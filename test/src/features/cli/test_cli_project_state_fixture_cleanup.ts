@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProjectStateFixtureCleanup } from "./test_cli_project_state";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -183,35 +184,74 @@ export const test_cli_project_state_fixture_cleanup = (): void => {
     cleanupFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "project-state fixture cleanup preserves exact failure identity and order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.attempts === 1 &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      standalone.caught &&
-      standalone.failure === cleanupFailure &&
-      standalone.attempts === 1 &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1 &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.attempts === 1 &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.attempts === 1 &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.attempts === 1,
+    namedFacts([
+      ["successSilent", () => success.caught === false],
+      ["successNoFailure", () => success.failure === undefined],
+      ["successDisposed", () => success.attempts === 1],
+      ["primaryOnlyThrew", () => primaryOnly.caught],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyDisposed", () => primaryOnly.attempts === 1],
+      ["standaloneThrew", () => standalone.caught],
+      ["standalonePreserved", () => standalone.failure === cleanupFailure],
+      ["standaloneDisposed", () => standalone.attempts === 1],
+      ["combinedThrew", () => combined.caught],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedDisposed", () => combined.attempts === 1],
+      ["undefinedPrimaryThrew", () => undefinedPrimary.caught],
+      [
+        "undefinedPrimaryPreserved",
+        () => undefinedPrimary.failure === undefined,
+      ],
+      ["undefinedPrimaryDisposed", () => undefinedPrimary.attempts === 1],
+      ["undefinedStandaloneThrew", () => undefinedStandalone.caught],
+      [
+        "undefinedStandalonePreserved",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      ["undefinedStandaloneDisposed", () => undefinedStandalone.attempts === 1],
+      ["undefinedCombinedThrew", () => undefinedCombined.caught],
+      [
+        "undefinedCombinedAggregated",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      ["undefinedCombinedDisposed", () => undefinedCombined.attempts === 1],
+    ]),
+    {
+      successSilent: true,
+      successNoFailure: true,
+      successDisposed: true,
+      primaryOnlyThrew: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyDisposed: true,
+      standaloneThrew: true,
+      standalonePreserved: true,
+      standaloneDisposed: true,
+      combinedThrew: true,
+      combinedAggregated: true,
+      combinedDisposed: true,
+      undefinedPrimaryThrew: true,
+      undefinedPrimaryPreserved: true,
+      undefinedPrimaryDisposed: true,
+      undefinedStandaloneThrew: true,
+      undefinedStandalonePreserved: true,
+      undefinedStandaloneDisposed: true,
+      undefinedCombinedThrew: true,
+      undefinedCombinedAggregated: true,
+      undefinedCombinedDisposed: true,
+    },
   );
   TestValidator.equals(
     "project-state test owns its complete post-handoff fixture lifecycle",
@@ -239,7 +279,7 @@ export const test_cli_project_state_fixture_cleanup = (): void => {
             nestedTryStatements: 3,
             ownerParameters: [],
             tryDigest:
-              "3fc6ee1509e7b392527225cc97791d92265a379f2c5e40ba612802f0d9598aa8",
+              "e112d9ec7fc09dd6f7bf5ca08ccc43a8014d79f372cc00e7b6b8b963a5b509e1",
             tryStatements: 85,
           },
         ],

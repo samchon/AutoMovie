@@ -370,7 +370,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               "letlinkedRootFailure:ILegacyImportFixtureFailure|undefined;",
             ],
             tryDigest:
-              "4a86ef64f8df902644daa090c8c5be14a01defa12fcc14b5ef41ba3d480c732d",
+              "69a271b99ea2dd7e12da1735695651b003bbce13feeaa1854f3ea15d585693ee",
             tryPrefixes: [
               'linkedParent=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-linked-import-root-"),);',
             ],
@@ -415,7 +415,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               "letchangingLockFailure:ILegacyImportFixtureFailure|undefined;",
             ],
             tryDigest:
-              "3b6a1b83f9a107771ed596e10c08877ffa1e6d434856a54dd0baeaf47b816ea4",
+              "212ff09f5b9107158faf83f30ba8330fd6be88f75750ab89debda4eb226167d2",
             tryPrefixes: [
               'outsideLock=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-changing-lock-"),);',
             ],

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveCliRenderFixtureCleanup } from "./test_cli_render";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -155,27 +156,69 @@ export const test_cli_render_fixture_cleanup = (): void => {
     cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
     primaryFailure,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "CLI render fixture cleanup preserves acquisition and failure order",
-    success.failure === undefined &&
-      success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      partialSetup.failure === primaryFailure &&
-      partialSetup.order.join(",") === "cleanup-0,cleanup-1" &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      standalone.failure === firstCleanupFailure &&
-      standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      aggregateContainsExactly(multiple.failure, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+    namedFacts([
+      ["successSilent", () => success.failure === undefined],
+      [
+        "successOrder",
+        () => success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["partialSetupPreserved", () => partialSetup.failure === primaryFailure],
+      [
+        "partialSetupSkipsUnacquired",
+        () => partialSetup.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      [
+        "primaryOnlyOrder",
+        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["standalonePreserved", () => standalone.failure === firstCleanupFailure],
+      [
+        "standaloneOrder",
+        () => standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      [
+        "multipleAggregated",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "multipleOrder",
+        () => multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "combinedOrder",
+        () => combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+    ]),
+    {
+      successSilent: true,
+      successOrder: true,
+      partialSetupPreserved: true,
+      partialSetupSkipsUnacquired: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyOrder: true,
+      standalonePreserved: true,
+      standaloneOrder: true,
+      multipleAggregated: true,
+      multipleOrder: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+    },
   );
   TestValidator.equals(
     "CLI render test owns cwd and every acquired temporary root",

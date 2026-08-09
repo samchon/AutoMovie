@@ -90,9 +90,18 @@ export const test_film_camera_projection_sphere = (): void => {
       aspect: 2,
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "invalid sphere radii fail closed",
-    visible({ x: 0, y: 0, z: -5 }, -1) === false &&
-      visible({ x: 0, y: 0, z: -5 }, Number.NaN) === false,
+    namedFacts([
+      [
+        "negativeRadiusRejected",
+        () => visible({ x: 0, y: 0, z: -5 }, -1) === false,
+      ],
+      [
+        "nonFiniteRadiusRejected",
+        () => visible({ x: 0, y: 0, z: -5 }, Number.NaN) === false,
+      ],
+    ]),
+    { negativeRadiusRejected: true, nonFiniteRadiusRejected: true },
   );
 };

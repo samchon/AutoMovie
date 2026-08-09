@@ -304,7 +304,7 @@ const CONTRACT = {
         "letdeniedImportStateLstatFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "17c9fadf1558db74a8baa7959f9ea68550ff5cb476c64269163de87930f5308b",
+        "727c842ef8fb1d20181a4d749b125edb444a2bb793fbe529093dab09c03f30fb",
     },
     {
       catchBodies: ["writeFileSyncFailure={error};", "throwerror;"],
@@ -379,7 +379,7 @@ const CONTRACT = {
         "letopenSyncFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "b3250b94435de7529b4fa51f933750f6c27c689d9a4406b63b6142ca24c47e0a",
+        "edd9ce8c76646ff2a72fcb9b04977452330228a1a2e6e529df3a44f226080f80",
     },
     {
       catchBodies: ["writeFileSyncFailure3={error};", "throwerror;"],
@@ -394,7 +394,7 @@ const CONTRACT = {
         "letwriteFileSyncFailure3:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "ffdb4edb4e6cac0542d71feeab7ac650a75b58f5dcab8763d237adcadd36054f",
+        "5ec69810581f659262d55e6783200ac75d03ab740b4c16a1e7661caa5559fd42",
     },
     {
       catchBodies: ["readdirSyncFailure3={error};", "throwerror;"],

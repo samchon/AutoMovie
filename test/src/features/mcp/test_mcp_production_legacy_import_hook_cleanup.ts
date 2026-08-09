@@ -407,13 +407,13 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
             "letrollbackHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "35f79c505335c7074fcf8b80bab535b6ac7943b179a18b3fa9c2d0b29c4f5b3a",
-            tokens: 50,
+              "1e6dfb33b6c470c2865bfd4c25740dd20bc55ce2818b9eb7af88ded56542813f",
+            tokens: 105,
           },
           tryBody:
-            '{TestValidator.predicate("apartialrollbackfailurerestoresthecompleteappliedstate",throws(()=>importer.rollback(),"statewasrestored")&&fs.existsSync(path.join(rollbackFailure.root,".automovie"))&&importer.apply().status==="unchanged"&&quarantineCleanupDenied,);}',
+            '{TestValidator.equals("apartialrollbackfailurerestoresthecompleteappliedstate",namedFacts([["rollbackRefused",()=>throws(()=>importer.rollback(),"statewasrestored"),],["stateKept",()=>fs.existsSync(path.join(rollbackFailure.root,".automovie")),],["reapplyUnchanged",()=>importer.apply().status==="unchanged"],["quarantineDenied",()=>quarantineCleanupDenied],]),{rollbackRefused:true,stateKept:true,reapplyUnchanged:true,quarantineDenied:true,},);}',
           tryDigest:
-            "8d0d834ea3fe16c11f20efa94a3c67afe14915cffeb6b53ec1f91550956a53f2",
+            "cc770b81b620fc35cec555c515313a746437c7951432ffdac506bfed8b48f20d",
         },
         {
           catchBodies: [
@@ -515,13 +515,13 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
             "letrevisionAfterReadHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "9712a4f503dc16b1ac9582404735b6af3fc953fb06e7b9bcfd04e10308dd90df",
-            tokens: 31,
+              "6439c2aa9f02cee890f637fc79ee58da2e8c936fa0fb7ad802022b5e9f6cb1a1",
+            tokens: 63,
           },
           tryBody:
-            '{TestValidator.predicate("arevisionchangedafteritsdescriptorreadcannotblessamixedimportplan",throws(()=>newAutoMovieLegacyImporter(revisionAfterReadRace.root).plan(),"revisionchanged",)&&changedAfterRead,);}',
+            '{TestValidator.equals("arevisionchangedafteritsdescriptorreadcannotblessamixedimportplan",namedFacts([["refused",()=>throws(()=>newAutoMovieLegacyImporter(revisionAfterReadRace.root,).plan(),"revisionchanged",),],["changedAfterRead",()=>changedAfterRead],]),{refused:true,changedAfterRead:true},);}',
           tryDigest:
-            "4618ec08f7e230baf65e28e1b1ac875d899b59ea402b6ea4284c196d724c1b0f",
+            "cf7c7a50289cab175f65712c0f7ac7b7cccce5aea1f09068b8b8c19723b03b8e",
         },
       ],
       parseDiagnostics: [],

@@ -397,9 +397,19 @@ export const test_film_perform_shot_camera_subject = (): void => {
   const projectileKeys = keysOf(
     projectile.shot.cameraMotion!.tracks[0]!.values,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the launch trajectory moves the prop-follow camera",
-    projectileKeys.length > 1 &&
-      !vclose(projectileKeys[0]!, projectileKeys[projectileKeys.length - 1]!),
+    namedFacts([
+      ["keysTheWholeFlight", () => projectileKeys.length > 1],
+      [
+        "cameraTravels",
+        () =>
+          !vclose(
+            projectileKeys[0]!,
+            projectileKeys[projectileKeys.length - 1]!,
+          ),
+      ],
+    ]),
+    { keysTheWholeFlight: true, cameraTravels: true },
   );
 };

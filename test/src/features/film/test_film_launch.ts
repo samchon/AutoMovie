@@ -192,9 +192,13 @@ export const test_film_launch = (): void => {
     y: hit.hitPoint.y - from!.y,
     z: hit.hitPoint.z - from!.z,
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "the recoil runs downrange (+x), no lateral drift",
-    knock.x > 0 && Math.abs(knock.z) < 1e-9,
+    namedFacts([
+      ["downrange", () => knock.x > 0],
+      ["noLateralDrift", () => Math.abs(knock.z) < 1e-9],
+    ]),
+    { downrange: true, noLateralDrift: true },
   );
   const vHit = projectileAt(
     { origin, velocity: hit.velocity, gravity: { x: 0, y: -9.81, z: 0 } },
@@ -275,10 +279,13 @@ export const test_film_launch = (): void => {
     pointed.events[0]!.target,
     null,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "but the flight still bakes",
-    pointed.clip.id === "trajectory:arrow" &&
-      vclose(pointed.hitPoint, target, 2e-3),
+    namedFacts([
+      ["flightBaked", () => pointed.clip.id === "trajectory:arrow"],
+      ["landsOnTarget", () => vclose(pointed.hitPoint, target, 2e-3)],
+    ]),
+    { flightBaked: true, landsOnTarget: true },
   );
 
   // 5. the high arc flies longer than the direct arc to the same target
@@ -331,10 +338,20 @@ export const test_film_launch = (): void => {
     "the apex lob lands on the target",
     vclose(apex.hitPoint, { x: 0, y: 6.25, z: 0 }, 1e-6),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the apex-lob react.from falls back to the sightline",
-    apex.react!.from.kind === "point" &&
-      vclose(apex.react!.from.point, { x: 0, y: 5.25, z: 0 }, 1e-6),
+    namedFacts([
+      ["fromIsPoint", () => apex.react!.from.kind === "point"],
+      [
+        "sightlineFallback",
+        // the `point` arm's discriminant is restated because the narrowing
+        // from the previous fact does not reach into this closure.
+        () =>
+          apex.react!.from.kind === "point" &&
+          vclose(apex.react!.from.point, { x: 0, y: 5.25, z: 0 }, 1e-6),
+      ],
+    ]),
+    { fromIsPoint: true, sightlineFallback: true },
   );
   TestValidator.equals(
     "onHit without unbalance carries undefined through",
@@ -367,9 +384,18 @@ export const test_film_launch = (): void => {
     "leading a +x mover aims past its start point",
     led.hitPoint.x > startAt.x + 1e-3,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the moving-target react is timed to the computed contact",
-    led.react !== null && nclose(led.react.start, 0.5 + led.hitTime),
+    namedFacts([
+      ["reactScheduled", () => led.react !== null],
+      [
+        "timedToContact",
+        // the null guard is restated so `led.react.start` is reachable: the
+        // narrowing from the previous fact does not reach into this closure.
+        () => led.react !== null && nclose(led.react.start, 0.5 + led.hitTime),
+      ],
+    ]),
+    { reactScheduled: true, timedToContact: true },
   );
   TestValidator.predicate(
     "the moving-target hit event follows the led contact time",

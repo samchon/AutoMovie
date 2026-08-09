@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProjectStateHarnessCleanup } from "./test_cli_project_state";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -172,26 +173,58 @@ export const test_cli_project_state_single_hook_cleanup = (): void => {
   const undefinedPrimary = captureCleanup({
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a single project-state restoration preserves the guarded failure first",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "cleanup-0" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0" &&
-      standalone.caught &&
-      standalone.failure === restorationFailure &&
-      standalone.order.join(",") === "cleanup-0" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        restorationFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === "cleanup-0",
+    namedFacts([
+      ["successSilent", () => success.caught === false],
+      ["successNoFailure", () => success.failure === undefined],
+      ["successRestored", () => success.order.join(",") === "cleanup-0"],
+      ["primaryOnlyThrew", () => primaryOnly.caught],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      [
+        "primaryOnlyRestored",
+        () => primaryOnly.order.join(",") === "cleanup-0",
+      ],
+      ["standaloneThrew", () => standalone.caught],
+      ["standalonePreserved", () => standalone.failure === restorationFailure],
+      ["standaloneRestored", () => standalone.order.join(",") === "cleanup-0"],
+      ["combinedThrew", () => combined.caught],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            restorationFailure,
+          ]),
+      ],
+      ["combinedRestored", () => combined.order.join(",") === "cleanup-0"],
+      ["undefinedPrimaryThrew", () => undefinedPrimary.caught],
+      [
+        "undefinedPrimaryPreserved",
+        () => undefinedPrimary.failure === undefined,
+      ],
+      [
+        "undefinedPrimaryRestored",
+        () => undefinedPrimary.order.join(",") === "cleanup-0",
+      ],
+    ]),
+    {
+      successSilent: true,
+      successNoFailure: true,
+      successRestored: true,
+      primaryOnlyThrew: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyRestored: true,
+      standaloneThrew: true,
+      standalonePreserved: true,
+      standaloneRestored: true,
+      combinedThrew: true,
+      combinedAggregated: true,
+      combinedRestored: true,
+      undefinedPrimaryThrew: true,
+      undefinedPrimaryPreserved: true,
+      undefinedPrimaryRestored: true,
+    },
   );
   TestValidator.equals(
     "project state protects every single-resource restoration",

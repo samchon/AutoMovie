@@ -61,9 +61,13 @@ export const test_film_forge_prop_door = (): void => {
   });
   TestValidator.equals("90° swing passes", open.violations.length, 0);
   const mirrorX = basisX(open.world.get("handleMirror")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "declared driver mirrors the hinge",
-    nclose(mirrorX[0], 0) && nclose(mirrorX[2], -1),
+    namedFacts([
+      ["mirrorLeftPlusX", () => nclose(mirrorX[0], 0)],
+      ["mirrorFacesMinusZ", () => nclose(mirrorX[2], -1)],
+    ]),
+    { mirrorLeftPlusX: true, mirrorFacesMinusZ: true },
   );
 
   const slammed = resolveFrame({
@@ -75,10 +79,16 @@ export const test_film_forge_prop_door = (): void => {
     ],
     seconds: 0,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing violations tagged by the forged profile",
-    slammed.violations.length > 0 &&
-      slammed.violations.every((v) => v.profile === "door-profile"),
+    namedFacts([
+      ["overSwingRefused", () => slammed.violations.length > 0],
+      [
+        "taggedByForgedProfile",
+        () => slammed.violations.every((v) => v.profile === "door-profile"),
+      ],
+    ]),
+    { overSwingRefused: true, taggedByForgedProfile: true },
   );
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);

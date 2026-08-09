@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -231,42 +232,106 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2";
-  TestValidator.predicate(
+  TestValidator.equals(
     "viewer hook cleanup preserves failure, resource, and restoration order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === closeFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [openFailure, closeFailure]) &&
-      multiple.message.includes("resource-0") &&
-      multiple.message.includes("resource-2") &&
-      multiple.message.includes("resource-1") === false &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        openFailure,
-        closeFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successSilent", () => success.caught === false],
+      ["successNoFailure", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === fullOrder],
+      ["primaryOnlyThrew", () => primaryOnly.caught],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneThrew", () => standalone.caught],
+      ["standalonePreserved", () => standalone.failure === closeFailure],
+      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
+      ["multipleThrew", () => multiple.caught],
+      [
+        "multipleAggregated",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            openFailure,
+            closeFailure,
+          ]),
+      ],
+      ["multipleNamesFirst", () => multiple.message.includes("resource-0")],
+      ["multipleNamesThird", () => multiple.message.includes("resource-2")],
+      [
+        "multipleOmitsClean",
+        () => multiple.message.includes("resource-1") === false,
+      ],
+      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
+      ["combinedThrew", () => combined.caught],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === fullOrder],
+      ["undefinedPrimaryThrew", () => undefinedPrimary.caught],
+      [
+        "undefinedPrimaryPreserved",
+        () => undefinedPrimary.failure === undefined,
+      ],
+      [
+        "undefinedPrimaryOrder",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneThrew", () => undefinedStandalone.caught],
+      [
+        "undefinedStandalonePreserved",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrder",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedThrew", () => undefinedCombined.caught],
+      [
+        "undefinedCombinedAggregated",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrder",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successSilent: true,
+      successNoFailure: true,
+      successOrder: true,
+      primaryOnlyThrew: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyOrder: true,
+      standaloneThrew: true,
+      standalonePreserved: true,
+      standaloneOrder: true,
+      multipleThrew: true,
+      multipleAggregated: true,
+      multipleNamesFirst: true,
+      multipleNamesThird: true,
+      multipleOmitsClean: true,
+      multipleOrder: true,
+      combinedThrew: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+      undefinedPrimaryThrew: true,
+      undefinedPrimaryPreserved: true,
+      undefinedPrimaryOrder: true,
+      undefinedStandaloneThrew: true,
+      undefinedStandalonePreserved: true,
+      undefinedStandaloneOrder: true,
+      undefinedCombinedThrew: true,
+      undefinedCombinedAggregated: true,
+      undefinedCombinedOrder: true,
+    },
   );
   TestValidator.equals(
     "CLI scaffold owns three viewer descriptor hook cleanup lifecycles",

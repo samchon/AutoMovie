@@ -458,14 +458,24 @@ export const test_film_perform_shot_attach = (): void => {
     endedSword.mount,
     null,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the grabbed prop's end velocity is the follow clip's trailing read",
-    endedSword.rootVelocity !== null &&
+    namedFacts([
+      ["velocityRead", () => endedSword.rootVelocity !== null],
+      // the null check is restated because the earlier fact's narrowing of the
+      // nullable `rootVelocity` property does not reach inside this closure.
       [
-        endedSword.rootVelocity.x,
-        endedSword.rootVelocity.y,
-        endedSword.rootVelocity.z,
-      ].every((c) => Number.isFinite(c)),
+        "velocityFinite",
+        () =>
+          endedSword.rootVelocity !== null &&
+          [
+            endedSword.rootVelocity.x,
+            endedSword.rootVelocity.y,
+            endedSword.rootVelocity.z,
+          ].every((c) => Number.isFinite(c)),
+      ],
+    ]),
+    { velocityRead: true, velocityFinite: true },
   );
   const endedKnight = ended.actors.find((a) => a.node === "knight")!;
   TestValidator.predicate(

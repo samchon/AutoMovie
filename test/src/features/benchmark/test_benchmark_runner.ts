@@ -313,59 +313,150 @@ export const test_benchmark_runner = async (): Promise<void> => {
     const replay = replayAutoMovieBenchmarkTrace(
       fs.readFileSync(path.join(output.archive, "trace/oracle.jsonl.gz")),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "one scenario id publishes runner-owned evidence and live MCP inventory",
-      archiveTaskPathRead === false &&
-        output.verdict.outcome === "scored" &&
-        output.verdict.filmScore === 1 &&
-        replay.truncated === false &&
-        replay.events[0]?.kind === "run-start" &&
-        replay.events.some((event) => event.kind === "compile") &&
-        replay.events.some((event) => event.kind === "review") &&
-        replay.events.some((event) => event.kind === "assertion") &&
-        replay.events.at(-2)?.kind === "verdict" &&
-        replay.events.at(-1)?.kind === "run-seal" &&
-        projectTree.digest === submission.treeDigest &&
-        projectTree.entries.some(
-          (entry) =>
-            entry.kind === "file" &&
-            entry.path === "receipts/observations.json",
-        ) &&
-        projectTree.entries.some(
-          (entry) =>
-            entry.kind === "file" && entry.path === "automovie.config.ts",
-        ) &&
-        workspaceMarker ===
-          `/**
+      namedFacts([
+        ["taskPathUnread", () => archiveTaskPathRead === false],
+        ["scored", () => output.verdict.outcome === "scored"],
+        ["filmScore", () => output.verdict.filmScore === 1],
+        ["replayWhole", () => replay.truncated === false],
+        ["replayOpens", () => replay.events[0]?.kind === "run-start"],
+        ["compiled", () => replay.events.some((e) => e.kind === "compile")],
+        ["reviewed", () => replay.events.some((e) => e.kind === "review")],
+        ["asserted", () => replay.events.some((e) => e.kind === "assertion")],
+        ["verdictNextToLast", () => replay.events.at(-2)?.kind === "verdict"],
+        ["sealLast", () => replay.events.at(-1)?.kind === "run-seal"],
+        ["treeDigest", () => projectTree.digest === submission.treeDigest],
+        [
+          "treeHasObservations",
+          () =>
+            projectTree.entries.some(
+              (entry) =>
+                entry.kind === "file" &&
+                entry.path === "receipts/observations.json",
+            ),
+        ],
+        [
+          "treeHasConfig",
+          () =>
+            projectTree.entries.some(
+              (entry) =>
+                entry.kind === "file" && entry.path === "automovie.config.ts",
+            ),
+        ],
+        [
+          "markerUntouched",
+          () =>
+            workspaceMarker ===
+            `/**
  * Runner-owned workspace marker. Replace it during benchmark project bootstrap.
  */
 export {};
-` &&
-        submission.edits.some(
-          (edit) => edit.path === "receipts/observations.json",
-        ) &&
-        submission.edits.some((edit) => edit.path === "src/film.ts") &&
-        submission.edits.every((edit) => edit.path !== "automovie.config.ts") &&
-        submission.edits.every((edit) => edit.path !== "nonexistent.ts") &&
-        submission.frames.every(
-          (frame) =>
-            fs.existsSync(path.join(output.archive, frame.path)) &&
-            frame.path.startsWith("evidence/frames/"),
-        ) &&
-        submission.deliverables.every(
-          (file) =>
-            fs.existsSync(path.join(output.archive, file.path)) &&
-            file.path.startsWith("evidence/deliverables/"),
-        ) &&
-        output.toolInventory.surfaces.length === 2 &&
-        liveObservation.session.tools.length === 5 &&
-        output.toolInventory.surfaces.find(
-          (surface) => surface.surface === "five-tool",
-        )?.tools === liveObservation.session.tools.length &&
-        output.toolInventory.comparisons.length === 1 &&
-        fs.existsSync(path.join(output.archive, "tool-sessions.json")) &&
-        submission.inventoryDigest.startsWith("sha256:") &&
-        submission.transcriptDigest.startsWith("sha256:"),
+`,
+        ],
+        [
+          "editedObservations",
+          () =>
+            submission.edits.some(
+              (edit) => edit.path === "receipts/observations.json",
+            ),
+        ],
+        [
+          "editedFilm",
+          () => submission.edits.some((edit) => edit.path === "src/film.ts"),
+        ],
+        [
+          "leftConfig",
+          () =>
+            submission.edits.every(
+              (edit) => edit.path !== "automovie.config.ts",
+            ),
+        ],
+        [
+          "inventedNothing",
+          () =>
+            submission.edits.every((edit) => edit.path !== "nonexistent.ts"),
+        ],
+        [
+          "framesArchived",
+          () =>
+            submission.frames.every(
+              (frame) =>
+                fs.existsSync(path.join(output.archive, frame.path)) &&
+                frame.path.startsWith("evidence/frames/"),
+            ),
+        ],
+        [
+          "deliverablesArchived",
+          () =>
+            submission.deliverables.every(
+              (file) =>
+                fs.existsSync(path.join(output.archive, file.path)) &&
+                file.path.startsWith("evidence/deliverables/"),
+            ),
+        ],
+        ["twoSurfaces", () => output.toolInventory.surfaces.length === 2],
+        // The session is read again inside each fact rather than once above
+        // them: a narrowing does not cross into a closure, and a fact leaning
+        // on one established elsewhere stops compiling the day that guard
+        // moves.
+        [
+          "fiveLiveTools",
+          () =>
+            liveObservation.session !== null &&
+            liveObservation.session.tools.length === 5,
+        ],
+        [
+          "surfaceCountsMatchLive",
+          () =>
+            liveObservation.session !== null &&
+            output.toolInventory.surfaces.find(
+              (surface) => surface.surface === "five-tool",
+            )?.tools === liveObservation.session.tools.length,
+        ],
+        ["oneComparison", () => output.toolInventory.comparisons.length === 1],
+        [
+          "sessionsArchived",
+          () => fs.existsSync(path.join(output.archive, "tool-sessions.json")),
+        ],
+        [
+          "inventoryDigest",
+          () => submission.inventoryDigest.startsWith("sha256:"),
+        ],
+        [
+          "transcriptDigest",
+          () => submission.transcriptDigest.startsWith("sha256:"),
+        ],
+      ]),
+      {
+        taskPathUnread: true,
+        scored: true,
+        filmScore: true,
+        replayWhole: true,
+        replayOpens: true,
+        compiled: true,
+        reviewed: true,
+        asserted: true,
+        verdictNextToLast: true,
+        sealLast: true,
+        treeDigest: true,
+        treeHasObservations: true,
+        treeHasConfig: true,
+        markerUntouched: true,
+        editedObservations: true,
+        editedFilm: true,
+        leftConfig: true,
+        inventedNothing: true,
+        framesArchived: true,
+        deliverablesArchived: true,
+        twoSurfaces: true,
+        fiveLiveTools: true,
+        surfaceCountsMatchLive: true,
+        oneComparison: true,
+        sessionsArchived: true,
+        inventoryDigest: true,
+        transcriptDigest: true,
+      },
     );
 
     const duplicate = await rejected(() =>
@@ -623,10 +714,25 @@ export {};
           ).events.some((event) => event.kind === "incident"),
       ),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing repaint runtime is infrastructure-excluded with a dedicated class",
-      repaintExcluded.verdict.outcome === "infra-excluded" &&
-        repaintExcluded.verdict.incident.kind === "repaint-adapter-unavailable",
+      namedFacts([
+        [
+          "excluded",
+          () => repaintExcluded.verdict.outcome === "infra-excluded",
+        ],
+        // The incident exists only on the excluded arm, so the arm is asked
+        // for again. Naming the facts must not cost the discriminant that
+        // makes the second one readable.
+        [
+          "named",
+          () =>
+            repaintExcluded.verdict.outcome === "infra-excluded" &&
+            repaintExcluded.verdict.incident.kind ===
+              "repaint-adapter-unavailable",
+        ],
+      ]),
+      { excluded: true, named: true },
     );
 
     const badProbe = await runAutoMovieBenchmark({
@@ -663,22 +769,49 @@ export {};
       agent: unreachableAgent,
       collect: collectCompleteEvidence,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed live MCP handshake is runner-owned infrastructure evidence",
-      badProbe.verdict.outcome === "infra-excluded" &&
-        badProbe.toolInventory.surfaces.length === 0 &&
-        readJson<{ mcp: { protocolVersion: string } }>(
-          path.join(badProbe.archive, "submission.json"),
-        ).mcp.protocolVersion === "unavailable",
+      namedFacts([
+        ["excluded", () => badProbe.verdict.outcome === "infra-excluded"],
+        ["noSurfaces", () => badProbe.toolInventory.surfaces.length === 0],
+        [
+          "recorded",
+          () =>
+            readJson<{ mcp: { protocolVersion: string } }>(
+              path.join(badProbe.archive, "submission.json"),
+            ).mcp.protocolVersion === "unavailable",
+        ],
+      ]),
+      { excluded: true, noSurfaces: true, recorded: true },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "a missing repaint runtime remains archiveable when MCP handshake also fails",
-      unavailableRepaintWithBadProbe.verdict.outcome === "infra-excluded" &&
-        unavailableRepaintWithBadProbe.verdict.incident.kind ===
-          "repaint-adapter-unavailable" &&
-        readJson<{ repaint: { status: string } }>(
-          path.join(unavailableRepaintWithBadProbe.archive, "submission.json"),
-        ).repaint.status === "unavailable",
+      namedFacts([
+        [
+          "excluded",
+          () =>
+            unavailableRepaintWithBadProbe.verdict.outcome === "infra-excluded",
+        ],
+        [
+          "named",
+          () =>
+            unavailableRepaintWithBadProbe.verdict.outcome ===
+              "infra-excluded" &&
+            unavailableRepaintWithBadProbe.verdict.incident.kind ===
+              "repaint-adapter-unavailable",
+        ],
+        [
+          "recorded",
+          () =>
+            readJson<{ repaint: { status: string } }>(
+              path.join(
+                unavailableRepaintWithBadProbe.archive,
+                "submission.json",
+              ),
+            ).repaint.status === "unavailable",
+        ],
+      ]),
+      { excluded: true, named: true, recorded: true },
     );
 
     await exerciseCandidateEvidenceBoundary(
@@ -802,23 +935,43 @@ const exerciseArchivePublicationRaces = async (
             /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(entry),
           )
       : [];
-    TestValidator.predicate(
+    TestValidator.equals(
       `archive publication rejects a ${phase} identity replacement`,
-      swapped &&
-        message.includes(
-          phase === "staging"
-            ? "physical directory selected for publication"
-            : phase === "record"
-              ? 'archive record "submission.json" changed'
-              : "physical directory selected for publication",
-        ) &&
-        contentArchives.length === (phase === "final" ? 1 : 0) &&
-        commitRecords.length === 0 &&
-        (phase !== "final" ||
-          (movedTo !== undefined &&
-            fs.existsSync(movedTo) &&
-            retryMessage.includes("is not committed") &&
-            retryMessage.includes("already archived") === false)),
+      namedFacts([
+        ["swapped", () => swapped],
+        [
+          "refused",
+          () =>
+            message.includes(
+              phase === "staging"
+                ? "physical directory selected for publication"
+                : phase === "record"
+                  ? 'archive record "submission.json" changed'
+                  : "physical directory selected for publication",
+            ),
+        ],
+        [
+          "contentArchives",
+          () => contentArchives.length === (phase === "final" ? 1 : 0),
+        ],
+        ["uncommitted", () => commitRecords.length === 0],
+        [
+          "retryReadsUncommitted",
+          () =>
+            phase !== "final" ||
+            (movedTo !== undefined &&
+              fs.existsSync(movedTo) &&
+              retryMessage.includes("is not committed") &&
+              retryMessage.includes("already archived") === false),
+        ],
+      ]),
+      {
+        swapped: true,
+        refused: true,
+        contentArchives: true,
+        uncommitted: true,
+        retryReadsUncommitted: true,
+      },
     );
     if (parked !== undefined)
       fs.rmSync(parked, { recursive: true, force: true });
@@ -1011,14 +1164,21 @@ const exerciseArchivePublicationSealRaces = async (
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       `archive publication rejects a ${phase} seal mutation`,
-      swapped &&
-        message.includes(
-          phase === "content"
-            ? "content changed while its publication record was prepared"
-            : "changed before publication",
-        ),
+      namedFacts([
+        ["swapped", () => swapped],
+        [
+          "refused",
+          () =>
+            message.includes(
+              phase === "content"
+                ? "content changed while its publication record was prepared"
+                : "changed before publication",
+            ),
+        ],
+      ]),
+      { swapped: true, refused: true },
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
   }
@@ -1088,12 +1248,19 @@ const exerciseArchiveVerifierRecordRace = async (
       },
     ]);
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "archive verifier rejects a commit record changed after descriptor read",
-    swapped &&
-      message.includes(
-        "does not bind the resident content-addressed directory",
-      ),
+    namedFacts([
+      ["swapped", () => swapped],
+      [
+        "refused",
+        () =>
+          message.includes(
+            "does not bind the resident content-addressed directory",
+          ),
+      ],
+    ]),
+    { swapped: true, refused: true },
   );
   fs.rmSync(campaignPath, { recursive: true, force: true });
 };
@@ -1176,11 +1343,18 @@ const exerciseArchiveShapeLinks = async (
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       `archive shape ${phase === "stable" ? "records" : "rejects"} a physical link identity`,
-      installed &&
-        (phase === "stable" ||
-          (swapped && message.includes("changed physical identity"))),
+      namedFacts([
+        ["installed", () => installed],
+        [
+          "answered",
+          () =>
+            phase === "stable" ||
+            (swapped && message.includes("changed physical identity")),
+        ],
+      ]),
+      { installed: true, answered: true },
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
   }
@@ -1242,15 +1416,40 @@ const exerciseCandidateEvidenceBoundary = async (
       lifecycle: completeLifecycle(),
     }),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "candidate-controlled evidence paths and workspace instability remain in the denominator",
-    malformedEvidence.verdict.outcome === "gate-failed" &&
-      "incident" in malformedEvidence.verdict === false &&
-      unstableProject.verdict.outcome === "gate-failed" &&
-      "incident" in unstableProject.verdict === false &&
-      readJson<{ entries: unknown[] }>(
-        path.join(unstableProject.archive, "project-tree.json"),
-      ).entries.length === 0,
+    namedFacts([
+      [
+        "evidenceGateFailed",
+        () => malformedEvidence.verdict.outcome === "gate-failed",
+      ],
+      [
+        "evidenceNotExcluded",
+        () => "incident" in malformedEvidence.verdict === false,
+      ],
+      [
+        "projectGateFailed",
+        () => unstableProject.verdict.outcome === "gate-failed",
+      ],
+      [
+        "projectNotExcluded",
+        () => "incident" in unstableProject.verdict === false,
+      ],
+      [
+        "treeEmpty",
+        () =>
+          readJson<{ entries: unknown[] }>(
+            path.join(unstableProject.archive, "project-tree.json"),
+          ).entries.length === 0,
+      ],
+    ]),
+    {
+      evidenceGateFailed: true,
+      evidenceNotExcluded: true,
+      projectGateFailed: true,
+      projectNotExcluded: true,
+      treeEmpty: true,
+    },
   );
 };
 
@@ -1582,16 +1781,47 @@ const exerciseInputAndFilesystemFences = async (
   );
   fs.unlinkSync(path.join(linkedCampaignRoot, ".benchmarks", "campaign"));
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "portable ids, source-repository ancestry, links, and unsupported lanes are refused",
-    unsafe.every((message) => message.includes("portable directory id")) &&
-      insideRepository.includes("inside source repository") &&
-      linkedRepository.includes("symbolic link or junction") &&
-      linkedCampaign.includes("real directory, not a link") &&
-      unsupportedLane.includes("does not support lane") &&
-      duplicateSurface.includes("repeat surface") &&
-      blankProvenance.includes("blank provenance") &&
-      missingMcpFailure.includes('MCP probe "missing-process" failed'),
+    namedFacts([
+      [
+        "portableId",
+        () =>
+          unsafe.every((message) => message.includes("portable directory id")),
+      ],
+      [
+        "insideRepository",
+        () => insideRepository.includes("inside source repository"),
+      ],
+      [
+        "linkedRepository",
+        () => linkedRepository.includes("symbolic link or junction"),
+      ],
+      [
+        "linkedCampaign",
+        () => linkedCampaign.includes("real directory, not a link"),
+      ],
+      [
+        "unsupportedLane",
+        () => unsupportedLane.includes("does not support lane"),
+      ],
+      ["duplicateSurface", () => duplicateSurface.includes("repeat surface")],
+      ["blankProvenance", () => blankProvenance.includes("blank provenance")],
+      [
+        "missingMcp",
+        () => missingMcpFailure.includes('MCP probe "missing-process" failed'),
+      ],
+    ]),
+    {
+      portableId: true,
+      insideRepository: true,
+      linkedRepository: true,
+      linkedCampaign: true,
+      unsupportedLane: true,
+      duplicateSurface: true,
+      blankProvenance: true,
+      missingMcp: true,
+    },
   );
 };
 
@@ -1687,15 +1917,29 @@ process.stdin.on("end", () => {
       }),
     "positive safe-integer timeoutMs",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "process adapters pass the exact brief on stdin without exposing archive paths",
-    result.stdout === "process complete" &&
-      result.generation.toolCalls === 1 &&
-      fs.readFileSync(path.join(project, "received-brief.md"), "utf8") ===
-        context.scenario.brief &&
-      spawnFailure.includes("could not complete") &&
-      exitFailure.includes("exited 2") &&
-      timeoutFailure.includes("could not complete"),
+    namedFacts([
+      ["stdout", () => result.stdout === "process complete"],
+      ["toolCalls", () => result.generation.toolCalls === 1],
+      [
+        "briefVerbatim",
+        () =>
+          fs.readFileSync(path.join(project, "received-brief.md"), "utf8") ===
+          context.scenario.brief,
+      ],
+      ["spawnFailure", () => spawnFailure.includes("could not complete")],
+      ["exitFailure", () => exitFailure.includes("exited 2")],
+      ["timeoutFailure", () => timeoutFailure.includes("could not complete")],
+    ]),
+    {
+      stdout: true,
+      toolCalls: true,
+      briefVerbatim: true,
+      spawnFailure: true,
+      exitFailure: true,
+      timeoutFailure: true,
+    },
   );
 };
 

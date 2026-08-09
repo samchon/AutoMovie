@@ -244,14 +244,29 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const firstRegistry = AutoMovieProductionProject.registeredProductionIds(
       fixture.root,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the non-MCP compiler API compiles the first registered production",
-      firstRegistry.length === 1 && firstRegistry[0] === "fixture-film",
+      namedFacts([
+        ["oneRegistered", () => firstRegistry.length === 1],
+        ["fixtureFilm", () => firstRegistry[0] === "fixture-film"],
+      ]),
+      { oneRegistered: true, fixtureFilm: true },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the non-MCP inspection API reports current compiled ownership",
-      inspectAutoMovieProduction(first).source.missing.length === 0 &&
-        inspectAutoMovieProduction(first).source.unownedGenerated.length === 0,
+      namedFacts([
+        [
+          "noMissing",
+          () => inspectAutoMovieProduction(first).source.missing.length === 0,
+        ],
+        [
+          "noUnowned",
+          () =>
+            inspectAutoMovieProduction(first).source.unownedGenerated.length ===
+            0,
+        ],
+      ]),
+      { noMissing: true, noUnowned: true },
     );
     const secondProject = AutoMovieProductionProject.open(
       fixture.root,
@@ -263,24 +278,38 @@ export const test_mcp_production_application = async (): Promise<void> => {
       root: fixture.root,
       productionId: "second-film",
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a second production binds the same source registry independently",
-      secondProject.setProductionDesign(
-        productionDesign({
-          id: "second-film",
-          title: "second-film",
-          visualDelivery: "deterministic",
-        }),
-      ).accepted &&
-        secondProject.setShotContract(shotContract()).accepted &&
-        productionCompileSucceeded(
-          "second production application fixture",
-          openAutoMovieProduction({
-            projectRoot: fixture.root,
-            productionId: "second-film",
-            capture,
-          }).compiler.compile({ scope: "source" }),
-        ),
+      namedFacts([
+        [
+          "designAccepted",
+          () =>
+            secondProject.setProductionDesign(
+              productionDesign({
+                id: "second-film",
+                title: "second-film",
+                visualDelivery: "deterministic",
+              }),
+            ).accepted,
+        ],
+        [
+          "contractAccepted",
+          () => secondProject.setShotContract(shotContract()).accepted,
+        ],
+        [
+          "sourceCompiled",
+          () =>
+            productionCompileSucceeded(
+              "second production application fixture",
+              openAutoMovieProduction({
+                projectRoot: fixture.root,
+                productionId: "second-film",
+                capture,
+              }).compiler.compile({ scope: "source" }),
+            ),
+        ],
+      ]),
+      { designAccepted: true, contractAccepted: true, sourceCompiled: true },
     );
 
     const application = new AutoMovieApplication({
@@ -289,11 +318,18 @@ export const test_mcp_production_application = async (): Promise<void> => {
       capture,
     });
     const paired: IFiveToolContract = application;
-    TestValidator.predicate(
+    TestValidator.equals(
       "the application implements the five named props/result pairs",
-      paired === application &&
-        Object.keys(AUTOMOVIE_TOOL_GUIDES).join(",") ===
-          "getGuideDocument,captureFrame,repaintShot,prepareReview,submitReview",
+      namedFacts([
+        ["contractInstance", () => paired === application],
+        [
+          "guideNames",
+          () =>
+            Object.keys(AUTOMOVIE_TOOL_GUIDES).join(",") ===
+            "getGuideDocument,captureFrame,repaintShot,prepareReview,submitReview",
+        ],
+      ]),
+      { contractInstance: true, guideNames: true },
     );
     const gated = await rejected(() =>
       application.captureFrame({
@@ -348,15 +384,34 @@ export const test_mcp_production_application = async (): Promise<void> => {
         },
       }),
     );
-    TestValidator.predicate(
+    // Each fact is its own closure, so a narrowing an earlier conjunct made
+    // (here: the recovery script is not `null`) does not reach the later facts.
+    // Repeat only the guard the compiler needs, as a comparison that cannot
+    // move the answer; `namedFacts` stops at the first false fact, so the
+    // guarding itself still comes from the ordering.
+    TestValidator.equals(
       "guide credit survives and the recovery script lists only missing reads",
-      partiallyGated?.includes("1/2 required guides") === true &&
-        partiallyGated.includes(
-          'getGuideDocument({ name: "CAPTURE_FRAME" })',
-        ) &&
-        partiallyGated.includes(
-          'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
-        ) === false,
+      namedFacts([
+        [
+          "creditRemembered",
+          () => partiallyGated?.includes("1/2 required guides") === true,
+        ],
+        [
+          "listsCaptureFrame",
+          () =>
+            partiallyGated?.includes(
+              'getGuideDocument({ name: "CAPTURE_FRAME" })',
+            ) === true,
+        ],
+        [
+          "omitsOverall",
+          () =>
+            partiallyGated?.includes(
+              'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
+            ) === false,
+        ],
+      ]),
+      { creditRemembered: true, listsCaptureFrame: true, omitsOverall: true },
     );
     application.getGuideDocument({ name: "CAPTURE_FRAME" });
     const reviewGated = await rejected(async () =>
@@ -456,38 +511,61 @@ export const test_mcp_production_application = async (): Promise<void> => {
           complete: false,
         }),
       );
-      TestValidator.predicate(
+      TestValidator.equals(
         `${target.kind} prepare and submit both require the exact review guide`,
-        prepareGate?.includes(
-          `getGuideDocument({ name: "${expectedGuide}" })`,
-        ) === true &&
-          submitGate?.includes(
-            `getGuideDocument({ name: "${expectedGuide}" })`,
-          ) === true,
+        namedFacts([
+          [
+            "prepareGated",
+            () =>
+              prepareGate?.includes(
+                `getGuideDocument({ name: "${expectedGuide}" })`,
+              ) === true,
+          ],
+          [
+            "submitGated",
+            () =>
+              submitGate?.includes(
+                `getGuideDocument({ name: "${expectedGuide}" })`,
+              ) === true,
+          ],
+        ]),
+        { prepareGated: true, submitGated: true },
       );
       gatedReview.getGuideDocument({ name: expectedGuide });
-      TestValidator.predicate(
+      // A fact closure is synchronous, so both awaits are hoisted; the submit
+      // stays behind the prepare exactly as the conjunction left it, and its
+      // placeholder is never read because `namedFacts` stops at the false one.
+      const prepareExecuted = await rejected(async () =>
+        gatedReview.prepareReview({ target }),
+      );
+      const submitExecuted =
+        prepareExecuted === null
+          ? await rejected(async () =>
+              gatedReview.submitReview({
+                target,
+                preparedFingerprint: `sha256:${"0".repeat(64)}`,
+                observations: "Gate execution probe.",
+                checks: [],
+                corrections: [
+                  {
+                    owner: "source",
+                    target: "gate-probe",
+                    problem: "The probe is intentionally incomplete.",
+                    expected: "The target-specific guide is credited.",
+                  },
+                ],
+                completionBasis: "Gate execution probe.",
+                complete: false,
+              }),
+            )
+          : "prepare was refused, so submit was never attempted";
+      TestValidator.equals(
         `${target.kind} prepare and submit execute after exact guide credit`,
-        (await rejected(async () => gatedReview.prepareReview({ target }))) ===
-          null &&
-          (await rejected(async () =>
-            gatedReview.submitReview({
-              target,
-              preparedFingerprint: `sha256:${"0".repeat(64)}`,
-              observations: "Gate execution probe.",
-              checks: [],
-              corrections: [
-                {
-                  owner: "source",
-                  target: "gate-probe",
-                  problem: "The probe is intentionally incomplete.",
-                  expected: "The target-specific guide is credited.",
-                },
-              ],
-              completionBasis: "Gate execution probe.",
-              complete: false,
-            }),
-          )) === null,
+        namedFacts([
+          ["prepareExecuted", () => prepareExecuted === null],
+          ["submitExecuted", () => submitExecuted === null],
+        ]),
+        { prepareExecuted: true, submitExecuted: true },
       );
     }
     application.getGuideDocument({ name: "REPAINT_SHOT" });
@@ -497,12 +575,22 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "deterministic delivery refuses repaint without requiring diffusion knowledge",
-      deterministicRepaint.repainted === false &&
-        deterministicRepaint.diagnostics[0]?.code ===
-          "repaint-delivery-disabled" &&
-        AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+      namedFacts([
+        ["refused", () => deterministicRepaint.repainted === false],
+        [
+          "deliveryDisabled",
+          () =>
+            deterministicRepaint.diagnostics[0]?.code ===
+            "repaint-delivery-disabled",
+        ],
+        [
+          "repaintGuideName",
+          () => AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+        ],
+      ]),
+      { refused: true, deliveryDisabled: true, repaintGuideName: true },
     );
     const stateRoot = path.join(fixture.root, ".automovie");
     const stateRegistryPath = path.join(stateRoot, "productions.json");
@@ -587,12 +675,23 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "explicit blank production ids never fall through to the host default",
-      invalidCaptureProduction.diagnostics[0]?.code ===
-        "capture-production-invalid" &&
-        invalidRepaintProduction.diagnostics[0]?.code ===
-          "repaint-production-invalid",
+      namedFacts([
+        [
+          "captureInvalid",
+          () =>
+            invalidCaptureProduction.diagnostics[0]?.code ===
+            "capture-production-invalid",
+        ],
+        [
+          "repaintInvalid",
+          () =>
+            invalidRepaintProduction.diagnostics[0]?.code ===
+            "repaint-production-invalid",
+        ],
+      ]),
+      { captureInvalid: true, repaintInvalid: true },
     );
     const registryPath = path.join(
       first.project.generatedRoot(),
@@ -616,10 +715,18 @@ export const test_mcp_production_application = async (): Promise<void> => {
       },
     });
     fs.writeFileSync(registryPath, originalRegistry);
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture refuses registry bytes that differ from compiler ownership",
-      staleRegistry.captured === false &&
-        staleRegistry.diagnostics[0]?.code === "capture-registry-unavailable",
+      namedFacts([
+        ["refused", () => staleRegistry.captured === false],
+        [
+          "registryUnavailable",
+          () =>
+            staleRegistry.diagnostics[0]?.code ===
+            "capture-registry-unavailable",
+        ],
+      ]),
+      { refused: true, registryUnavailable: true },
     );
     const missing = await application.captureFrame({
       target: {
@@ -761,12 +868,22 @@ export const test_mcp_production_application = async (): Promise<void> => {
         },
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "repainted delivery dynamically requires diffusion guidance",
-      diffusionGated?.includes("2/3 required guides") === true &&
-        diffusionGated.includes(
-          'getGuideDocument({ name: "DIFFUSION_ENHANCE" })',
-        ),
+      namedFacts([
+        [
+          "twoOfThree",
+          () => diffusionGated?.includes("2/3 required guides") === true,
+        ],
+        [
+          "listsDiffusionEnhance",
+          () =>
+            diffusionGated?.includes(
+              'getGuideDocument({ name: "DIFFUSION_ENHANCE" })',
+            ) === true,
+        ],
+      ]),
+      { twoOfThree: true, listsDiffusionEnhance: true },
     );
     application.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
     const unavailable = await application.repaintShot({
@@ -775,13 +892,23 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a missing repaint adapter returns provisioning guidance",
-      unavailable.repainted === false &&
-        unavailable.diagnostics[0]?.code === "repaint-host-unavailable" &&
-        unavailable.diagnostics[0].message.includes(
-          "AutoMovieProductionShotRepaint",
-        ),
+      namedFacts([
+        ["refused", () => unavailable.repainted === false],
+        [
+          "hostUnavailable",
+          () => unavailable.diagnostics[0]?.code === "repaint-host-unavailable",
+        ],
+        [
+          "namesHostType",
+          () =>
+            unavailable.diagnostics[0]?.message.includes(
+              "AutoMovieProductionShotRepaint",
+            ) === true,
+        ],
+      ]),
+      { refused: true, hostUnavailable: true, namesHostType: true },
     );
 
     const frameGrid: IAutoMovieCaptureFrame[] = [
@@ -802,9 +929,13 @@ export const test_mcp_production_application = async (): Promise<void> => {
             },
           }),
         );
-    TestValidator.predicate(
+    TestValidator.equals(
       "repaint source evidence covers every beauty, pose and required mask frame",
-      frameGrid.length === 25 && frameGrid.every((capture) => capture.captured),
+      namedFacts([
+        ["gridComplete", () => frameGrid.length === 25],
+        ["allCaptured", () => frameGrid.every((capture) => capture.captured)],
+      ]),
+      { gridComplete: true, allCaptured: true },
     );
 
     const shortRenditionBytes = await productionH264Mp4({
@@ -849,15 +980,26 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const sourcePrepared = repainting.prepareReview({
       target: { kind: "shot", id: "opening" },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "repaint source preparation owns every declared review pass",
-      sourcePrepared.frames.length === 3 &&
-        ["beauty", "mask", "pose"].every((pass) =>
-          sourcePrepared.frames.some((frame) => frame.pass === pass),
-        ) &&
-        sourcePrepared.diagnostics.every(
-          (diagnostic) => diagnostic.category !== "error",
-        ),
+      namedFacts([
+        ["threeFrames", () => sourcePrepared.frames.length === 3],
+        [
+          "everyPass",
+          () =>
+            ["beauty", "mask", "pose"].every((pass) =>
+              sourcePrepared.frames.some((frame) => frame.pass === pass),
+            ),
+        ],
+        [
+          "noErrors",
+          () =>
+            sourcePrepared.diagnostics.every(
+              (diagnostic) => diagnostic.category !== "error",
+            ),
+        ],
+      ]),
+      { threeFrames: true, everyPass: true, noErrors: true },
     );
     const frameEvidence = (frame: (typeof sourcePrepared.frames)[number]) => ({
       kind: "frame" as const,
@@ -921,29 +1063,13 @@ export const test_mcp_production_application = async (): Promise<void> => {
       completionBasis: sourcePrepared.requiredCriteria.join(", "),
       complete: true,
     });
-    if (sourceReview.accepted === false || sourceReview.state !== "complete")
-      throw new Error(
-        `Deterministic repaint-source review failed:\n${JSON.stringify(
-          {
-            prepared: {
-              criteria: sourcePrepared.requiredCriteria,
-              frames: sourcePrepared.frames.map((frame) => ({
-                reviewFrame: frame.reviewFrame,
-                time: frame.time,
-                pass: frame.pass,
-                digest: frame.digest,
-              })),
-              diagnostics: sourcePrepared.diagnostics,
-            },
-            submitted: sourceReview,
-          },
-          null,
-          2,
-        )}`,
-      );
-    TestValidator.predicate(
+    TestValidator.equals(
       "repaint requires and records a current completed deterministic source review",
-      sourceReview.accepted && sourceReview.state === "complete",
+      namedFacts([
+        ["accepted", () => sourceReview.accepted],
+        ["complete", () => sourceReview.state === "complete"],
+      ]),
+      { accepted: true, complete: true },
     );
     const restricted = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -955,11 +1081,17 @@ export const test_mcp_production_application = async (): Promise<void> => {
         strength: 0.8,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "non-rendition asset bytes are refused before adapter disclosure",
-      restricted.repainted === false &&
-        restricted.diagnostics[0]?.code === "repaint-reference-invalid" &&
-        repaintAdapterCalls === 0,
+      namedFacts([
+        ["refused", () => restricted.repainted === false],
+        [
+          "referenceInvalid",
+          () => restricted.diagnostics[0]?.code === "repaint-reference-invalid",
+        ],
+        ["adapterUntouched", () => repaintAdapterCalls === 0],
+      ]),
+      { refused: true, referenceInvalid: true, adapterUntouched: true },
     );
     const shortRendition = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -967,11 +1099,18 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Return a short clip.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "repaint output must match exact shot raster, clock and frame count",
-      shortRendition.repainted === false &&
-        shortRendition.diagnostics[0]?.code === "repaint-output-invalid" &&
-        repaintAdapterCalls === 1,
+      namedFacts([
+        ["refused", () => shortRendition.repainted === false],
+        [
+          "outputInvalid",
+          () =>
+            shortRendition.diagnostics[0]?.code === "repaint-output-invalid",
+        ],
+        ["adapterCalledOnce", () => repaintAdapterCalls === 1],
+      ]),
+      { refused: true, outputInvalid: true, adapterCalledOnce: true },
     );
     const repainted = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -979,50 +1118,110 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "attached repaint commits the complete provenance chain",
-      repainted.repainted &&
-        repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
-          true &&
-        repainted.receipt.sourceReviewFingerprint ===
-          sourceReview.fingerprint &&
-        repainted.receipt.attemptId.length === 36 &&
-        repainted.receipt.controls.some((control) => control.pass === "pose") &&
-        repainted.receipt.references[0]?.digest === reference.digest &&
-        repainted.receipt.adapterIdentity.includes("fixture-video") &&
-        repainted.receipt.output.digest.startsWith("sha256:") &&
-        repaintAdapterCalls === 2 &&
-        fs.existsSync(
-          path.join(
-            fixture.root,
-            "renders",
-            "fixture-film",
-            repainted.receipt.output.path,
-          ),
-        ),
+      namedFacts([
+        ["repaintedAttached", () => repainted.repainted],
+        [
+          "renderFingerprint",
+          () =>
+            repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
+            true,
+        ],
+        [
+          "reviewFingerprint",
+          () =>
+            repainted.receipt?.sourceReviewFingerprint ===
+            sourceReview.fingerprint,
+        ],
+        ["attemptIdUuid", () => repainted.receipt?.attemptId.length === 36],
+        [
+          "poseControl",
+          () =>
+            repainted.receipt?.controls.some(
+              (control) => control.pass === "pose",
+            ) === true,
+        ],
+        [
+          "referenceDigest",
+          () => repainted.receipt?.references[0]?.digest === reference.digest,
+        ],
+        [
+          "adapterIdentity",
+          () =>
+            repainted.receipt?.adapterIdentity.includes("fixture-video") ===
+            true,
+        ],
+        [
+          "outputDigest",
+          () => repainted.receipt?.output.digest.startsWith("sha256:") === true,
+        ],
+        ["adapterCalledTwice", () => repaintAdapterCalls === 2],
+        [
+          "renditionWritten",
+          () =>
+            repainted.receipt !== null &&
+            fs.existsSync(
+              path.join(
+                fixture.root,
+                "renders",
+                "fixture-film",
+                repainted.receipt.output.path,
+              ),
+            ),
+        ],
+      ]),
+      {
+        repaintedAttached: true,
+        renderFingerprint: true,
+        reviewFingerprint: true,
+        attemptIdUuid: true,
+        poseControl: true,
+        referenceDigest: true,
+        adapterIdentity: true,
+        outputDigest: true,
+        adapterCalledTwice: true,
+        renditionWritten: true,
+      },
     );
     repainting.getGuideDocument({ name: "REVIEW_SHOT" });
     const renditionReview = repainting.prepareReview({
       target: { kind: "rendition", id: "opening" },
     });
     const acceptedReceipt = repainted.receipt;
-    TestValidator.predicate(
+    TestValidator.equals(
       "repainted delivery enters separate receipt-bound review evidence",
-      acceptedReceipt !== null &&
-        renditionReview.renditions.some(
-          (rendition) =>
-            rendition.shot === "opening" &&
-            rendition.path === acceptedReceipt.output.path &&
-            rendition.digest === acceptedReceipt.output.digest &&
-            rendition.receiptDigest.startsWith("sha256:") &&
-            rendition.sourceRenderFingerprint ===
-              acceptedReceipt.sourceRenderFingerprint &&
-            rendition.sourceReviewFingerprint ===
-              acceptedReceipt.sourceReviewFingerprint,
-        ) &&
-        renditionReview.diagnostics.some(
-          (diagnostic) => diagnostic.code === "review-rendition-missing",
-        ) === false,
+      namedFacts([
+        ["receiptAccepted", () => acceptedReceipt !== null],
+        [
+          "renditionBound",
+          () =>
+            acceptedReceipt !== null &&
+            renditionReview.renditions.some(
+              (rendition) =>
+                rendition.shot === "opening" &&
+                rendition.path === acceptedReceipt.output.path &&
+                rendition.digest === acceptedReceipt.output.digest &&
+                rendition.receiptDigest.startsWith("sha256:") &&
+                rendition.sourceRenderFingerprint ===
+                  acceptedReceipt.sourceRenderFingerprint &&
+                rendition.sourceReviewFingerprint ===
+                  acceptedReceipt.sourceReviewFingerprint,
+            ),
+        ],
+        [
+          "noMissingDiagnostic",
+          () =>
+            renditionReview.diagnostics.some(
+              (diagnostic) => diagnostic.code === "review-rendition-missing",
+            ) === false,
+        ],
+      ]),
+      {
+        receiptAccepted: true,
+        renditionBound: true,
+        noMissingDiagnostic: true,
+      },
     );
     const rerolled = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -1041,22 +1240,53 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const repaintFilmReview = repainting.prepareReview({
       target: { kind: "film", id: "fixture-film" },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "even an identical-byte reroll selects a new attempt and stales prior review identity",
-      rerolled.repainted &&
-        rerolled.receipt?.attemptId !== acceptedReceipt?.attemptId &&
-        rerolled.receipt?.output.path !== acceptedReceipt?.output.path &&
-        rerolledReview.fingerprint !== renditionReview.fingerprint &&
-        rerolledReview.renditions.length === 1 &&
-        rerolledReview.renditions[0]?.path === rerolled.receipt?.output.path,
+      namedFacts([
+        ["rerolledAttached", () => rerolled.repainted],
+        [
+          "newAttemptId",
+          () => rerolled.receipt?.attemptId !== acceptedReceipt?.attemptId,
+        ],
+        [
+          "newOutputPath",
+          () => rerolled.receipt?.output.path !== acceptedReceipt?.output.path,
+        ],
+        [
+          "staleReviewIdentity",
+          () => rerolledReview.fingerprint !== renditionReview.fingerprint,
+        ],
+        ["oneRendition", () => rerolledReview.renditions.length === 1],
+        [
+          "selectsReroll",
+          () =>
+            rerolledReview.renditions[0]?.path ===
+            rerolled.receipt?.output.path,
+        ],
+      ]),
+      {
+        rerolledAttached: true,
+        newAttemptId: true,
+        newOutputPath: true,
+        staleReviewIdentity: true,
+        oneRendition: true,
+        selectsReroll: true,
+      },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "film review preflights the selected repaint cut before approval",
-      repaintFilmReview.renditions.length === 1 &&
-        repaintFilmReview.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "review-rendition-delivery-invalid",
-        ) === false,
+      namedFacts([
+        ["oneCut", () => repaintFilmReview.renditions.length === 1],
+        [
+          "deliveryValid",
+          () =>
+            repaintFilmReview.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "review-rendition-delivery-invalid",
+            ) === false,
+        ],
+      ]),
+      { oneCut: true, deliveryValid: true },
     );
     const activeRenditionPath = first.project.trackedStatePath(
       "renditions/active/opening.json",
@@ -1192,16 +1422,27 @@ export const test_mcp_production_application = async (): Promise<void> => {
       );
     }
     const uncitedRenditionReview = repainting.submitReview(uncitedCompletion);
-    TestValidator.predicate(
+    TestValidator.equals(
       "submitReview accepts exact rendition evidence and refuses forged or uncited identities",
-      acceptedRenditionReview.accepted &&
-        forgedRenditionReview.diagnostics.some(
-          (diagnostic) => diagnostic.code === "review-evidence-stale",
-        ) &&
-        uncitedRenditionReview.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "review-rendition-coverage-incomplete",
-        ),
+      namedFacts([
+        ["exactAccepted", () => acceptedRenditionReview.accepted],
+        [
+          "forgedStale",
+          () =>
+            forgedRenditionReview.diagnostics.some(
+              (diagnostic) => diagnostic.code === "review-evidence-stale",
+            ),
+        ],
+        [
+          "uncitedIncomplete",
+          () =>
+            uncitedRenditionReview.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "review-rendition-coverage-incomplete",
+            ),
+        ],
+      ]),
+      { exactAccepted: true, forgedStale: true, uncitedIncomplete: true },
     );
     const forgedReceipt = structuredClone(repainted.receipt!);
     forgedReceipt.sourceRenderFingerprint = forgedReceipt.output.digest;

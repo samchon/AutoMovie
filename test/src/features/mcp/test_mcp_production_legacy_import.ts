@@ -567,22 +567,58 @@ export const test_mcp_production_legacy_import = (): void => {
       ]);
     }
     const production = AutoMovieProductionProject.open(fixture.root);
-    TestValidator.predicate(
+    TestValidator.equals(
       "apply is atomic and idempotent until production provenance reopens",
-      applied.status === "applied" &&
-        legacyAssertionPathRead === false &&
-        repeatedRejected === false &&
-        appliedPlanPathRead === false &&
-        repeated?.status === "unchanged" &&
-        repeated.plan.fingerprint === plan.fingerprint &&
-        production.manifest().importedLegacy?.revision === 2 &&
-        production.manifest().importedLegacy?.sourceRoot === "." &&
-        equalFiles(before, legacyFiles(fixture.root)) &&
-        throws(
-          () => importer.apply(),
-          "already exists with a different or incomplete import",
-        ) &&
-        throws(() => importer.rollback(), "changed after import"),
+      namedFacts([
+        ["applied", () => applied.status === "applied"],
+        ["assertionPathUnread", () => legacyAssertionPathRead === false],
+        ["repeatAccepted", () => repeatedRejected === false],
+        ["planPathUnread", () => appliedPlanPathRead === false],
+        ["repeatUnchanged", () => repeated?.status === "unchanged"],
+        // Read through the optional chain again: a narrowing established on
+        // the fact above does not reach into this closure.
+        [
+          "repeatFingerprint",
+          () => repeated?.plan.fingerprint === plan.fingerprint,
+        ],
+        [
+          "revision",
+          () => production.manifest().importedLegacy?.revision === 2,
+        ],
+        [
+          "sourceRoot",
+          () => production.manifest().importedLegacy?.sourceRoot === ".",
+        ],
+        [
+          "legacyUntouched",
+          () => equalFiles(before, legacyFiles(fixture.root)),
+        ],
+        [
+          "reapplyRefused",
+          () =>
+            throws(
+              () => importer.apply(),
+              "already exists with a different or incomplete import",
+            ),
+        ],
+        [
+          "rollbackRefused",
+          () => throws(() => importer.rollback(), "changed after import"),
+        ],
+      ]),
+      {
+        applied: true,
+        assertionPathUnread: true,
+        repeatAccepted: true,
+        planPathUnread: true,
+        repeatUnchanged: true,
+        repeatFingerprint: true,
+        revision: true,
+        sourceRoot: true,
+        legacyUntouched: true,
+        reapplyRefused: true,
+        rollbackRefused: true,
+      },
     );
   } catch (error) {
     fixtureFailure = { error };
@@ -605,17 +641,53 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     createMissingOwnedRoots(untouched.root, plan);
     const rolledBack = importer.rollback();
-    TestValidator.predicate(
+    TestValidator.equals(
       "rollback removes only untouched import state and empty owned roots",
-      rolledBack.fingerprint === plan.fingerprint &&
-        fs.existsSync(path.join(untouched.root, ".automovie")) === false &&
-        fs.existsSync(path.join(untouched.root, "src")) === false &&
-        fs.existsSync(path.join(untouched.root, "generated")) === false &&
-        plan.rollbackBaseline.find((baseline) => baseline.path === "renders")
-          ?.existed === true &&
-        fs.existsSync(path.join(untouched.root, "renders")) &&
-        equalFiles(before, legacyFiles(untouched.root)) &&
-        throws(() => importer.rollback(), "Nothing was rolled back"),
+      namedFacts([
+        ["fingerprint", () => rolledBack.fingerprint === plan.fingerprint],
+        [
+          "automovieGone",
+          () =>
+            fs.existsSync(path.join(untouched.root, ".automovie")) === false,
+        ],
+        [
+          "sourceGone",
+          () => fs.existsSync(path.join(untouched.root, "src")) === false,
+        ],
+        [
+          "generatedGone",
+          () => fs.existsSync(path.join(untouched.root, "generated")) === false,
+        ],
+        [
+          "rendersPreexisted",
+          () =>
+            plan.rollbackBaseline.find(
+              (baseline) => baseline.path === "renders",
+            )?.existed === true,
+        ],
+        [
+          "rendersKept",
+          () => fs.existsSync(path.join(untouched.root, "renders")),
+        ],
+        [
+          "legacyUntouched",
+          () => equalFiles(before, legacyFiles(untouched.root)),
+        ],
+        [
+          "secondRollbackRefused",
+          () => throws(() => importer.rollback(), "Nothing was rolled back"),
+        ],
+      ]),
+      {
+        fingerprint: true,
+        automovieGone: true,
+        sourceGone: true,
+        generatedGone: true,
+        rendersPreexisted: true,
+        rendersKept: true,
+        legacyUntouched: true,
+        secondRollbackRefused: true,
+      },
     );
   } catch (error) {
     untouchedFailure = { error };
@@ -637,14 +709,26 @@ export const test_mcp_production_legacy_import = (): void => {
       shots: [{ ...shot, performances: [] }],
     });
     const actorlessPlan = new AutoMovieLegacyImporter(actorless.root).plan();
-    TestValidator.predicate(
+    TestValidator.equals(
       "an actorless legacy shot does not misrepresent its camera as a scene subject",
-      actorlessPlan.shotContractDrafts[0]?.camera.requiredSubjects.length ===
-        0 &&
-        actorlessPlan.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "legacy-camera-subject-reconstruction-required",
-        ),
+      namedFacts([
+        [
+          "noSubjects",
+          () =>
+            actorlessPlan.shotContractDrafts[0]?.camera.requiredSubjects
+              .length === 0,
+        ],
+        [
+          "reconstructionAsked",
+          () =>
+            actorlessPlan.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code ===
+                "legacy-camera-subject-reconstruction-required",
+            ),
+        ],
+      ]),
+      { noSubjects: true, reconstructionAsked: true },
     );
   } catch (error) {
     actorlessFailure = { error };
@@ -665,12 +749,21 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     AutoMovieProject.open(empty);
     const plan = new AutoMovieLegacyImporter(empty).plan();
-    TestValidator.predicate(
+    TestValidator.equals(
       "an empty legacy project gets a one-frame conservative draft",
-      plan.productionDraft.targetRuntimeSeconds === 1 / 30 &&
-        plan.productionDraft.visualDelivery === "deterministic" &&
-        plan.shotContractDrafts.length === 0 &&
-        plan.sourceTodos.length === 0,
+      namedFacts([
+        [
+          "oneFrame",
+          () => plan.productionDraft.targetRuntimeSeconds === 1 / 30,
+        ],
+        [
+          "deterministic",
+          () => plan.productionDraft.visualDelivery === "deterministic",
+        ],
+        ["noShots", () => plan.shotContractDrafts.length === 0],
+        ["noTodos", () => plan.sourceTodos.length === 0],
+      ]),
+      { oneFrame: true, deterministic: true, noShots: true, noTodos: true },
     );
   } catch (error) {
     emptyFailure = { error };
@@ -691,17 +784,28 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     AutoMovieProject.open(missingAsset).registerAsset("assets/missing.bin");
     const plan = new AutoMovieLegacyImporter(missingAsset).plan();
-    TestValidator.predicate(
+    TestValidator.equals(
       "a registered absent asset stays explicit",
-      plan.inventory.some(
-        (entry) =>
-          entry.path === "assets/missing.bin" &&
-          entry.digest === null &&
-          entry.bytes === 0,
-      ) &&
-        plan.diagnostics.some(
-          (diagnostic) => diagnostic.code === "legacy-asset-missing",
-        ),
+      namedFacts([
+        [
+          "inventoried",
+          () =>
+            plan.inventory.some(
+              (entry) =>
+                entry.path === "assets/missing.bin" &&
+                entry.digest === null &&
+                entry.bytes === 0,
+            ),
+        ],
+        [
+          "diagnosed",
+          () =>
+            plan.diagnostics.some(
+              (diagnostic) => diagnostic.code === "legacy-asset-missing",
+            ),
+        ],
+      ]),
+      { inventoried: true, diagnosed: true },
     );
   } catch (error) {
     missingAssetFailure = { error };
@@ -794,13 +898,20 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "legacy planning cleanup preserves standalone and combined failures",
-      standaloneCaught === standaloneCleanupFailure &&
-        aggregateContainsExactly(combinedCaught, [
-          planningFailure,
-          combinedCleanupFailure,
-        ]),
+      namedFacts([
+        ["standalone", () => standaloneCaught === standaloneCleanupFailure],
+        [
+          "combined",
+          () =>
+            aggregateContainsExactly(combinedCaught, [
+              planningFailure,
+              combinedCleanupFailure,
+            ]),
+        ],
+      ]),
+      { standalone: true, combined: true },
     );
   } catch (error) {
     planningCleanupFailure = { error };
@@ -981,15 +1092,28 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "legacy import staging cleanup retains publication and cleanup failures",
-      aggregateContainsExactly(caught, [
-        publicationFailure,
-        stagingCleanupFailure,
-      ]) &&
-        fs
-          .readdirSync(importCleanupFailure.root)
-          .every((entry) => entry.startsWith(".automovie-import-") === false),
+      namedFacts([
+        [
+          "bothFailures",
+          () =>
+            aggregateContainsExactly(caught, [
+              publicationFailure,
+              stagingCleanupFailure,
+            ]),
+        ],
+        [
+          "noStagingResidue",
+          () =>
+            fs
+              .readdirSync(importCleanupFailure.root)
+              .every(
+                (entry) => entry.startsWith(".automovie-import-") === false,
+              ),
+        ],
+      ]),
+      { bothFailures: true, noStagingResidue: true },
     );
   } catch (error) {
     importCleanupFailureDisposal = { error };
@@ -1180,10 +1304,20 @@ export const test_mcp_production_legacy_import = (): void => {
       statePath,
       `${JSON.stringify({ ...state, unexpected: true }, null, 2)}\n`,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "a changed import marker refuses idempotent apply and rollback",
-      throws(() => importer.apply(), "different or incomplete import") &&
-        throws(() => importer.rollback(), "changed after import"),
+      namedFacts([
+        [
+          "applyRefused",
+          () =>
+            throws(() => importer.apply(), "different or incomplete import"),
+        ],
+        [
+          "rollbackRefused",
+          () => throws(() => importer.rollback(), "changed after import"),
+        ],
+      ]),
+      { applyRefused: true, rollbackRefused: true },
     );
   } catch (error) {
     tamperedStateFailure = { error };
@@ -1231,20 +1365,38 @@ export const test_mcp_production_legacy_import = (): void => {
     const plan = importer.plan();
     importer.apply();
     fs.writeFileSync(path.join(sourceRoot, "new-work.ts"), "new work");
-    TestValidator.predicate(
+    TestValidator.equals(
       "a changed pre-existing source baseline refuses rollback",
-      plan.rollbackBaseline[0]?.existed === true &&
-        plan.rollbackBaseline[0].files.some(
-          (entry) => entry.path === "src/preserved.ts",
-        ) &&
-        throws(() => importer.rollback(), "changed after import"),
+      namedFacts([
+        ["existed", () => plan.rollbackBaseline[0]?.existed === true],
+        [
+          "baselineFile",
+          () =>
+            plan.rollbackBaseline[0]?.files.some(
+              (entry) => entry.path === "src/preserved.ts",
+            ) === true,
+        ],
+        [
+          "rollbackRefused",
+          () => throws(() => importer.rollback(), "changed after import"),
+        ],
+      ]),
+      { existed: true, baselineFile: true, rollbackRefused: true },
     );
     fs.rmSync(path.join(sourceRoot, "new-work.ts"));
     importer.rollback();
-    TestValidator.predicate(
+    TestValidator.equals(
       "an unchanged pre-existing source baseline survives rollback",
-      fs.readFileSync(sourceFile, "utf8") ===
-        "export const preserved = true;\n" && fs.existsSync(sourceRoot),
+      namedFacts([
+        [
+          "content",
+          () =>
+            fs.readFileSync(sourceFile, "utf8") ===
+            "export const preserved = true;\n",
+        ],
+        ["rootKept", () => fs.existsSync(sourceRoot)],
+      ]),
+      { content: true, rootKept: true },
     );
   } catch (error) {
     preexistingSourceFailure = { error };
@@ -1317,13 +1469,27 @@ export const test_mcp_production_legacy_import = (): void => {
     });
     let deniedImportStateLstatFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "an unexpected import-state lstat denial propagates through apply and rollback",
-        throws(() => importer.apply(), "injected import-state lstat denial") &&
-          throws(
-            () => importer.rollback(),
-            "injected import-state lstat denial",
-          ),
+        namedFacts([
+          [
+            "apply",
+            () =>
+              throws(
+                () => importer.apply(),
+                "injected import-state lstat denial",
+              ),
+          ],
+          [
+            "rollback",
+            () =>
+              throws(
+                () => importer.rollback(),
+                "injected import-state lstat denial",
+              ),
+          ],
+        ]),
+        { apply: true, rollback: true },
       );
     } catch (error) {
       deniedImportStateLstatFailure = { error };
@@ -1366,10 +1532,22 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     fs.rmdirSync(original);
     fs.mkdirSync(replacement);
-    TestValidator.predicate(
+    TestValidator.equals(
       "changed empty-directory topology refuses rollback",
-      plan.rollbackBaseline[0]?.directories.includes("src/original-empty") ===
-        true && throws(() => importer.rollback(), "changed after import"),
+      namedFacts([
+        [
+          "baselineDirectory",
+          () =>
+            plan.rollbackBaseline[0]?.directories.includes(
+              "src/original-empty",
+            ) === true,
+        ],
+        [
+          "rollbackRefused",
+          () => throws(() => importer.rollback(), "changed after import"),
+        ],
+      ]),
+      { baselineDirectory: true, rollbackRefused: true },
     );
     fs.rmdirSync(replacement);
     fs.mkdirSync(original);
@@ -1512,12 +1690,26 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.rmSync;
     let rollbackHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "a partial rollback failure restores the complete applied state",
-        throws(() => importer.rollback(), "state was restored") &&
-          fs.existsSync(path.join(rollbackFailure.root, ".automovie")) &&
-          importer.apply().status === "unchanged" &&
-          quarantineCleanupDenied,
+        namedFacts([
+          [
+            "rollbackRefused",
+            () => throws(() => importer.rollback(), "state was restored"),
+          ],
+          [
+            "stateKept",
+            () => fs.existsSync(path.join(rollbackFailure.root, ".automovie")),
+          ],
+          ["reapplyUnchanged", () => importer.apply().status === "unchanged"],
+          ["quarantineDenied", () => quarantineCleanupDenied],
+        ]),
+        {
+          rollbackRefused: true,
+          stateKept: true,
+          reapplyUnchanged: true,
+          quarantineDenied: true,
+        },
       );
     } catch (error) {
       rollbackHookFailure = { error };
@@ -1550,10 +1742,18 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a restored import remains safely roll-backable",
-      importer.rollback().status === "rolled-back" &&
-        fs.existsSync(path.join(rollbackFailure.root, ".automovie")) === false,
+      namedFacts([
+        ["rolledBack", () => importer.rollback().status === "rolled-back"],
+        [
+          "stateGone",
+          () =>
+            fs.existsSync(path.join(rollbackFailure.root, ".automovie")) ===
+            false,
+        ],
+      ]),
+      { rolledBack: true, stateGone: true },
     );
   } catch (error) {
     rollbackFailureDisposal = { error };
@@ -1982,11 +2182,14 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.readFileSync(reappliedLock, "utf8") === reappliedToken;
     releaseCommitLock(reappliedLock, reappliedToken);
     const fresh = AutoMovieProductionProject.open(incarnationRace.root);
-    TestValidator.predicate(
+    TestValidator.equals(
       "a retired rollback lock owner cannot cross re-apply ABA",
-      freshReappliedLock &&
-        retiredOwnerPreservesFreshLock &&
-        fresh.manifest().importedLegacy?.revision === 2,
+      namedFacts([
+        ["freshLock", () => freshReappliedLock],
+        ["retiredOwnerHarmless", () => retiredOwnerPreservesFreshLock],
+        ["revision", () => fresh.manifest().importedLegacy?.revision === 2],
+      ]),
+      { freshLock: true, retiredOwnerHarmless: true, revision: true },
     );
   } catch (error) {
     incarnationRaceFailure = { error };
@@ -2037,10 +2240,19 @@ export const test_mcp_production_legacy_import = (): void => {
       ),
       "{bad",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "malformed applied state is treated as an incomplete import",
-      throws(() => importer.apply(), "different or incomplete") &&
-        throws(() => importer.rollback(), "changed after import"),
+      namedFacts([
+        [
+          "applyRefused",
+          () => throws(() => importer.apply(), "different or incomplete"),
+        ],
+        [
+          "rollbackRefused",
+          () => throws(() => importer.rollback(), "changed after import"),
+        ],
+      ]),
+      { applyRefused: true, rollbackRefused: true },
     );
   } catch (error) {
     malformedAppliedStateFailure = { error };
@@ -2088,12 +2300,25 @@ export const test_mcp_production_legacy_import = (): void => {
     );
     const link = path.join(linkedParent, "project");
     fs.symlinkSync(linkedRoot.root, link, "junction");
-    TestValidator.predicate(
+    TestValidator.equals(
       "apply validates a physical root before creating its resident lock",
-      throws(
-        () => new AutoMovieLegacyImporter(link).apply(),
-        "physical, dedicated",
-      ) && fs.existsSync(path.join(linkedRoot.root, "revision.lock")) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(
+              () => new AutoMovieLegacyImporter(link).apply(),
+              "physical, dedicated",
+            ),
+        ],
+        [
+          "noLock",
+          () =>
+            fs.existsSync(path.join(linkedRoot.root, "revision.lock")) ===
+            false,
+        ],
+      ]),
+      { refused: true, noLock: true },
     );
   } catch (error) {
     linkedRootFailure = { error };
@@ -2158,20 +2383,42 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           "root replacement after namespace acquisition is detected before import",
-          throws(
-            () =>
-              new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
-            // Whichever fence catches it, the refusal names the root identity.
-            // The claim is that the swap is caught before any import writes, and
-            // the absent resident lock below is what proves that.
-            "root identity",
-          ) &&
-            fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
-              false &&
-            namespaceLocks.length === 2 &&
-            namespaceLocks.every((file) => fs.existsSync(file) === false),
+          namedFacts([
+            [
+              // Whichever fence catches it, the refusal names the root
+              // identity. The claim is that the swap is caught before any
+              // import writes, and the absent resident lock below proves it.
+              "refused",
+              () =>
+                throws(
+                  () =>
+                    new AutoMovieLegacyImporter(
+                      replacedDuringAcquire.root,
+                    ).apply(),
+                  "root identity",
+                ),
+            ],
+            [
+              "noResidentLock",
+              () =>
+                fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
+                false,
+            ],
+            ["twoNamespaceLocks", () => namespaceLocks.length === 2],
+            [
+              "namespaceLocksReleased",
+              () =>
+                namespaceLocks.every((file) => fs.existsSync(file) === false),
+            ],
+          ]),
+          {
+            refused: true,
+            noResidentLock: true,
+            twoNamespaceLocks: true,
+            namespaceLocksReleased: true,
+          },
         );
       } catch (error) {
         acquireRootSwapRecoveryFailure = { error };
@@ -2293,12 +2540,22 @@ export const test_mcp_production_legacy_import = (): void => {
       const retryToken = acquireCommitLock(residentLock);
       let residentLockFailure: ILegacyImportFixtureFailure | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           "the replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
-          retryToken !== parkedToken &&
-            fs.readFileSync(replacementLock, "utf8") === retryToken &&
-            fs.existsSync(path.join(residentReplacement, ".automovie")) ===
-              false,
+          namedFacts([
+            ["freshToken", () => retryToken !== parkedToken],
+            [
+              "lockHoldsToken",
+              () => fs.readFileSync(replacementLock, "utf8") === retryToken,
+            ],
+            [
+              "noImportState",
+              () =>
+                fs.existsSync(path.join(residentReplacement, ".automovie")) ===
+                false,
+            ],
+          ]),
+          { freshToken: true, lockHoldsToken: true, noImportState: true },
         );
       } catch (error) {
         residentLockFailure = { error };
@@ -2442,10 +2699,16 @@ export const test_mcp_production_legacy_import = (): void => {
       const retryToken = acquireCommitLock(residentLock);
       let residentLockFailure2: ILegacyImportFixtureFailure | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           "the rollback replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
-          retryToken !== parkedToken &&
-            fs.readFileSync(replacementLock, "utf8") === retryToken,
+          namedFacts([
+            ["freshToken", () => retryToken !== parkedToken],
+            [
+              "lockHoldsToken",
+              () => fs.readFileSync(replacementLock, "utf8") === retryToken,
+            ],
+          ]),
+          { freshToken: true, lockHoldsToken: true },
         );
       } catch (error) {
         residentLockFailure2 = { error };
@@ -2546,12 +2809,20 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.openSync;
     let revisionRaceCleanupFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "a changing resident revision cannot produce a mixed import plan",
-        throws(
-          () => new AutoMovieLegacyImporter(revisionRace.root).plan(),
-          "changed physical identity",
-        ) && changed,
+        namedFacts([
+          [
+            "refused",
+            () =>
+              throws(
+                () => new AutoMovieLegacyImporter(revisionRace.root).plan(),
+                "changed physical identity",
+              ),
+          ],
+          ["changed", () => changed],
+        ]),
+        { refused: true, changed: true },
       );
     } catch (error) {
       revisionRaceCleanupFailure = { error };
@@ -2627,12 +2898,23 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.closeSync;
     let revisionAfterReadHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "a revision changed after its descriptor read cannot bless a mixed import plan",
-        throws(
-          () => new AutoMovieLegacyImporter(revisionAfterReadRace.root).plan(),
-          "revision changed",
-        ) && changedAfterRead,
+        namedFacts([
+          [
+            "refused",
+            () =>
+              throws(
+                () =>
+                  new AutoMovieLegacyImporter(
+                    revisionAfterReadRace.root,
+                  ).plan(),
+                "revision changed",
+              ),
+          ],
+          ["changedAfterRead", () => changedAfterRead],
+        ]),
+        { refused: true, changedAfterRead: true },
       );
     } catch (error) {
       revisionAfterReadHookFailure = { error };
@@ -2962,12 +3244,20 @@ export const test_mcp_production_legacy_import = (): void => {
       }) as typeof fs.openSync;
       let openSyncFailure: ILegacyImportFixtureFailure | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           `resident lock mutation ${lockMutation} aborts legacy apply`,
-          throws(
-            () => new AutoMovieLegacyImporter(changingLock.root).apply(),
-            "changed during import apply",
-          ) && changed,
+          namedFacts([
+            [
+              "refused",
+              () =>
+                throws(
+                  () => new AutoMovieLegacyImporter(changingLock.root).apply(),
+                  "changed during import apply",
+                ),
+            ],
+            ["changed", () => changed],
+          ]),
+          { refused: true, changed: true },
         );
       } catch (error) {
         openSyncFailure = { error };
@@ -3035,9 +3325,16 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.writeFileSync;
     let writeFileSyncFailure3: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "rollback verifies the exact resident lock token",
-        throws(() => importer.rollback(), "changed after import") && corrupted,
+        namedFacts([
+          [
+            "refused",
+            () => throws(() => importer.rollback(), "changed after import"),
+          ],
+          ["corrupted", () => corrupted],
+        ]),
+        { refused: true, corrupted: true },
       );
     } catch (error) {
       writeFileSyncFailure3 = { error };

@@ -416,11 +416,11 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "13c63e6d75ef92f41135544faa6fa11d727408cb006e873383ec1ba75a496951",
-              tokens: 14493,
+                "92745902085afed1b104c57a7f7989ed4ddcefb9493263f9aec1dc7432319791",
+              tokens: 14962,
             },
             tryDigest:
-              "5fe9eb32d42e912a39bd6f758fc89e91db62014d39ab111589290a43a2b8f71c",
+              "89f1220d5f2cb82d4469d986d0deb495d12461e556b4463bee5429a07320ff51",
             tryStatements: 296,
           },
           {
@@ -458,11 +458,11 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 6,
             substantive: {
               digest:
-                "0bc133ff458d73e7343d0858053048ecf278d48d799bd13057d91517dc097101",
-              tokens: 1475,
+                "9653c314f00c587996293448b7060525cf98a984d06a3c5c950bfb2b4ad32dc9",
+              tokens: 1506,
             },
             tryDigest:
-              "a96eca1531c7c98e20b001f6213a0da453796ae682086882c7e2862e3c827fa2",
+              "c068db4d9cedf910fa38a9633c753df961de282375b746f46492c6c1d15168ed",
             tryStatements: 20,
           },
           {

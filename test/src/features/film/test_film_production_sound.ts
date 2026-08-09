@@ -256,17 +256,33 @@ export const test_film_production_sound = (): void => {
     contracts: new Map([["volley-shot", contract()]]),
     compiled: new Map([["volley-shot", source]]),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "trimmed events are omitted while every audible event stays frame-bound",
-    plan.events.length === 6 &&
-      plan.events.every(
-        (event) =>
-          event.frame === Math.round(event.timeSeconds * plan.fps) &&
-          event.attenuation > 0 &&
-          event.attenuation <= 1 &&
-          event.pan >= -1 &&
-          event.pan <= 1,
-      ),
+    namedFacts([
+      ["trimmedOmitted", () => plan.events.length === 6],
+      [
+        "framesRounded",
+        () =>
+          plan.events.every(
+            (event) => event.frame === Math.round(event.timeSeconds * plan.fps),
+          ),
+      ],
+      ["audible", () => plan.events.every((event) => event.attenuation > 0)],
+      [
+        "attenuationCapped",
+        () => plan.events.every((event) => event.attenuation <= 1),
+      ],
+      ["panNotPastLeft", () => plan.events.every((event) => event.pan >= -1)],
+      ["panNotPastRight", () => plan.events.every((event) => event.pan <= 1)],
+    ]),
+    {
+      trimmedOmitted: true,
+      framesRounded: true,
+      audible: true,
+      attenuationCapped: true,
+      panNotPastLeft: true,
+      panNotPastRight: true,
+    },
   );
   TestValidator.equals(
     "camera-relative emitters cover nodes, formations and instance sets",
@@ -280,10 +296,13 @@ export const test_film_production_sound = (): void => {
   const formationEvents = plan.events.filter(
     (event) => event.event === "arrival" || event.event === "reveal",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "formation emitters sample compact motion at each event time",
-    formationEvents[0]?.emitter.x === -1.75 &&
-      formationEvents[1]?.emitter.x === 2,
+    namedFacts([
+      ["arrivalEmitterPlaced", () => formationEvents[0]?.emitter.x === -1.75],
+      ["revealEmitterPlaced", () => formationEvents[1]?.emitter.x === 2],
+    ]),
+    { arrivalEmitterPlaced: true, revealEmitterPlaced: true },
   );
   const dialogue = new Map([["line", Float32Array.from([0.5])]]);
   const first = renderProductionSound({ plan, dialogue });

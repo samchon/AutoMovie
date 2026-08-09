@@ -4,6 +4,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 /** Repository root, four levels above `test/src/features/cli`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -279,29 +281,67 @@ const exerciseKokoroOverridePolicy = async (): Promise<void> => {
   });
   const completedOrder = "install-0,install-1,operation,restore-0,restore-1";
   const setupOrder = "install-0,install-1,restore-0,restore-1";
-  TestValidator.predicate(
+  TestValidator.equals(
     "Kokoro override policy rolls back partial setup and preserves every failure",
-    success.output === "loaded runtime" &&
-      success.caught === undefined &&
-      success.order.join(",") === completedOrder &&
-      setupOnly.output === undefined &&
-      setupOnly.caught === setupFailure &&
-      setupOnly.order.join(",") === setupOrder &&
-      operationOnly.caught === operationFailure &&
-      operationOnly.order.join(",") === completedOrder &&
-      standaloneRestoration.caught === firstRestorationFailure &&
-      standaloneRestoration.order.join(",") === completedOrder &&
-      aggregateContainsExactly(multipleRestorations.caught, [
-        firstRestorationFailure,
-        secondRestorationFailure,
-      ]) &&
-      multipleRestorations.order.join(",") === completedOrder &&
-      aggregateContainsExactly(combined.caught, [
-        operationFailure,
-        firstRestorationFailure,
-        secondRestorationFailure,
-      ]) &&
-      combined.order.join(",") === completedOrder,
+    namedFacts([
+      ["successOutput", () => success.output === "loaded runtime"],
+      ["successSilent", () => success.caught === undefined],
+      ["successOrder", () => success.order.join(",") === completedOrder],
+      ["setupOnlyWithheldOutput", () => setupOnly.output === undefined],
+      ["setupOnlyPreserved", () => setupOnly.caught === setupFailure],
+      ["setupOnlyRolledBack", () => setupOnly.order.join(",") === setupOrder],
+      ["operationPreserved", () => operationOnly.caught === operationFailure],
+      [
+        "operationOrder",
+        () => operationOnly.order.join(",") === completedOrder,
+      ],
+      [
+        "singleRestorationPreserved",
+        () => standaloneRestoration.caught === firstRestorationFailure,
+      ],
+      [
+        "singleRestorationOrder",
+        () => standaloneRestoration.order.join(",") === completedOrder,
+      ],
+      [
+        "multipleRestorationsAggregated",
+        () =>
+          aggregateContainsExactly(multipleRestorations.caught, [
+            firstRestorationFailure,
+            secondRestorationFailure,
+          ]),
+      ],
+      [
+        "multipleRestorationsOrder",
+        () => multipleRestorations.order.join(",") === completedOrder,
+      ],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.caught, [
+            operationFailure,
+            firstRestorationFailure,
+            secondRestorationFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === completedOrder],
+    ]),
+    {
+      successOutput: true,
+      successSilent: true,
+      successOrder: true,
+      setupOnlyWithheldOutput: true,
+      setupOnlyPreserved: true,
+      setupOnlyRolledBack: true,
+      operationPreserved: true,
+      operationOrder: true,
+      singleRestorationPreserved: true,
+      singleRestorationOrder: true,
+      multipleRestorationsAggregated: true,
+      multipleRestorationsOrder: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+    },
   );
 };
 

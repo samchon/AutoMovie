@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const camera = (
   translation = { x: 0, y: 1.44, z: 5 },
@@ -97,10 +97,13 @@ export const test_film_camera_move_grammar = (): void => {
     dolly.tracks[0]!.times.length,
     9,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "push-in spans the shot (0 → 2 s)",
-    nclose(dolly.tracks[0]!.times[0]!, 0) &&
-      nclose(dolly.tracks[0]!.times[8]!, 2),
+    namedFacts([
+      ["startsAtShotOpen", () => nclose(dolly.tracks[0]!.times[0]!, 0)],
+      ["endsAtShotClose", () => nclose(dolly.tracks[0]!.times[8]!, 2)],
+    ]),
+    { startsAtShotOpen: true, endsAtShotClose: true },
   );
   TestValidator.predicate(
     "dolly from 1.25×d",

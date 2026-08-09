@@ -15,7 +15,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM, joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -129,9 +129,18 @@ export const test_film_gait_phase_pipeline = (): void => {
     motions: [hero],
   });
   const heroEnd = end.actors.find((a) => a.node === "hero")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "resolveBeatEnd reads a live stride phase off the real ladder",
-    heroEnd.gaitPhase !== null && nclose(heroEnd.gaitPhase, 0.5),
+    namedFacts([
+      ["phaseIsLive", () => heroEnd.gaitPhase !== null],
+      // the null check is restated because the earlier fact's narrowing of the
+      // nullable `gaitPhase` property does not reach inside this closure.
+      [
+        "phaseIsHalfStride",
+        () => heroEnd.gaitPhase !== null && nclose(heroEnd.gaitPhase, 0.5),
+      ],
+    ]),
+    { phaseIsLive: true, phaseIsHalfStride: true },
   );
 
   const atEnd = sampleMotion(hero, 3.5).pose;

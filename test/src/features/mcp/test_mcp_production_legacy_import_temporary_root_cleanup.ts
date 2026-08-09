@@ -272,7 +272,7 @@ const CONTRACT = {
         "letemptyFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "79e53b23f835ae508232d5e2fabc5749a0c53ba8275e1fbe57921b1178e2dc7c",
+        "6be077bbc8a48e91eb6a9874e97bcd6c59e77c8b63ec9915f2045d2a53edf3e0",
     },
     {
       catchBodies: ["missingAssetFailure={error};", "throwerror;"],
@@ -287,7 +287,7 @@ const CONTRACT = {
         "letmissingAssetFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "92c8421f93e92b18dc78f391614d7aeb2a3a356445d9dc5bf753310423033d4d",
+        "714cf7c91a9062ad28d58e24d6a6846c7e49cbc9cd0c127dfeee37b4e0922f2f",
     },
     {
       catchBodies: ["rootFailure={error};", "throwerror;"],

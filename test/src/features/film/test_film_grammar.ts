@@ -236,19 +236,34 @@ export const test_film_grammar = (): void => {
     subjects: [subject("hero", point(0.5, 0, 0), point(-0.5, 0, 0))],
   });
   const unsuppressed = codes([movingRight, movingLeft]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "same-size shallow cut and screen reversal both report",
-    unsuppressed.includes("grammar-jump-cut") &&
-      unsuppressed.includes("grammar-screen-direction"),
+    namedFacts([
+      ["jumpCutReported", () => unsuppressed.includes("grammar-jump-cut")],
+      [
+        "screenDirectionReported",
+        () => unsuppressed.includes("grammar-screen-direction"),
+      ],
+    ]),
+    { jumpCutReported: true, screenDirectionReported: true },
   );
   const suppressed = codes([
     movingRight,
     { ...movingLeft, styleIntent: ["jump-cut"] },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "jump-cut style intent suppresses only its exact warning",
-    suppressed.includes("grammar-jump-cut") === false &&
-      suppressed.includes("grammar-screen-direction"),
+    namedFacts([
+      [
+        "jumpCutSuppressed",
+        () => suppressed.includes("grammar-jump-cut") === false,
+      ],
+      [
+        "screenDirectionKept",
+        () => suppressed.includes("grammar-screen-direction"),
+      ],
+    ]),
+    { jumpCutSuppressed: true, screenDirectionKept: true },
   );
   const followedRight = shot("followed-right", {
     camera: {
@@ -461,15 +476,28 @@ export const test_film_grammar = (): void => {
   const diagnostics = analyzeFilmGrammar({
     shots: [wrongSize, { ...displaced, duration: 3 }],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "every diagnostic carries fact impact and recovery",
-    diagnostics.some((diagnostic) => diagnostic.code === "grammar-pacing") &&
-      diagnostics.every(
-        (diagnostic) =>
-          diagnostic.fact.length !== 0 &&
-          diagnostic.impact.length !== 0 &&
-          diagnostic.recovery.length !== 0,
-      ),
+    namedFacts([
+      [
+        "pacingReported",
+        () =>
+          diagnostics.some(
+            (diagnostic) => diagnostic.code === "grammar-pacing",
+          ),
+      ],
+      [
+        "allCarryGuidance",
+        () =>
+          diagnostics.every(
+            (diagnostic) =>
+              diagnostic.fact.length !== 0 &&
+              diagnostic.impact.length !== 0 &&
+              diagnostic.recovery.length !== 0,
+          ),
+      ],
+    ]),
+    { pacingReported: true, allCarryGuidance: true },
   );
   const notes = grammarDiagnosticsToReviewNotes({
     beat: "beat-grammar",

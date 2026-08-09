@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 /** Where the stone sits in the thrower's hand, and where it is staged. */
 const HAND: IAutoMovieVector3 = { x: -0.71, y: 1.35, z: 0 };
@@ -200,10 +200,20 @@ export const test_film_beat_end_launched_prop = (): void => {
     shot: shotOf(5, [HELD, FLIGHT]),
     motions: [],
   }).actors.find((actor) => actor.node === "stone")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a landed prop reports no residual velocity",
-    landed.rootVelocity !== null &&
-      vclose(landed.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
+    namedFacts([
+      ["velocityReported", () => landed.rootVelocity !== null],
+      [
+        "velocityZero",
+        // The null check is restated because the previous fact's narrowing of
+        // the nullable field does not reach inside this closure.
+        () =>
+          landed.rootVelocity !== null &&
+          vclose(landed.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
+      ],
+    ]),
+    { velocityReported: true, velocityZero: true },
   );
 
   // 7. disjoint channel authorities compose into one transform.
@@ -224,9 +234,19 @@ export const test_film_beat_end_launched_prop = (): void => {
     shot: shotOf(5, [JUST_STARTED]),
     motions: [],
   }).actors.find((actor) => actor.node === "stone")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "an authority starting at beat end has no prior velocity sample",
-    justStarted.rootVelocity !== null &&
-      vclose(justStarted.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
+    namedFacts([
+      ["velocityReported", () => justStarted.rootVelocity !== null],
+      [
+        "velocityZero",
+        // The null check is restated because the previous fact's narrowing of
+        // the nullable field does not reach inside this closure.
+        () =>
+          justStarted.rootVelocity !== null &&
+          vclose(justStarted.rootVelocity, { x: 0, y: 0, z: 0 }, 1e-9),
+      ],
+    ]),
+    { velocityReported: true, velocityZero: true },
   );
 };

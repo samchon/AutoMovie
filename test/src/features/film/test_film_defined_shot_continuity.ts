@@ -650,17 +650,24 @@ export const test_film_defined_shot_continuity = (): void => {
     secondNode.transform.translation,
     Quaternion.rotateVector(secondNode.transform.rotation, secondFoot),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "translated and rotated handoff preserves the same world foot pin",
-    vclose(secondWorldFoot, firstPin, 1e-4) &&
-      second.source.motions.every(
-        (motion) =>
-          motion.id.length !== 0 &&
-          motion.skeleton === rig.id &&
-          motion.duration === 1 &&
-          motion.loop === false &&
-          (motion.gaitCycle ?? null) !== null,
-      ),
+    namedFacts([
+      ["pinPreserved", () => vclose(secondWorldFoot, firstPin, 1e-4)],
+      [
+        "motionsWellFormed",
+        () =>
+          second.source.motions.every(
+            (motion) =>
+              motion.id.length !== 0 &&
+              motion.skeleton === rig.id &&
+              motion.duration === 1 &&
+              motion.loop === false &&
+              (motion.gaitCycle ?? null) !== null,
+          ),
+      ],
+    ]),
+    { pinPreserved: true, motionsWellFormed: true },
   );
 
   const stalePin = {
@@ -745,16 +752,26 @@ export const test_film_defined_shot_continuity = (): void => {
     speed: 0.25,
     duration: 1,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a moving first shot produces incoming world velocity at its exact cut",
-    velocityFirst.success &&
-      vclose(
-        velocityFirst.continuity.closing.actors.find(
-          (actor) => actor.node === "knightA",
-        )?.rootVelocity ?? { x: 0, y: 0, z: 0 },
-        { x: 1, y: 0, z: 0 },
-        1e-6,
-      ),
+    namedFacts([
+      ["velocityFirstCompiled", () => velocityFirst.success],
+      [
+        "velocityAtCut",
+        // the success discriminant is restated so `continuity` is reachable:
+        // the narrowing from the previous fact stops at this closure.
+        () =>
+          velocityFirst.success &&
+          vclose(
+            velocityFirst.continuity.closing.actors.find(
+              (actor) => actor.node === "knightA",
+            )?.rootVelocity ?? { x: 0, y: 0, z: 0 },
+            { x: 1, y: 0, z: 0 },
+            1e-6,
+          ),
+      ],
+    ]),
+    { velocityFirstCompiled: true, velocityAtCut: true },
   );
   if (velocityFirst.success === false) return;
   const velocityActor = velocityFirst.continuity.closing.actors.find(
@@ -772,14 +789,24 @@ export const test_film_defined_shot_continuity = (): void => {
     previous: velocityFirst.continuity.closing,
     speed: 0.25,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "the next auto stride consumes that velocity instead of fallback speed",
-    velocitySecond.success &&
-      Vector3.length(
-        sampleMotion(velocitySecond.source.motions[0]!, 1).pose.root
-          ?.translation ?? { x: 0, y: 0, z: 0 },
-      ) >=
-        0.5 - 1e-9,
+    namedFacts([
+      ["velocitySecondCompiled", () => velocitySecond.success],
+      [
+        "strideCarriesVelocity",
+        // the success discriminant is restated so `source` is reachable: the
+        // narrowing from the previous fact stops at this closure.
+        () =>
+          velocitySecond.success &&
+          Vector3.length(
+            sampleMotion(velocitySecond.source.motions[0]!, 1).pose.root
+              ?.translation ?? { x: 0, y: 0, z: 0 },
+          ) >=
+            0.5 - 1e-9,
+      ],
+    ]),
+    { velocitySecondCompiled: true, strideCarriesVelocity: true },
   );
 
   const stage = makeStagingWrite();

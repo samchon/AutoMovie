@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProjectStateHarnessCleanup } from "./test_cli_project_state";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -220,51 +221,122 @@ export const test_cli_project_state_harness_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1";
-  TestValidator.predicate(
+  TestValidator.equals(
     "project-state harness cleanup preserves failure and restoration order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === hookFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      selective.caught &&
-      aggregateContainsExactly(selective.failure, [
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      selective.message.includes("resource-0") &&
-      selective.message.includes("resource-2") &&
-      selective.message.includes("resource-1") === false &&
-      selective.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successSilent", () => success.caught === false],
+      ["successNoFailure", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === fullOrder],
+      ["primaryOnlyThrew", () => primaryOnly.caught],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneThrew", () => standalone.caught],
+      ["standalonePreserved", () => standalone.failure === hookFailure],
+      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
+      ["multipleThrew", () => multiple.caught],
+      [
+        "multipleAggregated",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
+      ["combinedThrew", () => combined.caught],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === fullOrder],
+      ["selectiveThrew", () => selective.caught],
+      [
+        "selectiveAggregated",
+        () =>
+          aggregateContainsExactly(selective.failure, [
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      ["selectiveNamesFirst", () => selective.message.includes("resource-0")],
+      ["selectiveNamesThird", () => selective.message.includes("resource-2")],
+      [
+        "selectiveOmitsClean",
+        () => selective.message.includes("resource-1") === false,
+      ],
+      [
+        "selectiveOrder",
+        () => selective.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["undefinedPrimaryThrew", () => undefinedPrimary.caught],
+      [
+        "undefinedPrimaryPreserved",
+        () => undefinedPrimary.failure === undefined,
+      ],
+      [
+        "undefinedPrimaryOrder",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneThrew", () => undefinedStandalone.caught],
+      [
+        "undefinedStandalonePreserved",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrder",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedThrew", () => undefinedCombined.caught],
+      [
+        "undefinedCombinedAggregated",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrder",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successSilent: true,
+      successNoFailure: true,
+      successOrder: true,
+      primaryOnlyThrew: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyOrder: true,
+      standaloneThrew: true,
+      standalonePreserved: true,
+      standaloneOrder: true,
+      multipleThrew: true,
+      multipleAggregated: true,
+      multipleOrder: true,
+      combinedThrew: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+      selectiveThrew: true,
+      selectiveAggregated: true,
+      selectiveNamesFirst: true,
+      selectiveNamesThird: true,
+      selectiveOmitsClean: true,
+      selectiveOrder: true,
+      undefinedPrimaryThrew: true,
+      undefinedPrimaryPreserved: true,
+      undefinedPrimaryOrder: true,
+      undefinedStandaloneThrew: true,
+      undefinedStandalonePreserved: true,
+      undefinedStandaloneOrder: true,
+      undefinedCombinedThrew: true,
+      undefinedCombinedAggregated: true,
+      undefinedCombinedOrder: true,
+    },
   );
   TestValidator.equals(
     "project-state test owns two multi-resource harness lifecycles",

@@ -384,13 +384,13 @@ export const test_mcp_production_project_invalid_root_setup_hook_cleanup =
               index: 11,
               substantive: {
                 digest:
-                  "85ec1d7266b5f93b96573acb99fe3b4d09da84ae5343fd372a559807085880cf",
-                tokens: 28,
+                  "4e6c33c91ffa74d4b11cee5ce23645a436829bcd064d2144f7dee2a51fddc6b3",
+                tokens: 59,
               },
               tryBody:
-                '{TestValidator.predicate("anexistingwritableprojectdoesnotrequirewritableparentaccess",AutoMovieProductionProject.open(fresh).root===fs.realpathSync(fresh)&&attemptedParentSiblingLock===false,);}',
+                '{TestValidator.equals("anexistingwritableprojectdoesnotrequirewritableparentaccess",namedFacts([["openedInPlace",()=>AutoMovieProductionProject.open(fresh).root===fs.realpathSync(fresh),],["noParentLock",()=>attemptedParentSiblingLock===false],]),{openedInPlace:true,noParentLock:true},);}',
               tryDigest:
-                "8f13895af5005751845cf612e842c009d9cb8b70ca2e9e190ca94f62c2e2fa69",
+                "aade965800d2b70064c125c327657f9ebd2dbba013377fb90d01cf5bccaf7b12",
               tryStatements: 1,
             },
             {

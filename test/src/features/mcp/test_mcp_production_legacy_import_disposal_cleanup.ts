@@ -281,7 +281,7 @@ const CONTRACT = {
         "letfixtureFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "5cbd92c1376ea638fadbc555537f811205bb496fb00e9e7e2b757e72521070d9",
+        "58dbae6667cdfa091f37ad67a683a71660f28eb570fb92d4701418061919757a",
     },
     {
       catchBodies: ["untouchedFailure={error};", "throwerror;"],
@@ -296,7 +296,7 @@ const CONTRACT = {
         "letuntouchedFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "c016dd073fca1f3d35ce345d09b398bca1c0e87455d23af89c5abf0f09df58fd",
+        "f41e234347dd48dc7c8d51a8ae42b6f48a07e19618ddef5d803559d630079cd2",
     },
     {
       catchBodies: ["actorlessFailure={error};", "throwerror;"],
@@ -311,7 +311,7 @@ const CONTRACT = {
         "letactorlessFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "1e6a353407fed485b03fe9504df5f288f21244a0a600f3974bd354d7188176df",
+        "57aedc5875214e8c5140edbe45ee90fa3e76d2a6c677d0ddddcf5b87e5020848",
     },
     {
       catchBodies: ["planningCleanupFailure={error};", "throwerror;"],
@@ -326,7 +326,7 @@ const CONTRACT = {
         "letplanningCleanupFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "f234868b066454d79d6e152f2e2d4896aa861f4776f2e9ed40339b104c6a58ae",
+        "ad3fff74a346da7f2ad0e9f766089a8535e90781576199574ebf666153be7d3e",
     },
     {
       catchBodies: ["collisionsFailure={error};", "throwerror;"],
@@ -371,7 +371,7 @@ const CONTRACT = {
         "letimportCleanupFailureDisposal:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "4e8efc43405866ba53cecea3cd928eb963108c84ef4cf8cc00956a4b8e0a34e2",
+        "e88db2634d2dcb8d9fba340c6859e7d6af6a41812f86e0e808266afdab899691",
     },
     {
       catchBodies: ["tamperedFailure={error};", "throwerror;"],
@@ -401,7 +401,7 @@ const CONTRACT = {
         "lettamperedStateFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "f9ee1793a23e3471bdbf4f4f0b9de394ebf947e99e82b697d890c2851631480d",
+        "fa48187840be5a37e682ad454fac0e33e3fb5953fc38f69e7c595734343473de",
     },
     {
       catchBodies: ["productionWorkFailure={error};", "throwerror;"],
@@ -431,7 +431,7 @@ const CONTRACT = {
         "letpreexistingSourceFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "5958713b4859f38b9e6511038e17239876a89c28e606aa77f5a6b4176674765f",
+        "f53e6807f2cd6d34d1aed6f00a1e622f2ccf3580d5cb11a380806e105ad5c2d5",
     },
     {
       catchBodies: ["missingPreexistingSourceFailure={error};", "throwerror;"],
@@ -461,7 +461,7 @@ const CONTRACT = {
         "letdeniedImportStateFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "681383da495f3297735679a4b407b0953cbca33f70fa52ee64cda13fecc5bf14",
+        "42011ef7de69d9537308b29d5a5925e104a6d6901b547d1d8b64982d4732a7ee",
     },
     {
       catchBodies: ["emptyDirectoryTopologyFailure={error};", "throwerror;"],
@@ -476,7 +476,7 @@ const CONTRACT = {
         "letemptyDirectoryTopologyFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "069d05b8cbf95f0c7b4634b474163178f7f7a57979c8c029e54e86308a8ad8b8",
+        "d8b901f5471a405991e2598fe6017da024ae9b2e0029d457df8942aa112f96fa",
     },
     {
       catchBodies: [
@@ -509,7 +509,7 @@ const CONTRACT = {
         "letrollbackFailureDisposal:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "5cfde0a61f8645d05ef36006881b124cf0b01a3c54ed8fbabe8986910df16e82",
+        "95ae6cf39cc448e5213ae385ce7d5a67083aefeb961bed63f43d94cd96c6ea49",
     },
     {
       catchBodies: ["incompleteRestorationFailure={error};", "throwerror;"],
@@ -572,7 +572,7 @@ const CONTRACT = {
         "letincarnationRaceFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "b20e5c89cd3f3a9a848f17fe0bad2e2876eb7413e099fbe18a2a29e0a14fc2fd",
+        "15196b340bfbc78889bf8c947b73b738d0d5e48da7d250007bf6477a2954cb8c",
     },
     {
       catchBodies: ["extraStateFailure={error};", "throwerror;"],
@@ -602,7 +602,7 @@ const CONTRACT = {
         "letmalformedAppliedStateFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "6f14d478af2bba3441a425b636f89e7592a675a752f29ee8418836e4273a65b0",
+        "91a7961fdb1ec68820443ced383b571d6a82ec9d3e2becabe345c1c94a5ed6df",
     },
     {
       catchBodies: ["activeCommitFailure={error};", "throwerror;"],
@@ -632,7 +632,7 @@ const CONTRACT = {
         "letrevisionRaceFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "42c4b968ea69bbd88d5a79ecade09eb25a4929bf28a16b772bc15816d919a759",
+        "f66acc6ecd35fd8cd44a1a438070f31c9adcdf83dca53a1812bc696448847bfa",
     },
     {
       catchBodies: ["revisionAfterReadRaceFailure={error};", "throwerror;"],
@@ -647,7 +647,7 @@ const CONTRACT = {
         "letrevisionAfterReadRaceFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "c9797afa775dd138da5574edb87f6b42742f33d21b1464693e745a0161e80aa7",
+        "c88c8cb1f6f3afe1e0652fa6e254bcb41a968aa57b0fe96b32c7e1347226f7fa",
     },
     {
       catchBodies: ["invalidRollbackBaselineFailure={error};", "throwerror;"],
@@ -737,7 +737,7 @@ const CONTRACT = {
         "letmismatchedRollbackLockFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "6a88816a6a9787e6e9389f2d01d82c4844998122a2c016e267c19d86e5adff89",
+        "69d7b5d9e372f42942508b15e5468f2e6c7c8ad56f00a84dcdec7e2789153c9c",
     },
     {
       catchBodies: ["directoryImportPlanFailure={error};", "throwerror;"],

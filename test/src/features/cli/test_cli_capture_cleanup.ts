@@ -5,6 +5,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 /** Repository root, four levels above `test/src/features/cli`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -528,25 +530,53 @@ const exerciseProductionEncoderCleanup = (): void => {
     firstCleanupFailure,
     secondCleanupFailure,
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "scaffold encoder cleanup preserves every exact failure in resource order",
-    success.caught === undefined &&
-      success.order.join(",") === "0,1" &&
-      primaryOnly.caught === primaryFailure &&
-      primaryOnly.order.join(",") === "0,1" &&
-      standaloneSingle.caught === firstCleanupFailure &&
-      standaloneSingle.order.join(",") === "0,1" &&
-      aggregateContainsExactly(standaloneMultiple.caught, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      standaloneMultiple.order.join(",") === "0,1" &&
-      aggregateContainsExactly(combined.caught, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "0,1",
+    namedFacts([
+      ["successSilent", () => success.caught === undefined],
+      ["successOrder", () => success.order.join(",") === "0,1"],
+      ["primaryOnlyPreserved", () => primaryOnly.caught === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === "0,1"],
+      [
+        "singleReleasePreserved",
+        () => standaloneSingle.caught === firstCleanupFailure,
+      ],
+      ["singleReleaseOrder", () => standaloneSingle.order.join(",") === "0,1"],
+      [
+        "multipleReleasesAggregated",
+        () =>
+          aggregateContainsExactly(standaloneMultiple.caught, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "multipleReleasesOrder",
+        () => standaloneMultiple.order.join(",") === "0,1",
+      ],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.caught, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === "0,1"],
+    ]),
+    {
+      successSilent: true,
+      successOrder: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyOrder: true,
+      singleReleasePreserved: true,
+      singleReleaseOrder: true,
+      multipleReleasesAggregated: true,
+      multipleReleasesOrder: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+    },
   );
 };
 
