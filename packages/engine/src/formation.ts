@@ -46,6 +46,43 @@ export const formationSlot = (
   formation: IAutoMovieFormationDesign,
   slot: number,
 ): IAutoMovieFormationSlot => {
+  const actor =
+    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
+  return {
+    slot,
+    node:
+      actor ??
+      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
+    actor,
+    modelRecipe: formation.modelRecipe,
+    position: formationSlotPosition(formation, slot),
+    facingDeg: formation.facingDeg,
+    motionPhase: seededValue(formation.seed, slot, 0x70686173),
+  };
+};
+
+/** What a formation needs to say where one of its slots stands. */
+export type IAutoMovieFormationPlacement = Pick<
+  IAutoMovieFormationDesign,
+  "id" | "count" | "layout" | "anchor" | "facingDeg" | "seed"
+>;
+
+/**
+ * Where one slot of a formation stands at rest, in world space.
+ *
+ * The position half of {@link formationSlot}, taken on its own because a
+ * consumer that only asks where a member is should not have to hold the hero
+ * overrides and model recipe that name it. The compiled formation carries
+ * exactly this much, so the compiler can ask about a member without reaching
+ * back for the design record beside it.
+ *
+ * A second implementation of this arithmetic is how a gate and a renderer come
+ * to disagree about where a unit is standing, so there is one.
+ */
+export const formationSlotPosition = (
+  formation: IAutoMovieFormationPlacement,
+  slot: number,
+): IAutoMovieVector3 => {
   if (
     Number.isSafeInteger(slot) === false ||
     slot < 0 ||
@@ -58,22 +95,10 @@ export const formationSlot = (
   const radians = (formation.facingDeg * Math.PI) / 180;
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
-  const actor =
-    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
   return {
-    slot,
-    node:
-      actor ??
-      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-    actor,
-    modelRecipe: formation.modelRecipe,
-    position: {
-      x: formation.anchor.x + point.x * cosine + point.z * sine,
-      y: formation.anchor.y,
-      z: formation.anchor.z - point.x * sine + point.z * cosine,
-    },
-    facingDeg: formation.facingDeg,
-    motionPhase: seededValue(formation.seed, slot, 0x70686173),
+    x: formation.anchor.x + point.x * cosine + point.z * sine,
+    y: formation.anchor.y,
+    z: formation.anchor.z - point.x * sine + point.z * cosine,
   };
 };
 
@@ -278,7 +303,7 @@ export const composeFormationHeroTransform = (
  * exact point, so an existing production compiles unchanged.
  */
 const dressedFormationPoint = (
-  formation: IAutoMovieFormationDesign,
+  formation: IAutoMovieFormationPlacement,
   slot: number,
   point: { x: number; z: number },
 ): { x: number; z: number } => {
@@ -294,7 +319,7 @@ const dressedFormationPoint = (
 };
 
 const localFormationPoint = (
-  formation: IAutoMovieFormationDesign,
+  formation: IAutoMovieFormationPlacement,
   slot: number,
 ): { x: number; z: number } => {
   const layout = formation.layout;

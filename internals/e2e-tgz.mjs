@@ -1627,6 +1627,7 @@ if (
   requireCurrentAutoMovieProjectState,
 } from "@automovie/cli";
 import {
+  formationSlotPosition,
   isWalkable,
   sampleFormationMotion,
   transformFormationPoint,
@@ -1644,16 +1645,13 @@ for (const [id, shot] of state.generated.shots) {
     const own = cues.filter((cue) => cue.formation === formation.id);
     const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
     const resting = own.length === 0 || Math.min(...times) > 0;
-    // The four ground corners of the compiled bounds, the same shape the
-    // compiler judges: carried as points rather than re-fitted into a box that
-    // would be bigger than the unit once it is turned.
-    const { min, max } = formation.bounds;
-    const corners = [
-      { x: min.x, y: min.y, z: min.z },
-      { x: max.x, y: min.y, z: min.z },
-      { x: max.x, y: min.y, z: max.z },
-      { x: min.x, y: min.y, z: max.z },
-    ];
+    // Members, the same thing the compiler judges. The box around a formation
+    // has corners no member stands on, so reading those would report a place
+    // the unit is not. Every slot is asked here because a shipped starter is
+    // small enough to ask all of them.
+    const corners = Array.from({ length: formation.count }, (_, slot) =>
+      formationSlotPosition(formation, slot),
+    );
     for (const time of [...(resting ? [null] : []), ...times]) {
       // One sampled state per time, not one per corner: the four corners of a
       // unit are read at the same instant, and asking the engine four times for
@@ -1672,7 +1670,7 @@ for (const [id, shot] of state.generated.shots) {
       ))
         if (isWalkable(space, corner.x, corner.z) === false)
           throw new Error(
-            \`shot "\${id}" puts formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
+            \`shot "\${id}" puts a member of formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
               \` \${time === null ? "where it stands" : \`at \${time}s\`}, which the ground it staged does not carry.\`,
           );
       checked++;

@@ -1,5 +1,5 @@
+import type { IAutoMovieFormationPlacement } from "@automovie/engine";
 import type {
-  IAutoMovieCompiledFormation,
   IAutoMovieDiagnostic,
   IAutoMovieFormationMotion,
   IAutoMovieSpace,
@@ -29,20 +29,26 @@ const field = (half: number): IAutoMovieSpace => ({
   walkable: ["ground"],
 });
 
-type IUnit = Pick<
-  IAutoMovieCompiledFormation,
-  "id" | "bounds" | "anchor" | "facingDeg"
->;
+type IUnit = IAutoMovieFormationPlacement;
 
-/** One compiled unit reaching a stated distance from the origin. */
+/**
+ * One unit of four members, squared off a stated reach from its anchor.
+ *
+ * Members rather than a box: a formation extends forward from its anchor, and
+ * what the gate measures is where a slot really stands.
+ */
 const unit = (reach: number, id = "army"): IUnit => ({
   id,
-  bounds: {
-    min: { x: -reach, y: 0, z: -reach },
-    max: { x: reach, y: 0, z: reach },
+  count: 4,
+  layout: {
+    kind: "line",
+    files: 2,
+    ranks: 2,
+    spacing: { lateral: 2 * reach, depth: reach },
   },
   anchor: { x: 0, y: 0, z: 0 },
   facingDeg: 0,
+  seed: 0,
 });
 
 /** One cue carrying a unit a stated distance along +z between two times. */
@@ -109,15 +115,87 @@ const carry = (
   },
 });
 
-/** One compiled unit far longer than it is wide, so a turn sweeps. */
-const lance = (halfLength: number, halfWidth: number): IUnit => ({
+/** One unit far longer than it is wide, so a turn sweeps its far rank. */
+const lance = (length: number, halfWidth: number): IUnit => ({
   id: "army",
-  bounds: {
-    min: { x: -halfWidth, y: 0, z: -halfLength },
-    max: { x: halfWidth, y: 0, z: halfLength },
+  count: 4,
+  layout: {
+    kind: "line",
+    files: 2,
+    ranks: 2,
+    spacing: { lateral: 2 * halfWidth, depth: length },
   },
   anchor: { x: 0, y: 0, z: 0 },
   facingDeg: 0,
+  seed: 0,
+});
+
+/**
+ * One unit scattered over a disc, so its box corners hold nobody.
+ *
+ * Every member is inside `radius` of the anchor; the corners of the box around
+ * them are at `radius * sqrt(2)`, where nobody stands.
+ */
+const disc = (radius: number, count: number): IUnit => ({
+  id: "army",
+  count,
+  layout: { kind: "scatter", radius, seed: 7 },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 11,
+});
+
+/**
+ * One unit bent along an arc, so its box corners hold nobody either.
+ *
+ * Every member is exactly `radius` from the anchor, which is a circle and not
+ * the box a circle fits in.
+ */
+const bow = (radius: number, count: number): IUnit => ({
+  id: "army",
+  count,
+  layout: { kind: "arc", radius, arcDegrees: 180 },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 3,
+});
+
+/**
+ * One unit in a wedge: row `r` holds columns `-r` through `r` at depth `r`.
+ *
+ * A triangle, so the box corner at full width and no depth is the emptiest
+ * point a formation has.
+ */
+const wedge = (rows: number, spacing: number): IUnit => ({
+  id: "army",
+  count: rows * rows,
+  layout: {
+    kind: "wedge",
+    depth: rows,
+    spacing: { lateral: spacing, depth: spacing },
+  },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 5,
+});
+
+/** A triangle floor sized to a wedge of a stated reach. */
+const slope = (width: number, depth: number): IAutoMovieSpace => ({
+  id: "slope",
+  surfaces: [
+    {
+      id: "ground",
+      kind: "floor",
+      polygon: [
+        { x: 0, y: 0, z: 0 },
+        { x: width, y: 0, z: depth },
+        { x: -width, y: 0, z: depth },
+      ],
+      anchor: { x: 0, y: 0, z: 0 },
+      rampTo: null,
+    },
+  ],
+  walkable: ["ground"],
 });
 
 /**
@@ -212,16 +290,18 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  * records, which is how a field corrected in one went on drawing a floor a
  * third the size of its own unit in the other.
  *
- * Both numbers already exist. The bounds are the compiler's, the containment
- * question is the engine's, and this gate only compares them; deriving a third
- * answer here is the shape of the defect it exists to catch.
+ * Both numbers already exist. Where a member stands is the engine's, whether a
+ * point is carried is the engine's, and this gate only compares them; deriving
+ * a third answer here is the shape of the defect it exists to catch. What it
+ * measures is members and not the box around them, because the corners of that
+ * box are places a formation often has nobody.
  *
  * Scenarios:
  *
  * 1. A unit inside the staged floor is accepted, so the gate does not refuse the
  *    ordinary case it is meant to leave alone.
  * 2. A unit reaching past the floor is refused once, naming the shot, the unit and
- *    the corner the ground does not carry, all read from the one answer rather
+ *    the place the ground does not carry, all read from the one answer rather
  *    than from the same question asked twice.
  * 3. A unit exactly on the boundary is accepted, because the edge of a floor is
  *    still floor and a strict reading would refuse a field sized to its unit.
@@ -231,12 +311,12 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *    reports exactly one refusal and names which unit left, so a passing
  *    sibling cannot hide a failing one and the gate cannot report either.
  * 6. A unit that fits where it stands and marches off the floor is refused at the
- *    moment it leaves and at the corner that left, not at the end of its cue
- *    and a corner far out over nothing: where a unit went over a void is what
- *    an author needs, and the end of the cue is not it.
+ *    moment it leaves and at the member that left, not at the end of its cue
+ *    and a place far out over nothing: where a unit went over a void is what an
+ *    author needs, and the end of the cue is not it.
  * 7. A unit whose cue keeps it on the floor is accepted, and a cue belonging to
  *    another unit does not move this one.
- * 8. A unit whose cue starts at zero is never at its design bounds, so those are
+ * 8. A unit whose cue starts at zero is never where it was designed, so that is
  *    not measured: every sampled time is a position the unit really holds, and
  *    a gate that refused one it never held would be worse than none.
  * 9. A unit that lies along one arm of a crossroads and ends a quarter turn along
@@ -244,13 +324,11 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *    see. The refusal names one time inside the cue's own ends, stated to the
  *    millisecond rather than to the last digit a sample happens to carry, and a
  *    turn that never leaves is still accepted.
- * 10. A unit is judged by the corners of its compiled bounds carried as points, not
- *     by a box re-fitted around them once turned, which a diamond floor
- *     separates: the re-fitted box reaches past ground every corner of the
- *     bounds still stands on. Those corners are the box around the members and
- *     not members themselves, which is #1822 and not what this pins.
+ * 10. A unit is judged by its members carried as points, not by a box re-fitted
+ *     around them once turned, which a diamond floor separates: the re-fitted
+ *     box reaches past ground every member still stands on.
  * 11. The same unit and turn over a floor between the two numbers is refused,
- *     because the corner partway through the turn clears neither end's floor.
+ *     because the member partway through the turn clears neither end's floor.
  *     With the case above it brackets where the unit is really widest, which is
  *     inside the turn and not at either end of it.
  * 12. Ground is not convex, so a straight walk between two places that each carry
@@ -260,7 +338,20 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *     more for a walk than for a turn.
  * 13. A unit carried the length of a road that does carry it is accepted, so what
  *     the interior walk refuses is a crossing and not a journey.
- * 14. A cue turning far enough to reach the sample cap is walked from a unit that
+ * 14. A scattered unit fills a disc, and the corners of the box around it stand at
+ *     its radius times root two where nobody does. A floor shaped to the disc
+ *     carries every member and not those corners, and is accepted.
+ * 15. A unit bent along an arc puts every member exactly its radius out, which is a
+ *     circle and not the box a circle fits in; the same floor carries it.
+ * 16. A wedge is a triangle whose widest row is its deepest, so the box corner at
+ *     full width and no depth is the emptiest point a formation has. A
+ *     triangular floor carries every member and not that corner.
+ * 17. A member off the floor is still refused whatever its layout, so what the
+ *     three cases above buy is not a gate that has stopped looking.
+ * 18. The same formation staged by a second shot is measured the same as by the
+ *     first, because its members are found once and remembered, and what a
+ *     remembered answer may change is nothing.
+ * 19. A cue turning far enough to reach the sample cap is walked from a unit that
  *     does stand where it starts, so the walk runs rather than stopping at
  *     rest, and it still reaches an interior sample and names it. What
  *     resolution the cap left is not observed, only that an enormous turn is
@@ -284,11 +375,8 @@ export const test_mcp_production_formation_ground = (): void => {
       ["one", () => escaped.length === 1],
       ["target", () => escaped[0]!.target === "shot:opening"],
       ["category", () => escaped[0]!.category === "error"],
-      [
-        "formation",
-        () => escaped[0]!.message.startsWith("formation:army.bounds "),
-      ],
-      ["corner", () => escaped[0]!.message.includes("(-10, -10)")],
+      ["formation", () => escaped[0]!.message.startsWith("formation:army ")],
+      ["corner", () => escaped[0]!.message.includes("(10, 0)")],
     ]),
     {
       code: true,
@@ -335,10 +423,7 @@ export const test_mcp_production_formation_ground = (): void => {
       ["one", () => sibling.length === 1],
       // Distinct ids, so the refusal has to name which unit left. Two units
       // called the same thing would let the gate report either and pass.
-      [
-        "names",
-        () => sibling[0]!.message.startsWith("formation:cavalry.bounds "),
-      ],
+      ["names", () => sibling[0]!.message.startsWith("formation:cavalry ")],
     ]),
     { one: true, names: true },
   );
@@ -526,6 +611,49 @@ export const test_mcp_production_formation_ground = (): void => {
       [carry({ x: 0, z: -8 }, { x: 0, z: 8 })],
     ),
     [],
+  );
+
+  // The gate measures members, not the box around them. These three layouts
+  // leave their box corners empty, so a floor shaped to the members carries
+  // every one of them and does not carry the corners. A gate reading the box
+  // refuses all three, and every formation it refuses is standing on its
+  // ground.
+  TestValidator.equals(
+    "a scattered unit on a floor shaped to its disc is accepted",
+    codes(diamond(6 * Math.SQRT2), [disc(6, 200)]),
+    [],
+  );
+  TestValidator.equals(
+    "a unit bent along an arc on a floor shaped to its circle is accepted",
+    codes(diamond(6 * Math.SQRT2), [bow(6, 41)]),
+    [],
+  );
+  TestValidator.equals(
+    "a wedge on a floor shaped to its triangle is accepted",
+    codes(slope(40, 40), [wedge(9, 5)]),
+    [],
+  );
+  TestValidator.equals(
+    "a member off the floor is still refused, wherever its layout put it",
+    codes(diamond(3), [disc(6, 200)]),
+    ["engine-validation-failed"],
+  );
+
+  // The same formation is staged by every shot that uses it, and the members it
+  // is judged by are found once and remembered. Asked twice, it answers the
+  // same, which is what remembering an answer is allowed to change and all of
+  // what it is allowed to change.
+  const staged = disc(6, 200);
+  const twice = diamond(6 * Math.SQRT2);
+  TestValidator.equals(
+    "a unit staged by a second shot is measured the same as by the first",
+    namedFacts([
+      ["first", () => codes(twice, [staged]).length === 0],
+      ["again", () => codes(twice, [staged]).length === 0],
+      ["andRefused", () => codes(diamond(3), [staged]).length === 1],
+      ["stillRefused", () => codes(diamond(3), [staged]).length === 1],
+    ]),
+    { first: true, again: true, andRefused: true, stillRefused: true },
   );
 
   // A cue's turn is a plain unbounded number, and a thousand revolutions of one

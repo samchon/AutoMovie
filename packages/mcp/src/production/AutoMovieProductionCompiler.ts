@@ -1,7 +1,9 @@
 import {
   IAutoMovieActorContext,
+  type IAutoMovieFormationPlacement,
   compileDefinedShot,
   defineShot,
+  formationSlotPosition,
   isWalkable,
   makeActorSynthesizer,
   realizeShotContract,
@@ -23,7 +25,6 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFilmEdit,
-  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
   IAutoMovieDiagnostic,
@@ -2833,16 +2834,89 @@ const validateCompiledShot = (
 };
 
 /**
- * Metres a corner may travel between neighbouring samples inside one cue.
+ * Metres a member may travel between neighbouring samples inside one cue.
  *
  * Ground is judged in metres, so the resolution is stated in metres too. What
- * it buys is exactly this: no corner moves further than half a metre between
- * one sample and the next, so a stretch of void wider than that has a sample in
- * it. A narrower one can still be stepped over. Nothing requires an authored
- * surface to be wide, so that is a limit of the gate and not a claim about
- * spaces.
+ * it buys is exactly this: no measured member moves further than half a metre
+ * between one sample and the next, so a stretch of void wider than that has a
+ * sample in it. A narrower one can still be stepped over. Nothing requires an
+ * authored surface to be wide, so that is a limit of the gate and not a claim
+ * about spaces.
  */
 const FORMATION_GROUND_SAMPLE_METRES = 0.5;
+
+/**
+ * Directions the outermost member of a formation is asked for.
+ *
+ * A formation is a set of members, and which of them is furthest out depends on
+ * which way you look. Sixteen evenly spaced looks put a measured member within
+ * eleven degrees of any direction, so the outermost member in a direction not
+ * asked about stands at least `cos(11.25 deg)` of the way out as the one that
+ * was. Every measured point is a member, so a coarser reading can only miss; it
+ * cannot refuse a formation that was standing on its ground.
+ */
+const FORMATION_GROUND_SUPPORT_DIRECTIONS = 16;
+
+/**
+ * Members already found for one compiled formation.
+ *
+ * The set is a pure function of the formation, and the compiler hands the same
+ * compiled formation to every shot that stages it, so an army in fifty shots
+ * would otherwise regenerate every one of its members fifty times over. Keyed
+ * by the formation itself, so nothing outlives the compile that made it.
+ */
+const formationGroundMemberCache = new WeakMap<
+  IAutoMovieFormationPlacement,
+  IAutoMovieVector3[]
+>();
+
+/**
+ * The members a formation is judged by: its outermost in each asked direction.
+ *
+ * `bounds` is the axis-aligned box over every slot, and its corners are not
+ * members. A full `line` or `column` grid happens to put a slot at each of
+ * them; a `wedge`, an `arc` and a `scatter` do not, so judging the corners
+ * refuses formations every member of which is carried. This asks the engine
+ * where the members are and keeps the outermost ones, which is both sound and
+ * the set a floor's edge is met by.
+ *
+ * One pass over the slots, so the cost is the formation's own size and not the
+ * square of it. The same member is usually outermost in several directions; it
+ * is measured once.
+ */
+const formationGroundMembers = (
+  formation: IAutoMovieFormationPlacement,
+): IAutoMovieVector3[] => {
+  const remembered = formationGroundMemberCache.get(formation);
+  if (remembered !== undefined) return remembered;
+  const looks = Array.from(
+    { length: FORMATION_GROUND_SUPPORT_DIRECTIONS },
+    (_, index) => {
+      const radians =
+        (2 * Math.PI * index) / FORMATION_GROUND_SUPPORT_DIRECTIONS;
+      return { x: Math.cos(radians), z: Math.sin(radians) };
+    },
+  );
+  const furthest = looks.map(() => Number.NEGATIVE_INFINITY);
+  const outermost = looks.map((): IAutoMovieVector3 | null => null);
+  // The point itself is kept rather than the slot that produced it, so a
+  // formation of a hundred thousand members is asked for each of them once.
+  // A member outermost in several directions is the same object in each, which
+  // is what the set below dedupes on.
+  for (let slot = 0; slot < formation.count; ++slot) {
+    const point = formationSlotPosition(formation, slot);
+    for (let index = 0; index < looks.length; ++index) {
+      const look = looks[index]!;
+      const reach = point.x * look.x + point.z * look.z;
+      if (reach <= furthest[index]!) continue;
+      furthest[index] = reach;
+      outermost[index] = point;
+    }
+  }
+  const members = [...new Set(outermost.filter((point) => point !== null))];
+  formationGroundMemberCache.set(formation, members);
+  return members;
+};
 
 /**
  * Samples one cue may take, however far it carries a unit.
@@ -2898,10 +2972,10 @@ const formationGroundSampleTimes = (
   cue: IAutoMovieFormationMotion,
   radius: number,
 ): number[] => {
-  // How many times its design reach a spacing change ever holds a corner out
+  // How many times its design reach a spacing change ever holds a member out
   // at, so the arc a turn sweeps it through is measured at the radius it really
   // turns on. Read as a magnitude: a negative scale mirrors a unit rather than
-  // shrinking it past nothing, and a mirrored corner travels just as far.
+  // shrinking it past nothing, and a mirrored member travels just as far.
   const spread = Math.max(
     Math.abs(cue.from.spacingScale.lateral),
     Math.abs(cue.to.spacingScale.lateral),
@@ -2951,17 +3025,11 @@ const formationGroundSampleTimes = (
  * question go to the engine that owns them, so this compares answers that
  * already exist rather than deriving a third that could disagree with both.
  *
- * What is measured is the four ground corners of the compiled bounds, carried
- * through a cue as points rather than re-fitted into a new box at each sample.
- * A box fitted around a turned box is bigger than the unit, so measuring that
- * would refuse a unit standing at an angle that every member of it clears.
- *
- * Those corners are the box around the members, not members. A full `line` or
- * `column` grid puts a slot at each of them; a `wedge`, an `arc` and a
- * `scatter` do not, so this can still refuse a formation every member of which
- * is carried. Asking the engine where the members are instead is #1822. Until
- * then the gate is sound about the box and conservative about the unit, and
- * says so rather than promising otherwise.
+ * What is measured is members, chosen by {@link formationGroundMembers}: the
+ * outermost slot in each of a stated set of directions, carried through a cue
+ * as points. Every measured point is somewhere a member really stands, so a
+ * refusal is always sound; a member not asked about is the honest gap, stated
+ * the same way the time resolution is.
  *
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
@@ -2979,12 +3047,7 @@ export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
   value: {
     scene: Pick<IAutoMovieScene, "space">;
-    formations: ReadonlyArray<
-      Pick<
-        IAutoMovieCompiledFormation,
-        "id" | "bounds" | "anchor" | "facingDeg"
-      >
-    >;
+    formations: readonly IAutoMovieFormationPlacement[];
     formationMotions?: readonly IAutoMovieFormationMotion[];
   },
 ): IAutoMovieDiagnostic[] => {
@@ -2994,24 +3057,17 @@ export const validateAutoMovieFormationGround = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    // The four ground corners of the compiled bounds, carried as points. Fitting
-    // a new axis-aligned box around them at each sample would be bigger than the
-    // unit and would refuse it for standing at an angle. Each corner goes
-    // through the same point transform the runtime places members with.
-    const design = formation.bounds;
-    const corners = [
-      { x: design.min.x, y: design.min.y, z: design.min.z },
-      { x: design.max.x, y: design.min.y, z: design.min.z },
-      { x: design.max.x, y: design.min.y, z: design.max.z },
-      { x: design.min.x, y: design.min.y, z: design.max.z },
-    ];
-    // How far out the furthest measured corner sits, which is what turns an
-    // angle a cue sweeps into the metres that corner travels.
+    // The outermost members, carried as points through the same transform the
+    // runtime places them with.
+    const members = formationGroundMembers(formation);
+    // How far out the furthest measured member sits, which is what turns an
+    // angle a cue sweeps into the metres that member travels.
     const radius = Math.max(
-      ...corners.map((corner) =>
+      0,
+      ...members.map((member) =>
         Math.hypot(
-          corner.x - formation.anchor.x,
-          corner.z - formation.anchor.z,
+          member.x - formation.anchor.x,
+          member.z - formation.anchor.z,
         ),
       ),
     );
@@ -3031,26 +3087,25 @@ export const validateAutoMovieFormationGround = (
     const first = times[0];
     const resting = first === undefined || first > 0;
     // Walked rather than collected, and stopped at the first escape. A cue is
-    // sampled up to the cap, so gathering every corner at every sampled time
+    // sampled up to the cap, so gathering every member at every sampled time
     // before taking the first would measure a unit hundreds of times over to
     // report the moment it already found.
-    let escape: { time: number | null; corner: IAutoMovieVector3 } | null =
-      null;
+    let escape: { time: number | null; place: IAutoMovieVector3 } | null = null;
     for (const time of [...(resting ? [null] : []), ...times]) {
       const motion =
         time === null ? null : sampleFormationMotion(own, formation.id, time);
-      for (const corner of corners) {
+      for (const member of members) {
         const placed =
           motion === null
-            ? corner
+            ? member
             : transformFormationPoint(
-                corner,
+                member,
                 formation.anchor,
                 motion,
                 formation.facingDeg,
               );
         if (isWalkable(space, placed.x, placed.z)) continue;
-        escape = { time, corner: placed };
+        escape = { time, place: placed };
         break;
       }
       if (escape !== null) break;
@@ -3059,16 +3114,16 @@ export const validateAutoMovieFormationGround = (
     diagnostics.push(
       engineDiagnostic(
         contract.id,
-        `formation:${formation.id}.bounds`,
+        `formation:${formation.id}`,
         // Reported to the millimetre and the millisecond. A sampled interior
-        // time and a turned corner are both long fractions, and a diagnostic an
+        // time and a turned member are both long fractions, and a diagnostic an
         // author reads to find a place on a field gains nothing from the digits
         // below that. Only the reading is rounded; the comparison above is not.
         `must stand on the space this shot staged, but ${
           escape.time === null
-            ? "the unit reaches"
-            : `at ${round(escape.time)}s its cue takes the unit to`
-        } (${round(escape.corner.x)}, ${round(escape.corner.z)}) where no walkable surface carries it`,
+            ? "a member of it stands at"
+            : `at ${round(escape.time)}s its cue takes a member of it to`
+        } (${round(escape.place.x)}, ${round(escape.place.z)}) where no walkable surface carries it`,
       ),
     );
   }
