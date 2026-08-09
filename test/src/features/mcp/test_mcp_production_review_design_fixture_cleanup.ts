@@ -384,11 +384,11 @@ export const test_mcp_production_review_design_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantive: {
               digest:
-                "5d41b6f6470c0e7b9a457ec4a0a1d43023477cfbd56318610564ad8a6e7f15c8",
+                "ce742a766b250aeaf4720ccbba49182f6a4205ec35fe8fc1a2fba09f99e67052",
               tokens: 2359,
             },
             tryDigest:
-              "98763c76b9aa015caeba536b44c687fc50f455213912152826a9554901ca1490",
+              "fd7205e4b9fb0ccf878521cd31a0f7890aff311320bf2a0fa08841fe104e6a21",
             tryStatements: 74,
           },
         ],

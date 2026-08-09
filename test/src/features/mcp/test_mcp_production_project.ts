@@ -1668,8 +1668,7 @@ export const test_mcp_production_project = (): void => {
           "secondShotMutationConsequences3",
           () =>
             secondShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1691,8 +1690,7 @@ export const test_mcp_production_project = (): void => {
           "acceptanceMutationConsequences3",
           () =>
             acceptanceMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
       ]),
@@ -1805,8 +1803,7 @@ export const test_mcp_production_project = (): void => {
           "repaintedShotMutationConsequences2",
           () =>
             repaintedShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1821,8 +1818,7 @@ export const test_mcp_production_project = (): void => {
           "movedSequenceShotMutationConsequences",
           () =>
             movedSequenceShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1874,8 +1870,7 @@ export const test_mcp_production_project = (): void => {
           "movedAcceptanceMutationConsequences5",
           () =>
             movedAcceptanceMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1910,8 +1905,7 @@ export const test_mcp_production_project = (): void => {
           "worldMutationConsequences2",
           () =>
             worldMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-CUE",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
