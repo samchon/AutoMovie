@@ -33,7 +33,7 @@ The title describes the merged outcome in `<type>(<scope>)` style, not the work 
 
 ## Campaign Override
 
-Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue and benchmark campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`, with the benchmark additions in `.agents/skills/multi-agent/benchmark-campaign.md`. Their ownership, worktree, commit-message, check-cadence, CI-repair, and cleanup rules override the ordinary flow here.
+Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`. Their ownership, worktree, commit-message, check-cadence, CI-repair, and cleanup rules override the ordinary flow here.
 
 ## Watch Checks After Every Push
 

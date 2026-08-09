@@ -79,4 +79,4 @@ An experiment is allowed to end with nothing but an answer. Publish an issue onl
 
 Attribute before publishing: an engine defect, a missing schema axis, MCP-surface friction, and a guide gap are automovie's; a model-side failure against an adequate surface is not.
 
-If the question turns out to need systematic measurement rather than one run, stop and say so. That is the benchmark campaign's job, and running it informally produces anecdotes that look like data.
+If the question turns out to need systematic measurement rather than one run, stop and say so; running it informally produces anecdotes that look like data.

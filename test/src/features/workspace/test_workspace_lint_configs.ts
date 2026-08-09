@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 const SHARED_CONFIG =
   'export { default } from "../../internals/config/lint.config";';
-const KNOWN_TTSC_PACKAGES = ["benchmark-runner", "create-automovie"];
+const KNOWN_TTSC_PACKAGES = ["create-automovie"];
 
 /** Does a shell build script invoke `ttsc` as a command? */
 const invokesTtsc = (script: string): boolean =>

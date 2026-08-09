@@ -1,6 +1,6 @@
 ---
 name: review
-description: Defines exhaustive solo review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the default review mode inside issue and benchmark campaigns. This skill never spawns review agents; use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
+description: Defines exhaustive solo review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the default review mode inside issue campaigns. This skill never spawns review agents; use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
 ---
 
 # Review
@@ -41,7 +41,7 @@ Never call the pass a Self-Review, and never report it as one. A reader who sees
 
 ## Solo Issue Discovery Rounds
 
-Use these rounds only through the solo issue-campaign or benchmark-campaign skill.
+Use these rounds only through the solo issue-campaign skill.
 
 1. Audit the entire declared campaign scope yourself. Inspect source, tests, documentation, CI, packaging, rendered output, platform behavior, sibling-repository and upstream provenance, and open and closed issue or pull-request history. Audit the current implementation and history against the development skill's **Forbidden** section. A verified violation remains meaningful even when tests pass and coverage reads 100%.
 2. Record every raw candidate and its evidence in the campaign knowledge base before adjudication. Do not silently discard a suspicion because it looks duplicative or inconvenient.

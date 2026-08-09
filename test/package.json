@@ -14,8 +14,6 @@
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
-    "@automovie/benchmark": "workspace:^",
-    "@automovie/benchmark-runner": "workspace:^",
     "@automovie/cli": "workspace:^",
     "create-automovie": "workspace:^",
     "@automovie/engine": "workspace:^",

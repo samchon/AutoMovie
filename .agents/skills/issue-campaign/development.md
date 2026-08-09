@@ -1,6 +1,6 @@
 # Solo Campaign Development
 
-Read this document in full when the user authorizes implementation pull requests or the end of a solo issue or benchmark campaign that entered implementation. Also read the repository development, pull-request, and review skills before acting.
+Read this document in full when the user authorizes implementation pull requests or the end of a solo issue campaign that entered implementation. Also read the repository development, pull-request, and review skills before acting.
 
 ## Flow
 

@@ -72,8 +72,6 @@ The generated README explains the complete tracked-authoring, compile, capture, 
 | [`@automovie/cli`](./packages/cli)                           | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
 | [`create-automovie`](./packages/create-automovie)            | Package-manager-native one-command project creator.                                                                                 |
 | [`@automovie/playground`](./packages/playground)             | Browser demonstrations for inspecting deterministic models, motion, cameras, and imported assets.                                   |
-| [`@automovie/benchmark`](./packages/benchmark)               | Versioned movie task law, immutable submissions, and deterministic benchmark judgment.                                              |
-| [`@automovie/benchmark-runner`](./packages/benchmark-runner) | External-agent execution, trusted evidence collection, live MCP inventory measurement, and content-addressed archives.              |
 
 ## Repository development
 

@@ -37,13 +37,11 @@ const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 // Interface first, CLI last: each runtime dependency packs before its consumer.
 const PACKAGES = [
   "interface",
-  "benchmark",
   "engine",
   "render",
   "viewer",
   "ingest",
   "mcp",
-  "benchmark-runner",
   "cli",
   "create-automovie",
 ];
@@ -312,10 +310,6 @@ import {
   StdioClientTransport,
   getDefaultEnvironment,
 } from "@modelcontextprotocol/sdk/client/stdio.js";
-import {
-  createProcessAutoMovieBenchmarkAgent,
-  snapshotAutoMovieBenchmarkProject,
-} from "@automovie/benchmark-runner";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -335,13 +329,6 @@ const preserveCleanupFailure = async (failure, cleanup) => {
     );
   }
 };
-
-assert(
-  "benchmark-runner-public-entry",
-  typeof createProcessAutoMovieBenchmarkAgent === "function" &&
-    typeof snapshotAutoMovieBenchmarkProject === "function",
-  "the packed benchmark runner public entry is incomplete",
-);
 
 const bin = path.resolve("node_modules/@automovie/mcp/lib/bin.js");
 const projectRoot = path.resolve("mcp-host");
