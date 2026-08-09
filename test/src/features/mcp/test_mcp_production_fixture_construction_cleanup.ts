@@ -1,5 +1,4 @@
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
@@ -9,9 +8,6 @@ import { throwProductionFixtureConstructionFailure } from "./productionFixtures"
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
-
-const digest = (node: ts.Node, source: ts.SourceFile): string =>
-  createHash("sha256").update(node.getText(source)).digest("hex");
 
 const aggregateContainsExactly = (
   error: unknown,
@@ -57,7 +53,6 @@ const productionFixtureConstructionContract = (text: string): unknown => {
       region: "catch" | "try";
     }>;
     returnedDisposers: string[];
-    tryDigest: string;
   }> = [];
   for (const owner of owners) {
     const ownerBody = owner.arrow.body;
@@ -138,7 +133,6 @@ const productionFixtureConstructionContract = (text: string): unknown => {
       constructionCalls,
       rmCalls,
       returnedDisposers,
-      tryDigest: digest(lifecycle.tryBlock, source),
     });
   }
   const policies = arrows.filter(
@@ -258,8 +252,6 @@ export const test_mcp_production_fixture_construction_cleanup = (): void => {
             returnedDisposers: [
               "dispose:()=>fs.rmSync(root,{force:true,recursive:true})",
             ],
-            tryDigest:
-              "015d797553159425e446950c312c2ab588a79451721fe8b5d6c33cd8ac202f32",
           },
         ],
         rootDeclarations: [

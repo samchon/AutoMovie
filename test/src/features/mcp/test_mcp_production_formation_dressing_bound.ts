@@ -65,12 +65,28 @@ const bow = (props: {
   ...(props.dressing === undefined ? {} : { dressing: props.dressing }),
 });
 
+const diagnostics = (
+  layout: IAutoMovieFormationDesign["layout"],
+  count?: number,
+): IAutoMovieDiagnostic[] =>
+  validateAutoMovieProductionGraph(graph(layout, count));
+
 const messages = (
   layout: IAutoMovieFormationDesign["layout"],
   count?: number,
 ): string[] =>
-  validateAutoMovieProductionGraph(graph(layout, count)).map(
+  diagnostics(layout, count).map(
     (diagnostic: IAutoMovieDiagnostic) => diagnostic.message,
+  );
+
+/** The one refusal a case expects, as the record the caller receives. */
+const refusal = (
+  layout: IAutoMovieFormationDesign["layout"],
+  starting: string,
+  count?: number,
+): IAutoMovieDiagnostic | undefined =>
+  diagnostics(layout, count).find((diagnostic) =>
+    diagnostic.message.startsWith(starting),
   );
 
 /** Refusals that name a tolerance closing the interval it is drawn across. */
@@ -120,7 +136,18 @@ const closings = (
  * 8. An arc of one member has no neighbour and so no interval, and is accepted
  *    with a tolerance no arc of two could hold.
  * 9. A tolerance that is not a real measurement is refused once, as the range it
- *    is not, and never a second time as an interval nobody can read.
+ *    is not, and never a second time as an interval nobody can read. Both axes
+ *    are ranged, so a depth nobody can read is refused as its own axis rather
+ *    than as the one beside it.
+ * 10. Each refusal is a complete diagnostic and not only a sentence: it carries the
+ *     code a host routes on, the error category, the formation it belongs to
+ *     and the tracked record an author has to open. Both the interval refusal
+ *     and the arc's own say the same four things.
+ * 11. The chord an arc is judged by is fixed by its radius, its covered angle and
+ *     the intervals BETWEEN its members, and each of the three is bracketed:
+ *     one tolerance accepted at six members over half a circle is refused at
+ *     eleven, refused again at six over a quarter circle, and a tolerance a
+ *     little wider is refused at the first of those.
  *
  * A scatter is not among them. Its layout carries no `dressing` field at all,
  * so "a scatter is not measured" is a fact about the type rather than about
@@ -272,5 +299,138 @@ export const test_mcp_production_formation_dressing_bound = (): void => {
       ],
     ]),
     { range: true, notAsAnInterval: true },
+  );
+
+  // The two axes are ranged separately, so a depth nobody can read is refused
+  // as `depth` and not as the axis beside it.
+  const unrealDepth = messages(
+    lattice({ kind: "line", dressing: { lateral: 0.1, depth: Number.NaN } }),
+  );
+  TestValidator.equals(
+    "a depth tolerance nobody can read is refused as its own axis",
+    namedFacts([
+      [
+        "depthRanged",
+        () =>
+          unrealDepth.filter((message) =>
+            message.startsWith("layout.dressing.depth must be a finite value"),
+          ).length === 1,
+      ],
+      [
+        "notTheOtherAxis",
+        () =>
+          unrealDepth.some((message) =>
+            message.startsWith("layout.dressing.lateral"),
+          ) === false,
+      ],
+      [
+        "notAsAnInterval",
+        () =>
+          unrealDepth.filter((message) => message.startsWith("Dressing "))
+            .length === 0,
+      ],
+    ]),
+    { depthRanged: true, notTheOtherAxis: true, notAsAnInterval: true },
+  );
+
+  // A refusal is a routed record, not a sentence. Filtering on the sentence is
+  // what left every other field of these two unread.
+  const interval = refusal(
+    lattice({ kind: "line", dressing: { lateral: 0.4, depth: 0.1 } }),
+    "Dressing tolerance",
+  );
+  const chord = refusal(
+    bow({ radius: 1, dressing: { lateral: 0.35, depth: 0.35 } }),
+    "Dressing can move",
+  );
+  TestValidator.equals(
+    "both refusals carry the code, the category, the unit and the record to open",
+    namedFacts([
+      ["bothPresent", () => interval !== undefined && chord !== undefined],
+      [
+        "code",
+        () =>
+          [interval!, chord!].every(
+            (diagnostic) => diagnostic.code === "design-range-invalid",
+          ),
+      ],
+      [
+        "category",
+        () =>
+          [interval!, chord!].every(
+            (diagnostic) => diagnostic.category === "error",
+          ),
+      ],
+      [
+        "target",
+        () =>
+          [interval!, chord!].every(
+            (diagnostic) => diagnostic.target === "formation:line",
+          ),
+      ],
+      [
+        "path",
+        () =>
+          [interval!, chord!].every(
+            (diagnostic) =>
+              diagnostic.path?.endsWith("/formations/line.json") === true,
+          ),
+      ],
+    ]),
+    {
+      bothPresent: true,
+      code: true,
+      category: true,
+      target: true,
+      path: true,
+    },
+  );
+
+  // Six members over half a circle stand a fifth of the arc apart, so the chord
+  // between neighbours is `2 sin(18 deg) = 0.618` m. Each of the three things
+  // that fix it is bracketed by moving one of them alone: eleven members over
+  // the same arc, and six over a quarter of one, both close it to `2 sin(9 deg)
+  // = 0.313` m, which the same tolerance then reaches.
+  TestValidator.equals(
+    "the chord is fixed by the radius, the angle and the intervals between members",
+    namedFacts([
+      [
+        "insideTheChordIsAccepted",
+        () =>
+          closings(bow({ radius: 1, dressing: { lateral: 0.28, depth: 0.28 } }))
+            .length === 0,
+      ],
+      [
+        "pastTheChordIsRefused",
+        () =>
+          closings(
+            bow({ radius: 1, dressing: { lateral: 0.325, depth: 0.325 } }),
+          ).length === 1,
+      ],
+      [
+        "moreMembersCloseIt",
+        () =>
+          closings(
+            bow({ radius: 1, dressing: { lateral: 0.28, depth: 0.28 } }),
+            11,
+          ).length === 1,
+      ],
+      [
+        "aNarrowerArcClosesIt",
+        () =>
+          closings({
+            kind: "arc",
+            radius: 1,
+            arcDegrees: 90,
+            dressing: { lateral: 0.28, depth: 0.28 },
+          }).length === 1,
+      ],
+    ]),
+    {
+      insideTheChordIsAccepted: true,
+      pastTheChordIsRefused: true,
+      moreMembersCloseIt: true,
+      aNarrowerArcClosesIt: true,
+    },
   );
 };

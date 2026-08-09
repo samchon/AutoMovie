@@ -122,14 +122,14 @@ const actorOn = (fog: IAutoMovieScene["fog"], frame: number) =>
  *    is byte-identical to one written before atmospheres existed: the key does
  *    not appear in the JSON at all.
  * 2. A declared fog attenuates the far frame more than the near one, and by the
- *    engine's exact law at each depth.
+ *    engine's exact law at each depth — the depth being the actor's live world
+ *    root and not its staged placement, since the node sits at the origin for
+ *    the whole shot and the clip carries all the travel. A sidecar keyed to the
+ *    staged transform would report one atmosphere for both frames, and the
+ *    transmittance of depth zero at that.
  * 3. Viewer and renderer agree: the `FogExp2` the viewer builds from this same
  *    scene, evaluated through the shader's own expression at the actor's depth,
  *    is the number the sidecar carries.
- * 4. The depth is the actor's live world root, not its staged placement: the node
- *    sits at the origin for the whole shot and the clip carries all the travel,
- *    so a sidecar keyed to the staged transform would report one atmosphere for
- *    both frames.
  */
 export const test_render_scene_fog = (): void => {
   // 1. no declaration, no field, no byte.
@@ -159,6 +159,11 @@ export const test_render_scene_fog = (): void => {
       ["nearPresent", () => near !== undefined],
       ["farPresent", () => far !== undefined],
       ["farIsDimmer", () => far! < near!],
+      // These two depths are the CLIP's, not the node's: the node sits at the
+      // origin for the whole shot and the performance carries all the travel,
+      // so a sidecar keyed to the staged transform would report the depth-zero
+      // transmittance of exactly one on both frames. Saying separately that the
+      // two numbers differ would only restate `farIsDimmer`.
       [
         "nearIsExact",
         () => nclose(near!, sceneFogTransmittance(FOG, NEAR_DEPTH), 1e-12),
@@ -193,11 +198,5 @@ export const test_render_scene_fog = (): void => {
       ["farAgrees", () => nclose(far!, shaderAt(FAR_DEPTH), 1e-12)],
     ]),
     { sameDensity: true, nearAgrees: true, farAgrees: true },
-  );
-
-  // 4. the sample follows the performance, not the staged placement.
-  TestValidator.predicate(
-    "a moving actor's atmosphere changes between frames",
-    nclose(far!, near!, 1e-6) === false,
   );
 };

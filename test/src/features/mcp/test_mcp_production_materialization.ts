@@ -199,6 +199,69 @@ export const test_mcp_production_materialization = (): void => {
       boxSphereCapsule: true,
     },
   );
+  // The one material every generated part references. Its colour is the
+  // recipe's own palette entry decoded channel by channel, and its surface
+  // scalars are the compiler's: an author states a colour and never a
+  // roughness, so a renderer that read these from somewhere else would be
+  // shading a different material from the one the compiler emitted.
+  const material = models.get("stick")!.materials[0]!;
+  TestValidator.equals(
+    "a materialized model carries one compiler-owned material with its stated colour",
+    namedFacts([
+      ["one", () => models.get("stick")!.materials.length === 1],
+      ["namedForThePaletteEntry", () => material.id === "body"],
+      ["name", () => material.name === "body"],
+      ["hex", () => material.baseColor.hex === "#445566"],
+      [
+        "channels",
+        () =>
+          material.baseColor.r === 0x44 / 255 &&
+          material.baseColor.g === 0x55 / 255 &&
+          material.baseColor.b === 0x66 / 255 &&
+          material.baseColor.a === 1,
+      ],
+      // The three channels are three different numbers, so a decoder reading
+      // the wrong pair of digits answers a different colour.
+      [
+        "threeChannels",
+        () =>
+          new Set([
+            material.baseColor.r,
+            material.baseColor.g,
+            material.baseColor.b,
+          ]).size === 3,
+      ],
+      ["metallic", () => material.metallic === 0],
+      ["roughness", () => material.roughness === 0.7],
+      ["opacity", () => material.opacity === 1],
+      ["emissive", () => material.emissive === null],
+      ["untextured", () => material.baseColorTexture === null],
+      // Every part references it, so the scalars above describe the whole
+      // figure rather than one primitive of it.
+      [
+        "everyPart",
+        () =>
+          models
+            .get("stick")!
+            .parts.every((part) => part.material === material.id),
+      ],
+    ]),
+    {
+      one: true,
+      namedForThePaletteEntry: true,
+      name: true,
+      hex: true,
+      channels: true,
+      threeChannels: true,
+      metallic: true,
+      roughness: true,
+      opacity: true,
+      emissive: true,
+      untextured: true,
+      everyPart: true,
+    },
+  );
+
   const recipeMap = new Map(recipes.map((item) => [item.id, item]));
   const projectionRadii = recipes.map(
     (item, index) =>

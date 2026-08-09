@@ -251,14 +251,20 @@ const parseGeneration = (
     isRecord(value.plan) === false
   )
     throw new Error("Render plan generation record is malformed.");
+  const stored = value as unknown as {
+    generation: string;
+    plan: unknown;
+    predecessor: string | null;
+    version: 1 | 2;
+  };
   return {
     record: {
-      generation: value.generation,
+      generation: stored.generation,
       plan:
-        value.version === RENDER_PLAN_RANGE_SCHEMA
-          ? decodeRenderPlanRanges(value.plan)
-          : (value.plan as unknown as IAutoMovieProductionRenderJobPlan),
-      predecessor: value.predecessor as string | null,
+        stored.version === RENDER_PLAN_RANGE_SCHEMA
+          ? decodeRenderPlanRanges(stored.plan)
+          : (stored.plan as IAutoMovieProductionRenderJobPlan),
+      predecessor: stored.predecessor,
     },
     snapshot,
   };
@@ -492,7 +498,8 @@ const storedGeneration = (record: IRenderPlanGenerationRecord): unknown => {
 const encodeRenderPlanRanges = (
   plan: IAutoMovieProductionRenderJobPlan,
 ): Record<string, unknown> | null => {
-  const source = plan as unknown as Record<string, unknown>;
+  const source: unknown = plan;
+  if (isRecord(source) === false) return null;
   const tier = source.tier;
   const frameFormat = source.frameFormat;
   if (
@@ -580,13 +587,17 @@ const derivedRenderPlanFrameLayers = (
       "globalFrame,timelineFrame,timeSeconds,layers" ||
     frame.globalFrame !== globalFrame ||
     frame.timelineFrame !== globalFrame * frameStep ||
-    frame.timeSeconds !== globalFrame / fps ||
-    Array.isArray(frame.layers) === false ||
-    frame.layers.length === 0 ||
-    (frame.layers as unknown[]).every(isRenderPlanLayer) === false
+    frame.timeSeconds !== globalFrame / fps
   )
     return null;
-  return frame.layers as IAutoMovieProductionRenderLayer[];
+  const layers = frame.layers;
+  if (
+    Array.isArray(layers) === false ||
+    layers.length === 0 ||
+    layers.every(isRenderPlanLayer) === false
+  )
+    return null;
+  return layers as IAutoMovieProductionRenderLayer[];
 };
 
 const isRenderPlanLayer = (
@@ -620,30 +631,33 @@ const continuesRenderPlanRun = (
 const decodeRenderPlanRanges = (
   plan: unknown,
 ): IAutoMovieProductionRenderJobPlan => {
-  const tier = isRecord(plan) ? plan.tier : undefined;
-  const frameFormat = isRecord(plan) ? plan.frameFormat : undefined;
+  if (isRecord(plan) === false)
+    throw new Error("Render plan generation record is malformed.");
+  const chunks = plan.chunks;
+  const tier = plan.tier;
+  const frameFormat = plan.frameFormat;
   if (
-    isRecord(plan) === false ||
-    Array.isArray(plan.chunks) === false ||
+    Array.isArray(chunks) === false ||
     isRecord(tier) === false ||
-    isRecord(frameFormat) === false ||
-    Number.isSafeInteger(tier.frameStep) === false ||
-    (tier.frameStep as number) <= 0 ||
-    typeof frameFormat.fps !== "number" ||
-    Number.isFinite(frameFormat.fps) === false ||
-    frameFormat.fps <= 0
+    isRecord(frameFormat) === false
+  )
+    throw new Error("Render plan generation record is malformed.");
+  const frameStep = tier.frameStep;
+  const fps = frameFormat.fps;
+  if (
+    Number.isSafeInteger(frameStep) === false ||
+    (frameStep as number) <= 0 ||
+    typeof fps !== "number" ||
+    Number.isFinite(fps) === false ||
+    fps <= 0
   )
     throw new Error("Render plan generation record is malformed.");
   return replaceOwnKey(
     plan,
     "chunks",
     "chunks",
-    (plan.chunks as unknown[]).map((chunk) =>
-      decodeRenderPlanChunkRanges(
-        chunk,
-        tier.frameStep as number,
-        frameFormat.fps as number,
-      ),
+    (chunks as unknown[]).map((chunk) =>
+      decodeRenderPlanChunkRanges(chunk, frameStep as number, fps),
     ),
   ) as unknown as IAutoMovieProductionRenderJobPlan;
 };
@@ -653,27 +667,32 @@ const decodeRenderPlanChunkRanges = (
   frameStep: number,
   fps: number,
 ): Record<string, unknown> => {
+  if (isRecord(chunk) === false)
+    throw new Error("Render plan generation record is malformed.");
+  const runs = chunk.runs;
   if (
-    isRecord(chunk) === false ||
-    Array.isArray(chunk.runs) === false ||
+    Array.isArray(runs) === false ||
     Number.isSafeInteger(chunk.frameStart) === false ||
     Number.isSafeInteger(chunk.frameEndExclusive) === false
   )
     throw new Error("Render plan generation record is malformed.");
   const frames: unknown[] = [];
   let globalFrame = chunk.frameStart as number;
-  for (const run of chunk.runs as unknown[]) {
+  for (const run of runs as unknown[]) {
+    if (isRecord(run) === false)
+      throw new Error("Render plan generation record is malformed.");
+    const count = run.count;
+    const entries = run.layers;
     if (
-      isRecord(run) === false ||
-      Number.isSafeInteger(run.count) === false ||
-      (run.count as number) <= 0 ||
-      Array.isArray(run.layers) === false ||
-      run.layers.length === 0 ||
-      (run.layers as unknown[]).every(isRenderPlanLayer) === false
+      Number.isSafeInteger(count) === false ||
+      (count as number) <= 0 ||
+      Array.isArray(entries) === false ||
+      entries.length === 0 ||
+      entries.every(isRenderPlanLayer) === false
     )
       throw new Error("Render plan generation record is malformed.");
-    const layers = run.layers as IAutoMovieProductionRenderLayer[];
-    for (let offset = 0; offset < (run.count as number); ++offset) {
+    const layers = entries as IAutoMovieProductionRenderLayer[];
+    for (let offset = 0; offset < (count as number); ++offset) {
       frames.push({
         globalFrame,
         timelineFrame: globalFrame * frameStep,
@@ -704,7 +723,7 @@ const replaceOwnKey = (
   value: unknown,
 ): Record<string, unknown> =>
   Object.fromEntries(
-    Object.entries(source).map((entry) =>
+    Object.entries(source).map((entry): [string, unknown] =>
       entry[0] === key ? [replacement, value] : entry,
     ),
   );

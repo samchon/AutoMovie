@@ -1905,26 +1905,25 @@ export const performShot = (props: {
     // as a box rather than collapsed to a point and given a figure's height.
     // The live resolver is not consulted for it: it answers with ONE point,
     // which is exactly the datum that cannot describe a mass.
-    if (on.kind === "group") {
-      // Non-null because the group measured at least one member above, and
-      // which members resolve does not vary with the instant.
+    if (on.kind === "group" && groupSubjectBoxes(on, 0).length !== 0) {
+      // Non-null: the guard above measured at least one member, and which
+      // members resolve is a fact about this shot's placement and formation
+      // tables rather than about the instant they are read at.
       const framedAt = (seconds: number): IAutoMovieFramedBox =>
         framedBoxOf(unionSubjectBoxes(groupSubjectBoxes(on, seconds))!);
-      if (groupSubjectBoxes(on, 0).length !== 0) {
-        const framed = framedAt(0);
-        // A cue is the only thing that moves a unit, so a group carrying one is
-        // the only group a `follow` can track; without one the mass holds still
-        // and `at: null` states that, the same as every group before it.
-        const cued = (on.formations ?? []).some((id) =>
-          formationMotions.some((cue) => cue.formation === id),
-        );
-        return {
-          base: framed.base,
-          height: framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
-          radius: framed.radius,
-          at: cued === false ? null : (seconds) => framedAt(seconds).base,
-        };
-      }
+      const framed = framedAt(0);
+      // A cue is the only thing that moves a unit, so a group carrying one is
+      // the only group a `follow` can track; without one the mass holds still
+      // and `at: null` states that, the same as every group before it.
+      const cued = (on.formations ?? []).some((id) =>
+        formationMotions.some((cue) => cue.formation === id),
+      );
+      return {
+        base: framed.base,
+        height: framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
+        radius: framed.radius,
+        at: cued === false ? null : (seconds) => framedAt(seconds).base,
+      };
     }
     const point =
       resolveLiveTarget?.(on, 0) ??

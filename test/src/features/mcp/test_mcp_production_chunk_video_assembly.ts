@@ -80,13 +80,13 @@ const rangeTimeline = (): IAutoMovieFilmTimeline => {
  * 2. An assembly of many chunks carries every source sample unaltered, in play
  *    order, on one continuous clock -- proven against the same ranges conformed
  *    through the independent repaint path.
- * 3. Assembling twice, and assembling again after an interrupted attempt,
- *    produce byte-identical films: the assembly is a pure function of the
- *    receipt-bound chunk bytes, so a resumed render publishes what an
- *    uninterrupted one would have.
- * 4. No chunks, a chunk that changes raster mid-film, a chunk that is not
- *    H.264, a frame total the chunks do not cover, and a runtime past the exact
- *    MP4 clock are each refused rather than silently re-encoded.
+ * 3. Assembling twice, and assembling again after an interrupted attempt, produce
+ *    byte-identical films: the assembly is a pure function of the receipt-bound
+ *    chunk bytes, so a resumed render publishes what an uninterrupted one would
+ *    have.
+ * 4. No chunks, a chunk that changes raster mid-film, a chunk that is not H.264, a
+ *    frame total the chunks do not cover, and a runtime past the exact MP4
+ *    clock are each refused rather than silently re-encoded.
  */
 export const test_mcp_production_chunk_video_assembly =
   async (): Promise<void> => {
@@ -145,17 +145,26 @@ export const test_mcp_production_chunk_video_assembly =
     const conformed = conformProductionRenditionVideoMp4({
       timeline: rangeTimeline(),
       clips: new Map(
-        CHUNK_FRAMES.map((_count, index) => [`range-${index}`, chunks[index]!]),
+        CHUNK_FRAMES.map((_count, index): [string, Uint8Array] => [
+          `range-${index}`,
+          chunks[index]!,
+        ]),
       ),
     });
     const probe = probeProductionVideoMp4(assembled);
     TestValidator.equals(
       "a many-chunk assembly carries every source sample onto one continuous clock",
       namedFacts([
-        ["theAssemblyCoversEveryFrame", () => probe.frameCount === TOTAL_FRAMES],
+        [
+          "theAssemblyCoversEveryFrame",
+          () => probe.frameCount === TOTAL_FRAMES,
+        ],
         ["theAssemblyKeepsTheRaster", () => probe.width === WIDTH],
         ["theAssemblyKeepsTheRasterHeight", () => probe.height === HEIGHT],
-        ["theAssemblyKeepsTheFrameClock", () => Math.abs(probe.fps - FPS) < 1e-9],
+        [
+          "theAssemblyKeepsTheFrameClock",
+          () => Math.abs(probe.fps - FPS) < 1e-9,
+        ],
         [
           "theAssemblyRunsTheWholeFilm",
           () => Math.abs(probe.runtimeSeconds - TOTAL_FRAMES / FPS) < 1e-9,
@@ -172,7 +181,8 @@ export const test_mcp_production_chunk_video_assembly =
         ],
         [
           "theAssemblyIsNotOneChunkVerbatim",
-          () => Buffer.from(assembled).equals(Buffer.from(chunks[0]!)) === false,
+          () =>
+            Buffer.from(assembled).equals(Buffer.from(chunks[0]!)) === false,
         ],
       ]),
       {

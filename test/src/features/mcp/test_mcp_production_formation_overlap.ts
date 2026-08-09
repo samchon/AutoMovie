@@ -191,8 +191,8 @@ const close = (props: {
  *
  * Every cue end is a time the shot certainly holds and is therefore always
  * sampled; whatever is left of the budget fills the gaps between them. Eight of
- * these put nineteen ends on the clock, which is more than the budget itself, so
- * nothing is left for the interior and the walk reads the ends alone.
+ * these put nineteen ends on the clock, which is more than the budget itself,
+ * so nothing is left for the interior and the walk reads the ends alone.
  */
 const filler = (count: number): IAutoMovieFormationMotion[] =>
   Array.from({ length: count }, (_unused, index) => ({
@@ -316,25 +316,26 @@ const bone = (
  * 12. A unit a camera may draw at more than one tier is judged by the LEAST of
  *     them, because which tier it draws is the camera's decision and a refusal
  *     has to hold whichever one it makes. The same pair measured against the
- *     widest tier alone is refused, which is what makes the acceptance a reading
- *     of the least and not of nothing.
+ *     widest tier alone is refused, which is what makes the acceptance a
+ *     reading of the least and not of nothing.
  * 13. A unit measuring at one tier and not at another is not measured at all: half
- *     a size is not a size, and a gate that filled the gap with the tier it does
- *     have would be refusing against a stand-in.
+ *     a size is not a size, and a gate that filled the gap with the tier it
+ *     does have would be refusing against a stand-in.
  * 14. Two units standing at different heights are judged by the difference between
  *     them: a lift that still leaves their columns meeting is refused, and one
  *     that carries the upper clear of the lower is accepted, at the same
  *     distance apart in plan.
  * 15. Two members are found across a cell boundary in DEPTH as well as across one
- *     in width, because a crowd has ranks and the pair inside one another may be
- *     one behind the other rather than side by side.
+ *     in width, because a crowd has ranks and the pair inside one another may
+ *     be one behind the other rather than side by side.
  * 16. Only the first measured members of an enormous unit are measured: a body
- *     standing on one of them is refused, and the same body standing on a member
- *     past the cap is not. That is the trade the cap makes, stated rather than
- *     hidden.
- * 17. A shot whose cue ends already exceed the sampling budget is walked at its ends
- *     alone: an overlap standing at one of them is still refused, and one that
- *     happens only between two of them is the resolution this budget states.
+ *     standing on one of them is refused, and the same body standing on a
+ *     member past the cap is not. That is the trade the cap makes, stated
+ *     rather than hidden.
+ * 17. A shot whose cue ends already exceed the sampling budget is walked at its
+ *     ends alone: an overlap standing at one of them is still refused, and one
+ *     that happens only between two of them is the resolution this budget
+ *     states.
  */
 export const test_mcp_production_formation_overlap = (): void => {
   const wide = post({ id: "post", radius: 0.4 });
@@ -777,7 +778,10 @@ export const test_mcp_production_formation_overlap = (): void => {
       {
         id: "collar",
         name: null,
-        geometry: { type: "primitive", shape: { type: "sphere", radius: 0.33 } },
+        geometry: {
+          type: "primitive",
+          shape: { type: "sphere", radius: 0.33 },
+        },
         material: null,
         attachedBone: "neck",
         transform: null,
@@ -853,7 +857,9 @@ export const test_mcp_production_formation_overlap = (): void => {
       // 0.8 m, which it does not.
       [
         "leastIsWhatCounts",
-        () => codes({ models: [wide, narrow], formations: tieredPair }).length === 0,
+        () =>
+          codes({ models: [wide, narrow], formations: tieredPair }).length ===
+          0,
       ],
       [
         "theWidestAloneWouldRefuse",
@@ -951,7 +957,10 @@ export const test_mcp_production_formation_overlap = (): void => {
         "touchingHeightsAccepted",
         () => codes({ models: [wide], formations: lifted(2) }).length === 0,
       ],
-      ["clearAbove", () => codes({ models: [wide], formations: lifted(3) }).length === 0],
+      [
+        "clearAbove",
+        () => codes({ models: [wide], formations: lifted(3) }).length === 0,
+      ],
       // And the plan distance is the same in all three, so what separated them
       // is the lift and nothing else.
       [
@@ -970,7 +979,9 @@ export const test_mcp_production_formation_overlap = (): void => {
   // 15. a pair one behind the other, across a cell boundary in depth.
   const ranked = judge({
     models: [wide],
-    formations: [file({ count: 2, spacing: 0.3, anchor: { x: 0, y: 0, z: 0.7 } })],
+    formations: [
+      file({ count: 2, spacing: 0.3, anchor: { x: 0, y: 0, z: 0.7 } }),
+    ],
   });
   TestValidator.equals(
     "two members one behind the other are found across a boundary in depth",
@@ -1020,7 +1031,9 @@ export const test_mcp_production_formation_overlap = (): void => {
       // width, so neither answer above is the crowd reporting on itself.
       [
         "theHostIsCleanOnItsOwn",
-        () => codes({ models: [wide], formations: [host(HOST_COUNT)] }).length === 0,
+        () =>
+          codes({ models: [wide], formations: [host(HOST_COUNT)] }).length ===
+          0,
       ],
     ]),
     { withinTheCap: true, pastTheCap: true, theHostIsCleanOnItsOwn: true },

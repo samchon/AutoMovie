@@ -51,8 +51,10 @@ const lattice = (
  *
  * Scenarios:
  *
- * 1. A well-formed field passes, so what follows is the gate refusing malformed
- *    records rather than the gate refusing the rule.
+ * 1. A well-formed field passes, on two different lattice shapes, so what follows
+ *    is the gate refusing malformed records rather than the gate refusing the
+ *    rule — or holding every record to the one shape a fixture happened to
+ *    carry.
  * 2. A non-finite origin is refused on the axis that carries it, since a lattice
  *    with no place in the world cannot be sampled anywhere.
  * 3. A pitch of zero or below is refused: the lattice coordinate of a point is a
@@ -91,11 +93,26 @@ export const test_mcp_production_heightfield_validation = (): void => {
         diagnostic.message.includes(fragment),
     );
 
-  TestValidator.predicate(
-    "a well-formed sampled field passes the design gate",
-    validateAutoMovieProductionGraph(graph(lattice())).every(
-      (diagnostic) => diagnostic.target !== "world",
-    ),
+  const worldRefusals = (height: IAutoMovieHeightRule): number =>
+    validateAutoMovieProductionGraph(graph(height)).filter(
+      (diagnostic) => diagnostic.target === "world",
+    ).length;
+  TestValidator.equals(
+    "a well-formed sampled field passes the design gate, whatever lattice it declares",
+    namedFacts([
+      ["twoByTwo", () => worldRefusals(lattice()) === 0],
+      // A second shape, because the sample rule reads columns TIMES rows: a
+      // gate holding every lattice to the four the fixture happens to carry
+      // would pass the case above and refuse this one.
+      [
+        "threeByTwo",
+        () =>
+          worldRefusals(
+            lattice({ columns: 3, samples: [0, 1, 2, 3, 4, 5] }),
+          ) === 0,
+      ],
+    ]),
+    { twoByTwo: true, threeByTwo: true },
   );
 
   TestValidator.equals(

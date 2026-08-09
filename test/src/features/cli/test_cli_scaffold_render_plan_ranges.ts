@@ -14,11 +14,11 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionDesign,
   testCaptureRuntimeIdentity,
 } from "../mcp/productionFixtures";
-import { namedFacts } from "../internal/predicates";
 
 /** The byte ceiling `renderPlanSnapshot.ts` refuses a stored generation past. */
 const RENDER_PLAN_MAX_BYTES = 16 * 1024 * 1024;
@@ -150,9 +150,7 @@ const planInputs = () => ({
 });
 
 /** Bytes the abandoned per-frame schema would have written for this plan. */
-const perFrameRecordBytes = (
-  plan: IAutoMovieProductionRenderJobPlan,
-): number =>
+const perFrameRecordBytes = (plan: IAutoMovieProductionRenderJobPlan): number =>
   Buffer.byteLength(
     `${JSON.stringify(
       {
@@ -188,9 +186,9 @@ interface IRenderPlanSnapshotFixture {
  *
  * 1. A plan whose per-frame record would exceed the ceiling is published rather
  *    than refused, and the stored bytes are a small fraction of it.
- * 2. The stored generation names ranges, not frames, and reads back as the
- *    exact same plan -- still verifying against the compiler inputs it was
- *    planned from, so nothing downstream can tell the schema changed.
+ * 2. The stored generation names ranges, not frames, and reads back as the exact
+ *    same plan -- still verifying against the compiler inputs it was planned
+ *    from, so nothing downstream can tell the schema changed.
  * 3. A plan whose frames are not that derivation is stored verbatim instead of
  *    approximated, and still reads back exactly.
  */
@@ -245,7 +243,10 @@ export const test_cli_scaffold_render_plan_ranges = async (): Promise<void> => {
           "aPerFrameRecordWouldExceedTheStoredCeiling",
           () => perFrame > RENDER_PLAN_MAX_BYTES,
         ],
-        ["theStoredRecordFitsTheCeiling", () => stored.length < RENDER_PLAN_MAX_BYTES],
+        [
+          "theStoredRecordFitsTheCeiling",
+          () => stored.length < RENDER_PLAN_MAX_BYTES,
+        ],
         [
           "theStoredRecordIsAFractionOfThePerFrameOne",
           () => stored.length * 10 < perFrame,
@@ -260,7 +261,7 @@ export const test_cli_scaffold_render_plan_ranges = async (): Promise<void> => {
           () => record.plan.chunks[0]!.frames === undefined,
         ],
         [
-          "everyChunkStoresFarFewerRunsThanFrames",
+          "noChunkStoresMoreRunsThanItHasFrames",
           () =>
             record.plan.chunks.every(
               (chunk) => (chunk.runs as unknown[]).length <= CHUNK_FRAMES,
@@ -273,7 +274,10 @@ export const test_cli_scaffold_render_plan_ranges = async (): Promise<void> => {
               (chunk) => (chunk.runs as unknown[]).length > 1,
             ),
         ],
-        ["thePublishedGenerationIsTheHead", () => captured.generation === published.generation],
+        [
+          "thePublishedGenerationIsTheHead",
+          () => captured.generation === published.generation,
+        ],
         [
           "theReadPlanIsTheExactPlannedPlan",
           () => JSON.stringify(captured.plan) === JSON.stringify(plan),
@@ -297,7 +301,7 @@ export const test_cli_scaffold_render_plan_ranges = async (): Promise<void> => {
         theStoredRecordUsesTheRangeSchema: true,
         theStoredChunksNameRuns: true,
         theStoredChunksDoNotNameFrames: true,
-        everyChunkStoresFarFewerRunsThanFrames: true,
+        noChunkStoresMoreRunsThanItHasFrames: true,
         theDissolveIsStoredFrameByFrame: true,
         thePublishedGenerationIsTheHead: true,
         theReadPlanIsTheExactPlannedPlan: true,
@@ -334,13 +338,21 @@ export const test_cli_scaffold_render_plan_ranges = async (): Promise<void> => {
       });
       const verbatim = JSON.parse(
         fs
-          .readFileSync(path.join(`${foreignTarget}.generations`, "genesis.json"))
+          .readFileSync(
+            path.join(`${foreignTarget}.generations`, "genesis.json"),
+          )
           .toString("utf8"),
-      ) as { plan: { chunks: Array<Record<string, unknown>> }; version: number };
+      ) as {
+        plan: { chunks: Array<Record<string, unknown>> };
+        version: number;
+      };
       TestValidator.equals(
         "a plan the range codec cannot describe is stored verbatim, never approximated",
         namedFacts([
-          ["theStoredRecordKeepsThePerFrameSchema", () => verbatim.version === 1],
+          [
+            "theStoredRecordKeepsThePerFrameSchema",
+            () => verbatim.version === 1,
+          ],
           [
             "theStoredChunksStillNameFrames",
             () => Array.isArray(verbatim.plan.chunks[0]!.frames),
