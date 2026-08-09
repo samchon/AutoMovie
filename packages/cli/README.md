@@ -178,7 +178,7 @@ import {
 const loaded = loadAutoMovieProjectState({ root: process.cwd() });
 const state = requireCurrentAutoMovieProjectState(loaded);
 const shot = state.generated.shots.get("opening")!;
-const formation = state.generated.design.formations.get("army")!;
+const formation = state.generated.design.formations.get("chorus")!;
 const runtime = shot.formations.find((item) => item.id === formation.id)!;
 const base = formationSlot(formation, 31).position;
 const atTwoSeconds = transformFormationPoint(
@@ -189,7 +189,7 @@ const atTwoSeconds = transformFormationPoint(
 );
 const landmark = state.generated.design.world.landmarks[0]!.position;
 const distance = Vector3.length(Vector3.subtract(atTwoSeconds, landmark));
-const actor = shot.scene.nodes.find((item) => item.id === "sentinel")!;
+const actor = shot.scene.nodes.find((item) => item.id === "soloist")!;
 const model = shot.models.find((item) => item.id === actor.model)!;
 const reach =
   model.skeleton === null

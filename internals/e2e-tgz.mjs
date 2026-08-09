@@ -721,7 +721,7 @@ const graph = project.graph();
 const formationSummary = services.oracle.query({
   request: {
     query: "formation",
-    formation: "army",
+    formation: "chorus",
     shot: "opening",
     time: 2,
   },
@@ -746,10 +746,10 @@ assert(
 const effectSummary = services.oracle.query({
   request: {
     query: "effect",
-    zone: "signal-smoke",
+    zone: "plaza-haze",
     shot: "opening",
     time: 2,
-    subjects: ["sentinel"],
+    subjects: ["soloist"],
   },
 });
 const effectAcceptance = graph.acceptance.get("opening-effect-mask");
@@ -1581,9 +1581,9 @@ if (
     "npm run design",
     starterDir,
     [
-      "unchanged models/sentinel.json",
-      "unchanged models/army-hero.json",
-      "unchanged formations/army.json",
+      "unchanged models/soloist.json",
+      "unchanged models/chorus-hero.json",
+      "unchanged formations/chorus.json",
       "unchanged world.json",
     ],
   );

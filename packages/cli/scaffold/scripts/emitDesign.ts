@@ -8,10 +8,10 @@ import {
 } from "@automovie/mcp";
 
 import config from "../automovie.config";
-import { army } from "../src/formations/army";
-import { armyHero } from "../src/units/armyHero";
-import { sentinel } from "../src/units/sentinel";
-import { signalField } from "../src/world/signalField";
+import { chorus } from "../src/formations/chorus";
+import { chorusHero } from "../src/units/chorusHero";
+import { soloist } from "../src/units/soloist";
+import { plaza } from "../src/world/plaza";
 
 /**
  * Emit the tracked design records the compiler reads from the typed sources
@@ -72,31 +72,31 @@ const emit = (
   );
 };
 
-const sentinelRecipe = sentinel.design();
+const soloistRecipe = soloist.design();
 emit(
-  "models/sentinel.json",
-  { kind: "model", id: sentinelRecipe.id },
-  sentinelRecipe,
-  () => project.setModelRecipe(sentinelRecipe),
+  "models/soloist.json",
+  { kind: "model", id: soloistRecipe.id },
+  soloistRecipe,
+  () => project.setModelRecipe(soloistRecipe),
 );
 
-const armyHeroRecipe = armyHero.design();
+const chorusHeroRecipe = chorusHero.design();
 emit(
-  "models/army-hero.json",
-  { kind: "model", id: armyHeroRecipe.id },
-  armyHeroRecipe,
-  () => project.setModelRecipe(armyHeroRecipe),
+  "models/chorus-hero.json",
+  { kind: "model", id: chorusHeroRecipe.id },
+  chorusHeroRecipe,
+  () => project.setModelRecipe(chorusHeroRecipe),
 );
 
-const armyFormation = army.design();
+const chorusFormation = chorus.design();
 emit(
-  "formations/army.json",
-  { kind: "formation", id: armyFormation.id },
-  armyFormation,
-  () => project.setFormationDesign(armyFormation),
+  "formations/chorus.json",
+  { kind: "formation", id: chorusFormation.id },
+  chorusFormation,
+  () => project.setFormationDesign(chorusFormation),
 );
 
-const world = signalField.design();
+const world = plaza.design();
 emit("world.json", { kind: "world" }, world, () =>
   project.setWorldDesign(world),
 );
