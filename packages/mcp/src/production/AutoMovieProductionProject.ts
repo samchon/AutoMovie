@@ -710,6 +710,7 @@ export class AutoMovieProductionProject {
   public static open(
     rootDirectory: string,
     productionId?: string,
+    archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ): AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
     if (path.parse(root).root === root)
@@ -723,6 +724,8 @@ export class AutoMovieProductionProject {
         lease.root,
         lease,
         productionId,
+        false,
+        archetypes,
       );
       assertProductionRootNamespaceLease(lease);
       return project;
@@ -738,6 +741,7 @@ export class AutoMovieProductionProject {
   public static openReadOnly(
     rootDirectory: string,
     productionId?: string,
+    archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ): AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
     if (path.parse(root).root === root)
@@ -752,6 +756,7 @@ export class AutoMovieProductionProject {
         lease,
         productionId,
         true,
+        archetypes,
       );
       assertProductionRootNamespaceLease(lease);
       return project;

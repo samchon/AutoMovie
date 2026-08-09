@@ -154,16 +154,45 @@ export const applyRenderMode = (
     }
   })();
   // A structural pass renders only the subject mesh geometry: hide every
-  // non-mesh renderable first (#1226), then build the pass (whose own overlay,
-  // if any, is added afterward and stays visible). Restore reverses both.
+  // non-mesh renderable first (#1226), suspend the scene's atmosphere, then
+  // build the pass (whose own overlay, if any, is added afterward and stays
+  // visible). Restore reverses all three.
   const restoreRenderables = hideNonMeshRenderables(scene);
+  const restoreFog = suspendFog(scene);
   const handle = build();
   return {
     mode,
     restore: once(() => {
       handle.restore();
+      restoreFog();
       restoreRenderables();
     }),
+  };
+};
+
+/**
+ * Take the scene's fog off for the duration of a structural pass, and put it
+ * back exactly as it was.
+ *
+ * A guide pass states a geometric fact, and fog is not one: `three.js` fogs any
+ * material whose shader carries the chunks, which is every `MeshBasicMaterial`
+ * the mask and outline passes install. Left on, an atmosphere would mix the
+ * mask's flat palette color toward the fog color with distance, so a
+ * segmentation consumer would read a far node as a different node than the same
+ * node near, and the outline pass's black fill would lighten until the white
+ * contour stopped being a contour. The depth and edge passes escape only by
+ * accident, their `ShaderMaterial`s never include the fog chunks; relying on
+ * that accident is how the next pass written in `MeshBasicMaterial` inherits
+ * the bug.
+ *
+ * The beauty pass is deliberately NOT covered: that one IS the film, and it
+ * must carry the atmosphere the scene declares.
+ */
+const suspendFog = (scene: THREE.Scene): (() => void) => {
+  const fog = scene.fog;
+  scene.fog = null;
+  return () => {
+    scene.fog = fog;
   };
 };
 

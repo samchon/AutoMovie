@@ -1,0 +1,654 @@
+import {
+  HUMANOID_GAITS,
+  HUMANOID_JOINT_AXES,
+  IAutoMovieActorContext,
+  blockBeat,
+  cutSequence,
+  makeActorSynthesizer,
+  performShot,
+  resolveSequencePlayback,
+  stageScene,
+} from "@automovie/engine";
+import {
+  AutoMovieGuidePass,
+  AutoMoviePrimitiveShape,
+  IAutoMovieBlocking,
+  IAutoMovieModel,
+  IAutoMovieMotion,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
+  IAutoMovieShot,
+  IAutoMovieStage,
+  IAutoMovieVector3,
+} from "@automovie/interface";
+import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
+import {
+  AutoMoviePlayer,
+  IAutoMovieRenderModeHandle,
+  applyCaptureCanvasSize,
+  applyObjectMotion,
+  applyObjectMotions,
+  applyPose,
+  applyRenderMode,
+  applySceneFog,
+  buildLight,
+  buildModel,
+  buildSpaceObject,
+  mountViewer,
+  renderCrossDissolve,
+} from "@automovie/viewer";
+import * as THREE from "three";
+
+import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
+
+// The film pipeline end to end, on screen: the same tracked TypeScript values
+// a coding agent authors (script → staging → blocking → performance → assemble),
+// consumed by the engine's film compilers, played back through the sequence
+// resolver: real gait travel, a follow camera compiled from a `frame` verb,
+// a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
+// capture-shots.mjs bakes the identical film every run.
+
+// ── the coding-agent-authored stage values ──────────────────────────────────
+const script: IAutoMovieScript = {
+  logline: "A pursuer closes the distance; the one waiting never turns.",
+  theme: "inevitability at walking pace",
+  cast: [
+    { node: "walker", character: "the pursuer", modelRef: "stickman" },
+    { node: "waiter", character: "the one who waits", modelRef: "stickman" },
+  ],
+  beats: [
+    {
+      id: "approach",
+      name: "the approach",
+      summary: "the walker crosses the floor toward the waiter's back",
+      durationHint: 3,
+    },
+    {
+      id: "face-off",
+      name: "the face-off",
+      summary: "both hold; the camera circles the waiter",
+      durationHint: 2.5,
+    },
+  ],
+};
+
+const staging: IAutoMovieStage = {
+  scene: { id: "scene-pursuit", name: "the pursuit" },
+  plan: "walker starts 2.95 m behind the waiter, both facing +Z; a 12 × 10 m floor carries the walk, a low wall closes the far side; the camera stands side-on and follows the walker in.",
+  actors: [
+    { node: "walker", position: { x: 0, y: 0, z: -2.4 }, facingDeg: 0 },
+    { node: "waiter", position: { x: 0, y: 0, z: 0.55 }, facingDeg: 0 },
+  ],
+  // Set pieces (#1173): one unit box model resized per placement. The wall and
+  // the crate are the SAME `block` model at two sizes, which is the point of
+  // `scale`. The floor is drawn from the space below, not as a set node.
+  set: [
+    {
+      node: "wall-back",
+      model: "block",
+      position: { x: 0, y: 0.9, z: -4.6 },
+      scale: { x: 12, y: 1.8, z: 0.24 },
+    },
+    {
+      node: "crate",
+      model: "block",
+      position: { x: -1.6, y: 0.25, z: -1.2 },
+      facingDeg: 24,
+      scale: 0.5,
+    },
+  ],
+  // The space is the same floor's MEANING: one walkable patch under the whole
+  // walk. `buildSpaceObject` draws it, so the ground reaches every structural
+  // guide pass (a GridHelper never did: it is a LineSegments, hidden first).
+  space: {
+    id: "space-pursuit",
+    surfaces: [
+      {
+        id: "floor",
+        kind: "floor",
+        polygon: [
+          { x: -6, y: 0, z: -5 },
+          { x: 6, y: 0, z: -5 },
+          { x: 6, y: 0, z: 5 },
+          { x: -6, y: 0, z: 5 },
+        ],
+        anchor: { x: 0, y: 0, z: 0 },
+        rampTo: null,
+      },
+    ],
+    walkable: ["floor"],
+  },
+  cameras: [
+    {
+      node: "cam-main",
+      position: { x: 2.2, y: 1.4, z: -0.8 },
+      lookAt: { kind: "node", node: "walker" },
+      fovDeg: 40,
+    },
+  ],
+  lights: [
+    {
+      node: "sun",
+      role: "sun",
+      direction: { x: -1, y: -1.4, z: 0.4 },
+      intensity: 1.4,
+    },
+  ],
+};
+
+const blockings: IAutoMovieBlocking[] = [
+  {
+    beat: "approach",
+    analysis: "the distance itself is the drama: the walk must read whole.",
+    rationale:
+      "a medium follow keeps the walker's stride and the shrinking gap in one frame.",
+    actors: [
+      {
+        node: "walker",
+        beats: "walks the 2.25 m to just behind the waiter, eyes on him",
+        anchors: [{ t: 2.8, cue: "the last step lands" }],
+      },
+      { node: "waiter", beats: "stands dead still, facing away" },
+    ],
+    camera: {
+      framing: "full",
+      move: "follow",
+      on: { kind: "node", node: "walker" },
+    },
+    duration: 3,
+  },
+  {
+    beat: "face-off",
+    analysis: "stillness after motion: the circle asks who moves first.",
+    rationale:
+      "an orbiting close-up on the waiter turns his stillness into tension.",
+    actors: [
+      { node: "walker", beats: "holds one pace behind, watching" },
+      { node: "waiter", beats: "holds, jaw set" },
+    ],
+    camera: {
+      framing: "full",
+      move: "orbit",
+      on: { kind: "node", node: "waiter" },
+    },
+    duration: 2.5,
+  },
+];
+
+const performances: IAutoMoviePerformance[] = [
+  {
+    beat: "approach",
+    plan: "one locomote covers the whole beat; the head tracks the waiter; the camera follows.",
+    draft: [
+      {
+        verb: "locomote",
+        actor: "walker",
+        start: 0,
+        duration: 3,
+        gait: "walk",
+        to: { kind: "point", point: { x: 0, y: 0, z: -0.15 } },
+      },
+      {
+        verb: "lookAt",
+        actor: "walker",
+        start: 0,
+        duration: 3,
+        to: { kind: "node", node: "waiter" },
+      },
+      { verb: "hold", actor: "waiter", start: 0, duration: 3 },
+      {
+        verb: "frame",
+        actor: "cam-main",
+        start: 0,
+        duration: "auto",
+        framing: "full",
+        move: "follow",
+        on: { kind: "node", node: "walker" },
+      },
+    ],
+    revise: {
+      review: "stride covers the gap; the follow keeps both in frame.",
+      final: null,
+    },
+    duration: 3,
+  },
+  {
+    beat: "face-off",
+    plan: "both hold; the camera orbits the waiter in close.",
+    draft: [
+      { verb: "hold", actor: "walker", start: 0, duration: 2.5 },
+      {
+        verb: "emote",
+        actor: "waiter",
+        start: 0,
+        duration: 2.5,
+        preset: "angry",
+        intensity: 0.8,
+      },
+      {
+        verb: "frame",
+        actor: "cam-main",
+        start: 0,
+        duration: "auto",
+        framing: "full",
+        move: "orbit",
+        on: { kind: "node", node: "waiter" },
+      },
+    ],
+    revise: {
+      review: "nothing moves but the camera, as blocked.",
+      final: null,
+    },
+    duration: 2.5,
+  },
+];
+
+// ── rigs + the content seam ──────────────────────────────────────────────────
+const walkerRig = buildStickman(DEFAULT_STICKMAN);
+const waiterRig = buildStickman(DEFAULT_STICKMAN);
+const rigOf: Record<string, ReturnType<typeof buildStickman> | undefined> = {
+  walker: walkerRig,
+  waiter: waiterRig,
+};
+/** The rig of a performing node; set pieces have none and never pose. */
+const rigFor = (node: string): ReturnType<typeof buildStickman> => {
+  const rig = rigOf[node];
+  if (rig === undefined) throw new Error(`node "${node}" has no rig`);
+  return rig;
+};
+
+/**
+ * The one skeleton-less model every set piece is realised from: a 1 m unit box,
+ * resized per placement through the staged node's scale (#1173). One primitive
+ * standing in for a wall and a crate is exactly the "rough stages, primitive
+ * props" bet: the model registry stays at one entry, staging owns the sizes.
+ */
+const UNIT_BOX: AutoMoviePrimitiveShape = {
+  type: "box",
+  width: 1,
+  height: 1,
+  depth: 1,
+};
+const blockModel: IAutoMovieModel = {
+  id: "block",
+  name: "set block",
+  origin: "generated",
+  parts: [
+    {
+      id: "body",
+      name: "body",
+      geometry: { type: "primitive", shape: UNIT_BOX },
+      material: "stone",
+      attachedBone: null,
+      transform: null,
+    },
+  ],
+  skeleton: null,
+  body: null,
+  materials: [
+    {
+      id: "stone",
+      name: "stone",
+      baseColor: { r: 0.72, g: 0.73, b: 0.76, a: 1, hex: null },
+      metallic: 0,
+      roughness: 0.9,
+      emissive: null,
+      opacity: 1,
+      baseColorTexture: null,
+    },
+  ],
+  asset: null,
+};
+/**
+ * The model realising one staged node: a set piece's shared block, or the
+ * node's own rig. Keyed on the NODE (not the model id) because both actors
+ * share the one `stickman` cast `modelRef` while owning separate rigs.
+ */
+const modelForNode = (node: { id: string; model: string }): IAutoMovieModel =>
+  node.model === blockModel.id ? blockModel : rigFor(node.id).model;
+
+// The canonical humanoid walk from the engine's gait library: bent knees
+// (neutral-centered so they stay in ROM), contralateral arm swing, already
+// tuned. The demo drops it straight into the actor context; no hand-authoring.
+const WALK = HUMANOID_GAITS.walk;
+
+const staged = stageScene(script, staging);
+if (staged.success !== true) throw new Error("staging failed");
+
+const nodePositions = new Map<string, IAutoMovieVector3>(
+  staged.scene.nodes.map((n) => [n.id, n.transform.translation]),
+);
+// Only the rigged cast gets a motion context; a set piece never performs.
+const actorNodes = staged.scene.nodes.filter((n) => rigOf[n.id] !== undefined);
+const contexts = new Map<string, IAutoMovieActorContext>(
+  actorNodes.map((n) => [
+    n.id,
+    {
+      skeleton: rigFor(n.id).skeleton.id,
+      gaits: [WALK],
+      position: n.transform.translation,
+      speed: 0.75,
+      facingDeg: 0,
+      eyeHeight: 1.45,
+      restPose: {
+        skeleton: rigFor(n.id).skeleton.id,
+        root: null,
+        joints: [],
+      },
+    },
+  ]),
+);
+const synthesize = makeActorSynthesizer(contexts, nodePositions);
+
+// ── the ladder: block → perform → cut ────────────────────────────────────────
+const shots: IAutoMovieShot[] = [];
+const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>();
+performances.forEach((performance, i) => {
+  const blocked = blockBeat(script, staged, blockings[i]!);
+  if (blocked.success !== true)
+    throw new Error(`blocking failed: ${JSON.stringify(blocked.violations)}`);
+  const performed = performShot({
+    script,
+    staged,
+    performance,
+    synthesize,
+    skeleton: (node) => rigFor(node).skeleton,
+    blocking: blocked.blocking,
+  });
+  if (performed.success !== true)
+    throw new Error(`perform failed: ${JSON.stringify(performed.violations)}`);
+  shots.push(performed.shot);
+  motionsByShot.set(performed.shot.id, performed.motions);
+});
+
+const cut = cutSequence(
+  {
+    sequence: { id: "seq-pursuit", name: "the pursuit" },
+    fps: 30,
+    entries: shots.map((s, i) => ({
+      shot: s.id,
+      trim: null,
+      // dissolve the approach into the face-off close-up (a soft reveal); the
+      // first entry has nothing to transition from.
+      transition:
+        i === 1 ? { kind: "crossDissolve" as const, duration: 0.6 } : null,
+    })),
+    pacing: "the walk dissolves into the face-off close-up.",
+    continuity: "the walker ends where the close-up finds him.",
+  },
+  shots,
+);
+if (cut.success !== true) throw new Error("cut failed");
+export const FILM_DURATION = cut.runtime;
+
+// ── the set: scene nodes → three.js ─────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf2f4f8);
+// The staged space, drawn as real meshes (#1173). This replaces the GridHelper
+// that used to stand in for a floor: a grid is a LineSegments, which every
+// structural guide pass hides (#1226), so depth/mask/outline saw no ground at
+// all. A mesh floor is collected by the passes like any other geometry.
+scene.add(buildSpaceObject(staged.scene.space!));
+// Ambient fill stays a page decision (staging models no sky), but the KEY light
+// is the staged one, built through the viewer. A hardcoded sun stood here and
+// `staged.scene.lights` went unused, so every capture proved the page's own
+// lighting and nothing about the film's: the direction #1356 restored had no
+// witness on the render side at all.
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3b2, 1.1));
+for (const light of staged.scene.lights) scene.add(buildLight(light));
+
+// node id → its scene group, so a shot's objectMotions (a projectile/prop's
+// baked clip) can drive the object's world transform each frame.
+const groupsById = new Map<string, THREE.Group>();
+
+// Staged base per node: the FULL transform, scale included (the hand-rolled
+// group setup used to drop staged scale, #1087).
+const stagedNodeById = new Map(staged.scene.nodes.map((n) => [n.id, n]));
+const applyStagedBase = (group: THREE.Group, nodeId: string): void => {
+  const {
+    translation: t,
+    rotation: r,
+    scale: s,
+  } = stagedNodeById.get(nodeId)!.transform;
+  group.position.set(t.x, t.y, t.z);
+  group.quaternion.set(r.x, r.y, r.z, r.w);
+  group.scale.set(s.x, s.y, s.z);
+};
+const built = Object.fromEntries(
+  staged.scene.nodes.map((node) => {
+    const obj = buildModel(modelForNode(node));
+    const group = new THREE.Group();
+    applyStagedBase(group, node.id);
+    group.add(obj.object);
+    scene.add(group);
+    groupsById.set(node.id, group);
+    return [node.id, obj] as const;
+  }),
+);
+
+// One player per (shot, performing node); seeking a shot drives its players.
+const playersByShot = new Map<
+  string,
+  { node: string; player: AutoMoviePlayer }[]
+>(
+  shots.map((shot) => [
+    shot.id,
+    shot.performances.map((p) => ({
+      node: p.node,
+      player: new AutoMoviePlayer(
+        built[p.node]!,
+        rigFor(p.node).skeleton,
+        motionsByShot.get(shot.id)![p.node]!,
+        HUMANOID_JOINT_AXES,
+      ),
+    })),
+  ]),
+);
+
+// ── the projector: global seconds → posed set + framed camera ────────────────
+const camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.05, 100);
+const stagedCam = staged.scene.cameras[0]!;
+const applyStagedCamera = (): void => {
+  const t = stagedCam.transform.translation;
+  const r = stagedCam.transform.rotation;
+  camera.position.set(t.x, t.y, t.z);
+  camera.quaternion.set(r.x, r.y, r.z, r.w);
+  camera.fov = stagedCam.fovY;
+  camera.updateProjectionMatrix();
+};
+applyStagedCamera();
+
+const shotById = new Map(shots.map((s) => [s.id, s]));
+
+type SequenceRenderFrameSample = Pick<
+  IAutoMovieSequenceRenderFrame,
+  "shot" | "shotTimeSeconds" | "blend"
+>;
+
+type SequenceRenderShotSample = {
+  shot: string;
+  shotTimeSeconds: number;
+};
+
+// Pose the scene and aim the camera for one shot at its shot-local time: advance
+// each player, ride any objectMotions, and set the camera (its motion or the
+// staged default). The read side used both for a plain frame and for each half
+// of a cross-dissolve.
+const poseShot = (shot: IAutoMovieShot, time: number): void => {
+  // The applyObjectMotion host contract: a host that swaps clips mid-scene
+  // restores staged bases itself (#1087). Without this reset a node driven by
+  // shot A's objectMotion but absent from shot B kept A's tail transform,
+  // order-dependent frames that break chunked capture's determinism promise
+  // (a fresh page at a chunk boundary would render the staged base instead).
+  // Rigs without a performance in this shot likewise return to rest, not the
+  // previous shot's last pose, the same reset applyStagedCamera performs.
+  const performing = new Set(shot.performances.map((p) => p.node));
+  for (const node of staged.scene.nodes) {
+    applyStagedBase(groupsById.get(node.id)!, node.id);
+    // A set piece has no rig to rest: its staged base IS its whole state.
+    if (performing.has(node.id) || rigOf[node.id] === undefined) continue;
+    const rig = rigFor(node.id);
+    applyPose(
+      built[node.id]!,
+      { skeleton: rig.skeleton.id, root: null, joints: [] },
+      rig.skeleton,
+      HUMANOID_JOINT_AXES,
+    );
+  }
+  for (const { player } of playersByShot.get(shot.id)!) player.update(time);
+  applyObjectMotions(shot.objectMotions, time, (node) => groupsById.get(node));
+  if (shot.cameraMotion === null) applyStagedCamera();
+  else applyObjectMotion(shot.cameraMotion, time, () => camera);
+};
+
+// The last manifest frame drawn, so `__afPass` can re-render the SAME frame
+// composition (including a cross-dissolve) under a guide-pass override rather
+// than a plain single-pass render over the incoming-only posed scene (#1250).
+let lastSequenceFrame: SequenceRenderFrameSample | null = null;
+
+// Draw one manifest frame sample. Without a `pass`: on a hard cut it only poses
+// the live shot and returns false (the caller renders single-pass); inside a
+// transition it composites the outgoing tail and the incoming shot itself and
+// returns true. With a `pass` it always renders here (returning true): the cut
+// under the pass override, or the dissolve with the override applied to each
+// half so both shots reach the guide frame (#1250).
+const drawSequenceFrame = (
+  frame: SequenceRenderFrameSample,
+  pass?: AutoMovieGuidePass,
+): boolean => {
+  lastSequenceFrame = frame;
+  const live = shotById.get(frame.shot)!;
+  const withPass =
+    pass === undefined
+      ? undefined
+      : (render: () => void): void => {
+          // Apply/restore per render so the pose overlay is built from whatever
+          // shot is posed at that moment (the dissolve halves differ).
+          const handle = applyRenderMode(scene, pass);
+          render();
+          handle.restore();
+        };
+  if (frame.blend === null) {
+    poseShot(live, frame.shotTimeSeconds);
+    if (withPass === undefined) return false;
+    withPass(() => renderer.render(scene, camera));
+    return true;
+  }
+  const b = frame.blend;
+  const outgoing = shotById.get(b.shot)!;
+  renderCrossDissolve(
+    renderer,
+    scene,
+    camera,
+    () => poseShot(outgoing, b.shotTimeSeconds),
+    () => poseShot(live, frame.shotTimeSeconds),
+    b.alpha,
+    withPass,
+  );
+  return true;
+};
+
+const drawFrame = (seconds: number): boolean => {
+  const sample = resolveSequencePlayback(cut.sequence, shots, seconds);
+  if (sample === null) return false;
+  return drawSequenceFrame({
+    shot: sample.shot,
+    shotTimeSeconds: sample.time,
+    blend:
+      sample.blend === null
+        ? null
+        : {
+            shot: sample.blend.shot,
+            shotTimeSeconds: sample.blend.time,
+            alpha: sample.blend.alpha,
+          },
+  });
+};
+
+const renderSequenceFrame = (frame: SequenceRenderFrameSample): void => {
+  if (!drawSequenceFrame(frame)) renderer.render(scene, camera);
+};
+
+const renderShotOnly = (sample: SequenceRenderShotSample): void => {
+  const shot = shotById.get(sample.shot);
+  if (shot === undefined)
+    throw new Error(`unknown film shot "${sample.shot}" for sequence probe`);
+  poseShot(shot, sample.shotTimeSeconds);
+  renderer.render(scene, camera);
+};
+
+// ── mount + deterministic seek contract (capture-shots.mjs) ──────────────────
+const params = new URLSearchParams(location.search);
+const canvas = document.querySelector<HTMLCanvasElement>("#view")!;
+const capMode = params.get("cap") === "1";
+// Pin the capture canvas to the render plan's exact frame size (#1251), so a
+// headless screenshot of `#view` is that size regardless of the host window.
+if (capMode)
+  applyCaptureCanvasSize(
+    canvas,
+    Number(params.get("w")),
+    Number(params.get("h")),
+  );
+const frozen = params.get("t");
+const freezeAt = frozen !== null ? Number(frozen) : null;
+const handle = mountViewer(
+  canvas,
+  scene,
+  camera,
+  (elapsed) => {
+    // In capture/freeze mode the frame is driven by draw() below; returning
+    // true keeps the mount loop from overwriting a composited dissolve with a
+    // plain single-pass render.
+    if (capMode || freezeAt !== null) return true;
+    return drawFrame(elapsed % (FILM_DURATION + 0.8));
+  },
+  // Capture renders with AA off and a pinned pixel ratio (#1169) so structural
+  // guide passes read back crisp and byte-stable across hosts.
+  capMode ? { antialias: false, pixelRatio: 1 } : undefined,
+);
+const renderer = handle.renderer;
+const draw = (t: number): void => {
+  if (!drawFrame(t)) renderer.render(scene, camera);
+};
+if (freezeAt !== null && Number.isFinite(freezeAt)) draw(freezeAt);
+(window as unknown as { __afSeek: (t: number) => void }).__afSeek = (
+  t: number,
+): void => draw(t);
+// `__afPass` switches the guide pass a capturer screenshots (#1165): re-render
+// the LAST seeked frame's composition under the requested pass, so one seek
+// yields every pass of that frame. Re-composing the frame (rather than a plain
+// single-pass render over the posed scene) is what carries a cross-dissolve
+// into the guide passes. Otherwise a transition frame's passes, and its beauty
+// frame, showed only the incoming shot (#1250). The frame drives its own
+// apply/restore, so no override lingers across passes.
+let passHandle: IAutoMovieRenderModeHandle | null = null;
+(
+  window as unknown as { __afPass: (pass: AutoMovieGuidePass) => void }
+).__afPass = (pass: AutoMovieGuidePass): void => {
+  passHandle?.restore();
+  passHandle = null;
+  if (lastSequenceFrame !== null) drawSequenceFrame(lastSequenceFrame, pass);
+  else {
+    // No frame recorded yet (a freeze that resolved to no sample): fall back to
+    // a single-pass override of the current scene.
+    passHandle = applyRenderMode(scene, pass);
+    renderer.render(scene, camera);
+  }
+};
+(
+  window as unknown as {
+    __afSeekSequenceFrame: (frame: SequenceRenderFrameSample) => void;
+  }
+).__afSeekSequenceFrame = renderSequenceFrame;
+(
+  window as unknown as {
+    __afSeekSequenceShot: (sample: SequenceRenderShotSample) => void;
+  }
+).__afSeekSequenceShot = renderShotOnly;
+(window as unknown as { __automovie: unknown }).__automovie = {
+  ready: true,
+  duration: FILM_DURATION,
+  sequence: cut.sequence,
+  shots,
+  shotIds: shots.map((s) => s.id),
+};

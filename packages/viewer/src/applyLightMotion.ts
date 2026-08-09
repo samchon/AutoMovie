@@ -2,16 +2,33 @@ import { resolveShotLighting } from "@automovie/engine";
 import { IAutoMovieClip, IAutoMovieLight } from "@automovie/interface";
 import * as THREE from "three";
 
+import { applyTransform } from "./buildModel";
+
 /**
  * Write one {@link IAutoMovieLight}'s value onto the `three.js` light that plays
- * it: colour and intensity for every kind, falloff distance for the two that
- * have one, and the cone half-angle (degrees on the artifact, radians in
- * `three.js`) for a spot.
+ * it: its PLACEMENT for every kind, colour and intensity for every kind,
+ * falloff distance for the two that have one, and the cone half-angle (degrees
+ * on the artifact, radians in `three.js`) for a spot.
  *
  * The one place the mapping lives. {@link buildLight} calls it to place a staged
  * light and {@link applyLightMotion} calls it to move that same light over time,
  * so an animated light and a static one can never disagree about what `range`
  * or `coneAngle` means.
+ *
+ * The transform is written HERE rather than once at build time, which is what
+ * makes a light's direction animatable at all. `buildLight` used to place the
+ * light itself and this helper wrote everything except its placement, so a
+ * `/lights/<id>/rotation` track could resolve to a new orientation every frame
+ * and the `three.js` light would keep the one it was staged with forever. Both
+ * callers now go through one writer, so the rendered placement is the resolved
+ * placement by construction; {@link aimLight} keeps the light's target as a
+ * CHILD for exactly the same reason, so a turning light turns what it aims at
+ * with it.
+ *
+ * Writing an absolute TRS every frame is also what lets `applyLightMotion` keep
+ * its promise that the viewer's lighting is a pure function of scene, clips and
+ * time: a light nothing addresses is written back to where the scene staged it
+ * rather than holding wherever the previous frame left it.
  *
  * @author Samchon
  */
@@ -19,6 +36,7 @@ export const applyLightState = (
   target: THREE.Light,
   light: IAutoMovieLight,
 ): void => {
+  applyTransform(target, light.transform);
   target.color.setRGB(light.color.r, light.color.g, light.color.b);
   target.intensity = light.intensity;
   if (light.type === "point" && target instanceof THREE.PointLight)

@@ -58,7 +58,7 @@ const childrenOf = (action: IAutoMovieActionCall): string[] =>
  * placed the parent but had no skeletons) and returned as violations.
  *
  * Couplings CHAIN (#1140): a parent that is itself a coupled child this shot (a
- * knight mounted on a horse, carrying a lance) is baked FIRST, and its riders
+ * rider mounted on an animal, carrying a pole) is baked FIRST, and its riders
  * compose onto its baked follow frame per sample instead of its staged
  * placement, through any depth. The latest parent coupling is selected by its
  * first track time rather than by an id suffix. A coupling CYCLE has no world

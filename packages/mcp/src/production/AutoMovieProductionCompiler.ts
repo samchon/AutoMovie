@@ -178,9 +178,14 @@ export class AutoMovieProductionCompiler {
     const graph = this.project.graph();
     const inputRevision = this.project.revision();
     const projectManifest = this.project.manifest();
+    const archetypes = this.project.archetypes;
     const diagnostics: IAutoMovieDiagnostic[] = [
       ...missingDesignDiagnostics(this.project, graph),
-      ...validateAutoMovieProductionGraph(graph, this.project.productionId),
+      ...validateAutoMovieProductionGraph(
+        graph,
+        this.project.productionId,
+        archetypes,
+      ),
     ];
     const designReady = diagnostics.every(
       (diagnostic) => diagnostic.category !== "error",
