@@ -191,8 +191,9 @@ const codes = (
  *    still floor and a strict reading would refuse a field sized to its unit.
  * 4. A shot with no staged space is not measured at all, because the engine then
  *    falls back to the scalar ground plane and there is no extent to leave.
- * 5. Every staged unit answers for itself: one contained and one escaping report
- *    exactly one refusal, so a passing sibling cannot hide a failing one.
+ * 5. Every staged unit answers for itself: one contained beside one escaping
+ *    reports exactly one refusal and names which unit left, so a passing
+ *    sibling cannot hide a failing one and the gate cannot report either.
  * 6. A unit that fits where it stands and marches off the floor is refused, naming
  *    the time its cue took it out, because a unit walking over a void is the
  *    defect this gate exists for and not a different one.
@@ -264,10 +265,22 @@ export const test_mcp_production_formation_ground = (): void => {
     { nullSpace: true, absentSpace: true },
   );
 
+  const sibling = validateAutoMovieFormationGround(
+    { id: "opening" },
+    { scene: { space: field(5) }, formations: [unit(2), unit(9, "cavalry")] },
+  );
   TestValidator.equals(
     "one contained unit does not answer for an escaping one",
-    codes(field(5), [unit(2), unit(9)]),
-    ["engine-validation-failed"],
+    namedFacts([
+      ["one", () => sibling.length === 1],
+      // Distinct ids, so the refusal has to name which unit left. Two units
+      // called the same thing would let the gate report either and pass.
+      [
+        "names",
+        () => sibling[0]!.message.startsWith("formation:cavalry.bounds "),
+      ],
+    ]),
+    { one: true, names: true },
   );
 
   TestValidator.equals(
