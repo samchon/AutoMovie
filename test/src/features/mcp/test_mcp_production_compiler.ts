@@ -2320,19 +2320,37 @@ ${original}`,
     fs.rmSync(ensemblePath);
     fs.writeFileSync(sourcePath, original);
 
-    // The sandbox reimplements every engine name a source module may import,
-    // so a name registered but never invoked is a stand-in nothing has run.
-    // The starter's terrain subject asks the engine for its own height rather
-    // than reading the record, and this is what makes that call happen inside
-    // the sandbox: a stand-in that returned the wrong number, or that was not
-    // there at all, stops the compile rather than passing quietly.
+    // The sandbox reimplements every engine name a source module may import, so
+    // a name registered but never invoked is a stand-in nothing has run, and
+    // two implementations of one contract that nothing compares are how they
+    // come to disagree. Both branches of the height rule are answered from
+    // inside the sandbox against hand arithmetic: a level patch reads zero, and
+    // a plane reads its origin plus both slopes.
     fs.writeFileSync(
       sourcePath,
       mutate(
-        original,
+        `import { worldSurfaceHeight } from "@automovie/engine";
+${original}`,
         "  const performer = sentinel.render(context, { from: openingAbduction });",
         `  if (signalField.ground.heightAt({ x: 0, z: 0 }) !== 0)
     throw new Error("level ground must answer zero through the engine");
+  if (
+    worldSurfaceHeight(
+      {
+        id: "slope",
+        polygon: [
+          { x: -1, z: -1 },
+          { x: 1, z: -1 },
+          { x: 1, z: 1 },
+          { x: -1, z: 1 },
+        ],
+        height: { kind: "plane", originHeight: 1, slopeX: 2, slopeZ: 3 },
+        walkable: true,
+      },
+      { x: 1, z: 1 },
+    ) !== 6
+  )
+    throw new Error("a plane must answer origin plus both slopes");
   const performer = sentinel.render(context, { from: openingAbduction });`,
       ),
     );
