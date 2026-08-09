@@ -68,6 +68,25 @@ const bank = (): IAutoMovieWorldSurface =>
     walkable: true,
   });
 
+/**
+ * The same rise under the unit, declared by another surface.
+ *
+ * Identical pitch, base and reach along `z`, so every member of the unit stands
+ * at exactly the height {@link bank} puts it at; only the surface's id and the
+ * ground it covers differ. A digest that carried a unit's placements but not
+ * the ground it stands on would answer the same for both.
+ */
+const wideBank = (): IAutoMovieWorldSurface =>
+  worldRamp({
+    id: "wide-bank",
+    from: { x: 0, z: 0 },
+    to: { x: 0, z: 20 },
+    width: 80,
+    baseHeight: 0,
+    rise: 10,
+    walkable: true,
+  });
+
 /** Terrain far from the unit, which no member of it can ever stand on. */
 const elsewhere = (): IAutoMovieWorldSurface =>
   worldTerrain({
@@ -166,7 +185,9 @@ const refusals = (
  * 5. A unit compiled with no terrain declared is exactly the unit that compiled
  *    before: empty ground, every member at the anchor's height.
  * 6. Terrain is part of what a compiled unit is: the same design over the same
- *    ground digests identically, and over different ground it does not.
+ *    ground digests identically, and over a different surface that stands its
+ *    members in exactly the same places it does not — which is the ground
+ *    record itself entering the digest rather than the heights it produced.
  * 7. A unit staged under the floor its shot staged is refused, naming where it
  *    stands and what stands over it — the same duty the gate already had for a
  *    unit standing over nothing.
@@ -203,6 +224,10 @@ export const test_mcp_production_formation_relief = (): void => {
       ["high", () => nclose(compiled.bounds.max.y, 4.5, 1e-9)],
       // Four ranks of three, evenly weighted: the mean of 0, 1.5, 3 and 4.5.
       ["centroid", () => nclose(compiled.centroid.y, 2.25, 1e-9)],
+      // Not the same number read twice: a unit's own extent comes from the
+      // grounding pass's footprint while a chunk's comes from summarizing that
+      // chunk's slot range, so relief reaching one and not the other is exactly
+      // what these two facts disagreeing would say.
       [
         "chunkAgrees",
         () =>
@@ -248,6 +273,12 @@ export const test_mcp_production_formation_relief = (): void => {
     { empty: true, flatLow: true, flatHigh: true, everyMember: true },
   );
 
+  const relabelled = materializeCompiledFormation(
+    unit(),
+    new Map(),
+    undefined,
+    [wideBank()],
+  );
   TestValidator.equals(
     "terrain is part of what a compiled unit is",
     namedFacts([
@@ -257,9 +288,29 @@ export const test_mcp_production_formation_relief = (): void => {
           materializeCompiledFormation(unit(), new Map(), undefined, terrain)
             .digest === compiled.digest,
       ],
-      ["differs", () => bare.digest !== compiled.digest],
+      // The two units stand in exactly the same places, so nothing but the
+      // ground record itself is left to tell their digests apart. Comparing
+      // against the unit with no terrain at all would not say this: its members
+      // stand at different heights, and a digest that ignored ground entirely
+      // would still differ from it.
+      [
+        "standsIdentically",
+        () =>
+          nclose(relabelled.bounds.max.y, compiled.bounds.max.y, 1e-12) &&
+          nclose(relabelled.centroid.y, compiled.centroid.y, 1e-12) &&
+          nclose(
+            relabelled.heroes[0]!.transform.translation.y,
+            compiled.heroes[0]!.transform.translation.y,
+            1e-12,
+          ),
+      ],
+      ["differsByItsGroundAlone", () => relabelled.digest !== compiled.digest],
     ]),
-    { reproduces: true, differs: true },
+    {
+      reproduces: true,
+      standsIdentically: true,
+      differsByItsGroundAlone: true,
+    },
   );
 
   const sunk = refusals(flatSpace(2), staged({}));

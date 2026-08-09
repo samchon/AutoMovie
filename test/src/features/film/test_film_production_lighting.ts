@@ -97,13 +97,24 @@ const practical: IAutoMovieLight = {
   range: 4,
 };
 
-/** A scene's own copy of the production source: a reference, not a restaging. */
+/**
+ * A scene's own copy of the production source: a reference, not a restaging.
+ *
+ * Deliberately NOT the state the source holds at any story moment a case below
+ * reads — it faces `+Z` at a tenth of the intensity, where the source opens
+ * facing `−Z` at three. A staged copy that already matched the source's first
+ * moment would let a shot pinned at story zero read the staging and pass, which
+ * is the one outcome the whole inheritance exists to rule out.
+ */
 const stagedDaylight: IAutoMovieLight = {
   id: "daylight",
   type: "directional",
-  transform: IDENTITY_TRANSFORM,
+  transform: {
+    ...IDENTITY_TRANSFORM,
+    rotation: { x: 0, y: 1, z: 0, w: 0 },
+  },
   color: { r: 1, g: 1, b: 1, a: null, hex: null },
-  intensity: 3,
+  intensity: 0.1,
 };
 
 const lightOf = (lights: IAutoMovieLight[], id: string): IAutoMovieLight =>
@@ -173,6 +184,8 @@ export const test_film_production_lighting = (): void => {
   TestValidator.equals(
     "shots pinned at different story times inherit different states from one source",
     namedFacts([
+      // The staged copy faces +Z at 0.1, so these two are the SOURCE's opening
+      // state arriving rather than the staging being left alone.
       [
         "opensFacingMinusZ",
         () => vclose(directionOf(opening), { x: 0, y: 0, z: -1 }),

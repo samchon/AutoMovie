@@ -273,16 +273,17 @@ export const test_film_production_sound = (): void => {
         "attenuationCapped",
         () => plan.events.every((event) => event.attenuation <= 1),
       ],
-      ["panNotPastLeft", () => plan.events.every((event) => event.pan >= -1)],
-      ["panNotPastRight", () => plan.events.every((event) => event.pan <= 1)],
+      // The pan's own bounds are not asserted here. It is one component of a
+      // displacement over that displacement's own norm, so `[-1, 1]` is
+      // arithmetic rather than a rule, and no emitter a production can place
+      // could put it outside. Where the pan is really decided — which side of
+      // the lens an emitter is on — is the case below.
     ]),
     {
       trimmedOmitted: true,
       framesRounded: true,
       audible: true,
       attenuationCapped: true,
-      panNotPastLeft: true,
-      panNotPastRight: true,
     },
   );
   TestValidator.equals(

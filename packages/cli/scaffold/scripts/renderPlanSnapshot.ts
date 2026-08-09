@@ -32,12 +32,12 @@ import {
  * Where that lands, at the default 48 frames per chunk and counting every video
  * deliverable's copy of the chunk list:
  *
- * - one video deliverable, a cut at most every chunk: ~1,045,000 output frames,
+ * - One video deliverable, a cut at most every chunk: ~1,045,000 output frames,
  *   about 12 hours at 24 fps.
- * - four video deliverables (a feature plus three guide passes), a cut in every
+ * - Four video deliverables (a feature plus three guide passes), a cut in every
  *   chunk: ~261,000 output frames, about 3 hours at 24 fps or 2.4 hours at 30
  *   fps.
- * - four video deliverables, three cuts in every chunk: ~166,000 output frames,
+ * - Four video deliverables, three cuts in every chunk: ~166,000 output frames,
  *   about 1.9 hours at 24 fps.
  *
  * The same four-deliverable production reached this cap at 13,919 frames -- 9.7
@@ -478,8 +478,8 @@ const storedGeneration = (record: IRenderPlanGenerationRecord): unknown => {
 };
 
 /**
- * Replace every chunk's per-frame array with the ranges it was derived from,
- * or answer `null` when this plan is not that derivation.
+ * Replace every chunk's per-frame array with the ranges it was derived from, or
+ * answer `null` when this plan is not that derivation.
  *
  * A render chunk's frames are pure derived data: the output frame is the
  * chunk's own frame cursor, the timeline frame is that cursor times the tier's

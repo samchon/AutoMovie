@@ -146,8 +146,10 @@ const IDENTITY = [0, 0, 0, 1];
  *    where it does not: a spot has somewhere to stand and somewhere to look, a
  *    directional light is infinitely distant and carries no `position`, a point
  *    light radiates every way and carries no `rotation`.
- * 2. The joint rule refuses a non-unit rotation key on both payload layouts, and a
- *    mis-declared value type is caught before any of it.
+ * 2. The joint rule refuses a non-unit rotation key on both payload layouts, a
+ *    mis-declared value type is caught before any of it, and the per-component
+ *    range still reports the component it is about — located at that number's
+ *    own index, which is where the joint rule cannot report.
  * 3. A position track is unbounded and a unit rotation track is clean, so the
  *    rules refuse only what they name.
  * 4. The renormalization asymmetry: a `cubicspline` rotation whose tangents send
@@ -155,11 +157,11 @@ const IDENTITY = [0, 0, 0, 1];
  *    analysis still refuses a scalar axis (an intensity dipping below zero
  *    between two in-range keys), which is the case that would be lost if the
  *    exemption were written one condition too wide.
- * 5. One mistake earns one violation. A rotation key with a non-finite component,
- *    an uneven payload, and an empty one are each reported by the shared
- *    track-shape contract and NOT re-reported as a unit-length fault: the joint
- *    rule judges keyframes, and a payload that states no keyframe states
- *    nothing for it to judge.
+ * 5. One mistake earns one violation. A rotation key with a non-finite component
+ *    and an uneven payload are each reported by the shared track-shape contract
+ *    and NOT re-reported as a unit-length fault, and an empty payload is
+ *    refused by that same contract: the joint rule judges keyframes, and a
+ *    payload that states no keyframe states nothing for it to judge.
  */
 export const test_validation_light_transform_bounds = (): void => {
   // 1. the kind split.
@@ -287,6 +289,11 @@ export const test_validation_light_transform_bounds = (): void => {
             "$input.lightMotions[0].tracks[0].channel.valueType",
           ),
       ],
+      // Located at the component, not at the keyframe. A `w` of 2 is out of
+      // `[-1, 1]` AND not unit length, and the joint rule reports the whole
+      // value at `.values`; only the per-component range can report the eighth
+      // number, so naming its index is what says the range rule is still there
+      // rather than subsumed by the rule beside it.
       [
         "refusesOutOfRangeComponent",
         () =>
@@ -297,7 +304,7 @@ export const test_validation_light_transform_bounds = (): void => {
               [0, 4],
               [...IDENTITY, 0, 0, 0, 2],
             ),
-            "$input.lightMotions[0].tracks[0].values",
+            "$input.lightMotions[0].tracks[0].values[7]",
           ),
       ],
     ]),
@@ -420,13 +427,11 @@ export const test_validation_light_transform_bounds = (): void => {
             "$input.lightMotions[0].tracks[0].values",
           ),
       ],
-      [
-        "emptyIsNotAlsoNonUnit",
-        () =>
-          !reportsNonUnit(
-            track("/lights/key/rotation", "quaternion", [0, 4], []),
-          ),
-      ],
+      // A payload of no numbers is not asserted to escape the joint rule: the
+      // rule walks keyframes, and an empty payload states none for it to walk,
+      // so no reading of it could ever produce one. The uneven payload above is
+      // the case that can, since a rule reading its trailing part as a keyframe
+      // would report exactly what that fact refuses.
       [
         "emptyStillRefused",
         () =>
@@ -441,7 +446,6 @@ export const test_validation_light_transform_bounds = (): void => {
       nonFiniteStillRefused: true,
       unevenIsNotAlsoNonUnit: true,
       unevenStillRefused: true,
-      emptyIsNotAlsoNonUnit: true,
       emptyStillRefused: true,
     },
   );

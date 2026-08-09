@@ -139,7 +139,14 @@ export const test_viewer_formation_cadence = (): void => {
 
   const segments = formationCadenceSegments(
     [
-      cue({ id: "later", start: 4, end: 6, gait: "idle", from: place(0, 8) }),
+      cue({
+        id: "later",
+        start: 4,
+        end: 6,
+        gait: "idle",
+        from: place(0, 8),
+        to: place(0, 12),
+      }),
       cue({ id: "opening", start: 2, end: 4, to: place(0, 8) }),
       cue({ id: "elsewhere", formation: "another-unit", to: place(0, 99) }),
     ],
@@ -174,7 +181,7 @@ export const test_viewer_formation_cadence = (): void => {
         () =>
           segments[2]!.gait === "idle" &&
           nclose(segments[2]!.seconds, 1) &&
-          nclose(segments[2]!.distance, 0),
+          nclose(segments[2]!.distance, 2),
       ],
       [
         "aCueBeyondTheSampledTimeIsNotReached",
@@ -310,6 +317,10 @@ export const test_viewer_formation_cadence = (): void => {
       ["halfTheCueIsHalfTheCycle", () => nclose(halfway.advance, 2.5 / stride)],
       ["travellingStraightNeverTurns", () => nclose(covered.turn, 0)],
       [
+        // The starter figure stands 1.8 m. A cycle of a walk carries a body of
+        // that height somewhere between a fifth of it and a little over its
+        // own height, so a measurement outside that band is not a stride at
+        // all: it is an order of magnitude, or a planted fraction inverted.
         "theStrideIsOneAFigureThatSizeCouldTake",
         () => stride > 1.8 * 0.2 && stride < 1.8 * 1.2,
       ],

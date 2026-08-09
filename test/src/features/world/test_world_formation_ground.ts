@@ -147,8 +147,10 @@ const placed = (
  * 7. The full slot, not only the position, carries the relief, so a consumer
  *    reading a member's whole record sees the same height as one reading only
  *    where it stands.
- * 8. The same design places the same army twice, because relief is arithmetic over
- *    stored numbers and nothing about the machine can reach it.
+ *
+ * "The same design places the same crowd twice" is not among them. Placement is
+ * arithmetic over stored numbers with no state behind it, so a second identical
+ * call is the same call: it can report nothing the first did not.
  */
 export const test_world_formation_ground = (): void => {
   const bare = placed();
@@ -178,9 +180,12 @@ export const test_world_formation_ground = (): void => {
               nclose(point.z, bare[index]!.z, 1e-12),
           ),
       ],
-      ["staged", () => bare.every((point) => point.y === 0)],
+      // "The unit with no terrain sits at zero" is not stated here. Its anchor
+      // is at zero, so the claim reads the same whether placement keeps the
+      // staged height or drops every member to the world origin. The case that
+      // separates those is `noGroundAtAll` below, which stages at 0.75.
     ]),
-    { atZero: true, raised: true, plan: true, staged: true },
+    { atZero: true, raised: true, plan: true },
   );
 
   // The anchor stands on the slope, so the relief is the terrain itself and each
@@ -245,6 +250,11 @@ export const test_world_formation_ground = (): void => {
       ],
       // Files run -4, -2, 0, 2, 4 in x; the centre one is the crest.
       ["crestHighest", () => ridden[2]!.y > ridden[1]!.y],
+      // Not the rule's own evenness restated: the members stand BETWEEN
+      // samples, so this is the stored lattice and the blend across it reading
+      // the same at -2 and +2. A column index off by one would shift the whole
+      // lattice and break exactly this, while `onTheRidge` — which measures the
+      // placement against that same shifted reading — would not notice.
       ["symmetric", () => nclose(ridden[1]!.y, ridden[3]!.y, 1e-9)],
       ["flanksLower", () => ridden[0]!.y < ridden[1]!.y],
       // A plane through the two flanks would put the crest between them at
@@ -365,13 +375,6 @@ export const test_world_formation_ground = (): void => {
     "the whole slot carries the relief, not only the position query",
     Array.from({ length: COUNT }, (_unused, slot) => slot).every((slot) =>
       nclose(formationSlot(design, slot).position.y, climbed[slot]!.y, 1e-12),
-    ),
-  );
-
-  TestValidator.predicate(
-    "the same design places the same army twice",
-    placed([hillside], { x: 0, y: anchorHeight, z: 0 }).every(
-      (point, index) => point.y === climbed[index]!.y,
     ),
   );
 };

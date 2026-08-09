@@ -17,14 +17,22 @@ import {
   vclose,
 } from "../internal/predicates";
 
-/** A lamp standing away from the origin, so a move is visible as a move. */
+/**
+ * A lamp standing away from the origin, so a move is visible as a move.
+ *
+ * Staged facing `+Z` — half a turn about Y — and scaled unevenly, neither of
+ * which any clip below ever writes and neither of which is the identity. A pass
+ * that addressed one axis and quietly rebuilt the rest would answer with the
+ * identity instead of with what the light was staged with, and an identity
+ * fixture could not tell those two apart.
+ */
 const lamp: IAutoMovieLight = {
   id: "lamp",
   type: "spot",
   transform: {
     translation: { x: 2, y: 4, z: 0 },
-    rotation: { x: 0, y: 0, z: 0, w: 1 },
-    scale: { x: 1, y: 1, z: 1 },
+    rotation: { x: 0, y: 1, z: 0, w: 0 },
+    scale: { x: 1.5, y: 0.5, z: 2 },
   },
   color: { r: 1, g: 1, b: 1, a: null, hex: null },
   intensity: 2,
@@ -213,11 +221,11 @@ export const test_resolve_light_transform_channel = (): void => {
       ],
       [
         "keepsStagedRotation",
-        () => vclose(directionOf(walked), { x: 0, y: 0, z: -1 }),
+        () => vclose(directionOf(walked), { x: 0, y: 0, z: 1 }),
       ],
       [
         "keepsStagedScale",
-        () => vclose(walked.transform.scale, { x: 1, y: 1, z: 1 }),
+        () => vclose(walked.transform.scale, { x: 1.5, y: 0.5, z: 2 }),
       ],
       ["dimmedIsANewLight", () => dimmed !== lamp],
       [

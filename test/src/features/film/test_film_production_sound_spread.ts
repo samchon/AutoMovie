@@ -44,7 +44,10 @@ const NEAR_Z = -2;
 const CLOSED = 0.5;
 const CUE_END = 2;
 
-/** One rank of `count` members on a stated line, as the compiler materializes it. */
+/**
+ * One rank of `count` members on a stated line, as the compiler materializes
+ * it.
+ */
 const unit = (props: {
   id: string;
   count: number;
@@ -72,9 +75,9 @@ const unit = (props: {
  * The far mass closes its own intervals to half of themselves.
  *
  * Translation stays at zero throughout, and the anchor is the unit's own
- * centroid, so nothing about where the mass is heard from moves: the cue changes
- * how large it is and nothing else, which is what leaves the spread as the only
- * quantity a case below can be reading.
+ * centroid, so nothing about where the mass is heard from moves: the cue
+ * changes how large it is and nothing else, which is what leaves the spread as
+ * the only quantity a case below can be reading.
  */
 const CLOSE_RANKS: IAutoMovieFormationMotion[] = [
   {
@@ -163,7 +166,12 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     },
     models: [],
     formations: [
-      unit({ id: "crowd", count: CROWD_COUNT, interval: CROWD_INTERVAL, z: FAR_Z }),
+      unit({
+        id: "crowd",
+        count: CROWD_COUNT,
+        interval: CROWD_INTERVAL,
+        z: FAR_Z,
+      }),
       unit({
         id: "near-crowd",
         count: NEAR_COUNT,
@@ -208,11 +216,8 @@ const eventOf = (plan: IAutoMovieProductionSoundPlan, id: string) =>
  * The mean squared distance from the centre of a box to a point drawn uniformly
  * inside it, over its half-extents: one third of its squared half-diagonal.
  */
-const boxVariance = (half: {
-  x: number;
-  y: number;
-  z: number;
-}): number => (half.x * half.x + half.y * half.y + half.z * half.z) / 3;
+const boxVariance = (half: { x: number; y: number; z: number }): number =>
+  (half.x * half.x + half.y * half.y + half.z * half.z) / 3;
 
 /** Squared distance between two points. */
 const squaredDistance = (
@@ -231,14 +236,15 @@ const squaredDistance = (
  * of each subject are spread about their OWN centre, and every one of those
  * centres is itself displaced from the group's. Dropping the displacement — the
  * cross term — makes one figure standing 24 m from a mass acoustically the same
- * as one standing inside it, which is the whole of what the identity
- * `variance = sum_i n_i (variance_i + |c_i - c|^2) / sum_i n_i` exists to
- * refuse. It is an identity and not a taste, so the oracle below is arithmetic
- * over the fixture's own geometry and never a reading of the plan.
+ * as one standing inside it, which is the whole of what the identity `variance
+ * = sum_i n_i (variance_i + |c_i - c|^2) / sum_i n_i` exists to refuse. It is
+ * an identity and not a taste, so the oracle below is arithmetic over the
+ * fixture's own geometry and never a reading of the plan.
  *
  * A cue is likewise the only thing that changes how large a mass is. A unit
- * that closes its intervals is smaller, and a mix that went on hearing it at its
- * designed width would be describing an arrangement the shot no longer holds.
+ * that closes its intervals is smaller, and a mix that went on hearing it at
+ * its designed width would be describing an arrangement the shot no longer
+ * holds.
  *
  * Scenarios:
  *
@@ -246,16 +252,16 @@ const squaredDistance = (
  *    describe: one rank of five at four-metre intervals reaches 8 m, so the
  *    spread is `8 / sqrt(3)`.
  * 2. That mass closing its own intervals to half is heard at half the spread, at
- *    the same count and from the same place, so what the cue changed is the size
- *    and nothing else. Reading the designed bounds instead would report the same
- *    number twice.
+ *    the same count and from the same place, so what the cue changed is the
+ *    size and nothing else. Reading the designed bounds instead would report
+ *    the same number twice.
  * 3. A lone source beside that mass is one combined source whose spread is the
  *    parallel-axis sum, which is strictly larger than either the mass's own
  *    spread or the count-weighted mean of the two variances. That second
- *    comparison is the cross term: without it the answer would be 4.216 m rather
- *    than 9.888 m.
- * 4. The post-mix limiter owns the headroom a crowd's own level does not: a mass of
- *    four hundred two metres from the listener mixes far past full scale and
+ *    comparison is the cross term: without it the answer would be 4.216 m
+ *    rather than 9.888 m.
+ * 4. The post-mix limiter owns the headroom a crowd's own level does not: a mass
+ *    of four hundred two metres from the listener mixes far past full scale and
  *    comes back at exactly 0.95 with nothing clipped, while the same plan
  *    without it is left alone below that ceiling.
  */
@@ -275,10 +281,15 @@ export const test_film_production_sound_spread = (): void => {
     "a mass is heard at the RMS radius of the box its bounds describe",
     namedFacts([
       ["count", () => rest.memberCount === CROWD_COUNT],
-      ["spread", () => nclose(rest.spreadRadiusMeters, Math.sqrt(restVariance), 1e-9)],
+      [
+        "spread",
+        () => nclose(rest.spreadRadiusMeters, Math.sqrt(restVariance), 1e-9),
+      ],
       [
         "emitter",
-        () => nclose(rest.emitter.x, 0, 1e-9) && nclose(rest.emitter.z, FAR_Z, 1e-9),
+        () =>
+          nclose(rest.emitter.x, 0, 1e-9) &&
+          nclose(rest.emitter.z, FAR_Z, 1e-9),
       ],
     ]),
     { count: true, spread: true, emitter: true },
@@ -298,13 +309,18 @@ export const test_film_production_sound_spread = (): void => {
       ],
       [
         "spread",
-        () => nclose(closed.spreadRadiusMeters, Math.sqrt(closedVariance), 1e-9),
+        () =>
+          nclose(closed.spreadRadiusMeters, Math.sqrt(closedVariance), 1e-9),
       ],
       // Exactly half, because the cue halved the one axis the box has.
       [
         "halfTheDesignedSpread",
         () =>
-          nclose(closed.spreadRadiusMeters, rest.spreadRadiusMeters * CLOSED, 1e-9),
+          nclose(
+            closed.spreadRadiusMeters,
+            rest.spreadRadiusMeters * CLOSED,
+            1e-9,
+          ),
       ],
       // And the attenuation moves with it, because spread is what the RMS
       // listener distance is taken at.
@@ -391,11 +407,16 @@ export const test_film_production_sound_spread = (): void => {
       [
         "wouldHaveClipped",
         () =>
-          (0.5 * eventOf(plan, "near").attenuation * eventOf(plan, "near").densityGain) /
+          (0.5 *
+            eventOf(plan, "near").attenuation *
+            eventOf(plan, "near").densityGain) /
             Math.SQRT2 >
           1,
       ],
-      ["limitedToTheCeiling", () => nclose(loud.analysis.samplePeak, 0.95, 1e-6)],
+      [
+        "limitedToTheCeiling",
+        () => nclose(loud.analysis.samplePeak, 0.95, 1e-6),
+      ],
       ["nothingClipped", () => loud.analysis.clippingSamples === 0],
       ["quietIsAudible", () => quiet.analysis.samplePeak > 0],
       ["quietIsLeftAlone", () => quiet.analysis.samplePeak < 0.95],

@@ -92,6 +92,63 @@ const row = (props: {
   };
 };
 
+/**
+ * One unit whose members may be drawn as any of several stated runtimes.
+ *
+ * Which tier a member is drawn at is the camera's decision, so a unit that
+ * carries more than one is a unit whose real size is a range rather than a
+ * number, and the refusal has to hold whichever end of it the camera picks.
+ */
+const tiered = (props: {
+  id: string;
+  models: string[];
+  anchor?: IAutoMovieVector3;
+}): IUnit => ({
+  ...row({ id: props.id, count: 1, spacing: 1, anchor: props.anchor }),
+  lod: props.models.map((model) => ({ model })),
+});
+
+/** One file of members, one behind the other along +z from a stated anchor. */
+const file = (props: {
+  id?: string;
+  count: number;
+  spacing: number;
+  anchor: IAutoMovieVector3;
+}): IUnit => ({
+  id: props.id ?? "crowd",
+  count: props.count,
+  layout: {
+    kind: "line",
+    ranks: props.count,
+    files: 1,
+    spacing: { lateral: props.spacing, depth: props.spacing },
+  },
+  anchor: props.anchor,
+  facingDeg: 0,
+  seed: 0,
+  lod: [{ model: "post" }],
+});
+
+/** One unit far larger than the number of members the gate will measure. */
+const host = (count: number): IUnit => ({
+  id: "host",
+  count,
+  layout: {
+    kind: "line",
+    ranks: 1,
+    files: count,
+    spacing: { lateral: 1, depth: 1 },
+  },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 0,
+  lod: [{ model: "post" }],
+});
+
+/** Where slot `slot` of {@link host} stands, from its layout alone. */
+const hostSlotX = (count: number, slot: number): number =>
+  slot - (count - 1) / 2;
+
 /** One cue carrying a unit from one place to another along `x`. */
 const carry = (props: {
   formation: string;
@@ -128,6 +185,22 @@ const close = (props: {
     spacingScale: { lateral: props.scale, depth: props.scale },
   },
 });
+
+/**
+ * Cues of a unit nobody stages, purely to spend the shot's sampling budget.
+ *
+ * Every cue end is a time the shot certainly holds and is therefore always
+ * sampled; whatever is left of the budget fills the gaps between them. Eight of
+ * these put nineteen ends on the clock, which is more than the budget itself, so
+ * nothing is left for the interior and the walk reads the ends alone.
+ */
+const filler = (count: number): IAutoMovieFormationMotion[] =>
+  Array.from({ length: count }, (_unused, index) => ({
+    ...carry({ formation: "elsewhere", from: 0, to: 0 }),
+    id: `filler-${index}`,
+    start: 4 + index * 2,
+    end: 5 + index * 2,
+  }));
 
 /** One cue taking named members out of the shot for the whole of it. */
 const remove = (props: {
@@ -236,9 +309,32 @@ const bone = (
  *     a shape whose dimensions are not real.
  * 11. A part is measured where its bone rests, added up the chain however the bones
  *     are ordered, and left out when the chain leaves the axis, when the part's
- *     own transform does, or when it turns about anything but the vertical. A
- *     part's scale is applied rather than refused, and one that scales a column
- *     away leaves nothing to measure.
+ *     own transform does, or when it turns about anything but the vertical, and
+ *     equally when the BONE it rides is turned out of the vertical. A part's
+ *     scale is applied rather than refused, and one that scales a column away
+ *     leaves nothing to measure.
+ * 12. A unit a camera may draw at more than one tier is judged by the LEAST of
+ *     them, because which tier it draws is the camera's decision and a refusal
+ *     has to hold whichever one it makes. The same pair measured against the
+ *     widest tier alone is refused, which is what makes the acceptance a reading
+ *     of the least and not of nothing.
+ * 13. A unit measuring at one tier and not at another is not measured at all: half
+ *     a size is not a size, and a gate that filled the gap with the tier it does
+ *     have would be refusing against a stand-in.
+ * 14. Two units standing at different heights are judged by the difference between
+ *     them: a lift that still leaves their columns meeting is refused, and one
+ *     that carries the upper clear of the lower is accepted, at the same
+ *     distance apart in plan.
+ * 15. Two members are found across a cell boundary in DEPTH as well as across one
+ *     in width, because a crowd has ranks and the pair inside one another may be
+ *     one behind the other rather than side by side.
+ * 16. Only the first measured members of an enormous unit are measured: a body
+ *     standing on one of them is refused, and the same body standing on a member
+ *     past the cap is not. That is the trade the cap makes, stated rather than
+ *     hidden.
+ * 17. A shot whose cue ends already exceed the sampling budget is walked at its ends
+ *     alone: an overlap standing at one of them is still refused, and one that
+ *     happens only between two of them is the resolution this budget states.
  */
 export const test_mcp_production_formation_overlap = (): void => {
   const wide = post({ id: "post", radius: 0.4 });
@@ -578,6 +674,12 @@ export const test_mcp_production_formation_overlap = (): void => {
         bone("hips", null, at(0, 1, 0)),
         bone("leftUpperArm", "spine", at(0.3, 0, 0)),
         bone("leftLowerArm", "leftUpperArm", at(0, -0.2, 0)),
+        // On the axis in translation and turned off the vertical in rotation,
+        // so the column of anything riding it is no longer vertical either.
+        bone("neck", "spine", {
+          ...at(0, 0.2, 0),
+          rotation: { x: 0.7071, y: 0, z: 0, w: 0.7071 },
+        }),
       ],
     },
     parts: [
@@ -668,6 +770,18 @@ export const test_mcp_production_formation_overlap = (): void => {
         attachedBone: null,
         transform: { ...at(0, 0, 0), scale: { x: 0, y: 1, z: 1 } },
       },
+      // Riding a bone that is itself turned off the vertical. Its own transform
+      // is identity and its bone stands on the axis, so only the bone's own
+      // rotation can leave it out; the radius is distinct from every measured
+      // column so its absence is readable rather than merely a count.
+      {
+        id: "collar",
+        name: null,
+        geometry: { type: "primitive", shape: { type: "sphere", radius: 0.33 } },
+        material: null,
+        attachedBone: "neck",
+        transform: null,
+      },
     ],
   };
   const chained = autoMovieModelColumns(rigged);
@@ -704,7 +818,267 @@ export const test_mcp_production_formation_overlap = (): void => {
           nclose(chained[2]!.bottom, -1) &&
           nclose(chained[2]!.top, 3),
       ],
+      // The collar rides a bone that stands on the axis and is turned off the
+      // vertical, so its column is not vertical and is not measured. Its radius
+      // is unique among the parts, so its absence is a fact about that part
+      // rather than a count that happens to agree.
+      [
+        "theTurnedBoneCarriesNothing",
+        () => chained.every((column) => nclose(column.radius, 0.33) === false),
+      ],
     ]),
-    { three: true, pelvis: true, crown: true, scaled: true },
+    {
+      three: true,
+      pelvis: true,
+      crown: true,
+      scaled: true,
+      theTurnedBoneCarriesNothing: true,
+    },
+  );
+
+  // 12. a unit a camera may draw at more than one tier is judged by the least.
+  const narrow = post({ id: "narrow", radius: 0.1 });
+  const tieredPair = [
+    tiered({ id: "left", models: ["post", "narrow"] }),
+    tiered({
+      id: "right",
+      models: ["post", "narrow"],
+      anchor: { x: 0.3, y: 0, z: 0 },
+    }),
+  ];
+  TestValidator.equals(
+    "a unit drawn at several tiers is judged by the least clearance of any of them",
+    namedFacts([
+      // Two narrow posts fill 0.2 m, which 0.3 m clears; two wide ones fill
+      // 0.8 m, which it does not.
+      [
+        "leastIsWhatCounts",
+        () => codes({ models: [wide, narrow], formations: tieredPair }).length === 0,
+      ],
+      [
+        "theWidestAloneWouldRefuse",
+        () =>
+          codes({
+            models: [wide, narrow],
+            formations: [
+              tiered({ id: "left", models: ["post"] }),
+              tiered({
+                id: "right",
+                models: ["post"],
+                anchor: { x: 0.3, y: 0, z: 0 },
+              }),
+            ],
+          }).length === 1,
+      ],
+      // And inside the least, the same pair is refused: what the tiers bought is
+      // the least and not an exemption.
+      [
+        "insideTheLeastIsStillRefused",
+        () =>
+          codes({
+            models: [wide, narrow],
+            formations: [
+              tiered({ id: "left", models: ["post", "narrow"] }),
+              tiered({
+                id: "right",
+                models: ["post", "narrow"],
+                anchor: { x: 0.15, y: 0, z: 0 },
+              }),
+            ],
+          }).length === 1,
+      ],
+    ]),
+    {
+      leastIsWhatCounts: true,
+      theWidestAloneWouldRefuse: true,
+      insideTheLeastIsStillRefused: true,
+    },
+  );
+
+  // 13. one tier measuring and another not is no size at all.
+  TestValidator.equals(
+    "a unit that measures at one tier and not at another is not measured",
+    namedFacts([
+      [
+        "mixedIsLeftAlone",
+        () =>
+          codes({
+            models: [wide, flat],
+            formations: [
+              {
+                ...row({ spacing: 0.1 }),
+                lod: [{ model: "post" }, { model: "flat" }],
+              },
+            ],
+          }).length === 0,
+      ],
+      [
+        "theMeasurableTierAloneRefuses",
+        () =>
+          codes({
+            models: [wide, flat],
+            formations: [
+              { ...row({ spacing: 0.1 }), lod: [{ model: "post" }] },
+            ],
+          }).length === 1,
+      ],
+    ]),
+    { mixedIsLeftAlone: true, theMeasurableTierAloneRefuses: true },
+  );
+
+  // 14. a lift between two units narrows the clearance between them.
+  const lifted = (height: number) => [
+    row({ id: "lower", count: 1, spacing: 1 }),
+    row({
+      id: "upper",
+      count: 1,
+      spacing: 1,
+      anchor: { x: 0.3, y: height, z: 0 },
+    }),
+  ];
+  TestValidator.equals(
+    "two units are judged by the height between them, not only by the plan",
+    namedFacts([
+      // A post two metres tall stands from -1 to 1 about its own origin, so a
+      // metre and a half of lift still leaves half a metre of shared height.
+      [
+        "overlappingHeightsRefused",
+        () => codes({ models: [wide], formations: lifted(1.5) }).length === 1,
+      ],
+      // Two metres of lift stands the upper column's floor exactly on the
+      // lower's ceiling, which is passing above rather than standing inside.
+      [
+        "touchingHeightsAccepted",
+        () => codes({ models: [wide], formations: lifted(2) }).length === 0,
+      ],
+      ["clearAbove", () => codes({ models: [wide], formations: lifted(3) }).length === 0],
+      // And the plan distance is the same in all three, so what separated them
+      // is the lift and nothing else.
+      [
+        "levelIsRefused",
+        () => codes({ models: [wide], formations: lifted(0) }).length === 1,
+      ],
+    ]),
+    {
+      overlappingHeightsRefused: true,
+      touchingHeightsAccepted: true,
+      clearAbove: true,
+      levelIsRefused: true,
+    },
+  );
+
+  // 15. a pair one behind the other, across a cell boundary in depth.
+  const ranked = judge({
+    models: [wide],
+    formations: [file({ count: 2, spacing: 0.3, anchor: { x: 0, y: 0, z: 0.7 } })],
+  });
+  TestValidator.equals(
+    "two members one behind the other are found across a boundary in depth",
+    namedFacts([
+      ["one", () => ranked.length === 1],
+      ["members", () => ranked[0]!.message.includes("its slots 0 and 1")],
+      ["apart", () => ranked[0]!.message.includes("0.3m apart")],
+      // The two stand at z = 0.7 and z = 1.0, which the gate's own cell width of
+      // twice the widest column puts on either side of a boundary.
+      ["place", () => ranked[0]!.message.includes("(0, 0.85)")],
+    ]),
+    { one: true, members: true, apart: true, place: true },
+  );
+
+  // 16. only the first measured members of an enormous unit are measured.
+  const HOST_COUNT = 5_000;
+  const MEASURED_SLOT = 100;
+  const UNMEASURED_SLOT = 4_500;
+  const sentry = (x: number): IUnit =>
+    row({ id: "sentry", count: 1, spacing: 1, anchor: { x, y: 0, z: 0 } });
+  TestValidator.equals(
+    "a body standing on a member past the measured cap is not measured",
+    namedFacts([
+      [
+        "withinTheCap",
+        () =>
+          codes({
+            models: [wide],
+            formations: [
+              host(HOST_COUNT),
+              sentry(hostSlotX(HOST_COUNT, MEASURED_SLOT)),
+            ],
+          }).length === 1,
+      ],
+      [
+        "pastTheCap",
+        () =>
+          codes({
+            models: [wide],
+            formations: [
+              host(HOST_COUNT),
+              sentry(hostSlotX(HOST_COUNT, UNMEASURED_SLOT)),
+            ],
+          }).length === 0,
+      ],
+      // The unit itself is laid out at a metre, well clear of its members' own
+      // width, so neither answer above is the crowd reporting on itself.
+      [
+        "theHostIsCleanOnItsOwn",
+        () => codes({ models: [wide], formations: [host(HOST_COUNT)] }).length === 0,
+      ],
+    ]),
+    { withinTheCap: true, pastTheCap: true, theHostIsCleanOnItsOwn: true },
+  );
+
+  // 17. a shot whose ends already spend the budget is walked at its ends alone.
+  const spent = filler(8);
+  const meetingAtAnEnd = [
+    row({ id: "still", count: 1, spacing: 1 }),
+    row({ id: "walker", count: 1, spacing: 1, anchor: { x: -5, y: 0, z: 0 } }),
+  ];
+  TestValidator.equals(
+    "a shot with no sampling budget left is walked at its cue ends alone",
+    namedFacts([
+      // The walker finishes its cue standing on the still unit, which is an end
+      // and is therefore always sampled.
+      [
+        "anEndIsAlwaysRead",
+        () =>
+          codes({
+            models: [wide],
+            formations: meetingAtAnEnd,
+            formationMotions: [
+              carry({ formation: "walker", from: 0, to: 5 }),
+              ...spent,
+            ],
+          }).length === 1,
+      ],
+      // The same crossing happening only between two ends is the resolution the
+      // budget states, rather than a claim that nothing crossed.
+      [
+        "theInteriorIsTheStatedLimit",
+        () =>
+          codes({
+            models: [wide],
+            formations: meetingAtAnEnd,
+            formationMotions: [
+              carry({ formation: "walker", from: 0, to: 10 }),
+              ...spent,
+            ],
+          }).length === 0,
+      ],
+      // With the budget unspent that same crossing is found, so the acceptance
+      // above is the ends being all that was left and not the walk failing.
+      [
+        "withBudgetItIsFound",
+        () =>
+          codes({
+            models: [wide],
+            formations: meetingAtAnEnd,
+            formationMotions: [carry({ formation: "walker", from: 0, to: 10 })],
+          }).length === 1,
+      ],
+    ]),
+    {
+      anEndIsAlwaysRead: true,
+      theInteriorIsTheStatedLimit: true,
+      withBudgetItIsFound: true,
+    },
   );
 };

@@ -16,10 +16,10 @@ const INTERVAL = 10;
 /**
  * A bank that rises along `z` alone and is level across `x`.
  *
- * A unit laid out along its own `x` and turned a quarter circle lies along world
- * `z`, so this surface separates where a member really stands from where its
- * layout put it: read at the designed point every member reads the same height,
- * and read where the member stands they read three.
+ * A unit laid out along its own `x` and turned a quarter circle lies along
+ * world `z`, so this surface separates where a member really stands from where
+ * its layout put it: read at the designed point every member reads the same
+ * height, and read where the member stands they read three.
  */
 const bank = (): IAutoMovieWorldSurface => ({
   id: "bank",
@@ -116,8 +116,8 @@ const heightOf = (x: number, z: number): number =>
  *    spread above is the turn and not the terrain being read twice.
  * 3. A lattice that is a palindrome in neither axis reproduces each stored corner
  *    exactly, and reads the cell between them bilinearly: the centre is 3.75 m,
- *    which is neither the 0.5 m a reading that stopped at the near row gives nor
- *    the 2 m a reading that stopped at the near column gives.
+ *    which is neither the 0.5 m a reading that stopped at the near row gives
+ *    nor the 2 m a reading that stopped at the near column gives.
  * 4. Each axis is separable at the lattice's own edges: half a cell along `z` on
  *    column zero is the mean of that column's two rows, and half a cell along
  *    `x` on row zero is the mean of that row's two columns.
@@ -173,16 +173,14 @@ export const test_world_formation_relief_rotation = (): void => {
     namedFacts([
       // The stored corners, reproduced exactly at their own lattice points.
       ["nearLeft", () => nclose(heightOf(0, 0), NEAR_LEFT, 1e-12)],
-      ["nearRight", () => nclose(heightOf(LATTICE_PITCH, 0), NEAR_RIGHT, 1e-12)],
+      [
+        "nearRight",
+        () => nclose(heightOf(LATTICE_PITCH, 0), NEAR_RIGHT, 1e-12),
+      ],
       ["farLeft", () => nclose(heightOf(0, LATTICE_PITCH), FAR_LEFT, 1e-12)],
       [
         "farRight",
-        () =>
-          nclose(
-            heightOf(LATTICE_PITCH, LATTICE_PITCH),
-            FAR_RIGHT,
-            1e-12,
-          ),
+        () => nclose(heightOf(LATTICE_PITCH, LATTICE_PITCH), FAR_RIGHT, 1e-12),
       ],
       // No two corners agree and the two rows differ, which is what makes the
       // three readings below distinguishable at all.
@@ -203,7 +201,10 @@ export const test_world_formation_relief_rotation = (): void => {
             1e-12,
           ),
       ],
-      ["centreIsNotTheNearRow", () => nclose(heightOf(5, 5), 0.5, 1e-9) === false],
+      [
+        "centreIsNotTheNearRow",
+        () => nclose(heightOf(5, 5), 0.5, 1e-9) === false,
+      ],
       [
         "centreIsNotTheNearColumn",
         () => nclose(heightOf(5, 5), 2, 1e-9) === false,
@@ -250,10 +251,7 @@ export const test_world_formation_relief_rotation = (): void => {
     "a query outside the lattice reads its nearest edge rather than an invention",
     namedFacts([
       ["beforeBoth", () => nclose(heightOf(-15, -15), NEAR_LEFT, 1e-12)],
-      [
-        "pastBoth",
-        () => nclose(heightOf(25, 25), FAR_RIGHT, 1e-12),
-      ],
+      ["pastBoth", () => nclose(heightOf(25, 25), FAR_RIGHT, 1e-12)],
       // One axis at a time: clamped in `x`, still interpolated in `z`.
       [
         "clampedAcross",

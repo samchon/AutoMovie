@@ -73,9 +73,10 @@ const hillHeight = (point: { x: number; z: number }): number =>
  * 3. A query outside the lattice reads its nearest edge sample rather than an
  *    extrapolation, because a sampled relief says nothing about ground it never
  *    covered. The polygon, not the lattice, still bounds where the surface is.
- * 4. Reading the same field twice answers identically, and a second field built
- *    from the same sampler answers identically to the first: relief is stored
- *    numbers, so nothing about the machine can reach it.
+ * 4. The sampler leaves numbers behind and nothing else: the nine heights land in
+ *    the documented row-major order, which is the whole of what "relief is
+ *    stored" means and the only part of it a case can put at risk — asking a
+ *    pure function twice only says that it is one.
  * 5. `constant` and `plane` answer exactly what they answered before, so adding a
  *    third rule changed neither of the two that existed.
  * 6. The ground under a point is the first declared surface containing it, so a
