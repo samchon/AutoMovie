@@ -27,6 +27,10 @@ What `automovie` is, the long-haul mission, the workspace layout, and the canoni
 
 Work rules, testing, the always-100% coverage mandate, validation, consequence analysis, change integrity, `.agents/skills/development/SKILL.md`. Read before writing or modifying code.
 
+### Scaffold Authoring
+
+How a production is authored inside `packages/cli/scaffold`: the docs ladder from logline to scene, the spec library, subjects as classes under `src`, and the evidence graph in `lint.config.ts` that makes each stage answer for the one above it, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
+
 ### Documentation
 
 The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writing rules for AGENTS.md and skills themselves, `.agents/skills/documentation/SKILL.md`. Read before writing or modifying docs or agent instructions, and revise the wiki as the work proceeds.
@@ -87,4 +91,4 @@ Update AGENTS.md only for repository-contract changes: a new skill area, a renam
 - **Create or merge.** Add a skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns when they share most of their structure.
 - **Repository skill files only.** Keep repository skills to `SKILL.md` and conditionally loaded sibling documents. Do not create separate `multi-agent-*` skills or `agents/openai.yaml`; parallel variants belong under `multi-agent/`.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.
-- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
+- **Current set.** The repository skills are `project`, `development`, `scaffold`, `documentation`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
