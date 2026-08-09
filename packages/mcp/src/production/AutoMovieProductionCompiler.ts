@@ -3566,10 +3566,16 @@ export const validateAutoMovieFormationSlotMotions = (
   const compiledById = new Map(
     value.formations.map((formation) => [formation.id, formation]),
   );
-  // Keyed by formation and slot rather than by formation alone, because two
-  // members of one crowd doing different things at the same second is the whole
-  // point of the channel. One member doing two things at once is not.
-  const priorBySlot = new Map<string, IAutoMovieFormationSlotMotion>();
+  // Keyed by formation and then by slot rather than by formation alone, because
+  // two members of one crowd doing different things at the same second is the
+  // whole point of the channel. One member doing two things at once is not.
+  // Nested rather than joined into one string key, because a formation id is
+  // author-chosen text and any separator picked to join them is one an id may
+  // legitimately contain.
+  const priorBySlot = new Map<
+    string,
+    Map<number, IAutoMovieFormationSlotMotion>
+  >();
   for (const cue of [...cues].sort(
     (left, right) =>
       compareCodeUnits(left.formation, right.formation) ||
@@ -3645,15 +3651,18 @@ export const validateAutoMovieFormationSlotMotions = (
           "must keep offset inside +/-1000000000m and facing inside +/-360000 degrees",
         );
     }
+    const priorSlots =
+      priorBySlot.get(cue.formation) ??
+      new Map<number, IAutoMovieFormationSlotMotion>();
+    priorBySlot.set(cue.formation, priorSlots);
     for (const slot of cue.slots) {
-      const key = `${cue.formation} ${slot}`;
-      const prior = priorBySlot.get(key);
+      const prior = priorSlots.get(slot);
       if (prior !== undefined && cue.start < prior.end)
         fail(
           `formationSlotMotion:${cue.id}.start`,
           `must not overlap prior cue "${prior.id}" on slot ${slot} ending at ${prior.end}s`,
         );
-      priorBySlot.set(key, cue);
+      priorSlots.set(slot, cue);
     }
   }
   return diagnostics;

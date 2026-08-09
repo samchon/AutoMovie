@@ -18,6 +18,8 @@ import {
   transformFormationBounds,
   transformFormationPoint,
   validatePose,
+  worldGroundSurface,
+  worldSurfaceHeight,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
@@ -1634,30 +1636,6 @@ const queryFailure = (
 
 const distance = (left: IAutoMovieVector3, right: IAutoMovieVector3): number =>
   Math.hypot(left.x - right.x, left.y - right.y, left.z - right.z);
-
-const insidePolygon = (
-  point: { x: number; z: number },
-  polygon: ReadonlyArray<{ x: number; z: number }>,
-): boolean => {
-  let inside = false;
-  for (
-    let index = 0, previous = polygon.length - 1;
-    index < polygon.length;
-    previous = index++
-  ) {
-    const currentPoint = polygon[index]!;
-    const previousPoint = polygon[previous]!;
-    if (
-      currentPoint.z > point.z !== previousPoint.z > point.z &&
-      point.x <
-        ((previousPoint.x - currentPoint.x) * (point.z - currentPoint.z)) /
-          (previousPoint.z - currentPoint.z) +
-          currentPoint.x
-    )
-      inside = !inside;
-  }
-  return inside;
-};
 
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");

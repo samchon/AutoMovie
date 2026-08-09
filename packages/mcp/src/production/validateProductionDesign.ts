@@ -249,8 +249,22 @@ export const validateAutoMovieProductionGraph = (
       );
     if (model.asset !== undefined)
       text(diagnostics, model.asset, target, file, "asset");
+    text(diagnostics, model.archetype, target, file, "archetype");
+    // The recipe names a builder rather than a member of a closed union, so an
+    // unregistered name is a design fact this gate has to report. Everything
+    // downstream of it — parameters, capabilities, attachments — is defined by
+    // the archetype, so none of it can be judged without one.
+    const archetype = archetypes.get(model.archetype);
+    if (archetype === undefined)
+      invalid(
+        diagnostics,
+        "model-archetype-unregistered",
+        target,
+        file,
+        `Model archetype "${model.archetype}" is not registered with this compiler. Name a registered archetype (${registeredArchetypeNames(archetypes)}) in the tracked model recipe record, or register a builder for "${model.archetype}" before compiling.`,
+      );
     validateModelProfiles(diagnostics, model.profiles ?? [], target, file);
-    validateModelParameters(diagnostics, model, target, file);
+    validateModelParameters(diagnostics, model, archetype, target, file);
     const paletteSize = Object.keys(model.palette).length;
     if (paletteSize === 0)
       invalid(
@@ -343,9 +357,8 @@ export const validateAutoMovieProductionGraph = (
       file,
       "capabilities",
     );
-    const supportedCapabilities = SUPPORTED_MODEL_CAPABILITIES[model.archetype];
     for (const capability of model.capabilities)
-      if (supportedCapabilities.has(capability) === false)
+      if (archetype !== undefined && archetype.capabilities.includes(capability) === false)
         invalid(
           diagnostics,
           "design-capability-unsupported",
@@ -365,24 +378,29 @@ export const validateAutoMovieProductionGraph = (
       );
       text(diagnostics, attachment.bone, target, file, "attachments.bone");
       if (
-        model.archetype === "stickman" &&
-        SUPPORTED_STICKMAN_ATTACHMENT_BONES.has(attachment.bone) === false
+        archetype !== undefined &&
+        archetype.bones.length !== 0 &&
+        archetype.bones.includes(attachment.bone) === false
       )
         invalid(
           diagnostics,
           "design-attachment-unsupported",
           target,
           file,
-          `Stickman attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned foundation skeleton does not materialize. Use one of ${[...SUPPORTED_STICKMAN_ATTACHMENT_BONES].join(", ")} or remove the attachment.`,
+          `Attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned skeleton of archetype "${model.archetype}" does not materialize. Use one of ${archetype.bones.join(", ")} or remove the attachment.`,
         );
     }
-    if (model.archetype !== "stickman" && model.attachments.length !== 0)
+    if (
+      archetype !== undefined &&
+      archetype.bones.length === 0 &&
+      model.attachments.length !== 0
+    )
       invalid(
         diagnostics,
         "design-attachment-unsupported",
         target,
         file,
-        `Archetype "${model.archetype}" has no compiler-owned humanoid skeleton for bone attachments. Remove attachments or use a stickman recipe.`,
+        `Archetype "${model.archetype}" builds no compiler-owned skeleton for bone attachments. Remove attachments or name an archetype whose builder owns one.`,
       );
   }
 
@@ -450,7 +468,7 @@ export const validateAutoMovieProductionGraph = (
           file,
           "surface.height.value",
         );
-      else {
+      else if (surface.height.kind === "plane") {
         finite(
           diagnostics,
           surface.height.originHeight,
@@ -472,6 +490,51 @@ export const validateAutoMovieProductionGraph = (
           file,
           "surface.height.slopeZ",
         );
+      } else {
+        const field = surface.height;
+        finite(diagnostics, field.originX, "world", file, "surface.height.originX");
+        finite(diagnostics, field.originZ, "world", file, "surface.height.originZ");
+        positive(
+          diagnostics,
+          field.spacingX,
+          "world",
+          file,
+          "surface.height.spacingX",
+        );
+        positive(
+          diagnostics,
+          field.spacingZ,
+          "world",
+          file,
+          "surface.height.spacingZ",
+        );
+        // A lattice needs two lines on each axis before anything between them
+        // can be interpolated, and its samples have to be exactly the lattice:
+        // a short array would read relief that was never authored, and a long
+        // one hides a row the author meant to be read.
+        if (
+          Number.isSafeInteger(field.columns) === false ||
+          Number.isSafeInteger(field.rows) === false ||
+          field.columns < 2 ||
+          field.rows < 2
+        )
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            "world",
+            file,
+            `Surface "${surface.id}" heightfield has ${field.columns} columns and ${field.rows} rows. Use at least two of each in the tracked world design record.`,
+          );
+        else if (field.samples.length !== field.columns * field.rows)
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            "world",
+            file,
+            `Surface "${surface.id}" heightfield carries ${field.samples.length} samples for a ${field.columns} by ${field.rows} lattice. Store exactly ${field.columns * field.rows} row-major heights in the tracked world design record.`,
+          );
+        for (const sample of field.samples)
+          finite(diagnostics, sample, "world", file, "surface.height.samples");
       }
     }
     const routeIds = new Set<string>();

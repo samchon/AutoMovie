@@ -26,6 +26,7 @@ import {
 import {
   IAutoMovieNodeChannel,
   NODE_CHANNEL_PATHS,
+  channelValueWidth,
   clipLoopFault,
   clipTrackShapeFaults,
 } from "./clipTrackShape";

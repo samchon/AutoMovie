@@ -7,6 +7,7 @@ import {
   IAutoMovieConstraintViolation,
   IAutoMovieDefinedShot,
   IAutoMovieFormationDesign,
+  IAutoMovieFormationMotion,
   IAutoMovieModel,
   IAutoMovieProductionDesign,
   IAutoMovieShotDefinition,

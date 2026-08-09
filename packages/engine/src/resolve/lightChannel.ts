@@ -155,6 +155,13 @@ export interface IAutoMovieLightChannelProperty {
    * before admitting a track, so a track the applier could not honor is refused
    * at commit rather than dropped at playback.
    *
+   * Placement splits the same way, and along the other axis. A directional
+   * light is infinitely distant, so `IAutoMovieLight.transform` documents that
+   * "only the orientation matters" and it carries no `position`; a point light
+   * radiates equally in every direction, so it carries no `rotation`. A spot
+   * carries both, being the one kind that has somewhere to stand AND somewhere
+   * to look.
+   *
    * The parameter is `unknown` so the gate can ask it of a staged light's raw
    * `type` without first asserting the union it is reading — asserting the
    * value a check is about to doubt is how a validator stops validating. A kind
@@ -162,6 +169,20 @@ export interface IAutoMovieLightChannelProperty {
    * predicate is deciding.
    */
   carries: (kind: unknown) => boolean;
+
+  /**
+   * A rule the whole keyframe VALUE must satisfy, beyond the per-component
+   * {@link bounds}, as a sentence with no subject, or `null` when the value is
+   * sound. Absent when the components are the whole rule, which is every scalar
+   * and colour axis.
+   *
+   * It exists because {@link bounds} is a per-component range and some
+   * constraints are not: a rotation's four components are jointly constrained
+   * to unit length, and no range over one component can say so. The gate reads
+   * it off this table for the same reason it reads everything else here — a
+   * rule stated beside the applier cannot drift from what the applier writes.
+   */
+  valueFault?: (value: readonly unknown[]) => string | null;
 
   /**
    * Record the sampled value. Precondition: {@link carries} accepted the light,
@@ -221,6 +242,37 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
     carries: (kind) => kind === "spot",
     write: (override, value) => {
       override.coneAngle = value[0]!;
+    },
+  },
+  position: {
+    valueType: "vec3",
+    // A place in the world has no documented range: the scene gate holds a
+    // light's translation to finiteness and nothing more, and the shared
+    // track-shape contract already refuses a non-finite keyframe. Stating the
+    // unbounded interval keeps this column honest rather than inventing a
+    // ceiling no artifact is held to.
+    bounds: { min: -Infinity, max: Infinity, inclusiveMin: true },
+    carries: (kind) => kind !== "directional",
+    write: (override, value) => {
+      override.position = { x: value[0]!, y: value[1]!, z: value[2]! };
+    },
+  },
+  rotation: {
+    valueType: "quaternion",
+    // `quaternion` rather than `vec4` so `sampleClip` SLERPs it: a light
+    // swinging through a wide arc under component-wise lerp would slow in the
+    // middle and dip off the unit sphere, and the same declaration would then
+    // aim differently depending on how far apart its keys sat.
+    bounds: { min: -1, max: 1, inclusiveMin: true },
+    valueFault: unitQuaternionFault,
+    carries: (kind) => kind !== "point",
+    write: (override, value) => {
+      override.rotation = {
+        x: value[0]!,
+        y: value[1]!,
+        z: value[2]!,
+        w: value[3]!,
+      };
     },
   },
 };
@@ -301,7 +353,7 @@ export const applyLightOverride = (
 ): IAutoMovieLight => {
   const base = {
     id: light.id,
-    transform: light.transform,
+    transform: applyLightTransformOverride(light.transform, override),
     color: override.color ?? light.color,
     intensity: override.intensity ?? light.intensity,
   };
@@ -319,3 +371,30 @@ export const applyLightOverride = (
       };
   }
 };
+
+/**
+ * The light's placement at this instant: the staged transform with whichever of
+ * its translation and rotation a track wrote.
+ *
+ * `scale` is deliberately not animatable and is carried through untouched. A
+ * punctual light has no extent for a scale to mean anything about — `three.js`
+ * reads none of it, and glTF's `KHR_lights_punctual` defines none — so an
+ * animatable scale axis would be a channel that validates, applies, and changes
+ * no frame, which is the false green #1339 named.
+ *
+ * A transform no track touched is returned BY IDENTITY, the same guarantee
+ * `resolveShotLighting` gives for a whole light: a shot that dims a lamp
+ * without moving it leaves the very transform object the scene staged, so
+ * nothing downstream can mistake a re-boxed copy for a move.
+ */
+const applyLightTransformOverride = (
+  transform: IAutoMovieTransform,
+  override: IAutoMovieLightOverride,
+): IAutoMovieTransform =>
+  override.position === undefined && override.rotation === undefined
+    ? transform
+    : {
+        translation: override.position ?? transform.translation,
+        rotation: override.rotation ?? transform.rotation,
+        scale: transform.scale,
+      };

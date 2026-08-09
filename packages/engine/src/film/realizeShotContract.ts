@@ -396,11 +396,11 @@ const framedSubjectHeight = (
 };
 
 /**
- * The world box a required subject occupies at `time`, or null when it does not
- * resolve at all.
+ * The world box a required subject occupies at `time`, given the point it
+ * already resolved to.
  *
  * The two kinds of subject are measured the way the camera solve measured them.
- * A node keeps the segment it has always been graded on: its animated root and
+ * A node keeps the segment it has always been graded on: its resolved root and
  * its measured height, a box with no horizontal span, which the box test below
  * decides exactly as the segment test did. A formation is its whole transformed
  * footprint, widened by a member's radius and raised by a member's height, so a
@@ -410,6 +410,7 @@ const framedSubjectHeight = (
 const framedSubjectBox = (
   props: Parameters<typeof realizeShotContract>[0],
   subject: string,
+  point: IAutoMovieVector3,
   time: number,
 ): IAutoMovieSubjectBox => {
   const formation = props.formations.has(subject)
@@ -417,20 +418,17 @@ const framedSubjectBox = (
         (candidate) => candidate.id === subject,
       )
     : undefined;
-  if (formation !== undefined)
-    return formationSubjectBox({
-      formation,
-      motions: props.compiled.formationMotions ?? [],
-      member: formationMemberExtent(formation, props.compiled.models),
-      seconds: time,
-    });
-  const point = props.formations.has(subject)
-    ? resolveSpatial(props, { kind: "formation", id: subject }, time)
-    : resolveSpatial(props, { kind: "node", id: subject }, time);
-  return pointSubjectBox(point, {
-    min: 0,
-    max: framedSubjectHeight(props, subject),
-  });
+  return formation === undefined
+    ? pointSubjectBox(point, {
+        min: 0,
+        max: framedSubjectHeight(props, subject),
+      })
+    : formationSubjectBox({
+        formation,
+        motions: props.compiled.formationMotions ?? [],
+        member: formationMemberExtent(formation, props.compiled.models),
+        seconds: time,
+      });
 };
 
 const cameraOutcome = (
@@ -465,12 +463,12 @@ const cameraOutcome = (
         ? resolveSpatial(props, { kind: "formation", id: subject }, time)
         : resolveSpatial(props, { kind: "node", id: subject }, time);
       ++resolvedSubjects;
-      const height = framedSubjectHeight(props, subject);
+      const box = framedSubjectBox(props, subject, point, time);
       if (
-        intersectsPerspectiveFrustumSegment({
+        intersectsPerspectiveFrustumBox({
           camera: resolvedCamera,
-          from: point,
-          to: { x: point.x, y: point.y + height, z: point.z },
+          min: box.min,
+          max: box.max,
           near: camera.near,
           far: camera.far,
           halfY,
