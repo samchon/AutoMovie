@@ -1,5 +1,5 @@
-import { stageScene } from "@automovie/engine";
-import { IAutoMovieFog, IAutoMovieStagedSet } from "@automovie/engine";
+import { IAutoMovieStagedSet, stageScene } from "@automovie/engine";
+import { AutoMovieViolationKind, IAutoMovieFog } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
@@ -12,20 +12,27 @@ const FOG: IAutoMovieFog = {
 
 /** Stage the standard set with `fog` replaced by whatever a case submits. */
 const stagedWith = (fog: unknown): IAutoMovieStagedSet =>
-  stageScene(
-    makeScriptWrite(),
-    makeStagingWrite({ fog: fog as IAutoMovieFog }),
-  );
+  stageScene(makeScriptWrite(), makeStagingWrite({ fog: fog as IAutoMovieFog }));
+
+/** True when submitting `fog` is refused with a violation at `path`. */
+const refusedAt = (
+  fog: unknown,
+  kind: AutoMovieViolationKind,
+  path: string,
+): boolean => {
+  const staged = stagedWith(fog);
+  return staged.success === false && hasViolation(staged, kind, path);
+};
 
 /**
  * Staging may author the set's atmosphere, and the gate that accepts it is the
  * one the scene artifact applies downstream.
  *
- * Fog is a scene property, so `stage`, which is the rung that composes scenes,
- * has to be able to state one; otherwise the field is declarable in the schema
- * and unreachable from the only authoring path that builds a scene. Two facts
- * carry it and both are checked, because both fail silently rather than loudly:
- * a negative or non-finite `density` feeds `exp(-(density*d)^2)` a number the
+ * Fog is a scene property, so `stage`, the rung that composes scenes, has to be
+ * able to state one; otherwise the field is declarable in the schema and
+ * unreachable from the only authoring path that builds a scene. Two facts carry
+ * it and both are checked, because both fail silently rather than loudly: a
+ * negative or non-finite `density` feeds `exp(-(density*d)^2)` a number the
  * shader paints as a dead frame, and an out-of-range color puts a horizon on
  * screen that no light in the scene could make.
  *
@@ -37,10 +44,10 @@ const stagedWith = (fog: unknown): IAutoMovieStagedSet =>
  *    staged scene ever composed would change the bytes, and the content digest,
  *    of every production that never mentioned it.
  * 3. Each gate fires at the submitted field: a fog that is not an object, a
- *    negative density, a non-finite density, a color that is not an object, and
- *    a color component outside `[0, 1]`.
- * 4. The negative twin: a zero density is a vacuum, not a mistake, and an
- *    enormous one is a wall of cloud, which is a look. Neither is refused.
+ *    negative density, a non-finite density, a density that is not a number, a
+ *    color that is not an object, and a color component outside `[0, 1]`.
+ * 4. The negative twin: a zero density is a vacuum and an enormous one is a
+ *    wall of cloud. Both are looks, and neither is refused.
  */
 export const test_film_stage_scene_fog = (): void => {
   // 1. lowered verbatim.
@@ -59,10 +66,7 @@ export const test_film_stage_scene_fog = (): void => {
     "an omitted fog composes no fog key at all",
     namedFacts([
       ["staged", () => bare.success === true],
-      [
-        "keyAbsent",
-        () => bare.success === true && "fog" in bare.scene === false,
-      ],
+      ["keyAbsent", () => bare.success === true && !("fog" in bare.scene)],
     ]),
     { staged: true, keyAbsent: true },
   );
@@ -71,15 +75,12 @@ export const test_film_stage_scene_fog = (): void => {
   TestValidator.equals(
     "each malformed atmosphere is refused where it was written",
     namedFacts([
-      [
-        "notAnObject",
-        () => hasViolation(stagedWith(null), "type", "$input.fog"),
-      ],
+      ["notAnObject", () => refusedAt(null, "type", "$input.fog")],
       [
         "negativeDensity",
         () =>
-          hasViolation(
-            stagedWith({ ...FOG, density: -0.01 }),
+          refusedAt(
+            { ...FOG, density: -0.01 },
             "range",
             "$input.fog.density",
           ),
@@ -87,8 +88,8 @@ export const test_film_stage_scene_fog = (): void => {
       [
         "nonFiniteDensity",
         () =>
-          hasViolation(
-            stagedWith({ ...FOG, density: Number.POSITIVE_INFINITY }),
+          refusedAt(
+            { ...FOG, density: Number.POSITIVE_INFINITY },
             "range",
             "$input.fog.density",
           ),
@@ -96,26 +97,17 @@ export const test_film_stage_scene_fog = (): void => {
       [
         "densityNotANumber",
         () =>
-          hasViolation(
-            stagedWith({ ...FOG, density: "thick" }),
-            "range",
-            "$input.fog.density",
-          ),
+          refusedAt({ ...FOG, density: "thick" }, "range", "$input.fog.density"),
       ],
       [
         "colorNotAnObject",
-        () =>
-          hasViolation(
-            stagedWith({ ...FOG, color: null }),
-            "type",
-            "$input.fog.color",
-          ),
+        () => refusedAt({ ...FOG, color: null }, "type", "$input.fog.color"),
       ],
       [
         "componentOutOfRange",
         () =>
-          hasViolation(
-            stagedWith({ ...FOG, color: { ...FOG.color, g: 1.4 } }),
+          refusedAt(
+            { ...FOG, color: { ...FOG.color, g: 1.4 } },
             "range",
             "$input.fog.color.g",
           ),

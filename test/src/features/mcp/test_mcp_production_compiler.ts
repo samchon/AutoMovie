@@ -2369,7 +2369,7 @@ ${mutate(
 } from "@automovie/engine";
 import type { IAutoMovieShotBuildContext } from "@automovie/interface";
 
-import { sentinel } from "./sentinel";
+import { soloist } from "./soloist";
 
 class Staged extends AutoMovieSubject<null> {
   public readonly id = "staged";
@@ -2381,7 +2381,7 @@ class Staged extends AutoMovieSubject<null> {
   public render(
     context: IAutoMovieShotBuildContext,
   ): IAutoMovieSubjectContribution {
-    return sentinel.render(context, { from: 0 });
+    return soloist.render(context, { from: 0 });
   }
 }
 
@@ -2405,7 +2405,7 @@ export const ensemble = new Ensemble();
       mutate(
         `import { ensemble } from "../units/ensemble";
 ${original}`,
-        "const performer = sentinel.render(context, { from: openingAbduction });",
+        "const performer = soloist.render(context, { from: openingAbduction });",
         "const performer = ensemble.render(context);",
       ),
     );
@@ -2430,8 +2430,8 @@ ${original}`,
       mutate(
         `import { worldSurfaceHeight } from "@automovie/engine";
 ${original}`,
-        "  const performer = sentinel.render(context, { from: openingAbduction });",
-        `  if (signalField.ground.heightAt({ x: 0, z: 0 }) !== 0)
+        "  const performer = soloist.render(context, { from: openingAbduction });",
+        `  if (plaza.ground.heightAt({ x: 0, z: 0 }) !== 0)
     throw new Error("level ground must answer zero through the engine");
   if (
     worldSurfaceHeight(
@@ -2450,7 +2450,7 @@ ${original}`,
     ) !== 6
   )
     throw new Error("a plane must answer origin plus both slopes");
-  const performer = sentinel.render(context, { from: openingAbduction });`,
+  const performer = soloist.render(context, { from: openingAbduction });`,
       ),
     );
     TestValidator.equals(
