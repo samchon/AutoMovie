@@ -1,8 +1,5 @@
-import {
-  CAT_PROFILE,
-  HORSE_PROFILE,
-  bindProfileGaits,
-} from "@automovie/engine";
+import { CAT_PROFILE, HORSE_PROFILE } from "@automovie/archetypes";
+import { bindProfileGaits } from "@automovie/engine";
 import { AutoMovieHumanoidBone, IAutoMovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 

@@ -27,6 +27,7 @@
     "design": "tsx scripts/emitDesign.ts"
   },
   "dependencies": {
+    "@automovie/archetypes": "{{version:archetypes}}",
     "@automovie/cli": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",

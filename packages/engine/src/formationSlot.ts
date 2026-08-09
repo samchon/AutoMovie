@@ -19,8 +19,8 @@ export const IDENTITY_FORMATION_SLOT_STATE: IAutoMovieFormationSlotState = {
  *
  * The unit-level sampler answers for the whole crowd at once; this answers for
  * one member of it. The retention law is deliberately the same one: identity
- * before the first cue that names this slot, interpolation inside a cue, and the
- * cue's exact `to` state retained after it ends. That is what lets a member
+ * before the first cue that names this slot, interpolation inside a cue, and
+ * the cue's exact `to` state retained after it ends. That is what lets a member
  * removed once stay removed, and a member that fell stay down, without the
  * author restating either every second of the shot.
  *
@@ -79,16 +79,17 @@ export const sampleFormationSlotMotion = (
  * Turn a unit-local displacement into the frame a unit's members are placed in.
  *
  * A member's offset is authored in its unit's own frame: `+x` is the unit's
- * left-to-right and `+z` its front-to-back, whichever way the unit happens to be
- * pointing. {@link transformFormationPoint} rotates a unit's interior by the
+ * left-to-right and `+z` its front-to-back, whichever way the unit happens to
+ * be pointing. {@link transformFormationPoint} rotates a unit's interior by the
  * same total heading, so an offset joins a placed point only after this turns
- * it, and a member that stepped aside keeps stepping aside once its unit turns.
+ * it, and a member that stepped aside keeps stepping aside once its unit
+ * turns.
  *
- * Taken as a heading in degrees rather than as a unit, because the two consumers
- * of this arithmetic hold different halves of it: a gate composing a whole world
- * placement passes the unit's designed heading plus the offset its cue has
- * turned it by, while a renderer whose scene graph already carries the cue's
- * rotation passes only the designed heading.
+ * Taken as a heading in degrees rather than as a unit, because the two
+ * consumers of this arithmetic hold different halves of it: a gate composing a
+ * whole world placement passes the unit's designed heading plus the offset its
+ * cue has turned it by, while a renderer whose scene graph already carries the
+ * cue's rotation passes only the designed heading.
  */
 export const rotateFormationLocalOffset = (
   offset: IAutoMovieVector3,
@@ -118,9 +119,10 @@ export interface IAutoMovieFormationSlotPlacement {
  * Compose a unit's cue and one member's own cue into that member's placement.
  *
  * One owner for the whole composition, because four consumers ask this question
- * and a private copy in any of them is how a review frame comes to disagree with
- * the gate that passed it. The unit's cue places the member exactly as it always
- * did; the member's own cue then displaces and turns it inside the unit.
+ * and a private copy in any of them is how a review frame comes to disagree
+ * with the gate that passed it. The unit's cue places the member exactly as it
+ * always did; the member's own cue then displaces and turns it inside the
+ * unit.
  */
 export const placeFormationSlot = (props: {
   /** Designed world-space position of this member at rest. */
@@ -154,6 +156,8 @@ export const placeFormationSlot = (props: {
       z: placed.z + offset.z,
     },
     facingDeg:
-      props.facingDeg + props.unit.facingOffsetDeg + props.member.facingOffsetDeg,
+      props.facingDeg +
+      props.unit.facingOffsetDeg +
+      props.member.facingOffsetDeg,
   };
 };

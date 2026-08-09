@@ -1644,6 +1644,16 @@ const validateStorySyncCriterion = (
       );
       continue;
     }
+    // An unusable pin is already diagnosed on its own shot. Mapping a window
+    // through it would produce a second, derived complaint about a number the
+    // author has yet to fix, so the reachability question waits for a pin that
+    // can answer it.
+    if (
+      Number.isFinite(pin.originSeconds) === false ||
+      (pin.rate !== undefined &&
+        (Number.isFinite(pin.rate) === false || pin.rate <= 0))
+    )
+      continue;
     windows.push({
       from: autoMovieStoryTime(pin, event.window.from),
       to: autoMovieStoryTime(pin, event.window.to),
@@ -2098,14 +2108,31 @@ const validateInstanceSets = (
 /**
  * A dressing tolerance is a distance, so it obeys the same bounds spacing does,
  * except that zero is meaningful: it is how a layout asks for exact geometry.
+ *
+ * And it is bounded by the interval it perturbs. A tolerance says how far a
+ * member may stand off its own place, so two neighbours may each come that far
+ * toward each other: at half the interval between them they can stand in
+ * exactly one place, and above it they can change places. That is not a loosely
+ * dressed line, it is a line that has stopped being one, and saying so needs no
+ * knowledge of how large a member is.
+ *
+ * Which interval depends on the layout, because each states its own. A lattice
+ * states two spacings and each tolerance answers to the one it moves along, the
+ * other only carrying a member further away. An arc states none, so the interval
+ * is the chord between neighbouring slots that its radius, covered angle and
+ * count fix together; deviation there is drawn on both axes at once, so what has
+ * to survive the chord is twice the tolerance's diagonal. An arc of one member
+ * has no neighbour and so no interval to keep.
  */
 const validateFormationDressing = (
   diagnostics: IAutoMovieDiagnostic[],
-  layout: IAutoMovieFormationDesign["layout"],
+  formation: IAutoMovieFormationDesign,
   target: string,
   file: string,
 ): void => {
-  const dressing = "dressing" in layout ? layout.dressing : undefined;
+  const layout = formation.layout;
+  if (layout.kind === "scatter") return;
+  const dressing = layout.dressing;
   if (dressing === undefined) return;
   bounded(
     diagnostics,
@@ -2125,7 +2152,84 @@ const validateFormationDressing = (
     file,
     "layout.dressing.depth",
   );
+  if (layout.kind === "arc") {
+    const chord =
+      formation.count < 2
+        ? Number.POSITIVE_INFINITY
+        : 2 *
+          layout.radius *
+          Math.sin(
+            (layout.arcDegrees * Math.PI) /
+              180 /
+              (2 * (formation.count - 1)),
+          );
+    if (
+      measurable(dressing.lateral) &&
+      measurable(dressing.depth) &&
+      measurable(chord) &&
+      2 * Math.hypot(dressing.lateral, dressing.depth) >= chord
+    )
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Dressing can move two neighbouring members of this arc onto one another, because twice its diagonal tolerance reaches the whole chord between adjacent slots. Reduce layout.dressing, or widen layout.radius or layout.arcDegrees, in the tracked formation design record.`,
+      );
+    return;
+  }
+  dressedInterval(
+    diagnostics,
+    dressing.lateral,
+    layout.spacing.lateral,
+    "lateral",
+    target,
+    file,
+  );
+  dressedInterval(
+    diagnostics,
+    dressing.depth,
+    layout.spacing.depth,
+    "depth",
+    target,
+    file,
+  );
 };
+
+/**
+ * Refuse one tolerance that reaches the whole interval it is drawn across.
+ *
+ * Silent when either number is not a real measurement: an unmeasurable
+ * tolerance or spacing is already refused as a range, and stating a second time
+ * that it closes an interval nobody can measure would be noise rather than a
+ * correction.
+ */
+const dressedInterval = (
+  diagnostics: IAutoMovieDiagnostic[],
+  tolerance: number,
+  spacing: number,
+  axis: string,
+  target: string,
+  file: string,
+): void => {
+  if (
+    measurable(tolerance) === false ||
+    measurable(spacing) === false ||
+    2 * tolerance < spacing
+  )
+    return;
+  invalid(
+    diagnostics,
+    "design-range-invalid",
+    target,
+    file,
+    `Dressing tolerance ${tolerance} m reaches half the ${spacing} m ${axis} interval it perturbs, so two neighbouring members can stand in one place. Keep twice layout.dressing.${axis} below layout.spacing.${axis} in the tracked formation design record.`,
+  );
+};
+
+/** True when one number is a real, positive-or-zero measurement in metres. */
+const measurable = (value: number): boolean =>
+  Number.isFinite(value) && value >= 0;
 
 const validateFormationLayout = (
   diagnostics: IAutoMovieDiagnostic[],
@@ -2134,7 +2238,7 @@ const validateFormationLayout = (
   file: string,
 ): void => {
   const layout = formation.layout;
-  validateFormationDressing(diagnostics, layout, target, file);
+  validateFormationDressing(diagnostics, formation, target, file);
   if (layout.kind === "line" || layout.kind === "column") {
     bounded(
       diagnostics,

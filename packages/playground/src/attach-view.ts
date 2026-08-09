@@ -1,5 +1,5 @@
+import { HUMANOID_GAITS } from "@automovie/archetypes";
 import {
-  HUMANOID_GAITS,
   HUMANOID_JOINT_AXES,
   IAutoMovieActorContext,
   cutSequence,

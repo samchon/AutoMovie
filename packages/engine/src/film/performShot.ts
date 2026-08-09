@@ -319,7 +319,8 @@ export const performShot = (props: {
    * Compiler-owned compact formations present in this shot, so a camera can
    * frame a mass. A group target naming a formation this list does not carry is
    * a violation rather than a silently smaller frame: the alternative is a shot
-   * that succeeds having framed a crowd as one figure standing at its centroid.
+   * that succeeds having framed a crowd as one figure standing at its
+   * centroid.
    */
   formations?: readonly IAutoMovieCompiledFormation[];
   /**
@@ -639,7 +640,11 @@ export const performShot = (props: {
      */
     formationsFramed = false,
   ): IAutoMovieVector3 | null => {
-    if (!validateTargetNodeIds(target, path, label)) return null;
+    // Refused BEFORE the id check, so the correction round is told the one
+    // thing it can act on. Checking membership first would answer "that
+    // formation is not compiled" to an author whose real mistake was asking an
+    // actor to look at an army, and a compiled formation would have made that
+    // sentence disappear without making the target legal.
     if (formationsFramed === false && isRecord(target)) {
       const named = Array.isArray(target.formations) ? target.formations : [];
       if (named.length > 0) {
@@ -648,12 +653,15 @@ export const performShot = (props: {
           path,
           `${subject} must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but its group names formation ${named
             .map((formation) => `"${String(formation)}"`)
-            .join(", ")}: a formation is a mass a camera frames, not one body with one point to aim at; name the staged nodes to aim at instead`,
+            .join(
+              ", ",
+            )}: a formation is a mass a camera frames, not one body with one point to aim at; name the staged nodes to aim at instead`,
           target,
         );
         return null;
       }
     }
+    if (!validateTargetNodeIds(target, path, label)) return null;
     const point =
       resolveLiveTarget?.(target, seconds) ??
       resolveTargetPoint(target, nodePositions, formationPoints);
@@ -1872,8 +1880,7 @@ export const performShot = (props: {
         );
         return {
           base: framed.base,
-          height:
-            framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
+          height: framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
           radius: framed.radius,
           at:
             cued === false
@@ -1887,7 +1894,11 @@ export const performShot = (props: {
     }
     const point =
       resolveLiveTarget?.(on, 0) ??
-      (resolveTargetPoint(on, nodePositions, formationPoints) as IAutoMovieVector3);
+      (resolveTargetPoint(
+        on,
+        nodePositions,
+        formationPoints,
+      ) as IAutoMovieVector3);
     const node = on.kind === "node" ? on.node : null;
     // Measure the figure, not the rig. The extent is model-space, so its floor
     // is where the geometry actually starts: shifting the framed base by it

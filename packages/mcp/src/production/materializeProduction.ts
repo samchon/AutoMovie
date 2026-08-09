@@ -1009,4 +1009,3 @@ const materialOf = (
     baseColorTexture: null,
   };
 };
-

@@ -46,8 +46,8 @@ export interface IAutoMovieFormationViewerStats {
    * `near` and `far` count anonymous instance slots. `hero` counts promoted
    * hero objects still inside the frustum instead, because an anonymous slot
    * can never select that tier: the compiler drops the hero tier from the
-   * anonymous LOD list. Anonymous accounting is therefore `near + far +
-   * culled`, and the hero count belongs beside it rather than inside it.
+   * anonymous LOD list. Anonymous accounting is therefore `near + far + culled
+   * + removed`, and the hero count belongs beside it rather than inside it.
    */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
   /** Anonymous slots rejected by camera-frustum chunk culling. */
@@ -97,8 +97,8 @@ interface IChunkObject {
  * The channel is sparse and its whole promise is that a crowd does not pay for
  * it, so the members it singles out are located once and the per-frame work is
  * proportional to how many there are. A slot named but not found here — a
- * promoted hero, or an index outside the unit — simply has no instance to write,
- * which is what the compiler gate already refuses at compile time.
+ * promoted hero, or an index outside the unit — simply has no instance to
+ * write, which is what the compiler gate already refuses at compile time.
  */
 interface ISlotException {
   /** Zero-based slot inside the whole formation. */
@@ -247,7 +247,8 @@ export const buildInstancedFormation = (input: {
         slot >= candidate.runtime.start &&
         slot < candidate.runtime.start + candidate.runtime.count,
     );
-    const index = chunk?.slots.findIndex((member) => member.slot === slot) ?? -1;
+    const index =
+      chunk?.slots.findIndex((member) => member.slot === slot) ?? -1;
     if (chunk === undefined || index < 0) continue;
     exceptions.push({ slot, chunk, index, designed: chunk.slots[index]! });
   }

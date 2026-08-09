@@ -62,6 +62,9 @@ export const test_world_kit = (): void => {
     base: { x: -8, y: 0, z: 8 },
     size: { x: 5, y: 2, z: 0.4 },
     color: "#777777",
+    // A production whose catalogue registers its own static-primitive builder
+    // names it here; the default is the shipped one.
+    archetype: "registered-block",
   });
   const route = {
     id: "road",

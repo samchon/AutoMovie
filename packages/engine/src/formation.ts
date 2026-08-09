@@ -461,9 +461,9 @@ export const lerp = (from: number, to: number, progress: number): number =>
  * Shape one cue's linear progress by its declared curve.
  *
  * Exported because the per-member channel beside the unit-level one authors the
- * same `easing` names and must bend them identically. Two spellings of one curve
- * is how a member and the unit it stands in come to disagree about where they
- * are halfway through the same second.
+ * same `easing` names and must bend them identically. Two spellings of one
+ * curve is how a member and the unit it stands in come to disagree about where
+ * they are halfway through the same second.
  */
 export const easingProgress = (
   easing: IAutoMovieFormationMotion["easing"],

@@ -1,3 +1,7 @@
+import {
+  AUTOMOVIE_PRIMITIVE_ARCHETYPES,
+  createAutoMovieArchetypeRegistry,
+} from "@automovie/archetypes";
 import type {
   IAutoMovieDesignMutationOutput,
   IAutoMovieDesignTarget,
@@ -33,6 +37,7 @@ import { plaza } from "../src/world/plaza";
 const project = AutoMovieProductionProject.open(
   findAutoMovieProjectRoot(process.cwd()),
   config.productionId,
+  createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
 );
 
 /**

@@ -97,8 +97,8 @@ import {
   materializeProductionModels,
 } from "./materializeProduction";
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
-import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { probeProductionMedia } from "./probeProductionMedia";
+import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
@@ -2951,6 +2951,7 @@ const validateCompiledShot = (
   diagnostics.push(...validateAutoMovieFormationMotions(contract, value));
   diagnostics.push(...validateAutoMovieFormationSlotMotions(contract, value));
   diagnostics.push(...validateAutoMovieFormationGround(contract, value));
+  diagnostics.push(...validateAutoMovieFormationOverlap(contract, value));
   diagnostics.push(...validateAutoMovieEffects(contract, value));
   for (const model of value.models)
     appendValidation(diagnostics, id, validateModel({ model }));
@@ -3017,9 +3018,9 @@ const formationGroundMemberCache = new WeakMap<
 /**
  * One member the ground gate measures, kept with the slot that produced it.
  *
- * The point alone was enough while every member of a unit did the same thing.
- * A member with its own cue does not, so the slot has to travel with the point:
- * a member removed at four seconds must stop being measured, and a member that
+ * The point alone was enough while every member of a unit did the same thing. A
+ * member with its own cue does not, so the slot has to travel with the point: a
+ * member removed at four seconds must stop being measured, and a member that
  * stepped off its place must be measured where it stepped to.
  */
 interface IFormationGroundMember {
@@ -3176,12 +3177,12 @@ const formationGroundSampleTimes = (
  * The same argument as {@link formationGroundSampleTimes} and the same bound: a
  * member's cue displaces it along a straight segment, ground is not convex, and
  * both ends can stand on floor the middle does not. What the member travels is
- * the length of that displacement, so the step count follows from it rather than
- * from a guess, and the same cap keeps a member carried absurdly far measured
- * coarsely instead of endlessly.
+ * the length of that displacement, so the step count follows from it rather
+ * than from a guess, and the same cap keeps a member carried absurdly far
+ * measured coarsely instead of endlessly.
  *
- * A turn of the member alone sweeps nothing, because a member is a point to this
- * gate: the ground under it does not move when it faces another way.
+ * A turn of the member alone sweeps nothing, because a member is a point to
+ * this gate: the ground under it does not move when it faces another way.
  */
 const formationSlotGroundSampleTimes = (
   cue: IAutoMovieFormationSlotMotion,
@@ -3227,7 +3228,7 @@ const FORMATION_GROUND_SINK_TOLERANCE_METRES = 1e-3;
  * the refusal can say what an author has to correct rather than the same
  * sentence twice.
  *
- * Standing *above* the surface is not refused. `anchor.y` is the height a unit
+ * Standing _above_ the surface is not refused. `anchor.y` is the height a unit
  * was staged at and always has been, and a shot deliberately holding a unit
  * over the space it staged — a rank on structure the space does not model, a
  * unit whose terrain record and staged space are two readings of one place — is
@@ -3429,6 +3430,515 @@ export const validateAutoMovieFormationGround = (
   return diagnostics;
 };
 
+/**
+ * Members of one unit the overlap gate measures.
+ *
+ * Every measured member is a point placed into a grid at every sampled time,
+ * and a unit may be a hundred thousand of them. Past this many the walk stays
+ * bounded and what is measured is the unit's first slots, which is the trade a
+ * gate that samples has to make somewhere and had better say out loud. Below it
+ * — where nearly every authored unit sits — every member is measured, so every
+ * pair standing inside its own bodies is found.
+ */
+const FORMATION_OVERLAP_MEMBER_LIMIT = 4096;
+
+/**
+ * Times inside one shot the overlap gate places its units at.
+ *
+ * Zero and both ends of every cue are always among them, because those are
+ * states the shot certainly holds; whatever budget is left fills the gaps
+ * between them evenly. The interior is what catches two units standing clear at
+ * both ends of a cue and walking through one another in between, and a cue that
+ * closes a gap for less than one such interval is the honest limit this number
+ * states rather than hides.
+ */
+const FORMATION_OVERLAP_SAMPLE_LIMIT = 16;
+
+/**
+ * One vertical column a runtime model certainly fills, about its own axis.
+ *
+ * Not the extent of the model but a disc inside it: the largest circle that
+ * fits in one part's own horizontal cross-section, centred on the axis the
+ * member stands on, over the height that part covers. Two members standing
+ * closer than the sum of two such radii, at heights whose intervals meet, are
+ * two bodies in one place, and that is what lets a refusal be sound. Everything
+ * the measure leaves out — an arm reaching outside the column, a limb a motion
+ * swings, a part hung off the axis — costs the gate an overlap it does not
+ * find, and can never make it invent one.
+ */
+export interface IAutoMovieModelColumn {
+  /** Radius of the disc the model fills, in metres. */
+  radius: number;
+  /** Bottom of the column, in metres above where the model stands. */
+  bottom: number;
+  /** Top of the column, in metres above where the model stands. */
+  top: number;
+}
+
+/**
+ * The columns one runtime model fills, read from the geometry it already is.
+ *
+ * A member's size is not a field an author states beside the model and then
+ * contradicts: it is derived from the parts the compiler materialized, so a
+ * recipe that grows grows here too and there is nothing to keep in step by
+ * hand. One reading answers for a figure assembled from primitives, for a
+ * single-primitive object, and for the proxy an imported appearance is bound
+ * through, because all three are parts with stated dimensions.
+ *
+ * Only parts standing on the model's own vertical axis are read. A part hung
+ * off the axis sits somewhere different for every heading its member holds, and
+ * this answer has to hold whichever way a member faces; a disc about the axis
+ * does. A part turned about anything but the vertical is left out for the same
+ * reason, its column no longer being vertical, and so is a scaled one, whose
+ * real dimensions are no longer the ones its shape states.
+ */
+export const autoMovieModelColumns = (
+  model: Pick<IAutoMovieModel, "parts" | "skeleton">,
+): IAutoMovieModelColumn[] => {
+  const heights = axialBoneHeights(model.skeleton);
+  return model.parts.flatMap((part) => {
+    const column = axialPartColumn(part, heights);
+    return column === null ? [] : [column];
+  });
+};
+
+/**
+ * Where each bone rests on the model's own vertical axis, above its origin.
+ *
+ * A bone is on that axis when it and every bone above it rest with no sideways
+ * displacement and no turn out of the vertical, which is exactly when adding up
+ * the chain's heights gives the bone's real resting height. A bone that fails
+ * either test, or whose parent does, is simply absent: the parts riding it are
+ * then not measured, which costs the gate a column and never gives it a wrong
+ * one.
+ *
+ * Resolved by repeated passes rather than by walking parents, because bones are
+ * not required to be listed above their children, and a chain that never
+ * resolves — a parent that is missing, off the axis, or its own ancestor —
+ * simply stops adding heights instead of needing a cycle guard of its own.
+ */
+const axialBoneHeights = (
+  skeleton: IAutoMovieModel["skeleton"],
+): Map<AutoMovieHumanoidBone, number> => {
+  const heights = new Map<AutoMovieHumanoidBone, number>();
+  const axial = (skeleton?.bones ?? []).filter(
+    (bone) =>
+      bone.rest.translation.x === 0 &&
+      bone.rest.translation.z === 0 &&
+      bone.rest.rotation.x === 0 &&
+      bone.rest.rotation.z === 0,
+  );
+  let settled = true;
+  while (settled) {
+    settled = false;
+    for (const bone of axial) {
+      if (heights.has(bone.bone)) continue;
+      const above = bone.parent === null ? 0 : heights.get(bone.parent);
+      if (above === undefined) continue;
+      heights.set(bone.bone, above + bone.rest.translation.y);
+      settled = true;
+    }
+  }
+  return heights;
+};
+
+/** The column one part fills on its model's axis, or `null` when it fills none. */
+const axialPartColumn = (
+  part: IAutoMovieModel["parts"][number],
+  heights: ReadonlyMap<AutoMovieHumanoidBone, number>,
+): IAutoMovieModelColumn | null => {
+  const solid = columnOfShape(part.geometry);
+  if (solid === null) return null;
+  const base = axialPartHeight(part, heights);
+  return base === null
+    ? null
+    : {
+        radius: solid.radius,
+        bottom: base + solid.centre - solid.half,
+        top: base + solid.centre + solid.half,
+      };
+};
+
+/**
+ * Height above the model's origin at which one part rides, or `null` off-axis.
+ *
+ * A part rides a bone, or the model's origin when it rides no bone at all, and
+ * then its own transform moves it again. Either step can take it off the axis
+ * this gate measures about, and a part it cannot place is a part it does not
+ * measure.
+ */
+const axialPartHeight = (
+  part: IAutoMovieModel["parts"][number],
+  heights: ReadonlyMap<AutoMovieHumanoidBone, number>,
+): number | null => {
+  const bone = part.attachedBone === null ? 0 : heights.get(part.attachedBone);
+  if (bone === undefined) return null;
+  const local = part.transform;
+  if (local === null) return bone;
+  return local.translation.x === 0 &&
+    local.translation.z === 0 &&
+    local.rotation.x === 0 &&
+    local.rotation.z === 0 &&
+    local.scale.x === 1 &&
+    local.scale.y === 1 &&
+    local.scale.z === 1
+    ? bone + local.translation.y
+    : null;
+};
+
+/**
+ * The disc one primitive shape certainly fills, and the height it fills it
+ * over.
+ *
+ * Inscribed rather than circumscribed, every time. A box holds a disc of its
+ * narrower side however it is turned; a cone tapers, so only its wider half
+ * holds a disc of half its base radius; a plane has no thickness, so nothing is
+ * ever inside one. A mesh states no dimensions here and is left to the parts
+ * that do.
+ */
+const columnOfShape = (
+  geometry: IAutoMovieModel["parts"][number]["geometry"],
+): { radius: number; centre: number; half: number } | null => {
+  if (geometry.type !== "primitive") return null;
+  const shape = geometry.shape;
+  if (shape.type === "sphere")
+    return solidColumn(shape.radius, 0, shape.radius);
+  if (shape.type === "capsule" || shape.type === "cylinder")
+    return solidColumn(shape.radius, 0, shape.height / 2);
+  if (shape.type === "cone")
+    return solidColumn(shape.radius / 2, shape.height / 4, shape.height / 4);
+  if (shape.type === "box")
+    return solidColumn(
+      Math.min(shape.width, shape.depth) / 2,
+      0,
+      shape.height / 2,
+    );
+  return null;
+};
+
+/**
+ * One measured disc, or `null` when the dimensions it was read from are not
+ * real.
+ */
+const solidColumn = (
+  radius: number,
+  centre: number,
+  half: number,
+): { radius: number; centre: number; half: number } | null =>
+  finiteAbove(radius, 0) && finiteAbove(half, 0)
+    ? { radius, centre, half }
+    : null;
+
+const finiteAbove = (value: number, floor: number): boolean =>
+  Number.isFinite(value) && value > floor;
+
+/** One unit the overlap gate measures, with everything it is measured by. */
+interface IFormationOverlapUnit {
+  /** Position in the shot's own order, which is the order refusals come in. */
+  index: number;
+  /** The staged unit itself. */
+  formation: IAutoMovieFormationPlacement & {
+    lod: ReadonlyArray<{ model: string }>;
+  };
+  /** Where each measured member stands at rest, with the slot it is. */
+  members: ReadonlyArray<{ slot: number; point: IAutoMovieVector3 }>;
+  /** Columns of every runtime one of its members may be drawn as. */
+  tiers: ReadonlyArray<readonly IAutoMovieModelColumn[]>;
+}
+
+/** One measured member, placed where the sampled time really puts it. */
+interface IFormationOverlapPlacement {
+  /** Unit this member stands in. */
+  unit: IFormationOverlapUnit;
+  /** Zero-based slot it is. */
+  slot: number;
+  /** Where it stands at the sampled time. */
+  point: IAutoMovieVector3;
+}
+
+/**
+ * The members one unit is measured by, found once and remembered.
+ *
+ * The set is a pure function of the unit, and the compiler hands the same
+ * compiled unit to every shot that stages it, so a crowd in fifty shots would
+ * otherwise be regenerated fifty times over. Keyed by the unit itself, so
+ * nothing outlives the compile that made it.
+ */
+const formationOverlapMemberCache = new WeakMap<
+  IAutoMovieFormationPlacement,
+  ReadonlyArray<{ slot: number; point: IAutoMovieVector3 }>
+>();
+
+const formationOverlapMembers = (
+  formation: IAutoMovieFormationPlacement,
+): ReadonlyArray<{ slot: number; point: IAutoMovieVector3 }> => {
+  const remembered = formationOverlapMemberCache.get(formation);
+  if (remembered !== undefined) return remembered;
+  const members = Array.from(
+    { length: Math.min(formation.count, FORMATION_OVERLAP_MEMBER_LIMIT) },
+    (_, slot) => ({ slot, point: formationSlotPosition(formation, slot) }),
+  );
+  formationOverlapMemberCache.set(formation, members);
+  return members;
+};
+
+/**
+ * When one shot is worth placing its units at.
+ *
+ * Ends first, because the ends of a cue are states the shot certainly holds and
+ * zero is where a unit that has no cue at all stands. Then the gaps between
+ * them, filled evenly with whatever budget is left, because two units clear at
+ * both ends of a cue can walk straight through one another in between and a
+ * spacing that closes and reopens inside one cue never shows at either end.
+ *
+ * This samples; it does not solve. Whether two members are ever inside one
+ * another has no closed form — it depends on the layouts, the easings and the
+ * cues together — so a resolution is stated instead of a guarantee. Every
+ * sampled time is a state the shot really holds, which is what keeps the gate
+ * from refusing a production that was correct.
+ */
+const formationOverlapSampleTimes = (
+  cues: readonly IAutoMovieFormationMotion[],
+  slotCues: readonly IAutoMovieFormationSlotMotion[],
+): number[] => {
+  const ends = [
+    ...new Set([
+      0,
+      ...cues.flatMap((cue) => [cue.start, cue.end]),
+      ...slotCues.flatMap((cue) => [cue.start, cue.end]),
+    ]),
+  ].sort((left, right) => left - right);
+  const gaps = Math.max(1, ends.length - 1);
+  const inside = Math.max(
+    0,
+    Math.floor((FORMATION_OVERLAP_SAMPLE_LIMIT - ends.length) / gaps),
+  );
+  return [
+    ...new Set(
+      ends.flatMap((time, index) => {
+        const next = ends[index + 1];
+        return next === undefined
+          ? [time]
+          : [
+              time,
+              ...Array.from(
+                { length: inside },
+                (_, step) => time + ((next - time) * (step + 1)) / (inside + 1),
+              ),
+            ];
+      }),
+    ),
+  ];
+};
+
+/**
+ * How close two members of two units may stand before they are in one place.
+ *
+ * The least any pair of the runtimes they may be drawn as allows, because which
+ * tier a member is drawn at is the camera's decision and a refusal has to hold
+ * whichever one it makes. Zero when no pair of their columns ever meets in
+ * height, which is two bodies that pass each other at different levels rather
+ * than through each other.
+ */
+const formationOverlapClearance = (
+  left: IFormationOverlapUnit,
+  right: IFormationOverlapUnit,
+  lift: number,
+): number => {
+  let least = Number.POSITIVE_INFINITY;
+  for (const near of left.tiers)
+    for (const far of right.tiers) {
+      let widest = 0;
+      for (const one of near)
+        for (const other of far)
+          if (
+            Math.max(one.bottom, other.bottom + lift) <
+              Math.min(one.top, other.top + lift) &&
+            one.radius + other.radius > widest
+          )
+            widest = one.radius + other.radius;
+      least = Math.min(least, widest);
+    }
+  return least;
+};
+
+/**
+ * Refuse a shot that stands one member of a crowd inside another.
+ *
+ * Two bodies cannot occupy one place. That is a fact about dancers, animals,
+ * vehicles and machines alike, and until this gate existed nothing in the
+ * pipeline checked it: a unit could be laid out at a tenth of its members' own
+ * width, a cue could pull one to a fifth of its spacing, and two units could be
+ * staged on the same ground, and every one of those compiled clean and rendered
+ * as figures standing through each other.
+ *
+ * A member's own size is not asked of the author. It is read from the runtime
+ * the compiler already built for it by {@link autoMovieModelColumns}, so the
+ * measure follows the geometry rather than sitting beside it going stale, and a
+ * unit whose runtime this shot does not carry is not measured at all rather
+ * than measured against a guess.
+ *
+ * What is measured is members, at the times {@link formationOverlapSampleTimes}
+ * picks and in the places {@link placeFormationSlot} puts them, which is the
+ * same answer the renderer places them by. Both units of a pair are placed at
+ * one time and compared to each other, which is what the ground gate's
+ * per-formation loop structurally cannot see: two crowds each standing
+ * perfectly well on the floor, in each other.
+ *
+ * Sound by construction and incomplete by design, in three stated ways: a
+ * column is inscribed in a member and never around it, so a refusal means two
+ * bodies really share a place; only the first
+ * {@link FORMATION_OVERLAP_MEMBER_LIMIT} slots of an enormous unit are measured;
+ * and time is sampled rather than solved. Each of those loses overlaps this
+ * gate could have found. None of them can make it refuse a production that was
+ * correct, which is the discipline the ground gate beside it is built on and
+ * the only one worth having here.
+ *
+ * A member the shot has taken out is not measured, because nothing can stand
+ * inside a body that is not there.
+ */
+export const validateAutoMovieFormationOverlap = (
+  contract: Pick<IAutoMovieShotContract, "id">,
+  value: {
+    models: readonly IAutoMovieModel[];
+    formations: ReadonlyArray<
+      IAutoMovieFormationPlacement & {
+        lod: ReadonlyArray<{ model: string }>;
+      }
+    >;
+    formationMotions?: readonly IAutoMovieFormationMotion[];
+    formationSlotMotions?: readonly IAutoMovieFormationSlotMotion[];
+  },
+): IAutoMovieDiagnostic[] => {
+  const runtimes = new Map(value.models.map((model) => [model.id, model]));
+  const units = value.formations.flatMap(
+    (formation, index): IFormationOverlapUnit[] => {
+      const tiers = formation.lod.map((tier) => {
+        const runtime = runtimes.get(tier.model);
+        return runtime === undefined ? [] : autoMovieModelColumns(runtime);
+      });
+      // A unit with a tier this shot does not carry, or one whose geometry fills
+      // no column at all, has no size this gate can prove. Measuring it against
+      // a stand-in number is how a gate starts refusing productions that were
+      // correct, so it is left alone instead.
+      return tiers.length === 0 || tiers.some((columns) => columns.length === 0)
+        ? []
+        : [
+            {
+              index,
+              formation,
+              members: formationOverlapMembers(formation),
+              tiers,
+            },
+          ];
+    },
+  );
+  if (units.length === 0) return [];
+  const cues = value.formationMotions ?? [];
+  const slotCues = value.formationSlotMotions ?? [];
+  // One cell wide enough that no pair inside its own clearance can fall outside
+  // the ring of cells around either of them. A height difference narrows a
+  // clearance and never widens it, so twice the widest column in the shot bounds
+  // every clearance there is.
+  const cell =
+    2 *
+    Math.max(
+      ...units.flatMap((unit) =>
+        unit.tiers.flatMap((columns) => columns.map((column) => column.radius)),
+      ),
+    );
+  const found = new Map<
+    string,
+    {
+      time: number;
+      left: IFormationOverlapPlacement;
+      right: IFormationOverlapPlacement;
+      apart: number;
+      clearance: number;
+    }
+  >();
+  for (const time of formationOverlapSampleTimes(cues, slotCues)) {
+    const grid = new Map<string, IFormationOverlapPlacement[]>();
+    for (const unit of units) {
+      const motion = sampleFormationMotion(cues, unit.formation.id, time);
+      for (const member of unit.members) {
+        const placed = placeFormationSlot({
+          position: member.point,
+          facingDeg: unit.formation.facingDeg,
+          anchor: unit.formation.anchor,
+          baseFacingDeg: unit.formation.facingDeg,
+          unit: motion,
+          member: sampleFormationSlotMotion(
+            slotCues,
+            unit.formation.id,
+            member.slot,
+            time,
+          ),
+        });
+        if (placed.present === false) continue;
+        const here: IFormationOverlapPlacement = {
+          unit,
+          slot: member.slot,
+          point: placed.position,
+        };
+        const column = Math.floor(placed.position.x / cell);
+        const row = Math.floor(placed.position.z / cell);
+        for (let across = -1; across <= 1; ++across)
+          for (let along = -1; along <= 1; ++along)
+            for (const other of grid.get(`${column + across}:${row + along}`) ??
+              []) {
+              // Ordered by the unit each stands in, and every member already in
+              // the grid was placed by a unit no later than this one, so one
+              // reading of a pair of units is the whole of what it reports.
+              const pair = `${other.unit.index}:${unit.index}`;
+              if (found.has(pair)) continue;
+              const clearance = formationOverlapClearance(
+                other.unit,
+                unit,
+                here.point.y - other.point.y,
+              );
+              const apart = Math.hypot(
+                here.point.x - other.point.x,
+                here.point.z - other.point.z,
+              );
+              if (apart >= clearance) continue;
+              found.set(pair, {
+                time,
+                left: other,
+                right: here,
+                apart,
+                clearance,
+              });
+            }
+        const key = `${column}:${row}`;
+        const neighbours = grid.get(key);
+        if (neighbours === undefined) grid.set(key, [here]);
+        else neighbours.push(here);
+      }
+    }
+  }
+  return [...found.values()].map((overlap) =>
+    engineDiagnostic(
+      contract.id,
+      `formation:${overlap.left.unit.formation.id}`,
+      // Reported to the millimetre and the millisecond, the same as every other
+      // reading a shot's author reads to find a place on a field. Only the
+      // reading is rounded; the comparison above is not.
+      `must not stand a member where another body already is, but at ${round(
+        overlap.time,
+      )}s ${
+        overlap.left.unit === overlap.right.unit
+          ? `its slots ${overlap.left.slot} and ${overlap.right.slot}`
+          : `its slot ${overlap.left.slot} and slot ${overlap.right.slot} of "${overlap.right.unit.formation.id}"`
+      } stand ${round(overlap.apart)}m apart at (${round(
+        (overlap.left.point.x + overlap.right.point.x) / 2,
+      )}, ${round(
+        (overlap.left.point.z + overlap.right.point.z) / 2,
+      )}), inside the ${round(overlap.clearance)}m their bodies fill`,
+    ),
+  );
+};
+
 /** Validate bounded source-authored formation cues against one compiled shot. */
 export const validateAutoMovieFormationMotions = (
   contract: IAutoMovieShotContract,
@@ -3527,11 +4037,12 @@ export const validateAutoMovieFormationMotions = (
 /**
  * Members one shot may single out of its crowds, in total.
  *
- * The channel's whole promise is that a crowd of a hundred thousand does not pay
- * for the three members something happens to, and a promise nothing enforces is
- * a comment. Past this the answer is the other mechanism: a member that needs a
- * shot's full attention is promoted to a named actor, which exists and is capped
- * for the same reason. This is the cheaper thing and must not become that.
+ * The channel's whole promise is that a crowd of a hundred thousand does not
+ * pay for the three members something happens to, and a promise nothing
+ * enforces is a comment. Past this the answer is the other mechanism: a member
+ * that needs a shot's full attention is promoted to a named actor, which exists
+ * and is capped for the same reason. This is the cheaper thing and must not
+ * become that.
  */
 const FORMATION_SLOT_EXCEPTION_LIMIT = 1_024;
 

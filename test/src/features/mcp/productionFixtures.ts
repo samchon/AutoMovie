@@ -110,7 +110,7 @@ export const productionFixture = (): {
     ) as IAutoMovieAcceptanceScenario;
     if (openingBeauty.criterion.kind === "frame")
       openingBeauty.criterion.expectation =
-        "The full sentinel and raised signal arm remain readable.";
+        "The full performer and raised cue arm remain readable.";
     files[".automovie/design/acceptance/opening-beauty.json"] =
       `${JSON.stringify(openingBeauty, null, 2)}\n`;
     files[".automovie/design/production.json"] = `${JSON.stringify(
@@ -201,7 +201,7 @@ const SCAFFOLD_REGISTRATION_BOUNDARIES = {
   },
   answer: {
     registration: "ANSWER_CONTRACT",
-    nextDeclaration: "const buildSignal = (",
+    nextDeclaration: "const buildCue = (",
   },
 } as const;
 
@@ -377,7 +377,7 @@ const oneShotProduction = (
   production: IAutoMovieProductionDesign,
 ): IAutoMovieProductionDesign => ({
   ...production,
-  logline: "A primitive sentinel raises a signal in one deterministic fixture.",
+  logline: "A primitive performer raises a cue in one deterministic fixture.",
   targetRuntimeSeconds: 6,
   frameFormat: {
     ...production.frameFormat,
@@ -416,12 +416,12 @@ export const fixtureWorldDesign = (): IAutoMovieWorldDesign => ({
 /**
  * Starter shot contract restricted to its named actor.
  *
- * `productionFixture` renders the one-actor slice of the starter: the army
+ * `productionFixture` renders the one-actor slice of the starter: the instanced
  * formation, its LOD recipes and its effect-mask acceptance stay out so the
  * production services under test have a small deterministic graph. The
  * in-memory contract has to describe that same slice, or every consumer that
  * pairs it with a fixture project resolves a formation the project does not
- * own. Tests that want the shipped instanced army drive the scaffold directly.
+ * own. Tests that want the shipped instanced group drive the scaffold directly.
  */
 export const shotContract = (): IAutoMovieShotContract => {
   const contract = scaffoldJson<IAutoMovieShotContract>(

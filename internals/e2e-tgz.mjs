@@ -38,6 +38,7 @@ const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 const PACKAGES = [
   "interface",
   "engine",
+  "archetypes",
   "render",
   "viewer",
   "ingest",
@@ -1616,8 +1617,9 @@ if (
 import {
   formationSlotPosition,
   isWalkable,
+  placeFormationSlot,
   sampleFormationMotion,
-  transformFormationPoint,
+  sampleFormationSlotMotion,
 } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(
@@ -1628,38 +1630,56 @@ for (const [id, shot] of state.generated.shots) {
   const space = shot.scene.space;
   if (space === undefined || space === null) continue;
   const cues = shot.formationMotions ?? [];
+  const slotCues = shot.formationSlotMotions ?? [];
   for (const formation of shot.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
-    const resting = own.length === 0 || Math.min(...times) > 0;
+    const ownSlots = slotCues.filter((cue) => cue.formation === formation.id);
+    const times = [
+      ...new Set(
+        [...own, ...ownSlots].flatMap((cue) => [cue.start, cue.end]),
+      ),
+    ];
     // Members, the same thing the compiler judges. The box around a formation
     // has corners no member stands on, so reading those would report a place
     // the unit is not. Every slot is asked here because a shipped starter is
     // small enough to ask all of them.
-    const corners = Array.from({ length: formation.count }, (_, slot) =>
-      formationSlotPosition(formation, slot),
-    );
+    const members = Array.from({ length: formation.count }, (_, slot) => ({
+      slot,
+      point: formationSlotPosition(formation, slot),
+    }));
+    const resting = times.length === 0 || Math.min(...times) > 0;
     for (const time of [...(resting ? [null] : []), ...times]) {
-      // One sampled state per time, not one per corner: the four corners of a
-      // unit are read at the same instant, and asking the engine four times for
-      // that one instant would be four chances to read it differently.
+      // One sampled unit state per time, not one per member: every member of a
+      // unit is read at the same instant, and asking the engine once per member
+      // for that one instant would be as many chances to read it differently.
       const motion =
         time === null ? null : sampleFormationMotion(own, formation.id, time);
-      for (const corner of corners.map((point) =>
-        motion === null
-          ? point
-          : transformFormationPoint(
-              point,
-              formation.anchor,
-              motion,
-              formation.facingDeg,
-            ),
-      ))
-        if (isWalkable(space, corner.x, corner.z) === false)
+      for (const member of members) {
+        // A member the shot removed stands nowhere, so no surface has to carry
+        // it, and a member with a cue of its own is read where that cue puts it.
+        const placed =
+          motion === null
+            ? { present: true, position: member.point }
+            : placeFormationSlot({
+                position: member.point,
+                facingDeg: formation.facingDeg,
+                anchor: formation.anchor,
+                baseFacingDeg: formation.facingDeg,
+                unit: motion,
+                member: sampleFormationSlotMotion(
+                  ownSlots,
+                  formation.id,
+                  member.slot,
+                  time,
+                ),
+              });
+        if (placed.present === false) continue;
+        if (isWalkable(space, placed.position.x, placed.position.z) === false)
           throw new Error(
-            \`shot "\${id}" puts a member of formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
+            \`shot "\${id}" puts a member of formation "\${formation.id}" at (\${placed.position.x}, \${placed.position.z})\` +
               \` \${time === null ? "where it stands" : \`at \${time}s\`}, which the ground it staged does not carry.\`,
           );
+      }
       checked++;
     }
   }

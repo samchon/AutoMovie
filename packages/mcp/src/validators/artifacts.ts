@@ -187,6 +187,28 @@ export const validateSceneArtifact = (
       remapSpaceViolations(validateSpace({ space: space as IAutoMovieSpace })),
     );
 
+  // The atmosphere the frame is read through. Absent or null is a scene with
+  // none, so only a declared fog is checked, and like a space it needs no
+  // model: fog is a property of the scene, not an object in it.
+  //
+  // Both facts are gated because both can silently ruin a render rather than
+  // fail it: a negative or non-finite `density` feeds `exp(-(density*d)^2)` a
+  // value the shader will happily paint as a uniformly dead frame, and an
+  // out-of-range color leaves the horizon a color no light in the scene can
+  // produce. Density is unbounded above on purpose; a wall of cloud is a look.
+  const fog = scene.fog ?? null;
+  if (fog !== null && validateObjectArtifact(fog, "$input.fog", "fog", violations)) {
+    validateRange(
+      fog.density,
+      "$input.fog.density",
+      0,
+      Infinity,
+      "fog density",
+      violations,
+    );
+    validateColorArtifact(fog.color, "$input.fog.color", violations);
+  }
+
   return toValidation(violations);
 };
 

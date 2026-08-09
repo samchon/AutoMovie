@@ -80,8 +80,8 @@ const crossroads = (arm: number, halfWidth: number): IAutoMovieSpace => ({
 /**
  * One unit of a stated size, three abreast on a one-metre grid.
  *
- * Any population at all: the channel under test says nothing about what a member
- * is, only that one of them may do what its neighbours do not.
+ * Any population at all: the channel under test says nothing about what a
+ * member is, only that one of them may do what its neighbours do not.
  */
 const unit = (
   count: number,
@@ -93,6 +93,25 @@ const unit = (
     kind: "line",
     files: 3,
     ranks: Math.ceil(count / 3),
+    spacing: { lateral: 1, depth: 1 },
+  },
+  anchor,
+  facingDeg: 0,
+  seed: 4,
+});
+
+/** One member standing alone at a stated place, so nothing crowds the reading. */
+const alone = (anchor: {
+  x: number;
+  y: number;
+  z: number;
+}): IAutoMovieFormationPlacement => ({
+  id: "crowd",
+  count: 1,
+  layout: {
+    kind: "line",
+    files: 1,
+    ranks: 1,
     spacing: { lateral: 1, depth: 1 },
   },
   anchor,
@@ -196,44 +215,47 @@ const cueCodes = (
  * nothing can befall one member alone: a cue that moves a unit moves every
  * member of it, and a member that should stumble, drop out, stop, or leave has
  * no channel at all. This is that channel, and it is sparse by contract — it
- * names slots, so a crowd of a hundred thousand pays for the three exceptions it
- * has and not for its own size. Nothing here knows what a member is: the same
- * cue serves a figure that falls, one that breaks from the group, and one that
- * pulls out of a line.
+ * names slots, so a crowd of a hundred thousand pays for the three exceptions
+ * it has and not for its own size. Nothing here knows what a member is: the
+ * same cue serves a figure that falls, one that breaks from the group, and one
+ * that pulls out of a line.
  *
  * Scenarios:
  *
- * 1. A named member holds identity before its first cue, interpolates inside
- *    one, and retains the cue's end state afterwards, while its neighbours and
- *    other units are untouched.
- * 2. Presence is held rather than interpolated, so a cue absent at both ends
- *    takes its member out at the start and one absent only at its end takes it
- *    out then, and either way it stays out.
+ * 1. A named member holds identity before its first cue, interpolates inside one,
+ *    and retains the cue's end state afterwards, while its neighbours and other
+ *    units are untouched.
+ * 2. Presence is held rather than interpolated, so a cue absent at both ends takes
+ *    its member out at the start and one absent only at its end takes it out
+ *    then, and either way it stays out.
  * 3. A member's offset is stated in its unit's own frame, so it turns with the
  *    unit, and the composed placement is the unit's cue plus the member's.
- * 4. The ground gate measures a displaced member where its own cue puts it,
- *    walks the interior of that cue, and never refuses a shot for a member the
- *    shot has removed.
- * 5. A crowd nobody singled out is measured exactly as it was before the
- *    channel existed.
+ * 4. The ground gate measures a displaced member where its own cue puts it, walks
+ *    the interior of that cue, and never refuses a shot for a member the shot
+ *    has removed.
+ * 5. A crowd nobody singled out is measured exactly as it was before the channel
+ *    existed.
  * 6. The cue gate refuses blank and duplicate ids, absent units, bad windows,
  *    empty, repeated and out-of-range slots, promoted heroes, unbounded state,
  *    two cues on one member at once, and either sparsity cap — while accepting
  *    two members doing different things at the same second.
- * 7. The channel's cost is the exceptions it names and not the size of the
- *    crowd it names them in.
+ * 7. The channel's cost is the exceptions it names and not the size of the crowd
+ *    it names them in.
  */
 export const test_mcp_production_formation_slot_motion = (): void => {
   const cue = steps([4], 2);
   const before = sampleFormationSlotMotion([cue], "crowd", 4, 0);
-  const halfway = sampleFormationSlotMotion([cue], "crowd", 2, 4);
+  const halfway = sampleFormationSlotMotion([cue], "crowd", 4, 2);
   const after = sampleFormationSlotMotion([cue], "crowd", 4, 5);
   const neighbour = sampleFormationSlotMotion([cue], "crowd", 5, 2);
   const stranger = sampleFormationSlotMotion([cue], "other", 4, 2);
   TestValidator.equals(
     "one named member deviates while its neighbours and other units do not",
     namedFacts([
-      ["identityBeforeTheFirstCue", () => vclose(before.offset, cue.from.offset)],
+      [
+        "identityBeforeTheFirstCue",
+        () => vclose(before.offset, cue.from.offset),
+      ],
       ["halfwayIsHalfTheOffset", () => nclose(halfway.offset.x, 1)],
       ["theEndStateIsRetained", () => nclose(after.offset.x, 2)],
       ["theNeighbourIsUntouched", () => nclose(neighbour.offset.x, 0)],
@@ -312,7 +334,8 @@ export const test_mcp_production_formation_slot_motion = (): void => {
       [
         "absentOnceThatCueEnds",
         () =>
-          sampleFormationSlotMotion([dwindles], "crowd", 4, 3).present === false,
+          sampleFormationSlotMotion([dwindles], "crowd", 4, 3).present ===
+          false,
       ],
       [
         "theNeighbourIsStillDrawn",
@@ -423,7 +446,7 @@ export const test_mcp_production_formation_slot_motion = (): void => {
   const crowd = unit(9);
   // One member alone, standing in the north arm and ending in the east one. Both
   // ends are carried; the straight path between them is not.
-  const lone = unit(1, { x: 0, y: 0, z: 4 });
+  const lone = alone({ x: 0, y: 0, z: 4 });
   const crosses: IAutoMovieFormationSlotMotion = {
     ...steps([0], 0, "cross"),
     to: state({ offset: { x: 4, y: 0, z: -4 } }),
@@ -458,9 +481,11 @@ export const test_mcp_production_formation_slot_motion = (): void => {
       [
         "thatMemberStandsOnFloorAtBothEnds",
         () =>
-          codes(crossroads(6, 1), [lone], [
-            { ...crosses, end: crosses.start + 1e-9 },
-          ]).length === 0,
+          codes(
+            crossroads(6, 1),
+            [lone],
+            [{ ...crosses, end: crosses.start + 1e-9 }],
+          ).length === 0,
       ],
       [
         "aShotThatStagedNoSpaceIsNotMeasured",
@@ -629,39 +654,49 @@ export const test_mcp_production_formation_slot_motion = (): void => {
     },
   );
 
-  const exceptions = [steps([4], 2, "a"), leaves([5], 1, "b")];
+  // Written as a function of the crowd rather than as a literal, so a channel
+  // that ever grew a per-member field would show up here as a longer record.
+  const evacuate = (
+    crowd: IAutoMovieFormationPlacement,
+    departing: number,
+  ): IAutoMovieFormationSlotMotion[] => [
+    leaves(
+      Array.from({ length: departing }, (_, index) => index),
+      2,
+      `${crowd.id}-departure`,
+    ),
+  ];
   const small = unit(9);
   const vast = unit(100_000);
+  const bytes = (cues: readonly IAutoMovieFormationSlotMotion[]): number =>
+    JSON.stringify(cues).length;
   TestValidator.equals(
     "the channel costs the exceptions it names and not the crowd it names them in",
     namedFacts([
       [
-        "theSameExceptionsSerializeIdenticallyAtEitherSize",
-        () => JSON.stringify(exceptions) === JSON.stringify(exceptions),
+        "threeDeparturesCostTheSameInACrowdOfNineAndOfAHundredThousand",
+        () => bytes(evacuate(small, 3)) === bytes(evacuate(vast, 3)),
       ],
       [
-        "neitherCrowdStoresAnythingPerMember",
-        () =>
-          JSON.stringify({ ...small, count: 0 }) ===
-          JSON.stringify({ ...vast, count: 0 }),
+        "oneMoreDepartingMemberCostsOneMoreSlot",
+        () => bytes(evacuate(vast, 4)) > bytes(evacuate(vast, 3)),
       ],
       [
         "oneMoreExceptionCostsOneMoreRecord",
         () =>
-          JSON.stringify([...exceptions, steps([6], 2, "c")]).length >
-          JSON.stringify(exceptions).length,
+          bytes([...evacuate(vast, 3), steps([9], 2, "aside")]) >
+          bytes(evacuate(vast, 3)),
       ],
       [
-        "aVastCrowdSamplesOneMemberFromItsOwnCuesAlone",
+        "aVastCrowdReadsOneMemberFromItsOwnCuesAlone",
         () =>
-          nclose(
-            sampleFormationSlotMotion(exceptions, vast.id, 4, 5).offset.x,
-            2,
-          ) &&
-          sampleFormationSlotMotion(exceptions, vast.id, 99_999, 5).present,
+          sampleFormationSlotMotion(evacuate(vast, 3), vast.id, 1, 5)
+            .present === false &&
+          sampleFormationSlotMotion(evacuate(vast, 3), vast.id, 99_999, 5)
+            .present,
       ],
       [
-        "theSameSeedAndCuesReproduceTheSamePlacement",
+        "theSameDesignAndCuesReproduceTheSamePlacement",
         () =>
           JSON.stringify(
             placeFormationSlot({
@@ -670,7 +705,12 @@ export const test_mcp_production_formation_slot_motion = (): void => {
               anchor: vast.anchor,
               baseFacingDeg: vast.facingDeg,
               unit: held,
-              member: sampleFormationSlotMotion(exceptions, vast.id, 4, 2),
+              member: sampleFormationSlotMotion(
+                [steps([4], 2, "aside")],
+                vast.id,
+                4,
+                2,
+              ),
             }),
           ) ===
           JSON.stringify(
@@ -680,17 +720,29 @@ export const test_mcp_production_formation_slot_motion = (): void => {
               anchor: vast.anchor,
               baseFacingDeg: vast.facingDeg,
               unit: held,
-              member: sampleFormationSlotMotion(exceptions, vast.id, 4, 2),
+              member: sampleFormationSlotMotion(
+                [steps([4], 2, "aside")],
+                vast.id,
+                4,
+                2,
+              ),
             }),
           ),
       ],
+      [
+        "theCueGateAcceptsTheSameSparseChannelAtEitherSize",
+        () =>
+          cueCodes(evacuate(small, 3), [compiled(9)]).length === 0 &&
+          cueCodes(evacuate(vast, 3), [compiled(100_000)]).length === 0,
+      ],
     ]),
     {
-      theSameExceptionsSerializeIdenticallyAtEitherSize: true,
-      neitherCrowdStoresAnythingPerMember: true,
+      threeDeparturesCostTheSameInACrowdOfNineAndOfAHundredThousand: true,
+      oneMoreDepartingMemberCostsOneMoreSlot: true,
       oneMoreExceptionCostsOneMoreRecord: true,
-      aVastCrowdSamplesOneMemberFromItsOwnCuesAlone: true,
-      theSameSeedAndCuesReproduceTheSamePlacement: true,
+      aVastCrowdReadsOneMemberFromItsOwnCuesAlone: true,
+      theSameDesignAndCuesReproduceTheSamePlacement: true,
+      theCueGateAcceptsTheSameSparseChannelAtEitherSize: true,
     },
   );
 };

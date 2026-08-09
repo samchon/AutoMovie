@@ -11,10 +11,10 @@ import { IAutoMovieRestFrame } from "../rom/restFrame";
 /**
  * The per-actor context the reference {@link makeActorSynthesizer} needs to
  * fatten an actor's verbs deterministically: which skeleton its clips target,
- * the gaits it can perform (a horse's walk/trot/gallop), where it stands at the
- * shot's start (so a `locomote` knows how far to travel), how fast it moves,
- * and the rest pose it holds. The host assembles one of these per actor from
- * the actor's profile and staged rig.
+ * the gaits it can perform (whatever named locomotion its profile carries),
+ * where it stands at the shot's start (so a `locomote` knows how far to
+ * travel), how fast it moves, and the rest pose it holds. The host assembles
+ * one of these per actor from the actor's profile and staged rig.
  *
  * @author Samchon
  */

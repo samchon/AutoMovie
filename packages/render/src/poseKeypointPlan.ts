@@ -1,4 +1,5 @@
 import {
+  foldRoot,
   playbackCursor,
   projectToNdc,
   resolveCameraAt,
@@ -8,11 +9,13 @@ import {
   sequenceTimeline,
 } from "@automovie/engine";
 import {
+  IAutoMovieCamera,
   IAutoMovieMotion,
   IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 
 import {
@@ -30,6 +33,12 @@ import {
  * scene, or camera cannot be resolved, and an actor whose motion, skeleton, or
  * node cannot, simply contribute no keypoints rather than throwing: the sidecar
  * still covers every output frame.
+ *
+ * When the scene declares an atmosphere, each actor also carries the fog
+ * transmittance at its own depth ({@link IAutoMoviePoseKeypointActor.atmosphere}),
+ * derived through the engine's {@link sceneFogTransmittance}: the identical law
+ * the viewer hands the GPU, so the sidecar and the captured frame state the
+ * same film. A scene without fog omits the field and the sidecar is unchanged.
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *
@@ -138,10 +147,14 @@ const actorsAt = (
       // sidecar without the key at all: byte-identical to one written before
       // the field existed, which is the whole promise of an absent default.
       //
-      // The actor's root is the depth sample, the same one-point subject
-      // approximation `reviewVisualRead` frames against; a per-joint
-      // transmittance would multiply the sidecar's size for a difference
-      // smaller than a body's own depth.
+      // The actor's world root is the depth sample: its staged placement with
+      // the sampled pose root folded in ({@link foldRoot}), which is the same
+      // one-point subject `reviewVisualRead` frames against. The staged
+      // placement ALONE would be wrong wherever a clip carries the travel, the
+      // ordinary case: an actor walking away from the lens would keep the
+      // atmosphere it had at frame zero. A per-joint transmittance would
+      // multiply the sidecar's size for a difference smaller than a body's own
+      // depth.
       ...(fog === null
         ? {}
         : {
@@ -151,7 +164,7 @@ const actorsAt = (
                 camera,
                 shot.cameraMotion,
                 time,
-                node.transform.translation,
+                foldRoot(node.transform, pose.root).translation,
               ),
             ),
           }),

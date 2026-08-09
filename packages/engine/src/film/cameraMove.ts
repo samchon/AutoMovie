@@ -159,11 +159,11 @@ export interface IAutoMovieCameraFrameEntry {
  * the subject's extent the frame shows, fitted to the camera's field of view by
  * `d = (visible/2) / tan(half-angle)`, vertically against the subject's height
  * and horizontally against its width, whichever demands the greater distance)
- * and the aim height; **move** picks the path:
- * `static` locks the framed position, `push-in` dollies from 1.25× to 0.8× of
- * the framed distance, `orbit` sweeps 45° around the subject, `follow`
- * re-frames against the subject's animated base, and `whip` pans in place from
- * the staged orientation onto the subject.
+ * and the aim height; **move** picks the path: `static` locks the framed
+ * position, `push-in` dollies from 1.25× to 0.8× of the framed distance,
+ * `orbit` sweeps 45° around the subject, `follow` re-frames against the
+ * subject's animated base, and `whip` pans in place from the staged orientation
+ * onto the subject.
  *
  * The camera approaches along its **staged bearing** (the direction from the
  * subject's aim point to where staging placed the camera), so the side the

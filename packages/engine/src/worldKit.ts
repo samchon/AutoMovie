@@ -27,13 +27,21 @@ export interface IAutoMovieWorldBlock {
   };
 }
 
-/** Build one box-proxy wall or building from a grounded base and size. */
+/**
+ * Build one box-proxy wall or building from a grounded base and size.
+ *
+ * The emitted recipe names an archetype the production must have registered.
+ * It defaults to the shipped `primitive-prop` builder and its `box` shape,
+ * because that is what this helper's parameters describe; a production whose
+ * catalogue spells the same static primitive differently passes its own id.
+ */
 export const worldBlock = (input: {
   id: string;
   kind: IAutoMovieWorldBlock["kind"];
   base: IAutoMovieVector3;
   size: IAutoMovieVector3;
   color: string;
+  archetype?: string;
 }): IAutoMovieWorldBlock => {
   assertText(input.id, "World block id");
   for (const [name, value] of Object.entries(input.size))
@@ -47,7 +55,7 @@ export const worldBlock = (input: {
   const recipe: IAutoMovieModelRecipe = {
     id: input.id,
     role: "set",
-    archetype: "primitive-prop",
+    archetype: input.archetype ?? "primitive-prop",
     parameters: {
       shape: "box",
       width: input.size.x,

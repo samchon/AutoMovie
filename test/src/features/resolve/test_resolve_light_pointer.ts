@@ -31,8 +31,12 @@ const parsed = (pointer: unknown): string | null => {
  *
  * Scenarios:
  *
- * 1. The four table properties parse on a plain id, and each round-trips back to
- *    the pointer it came from.
+ * 1. Every table property parses on a plain id, and each round-trips back to the
+ *    pointer it came from. The placement pair (`position`, `rotation`) is
+ *    addressed through the very same grammar as the four value axes, because a
+ *    light's placement is not a second kind of thing to animate: automovie
+ *    stages lights outside `nodes`, so a pointer is the ONLY way to reach one,
+ *    and where it stands is as much the light's property as how bright it is.
  * 2. An id carrying reserved characters survives: `/lights/a~1b~0c/intensity`
  *    decodes to the id `a/b~c`, and formatting that id reproduces the pointer.
  * 3. Every way a string fails to be a light pointer yields `null` rather than a
@@ -46,8 +50,15 @@ const parsed = (pointer: unknown): string | null => {
  *    property.
  */
 export const test_resolve_light_pointer = (): void => {
-  // 1. the table's four properties, and the round trip.
-  const PROPERTIES = ["intensity", "color", "range", "coneAngle"] as const;
+  // 1. every property in the table, and the round trip.
+  const PROPERTIES = [
+    "intensity",
+    "color",
+    "range",
+    "coneAngle",
+    "position",
+    "rotation",
+  ] as const;
   TestValidator.equals(
     "the table admits exactly these properties",
     Object.keys(LIGHT_CHANNEL_PROPERTIES),

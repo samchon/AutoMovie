@@ -832,10 +832,10 @@ export interface IAutoMovieFormationMotion {
  * One member-local deviation from the unit that member stands in.
  *
  * A group cue moves every member alike. This is what one named member does
- * differently: whether it is there at all, how far it has come off the place its
- * layout put it, and how far it has turned out of the heading its unit holds.
- * The offset and the heading are stated in the unit's own frame, so a member
- * that steps left keeps stepping left after its unit turns.
+ * differently: whether it is there at all, how far it has come off the place
+ * its layout put it, and how far it has turned out of the heading its unit
+ * holds. The offset and the heading are stated in the unit's own frame, so a
+ * member that steps left keeps stepping left after its unit turns.
  */
 export interface IAutoMovieFormationSlotState {
   /**
@@ -860,8 +860,8 @@ export interface IAutoMovieFormationSlotState {
  * The unit-level channel is the whole of what a group does together, so nothing
  * can happen to one member of a crowd through it: a cue that moves a unit moves
  * every member of it. This is the sparse channel beside it. It names slots, not
- * members-in-general, and it costs the number of exceptions rather than the size
- * of the crowd, so three members of a hundred thousand cost three.
+ * members-in-general, and it costs the number of exceptions rather than the
+ * size of the crowd, so three members of a hundred thousand cost three.
  *
  * Sampled exactly as {@link IAutoMovieFormationMotion} is: a member holds the
  * identity state before its first cue, interpolates inside a cue, and retains a
@@ -870,7 +870,8 @@ export interface IAutoMovieFormationSlotState {
  * restating it, and a member that falls stays down.
  *
  * A named slot stays an instanced member. Promotion to a named actor is the
- * other, dearer thing: it exists, it is capped, and this is deliberately not it.
+ * other, dearer thing: it exists, it is capped, and this is deliberately not
+ * it.
  */
 export interface IAutoMovieFormationSlotMotion {
   /** Stable cue id, unique inside one shot. */

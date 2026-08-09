@@ -75,6 +75,7 @@ const exactCatalogVersion = (catalog, dep) =>
  * names the subset a workspace-local consumer overrides with `workspace:^`.
  */
 export const resolveTemplateVersions = () => ({
+  archetypes: packageVersion("packages/archetypes"),
   cli: packageVersion("packages/cli"),
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
@@ -110,6 +111,7 @@ export const resolveTemplateVersions = () => ({
  * the working tree instead of npm.
  */
 export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
+  "archetypes",
   "cli",
   "engine",
   "interface",

@@ -1,5 +1,5 @@
+import { HORSE_PROFILE } from "@automovie/archetypes";
 import {
-  HORSE_PROFILE,
   Quaternion,
   bindProfileGaits,
   sequenceMotion,

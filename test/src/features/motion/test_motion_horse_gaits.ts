@@ -1,6 +1,5 @@
+import { HORSE_GAITS, HORSE_PROFILE } from "@automovie/archetypes";
 import {
-  HORSE_GAITS,
-  HORSE_PROFILE,
   bindProfileGaits,
   gaitMotion,
   validateMotion,

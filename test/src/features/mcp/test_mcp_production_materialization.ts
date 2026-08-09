@@ -847,15 +847,15 @@ export const test_mcp_production_materialization = (): void => {
     });
     const openingSourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const anchor =
-      "  const performer = sentinel.render(context, { from: openingAbduction });";
+      "  const performer = soloist.render(context, { from: openingAbduction });";
     const openingSource = rewriteSource(
-      // The unit is 1024 files across, far wider than the field the starter's
-      // world derives for its own army. A shot must stage ground that carries
+      // The unit is 1024 files across, far wider than the ground the starter's
+      // world derives for its own group. A shot must stage ground that carries
       // what it stages, so this fixture stages its own; the compiler's own
       // gate is what proves the number is large enough.
       rewriteSource(
         fs.readFileSync(openingSourcePath, "utf8"),
-        "      space: signalField.space(),",
+        "      space: plaza.space(),",
         `      space: {
         id: "high-count-space",
         surfaces: [
@@ -885,12 +885,12 @@ ${anchor}`,
     // rather than a string this fixture could rename in the shot. Renaming the
     // subject is what keeps the participant, the design record and the cue
     // speaking about one formation.
-    const armySourcePath = path.join(fixture.root, "src/formations/army.ts");
+    const chorusSourcePath = path.join(fixture.root, "src/formations/chorus.ts");
     fs.writeFileSync(
-      armySourcePath,
+      chorusSourcePath,
       rewriteSource(
-        fs.readFileSync(armySourcePath, "utf8"),
-        '  public readonly id = "army";',
+        fs.readFileSync(chorusSourcePath, "utf8"),
+        '  public readonly id = "chorus";',
         `  public readonly id = "${highCount.id}";`,
       ),
     );

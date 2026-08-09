@@ -14,6 +14,7 @@
   "author": "Samchon",
   "license": "MIT",
   "dependencies": {
+    "@automovie/archetypes": "workspace:^",
     "@automovie/cli": "workspace:^",
     "create-automovie": "workspace:^",
     "@automovie/engine": "workspace:^",

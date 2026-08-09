@@ -25,11 +25,11 @@ import {
  * elsewhere, not here. This is the geometry primitive the harness's reach /
  * distance queries and the locomote traveller share.
  *
+ * @author Samchon
  * @param formations World points for the formations a group may name. A caller
  *   that holds no formation geometry omits it, and a group naming one resolves
  *   from its nodes alone — never from a formation whose place this caller could
  *   not know.
- * @author Samchon
  */
 export const resolveTargetPoint = (
   target: IAutoMovieActionTarget,

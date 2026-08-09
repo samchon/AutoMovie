@@ -26,6 +26,21 @@ conservative bound before any geometry exists; `build` produces parts and an
 optional skeleton. The same parameters always plan, measure, and build the same
 result, on every host and in every process.
 
+## Gait tables
+
+The gait tables ship here for the same reason the archetypes do. The engine owns
+the gait *machinery* — phase, duty, amplitude, per-limb easing, root bob,
+contact resolution — and that machinery describes how any jointed body walks.
+Which bones swing, at which phases, with which amplitudes is data about one kind
+of body, so it belongs to the catalogue a host chooses rather than to the
+universal surface.
+
+Each table is a record of named `IAutoMovieGait` values, and each ships beside an
+`IAutoMovieProfile` that packages the same vocabulary for the engine's
+`bindProfileGaits` to bind onto a skeleton. A production whose figure is shaped
+differently authors its own table against the same shape; nothing in the engine
+has to learn about it.
+
 ## Boundary
 
 Diagnostics belong to the design gate, not here: a definition reports the facts
@@ -40,3 +55,8 @@ skeleton ids rather than deriving them.
 식별자이며, 컴파일러는 등록된 레지스트리에서 이를 조회하고 등록되지 않은 이름은 진단으로
 거절한다. 어떤 형상을 만들 수 있는지는 호스트가 등록한 카탈로그의 결정이지, 보편 표면이
 열거하는 유니온이 아니다.
+
+보행 테이블도 같은 이유로 여기에 있다. 엔진은 위상·듀티·진폭·이징·접지 해석이라는 보행
+*기계*를 소유하며, 그 기계는 관절을 가진 모든 몸이 걷는 방식을 설명한다. 어떤 본이 어떤
+위상에서 어떤 진폭으로 흔들리는지는 특정한 몸에 대한 데이터이므로, 보편 표면이 아니라
+호스트가 고르는 카탈로그에 속한다.

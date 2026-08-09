@@ -10,8 +10,8 @@
  * bounds rather than a point at its centroid.
  *
  * A formation is a thing a camera can FRAME. It is not a place an actor can aim
- * at: `lookAt`, `reach`, a gesture aim and a `launch` aim each need one point on
- * one body, and the perform gate refuses a formation named there rather than
+ * at: `lookAt`, `reach`, a gesture aim and a `launch` aim each need one point
+ * on one body, and the perform gate refuses a formation named there rather than
  * silently aiming at the centroid of a crowd.
  *
  * @author Samchon

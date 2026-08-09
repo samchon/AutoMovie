@@ -238,6 +238,60 @@ const validateLightColor = (
 };
 
 /**
+ * The staged atmosphere, held to the rule the scene gate applies downstream, so
+ * a fog `stage` composes can never be one `commitScene` refuses.
+ *
+ * Two facts and no more, because {@link IAutoMovieFog} carries two: an
+ * extinction coefficient that must be finite and non-negative (a negative one
+ * would AMPLIFY a distant subject, and a non-finite one erases every pixel),
+ * and a color whose components are unit-ranged like every other color the
+ * engine accepts. Density has no upper bound on purpose: `1 /m` is a wall of
+ * cloud, which is a look, not a mistake.
+ *
+ * Total over an untyped payload for the same reason
+ * {@link validateLightColor} is: `stage` is reachable in-process without the
+ * transport's structural gate, and a `null` fog must become a located violation
+ * rather than a `TypeError` two rungs later.
+ */
+const validateFogPlacement = (
+  fog: unknown,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (!isRecord(fog)) {
+    out.push("type", path, "fog must be a JSON object", fog);
+    return;
+  }
+  if (
+    typeof fog.density !== "number" ||
+    !Number.isFinite(fog.density) ||
+    fog.density < 0
+  )
+    out.push(
+      "range",
+      `${path}.density`,
+      `fog density must be a finite number >= 0, but was ${String(fog.density)}`,
+      fog.density,
+    );
+  if (!isRecord(fog.color)) {
+    out.push(
+      "type",
+      `${path}.color`,
+      "fog color must be a JSON object",
+      fog.color,
+    );
+    return;
+  }
+  for (const key of ["r", "g", "b"] as const)
+    unitComponent(
+      fog.color[key],
+      `${path}.color.${key}`,
+      `fog color ${key}`,
+      out,
+    );
+};
+
+/**
  * One color component in `[0, 1]`, reported in
  * {@link ViolationCollector.range}'s own words.
  *
@@ -383,6 +437,11 @@ export namespace IAutoMovieStagedSet {
  * ground's meaning, standable surfaces and walkability, copied onto the
  * composed scene after {@link validateSpace} accepts it. Omitting `space`
  * composes `space: null`, the scalar ground plane the engine assumed before.
+ *
+ * A set may also declare its `fog`, the scene's atmosphere and the depth cue an
+ * exterior otherwise has no way to state: it is range-checked here and lowered
+ * verbatim. Omitting it composes a scene with no `fog` at all, which renders
+ * exactly as every staged scene did before atmospheres existed.
  */
 export const stageScene = (
   script: IAutoMovieScript,
@@ -555,6 +614,13 @@ export const stageScene = (
         });
   }
 
+  // The atmosphere, gated at the field the author submitted. Unlike the space
+  // it needs no shared validator: fog is two scalars-and-a-color with no
+  // referential integrity to check, so the rule lives beside the other
+  // placement rules rather than in a module of its own.
+  if (staging.fog !== undefined)
+    validateFogPlacement(staging.fog, "$input.fog", out);
+
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
     const positionFinite = isFiniteVector3(camera.position);
@@ -692,6 +758,13 @@ export const stageScene = (
       // whether it has a ground: `null` is "no space, fall back to the scalar
       // plane", which is a decision, not an absent field.
       space: staging.space ?? null,
+      // Fog goes the other way and is OMITTED when unstaged, deliberately.
+      // A ground is something every set has, so stating `null` says "this one
+      // is the scalar plane"; an atmosphere is something most sets simply do
+      // not have, and writing `fog: null` onto every staged scene ever composed
+      // would change the bytes, and therefore the content digest, of every
+      // production that never mentioned fog. Absent already means none.
+      ...(staging.fog === undefined ? {} : { fog: staging.fog }),
     },
     mounts,
   };

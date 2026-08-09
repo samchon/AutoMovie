@@ -368,8 +368,8 @@ const resolveSpatial = (
  * one subject and grade another.
  *
  * A formation does not come through here. Its extent is its own transformed
- * bounds ({@link formationSubjectBox}), which is a box rather than a height,
- * and reducing it to one would put the crowd back at its centroid.
+ * bounds ({@link formationSubjectBox}), which is a box rather than a height, and
+ * reducing it to one would put the crowd back at its centroid.
  */
 const framedSubjectHeight = (
   props: Parameters<typeof realizeShotContract>[0],

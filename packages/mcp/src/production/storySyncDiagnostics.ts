@@ -7,8 +7,6 @@ import type {
   IAutoMovieStorySyncOutcome,
 } from "@automovie/interface";
 
-import { compareCodeUnits } from "./contentIdentity";
-
 /** The cross-shot half of one acceptance criterion, when it has one. */
 export const storySyncCriterionOf = (
   scenario: IAutoMovieAcceptanceScenario,
@@ -76,7 +74,7 @@ export const storySyncDiagnostics = (props: {
       message: `Acceptance "${id}" claims these events share one story moment, and the compiled realizations say otherwise: ${outcome.summary} Move the realized event times in the owning shot sources, repin a shot's storyTime, or state the tolerance the film actually keeps.`,
     });
   }
-  return diagnostics.sort((left, right) =>
-    compareCodeUnits(left.target, right.target),
-  );
+  // The design graph reads its acceptance records in canonical filename order,
+  // so this list is already deterministic without a second sort.
+  return diagnostics;
 };
