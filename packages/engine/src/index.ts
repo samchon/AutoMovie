@@ -14,6 +14,7 @@ export * from "./formationSlot";
 export * from "./subject";
 export * from "./effect";
 export * from "./worldKit";
+export * from "./scene";
 export * from "./space";
 export * from "./validation";
 export * from "./productionIdentity";

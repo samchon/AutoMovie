@@ -1,5 +1,6 @@
 import {
   IAutoMovieCamera,
+  IAutoMovieFog,
   IAutoMovieLight,
   IAutoMovieScene,
 } from "@automovie/interface";

@@ -1608,6 +1608,10 @@ const compileShotSource = (
       world: props.context.world,
       formationDesigns: new Map(Object.entries(props.context.formations)),
       formations: Object.values(props.context.formationRuntime),
+      // The unit cues the source authored, handed to the performance boundary
+      // rather than only attached to the artifact below: a camera framing a
+      // formation has to measure it where its cue has moved it.
+      formationMotions: program.value.formationMotions ?? [],
       models: Object.values(props.context.runtimeModels),
       previous: props.previous ?? undefined,
     },

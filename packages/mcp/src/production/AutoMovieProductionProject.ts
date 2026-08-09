@@ -61,6 +61,10 @@ import {
   releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
 import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+} from "./productionArchetypes";
+import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
 } from "./validateProductionDesign";
@@ -196,6 +200,11 @@ export class AutoMovieProductionProject {
     >,
     requestedProductionId?: string,
     readOnly = false,
+    /**
+     * The archetype catalogue every design record in this project is judged
+     * against, and the one its compiler builds from.
+     */
+    public readonly archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ) {
     this.readOnly_ = readOnly;
     this.rootReal = fs.realpathSync(root);
@@ -2565,9 +2574,11 @@ export class AutoMovieProductionProject {
       screenplay,
     );
     const previousDiagnostics = new Set(
-      validateAutoMovieProductionGraph(graph, this.productionId).map(
-        diagnosticIdentity,
-      ),
+      validateAutoMovieProductionGraph(
+        graph,
+        this.productionId,
+        this.archetypes,
+      ).map(diagnosticIdentity),
     );
     if (validation.success === false)
       return {
@@ -2614,6 +2625,7 @@ export class AutoMovieProductionProject {
     const nextDiagnostics = validateAutoMovieProductionGraph(
       next,
       this.productionId,
+      this.archetypes,
     );
     const diagnostics = nextDiagnostics.filter(
       (diagnostic) =>

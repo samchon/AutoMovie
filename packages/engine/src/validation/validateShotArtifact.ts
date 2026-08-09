@@ -915,6 +915,68 @@ const appendLightValueBounds = (
       bounds.inclusiveMin,
     );
   });
+  appendLightKeyValueFaults(track, property, path, false, violations);
+};
+
+/**
+ * The per-keyframe value width of one light property, read from the SAME table
+ * `clipTrackShapeFaults` measures a track against.
+ *
+ * Never `undefined` here: that answer is reserved for a `weights` channel,
+ * whose width is the model's morph-target count, and no light property declares
+ * one. Deriving the width locally is what let this file's cubic pass carry
+ * `scalar ? 1 : 3`, a rule that was right only while every non-scalar axis
+ * happened to be a `vec3`.
+ */
+const lightValueWidth = (property: AutoMovieLightProperty): number =>
+  channelValueWidth({
+    kind: "pointer",
+    valueType: LIGHT_CHANNEL_PROPERTIES[property].valueType,
+  })!;
+
+/**
+ * The whole-value rule of one light property ({@link
+ * IAutoMovieLightChannelProperty.valueFault}), applied to every keyframe of one
+ * track.
+ *
+ * Separate from the per-component pass because it reads a keyframe as a unit: a
+ * light `rotation` is unit-length or it is not, and that question cannot be
+ * asked one component at a time. `cubic` says where the value sits inside a
+ * stored keyframe, which is the whole difference between the two payload
+ * layouts — a `cubicspline` keyframe is in-tangent / value / out-tangent, so
+ * the value starts one width in. Tangents are derivatives and carry no such
+ * rule.
+ *
+ * A payload whose length is not a whole number of keyframes states no keyframe
+ * to judge; the shared shape gate has already refused it, and slicing one out
+ * of it anyway would report a fault about a value the author never wrote.
+ */
+const appendLightKeyValueFaults = (
+  track: Record<string, unknown>,
+  property: AutoMovieLightProperty,
+  path: string,
+  cubic: boolean,
+  violations: IAutoMovieConstraintViolation[],
+): void => {
+  const { valueFault } = LIGHT_CHANNEL_PROPERTIES[property];
+  if (valueFault === undefined) return;
+  const width = lightValueWidth(property);
+  const stride = cubic ? width * 3 : width;
+  const values = asArray(track.values);
+  if (values.length === 0 || values.length % stride !== 0) return;
+  for (let key = 0; key * stride < values.length; ++key) {
+    const base = key * stride + (cubic ? width : 0);
+    const value = values.slice(base, base + width);
+    const fault = valueFault(value);
+    if (fault !== null)
+      pushViolation(
+        violations,
+        "range",
+        `${path}.values`,
+        `light ${property} keyframe ${key} ${fault}`,
+        value,
+      );
+  }
 };
 
 /** A finite scalar lies inside one light property's documented range. */
@@ -954,8 +1016,7 @@ const appendCubicLightValueBounds = (
 ): void => {
   const times = asArray(track.times);
   const values = asArray(track.values);
-  const width =
-    LIGHT_CHANNEL_PROPERTIES[property].valueType === "scalar" ? 1 : 3;
+  const width = lightValueWidth(property);
   const stride = width * 3;
   // The shared clip-shape gate owns every malformed case. Stop here rather
   // than deriving ranges from a stride or clock it has already refused.
@@ -987,7 +1048,17 @@ const appendCubicLightValueBounds = (
         LIGHT_CHANNEL_PROPERTIES[property].bounds.inclusiveMin,
       );
     }
+  appendLightKeyValueFaults(track, property, path, true, violations);
   if (!keysInBounds) return;
+  // A rotation is renormalized AT PLAYBACK: `sampleClip`'s `cubicHermite` puts
+  // an interpolated quaternion back on the unit sphere before anything reads
+  // it, so the value the film actually plays is unit at every interior instant
+  // and every component of it is inside `[-1, 1]` by construction. The Hermite
+  // overshoot this analysis hunts for therefore cannot reach the light, and
+  // reporting it would refuse a declaration that renders correctly. The keys
+  // themselves are still judged above, because the sampler returns a boundary
+  // key VERBATIM, without that renormalization.
+  if (LIGHT_CHANNEL_PROPERTIES[property].valueType === "quaternion") return;
 
   for (let segment = 0; segment + 1 < times.length; ++segment) {
     const span = (times[segment + 1] as number) - (times[segment] as number);

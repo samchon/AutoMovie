@@ -1,5 +1,6 @@
 import { IAutoMovieStage } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieCamera } from "./IAutoMovieCamera";
+import { IAutoMovieFog } from "./IAutoMovieFog";
 import { IAutoMovieLight } from "./IAutoMovieLight";
 import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
 import { IAutoMovieSpace } from "./IAutoMovieSpace";
@@ -44,4 +45,24 @@ export interface IAutoMovieScene {
    * guide passes instead of leaving actors over a void (#1173).
    */
   space?: IAutoMovieSpace | null;
+
+  /**
+   * The scene's atmosphere: exponential distance fog ({@link IAutoMovieFog}),
+   * the depth cue an exterior needs and the only one that costs no particles.
+   *
+   * Absent or `null` means no atmosphere, and a scene that says nothing about
+   * fog renders exactly as it did before the field existed: the viewer leaves
+   * `scene.fog` unset and every offline consumer derives a transmittance of
+   * one. Optional (`?`) rather than required for the same evolving-schema
+   * reason {@link space} is, so no committed scene has to be rewritten.
+   *
+   * The viewer builds it once ({@link applySceneFog}) and the offline side
+   * derives the identical number from the identical declaration
+   * ({@link sceneFogTransmittance}); the two cannot disagree, because a review
+   * frame that lies about the film's atmosphere is worse than no frame.
+   * Structural guide passes suspend it: a depth or mask pass describes
+   * geometry, and fogging it would tint the very channel the pass exists to
+   * state exactly.
+   */
+  fog?: IAutoMovieFog | null;
 }

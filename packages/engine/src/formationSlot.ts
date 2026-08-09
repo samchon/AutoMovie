@@ -82,7 +82,7 @@ export const sampleFormationSlotMotion = (
  * left-to-right and `+z` its front-to-back, whichever way the unit happens to be
  * pointing. {@link transformFormationPoint} rotates a unit's interior by the
  * same total heading, so an offset joins a placed point only after this turns
- * it, and a member that stepped aside keeps stepping aside once its unit wheels.
+ * it, and a member that stepped aside keeps stepping aside once its unit turns.
  *
  * Taken as a heading in degrees rather than as a unit, because the two consumers
  * of this arithmetic hold different halves of it: a gate composing a whole world

@@ -491,19 +491,19 @@ export const validateAutoMovieProductionGraph = (
           "surface.height.slopeZ",
         );
       } else {
-        const field = surface.height;
-        finite(diagnostics, field.originX, "world", file, "surface.height.originX");
-        finite(diagnostics, field.originZ, "world", file, "surface.height.originZ");
+        const lattice = surface.height;
+        finite(diagnostics, lattice.originX, "world", file, "surface.height.originX");
+        finite(diagnostics, lattice.originZ, "world", file, "surface.height.originZ");
         positive(
           diagnostics,
-          field.spacingX,
+          lattice.spacingX,
           "world",
           file,
           "surface.height.spacingX",
         );
         positive(
           diagnostics,
-          field.spacingZ,
+          lattice.spacingZ,
           "world",
           file,
           "surface.height.spacingZ",
@@ -513,27 +513,27 @@ export const validateAutoMovieProductionGraph = (
         // a short array would read relief that was never authored, and a long
         // one hides a row the author meant to be read.
         if (
-          Number.isSafeInteger(field.columns) === false ||
-          Number.isSafeInteger(field.rows) === false ||
-          field.columns < 2 ||
-          field.rows < 2
+          Number.isSafeInteger(lattice.columns) === false ||
+          Number.isSafeInteger(lattice.rows) === false ||
+          lattice.columns < 2 ||
+          lattice.rows < 2
         )
           invalid(
             diagnostics,
             "design-range-invalid",
             "world",
             file,
-            `Surface "${surface.id}" heightfield has ${field.columns} columns and ${field.rows} rows. Use at least two of each in the tracked world design record.`,
+            `Surface "${surface.id}" heightfield has ${lattice.columns} columns and ${lattice.rows} rows. Use at least two of each in the tracked world design record.`,
           );
-        else if (field.samples.length !== field.columns * field.rows)
+        else if (lattice.samples.length !== lattice.columns * lattice.rows)
           invalid(
             diagnostics,
             "design-range-invalid",
             "world",
             file,
-            `Surface "${surface.id}" heightfield carries ${field.samples.length} samples for a ${field.columns} by ${field.rows} lattice. Store exactly ${field.columns * field.rows} row-major heights in the tracked world design record.`,
+            `Surface "${surface.id}" heightfield carries ${lattice.samples.length} samples for a ${lattice.columns} by ${lattice.rows} lattice. Store exactly ${lattice.columns * lattice.rows} row-major heights in the tracked world design record.`,
           );
-        for (const sample of field.samples)
+        for (const sample of lattice.samples)
           finite(diagnostics, sample, "world", file, "surface.height.samples");
       }
     }
@@ -1677,60 +1677,31 @@ const validateStorySyncCriterion = (
     );
 };
 
-const MODEL_PARAMETERS: Record<
-  IAutoMovieModelRecipe["archetype"],
-  Record<
-    string,
-    readonly [type: "number" | "string" | "boolean", min?: number, max?: number]
-  >
-> = {
-  stickman: {
-    height: ["number", 0.5, 3],
-    headRadius: ["number", 0.05, 0.5],
-    limbRadius: ["number", 0.01, 0.25],
-  },
-  "primitive-prop": {
-    shape: ["string"],
-    width: ["number", 0.001, 100],
-    height: ["number", 0.001, 100],
-    depth: ["number", 0.001, 100],
-    radius: ["number", 0.001, 50],
-  },
-};
+/** Registered archetype names, for a diagnostic that has to name the choices. */
+const registeredArchetypeNames = (
+  archetypes: AutoMovieModelArchetypeRegistry,
+): string =>
+  [...archetypes.keys()].sort(compareCodeUnits).join(", ") || "none registered";
 
-const REQUIRED_MODEL_PARAMETERS: Record<
-  Exclude<IAutoMovieModelRecipe["archetype"], "primitive-prop">,
-  readonly string[]
-> = {
-  stickman: ["height", "headRadius", "limbRadius"],
-};
-
-const PRIMITIVE_PROP_DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
-  box: ["width", "height", "depth"],
-  sphere: ["radius"],
-  capsule: ["radius", "height"],
-  cylinder: ["radius", "height"],
-  cone: ["radius", "height"],
-  plane: ["width", "depth"],
-};
-
+/**
+ * Judge one parameter map against the archetype that owns it.
+ *
+ * The schema, the bounds, and which keys a discriminating value makes
+ * meaningful all belong to the archetype. This gate only turns those facts into
+ * diagnostics, which is why an unregistered archetype leaves early: without a
+ * builder there is no contract to measure the map against, and the recipe has
+ * already been refused for naming one.
+ */
 const validateModelParameters = (
   diagnostics: IAutoMovieDiagnostic[],
   model: IAutoMovieModelRecipe,
+  archetype: IAutoMovieModelArchetype | undefined,
   target: string,
   file: string,
 ): void => {
-  const schema = MODEL_PARAMETERS[model.archetype];
-  const required =
-    model.archetype === "primitive-prop"
-      ? [
-          "shape",
-          ...(typeof model.parameters.shape === "string"
-            ? (PRIMITIVE_PROP_DIMENSIONS[model.parameters.shape] ?? [])
-            : []),
-        ]
-      : REQUIRED_MODEL_PARAMETERS[model.archetype];
-  for (const key of required)
+  if (archetype === undefined) return;
+  const plan = archetype.plan(model.parameters);
+  for (const key of plan.required)
     if (key in model.parameters === false)
       invalid(
         diagnostics,
@@ -1739,33 +1710,12 @@ const validateModelParameters = (
         file,
         `Required parameter "${key}" is missing for ${model.archetype}. Add it in the tracked model recipe record.`,
       );
-  const primitiveShape =
-    model.archetype === "primitive-prop" &&
-    typeof model.parameters.shape === "string"
-      ? model.parameters.shape
-      : null;
-  if (
-    primitiveShape !== null &&
-    primitiveShape in PRIMITIVE_PROP_DIMENSIONS === false
-  )
-    invalid(
-      diagnostics,
-      "model-parameter-invalid",
-      target,
-      file,
-      `Primitive-prop shape "${primitiveShape}" is unsupported. Use box, sphere, capsule, cylinder, cone, or plane in the tracked model recipe record.`,
-    );
-  const primitiveKeys =
-    primitiveShape === null ||
-    PRIMITIVE_PROP_DIMENSIONS[primitiveShape] === undefined
-      ? null
-      : new Set(["shape", ...PRIMITIVE_PROP_DIMENSIONS[primitiveShape]]);
+  for (const refusal of plan.refusals)
+    invalid(diagnostics, refusal.code, target, file, refusal.message);
+  const accepted = plan.accepted === null ? null : new Set(plan.accepted);
   for (const [key, value] of Object.entries(model.parameters)) {
-    const rule = schema[key];
-    if (
-      rule === undefined ||
-      (primitiveKeys !== null && !primitiveKeys.has(key))
-    ) {
+    const rule = archetype.parameters[key];
+    if (rule === undefined || (accepted !== null && accepted.has(key) === false)) {
       invalid(
         diagnostics,
         "model-parameter-unsupported",
@@ -1775,21 +1725,21 @@ const validateModelParameters = (
       );
       continue;
     }
-    if (typeof value !== rule[0]) {
+    if (typeof value !== rule.kind) {
       invalid(
         diagnostics,
         "model-parameter-invalid",
         target,
         file,
-        `Parameter "${key}" must be ${rule[0]}. Fix it in the tracked model recipe record.`,
+        `Parameter "${key}" must be ${rule.kind}. Fix it in the tracked model recipe record.`,
       );
       continue;
     }
     if (
-      rule[0] === "number" &&
+      rule.kind === "number" &&
       (Number.isFinite(value as number) === false ||
-        (rule[1] !== undefined && (value as number) < rule[1]) ||
-        (rule[2] !== undefined && (value as number) > rule[2]))
+        (rule.minimum !== undefined && (value as number) < rule.minimum) ||
+        (rule.maximum !== undefined && (value as number) > rule.maximum))
     )
       invalid(
         diagnostics,
