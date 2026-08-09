@@ -1,9 +1,11 @@
+import { HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   AutoMovieSubject,
   type IAutoMovieSubjectContribution,
 } from "@automovie/engine";
 import type {
   IAutoMovieModelRecipe,
+  IAutoMovieProfile,
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
