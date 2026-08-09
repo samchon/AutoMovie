@@ -10,6 +10,12 @@ Hand-author while a production has a handful of shots. The starter's two shots a
 
 Compose at the moment you copy a shot module and change its names. That copy is the signal, not the fortieth one. The cost of hand-authoring is linear in runtime and invisible until the runtime is large, so the decision has to be made from the repetition you can see rather than from the pain you have felt.
 
+## Each module has one second
+
+The sandbox runs every transpiled module, the registration probe, and the `build` call under a one-second timeout, and a script that exceeds it is refused with `source-execution-timeout` having published nothing. The budget is per invocation rather than per production, so a hundred shot modules each get a second of their own — and the single film module that assembles every placement in the edit gets one second for the whole thing.
+
+That is an arrangement constraint, not a micro-optimization. Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which run outside the sandbox and under no such clock.
+
 ## Every subject is a class
 
 A figure, an animal, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
@@ -109,6 +115,8 @@ State the seed in the design record rather than in source, so the variation is a
 A factory takes the parameters that actually differ and returns the shot definition. What repeats lives in the factory; what varies lives in the table that calls it.
 
 Name factories for what the shot *is*, not for what it looks like: a factory named for an action reads at the call site, and one named for a camera move hides the beat behind the lens. Keep them honest about what they cannot know. A factory that supplies a default predicate, a default event time, or a default acceptance criterion produces shots that satisfy their contract and prove nothing, which is worse than a shot that fails to compile.
+
+Keep the module quotable while you are at it. `prepareReview` returns source selectors for only the first 512 non-blank lines of a module and warns `review-selector-truncated` past that, so everything below the cut exists but cannot be cited as review evidence. A factory module that grows beyond it has a tail no review can reach; split it along its own seams before that happens.
 
 ## Derive the tracked design record from the same table
 

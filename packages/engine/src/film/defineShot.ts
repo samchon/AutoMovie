@@ -2,6 +2,7 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieBeatEndFootPlant,
   IAutoMovieBeatEndState,
+  IAutoMovieClip,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFormation,
   IAutoMovieConstraintViolation,
@@ -121,6 +122,14 @@ export interface IAutoMovieShotRuntime {
    * artifact after it is built.
    */
   formationMotions?: readonly IAutoMovieFormationMotion[];
+  /**
+   * The shot's own light clips, carried onto the compiled shot.
+   *
+   * The source states them beside its verbs and the host hands them here; the
+   * performance boundary gates them against the staged lights, exactly as it
+   * gates every other reference the source makes.
+   */
+  lightMotions?: readonly IAutoMovieClip[];
   /** Optional full models when predicates need model-owned rig evidence. */
   models?: readonly IAutoMovieModel[];
   /** Formation-slot collisions found while materializing this shot. */
@@ -335,6 +344,7 @@ export const compileDefinedShot = <Context>(props: {
       models: props.runtime.models,
       formations: props.runtime.formations,
       formationMotions: props.runtime.formationMotions,
+      lightMotions: props.runtime.lightMotions,
       frameFormat: props.runtime.frameFormat,
       hasActorContext: props.runtime.hasActorContext,
       jointAxes: props.runtime.jointAxes,

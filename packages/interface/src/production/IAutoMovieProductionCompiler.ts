@@ -3,10 +3,11 @@ import {
   IAutoMovieShotProgram,
 } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
+import { IAutoMovieClip } from "../core";
 import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
-import { IAutoMovieScene } from "../scene";
+import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -577,6 +578,16 @@ export interface IAutoMovieShotBuildContext {
   contract: IAutoMovieShotContract;
   /** Current model recipes keyed by id. */
   models: Readonly<Record<string, IAutoMovieModelRecipe>>;
+  /**
+   * The production's story-clock light sources, when it declares any.
+   *
+   * The source reads what the production is lit by at this shot's story moment
+   * — its contract carries the pin — and states its own local light on top
+   * through {@link IAutoMovieProductionShotProgram.lightMotions}. Absent when
+   * the production declares no lighting, which is exactly the context a source
+   * saw before the field existed.
+   */
+  lighting?: IAutoMovieProductionLighting;
   /** Current world design. */
   world: IAutoMovieWorldDesign;
   /** Current formations keyed by id. */
@@ -1137,6 +1148,18 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * `performShot`; they are not precompiled shot output.
    */
   clips?: IAutoMovieMotion[];
+  /**
+   * Optional clips moving this shot's staged lights over its own local clock.
+   *
+   * The shot-local half of production lighting: a lamp switched on inside this
+   * beat, a candle blown out. Each track addresses one staged light by pointer
+   * channel (`/lights/<id>/<property>`), the same grammar
+   * {@link IAutoMovieProductionLighting.motions} uses on the story clock, and
+   * the host carries them onto the compiled shot's `lightMotions`. Omitted, the
+   * shot's lighting is constant and its compiled artifact is byte-identical to
+   * one compiled before this field existed.
+   */
+  lightMotions?: IAutoMovieClip[];
   /** Optional compact formation-level cues. */
   formationMotions?: IAutoMovieFormationMotion[];
   /** Optional sparse per-member exceptions inside compact formations. */

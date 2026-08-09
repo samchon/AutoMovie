@@ -388,6 +388,10 @@ export class AutoMovieProductionCompiler {
             context: {
               contract: entry.contract,
               models: Object.fromEntries(graph.models),
+              // Undefined when the production declares no lighting, so the
+              // frozen context a source reads is unchanged for every production
+              // that says nothing about light.
+              lighting: graph.production!.lighting,
               world: graph.world!,
               formations: Object.fromEntries(graph.formations),
               runtimeModels: Object.fromEntries(runtimeModels),
@@ -842,6 +846,7 @@ interface ICompileShotSourceProps {
   context: {
     contract: IAutoMovieShotContract;
     models: IAutoMovieShotBuildContext["models"];
+    lighting: IAutoMovieShotBuildContext["lighting"];
     world: IAutoMovieWorldDesign;
     formations: IAutoMovieShotBuildContext["formations"];
     runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
@@ -1630,6 +1635,10 @@ const compileShotSource = (
       // rather than only attached to the artifact below: a camera framing a
       // formation has to measure it where its cue has moved it.
       formationMotions: program.value.formationMotions ?? [],
+      // The shot's own light statement, left undefined when the source made
+      // none so its compiled artifact keeps the exact bytes it had before this
+      // channel existed.
+      lightMotions: program.value.lightMotions,
       models: Object.values(props.context.runtimeModels),
       previous: props.previous ?? undefined,
     },

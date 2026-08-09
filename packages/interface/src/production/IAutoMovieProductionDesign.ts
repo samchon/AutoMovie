@@ -1,6 +1,7 @@
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieProfile } from "../core";
-import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieHeightRule, IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
@@ -93,6 +94,23 @@ export interface IAutoMovieProductionDesign {
    * then carry no pin and no cross-shot criterion is admissible.
    */
   storyClock?: IAutoMovieStoryClock;
+  /**
+   * The production's own light sources and their motion on the story clock.
+   *
+   * Where {@link storyClock} says when a shot happens, this says what the light
+   * is doing then. A shot's `lightMotions` is the right unit for a light that
+   * belongs to the moment and the wrong unit for one that belongs to the
+   * production: stated per shot, every shot restages the same source and
+   * nothing relates the light in the first shot to the light in the last. A
+   * production that runs across a stretch of story could not say that its light
+   * travelled over that stretch, whatever the subject.
+   *
+   * Declared once here, each shot reads the state at its own story moment
+   * ({@link IAutoMovieShotStoryTime}); a shot still states its own local light
+   * on top. Optional and purely additive: a production declaring none is
+   * unaffected in every respect, and so is any shot carrying no story pin.
+   */
+  lighting?: IAutoMovieProductionLighting;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**
@@ -290,72 +308,6 @@ export interface IAutoMovieWorldLandmark {
   /** Non-blank narrative or tactical meaning. */
   meaning: string;
 }
-
-/** A height rule used by a world surface. */
-export type IAutoMovieHeightRule =
-  | {
-      /** Flat surface. */
-      kind: "constant";
-      /** Surface height in meters. */
-      value: number;
-    }
-  | {
-      /** Planar slope. */
-      kind: "plane";
-      /** Plane height at the world origin. */
-      originHeight: number;
-      /** Height gained per positive X meter. */
-      slopeX: number;
-      /** Height gained per positive Z meter. */
-      slopeZ: number;
-    }
-  | {
-      /**
-       * Sampled relief: a regular XZ grid of heights over the surface.
-       *
-       * `constant` is one number and `plane` is a single tilt, so neither can
-       * express a rise: a hill, a terraced square, a riverbank, a stepped
-       * approach. This is the smallest rule that can. The grid is a lattice of
-       * stored heights and the surface height between them is interpolated, so
-       * relief costs `columns * rows` numbers rather than a mesh.
-       *
-       * **Bounds.** The grid is a sampling lattice, not an extent: the
-       * `polygon` still says where the surface exists, exactly as it does for
-       * `constant` and `plane`. A query outside the lattice clamps to the
-       * nearest edge sample rather than extrapolating, because extrapolating a
-       * sampled relief invents terrain nobody authored, and a lattice that
-       * covers its polygon never reaches this at all.
-       *
-       * **Interpolation.** Bilinear between the four surrounding samples. The
-       * result is continuous across cell boundaries and reproduces a stored
-       * sample exactly at its own lattice point, so a member standing on a
-       * sample stands at the authored height.
-       *
-       * **Determinism.** Pure arithmetic over the stored samples: the same
-       * design answers the same height on every machine and every run. Nothing
-       * is sampled from an image, a noise function, or a seed here; a generator
-       * that wants relief bakes its samples into this array, where the compiler
-       * digests them with the rest of the design.
-       */
-      kind: "heightfield";
-      /** World X of sample column zero, in meters. */
-      originX: number;
-      /** World Z of sample row zero, in meters. */
-      originZ: number;
-      /** Finite column pitch along +X in meters, strictly above zero. */
-      spacingX: number;
-      /** Finite row pitch along +Z in meters, strictly above zero. */
-      spacingZ: number;
-      /** Sample columns along +X; at least two. */
-      columns: number;
-      /** Sample rows along +Z; at least two. */
-      rows: number;
-      /**
-       * Finite sample heights in meters, row-major: index `row * columns +
-       * column`. Exactly `columns * rows` entries.
-       */
-      samples: number[];
-    };
 
 /** A bounded horizontal polygon with a deterministic height function. */
 export interface IAutoMovieWorldSurface {
@@ -803,6 +755,7 @@ export interface IAutoMovieShotReviewFrame {
  * chose to keep one otherwise questionable edit.
  */
 export type AutoMovieGrammarStyleIntent =
+  | "axis-cross"
   | "jump-cut"
   | "eyeline-break"
   | "tight-reestablish"

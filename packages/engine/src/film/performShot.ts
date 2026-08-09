@@ -49,7 +49,10 @@ import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { spaceGround } from "../space/surfaces";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
-import { validateShotArtifact } from "../validation/validateShotArtifact";
+import {
+  appendLightMotionsArtifact,
+  validateShotArtifact,
+} from "../validation/validateShotArtifact";
 import { ViolationCollector } from "../validation/violation";
 import {
   DEFAULT_SUBJECT_HEIGHT,
@@ -365,6 +368,22 @@ export const performShot = (props: {
    */
   blocking?: IAutoMovieBlocking;
   /**
+   * Clips moving the staged lights over this shot's own clock, carried onto the
+   * assembled shot's `lightMotions`.
+   *
+   * Light placement is an animatable channel and the applier that plays these
+   * clips already exists; what did not exist was any way for an authored change
+   * of light to reach a compiled shot, so a film of any length was lit by one
+   * unchanging rig. Each track addresses one STAGED light by pointer channel,
+   * which is checked here rather than at the artifact gate: that gate throws on
+   * failure because reaching it means an engine defect, and a clip naming a
+   * light this set never staged is an authoring fault with a path to name.
+   *
+   * Omitted, the assembled shot carries no such field and is byte-identical to
+   * one assembled before this input existed.
+   */
+  lightMotions?: readonly IAutoMovieClip[];
+  /**
    * Registered source identity for direct code authoring. Omit on the legacy
    * beat ladder to retain its `shot:${beat}` identity.
    */
@@ -464,6 +483,17 @@ export const performShot = (props: {
 
   const nodeIds = new Set(staged.scene.nodes.map((n) => n.id));
   const cameraIds = new Set(staged.scene.cameras.map((c) => c.id));
+
+  // The shot's own statement about its light, held to exactly the contract the
+  // artifact gate holds it to, against the scene this shot actually staged.
+  const lightMotions =
+    props.lightMotions === undefined ? undefined : [...props.lightMotions];
+  appendLightMotionsArtifact(
+    lightMotions,
+    "$input.lightMotions",
+    new Map(staged.scene.lights.map((light) => [light.id, light.type])),
+    out.items,
+  );
 
   const validateTargetNodeIds = (
     target: unknown,
@@ -2012,6 +2042,9 @@ export const performShot = (props: {
       startOffset: 0,
     })),
     objectMotions,
+    // Present exactly when the caller stated one, so a shot that says nothing
+    // about its light assembles the record it always did.
+    ...(lightMotions === undefined ? {} : { lightMotions }),
     events: orderEvents(events),
     // Directorial intent per frame span (#1187): the focus subject resolves
     // to a world point the same way `on` did; the solve itself never reads

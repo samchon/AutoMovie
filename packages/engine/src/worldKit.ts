@@ -9,6 +9,7 @@ import {
 } from "@automovie/interface";
 
 import { productionRuntimeModelId } from "./productionIdentity";
+import { surfaceHeightAt } from "./space/surfaces";
 
 /** One generated visible wall/building block and its support footprint. */
 export interface IAutoMovieWorldBlock {
@@ -349,35 +350,16 @@ export const assertWorldPlacements = (input: {
  * {@link worldGroundSurface} answers where the rule applies. A `heightfield`
  * clamps to its edge samples outside its own lattice, so the answer stays a
  * finite number wherever it is asked.
+ *
+ * The world spelling of {@link surfaceHeightAt}, which is where the arithmetic
+ * lives. A scene's standable patch carries the same {@link IAutoMovieHeightRule}
+ * and is read by that same function, so terrain a crowd is placed on and ground
+ * a performer plants a foot on cannot answer differently.
  */
 export const worldSurfaceHeight = (
   surface: IAutoMovieWorldSurface,
   point: { x: number; z: number },
-): number => {
-  const rule = surface.height;
-  if (rule.kind === "constant") return rule.value;
-  if (rule.kind === "plane")
-    return rule.originHeight + rule.slopeX * point.x + rule.slopeZ * point.z;
-  // Bilinear over the cell the point falls in. The lattice coordinate is
-  // clamped before the cell is chosen, so a query outside the grid reads its
-  // nearest edge instead of extrapolating relief nobody authored.
-  const column = latticeCell(
-    (point.x - rule.originX) / rule.spacingX,
-    rule.columns,
-  );
-  const row = latticeCell((point.z - rule.originZ) / rule.spacingZ, rule.rows);
-  const near = lerp(
-    heightfieldSample(rule, column.index, row.index),
-    heightfieldSample(rule, column.index + 1, row.index),
-    column.fraction,
-  );
-  const far = lerp(
-    heightfieldSample(rule, column.index, row.index + 1),
-    heightfieldSample(rule, column.index + 1, row.index + 1),
-    column.fraction,
-  );
-  return lerp(near, far, row.fraction);
-};
+): number => surfaceHeightAt(surface, point.x, point.z);
 
 /**
  * The world terrain under an XZ point, or `null` where the world has none.
@@ -407,44 +389,6 @@ export const worldGroundHeight = (
   const surface = worldGroundSurface(surfaces, point);
   return surface === null ? null : worldSurfaceHeight(surface, point);
 };
-
-/**
- * Which cell of a lattice a coordinate falls in, and how far across it.
- *
- * The coordinate is clamped into the lattice first, so a point outside reads
- * the edge cell at fraction zero or one rather than an extrapolated one. A
- * lattice of a single line has no cell to cross and reads that line.
- */
-const latticeCell = (
-  coordinate: number,
-  count: number,
-): { index: number; fraction: number } => {
-  const last = Math.max(0, count - 2);
-  const clamped = Math.min(Math.max(coordinate, 0), Math.max(0, count - 1));
-  const index = Math.min(Math.floor(clamped), last);
-  return { index, fraction: clamped - index };
-};
-
-/**
- * One stored sample, with its indices clamped into the declared grid.
- *
- * A record whose `samples` is shorter than `columns * rows` is refused by
- * design validation; reading it here answers zero rather than `NaN`, so a
- * placement built on a malformed field is wrong in a way a reader can see
- * instead of poisoning every arithmetic downstream of it.
- */
-const heightfieldSample = (
-  rule: Extract<IAutoMovieWorldSurface["height"], { kind: "heightfield" }>,
-  column: number,
-  row: number,
-): number =>
-  rule.samples[
-    Math.min(Math.max(row, 0), rule.rows - 1) * rule.columns +
-      Math.min(Math.max(column, 0), rule.columns - 1)
-  ] ?? 0;
-
-const lerp = (from: number, to: number, progress: number): number =>
-  from + (to - from) * progress;
 
 const overlaps = (
   left: IAutoMovieWorldBlock,

@@ -96,11 +96,51 @@ export interface IAutoMovieGrammarDiagnostic {
 export const GRAMMAR_STYLE_SUPPRESSION: Readonly<
   Record<AutoMovieGrammarStyleIntent, AutoMovieGrammarDiagnosticCode>
 > = {
+  "axis-cross": "grammar-axis-crossed",
   "jump-cut": "grammar-jump-cut",
   "eyeline-break": "grammar-eyeline",
   "tight-reestablish": "grammar-reestablish",
   "rhythmic-pacing": "grammar-pacing",
 };
+
+/** One deliberate exception, and the shot whose contract declared it. */
+export interface IAutoMovieGrammarStyleClaim {
+  /** Shot that declared the exception. */
+  shot: string;
+  /** Declared deliberate break. */
+  intent: AutoMovieGrammarStyleIntent;
+}
+
+/**
+ * Everything one mechanical pass over an edited sequence establishes.
+ *
+ * The findings alone cannot answer the author's second question. A declaration
+ * that suppresses a finding and a declaration that suppresses nothing look
+ * identical from outside — both leave the diagnostic list silent — so a shot
+ * declaring an exception nobody ever broke reads as a registered intent when it
+ * is in fact a claim about a film that is not there. Reporting which
+ * declarations were exercised is therefore part of the same read, computed by
+ * the one pass that already decides it, rather than by a second implementation
+ * of the suppression table downstream.
+ */
+export interface IAutoMovieGrammarReading {
+  /** Findings no declared exception excepted, in analyzer order. */
+  reported: IAutoMovieGrammarDiagnostic[];
+  /** Declarations that excepted at least one finding, in shot order. */
+  matched: IAutoMovieGrammarStyleClaim[];
+  /** Declarations that found nothing to except, in shot order. */
+  unmatched: IAutoMovieGrammarStyleClaim[];
+}
+
+/** One edited sequence and the thresholds its mechanical read uses. */
+export interface IAutoMovieGrammarInput {
+  /** Shots in edited playback order. */
+  shots: readonly IAutoMovieGrammarShotObservation[];
+  /** Smallest camera-bearing change that avoids a same-size jump cut. */
+  minimumCutAngleDegrees?: number;
+  /** Subject displacement that requires a wide re-establishing view. */
+  reestablishDistance?: number;
+}
 
 const DEFAULT_MINIMUM_CUT_ANGLE_DEGREES = 30;
 const DEFAULT_REESTABLISH_DISTANCE = 10;
@@ -109,19 +149,24 @@ const EPSILON = 1e-6;
 /**
  * Diagnose an ordered edit from deterministic shot observations.
  *
+ * The findings half of {@link readFilmGrammar}, kept as the plain call for a
+ * consumer that only files what survived.
+ */
+export const analyzeFilmGrammar = (
+  props: IAutoMovieGrammarInput,
+): IAutoMovieGrammarDiagnostic[] => readFilmGrammar(props).reported;
+
+/**
+ * Read an ordered edit, and report which declared exceptions it exercised.
+ *
  * Shot order is editorial meaning and remains untouched. Subject collections
  * and action-axis endpoints are normalized by id, so collection order and
  * random generation order cannot alter the result. The analyzer has no seed,
  * clock, scene mutation, or renderer dependency.
  */
-export const analyzeFilmGrammar = (props: {
-  /** Shots in edited playback order. */
-  shots: readonly IAutoMovieGrammarShotObservation[];
-  /** Smallest camera-bearing change that avoids a same-size jump cut. */
-  minimumCutAngleDegrees?: number;
-  /** Subject displacement that requires a wide re-establishing view. */
-  reestablishDistance?: number;
-}): IAutoMovieGrammarDiagnostic[] => {
+export const readFilmGrammar = (
+  props: IAutoMovieGrammarInput,
+): IAutoMovieGrammarReading => {
   const minimumCutAngleDegrees =
     props.minimumCutAngleDegrees ?? DEFAULT_MINIMUM_CUT_ANGLE_DEGREES;
   const reestablishDistance =
@@ -164,19 +209,54 @@ export const analyzeFilmGrammar = (props: {
         "compare the duration series with the intended dramatic cadence, then trim, extend, or explicitly mark rhythmic-pacing",
     });
   }
-  return diagnostics.filter((diagnostic) => {
-    if (diagnostic.code === "grammar-pacing")
-      return shots.some((shot) => shot.styleIntent.includes("rhythmic-pacing"))
-        ? false
-        : true;
+  // Which declaration excepted which finding is decided exactly once, here,
+  // while the decision is being made. Recomputing it downstream from the same
+  // table is how a suppression and a report of that suppression come to
+  // disagree about the same edit.
+  const exercised = new Set<string>();
+  const reported = diagnostics.filter((diagnostic) => {
+    if (diagnostic.code === "grammar-pacing") {
+      // Pacing is the one film-wide finding, so any participating shot's
+      // marker excepts it and every such marker is exercised by it.
+      const marked = shots.filter((shot) =>
+        shot.styleIntent.includes("rhythmic-pacing"),
+      );
+      for (const shot of marked)
+        exercised.add(claimKey(shot.id, "rhythmic-pacing"));
+      return marked.length === 0;
+    }
     const shot = shots.find((candidate) => candidate.id === diagnostic.shot)!;
-    return (shot.styleIntent ?? []).some(
-      (intent) => GRAMMAR_STYLE_SUPPRESSION[intent] === diagnostic.code,
-    )
-      ? false
-      : true;
+    const intent = shot.styleIntent.find(
+      (candidate) => GRAMMAR_STYLE_SUPPRESSION[candidate] === diagnostic.code,
+    );
+    if (intent === undefined) return true;
+    exercised.add(claimKey(shot.id, intent));
+    return false;
   });
+  const claims: IAutoMovieGrammarStyleClaim[] = shots.flatMap((shot) =>
+    shot.styleIntent.map((intent) => ({ shot: shot.id, intent })),
+  );
+  return {
+    reported,
+    matched: claims.filter((claim) =>
+      exercised.has(claimKey(claim.shot, claim.intent)),
+    ),
+    unmatched: claims.filter(
+      (claim) => exercised.has(claimKey(claim.shot, claim.intent)) === false,
+    ),
+  };
 };
+
+/**
+ * Shot and intent as one lookup key.
+ *
+ * Separated by a character no declared intent carries, so two distinct claims
+ * cannot collide however a shot happens to be named.
+ */
+const claimKey = (
+  shot: string,
+  intent: AutoMovieGrammarStyleIntent,
+): string => `${shot}|${intent}`;
 
 /** Adapt grammar diagnostics into the existing visual-review backlog socket. */
 export const grammarDiagnosticsToReviewNotes = (props: {

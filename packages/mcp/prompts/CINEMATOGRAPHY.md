@@ -36,6 +36,8 @@ Ease camera starts and stops unless impact calls for discontinuity. Coordinate s
 
 Design key direction, fill ratio, practical motivation, contrast, and color separation around story state. Maintain continuity where the scene is continuous; change it only when time, location, perception, or dramatic state changes. Confirm that skin, uniforms, props, smoke, and terrain remain separable under the actual material and render path.
 
+Atmosphere is a declared value, not a mood word. A set states its `fog` as an extinction density per meter and the color an infinitely distant surface tends toward, and every drawn surface is mixed toward that color by its camera depth. Half of a subject's own color survives at roughly `0.83 / density` meters, so `0.002` reads as the barely perceptible perspective of a wide vista, `0.01` as a clear day with a soft horizon, and `0.05` as heavy weather; zero renders exactly as no atmosphere at all. Match the color to the background or the horizon cuts a visible seam where fogged geometry meets unfogged sky. Reach for it before spending the particle budget on billboards standing in for haze. Judge it from a beauty frame only: structural passes suspend fog so the channel they exist to state stays exact, so a depth or mask frame will not show the atmosphere you declared.
+
 ## Intentional rule breaking
 
 Continuity rules are tools, not moral law. Break eyeline, axis, framing, exposure, focus, or stability only when the higher dramatic value is named and the result remains legible enough to achieve it. `styleIntent` records the reason and the violated rule; review checks whether the result serves that reason rather than excusing an accident.

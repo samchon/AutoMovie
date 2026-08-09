@@ -29,6 +29,8 @@ For continuity, compare outgoing and incoming state: position, facing, pose, gaz
 
 Run the scaffold’s configured doctor or verify path. Check current compile identity, registered target, host runtime identity, decoded PNG/media facts, raster, frame rate, frame count, duration, and atomic manifest. `captured:false` means no evidence exists.
 
+`generated-stale` is not one of these failures and no doctor or verify command clears it. `captureFrame`, `repaintShot`, and review all read compile status through a read-only lint that is built never to repair what it reports, so the tools can only keep refusing while the generated tree lags current design and source. Run the ordinary scaffold compile command, then capture again.
+
 If a renderer produces bytes but the receipt gate rejects them, the bytes are not deliverable. Preserve the diagnostic, correct runtime or configuration, and regenerate.
 
 ## Repaint failures

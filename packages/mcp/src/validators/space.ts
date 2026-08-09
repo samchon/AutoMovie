@@ -15,12 +15,14 @@ import {
  * committed scene's `scene.space`. A space is the only staging payload with a
  * nested array of objects each holding a further array of vectors, so a
  * malformed one would otherwise reach `surface.polygon.forEach` or
- * `surface.rampTo.x` as a throw instead of a field-located violation.
+ * `surface.height.samples.forEach` as a throw instead of a field-located
+ * violation.
  *
- * Types only, emptiness, uniqueness, convexity, ramp axes, and walkable
- * resolution stay with the engine's `validateSpace`, so every space rule has
- * exactly one owner and staging cannot disagree with a committed scene. Returns
- * whether the shape is safe to hand to that validator.
+ * Types only, emptiness, uniqueness, convexity, which ground statement a
+ * surface is allowed, ramp axes, height-rule ranges, and walkable resolution
+ * stay with the engine's `validateSpace`, so every space rule has exactly one
+ * owner and staging cannot disagree with a committed scene. Returns whether the
+ * shape is safe to hand to that validator.
  *
  * @author Samchon
  */
@@ -87,20 +89,41 @@ const validateSurfaceShape = (
         violations,
       );
     });
-  validateObjectArtifact(
-    surface.anchor,
-    `${path}.anchor`,
-    "surface anchor",
-    violations,
-  );
-  // `rampTo` is `IAutoMovieVector3 | null`, and the height query branches on
-  // `!== null` before reading `.x`, an omitted field would read as a ramp and
-  // throw, so absence is a violation rather than a silent flat patch.
-  if (surface.rampTo !== null)
+  // A surface states its ground exactly one way, and WHICH way is the engine's
+  // rule to enforce: absence is a located `validateSpace` violation rather than
+  // a shape refusal, because a payload that omits both is well-formed JSON
+  // saying something wrong, not malformed JSON. Only presence is shaped here.
+  if (surface.anchor !== undefined)
+    validateObjectArtifact(
+      surface.anchor,
+      `${path}.anchor`,
+      "surface anchor",
+      violations,
+    );
+  if (surface.rampTo !== null && surface.rampTo !== undefined)
     validateObjectArtifact(
       surface.rampTo,
       `${path}.rampTo`,
       "surface ramp anchor (null when flat)",
+      violations,
+    );
+  if (
+    surface.height !== undefined &&
+    validateObjectArtifact(
+      surface.height,
+      `${path}.height`,
+      "surface height rule",
+      violations,
+    ) &&
+    surface.height.kind === "heightfield"
+  )
+    // The one array inside a height rule. Every other field is a scalar the
+    // engine range-checks, but `samples` is walked, so a non-array would reach
+    // `.forEach` as a throw.
+    validateArrayArtifact(
+      surface.height.samples,
+      `${path}.height.samples`,
+      "heightfield samples",
       violations,
     );
 };
