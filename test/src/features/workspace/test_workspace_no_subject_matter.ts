@@ -109,15 +109,16 @@ export const test_workspace_no_subject_matter = (): void => {
     );
   });
   TestValidator.equals(
+    "the scan reaches a real population",
+    namedFacts([["scanned", () => scanned.length > 100]]),
+    { scanned: true },
+  );
+  // Compared as a list rather than a count: a count says a rule broke, a list
+  // says where, and the whole point of the scan is to fix every site in one
+  // pass rather than one site per run.
+  TestValidator.equals(
     "no shipped or teaching file names one production's subject",
-    namedFacts([
-      ["scanned", () => scanned.length > 100],
-      ["clean", () => offences.length === 0],
-      // Named rather than counted: a count says a rule broke, a list says
-      // where, and the whole point of the scan is to fix every site in one
-      // pass rather than one site per run.
-      ["offences", () => (offences.length === 0 ? [] : offences)],
-    ]),
-    { scanned: true, clean: true, offences: [] },
+    offences,
+    [],
   );
 };

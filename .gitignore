@@ -28,3 +28,7 @@ packages/playground/cf.html
 packages/playground/montage-three.png
 # keep the parametric head model data (generated, but the editor needs it)
 !packages/playground/public/models/head-model.json
+
+# transpiled output that lands beside a source rather than in `lib/`
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map

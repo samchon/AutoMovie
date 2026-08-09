@@ -115,6 +115,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     },
     motions: [],
     formationMotions: [],
+    formationSlotMotions: [],
     effectCues: [],
     shot: {
       id: "density-shot",

@@ -1,5 +1,5 @@
-import type { IAutoMovieFormationPlacement } from "@automovie/engine";
 import {
+  type IAutoMovieFormationPlacement,
   formationSlotPosition,
   placeFormationSlot,
   rotateFormationLocalOffset,

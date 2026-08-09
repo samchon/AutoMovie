@@ -112,6 +112,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
         easing: "linear",
       },
     ],
+    formationSlotMotions: [],
     effectCues: [],
     shot: {
       id: "sound-shot",

@@ -188,14 +188,18 @@ export const test_world_heightfield_terrain = (): void => {
     { beyondPositiveX: true, beyondNegativeZ: true, beyondBoth: true },
   );
 
+  const firstReading = worldSurfaceHeight(field, { x: 1.3, z: -2.7 });
+  const secondReading = worldSurfaceHeight(field, { x: 1.3, z: -2.7 });
   TestValidator.equals(
     "relief is stored numbers, so it reproduces exactly",
     namedFacts([
       [
+        // Both readings are taken into locals first. Written as one comparison
+        // the two calls sit either side of `===`, which reads as a value
+        // compared with itself and is refused as such; naming them says what
+        // is actually being claimed, that asking twice answers twice the same.
         "twice",
-        () =>
-          worldSurfaceHeight(field, { x: 1.3, z: -2.7 }) ===
-          worldSurfaceHeight(field, { x: 1.3, z: -2.7 }),
+        () => firstReading === secondReading,
       ],
       [
         "rebuilt",

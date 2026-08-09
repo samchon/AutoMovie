@@ -20,3 +20,12 @@ apart in one frame without a scale break.
 
 In order while the cue is given, and still in order after it. Any loosening is
 a dramatic event and must be authored as one, never left to chance.
+
+## Life
+
+The rows are alive rather than one frozen figure repeated. Every member walks
+the same stride and each is at its own point in it, so the group reads as many
+bodies rather than as a pattern. The stride belongs to the member and never
+reaches the interval: the group that walks is the same group, in the same
+order, as the group that stands. A member too distant to be posed is still a
+member, so this holds at every distance the group is seen from.
