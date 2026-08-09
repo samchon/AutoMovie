@@ -2835,7 +2835,14 @@ const validateCompiledShot = (
 /** Degrees of turn between neighbouring samples inside one cue. */
 const AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES = 5;
 
-/** Samples one cue may take, so a turn nobody bounded cannot unbound the walk. */
+/**
+ * Samples one cue may take, however far it turns.
+ *
+ * A cue may legally turn through 360,000 degrees, and holding the resolution
+ * there would cost a hundred thousand samples for one unit. Past this the walk
+ * stays bounded and the resolution coarsens in proportion, which is the trade a
+ * gate that samples has to make somewhere and had better say out loud.
+ */
 const AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT = 360;
 
 /**
@@ -2851,7 +2858,9 @@ const AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT = 360;
  * hit an exact angle would be a second one. Every easing this engine has moves
  * at most twice the average rate, so `n` even steps hold the turn between
  * neighbours below `2 * turn / n`, and the step count is chosen from that bound
- * rather than guessed.
+ * rather than guessed. The bound holds until
+ * {@link AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT} clamps the count; a cue turning
+ * far enough to reach it is measured more coarsely, in proportion.
  *
  * This samples; it does not solve. Once a cue translates and rescales as well
  * as turns, the extreme is the root of a transcendental equation and no closed

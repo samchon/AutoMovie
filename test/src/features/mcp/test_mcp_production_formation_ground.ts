@@ -207,6 +207,9 @@ const codes = (
  * 10. A unit is judged by its own four corners rather than the box around them,
  *     which a diamond floor separates: turned, the box reaches past ground
  *     every corner of the unit is still standing on.
+ * 11. A cue turning far enough to reach the sample cap still answers in bounded
+ *     time, because a cue may legally turn through 360,000 degrees and one unit
+ *     may not cost a hundred thousand measurements.
  */
 export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
@@ -411,5 +414,14 @@ export const test_mcp_production_formation_ground = (): void => {
     "a unit is judged by its own corners, not the box around them",
     codes(diamond(13.5), [lance(9, 1)], [turn(45)]),
     [],
+  );
+
+  // A cue may legally turn through 360,000 degrees, and the sample count is
+  // capped so one unit cannot cost a hundred thousand measurements. The cap has
+  // to still answer, and still catch a unit this far off its ground.
+  TestValidator.equals(
+    "a cue turning far enough to reach the sample cap still answers",
+    codes(field(4), [lance(9, 1)], [turn(360_000)]),
+    ["engine-validation-failed"],
   );
 };
