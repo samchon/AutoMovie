@@ -185,8 +185,9 @@ const codes = (
  *
  * 1. A unit inside the staged floor is accepted, so the gate does not refuse the
  *    ordinary case it is meant to leave alone.
- * 2. A unit reaching past the floor is refused, naming the formation and the
- *    corner the ground does not carry.
+ * 2. A unit reaching past the floor is refused once, naming the shot, the unit and
+ *    the corner the ground does not carry, all read from the one answer rather
+ *    than from the same question asked twice.
  * 3. A unit exactly on the boundary is accepted, because the edge of a floor is
  *    still floor and a strict reading would refuse a field sized to its unit.
  * 4. A shot with no staged space is not measured at all, because the engine then
@@ -194,9 +195,9 @@ const codes = (
  * 5. Every staged unit answers for itself: one contained beside one escaping
  *    reports exactly one refusal and names which unit left, so a passing
  *    sibling cannot hide a failing one and the gate cannot report either.
- * 6. A unit that fits where it stands and marches off the floor is refused, naming
- *    the time its cue took it out, because a unit walking over a void is the
- *    defect this gate exists for and not a different one.
+ * 6. A unit that fits where it stands and marches off the floor is refused at the
+ *    time its cue took it out, because a unit walking over a void is the defect
+ *    this gate exists for and not a different one.
  * 7. A unit whose cue keeps it on the floor is accepted, and a cue belonging to
  *    another unit does not move this one.
  * 8. A unit whose cue starts at zero is never at its design bounds, so those are
@@ -219,25 +220,31 @@ export const test_mcp_production_formation_ground = (): void => {
     [],
   );
 
-  TestValidator.equals(
-    "a unit reaching past the staged floor is refused",
-    codes(field(4), [unit(10)]),
-    ["engine-validation-failed"],
-  );
-
   const escaped = validateAutoMovieFormationGround(
     { id: "opening" },
     { scene: { space: field(4) }, formations: [unit(10)] },
-  )[0]!;
+  );
   TestValidator.equals(
-    "the refusal names the shot, the unit, and the corner the ground cannot carry",
+    "a unit reaching past the staged floor is refused, and the refusal says which and where",
     namedFacts([
-      ["target", () => escaped.target === "shot:opening"],
-      ["category", () => escaped.category === "error"],
-      ["formation", () => escaped.message.startsWith("formation:army.bounds ")],
-      ["corner", () => escaped.message.includes("(-10, -10)")],
+      ["code", () => escaped[0]?.code === "engine-validation-failed"],
+      ["one", () => escaped.length === 1],
+      ["target", () => escaped[0]!.target === "shot:opening"],
+      ["category", () => escaped[0]!.category === "error"],
+      [
+        "formation",
+        () => escaped[0]!.message.startsWith("formation:army.bounds "),
+      ],
+      ["corner", () => escaped[0]!.message.includes("(-10, -10)")],
     ]),
-    { target: true, category: true, formation: true, corner: true },
+    {
+      code: true,
+      one: true,
+      target: true,
+      category: true,
+      formation: true,
+      corner: true,
+    },
   );
 
   TestValidator.equals(
@@ -283,12 +290,6 @@ export const test_mcp_production_formation_ground = (): void => {
     { one: true, names: true },
   );
 
-  TestValidator.equals(
-    "a unit that fits at rest and marches off the floor is refused",
-    codes(field(10), [unit(4)], [march(20)]),
-    ["engine-validation-failed"],
-  );
-
   const marched = validateAutoMovieFormationGround(
     { id: "opening" },
     {
@@ -296,17 +297,18 @@ export const test_mcp_production_formation_ground = (): void => {
       formations: [unit(4)],
       formationMotions: [march(20)],
     },
-  )[0]!;
+  );
   TestValidator.equals(
-    "the refusal names the time its cue took the unit out and where to",
+    "a unit that fits at rest and marches off the floor is refused, at the time its cue took it",
     namedFacts([
+      ["code", () => marched[0]?.code === "engine-validation-failed"],
       [
         "time",
-        () => marched.message.includes("at 3s its cue takes the unit to"),
+        () => marched[0]!.message.includes("at 3s its cue takes the unit to"),
       ],
-      ["corner", () => marched.message.includes("(-4, 16)")],
+      ["corner", () => marched[0]!.message.includes("(-4, 16)")],
     ]),
-    { time: true, corner: true },
+    { code: true, time: true, corner: true },
   );
 
   TestValidator.equals(
