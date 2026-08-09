@@ -2957,22 +2957,32 @@ export const validateAutoMovieFormationGround = (
       { x: design.max.x, y: design.min.y, z: design.max.z },
       { x: design.min.x, y: design.min.y, z: design.max.z },
     ];
-    const escape = [...(resting ? [null] : []), ...times].flatMap((time) =>
-      corners
-        .map((corner) =>
-          time === null
+    // Walked rather than collected, and stopped at the first escape. A turn is
+    // sampled up to the cap, so gathering every corner at every sampled time
+    // before taking the first would measure a unit hundreds of times over to
+    // report the moment it already found.
+    let escape: { time: number | null; corner: IAutoMovieVector3 } | null =
+      null;
+    for (const time of [...(resting ? [null] : []), ...times]) {
+      const motion =
+        time === null ? null : sampleFormationMotion(cues, formation.id, time);
+      for (const corner of corners) {
+        const placed =
+          motion === null
             ? corner
             : transformFormationPoint(
                 corner,
                 formation.anchor,
-                sampleFormationMotion(cues, formation.id, time),
+                motion,
                 formation.facingDeg,
-              ),
-        )
-        .filter((corner) => isWalkable(space, corner.x, corner.z) === false)
-        .map((corner) => ({ time, corner })),
-    )[0];
-    if (escape === undefined) continue;
+              );
+        if (isWalkable(space, placed.x, placed.z)) continue;
+        escape = { time, corner: placed };
+        break;
+      }
+      if (escape !== null) break;
+    }
+    if (escape === null) continue;
     diagnostics.push(
       engineDiagnostic(
         contract.id,
