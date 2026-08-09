@@ -41,8 +41,7 @@ And a shot cites a scene, which is the join that stops a production from
 accumulating footage nothing asked for.
 
 There is no population for actions. An action belongs to the subject that
-performs it -- `Army.advance` is a method on the class its specification
-describes. A choreography that spans subjects and belongs to none of them is a
+performs it, as a method on the class its specification describes. A choreography that spans subjects and belongs to none of them is a
 shot, and cites its scene.
 
 ## Subjects are classes

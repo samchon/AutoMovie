@@ -2,7 +2,7 @@
 
 A film is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
 
-`TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers, a battle line.
+`TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
 
 ## Know when to compose
 
@@ -12,7 +12,7 @@ Compose at the moment you copy a shot module and change its names. That copy is 
 
 ## Every subject is a class
 
-A soldier, a horse, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
+A figure, an animal, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
 
 A class owns four things, and the reason it is a class rather than a factory returning a record is that these four belong together:
 
@@ -31,8 +31,8 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
-export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
-  public readonly id = "sentinel";
+export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  public readonly id = "figure";
 
   /** A fact other subjects measure themselves against. */
   public readonly height = 1.8;
@@ -76,7 +76,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
 
 ## A group of subjects is a subject
 
-A squadron holds soldiers, a regiment holds squadrons, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a line battle authorable: a regiment advancing is one call, not two thousand.
+A cluster holds figures, a group holds clusters, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a mass scene authorable: a group advancing is one call, not two thousand.
 
 Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
@@ -152,5 +152,5 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 
 ## Read the shipped examples
 
-The starter's own vocabulary is the worked example of the subject layer. `src/units/sentinel.ts` is a leaf subject whose measured facts are fields and whose one capability is a method; `src/units/armyHero.ts` derives its scale from the sentinel rather than restating it; `src/formations/army.ts` is a group that states arrangement and answers questions about its own extent; `src/world/signalField.ts` is a group of places whose record is the merge of what its pieces put down.
+The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
 

@@ -26,7 +26,7 @@ verb by convention.
 
 Primitive props are static and always materialize without a skeleton. Do not send `rigged`; the validator refuses it until a deterministic prop-rig schema, compiler binding, and viewer path exist.
 
-LOD is a reference graph emitted in the generated contract. `hero`, `near`, and `far` entries name recipes, with increasing distance limits and one final unbounded tier where appropriate. The scaffold viewer automatically selects anonymous formation `near` and `far` tiers from camera distance, representative projected contribution, and hysteresis. Named heroes remain explicit objects, and ordinary non-formation nodes keep their source-selected runtime model. Do not expand a formation into one model recipe per soldier. Ordinary members share a recipe; only intentional hero slots become named actors.
+LOD is a reference graph emitted in the generated contract. `hero`, `near`, and `far` entries name recipes, with increasing distance limits and one final unbounded tier where appropriate. The scaffold viewer automatically selects anonymous formation `near` and `far` tiers from camera distance, representative projected contribution, and hysteresis. Named heroes remain explicit objects, and ordinary non-formation nodes keep their source-selected runtime model. Do not expand a formation into one model recipe per member. Ordinary members share a recipe; only intentional hero slots become named actors.
 
 The production compiler materializes every supported recipe as an immutable runtime model before it executes a shot builder. Use `context.runtimeModels[recipeId]` and its exact generated model id; do not duplicate the model or its proxy in source. Formation models are inserted automatically from their recipes.
 
