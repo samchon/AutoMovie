@@ -2835,6 +2835,9 @@ const validateCompiledShot = (
 /** Degrees of turn between neighbouring samples inside one cue. */
 const AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES = 5;
 
+/** One measurement as a reader wants it: to the millimetre, without a tail. */
+const round = (value: number): number => Math.round(value * 1000) / 1000;
+
 /**
  * Samples one cue may take, however far it turns.
  *
@@ -2965,7 +2968,7 @@ export const validateAutoMovieFormationGround = (
       null;
     for (const time of [...(resting ? [null] : []), ...times]) {
       const motion =
-        time === null ? null : sampleFormationMotion(cues, formation.id, time);
+        time === null ? null : sampleFormationMotion(own, formation.id, time);
       for (const corner of corners) {
         const placed =
           motion === null
@@ -2987,11 +2990,15 @@ export const validateAutoMovieFormationGround = (
       engineDiagnostic(
         contract.id,
         `formation:${formation.id}.bounds`,
+        // Reported to the millimetre and the millisecond. A sampled interior
+        // time and a turned corner are both long fractions, and a diagnostic an
+        // author reads to find a place on a field gains nothing from the digits
+        // below that. Only the reading is rounded; the comparison above is not.
         `must stand on the space this shot staged, but ${
           escape.time === null
             ? "the unit reaches"
-            : `at ${escape.time}s its cue takes the unit to`
-        } (${escape.corner.x}, ${escape.corner.z}) where no walkable surface carries it`,
+            : `at ${round(escape.time)}s its cue takes the unit to`
+        } (${round(escape.corner.x)}, ${round(escape.corner.z)}) where no walkable surface carries it`,
       ),
     );
   }

@@ -1610,6 +1610,14 @@ if (
   // to the engine that owns it. Recomputing the layout here would put a second
   // answer beside the compiler's, which is the shape of the defect this gate
   // exists to catch.
+  //
+  // The compiler owns the whole relation and refuses it during `npm run
+  // compile` above, including the interior of a cue that turns. This reads it
+  // back where the unit stands and at each end of its cues, which is what a
+  // packaged consumer can ask without the compiler's own sampling policy. What
+  // it uniquely proves is that the shipped artifacts carry a staged space and a
+  // staged unit at all, so the gate had something to measure, and that the
+  // engine's placement and containment answers are reachable from an install.
   const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
   writeFileSync(
     fieldProbePath,
@@ -1672,7 +1680,7 @@ if (checked === 0)
 `,
   );
   run(
-    "packaged starter draws a field that contains its army",
+    "packaged starter reads its staged unit back onto its staged ground",
     "node verify-packaged-field.mjs",
     starterDir,
   );
