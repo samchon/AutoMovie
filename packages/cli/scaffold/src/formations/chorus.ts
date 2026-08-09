@@ -16,8 +16,8 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  * A group is where arrangement lives. The members it holds state what one of
  * them is; this states how many there are, how they stand, and what the whole
  * can do. Count, layout, anchor, facing and seed derive every member, so the
- * compiler stores bounded chunks instead of scene nodes and the rows
- * regenerate from index and seed alone.
+ * compiler stores bounded chunks instead of scene nodes and the rows regenerate
+ * from index and seed alone.
  *
  * The seed is declared here rather than chosen in source, so the same design
  * always materializes the same chorus.

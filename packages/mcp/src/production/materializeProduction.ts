@@ -1122,14 +1122,6 @@ const transform = (
 const horizontal = (x: number): IAutoMovieTransform =>
   rotateZ(x < 0 ? 90 : -90, x, 0, 0);
 
-const rotateX = (
-  degrees: number,
-  x: number,
-  y: number,
-  z: number,
-): IAutoMovieTransform =>
-  transform(x, y, z, Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, degrees));
-
 const rotateZ = (
   degrees: number,
   x: number,

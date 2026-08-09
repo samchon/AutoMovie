@@ -51,8 +51,8 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * Member height in metres, stated against the production's reference scale.
    *
    * "A head shorter than the soloist" is the specification's own phrasing, so
-   * it is derived from the soloist rather than restated as a second number
-   * that could drift from it. {@link design} is what checks the derivation still
+   * it is derived from the soloist rather than restated as a second number that
+   * could drift from it. {@link design} is what checks the derivation still
    * lands on {@link SPECIFIED_HEIGHT}.
    */
   public readonly height = soloist.height - ChorusMember.HEAD;

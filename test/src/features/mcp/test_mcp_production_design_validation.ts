@@ -1126,24 +1126,25 @@ export const test_mcp_production_design_validation = (): void => {
       },
     ],
   };
-  const attachedHorse: IAutoMovieModelRecipe = {
+  const attachedProp: IAutoMovieModelRecipe = {
     ...modelRecipe(),
-    id: "attached-horse",
-    role: "mount",
-    archetype: "horse",
+    id: "attached-prop",
+    role: "prop",
+    archetype: "primitive-prop",
     parameters: {
-      length: 2.2,
+      shape: "box",
+      width: 2.2,
       height: 1.7,
-      legLength: 0.9,
+      depth: 0.9,
     },
     lod: [
       {
         tier: "hero",
         maxDistance: null,
-        recipe: "attached-horse",
+        recipe: "attached-prop",
       },
     ],
-    attachments: [{ id: "saddle", bone: "hips" }],
+    attachments: [{ id: "socket", bone: "hips" }],
   };
   const unsupportedStickmanAttachment: IAutoMovieModelRecipe = {
     ...modelRecipe(),
@@ -1176,7 +1177,7 @@ export const test_mcp_production_design_validation = (): void => {
       [invalidPrimitive.id, invalidPrimitive],
       [unknownPrimitive.id, unknownPrimitive],
       [missingPrimitive.id, missingPrimitive],
-      [attachedHorse.id, attachedHorse],
+      [attachedProp.id, attachedProp],
       [unsupportedStickmanAttachment.id, unsupportedStickmanAttachment],
       [multiplePaletteMaterials.id, multiplePaletteMaterials],
     ]),

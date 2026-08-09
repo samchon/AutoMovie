@@ -9,10 +9,6 @@ The current parameter contract is exact:
 | archetype        | required parameters                                                                                                                                                  |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stickman`       | `height` 0.5–3 m, `headRadius` 0.05–0.5 m, `limbRadius` 0.01–0.25 m                                                                                                  |
-| `horse`          | `length` 0.5–4 m, `height` 0.5–3 m, `legLength` 0.2–2 m                                                                                                              |
-| `artillery`      | `barrelLength` 0.2–8 m, `wheelRadius` 0.1–3 m, `gauge` 0.2–5 m                                                                                                       |
-| `flag`           | `width` 0.1–10 m, `height` 0.1–10 m, `poleHeight` 0.2–20 m                                                                                                           |
-| `weapon`         | `length` 0.05–8 m, `thickness` 0.001–1 m                                                                                                                             |
 | `primitive-prop` | `shape` plus dimensions: `box` width/height/depth, `sphere` radius, `capsule` radius/height, `cylinder` radius/height, `cone` radius/height, or `plane` width/depth. |
 
 Primitive-prop width, height, and depth are 0.001–100 m; radius is 0.001–50 m. Do not include dimensions unused by the selected shape. Material colors are six-digit `#RRGGBB`. LOD tiers are unique and ordered `hero`, `near`, `far`; finite maximum distances are positive and strictly increasing, and only the final tier may use `null`.
@@ -25,8 +21,8 @@ owns a non-empty unique inventory of firearm, cannon, or melee data;
 `mountable` owns seats and payload mass; `destructible` owns durability and an
 impact body. Firearm accuracy distances are strictly increasing, cannon
 ammunition kinds are unique, and every physical scalar is bounded by design
-lint and the same public engine validator. A name such as `musket` or
-`artillery` never grants a verb by convention.
+lint and the same public engine validator. A descriptive name never grants a
+verb by convention.
 
 Primitive props are static and always materialize without a skeleton. Do not send `rigged`; the validator refuses it until a deterministic prop-rig schema, compiler binding, and viewer path exist.
 

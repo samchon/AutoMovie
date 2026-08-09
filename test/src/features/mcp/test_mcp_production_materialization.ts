@@ -67,12 +67,7 @@ const recipe = (
 ): IAutoMovieModelRecipe => ({
   ...modelRecipe(),
   id,
-  role:
-    archetype === "horse"
-      ? "mount"
-      : archetype === "stickman"
-        ? "performer"
-        : "prop",
+  role: archetype === "stickman" ? "performer" : "prop",
   archetype,
   parameters,
   palette: { body: "#445566" },
@@ -87,7 +82,7 @@ const recipe = (
  * Scenarios:
  *
  * 1. Every supported archetype and primitive-prop shape becomes deterministic
- *    model geometry, including a rigged stickman and static battle props.
+ *    model geometry, including a rigged stickman and static primitive props.
  * 2. Line, column, wedge, one-member arc, and seeded scatter layouts produce
  *    stable slots, hero identities, anchors, and facing.
  * 3. Shot materialization adds missing slots, repositions an existing hero,
@@ -103,25 +98,6 @@ export const test_mcp_production_materialization = (): void => {
       height: 1.8,
       headRadius: 0.16,
       limbRadius: 0.055,
-    }),
-    recipe("horse", "horse", {
-      length: 2.2,
-      height: 1.7,
-      legLength: 0.9,
-    }),
-    recipe("artillery", "artillery", {
-      barrelLength: 2.4,
-      wheelRadius: 0.55,
-      gauge: 1.3,
-    }),
-    recipe("flag", "flag", {
-      width: 0.1,
-      height: 0.8,
-      poleHeight: 2.2,
-    }),
-    recipe("weapon", "weapon", {
-      length: 1.4,
-      thickness: 0.04,
     }),
     recipe("box", "primitive-prop", {
       shape: "box",
@@ -172,17 +148,6 @@ export const test_mcp_production_materialization = (): void => {
           productionRuntimeSkeletonId("stick"),
       ],
       ["modelsGetStick3", () => models.get("stick")?.parts.length === 13],
-      ["modelsGetHorse", () => models.get("horse")?.parts.length === 6],
-      ["modelsGetArtillery", () => models.get("artillery")?.parts.length === 3],
-      ["modelsGetFlag", () => models.get("flag")?.parts.length === 2],
-      [
-        "modelsGetWeapon",
-        () => models.get("weapon")?.materials[0]?.metallic === 0.7,
-      ],
-      [
-        "modelsGetWeapon2",
-        () => models.get("weapon")?.materials[0]?.roughness === 0.35,
-      ],
       [
         "modelsGetBox",
         () => models.get("box")?.parts[0]?.geometry.type === "primitive",

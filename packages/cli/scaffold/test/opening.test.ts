@@ -4,8 +4,8 @@ import {
 } from "@automovie/mcp";
 import assert from "node:assert/strict";
 
-import { Army } from "../src/formations/army";
-import { ArmyMember } from "../src/units/armyHero";
+import { Chorus } from "../src/formations/chorus";
+import { ChorusMember } from "../src/units/chorusHero";
 
 const firstProject = AutoMovieProductionProject.open(process.cwd());
 const first = new AutoMovieProductionCompiler(firstProject).compile({
@@ -34,27 +34,27 @@ process.stdout.write("opening compile/reopen identity: ok\n");
 // method that emits the record sees what the subject finally is.
 assert.throws(
   () =>
-    new (class extends Army {
+    new (class extends Chorus {
       public override readonly count = 1;
     })().design(),
-  /docs\/characters\/army\.md/,
-  "An army whose count leaves a declared rank empty must be refused.",
+  /docs\/characters\/chorus\.md/,
+  "A chorus whose count leaves a declared row empty must be refused.",
 );
 assert.throws(
   () =>
-    new (class extends ArmyMember {
+    new (class extends ChorusMember {
       public override readonly height = 1.9;
     })().design(),
-  /docs\/characters\/army\.md/,
+  /docs\/characters\/chorus\.md/,
   "A member taller than the specification states must be refused.",
 );
 // The scale is compared within a tolerance because it is a difference of two
-// authored metres: a sentinel of 1.85 less a head of 0.15 lands a billionth
+// authored metres: a soloist of 1.85 less a head of 0.15 lands a billionth
 // above 1.7, and refusing that would be refusing arithmetic rather than a scale
 // the document did not state.
 assert.doesNotThrow(
   () =>
-    new (class extends ArmyMember {
+    new (class extends ChorusMember {
       public override readonly height = 1.85 - 0.15;
     })().design(),
   "A derived scale that only drifts by float representation must be accepted.",

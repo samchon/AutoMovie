@@ -38,10 +38,6 @@ const SUPPORTED_MODEL_CAPABILITIES: Record<
   ReadonlySet<string>
 > = {
   stickman: new Set(["signal"]),
-  horse: new Set(),
-  artillery: new Set(),
-  flag: new Set(),
-  weapon: new Set(),
   "primitive-prop": new Set(),
 };
 
@@ -1463,25 +1459,6 @@ const MODEL_PARAMETERS: Record<
     headRadius: ["number", 0.05, 0.5],
     limbRadius: ["number", 0.01, 0.25],
   },
-  horse: {
-    length: ["number", 0.5, 4],
-    height: ["number", 0.5, 3],
-    legLength: ["number", 0.2, 2],
-  },
-  artillery: {
-    barrelLength: ["number", 0.2, 8],
-    wheelRadius: ["number", 0.1, 3],
-    gauge: ["number", 0.2, 5],
-  },
-  flag: {
-    width: ["number", 0.1, 10],
-    height: ["number", 0.1, 10],
-    poleHeight: ["number", 0.2, 20],
-  },
-  weapon: {
-    length: ["number", 0.05, 8],
-    thickness: ["number", 0.001, 1],
-  },
   "primitive-prop": {
     shape: ["string"],
     width: ["number", 0.001, 100],
@@ -1496,10 +1473,6 @@ const REQUIRED_MODEL_PARAMETERS: Record<
   readonly string[]
 > = {
   stickman: ["height", "headRadius", "limbRadius"],
-  horse: ["length", "height", "legLength"],
-  artillery: ["barrelLength", "wheelRadius", "gauge"],
-  flag: ["width", "height", "poleHeight"],
-  weapon: ["length", "thickness"],
 };
 
 const PRIMITIVE_PROP_DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
