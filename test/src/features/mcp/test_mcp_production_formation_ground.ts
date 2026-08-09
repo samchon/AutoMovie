@@ -247,14 +247,18 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  * 10. A unit is judged by its own four corners rather than the box around them,
  *     which a diamond floor separates: turned, the box reaches past ground
  *     every corner of the unit is still standing on.
- * 11. Ground is not convex, so a straight walk between two places that each carry
+ * 11. The same unit and turn over a floor between the two numbers is refused,
+ *     because the corner partway through the turn clears neither end's floor.
+ *     With the case above it brackets where the unit is really widest, which is
+ *     inside the turn and not at either end of it.
+ * 12. Ground is not convex, so a straight walk between two places that each carry
  *     the unit is not itself carried. One crossing a crossroads corner to
  *     corner stands on the north road, ends on the east road, and passes over
  *     the quadrant between them, which reading only the ends cannot see any
  *     more for a walk than for a turn.
- * 12. A unit carried the length of a road that does carry it is accepted, so what
+ * 13. A unit carried the length of a road that does carry it is accepted, so what
  *     the interior walk refuses is a crossing and not a journey.
- * 13. A cue turning far enough to reach the sample cap is walked from a unit that
+ * 14. A cue turning far enough to reach the sample cap is walked from a unit that
  *     does stand where it starts, so the walk runs rather than stopping at
  *     rest, and it still reaches an interior sample and names it. What
  *     resolution the cap left is not observed, only that an enormous turn is
@@ -467,13 +471,26 @@ export const test_mcp_production_formation_ground = (): void => {
 
   // The box around a turned unit is bigger than the unit, and on a square floor
   // the two agree: the box's half-extents are exactly the unit's widest corners
-  // in each axis. A diamond separates them. Turned a quarter of a right angle,
-  // this unit's four corners all sit at |x| + |z| = 12.73 while its box corners
-  // sit at 14.14, so a floor reaching 13.5 carries the unit and not its box.
+  // in each axis. A diamond separates them, where `|x| + |z|` is what a floor
+  // bounds. Through this quarter of a right angle the unit's furthest corner
+  // reaches 12.81, at 38.7 degrees rather than at either end, while the box
+  // around it reaches 14.14; a floor reaching 13.5 carries the one and not the
+  // other. The interior is where the unit is widest, so an end-reading of this
+  // case would understate its own margin.
   TestValidator.equals(
     "a unit is judged by its own corners, not the box around them",
     codes(diamond(13.5), [lance(9, 1)], [turn(45)]),
     [],
+  );
+
+  // The same unit through the same turn, over a floor between the two numbers.
+  // Both ends clear 12.75 and the corner at 38.7 degrees does not, so only a
+  // gate that looks inside the turn refuses it. With the case above, the two
+  // bracket where this unit is really widest: past 12.75 and short of 13.5.
+  TestValidator.equals(
+    "a unit widest partway through its turn is refused by a floor its ends clear",
+    codes(diamond(12.75), [lance(9, 1)], [turn(45)]),
+    ["engine-validation-failed"],
   );
 
   // Ground is not convex, so a straight walk between two places that carry the
@@ -509,8 +526,9 @@ export const test_mcp_production_formation_ground = (): void => {
     [],
   );
 
-  // A cue may legally turn through 360,000 degrees, which without a cap would
-  // be a hundred thousand measurements for one unit. This unit stands on the
+  // A cue's turn is a plain unbounded number, and a thousand revolutions of one
+  // would be hundreds of thousands of measurements without a cap on the samples
+  // one cue may take. This unit stands on the
   // road it starts on, so the walk really runs rather than stopping at rest,
   // and it still reaches an interior sample and reports it. What the cap left
   // that sampling at — coarser, in proportion — is not observed here; only that

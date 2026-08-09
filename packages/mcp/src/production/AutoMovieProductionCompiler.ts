@@ -2835,11 +2835,12 @@ const validateCompiledShot = (
 /**
  * Metres a corner may travel between neighbouring samples inside one cue.
  *
- * Ground is judged in metres, so the resolution is stated in metres too. Half a
- * metre is under the width of anything a space calls a surface, so a corner
- * cannot step over a gap a unit could have fallen into without a sample landing
- * in it — for gaps at that scale and wider, which is the honest extent of the
- * claim.
+ * Ground is judged in metres, so the resolution is stated in metres too. What
+ * it buys is exactly this: no corner moves further than half a metre between
+ * one sample and the next, so a stretch of void wider than that has a sample in
+ * it. A narrower one can still be stepped over. Nothing requires an authored
+ * surface to be wide, so that is a limit of the gate and not a claim about
+ * spaces.
  */
 const FORMATION_GROUND_SAMPLE_METRES = 0.5;
 
@@ -2847,10 +2848,10 @@ const FORMATION_GROUND_SAMPLE_METRES = 0.5;
  * Samples one cue may take, however far it carries a unit.
  *
  * A cue's turn and travel are plain unbounded numbers, and holding the
- * resolution over a turn of a thousand revolutions would cost a hundred
- * thousand samples for one unit. Past this the walk stays bounded and the
- * resolution coarsens in proportion, which is the trade a gate that samples has
- * to make somewhere and had better say out loud.
+ * resolution over a turn of a thousand revolutions would cost a unit of
+ * ordinary size hundreds of thousands of samples. Past this the walk stays
+ * bounded and the resolution coarsens in proportion, which is the trade a gate
+ * that samples has to make somewhere and had better say out loud.
  */
 const FORMATION_GROUND_SAMPLE_LIMIT = 360;
 
@@ -2930,7 +2931,7 @@ const formationGroundSampleTimes = (
     cue.start,
     ...Array.from(
       { length: Math.max(0, steps - 1) },
-      (_unused, index) => cue.start + (span * (index + 1)) / steps,
+      (_, index) => cue.start + (span * (index + 1)) / steps,
     ),
     cue.end,
   ];
