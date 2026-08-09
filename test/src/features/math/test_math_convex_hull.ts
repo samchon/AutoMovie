@@ -7,7 +7,7 @@ import {
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const v = (x: number, z: number) => ({ x, y: 0, z });
 
@@ -89,9 +89,13 @@ export const test_math_convex_hull = (): void => {
   const edge = nearestHullEdge(v(3, 1), square);
   TestValidator.predicate("nearest edge distance", nclose(edge.distance, 1));
   const single = nearestHullEdge(v(3, 0), [v(0, 0)]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "single-vertex hull yields a zero-length edge",
-    nclose(single.distance, 3) && vclose(single.start, single.end),
+    namedFacts([
+      ["vertexDistance", () => nclose(single.distance, 3)],
+      ["edgeCollapsed", () => vclose(single.start, single.end)],
+    ]),
+    { vertexDistance: true, edgeCollapsed: true },
   );
 
   TestValidator.predicate(

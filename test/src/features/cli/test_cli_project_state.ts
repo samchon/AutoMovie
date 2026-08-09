@@ -492,12 +492,19 @@ export const test_cli_project_state = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a malformed ownership manifest is stale rather than missing",
-      invalidManifest.freshness.status === "stale" &&
-        invalidManifest.freshness.problems.some(
-          (problem) => problem.code === "generated-manifest-invalid",
-        ),
+      namedFacts([
+        ["stale", () => invalidManifest.freshness.status === "stale"],
+        [
+          "manifestInvalidReported",
+          () =>
+            invalidManifest.freshness.problems.some(
+              (problem) => problem.code === "generated-manifest-invalid",
+            ),
+        ],
+      ]),
+      { stale: true, manifestInvalidReported: true },
     );
 
     const compilerLint = AutoMovieProductionCompiler.prototype.lint;
@@ -524,16 +531,27 @@ export const test_cli_project_state = (): void => {
     };
     const invalidStatus = loadAutoMovieProjectState({ root: fixture.root });
     AutoMovieProductionCompiler.prototype.lint = compilerLint;
-    TestValidator.predicate(
+    TestValidator.equals(
       "unavailable and unsuccessful current compilation are distinguished",
-      unavailableStatus.freshness.problems.some(
-        (problem) =>
-          problem.code === "compile-status-unavailable" &&
-          problem.message === "lint unavailable",
-      ) &&
-        invalidStatus.freshness.problems.some(
-          (problem) => problem.code === "current-compile-invalid",
-        ),
+      namedFacts([
+        [
+          "unavailableCarriesCause",
+          () =>
+            unavailableStatus.freshness.problems.some(
+              (problem) =>
+                problem.code === "compile-status-unavailable" &&
+                problem.message === "lint unavailable",
+            ),
+        ],
+        [
+          "unsuccessfulReportedInvalid",
+          () =>
+            invalidStatus.freshness.problems.some(
+              (problem) => problem.code === "current-compile-invalid",
+            ),
+        ],
+      ]),
+      { unavailableCarriesCause: true, unsuccessfulReportedInvalid: true },
     );
 
     const lint = AutoMovieProductionCompiler.prototype.lint;
@@ -569,28 +587,61 @@ export const test_cli_project_state = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "source changes between fingerprint fences cannot look current",
-      raced.freshness.status === "stale" &&
-        raced.freshness.problems.some(
-          (problem) => problem.code === "project-state-changed",
-        ) &&
-        raced.freshness.currentFingerprint !==
-          raced.freshness.compileFingerprint &&
-        refusesCurrent(raced),
+      namedFacts([
+        ["stale", () => raced.freshness.status === "stale"],
+        [
+          "changeReported",
+          () =>
+            raced.freshness.problems.some(
+              (problem) => problem.code === "project-state-changed",
+            ),
+        ],
+        [
+          "fingerprintsDiverged",
+          () =>
+            raced.freshness.currentFingerprint !==
+            raced.freshness.compileFingerprint,
+        ],
+        ["refusesCurrent", () => refusesCurrent(raced)],
+      ]),
+      {
+        stale: true,
+        changeReported: true,
+        fingerprintsDiverged: true,
+        refusesCurrent: true,
+      },
     );
 
     fs.appendFileSync(sourcePath, "\n// stale reader fixture\n");
     const stale = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "source drift preserves the identified old snapshot but marks it stale",
-      stale.freshness.status === "stale" &&
-        stale.freshness.compileFingerprint ===
-          compiled.compiler.inputFingerprint &&
-        stale.freshness.currentFingerprint !==
-          stale.freshness.compileFingerprint &&
-        stale.generated.shots.has("opening") &&
-        refusesCurrent(stale),
+      namedFacts([
+        ["staleStatus", () => stale.freshness.status === "stale"],
+        [
+          "snapshotIdentityKept",
+          () =>
+            stale.freshness.compileFingerprint ===
+            compiled.compiler.inputFingerprint,
+        ],
+        [
+          "fingerprintsDiverged",
+          () =>
+            stale.freshness.currentFingerprint !==
+            stale.freshness.compileFingerprint,
+        ],
+        ["shotPreserved", () => stale.generated.shots.has("opening")],
+        ["refusesCurrent", () => refusesCurrent(stale)],
+      ]),
+      {
+        staleStatus: true,
+        snapshotIdentityKept: true,
+        fingerprintsDiverged: true,
+        shotPreserved: true,
+        refusesCurrent: true,
+      },
     );
 
     fs.writeFileSync(sourcePath, originalSource);
@@ -600,16 +651,31 @@ export const test_cli_project_state = (): void => {
     );
     fs.appendFileSync(generatedShot, "\n");
     const modified = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "modified compiler bytes are excluded and reported stale",
-      modified.freshness.status === "stale" &&
-        modified.freshness.problems.some(
-          (problem) =>
-            problem.code === "generated-file-modified" &&
-            problem.path === "shots/opening.json",
-        ) &&
-        modified.generated.shots.has("opening") === false &&
-        refusesCurrent(modified),
+      namedFacts([
+        ["staleStatus", () => modified.freshness.status === "stale"],
+        [
+          "modificationReported",
+          () =>
+            modified.freshness.problems.some(
+              (problem) =>
+                problem.code === "generated-file-modified" &&
+                problem.path === "shots/opening.json",
+            ),
+        ],
+        [
+          "shotExcluded",
+          () => modified.generated.shots.has("opening") === false,
+        ],
+        ["refusesCurrent", () => refusesCurrent(modified)],
+      ]),
+      {
+        staleStatus: true,
+        modificationReported: true,
+        shotExcluded: true,
+        refusesCurrent: true,
+      },
     );
   } catch (error) {
     projectStateFailure = { error };

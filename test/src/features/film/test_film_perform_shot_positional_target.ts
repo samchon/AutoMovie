@@ -350,13 +350,37 @@ export const test_film_perform_shot_positional_target = (): void => {
   // 2. an unknown id is named, per verb, at its own path.
   for (const [label, action, path] of UNRESOLVED_BY_VERB) {
     const performed = perform([action]);
-    TestValidator.predicate(
+    TestValidator.equals(
       `${label} names the unresolved id, not the discriminator`,
-      says(performed, path, '"ghost"', "is not placed in the staged scene") &&
-        performed.success === false &&
-        performed.violations.every(
-          (item) => !item.expected.includes('not "node"'),
-        ),
+      namedFacts([
+        [
+          "namesTheUnplacedId",
+          () =>
+            says(
+              performed,
+              path,
+              '"ghost"',
+              "is not placed in the staged scene",
+            ),
+        ],
+        ["refused", () => performed.success === false],
+        // the failure check is restated because the earlier fact's narrowing of
+        // the result union does not reach inside this closure, and only the
+        // failed arm carries `violations`.
+        [
+          "neverEchoesTheDiscriminator",
+          () =>
+            performed.success === false &&
+            performed.violations.every(
+              (item) => !item.expected.includes('not "node"'),
+            ),
+        ],
+      ]),
+      {
+        namesTheUnplacedId: true,
+        refused: true,
+        neverEchoesTheDiscriminator: true,
+      },
     );
   }
 

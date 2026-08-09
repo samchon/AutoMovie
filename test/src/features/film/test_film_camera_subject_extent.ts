@@ -145,11 +145,23 @@ export const test_film_camera_subject_extent = (): void => {
     "the rig measurement is the joint span, not the figure",
     nclose(jointSpan, HEIGHT * 0.68, 1e-9),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the drawn extent is the figure, floor to crown",
-    extent !== null &&
-      nclose(extent.min, 0, 1e-9) &&
-      nclose(extent.max, HEIGHT, 1e-9),
+    namedFacts([
+      ["extentMeasured", () => extent !== null],
+      [
+        "floorAtZero",
+        // The null check is restated because the narrowing the first fact
+        // performs does not reach inside this closure.
+        () => extent !== null && nclose(extent.min, 0, 1e-9),
+      ],
+      [
+        "crownAtHeight",
+        // Same restated guard, for the same reason.
+        () => extent !== null && nclose(extent.max, HEIGHT, 1e-9),
+      ],
+    ]),
+    { extentMeasured: true, floorAtZero: true, crownAtHeight: true },
   );
 
   // The band a `full` shot shows, in world Y, given a base at the ground.
@@ -184,11 +196,23 @@ export const test_film_camera_subject_extent = (): void => {
     skeleton: null,
   };
   const propExtent = computeModelRestExtentY(prop);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a rigless prop measures from its own geometry",
-    propExtent !== null &&
-      nclose(propExtent.min, 0, 1e-9) &&
-      nclose(propExtent.max, 2, 1e-9),
+    namedFacts([
+      ["propMeasured", () => propExtent !== null],
+      [
+        "propFloorAtZero",
+        // The null check is restated because the narrowing the first fact
+        // performs does not reach inside this closure.
+        () => propExtent !== null && nclose(propExtent.min, 0, 1e-9),
+      ],
+      [
+        "propCrownAtTwo",
+        // Same restated guard, for the same reason.
+        () => propExtent !== null && nclose(propExtent.max, 2, 1e-9),
+      ],
+    ]),
+    { propMeasured: true, propFloorAtZero: true, propCrownAtTwo: true },
   );
   TestValidator.equals(
     "a model with nothing drawn measures nothing",

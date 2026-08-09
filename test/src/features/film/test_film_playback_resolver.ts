@@ -143,9 +143,13 @@ export const test_film_playback_resolver = (): void => {
   TestValidator.equals("before the film", at(-1), null);
   TestValidator.equals("at the exclusive end", at(7.5), null);
   const t0 = at(0)!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "first frame",
-    t0.shot === "shot:beat-1" && nclose(t0.time, 0),
+    namedFacts([
+      ["opensOnTheFirstShot", () => t0.shot === "shot:beat-1"],
+      ["atLocalZero", () => nclose(t0.time, 0)],
+    ]),
+    { opensOnTheFirstShot: true, atLocalZero: true },
   );
   TestValidator.predicate(
     "duplicate playback shots reject ambiguous lookup",

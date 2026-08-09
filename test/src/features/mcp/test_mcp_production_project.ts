@@ -821,18 +821,33 @@ export const test_mcp_production_project = (): void => {
       },
     );
     const unrelatedDuringMigration = project.setWorldDesign(worldDesign());
-    TestValidator.predicate(
+    TestValidator.equals(
       "an unrelated setter does not claim a pre-existing migration blocker as its consequence",
-      unrelatedDuringMigration.accepted &&
-        unrelatedDuringMigration.diagnostics.every(
-          (diagnostic) => diagnostic.code !== "design-downstream-invalidated",
-        ),
+      namedFacts([
+        ["accepted", () => unrelatedDuringMigration.accepted],
+        [
+          "noDownstreamBlame",
+          () =>
+            unrelatedDuringMigration.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.code !== "design-downstream-invalidated",
+            ),
+        ],
+      ]),
+      { accepted: true, noDownstreamBlame: true },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "restoring the upstream contract clears the staged dependency break",
-      project.setShotContract(shotContract()).accepted &&
-        new AutoMovieProductionCompiler(project).lint({ scope: "design" })
-          .success,
+      namedFacts([
+        ["restored", () => project.setShotContract(shotContract()).accepted],
+        [
+          "lintClean",
+          () =>
+            new AutoMovieProductionCompiler(project).lint({ scope: "design" })
+              .success,
+        ],
+      ]),
+      { restored: true, lintClean: true },
     );
     TestValidator.equals(
       "source ownership rejects absolute, external and non-TypeScript paths",
@@ -946,10 +961,16 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "source reads bind bytes to the verified descriptor across a pathname swap",
-      sourcePathRead === false &&
-        Buffer.from(sourceReadBytes).equals(sourceReadBefore),
+      namedFacts([
+        ["noPathRead", () => sourcePathRead === false],
+        [
+          "residentBytes",
+          () => Buffer.from(sourceReadBytes).equals(sourceReadBefore),
+        ],
+      ]),
+      { noPathRead: true, residentBytes: true },
     );
 
     const projectManifestPath = path.join(
@@ -1306,16 +1327,27 @@ export const test_mcp_production_project = (): void => {
         projectEraseDesignArtifact2: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "temporary film acceptances erase without a cascade",
-      project.eraseDesignArtifact({
-        kind: "acceptance",
-        id: filmAcceptance.id,
-      }).accepted &&
-        project.eraseDesignArtifact({
-          kind: "acceptance",
-          id: filmEventAcceptance.id,
-        }).accepted,
+      namedFacts([
+        [
+          "beautyErased",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: filmAcceptance.id,
+            }).accepted,
+        ],
+        [
+          "eventErased",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: filmEventAcceptance.id,
+            }).accepted,
+        ],
+      ]),
+      { beautyErased: true, eventErased: true },
     );
     TestValidator.predicate(
       "shot frame clocks retain the singleton production design",
@@ -1376,10 +1408,20 @@ export const test_mcp_production_project = (): void => {
       },
     ];
     project.setShotContract(landmarkShot);
-    TestValidator.predicate(
+    TestValidator.equals(
       "both distance operands preserve their referenced landmark world",
-      landmarkAsDistanceDestination.accepted === false &&
-        project.eraseDesignArtifact({ kind: "world" }).accepted === false,
+      namedFacts([
+        [
+          "destinationRefused",
+          () => landmarkAsDistanceDestination.accepted === false,
+        ],
+        [
+          "originRefused",
+          () =>
+            project.eraseDesignArtifact({ kind: "world" }).accepted === false,
+        ],
+      ]),
+      { destinationRefused: true, originRefused: true },
     );
     project.setShotContract(shotContract());
     const standaloneModel = {
@@ -1393,13 +1435,20 @@ export const test_mcp_production_project = (): void => {
         },
       ],
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "a model's self LOD does not make the model impossible to erase",
-      project.setModelRecipe(standaloneModel).accepted &&
-        project.eraseDesignArtifact({
-          kind: "model",
-          id: standaloneModel.id,
-        }).accepted,
+      namedFacts([
+        ["accepted", () => project.setModelRecipe(standaloneModel).accepted],
+        [
+          "erased",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "model",
+              id: standaloneModel.id,
+            }).accepted,
+        ],
+      ]),
+      { accepted: true, erased: true },
     );
     project.setFormationDesign(formationDesign());
     const dependentModel = {
@@ -1664,12 +1713,19 @@ export const test_mcp_production_project = (): void => {
     const refusedRepaint = project.setProductionDesign(
       productionDesign({ visualDelivery: "repainted" }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "refused delivery mutations retain only current review targets",
-      refusedRepaint.accepted === false &&
-        refusedRepaint.consequences.staleReviews.some(
-          (target) => target.kind === "rendition",
-        ) === false,
+      namedFacts([
+        ["refused", () => refusedRepaint.accepted === false],
+        [
+          "noRenditionReviews",
+          () =>
+            refusedRepaint.consequences.staleReviews.some(
+              (target) => target.kind === "rendition",
+            ) === false,
+        ],
+      ]),
+      { refused: true, noRenditionReviews: true },
     );
     const repaintedProduction = productionDesign({
       visualDelivery: "repainted",
@@ -2073,10 +2129,16 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "generated reads bind bytes to the verified descriptor across a pathname swap",
-      generatedPathRead === false &&
-        Buffer.from(generatedReadBytes).equals(generatedReadBefore),
+      namedFacts([
+        ["noPathRead", () => generatedPathRead === false],
+        [
+          "residentBytes",
+          () => Buffer.from(generatedReadBytes).equals(generatedReadBefore),
+        ],
+      ]),
+      { noPathRead: true, residentBytes: true },
     );
     const linkedGenerated = productionFixture();
     let outsideGenerated: string | undefined;
@@ -2254,10 +2316,20 @@ export const test_mcp_production_project = (): void => {
       ]);
     }
     const ownerProject = AutoMovieProductionProject.open(fixture.root);
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing keyed design reads are explicit",
-      ownerProject.design({ kind: "shot", id: "absent" }) === null &&
-        ownerProject.design({ kind: "acceptance", id: "absent" }) === null,
+      namedFacts([
+        [
+          "missingShot",
+          () => ownerProject.design({ kind: "shot", id: "absent" }) === null,
+        ],
+        [
+          "missingAcceptance",
+          () =>
+            ownerProject.design({ kind: "acceptance", id: "absent" }) === null,
+        ],
+      ]),
+      { missingShot: true, missingAcceptance: true },
     );
     const oldManifest = ownerProject.generatedManifest()!;
     const retained = oldManifest.files.filter((entry) =>
@@ -2405,36 +2477,47 @@ export const test_mcp_production_project = (): void => {
         path.join(ownerProject.generatedRoot(), "shots/opening.json"),
       ) === false,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "generated and render writes cannot escape owned roots",
-      throws(() =>
-        ownerProject.commitGenerated(
-          new Map([["../escape", Buffer.from("x")]]),
-          oldManifest,
-        ),
-      ) &&
-        throws(() =>
-          ownerProject.commitRenderBundle("../escape", new Map(), {
-            version: 3,
-            target: { kind: "shot", id: "opening" },
-            compileFingerprint: oldManifest.inputFingerprint,
-            rendererIdentity: testRendererIdentity(),
-            targetFingerprint: productionRenderTargetFingerprint(
-              ownerProject,
-              oldManifest,
-              { kind: "shot", id: "opening" },
+      namedFacts([
+        [
+          "generatedRefused",
+          () =>
+            throws(() =>
+              ownerProject.commitGenerated(
+                new Map([["../escape", Buffer.from("x")]]),
+                oldManifest,
+              ),
             ),
-            renderSpec: {
-              target: "opening",
-              frameFormat: { width: 1, height: 1, fps: 1 },
-              toneMapping: "none",
-              codec: "h264",
-              pixelFormat: "yuv420p",
-              crf: 17,
-            },
-            frames: [],
-          }),
-        ),
+        ],
+        [
+          "renderRefused",
+          () =>
+            throws(() =>
+              ownerProject.commitRenderBundle("../escape", new Map(), {
+                version: 3,
+                target: { kind: "shot", id: "opening" },
+                compileFingerprint: oldManifest.inputFingerprint,
+                rendererIdentity: testRendererIdentity(),
+                targetFingerprint: productionRenderTargetFingerprint(
+                  ownerProject,
+                  oldManifest,
+                  { kind: "shot", id: "opening" },
+                ),
+                renderSpec: {
+                  target: "opening",
+                  frameFormat: { width: 1, height: 1, fps: 1 },
+                  toneMapping: "none",
+                  codec: "h264",
+                  pixelFormat: "yuv420p",
+                  crf: 17,
+                },
+                frames: [],
+              }),
+            ),
+        ],
+      ]),
+      { generatedRefused: true, renderRefused: true },
     );
 
     const renderImage = new PNG({ width: 1, height: 1 });
@@ -2574,9 +2657,13 @@ export const test_mcp_production_project = (): void => {
     const missingRenderFrame =
       ownerProject.verifiedRenderManifest(renderManifestPath);
     fs.writeFileSync(renderImagePath, renderImageBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "manifest ownership includes every declared frame's current PNG bytes",
-      tamperedRenderFrame === null && missingRenderFrame === null,
+      namedFacts([
+        ["tamperedRejected", () => tamperedRenderFrame === null],
+        ["missingRejected", () => missingRenderFrame === null],
+      ]),
+      { tamperedRejected: true, missingRejected: true },
     );
     const renderReceiptDirectory = path.join(
       fixture.root,
@@ -2737,10 +2824,19 @@ export const test_mcp_production_project = (): void => {
         ownerProjectVerifiedRenderManifest: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render reads reject absent paths and directories",
-      throws(() => ownerProject.readRenderFile("absent.bin")) &&
-        throws(() => ownerProject.readRenderFile(renderBundle)),
+      namedFacts([
+        [
+          "absentRejected",
+          () => throws(() => ownerProject.readRenderFile("absent.bin")),
+        ],
+        [
+          "directoryRejected",
+          () => throws(() => ownerProject.readRenderFile(renderBundle)),
+        ],
+      ]),
+      { absentRejected: true, directoryRejected: true },
     );
     let outsideRenderReadFailure:
       | ISingleProductionProjectFixtureFailure
@@ -2775,12 +2871,23 @@ export const test_mcp_production_project = (): void => {
         "read-parent-file",
       );
       fs.writeFileSync(renderParentFile, "not a directory");
-      TestValidator.predicate(
+      TestValidator.equals(
         "render reads reject linked files and non-directory ancestry",
-        throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
-          throws(() =>
-            ownerProject.readRenderFile("read-parent-file/escape.bin"),
-          ),
+        namedFacts([
+          [
+            "linkedFileRejected",
+            () =>
+              throws(() => ownerProject.readRenderFile("read-file-link.bin")),
+          ],
+          [
+            "nonDirectoryParentRejected",
+            () =>
+              throws(() =>
+                ownerProject.readRenderFile("read-parent-file/escape.bin"),
+              ),
+          ],
+        ]),
+        { linkedFileRejected: true, nonDirectoryParentRejected: true },
       );
       fs.unlinkSync(renderFileLink);
       fs.rmSync(renderParentFile);
@@ -2839,9 +2946,13 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         "render reads compare descriptor identities within one platform API domain",
-        divergentPathIdentityObserved && crossApiIdentityRead === "resident",
+        namedFacts([
+          ["divergentIdentity", () => divergentPathIdentityObserved],
+          ["residentBytes", () => crossApiIdentityRead === "resident"],
+        ]),
+        { divergentIdentity: true, residentBytes: true },
       );
 
       const descriptorCleanupFile = path.join(
@@ -3427,9 +3538,16 @@ export const test_mcp_production_project = (): void => {
       } catch (error) {
         aggregate = error instanceof AggregateError;
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         "rollback failure is surfaced as an aggregate instead of hidden",
-        aggregate && ownerProject.revision() === revisionBeforeFailure,
+        namedFacts([
+          ["aggregate", () => aggregate],
+          [
+            "revisionUnchanged",
+            () => ownerProject.revision() === revisionBeforeFailure,
+          ],
+        ]),
+        { aggregate: true, revisionUnchanged: true },
       );
     } catch (error) {
       rollbackAggregateFailure = { error };
@@ -3818,19 +3936,26 @@ export const test_mcp_production_project = (): void => {
         }),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "declared content reads bind rooted, direct, and asset bytes to verified descriptors",
-      contentPathReads.size === 0 &&
-        [...contentReadResidents.values()].every((resident) => {
-          const input = boundContentInputs.find(
-            (candidate) => candidate.path === resident.relative,
-          );
-          return (
-            input?.bytes !== null &&
-            input?.bytes !== undefined &&
-            Buffer.from(input.bytes).equals(resident.bytes)
-          );
-        }),
+      namedFacts([
+        ["noPathReads", () => contentPathReads.size === 0],
+        [
+          "residentBytes",
+          () =>
+            [...contentReadResidents.values()].every((resident) => {
+              const input = boundContentInputs.find(
+                (candidate) => candidate.path === resident.relative,
+              );
+              return (
+                input?.bytes !== null &&
+                input?.bytes !== undefined &&
+                Buffer.from(input.bytes).equals(resident.bytes)
+              );
+            }),
+        ],
+      ]),
+      { noPathReads: true, residentBytes: true },
     );
     let outsideContentFailure:
       | ISingleProductionProjectFixtureFailure
@@ -4204,13 +4329,24 @@ export const test_mcp_production_project = (): void => {
   try {
     const fileRoot = path.join(invalidRoot, "file");
     fs.writeFileSync(fileRoot, "x");
-    TestValidator.predicate(
+    TestValidator.equals(
       "project root must be a directory",
-      throws(() => AutoMovieProductionProject.open(fileRoot)) &&
-        throws(
-          () => AutoMovieProductionProject.open(path.join(fileRoot, "child")),
-          "parent",
-        ),
+      namedFacts([
+        [
+          "fileRootRejected",
+          () => throws(() => AutoMovieProductionProject.open(fileRoot)),
+        ],
+        [
+          "fileParentRejected",
+          () =>
+            throws(
+              () =>
+                AutoMovieProductionProject.open(path.join(fileRoot, "child")),
+              "parent",
+            ),
+        ],
+      ]),
+      { fileRootRejected: true, fileParentRejected: true },
     );
     TestValidator.predicate(
       "project root must not be a filesystem root",
@@ -4259,10 +4395,18 @@ export const test_mcp_production_project = (): void => {
     }) as typeof fs.writeFileSync;
     let existingRootHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "an existing writable project does not require writable parent access",
-        AutoMovieProductionProject.open(fresh).root ===
-          fs.realpathSync(fresh) && attemptedParentSiblingLock === false,
+        namedFacts([
+          [
+            "openedInPlace",
+            () =>
+              AutoMovieProductionProject.open(fresh).root ===
+              fs.realpathSync(fresh),
+          ],
+          ["noParentLock", () => attemptedParentSiblingLock === false],
+        ]),
+        { openedInPlace: true, noParentLock: true },
       );
     } catch (error) {
       existingRootHookFailure = { error };
@@ -4278,10 +4422,23 @@ export const test_mcp_production_project = (): void => {
       ]);
     }
     const nestedFresh = path.join(invalidRoot, "missing", "nested", "project");
-    TestValidator.predicate(
+    TestValidator.equals(
       "fresh project recursively creates a missing nested root",
-      AutoMovieProductionProject.open(nestedFresh).root === nestedFresh &&
-        fs.existsSync(path.join(nestedFresh, ".automovie/incarnation.json")),
+      namedFacts([
+        [
+          "nestedRoot",
+          () =>
+            AutoMovieProductionProject.open(nestedFresh).root === nestedFresh,
+        ],
+        [
+          "incarnationWritten",
+          () =>
+            fs.existsSync(
+              path.join(nestedFresh, ".automovie/incarnation.json"),
+            ),
+        ],
+      ]),
+      { nestedRoot: true, incarnationWritten: true },
     );
     const physicalAliasParent = path.join(invalidRoot, "physical-alias-parent");
     const aliasParent = path.join(invalidRoot, "alias-parent");
@@ -4424,9 +4581,13 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a requested alias swapped after physical lock acquisition is rejected",
-      requestedSwapRejected && requestedRootLocks === 2,
+      namedFacts([
+        ["rejected", () => requestedSwapRejected],
+        ["bothCoordinates", () => requestedRootLocks === 2],
+      ]),
+      { rejected: true, bothCoordinates: true },
     );
     const filesystemRoot = path.parse(invalidRoot).root;
     const nativeLstatForMissingBase = fs.lstatSync;
@@ -4743,9 +4904,13 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "root namespace assertions bind fence tokens to descriptors",
-      fenceAssertionSucceeded && fencePathRead === false,
+      namedFacts([
+        ["asserted", () => fenceAssertionSucceeded],
+        ["noPathRead", () => fencePathRead === false],
+      ]),
+      { asserted: true, noPathRead: true },
     );
     // A guarded commit runs the read-only compiler gate, which commits its own
     // snapshot, so one process reaches the same root coordinate twice. That is
@@ -5980,10 +6145,17 @@ export const test_mcp_production_project = (): void => {
       path.join(stateJunctionRoot, ".automovie"),
       "junction",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "reserved state cannot escape through a junction",
-      throws(() => AutoMovieProductionProject.open(stateJunctionRoot)) &&
-        fs.readdirSync(stateOutside).length === 0,
+      namedFacts([
+        [
+          "rejected",
+          () =>
+            throws(() => AutoMovieProductionProject.open(stateJunctionRoot)),
+        ],
+        ["outsideUntouched", () => fs.readdirSync(stateOutside).length === 0],
+      ]),
+      { rejected: true, outsideUntouched: true },
     );
 
     const invalidIncarnationRoot = path.join(

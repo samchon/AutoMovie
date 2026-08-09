@@ -9,7 +9,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const followFrame: IAutoMovieCameraAction = {
   verb: "frame",
@@ -147,10 +147,16 @@ export const test_film_perform_shot_camera_follow = (): void => {
   if (turned.success === true) {
     const tr = turned.shot.cameraMotion!.tracks[0]!;
     const n = tr.values.length;
-    TestValidator.predicate(
+    TestValidator.equals(
       "a +X model march under +90° facing renders as a world −Z follow",
-      nclose(tr.values[n - 3]! - tr.values[0]!, 0, 1e-6) &&
-        nclose(tr.values[n - 1]! - tr.values[2]!, -1, 1e-6),
+      namedFacts([
+        ["noXDrift", () => nclose(tr.values[n - 3]! - tr.values[0]!, 0, 1e-6)],
+        [
+          "travelsOneDownZ",
+          () => nclose(tr.values[n - 1]! - tr.values[2]!, -1, 1e-6),
+        ],
+      ]),
+      { noXDrift: true, travelsOneDownZ: true },
     );
   }
 };

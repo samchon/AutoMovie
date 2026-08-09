@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -146,19 +147,35 @@ export const test_cli_root_fixture_cleanup = (): void => {
   const primaryOnly = captureCleanup({ primaryFailure });
   const standalone = captureCleanup({ cleanupFailure });
   const combined = captureCleanup({ cleanupFailure, primaryFailure });
-  TestValidator.predicate(
+  TestValidator.equals(
     "single-root CLI cleanup preserves exact failure identity and order",
-    success.failure === undefined &&
-      success.attempts === 1 &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      standalone.failure === cleanupFailure &&
-      standalone.attempts === 1 &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1,
+    namedFacts([
+      ["successSilent", () => success.failure === undefined],
+      ["successRemoved", () => success.attempts === 1],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyRemoved", () => primaryOnly.attempts === 1],
+      ["standalonePreserved", () => standalone.failure === cleanupFailure],
+      ["standaloneRemoved", () => standalone.attempts === 1],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedRemoved", () => combined.attempts === 1],
+    ]),
+    {
+      successSilent: true,
+      successRemoved: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyRemoved: true,
+      standalonePreserved: true,
+      standaloneRemoved: true,
+      combinedAggregated: true,
+      combinedRemoved: true,
+    },
   );
   TestValidator.equals(
     "single-root CLI cleanup policy preserves both phases",

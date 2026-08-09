@@ -1113,13 +1113,20 @@ export const test_mcp_production_review = async (): Promise<void> => {
       (evidence) => evidence.kind !== "outcome",
     );
     const contractOnlyResult = review.submit(contractOnlyWorksheet);
-    TestValidator.predicate(
+    TestValidator.equals(
       "event and metric contracts cannot replace passing measured outcomes",
-      contractOnlyResult.accepted === false &&
-        contractOnlyResult.diagnostics.filter(
-          (diagnostic) =>
-            diagnostic.code === "review-acceptance-coverage-incomplete",
-        ).length >= 2,
+      namedFacts([
+        ["refused", () => contractOnlyResult.accepted === false],
+        [
+          "bothScenariosUncovered",
+          () =>
+            contractOnlyResult.diagnostics.filter(
+              (diagnostic) =>
+                diagnostic.code === "review-acceptance-coverage-incomplete",
+            ).length >= 2,
+        ],
+      ]),
+      { refused: true, bothScenariosUncovered: true },
     );
     const acceptanceTarget = {
       kind: "design" as const,
@@ -1218,9 +1225,13 @@ export const test_mcp_production_review = async (): Promise<void> => {
     };
     const sourcePrepared = review.prepare({ target: sourceTarget });
     const revise = review.submit(worksheet(project, sourcePrepared, false));
-    TestValidator.predicate(
+    TestValidator.equals(
       "an evidenced revise worksheet remains incomplete",
-      revise.accepted && revise.state === "revise",
+      namedFacts([
+        ["stored", () => revise.accepted],
+        ["reviseState", () => revise.state === "revise"],
+      ]),
+      { stored: true, reviseState: true },
     );
     const incompleteSheet = worksheet(project, sourcePrepared, false);
     incompleteSheet.checks.forEach((check) => {
@@ -1897,16 +1908,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
         digest: frame.digest,
       },
     ];
-    TestValidator.predicate(
+    TestValidator.equals(
       "visual evidence must be current and in bounds",
-      review
-        .submit(badRegion)
-        .diagnostics.some(
-          (item) => item.code === "review-evidence-region-invalid",
-        ) &&
-        review
-          .submit(staleFrame)
-          .diagnostics.some((item) => item.code === "review-evidence-stale"),
+      namedFacts([
+        [
+          "regionOutOfBounds",
+          () =>
+            review
+              .submit(badRegion)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-region-invalid",
+              ),
+        ],
+        [
+          "frameStale",
+          () =>
+            review
+              .submit(staleFrame)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-stale",
+              ),
+        ],
+      ]),
+      { regionOutOfBounds: true, frameStale: true },
     );
     const invalidRegions = [
       { x: 0.5, y: 0, width: 1, height: 1 },
@@ -2111,9 +2135,13 @@ export const test_mcp_production_review = async (): Promise<void> => {
     for (const entry of review.queue().entries) {
       const prepared = review.prepare({ target: entry.target });
       const result = review.submit(worksheet(project, prepared));
-      TestValidator.predicate(
+      TestValidator.equals(
         `complete review ${JSON.stringify(entry.target)}`,
-        result.accepted && result.state === "complete",
+        namedFacts([
+          ["stored", () => result.accepted],
+          ["completeState", () => result.state === "complete"],
+        ]),
+        { stored: true, completeState: true },
       );
     }
     TestValidator.predicate(

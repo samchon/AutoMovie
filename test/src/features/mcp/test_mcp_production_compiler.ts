@@ -235,9 +235,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
 
     const designOnly = compiler.lint({ scope: "design" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "read-only design lint does not materialize",
-      designOnly.success && designOnly.materialized.length === 0,
+      namedFacts([
+        ["lintSucceeded", () => designOnly.success],
+        ["nothingMaterialized", () => designOnly.materialized.length === 0],
+      ]),
+      { lintSucceeded: true, nothingMaterialized: true },
     );
     const preexistingGenerated = path.join(
       fixture.root,
@@ -1074,10 +1078,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         unmanifestedProject,
         () => ({ entries: [] }),
       ).lint({ scope: "source" });
-      TestValidator.predicate(
+      TestValidator.equals(
         "a referenced content file cannot become a film asset without a provenance manifest",
-        unmanifested.success === false &&
-          diagnosticCodes(unmanifested).has("film-audio-cue-invalid"),
+        namedFacts([
+          ["refused", () => unmanifested.success === false],
+          [
+            "audioCueInvalid",
+            () => diagnosticCodes(unmanifested).has("film-audio-cue-invalid"),
+          ],
+        ]),
+        { refused: true, audioCueInvalid: true },
       );
     } catch (error) {
       unmanifestedFixtureFailure = { error };
@@ -1098,12 +1108,20 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         return review.queue(status, snapshot);
       },
     ).compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "successful compile derives its response queue exactly once before commit",
-      productionCompileSucceeded(
-        "single review-queue compile",
-        singleQueueCompile,
-      ) && singleQueueCalls === 1,
+      namedFacts([
+        [
+          "compiled",
+          () =>
+            productionCompileSucceeded(
+              "single review-queue compile",
+              singleQueueCompile,
+            ),
+        ],
+        ["queuedOnce", () => singleQueueCalls === 1],
+      ]),
+      { compiled: true, queuedOnce: true },
     );
     fs.writeFileSync(
       sourcePath,
@@ -1379,12 +1397,25 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(recipeFile, JSON.stringify(recipeWithoutMaterial));
     const failedMaterialization = compiler.compile({ scope: "source" });
     fs.writeFileSync(recipeFile, recipeBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "invalid design is refused before compiler-owned model materialization",
-      diagnosticCodes(failedMaterialization).has("design-collection-empty") &&
-        diagnosticCodes(failedMaterialization).has(
-          "model-materialization-failed",
-        ) === false,
+      namedFacts([
+        [
+          "collectionEmpty",
+          () =>
+            diagnosticCodes(failedMaterialization).has(
+              "design-collection-empty",
+            ),
+        ],
+        [
+          "neverMaterialized",
+          () =>
+            diagnosticCodes(failedMaterialization).has(
+              "model-materialization-failed",
+            ) === false,
+        ],
+      ]),
+      { collectionEmpty: true, neverMaterialized: true },
     );
     project.setFormationDesign(formationDesign());
     const formationFile = path.join(
@@ -1546,24 +1577,46 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const reopenedWithFormation = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a restored valid formation changes identity and materializes its contract",
-      reopenedWithFormation.compiler.inputFingerprint !==
-        first.compiler.inputFingerprint &&
-        reopenedWithFormation.materialized.some(
-          (file) =>
-            file.path === "contracts/formations/line.json" &&
-            file.status === "created",
-        ),
+      namedFacts([
+        [
+          "identityChanged",
+          () =>
+            reopenedWithFormation.compiler.inputFingerprint !==
+            first.compiler.inputFingerprint,
+        ],
+        [
+          "formationCreated",
+          () =>
+            reopenedWithFormation.materialized.some(
+              (file) =>
+                file.path === "contracts/formations/line.json" &&
+                file.status === "created",
+            ),
+        ],
+      ]),
+      { identityChanged: true, formationCreated: true },
     );
     const reopened = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "reopen preserves the expanded identity and unchanged status",
-      reopened.compiler.inputFingerprint ===
-        reopenedWithFormation.compiler.inputFingerprint &&
-        reopened.materialized.every((file) => file.status === "unchanged"),
+      namedFacts([
+        [
+          "identityPreserved",
+          () =>
+            reopened.compiler.inputFingerprint ===
+            reopenedWithFormation.compiler.inputFingerprint,
+        ],
+        [
+          "allUnchanged",
+          () =>
+            reopened.materialized.every((file) => file.status === "unchanged"),
+        ],
+      ]),
+      { identityPreserved: true, allUnchanged: true },
     );
     const canonicalShotBytes = fs.readFileSync(
       path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
@@ -1587,10 +1640,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const normalizedSourceStatus = compiler.lint({ scope: "source" });
     fs.writeFileSync(boundSourcePath, boundSourceBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "bound TypeScript BOM and EOL changes do not re-enter through source-root content identity",
-      normalizedSourceStatus.compiler.inputFingerprint ===
-        reopened.compiler.inputFingerprint && normalizedSourceStatus.success,
+      namedFacts([
+        [
+          "identityUnmoved",
+          () =>
+            normalizedSourceStatus.compiler.inputFingerprint ===
+            reopened.compiler.inputFingerprint,
+        ],
+        ["lintSucceeded", () => normalizedSourceStatus.success],
+      ]),
+      { identityUnmoved: true, lintSucceeded: true },
     );
     const statusReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = ((relativePath: string) => {
@@ -1651,10 +1712,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(generatedShot, "{}\n");
     const tamperedLint = compiler.lint({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "lint refuses direct generated edits",
-      tamperedLint.success === false &&
-        diagnosticCodes(tamperedLint).has("generated-tampered"),
+      namedFacts([
+        ["refused", () => tamperedLint.success === false],
+        [
+          "tampered",
+          () => diagnosticCodes(tamperedLint).has("generated-tampered"),
+        ],
+      ]),
+      { refused: true, tampered: true },
     );
     const repaired = compiler.compile({ scope: "source" });
     TestValidator.equals(
@@ -1948,12 +2015,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       source: { module: "outside/source.ts", export: "opening" },
     };
     const outsideRootMutation = project.setShotContract(outsideRoot);
-    TestValidator.predicate(
+    TestValidator.equals(
       "canonical source outside configured roots reaches the compiler boundary",
-      outsideRootMutation.accepted &&
-        diagnosticCodes(compiler.compile({ scope: "source" })).has(
-          "source-path-outside-root",
-        ),
+      namedFacts([
+        ["committed", () => outsideRootMutation.accepted],
+        [
+          "outsideRoot",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "source-path-outside-root",
+            ),
+        ],
+      ]),
+      { committed: true, outsideRoot: true },
     );
     project.setShotContract(shotContract());
     const outside = {
@@ -1961,12 +2035,19 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       source: { module: "../outside.ts", export: "opening" },
     };
     const outsideMutation = project.setShotContract(outside);
-    TestValidator.predicate(
+    TestValidator.equals(
       "source traversal is refused before commit",
-      outsideMutation.accepted === false &&
-        outsideMutation.diagnostics.some(
-          (diagnostic) => diagnostic.code === "design-source-path-invalid",
-        ),
+      namedFacts([
+        ["refused", () => outsideMutation.accepted === false],
+        [
+          "sourcePathInvalid",
+          () =>
+            outsideMutation.diagnostics.some(
+              (diagnostic) => diagnostic.code === "design-source-path-invalid",
+            ),
+        ],
+      ]),
+      { refused: true, sourcePathInvalid: true },
     );
     TestValidator.predicate(
       "refused source traversal leaves the current source compilable",
@@ -2486,12 +2567,23 @@ ${original}`,
       throw new Error("design scope read declared content");
     }) as typeof project.contentInputs;
     const contentIndependentDesign = compiler.compile({ scope: "design" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "design scope does not read declared content or derive review fingerprints",
-      productionCompileSucceeded(
-        "content-independent design compile",
-        contentIndependentDesign,
-      ) && contentIndependentDesign.reviews.entries.length === 0,
+      namedFacts([
+        [
+          "compiled",
+          () =>
+            productionCompileSucceeded(
+              "content-independent design compile",
+              contentIndependentDesign,
+            ),
+        ],
+        [
+          "noReviewEntries",
+          () => contentIndependentDesign.reviews.entries.length === 0,
+        ],
+      ]),
+      { compiled: true, noReviewEntries: true },
     );
     for (const failure of [
       new Error("declared content junction"),
@@ -2506,15 +2598,25 @@ ${original}`,
         return iterator.throw(failure) as never;
       }) as typeof project.contentInputs;
       const unsafeContent = compiler.compile({ scope: "source" });
-      TestValidator.predicate(
+      TestValidator.equals(
         "declared content inventory failures are compiler diagnostics",
-        unsafeContent.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "content-input-unsafe" &&
-            diagnostic.message.includes(
-              String(failure instanceof Error ? failure.message : failure),
-            ),
-        ) && unsafeContent.reviews.entries.length === 0,
+        namedFacts([
+          [
+            "unsafeReported",
+            () =>
+              unsafeContent.diagnostics.some(
+                (diagnostic) =>
+                  diagnostic.code === "content-input-unsafe" &&
+                  diagnostic.message.includes(
+                    String(
+                      failure instanceof Error ? failure.message : failure,
+                    ),
+                  ),
+              ),
+          ],
+          ["noReviewEntries", () => unsafeContent.reviews.entries.length === 0],
+        ]),
+        { unsafeReported: true, noReviewEntries: true },
       );
     }
     project.contentInputs = residentContentInputs;
@@ -3265,12 +3367,19 @@ ${original}`,
     );
 
     const optionalFinalWithoutLedger = compiler.compile({ scope: "final" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "final scope requires an aggregate byte ledger even when every deliverable is optional",
-      optionalFinalWithoutLedger.success === false &&
-        diagnosticCodes(optionalFinalWithoutLedger).has(
-          "render-deliverable-missing",
-        ),
+      namedFacts([
+        ["refused", () => optionalFinalWithoutLedger.success === false],
+        [
+          "ledgerMissing",
+          () =>
+            diagnosticCodes(optionalFinalWithoutLedger).has(
+              "render-deliverable-missing",
+            ),
+        ],
+      ]),
+      { refused: true, ledgerMissing: true },
     );
 
     const requiredProduction = {
@@ -3513,18 +3622,32 @@ ${original}`,
       "final compile requires every declared deliverable",
       diagnosticCodes(incompleteRender).has("render-deliverable-missing"),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "renderer commit and final compile both reject byte-mismatched deliverables",
-      mismatchedCommitRefused &&
-        diagnosticCodes(mismatchedRender).has("render-deliverable-stale"),
+      namedFacts([
+        ["commitRefused", () => mismatchedCommitRefused],
+        [
+          "compileStale",
+          () =>
+            diagnosticCodes(mismatchedRender).has("render-deliverable-stale"),
+        ],
+      ]),
+      { commitRefused: true, compileStale: true },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "final compile accepts complete byte-exact aggregate deliverables",
-      fakeMediaCommitRefused &&
-        productionCompileSucceeded(
-          "byte-exact final deliverables",
-          finalCompiler.compile({ scope: "final" }),
-        ),
+      namedFacts([
+        ["fakeMediaRefused", () => fakeMediaCommitRefused],
+        [
+          "finalCompiled",
+          () =>
+            productionCompileSucceeded(
+              "byte-exact final deliverables",
+              finalCompiler.compile({ scope: "final" }),
+            ),
+        ],
+      ]),
+      { fakeMediaRefused: true, finalCompiled: true },
     );
     TestValidator.predicate(
       "non-feature outputs cannot carry nominal repaint provenance",
@@ -3966,57 +4089,127 @@ export const film = {
     }) as typeof project.readRenderFile;
     const nonErrorRenderRead = finalCompiler.compile({ scope: "final" });
     project.readRenderFile = residentRenderRead;
-    TestValidator.predicate(
+    TestValidator.equals(
       `final ledger rejects duplicate, undeclared, incomplete and unreadable outputs: duplicate=${duplicateFileCommitRefused}, invalid=${invalidFileCommitRefused}, duplicateReceipt=${[...diagnosticCodes(duplicateReceiptRender)]}, mismatchedReceipt=${[...diagnosticCodes(mismatchedReceiptRender)]}, staleProbe=${[...diagnosticCodes(staleProbeRender)]}, receiptOnly=${[...diagnosticCodes(receiptOnlyRender)]}, probeFailure=${[...diagnosticCodes(currentProbeFailure)]}, duplicateOwned=${[...diagnosticCodes(duplicateOwnedRender)]}, invalidEntry=${[...diagnosticCodes(invalidEntryRender)]}, semantic=${semanticRender.diagnostics
         .map((diagnostic) => diagnostic.code)
         .join(",")}, nonError=${nonErrorRenderRead.diagnostics
         .map((diagnostic) => `${diagnostic.code}:${diagnostic.message}`)
         .join("|")}`,
-      duplicateFileCommitRefused &&
-        invalidFileCommitRefused &&
-        diagnosticCodes(duplicateReceiptRender).has(
-          "render-deliverable-unowned",
-        ) &&
-        diagnosticCodes(mismatchedReceiptRender).has(
-          "render-deliverable-unowned",
-        ) &&
-        diagnosticCodes(staleProbeRender).has("render-deliverable-unowned") &&
-        diagnosticCodes(receiptOnlyRender).has("render-deliverable-unowned") &&
-        diagnosticCodes(currentProbeFailure).has(
-          "render-deliverable-invalid",
-        ) &&
-        currentCaptionFailure.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "render-deliverable-media-mismatch" &&
-            diagnostic.message.includes(
-              'Caption deliverable "captions-invalid"',
-            ),
-        ) &&
-        outOfRuntimeCaption.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "render-deliverable-media-mismatch" &&
-            diagnostic.message.includes("production timeline"),
-        ) &&
-        diagnosticCodes(duplicateOwnedRender).has(
-          "render-deliverable-invalid",
-        ) &&
-        diagnosticCodes(invalidEntryRender).has("render-deliverable-invalid") &&
+      namedFacts([
+        ["duplicateFileRefused", () => duplicateFileCommitRefused],
+        ["invalidFileRefused", () => invalidFileCommitRefused],
         [
-          "render-deliverable-invalid",
-          "render-deliverable-incomplete",
-          "render-deliverable-missing",
-        ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
-        semanticRender.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.target === "guide-controls" &&
-            diagnostic.code === "render-deliverable-media-mismatch" &&
-            diagnostic.message.includes("continuous"),
-        ) &&
-        nonErrorRenderRead.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "render-deliverable-missing" &&
-            diagnostic.message.includes("non-error render read failure"),
-        ),
+          "duplicateReceiptUnowned",
+          () =>
+            diagnosticCodes(duplicateReceiptRender).has(
+              "render-deliverable-unowned",
+            ),
+        ],
+        [
+          "mismatchedReceiptUnowned",
+          () =>
+            diagnosticCodes(mismatchedReceiptRender).has(
+              "render-deliverable-unowned",
+            ),
+        ],
+        [
+          "staleProbeUnowned",
+          () =>
+            diagnosticCodes(staleProbeRender).has("render-deliverable-unowned"),
+        ],
+        [
+          "receiptOnlyUnowned",
+          () =>
+            diagnosticCodes(receiptOnlyRender).has(
+              "render-deliverable-unowned",
+            ),
+        ],
+        [
+          "probeFailureInvalid",
+          () =>
+            diagnosticCodes(currentProbeFailure).has(
+              "render-deliverable-invalid",
+            ),
+        ],
+        [
+          "captionMediaMismatch",
+          () =>
+            currentCaptionFailure.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "render-deliverable-media-mismatch" &&
+                diagnostic.message.includes(
+                  'Caption deliverable "captions-invalid"',
+                ),
+            ),
+        ],
+        [
+          "captionOutOfRuntime",
+          () =>
+            outOfRuntimeCaption.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "render-deliverable-media-mismatch" &&
+                diagnostic.message.includes("production timeline"),
+            ),
+        ],
+        [
+          "duplicateOwnedInvalid",
+          () =>
+            diagnosticCodes(duplicateOwnedRender).has(
+              "render-deliverable-invalid",
+            ),
+        ],
+        [
+          "invalidEntryInvalid",
+          () =>
+            diagnosticCodes(invalidEntryRender).has(
+              "render-deliverable-invalid",
+            ),
+        ],
+        [
+          "semanticCodes",
+          () =>
+            [
+              "render-deliverable-invalid",
+              "render-deliverable-incomplete",
+              "render-deliverable-missing",
+            ].every((code) => diagnosticCodes(semanticRender).has(code)),
+        ],
+        [
+          "guideControlsContinuous",
+          () =>
+            semanticRender.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.target === "guide-controls" &&
+                diagnostic.code === "render-deliverable-media-mismatch" &&
+                diagnostic.message.includes("continuous"),
+            ),
+        ],
+        [
+          "nonErrorReadMissing",
+          () =>
+            nonErrorRenderRead.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "render-deliverable-missing" &&
+                diagnostic.message.includes("non-error render read failure"),
+            ),
+        ],
+      ]),
+      {
+        duplicateFileRefused: true,
+        invalidFileRefused: true,
+        duplicateReceiptUnowned: true,
+        mismatchedReceiptUnowned: true,
+        staleProbeUnowned: true,
+        receiptOnlyUnowned: true,
+        probeFailureInvalid: true,
+        captionMediaMismatch: true,
+        captionOutOfRuntime: true,
+        duplicateOwnedInvalid: true,
+        invalidEntryInvalid: true,
+        semanticCodes: true,
+        guideControlsContinuous: true,
+        nonErrorReadMissing: true,
+      },
     );
     fs.rmSync(
       path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
@@ -4056,11 +4249,18 @@ export const film = {
       const empty = new AutoMovieProductionCompiler(
         AutoMovieProductionProject.open(noDesignRoot),
       ).compile({ scope: "design" });
-      TestValidator.predicate(
+      TestValidator.equals(
         "empty repository reports all required design classes",
-        empty.success === false &&
-          empty.diagnostics.filter((item) => item.code === "design-missing")
-            .length === 3,
+        namedFacts([
+          ["refused", () => empty.success === false],
+          [
+            "threeDesignsMissing",
+            () =>
+              empty.diagnostics.filter((item) => item.code === "design-missing")
+                .length === 3,
+          ],
+        ]),
+        { refused: true, threeDesignsMissing: true },
       );
     } catch (error) {
       noDesignFailure = { error };

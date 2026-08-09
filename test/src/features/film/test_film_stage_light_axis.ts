@@ -397,49 +397,73 @@ export const test_film_stage_light_axis = (): void => {
   );
 
   // 6. the parameters each kind REQUIRES
-  TestValidator.predicate(
+  TestValidator.equals(
     "an aimed light without a direction is refused",
-    hasViolation(
-      failure(stageLights([{ node: "sun", intensity: 1 }])),
-      "type",
-      "$input.lights[0].direction",
-    ) &&
-      hasViolation(
-        failure(
-          stageLights([
-            {
-              node: "lamp",
-              type: "spot",
-              position: { x: 0, y: 2, z: 0 },
-              intensity: 1,
-            },
-          ]),
-        ),
-        "type",
-        "$input.lights[0].direction",
-      ),
+    namedFacts([
+      [
+        "directionalRefused",
+        () =>
+          hasViolation(
+            failure(stageLights([{ node: "sun", intensity: 1 }])),
+            "type",
+            "$input.lights[0].direction",
+          ),
+      ],
+      [
+        "spotRefused",
+        () =>
+          hasViolation(
+            failure(
+              stageLights([
+                {
+                  node: "lamp",
+                  type: "spot",
+                  position: { x: 0, y: 2, z: 0 },
+                  intensity: 1,
+                },
+              ]),
+            ),
+            "type",
+            "$input.lights[0].direction",
+          ),
+      ],
+    ]),
+    { directionalRefused: true, spotRefused: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a positioned light without a position is refused",
-    hasViolation(
-      failure(stageLights([{ node: "flame", type: "point", intensity: 1 }])),
-      "type",
-      "$input.lights[0].position",
-    ) &&
-      hasViolation(
-        failure(
-          stageLights([
-            {
-              node: "lamp",
-              type: "spot",
-              direction: { x: 0, y: -1, z: 0 },
-              intensity: 1,
-            },
-          ]),
-        ),
-        "type",
-        "$input.lights[0].position",
-      ),
+    namedFacts([
+      [
+        "pointRefused",
+        () =>
+          hasViolation(
+            failure(
+              stageLights([{ node: "flame", type: "point", intensity: 1 }]),
+            ),
+            "type",
+            "$input.lights[0].position",
+          ),
+      ],
+      [
+        "spotRefused",
+        () =>
+          hasViolation(
+            failure(
+              stageLights([
+                {
+                  node: "lamp",
+                  type: "spot",
+                  direction: { x: 0, y: -1, z: 0 },
+                  intensity: 1,
+                },
+              ]),
+            ),
+            "type",
+            "$input.lights[0].position",
+          ),
+      ],
+    ]),
+    { pointRefused: true, spotRefused: true },
   );
 
   // 7. BOUNDARIES
@@ -500,32 +524,43 @@ export const test_film_stage_light_axis = (): void => {
       hasViolationFailureSpotAt3: true,
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "range 0 is infinite while a negative range is refused",
-    stageLights([
-      {
-        node: "flame",
-        type: "point",
-        position: { x: 0, y: 1, z: 0 },
-        intensity: 1,
-        range: 0,
-      },
-    ]).success === true &&
-      hasViolation(
-        failure(
+    namedFacts([
+      [
+        "zeroRangeStages",
+        () =>
           stageLights([
             {
               node: "flame",
               type: "point",
               position: { x: 0, y: 1, z: 0 },
               intensity: 1,
-              range: -1,
+              range: 0,
             },
-          ]),
-        ),
-        "range",
-        "$input.lights[0].range",
-      ),
+          ]).success === true,
+      ],
+      [
+        "negativeRangeRefused",
+        () =>
+          hasViolation(
+            failure(
+              stageLights([
+                {
+                  node: "flame",
+                  type: "point",
+                  position: { x: 0, y: 1, z: 0 },
+                  intensity: 1,
+                  range: -1,
+                },
+              ]),
+            ),
+            "range",
+            "$input.lights[0].range",
+          ),
+      ],
+    ]),
+    { zeroRangeStages: true, negativeRangeRefused: true },
   );
   TestValidator.predicate(
     "a non-finite position is refused as a range fault, not a missing one",
@@ -575,10 +610,20 @@ export const test_film_stage_light_axis = (): void => {
         },
       ]),
     );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a color that is not an object reports instead of throwing",
-    hasViolation(withColor(null), "type", "$input.lights[0].color") &&
-      hasViolation(withColor([1, 1, 1]), "type", "$input.lights[0].color"),
+    namedFacts([
+      [
+        "nullColorRefused",
+        () => hasViolation(withColor(null), "type", "$input.lights[0].color"),
+      ],
+      [
+        "arrayColorRefused",
+        () =>
+          hasViolation(withColor([1, 1, 1]), "type", "$input.lights[0].color"),
+      ],
+    ]),
+    { nullColorRefused: true, arrayColorRefused: true },
   );
   TestValidator.equals(
     "a light-slot alpha of null is the documented value, not a fault",

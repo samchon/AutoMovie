@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -235,10 +237,17 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
       'resource: "render GC sparse publication descriptor"',
       'resource: "render GC sparse publication descriptor mutated"',
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "CLI sparse descriptor contract rejects its resource-label mutation",
-      mutated !== text &&
-        JSON.stringify(sparseDescriptorCleanupContract(mutated)) !==
-          JSON.stringify(expected),
+      namedFacts([
+        ["labelMutated", () => mutated !== text],
+        [
+          "mutationRejected",
+          () =>
+            JSON.stringify(sparseDescriptorCleanupContract(mutated)) !==
+            JSON.stringify(expected),
+        ],
+      ]),
+      { labelMutated: true, mutationRejected: true },
     );
   };

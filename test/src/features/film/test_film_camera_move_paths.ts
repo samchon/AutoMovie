@@ -82,9 +82,13 @@ export const test_film_camera_move_paths = (): void => {
       orbit.tracks[0]!.values[k * 3 + 2]! - aim.z,
     );
   const step = (a: number, b: number): number => Math.abs(ang(b) - ang(a));
-  TestValidator.predicate(
+  TestValidator.equals(
     "orbit eases: the mid-arc turns faster than either end",
-    step(3, 4) > step(0, 1) + 1e-6 && step(3, 4) > step(7, 8) + 1e-6,
+    namedFacts([
+      ["fasterThanOpening", () => step(3, 4) > step(0, 1) + 1e-6],
+      ["fasterThanClosing", () => step(3, 4) > step(7, 8) + 1e-6],
+    ]),
+    { fasterThanOpening: true, fasterThanClosing: true },
   );
 
   const marching = {

@@ -422,62 +422,62 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
           {
             acquisition: "constfixture=productionFixture();",
             bodyStatements: 3,
-            catchBodies: ["productionCompilerFailure={error};", "throwerror;"],
-            catchVariables: ["error"],
             failureHolder:
               "letproductionCompilerFailure:IProductionCompilerFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveProductionCompilerFixtureCleanup(productionCompilerFailure,()=>fixture.dispose(),);",
-            ],
             index: 2,
             kind: "main",
             ownerParameters: [],
             substantiveStatements: 618,
             substantiveTokenDigest:
-              "a3030622ebc135f6aba9915b7db6948bf18c5677cbafcf8d5ca981d98a8b5b64",
+              "59415589a587a9f8d2c998860d32f35e9bdebe6f71b40b78770eecfff6257f5f",
+            catchBodies: ["productionCompilerFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(productionCompilerFailure,()=>fixture.dispose(),);",
+            ],
             tryDigest:
-              "1ba647c789bcaf498752bcbd0dcf2fa7e8641571ae6175870d627a0160f299b4",
+              "26adacbd0a678427688d9db44e84323dd06365e39dd05a216513d06e6b20c2b1",
             tryStatements: 622,
           },
           {
             acquisition: "constunmanifestedFixture=productionFixture();",
             bodyStatements: 622,
-            catchBodies: ["unmanifestedFixtureFailure={error};", "throwerror;"],
-            catchVariables: ["error"],
             failureHolder:
               "letunmanifestedFixtureFailure:|IProductionCompilerFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveProductionCompilerFixtureCleanup(unmanifestedFixtureFailure,()=>unmanifestedFixture.dispose(),);",
-            ],
             index: 104,
             kind: "unmanifested",
             ownerParameters: [],
             substantiveStatements: 9,
             substantiveTokenDigest:
-              "2c795f14bf89c64648a19730b8f8fcd2e2ac7c2555ca413275057bd250ac234f",
+              "3a93d5d0026d70b90810475aa8fbfdd2e0f2f9667b1fbfe9cf2d38a0bd98e9a2",
+            catchBodies: ["unmanifestedFixtureFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(unmanifestedFixtureFailure,()=>unmanifestedFixture.dispose(),);",
+            ],
             tryDigest:
-              "c3850b70bbf1d9894979cb6c457b0c5bbee880e67f4f2bb3cafac3e3848f5f71",
+              "896ddfda66b55b28f12236d3d2e5ca4c820ccae7340f4bb58f805ad44fab7260",
             tryStatements: 9,
           },
           {
             acquisition:
               'constnoDesignRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-production-empty-"),);',
             bodyStatements: 622,
-            catchBodies: ["noDesignFailure={error};", "throwerror;"],
-            catchVariables: ["error"],
             failureHolder:
               "letnoDesignFailure:IProductionCompilerFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveProductionCompilerFixtureCleanup(noDesignFailure,()=>fs.rmSync(noDesignRoot,{force:true,recursive:true}),);",
-            ],
             index: 621,
             kind: "no-design",
             ownerParameters: [],
             substantiveStatements: 2,
             substantiveTokenDigest:
-              "01102e6c4c80a020c1cac8a7866258b39107f65c50742d9311a387f7e4e12654",
+              "60cb555b753fbd61c990759c1072c5962e1c75e7daf19c2b18993b35b5db817a",
+            catchBodies: ["noDesignFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(noDesignFailure,()=>fs.rmSync(noDesignRoot,{force:true,recursive:true}),);",
+            ],
             tryDigest:
-              "dc10df26cb6d6ded90e12c54fafa708bf3a148b8bda6216f2cb97aca62130f30",
+              "d6dca591559213fec77c4d54425089625bbe857df39daa5eab117df81662a328",
             tryStatements: 2,
           },
         ],

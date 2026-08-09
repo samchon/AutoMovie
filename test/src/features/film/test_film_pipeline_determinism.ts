@@ -8,6 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 /**
  * Run the whole film-pipeline spine (stage -> perform each beat -> cut) from
@@ -131,8 +132,12 @@ export const test_film_pipeline_determinism = (): void => {
     first,
     second,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the serialized output carries dense per-frame motion samples",
-    first.length > 1000 && first.includes("keyframes"),
+    namedFacts([
+      ["payloadIsDense", () => first.length > 1000],
+      ["carriesKeyframes", () => first.includes("keyframes")],
+    ]),
+    { payloadIsDense: true, carriesKeyframes: true },
   );
 };

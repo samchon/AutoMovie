@@ -118,9 +118,13 @@ export const test_film_full_ladder_e2e = (): void => {
 
   const samples = playbackFrameSamples(cut.sequence, [performed.shot]);
   TestValidator.equals("frame count", samples.length, 48);
-  TestValidator.predicate(
+  TestValidator.equals(
     "first frame opens the shot",
-    samples[0]!.shot === "shot:beat-1" && nclose(samples[0]!.time, 0),
+    namedFacts([
+      ["onTheOneShot", () => samples[0]!.shot === "shot:beat-1"],
+      ["atTheFirstInstant", () => nclose(samples[0]!.time, 0)],
+    ]),
+    { onTheOneShot: true, atTheFirstInstant: true },
   );
   TestValidator.predicate(
     "every frame plays the one shot, hard-cut free",

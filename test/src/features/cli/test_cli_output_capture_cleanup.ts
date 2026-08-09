@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveCliOutputCaptureCleanup } from "./CliOutputCapture";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -209,27 +210,66 @@ export const test_cli_output_capture_cleanup = (): void => {
     cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
     primaryFailure,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "CLI output capture preserves acquisition and restoration failure order",
-    success.failure === undefined &&
-      success.order.join(",") === "cleanup-0,cleanup-1" &&
-      partialSetup.failure === primaryFailure &&
-      partialSetup.order.join(",") === "cleanup-0" &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0,cleanup-1" &&
-      standalone.failure === firstCleanupFailure &&
-      standalone.order.join(",") === "cleanup-0,cleanup-1" &&
-      aggregateContainsExactly(multiple.failure, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      multiple.order.join(",") === "cleanup-0,cleanup-1" &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1",
+    namedFacts([
+      ["successSilent", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === "cleanup-0,cleanup-1"],
+      ["partialSetupPreserved", () => partialSetup.failure === primaryFailure],
+      [
+        "partialSetupSkipsUninstalled",
+        () => partialSetup.order.join(",") === "cleanup-0",
+      ],
+      ["primaryOnlyPreserved", () => primaryOnly.failure === primaryFailure],
+      [
+        "primaryOnlyOrder",
+        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      ["standalonePreserved", () => standalone.failure === firstCleanupFailure],
+      [
+        "standaloneOrder",
+        () => standalone.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      [
+        "multipleAggregated",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "multipleOrder",
+        () => multiple.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      [
+        "combinedAggregated",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "combinedOrder",
+        () => combined.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+    ]),
+    {
+      successSilent: true,
+      successOrder: true,
+      partialSetupPreserved: true,
+      partialSetupSkipsUninstalled: true,
+      primaryOnlyPreserved: true,
+      primaryOnlyOrder: true,
+      standalonePreserved: true,
+      standaloneOrder: true,
+      multipleAggregated: true,
+      multipleOrder: true,
+      combinedAggregated: true,
+      combinedOrder: true,
+    },
   );
   TestValidator.equals(
     "CLI output capture owns both installed stream hooks",

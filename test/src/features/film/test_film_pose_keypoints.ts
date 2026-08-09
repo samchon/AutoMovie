@@ -116,9 +116,13 @@ export const test_film_pose_keypoints = (): void => {
     keypoints({ pose: poseAt(0, 0, -5), headRest: t3(0, 20, 0) }),
     "head",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a joint high above the frame is out, not clamped",
-    high.inFrame === false && high.y < 0,
+    namedFacts([
+      ["outOfFrame", () => high.inFrame === false],
+      ["aboveUnclamped", () => high.y < 0],
+    ]),
+    { outOfFrame: true, aboveUnclamped: true },
   );
   TestValidator.equals(
     "a joint behind the camera is out",
@@ -131,9 +135,13 @@ export const test_film_pose_keypoints = (): void => {
     false,
   );
   const beside = of(keypoints({ pose: poseAt(20, 0, -5) }), "hips");
-  TestValidator.predicate(
+  TestValidator.equals(
     "a joint beside the frame is out, not clamped",
-    beside.inFrame === false && beside.x > 1,
+    namedFacts([
+      ["outOfFrame", () => beside.inFrame === false],
+      ["besideUnclamped", () => beside.x > 1],
+    ]),
+    { outOfFrame: true, besideUnclamped: true },
   );
 
   // 3. missing bone + default joint set.
@@ -189,8 +197,12 @@ export const test_film_pose_keypoints = (): void => {
     }),
     "hips",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a sampled static camera move keeps the subject centered",
-    nclose(still.x, 0.5) && still.inFrame,
+    namedFacts([
+      ["centered", () => nclose(still.x, 0.5)],
+      ["inFrame", () => still.inFrame],
+    ]),
+    { centered: true, inFrame: true },
   );
 };

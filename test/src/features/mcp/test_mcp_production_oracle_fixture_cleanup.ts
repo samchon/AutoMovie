@@ -403,42 +403,42 @@ export const test_mcp_production_oracle_fixture_cleanup = (): void => {
           {
             acquisition: "constfixture=productionFixture();",
             bodyStatements: 3,
-            catchBodies: ["productionOracleFailure={error};", "throwerror;"],
-            catchVariables: ["error"],
             failureHolder:
               "letproductionOracleFailure:IProductionOracleFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveProductionOracleFixtureCleanup(productionOracleFailure,()=>fixture.dispose(),);",
-            ],
             index: 2,
             kind: "main",
             ownerParameters: [],
-            substantiveStatements: 282,
+            substantiveStatements: 284,
             substantiveTokenDigest:
-              "18d9b586057fe7c28700717239a23e4d9189cd69f6e5551dbb74f632ffd4754e",
+              "07f8e24b058371b8e4c1e7012e3556ffd0a187d90c3a19d6abdae41dbaa2b266",
+            catchBodies: ["productionOracleFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            finallyBodies: [
+              "preserveProductionOracleFixtureCleanup(productionOracleFailure,()=>fixture.dispose(),);",
+            ],
             tryDigest:
-              "7a22c6f9255c6d47d1e0480744359dd5b2fba7018a3901ac85f4b5315fc580ce",
+              "12fd3896538920740faa2bae507dbb997e012a36e71d20adb1bbe5e2924412f8",
             tryStatements: 281,
           },
           {
             acquisition: "constemptyRoot=productionFixture();",
             bodyStatements: 281,
-            catchBodies: ["emptyRootFailure={error};", "throwerror;"],
-            catchVariables: ["error"],
             failureHolder:
               "letemptyRootFailure:IProductionOracleFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveProductionOracleFixtureCleanup(emptyRootFailure,()=>emptyRoot.dispose(),);",
-            ],
             index: 280,
             kind: "empty-production",
             ownerParameters: [],
-            substantiveStatements: 3,
+            substantiveStatements: 5,
             substantiveTokenDigest:
-              "e8b00cd3980508345d5b7bcb0b7bb464cef9b9c28a40a2b8cf1f64b5cb97e25e",
+              "4913f8febce4a05d205c90efc41395c9f729c6c49277e5de39fae6c7f4cf1dcb",
+            catchBodies: ["emptyRootFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            finallyBodies: [
+              "preserveProductionOracleFixtureCleanup(emptyRootFailure,()=>emptyRoot.dispose(),);",
+            ],
             tryDigest:
-              "de21cf4244494a05dd1b55862122806f6d48f1e04bf0d7b81b18dea3f6b1aeb0",
-            tryStatements: 3,
+              "72d84807137f79643a74c4bdb22b3b2d78fc946ae50ab68a974c18593e3c1f8e",
+            tryStatements: 5,
           },
         ],
       },

@@ -146,9 +146,13 @@ export const test_film_scene_door_integration = (): void => {
     { ncloseOpenX: true, ncloseOpenX2: true, ncloseOpenX3: true },
   );
   const mirrorX = basisX(open.world.get("frontDoor/handleMirror")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the declared driver mirrors the hinge in-scene",
-    nclose(mirrorX[0], 0) && nclose(mirrorX[2], -1),
+    namedFacts([
+      ["mirrorLeftPlusX", () => nclose(mirrorX[0], 0)],
+      ["mirrorFacesMinusZ", () => nclose(mirrorX[2], -1)],
+    ]),
+    { mirrorLeftPlusX: true, mirrorFacesMinusZ: true },
   );
 
   const slammed = resolveFrame({
@@ -158,14 +162,31 @@ export const test_film_scene_door_integration = (): void => {
     profiles,
     seconds: 0,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing violations tagged by the forged profile on the prefixed channel",
-    slammed.violations.length > 0 &&
-      slammed.violations.every(
-        (violation) =>
-          violation.profile === "door-profile" &&
-          violation.channel === "node:frontDoor/hinge:rotation",
-      ),
+    namedFacts([
+      ["overSwingRefused", () => slammed.violations.length > 0],
+      [
+        "taggedByForgedProfile",
+        () =>
+          slammed.violations.every(
+            (violation) => violation.profile === "door-profile",
+          ),
+      ],
+      [
+        "onPrefixedHingeChannel",
+        () =>
+          slammed.violations.every(
+            (violation) =>
+              violation.channel === "node:frontDoor/hinge:rotation",
+          ),
+      ],
+    ]),
+    {
+      overSwingRefused: true,
+      taggedByForgedProfile: true,
+      onPrefixedHingeChannel: true,
+    },
   );
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);

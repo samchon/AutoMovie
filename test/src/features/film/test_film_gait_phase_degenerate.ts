@@ -14,7 +14,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const withCycle = (gaitCycle: IAutoMovieGaitCycle): IAutoMovieMotion => ({
   ...makeMotion(
@@ -90,9 +90,15 @@ export const test_film_gait_phase_degenerate = (): void => {
     0.4,
   );
   const phase = phaseOf({ period: 0.8, phaseAt: 0.7 });
-  TestValidator.predicate(
+  TestValidator.equals(
     "valid cycle: (0.7 + 0.5) mod 0.8 = 0.4",
-    phase !== null && nclose(phase, 0.4),
+    namedFacts([
+      ["phaseResolved", () => phase !== null],
+      // the null check is restated because the earlier fact's narrowing of the
+      // nullable `phase` does not reach inside this closure.
+      ["phaseWraps", () => phase !== null && nclose(phase, 0.4)],
+    ]),
+    { phaseResolved: true, phaseWraps: true },
   );
 
   TestValidator.equals(
