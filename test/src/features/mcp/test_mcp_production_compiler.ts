@@ -2320,6 +2320,49 @@ ${original}`,
     fs.rmSync(ensemblePath);
     fs.writeFileSync(sourcePath, original);
 
+    // The sandbox reimplements every engine name a source module may import, so
+    // a name registered but never invoked is a stand-in nothing has run, and
+    // two implementations of one contract that nothing compares are how they
+    // come to disagree. Both branches of the height rule are answered from
+    // inside the sandbox against hand arithmetic: a level patch reads zero, and
+    // a plane reads its origin plus both slopes.
+    fs.writeFileSync(
+      sourcePath,
+      mutate(
+        `import { worldSurfaceHeight } from "@automovie/engine";
+${original}`,
+        "  const performer = sentinel.render(context, { from: openingAbduction });",
+        `  if (signalField.ground.heightAt({ x: 0, z: 0 }) !== 0)
+    throw new Error("level ground must answer zero through the engine");
+  if (
+    worldSurfaceHeight(
+      {
+        id: "slope",
+        polygon: [
+          { x: -1, z: -1 },
+          { x: 1, z: -1 },
+          { x: 1, z: 1 },
+          { x: -1, z: 1 },
+        ],
+        height: { kind: "plane", originHeight: 1, slopeX: 2, slopeZ: 3 },
+        walkable: true,
+      },
+      { x: 1, z: 1 },
+    ) !== 6
+  )
+    throw new Error("a plane must answer origin plus both slopes");
+  const performer = sentinel.render(context, { from: openingAbduction });`,
+      ),
+    );
+    TestValidator.equals(
+      "a subject reaches the engine's own answer from inside the sandbox",
+      [...diagnosticCodes(compiler.compile({ scope: "source" }))].sort(
+        compareCodeUnits,
+      ),
+      beforeEnsemble,
+    );
+    fs.writeFileSync(sourcePath, original);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",

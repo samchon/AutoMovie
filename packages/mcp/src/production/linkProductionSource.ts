@@ -51,6 +51,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set([
   "AutoMovieSubject",
   "AutoMovieSubjectGroup",
   "mergeAutoMovieSubjectContributions",
+  "worldSurfaceHeight",
 ]);
 
 /** Whether a specifier addresses a module inside the project's own source. */

@@ -34,14 +34,19 @@ export class Army extends AutoMovieSubjectGroup<
    * Authored rather than derived from ranks times files, because the last rank
    * is deliberately short: a unit whose every rank is exactly full reads as a
    * lattice, and the silhouette this specification asks for is a real edge.
+   *
+   * Typed `number` rather than left to infer `2049`. A measurement is not the
+   * one value it currently holds, and a literal type says a specialisation of
+   * this unit may never state a different one, which is the composition the
+   * class layer exists for.
    */
-  public readonly count = 2049;
+  public readonly count: number = 2049;
 
   /** Rows deep, front to back. */
-  public readonly ranks = 33;
+  public readonly ranks: number = 33;
 
   /** Members across one rank. */
-  public readonly files = 64;
+  public readonly files: number = 64;
 
   /**
    * The interval between members, in metres.
@@ -50,10 +55,30 @@ export class Army extends AutoMovieSubjectGroup<
    * subject, which makes this the unit's load-bearing measurement rather than a
    * layout convenience.
    */
-  public readonly spacing = { lateral: 0.5, depth: 1 };
+  public readonly spacing: { lateral: number; depth: number } = {
+    lateral: 0.5,
+    depth: 1,
+  };
 
   /** The deterministic seed every per-member variation is drawn from. */
-  public readonly seed = 1415;
+  public readonly seed: number = 1415;
+
+  /**
+   * Where the front of the unit stands, in metres.
+   *
+   * A field rather than a literal inside the record, because the place that
+   * holds the unit has to know it: {@link reach} measures from here, and
+   * reaching into `design()` for one number would run the record's own
+   * validation to read a coordinate.
+   */
+  public readonly anchor: { x: number; y: number; z: number } = {
+    x: 0,
+    y: 0,
+    z: -5,
+  };
+
+  /** Which way the ranks face, in degrees. */
+  public readonly facingDeg: number = 180;
 
   /**
    * How far the unit advances when a shot puts it in motion, in metres.
@@ -66,7 +91,7 @@ export class Army extends AutoMovieSubjectGroup<
    * `@ttsc/evidence` does not yet select a class field as a unit
    * (samchon/ttsc#1121). The instance's tag answers for it until then.
    */
-  public readonly advanceMetres = 2;
+  public readonly advanceMetres: number = 2;
 
   public members(): readonly ArmyMember[] {
     return [armyHero];
@@ -79,10 +104,21 @@ export class Army extends AutoMovieSubjectGroup<
    * while the signal is given and still ordered after it, so a deviation here
    * would be a dramatic event nobody authored.
    *
+   * The constraint is checked here rather than in a constructor. A subclass
+   * that overrides a measurement sets its own fields after the base constructor
+   * has already run, so a constructor would validate numbers the subject no
+   * longer has. `design()` is where the record leaves the class, which makes it
+   * the one place every construction has to pass through.
+   *
    * @evidence docs/characters/army.md States the ranks stay ordered and that
    *   any loosening must be authored as a dramatic event.
    */
   public design(): IAutoMovieFormationDesign {
+    const slots = this.ranks * this.files;
+    if (this.count <= slots - this.files || this.count > slots)
+      throw new Error(
+        `docs/characters/army.md requires ranks and files legible as ranks and files, so a count of ${this.count} cannot stand in ${this.ranks} ranks of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last rank empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
+      );
     return {
       id: this.id,
       modelRecipe: armyHero.id,
@@ -93,8 +129,8 @@ export class Army extends AutoMovieSubjectGroup<
         files: this.files,
         spacing: this.spacing,
       },
-      anchor: { x: 0, y: 0, z: -5 },
-      facingDeg: 180,
+      anchor: this.anchor,
+      facingDeg: this.facingDeg,
       seed: this.seed,
       capabilities: ["advance", "break"],
       heroOverrides: [
@@ -218,10 +254,9 @@ export class Army extends AutoMovieSubjectGroup<
    */
   public reach(): number {
     const footprint = this.footprint();
-    const anchor = this.design().anchor;
     return Math.max(
-      Math.abs(anchor.x) + footprint.width / 2,
-      Math.abs(anchor.z) + footprint.depth + this.advanceMetres,
+      Math.abs(this.anchor.x) + footprint.width / 2,
+      Math.abs(this.anchor.z) + footprint.depth + this.advanceMetres,
     );
   }
 

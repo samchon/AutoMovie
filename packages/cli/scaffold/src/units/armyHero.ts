@@ -25,14 +25,35 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * The one place the phrase "a head shorter" becomes a number.
    */
-  public static readonly HEAD = 0.1;
+  public static readonly HEAD: number = 0.1;
+
+  /**
+   * The height the specification states, in metres.
+   *
+   * Kept beside the derivation so the two can be compared. The document says
+   * both things at once, that a member is 1.7 m and that it is a head shorter
+   * than the sentinel, and a subject that only derived would go on being
+   * internally consistent while drifting away from the number the film was
+   * written around.
+   */
+  public static readonly SPECIFIED_HEIGHT: number = 1.7;
+
+  /**
+   * How far a derived scale may land from the stated one, in metres.
+   *
+   * A nanometre. Small enough that no scale a document could state slips
+   * through, large enough that a subtraction of two authored metres is not
+   * mistaken for one.
+   */
+  public static readonly SCALE_TOLERANCE: number = 1e-9;
 
   /**
    * Member height in metres, stated against the production's reference scale.
    *
    * "A head shorter than the sentinel" is the specification's own phrasing, so
    * it is derived from the sentinel rather than restated as a second number
-   * that could drift from it.
+   * that could drift from it. {@link design} is what checks the derivation still
+   * lands on {@link SPECIFIED_HEIGHT}.
    */
   public readonly height = sentinel.height - ArmyMember.HEAD;
 
@@ -43,10 +64,27 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * rank to the far edge of the field; a single tier would either cost too much
    * at the back or lose the interval at the front.
    *
+   * The scale is checked here rather than in a constructor. A subclass that
+   * overrides a measurement sets its own fields after the base constructor has
+   * already run, so a constructor would validate numbers the subject no longer
+   * has. `design()` is where the record leaves the class, which makes it the
+   * one place every construction has to pass through.
+   *
    * @evidence docs/characters/army.md Requires ranks and files to stay legible
    *   at every distance, which is what the tier ladder answers for.
    */
   public design(): IAutoMovieModelRecipe {
+    // Compared within a tolerance, not exactly. The height is a difference of
+    // two authored metres, and a subtraction that lands a billionth away is the
+    // float representation rather than a scale the document did not state:
+    // refusing 1.75 less 0.05 would be refusing arithmetic.
+    if (
+      Math.abs(this.height - ArmyMember.SPECIFIED_HEIGHT) >
+      ArmyMember.SCALE_TOLERANCE
+    )
+      throw new Error(
+        `docs/characters/army.md states a member is ${ArmyMember.SPECIFIED_HEIGHT} m, a head shorter than the sentinel, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
+      );
     return {
       id: this.id,
       role: "performer",

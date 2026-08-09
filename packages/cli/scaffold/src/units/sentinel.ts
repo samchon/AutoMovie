@@ -27,7 +27,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * a second opinion, which is why it is public: a subject that needs human
    * scale reads it from here instead of restating 1.8.
    */
-  public readonly height = 1.8;
+  public readonly height: number = 1.8;
 
   /**
    * How far the signalling arm travels from rest, in degrees of abduction.
@@ -36,7 +36,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * measures, kept here so a shot that wants a partly raised arm scales one
    * declared extent rather than inventing an angle.
    */
-  public readonly signalAbduction = 110;
+  public readonly signalAbduction: number = 110;
 
   /**
    * When the raised arm arrives, in seconds from the start of the shot.
@@ -45,7 +45,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * so this is the subject's own claim about its timing rather than a number
    * each shot rediscovers.
    */
-  public readonly arrivalSeconds = 2;
+  public readonly arrivalSeconds: number = 2;
 
   /**
    * The measured recipe the production derives its design record from.

@@ -3,6 +3,7 @@ import {
   AutoMovieSubjectGroup,
   type IAutoMovieSubjectContribution,
   mergeAutoMovieSubjectContributions,
+  worldSurfaceHeight,
 } from "@automovie/engine";
 import type {
   IAutoMovieShotBuildContext,
@@ -63,7 +64,7 @@ export class SignalGround extends WorldPiece {
   public readonly id = "ground";
 
   /** Clear ground kept beyond the farthest member, in metres. */
-  public readonly margin = 1;
+  public readonly margin: number = 1;
 
   /**
    * Half-extent of the square field, in metres.
@@ -95,6 +96,22 @@ export class SignalGround extends WorldPiece {
         },
       ],
     };
+  }
+
+  /**
+   * How high this ground is where something stands on it, in metres.
+   *
+   * The question is asked of the record this piece emits, through the engine
+   * function that owns the answer. A class that read `height.value` itself
+   * would be right for a level field and wrong the day the piece slopes, and a
+   * second answer that agrees until it does not is the failure the whole
+   * one-owner rule exists to prevent.
+   *
+   * @evidence docs/world/signal-field.md Requires one level open place, which
+   *   is the height this returns everywhere inside it.
+   */
+  public heightAt(point: { x: number; z: number }): number {
+    return worldSurfaceHeight(this.place().surfaces![0]!, point);
   }
 
   /**
@@ -140,7 +157,7 @@ export class SignalGroundMark extends WorldPiece {
   public readonly id = "signal-ground";
 
   /** Readable radius around the marked point, in metres. */
-  public readonly radius = 3;
+  public readonly radius: number = 3;
 
   public place(): IAutoMovieSubjectContribution {
     return {
@@ -170,7 +187,7 @@ export class BattleSmoke extends WorldPiece {
   public readonly recipe = "battle-smoke";
 
   /** Deterministic seed for the emission, declared rather than drawn. */
-  public readonly seed = 1416;
+  public readonly seed: number = 1416;
 
   public place(): IAutoMovieSubjectContribution {
     return {
