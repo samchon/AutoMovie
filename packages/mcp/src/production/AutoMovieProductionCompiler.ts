@@ -115,7 +115,10 @@ import {
  * generated tree is recognised as older rather than silently misread as
  * current. This revision added a per-member cue channel, a ground sample per
  * member, and a story clock; each of those is a field a v7 reader would not
- * find where it expects one.
+ * find where it expects one. It also dropped `phase.periodSeconds` from a
+ * compiled formation, because a cycle's period is now measured from the baked
+ * motion rather than written down beside it -- so a v7 reader would look for
+ * that one where it is no longer written.
  */
 export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v8";
 
