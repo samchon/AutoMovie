@@ -1,5 +1,6 @@
 import {
   IAutoMovieAcceptanceScenario,
+  IAutoMovieCompiledContractRealization,
   IAutoMovieDiagnostic,
   IAutoMovieShotContract,
   IAutoMovieShotStoryTime,
@@ -442,6 +443,92 @@ export const test_mcp_production_story_clock = (): void => {
       refused: true,
       namesTheClosestPossibleGap: true,
       namesTheClaimedTolerance: true,
+    },
+  );
+
+  const criterion = storySyncCriterionOf(storySync());
+  const measure = (
+    contracts: ReadonlyMap<string, IAutoMovieShotContract>,
+    realization: (shot: string) => IAutoMovieCompiledContractRealization | null,
+  ): ReturnType<typeof autoMovieStorySyncOutcome> | null =>
+    criterion === null
+      ? null
+      : autoMovieStorySyncOutcome({ criterion, contracts, realization });
+  TestValidator.equals(
+    "the shared measurement reads its pins and its realized times from current state",
+    namedFacts([
+      ["crossShotCriterion", () => criterion !== null],
+      [
+        "frameCriterionIsNotCrossShot",
+        () => storySyncCriterionOf(acceptanceScenarios()[0]!) === null,
+      ],
+      [
+        "measuresPinnedShots",
+        () =>
+          measure(pinned.shots, (shot) =>
+            realizationOf(shot, shot === "opening" ? "mark-a" : "mark-b", 2),
+          )?.passed === true,
+      ],
+      [
+        "refusesUnpinnedOrAbsentShot",
+        () =>
+          measure(starter.shots, (shot) =>
+            realizationOf(shot, shot === "opening" ? "mark-a" : "mark-b", 2),
+          )?.spreadSeconds === null,
+      ],
+      [
+        "refusesUnrealizedEvent",
+        () =>
+          measure(pinned.shots, (shot) =>
+            realizationOf(shot, "never-realized", 2),
+          )?.passed === false,
+      ],
+      [
+        "refusesAbsentRealization",
+        () => measure(pinned.shots, () => null)?.passed === false,
+      ],
+      [
+        "crossShotCriterionReadsEveryNamedShot",
+        () =>
+          acceptanceCriterionShots(storySync()).join(",") === "opening,answer",
+      ],
+      [
+        "frameCriterionReadsItsOwningShot",
+        () => acceptanceCriterionShots(acceptanceScenarios()[0]!).length <= 1,
+      ],
+      [
+        "metricCriterionReadsNoShot",
+        () =>
+          acceptanceCriterionShots({
+            id: "runtime",
+            target: { kind: "film", id: "fixture-film" },
+            criterion: {
+              kind: "metric",
+              metric: "runtime-seconds",
+              operator: "==",
+              value: 6,
+            },
+            required: true,
+          }).length === 0,
+      ],
+      [
+        "crossShotClaimAddressesEachNamedShot",
+        () =>
+          acceptanceAddressesShot(storySync(), "answer") &&
+          acceptanceAddressesShot(storySync(), "nowhere") === false,
+      ],
+    ]),
+    {
+      crossShotCriterion: true,
+      frameCriterionIsNotCrossShot: true,
+      measuresPinnedShots: true,
+      refusesUnpinnedOrAbsentShot: true,
+      refusesUnrealizedEvent: true,
+      refusesAbsentRealization: true,
+      crossShotCriterionReadsEveryNamedShot: true,
+      frameCriterionReadsItsOwningShot: true,
+      metricCriterionReadsNoShot: true,
+      crossShotClaimAddressesEachNamedShot: true,
     },
   );
 };

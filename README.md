@@ -68,6 +68,7 @@ The generated README explains the complete tracked-authoring, compile, capture, 
 | [`@automovie/render`](./packages/render)                     | Render planning, deterministic frame evaluation, and video export helpers.                                                          |
 | [`@automovie/ingest`](./packages/ingest)                     | Digest-bound glTF, GLB, and VRM inspection for registered external models.                                                          |
 | [`@automovie/face`](./packages/face)                         | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary.                                     |
+| [`@automovie/archetypes`](./packages/archetypes)             | Primitive model archetype catalogue: parameter schemas, bounds, and geometry builders behind one registry.                          |
 | [`@automovie/mcp`](./packages/mcp)                           | Five-tool knowledge, host-evidence, optional repaint, and verdict-last review boundary.                                             |
 | [`@automovie/cli`](./packages/cli)                           | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
 | [`create-automovie`](./packages/create-automovie)            | Package-manager-native one-command project creator.                                                                                 |

@@ -1,6 +1,7 @@
 import { HUMANOID_PROFILE } from "@automovie/archetypes";
 import {
   IAutoMovieFormationDesign,
+  IAutoMovieModel,
   IAutoMovieModelRecipe,
 } from "@automovie/interface";
 import {
@@ -47,9 +48,9 @@ import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
  * 2. The tier's material injects the phase attribute, the part attribute, and both
  *    vertex writes, and shares the tier's uniform cells; a still tier's
  *    material is left untouched.
- * 3. Two members with different phases stand at different points of the cycle, a
- *    member returns to its own attitude after one period, and a part the gait
- *    does not articulate holds still while its neighbour swings.
+ * 3. Members spread across the cycle rather than stacking at one point, a member
+ *    moves through the whole of its own cycle and returns to its attitude one
+ *    period later, and a part the gait does not articulate holds still.
  * 4. The table is byte-identical across rebuilds and independent of crowd size,
  *    and the instance buffers stay exactly at the declared per-instance cost
  *    and inside the declared budget.
@@ -584,8 +585,7 @@ export const test_viewer_formation_cycle = (): void => {
       ],
       [
         "aModelWithoutProfilesHasNoCycle",
-        () =>
-          formationCycleGait({ ...nearModel, profiles: undefined }) === null,
+        () => formationCycleGait(withoutProfiles) === null,
       ],
       [
         "aProfileWithoutGaitsHasNoCycle",
@@ -708,10 +708,18 @@ const compileVertex = (
   return shader;
 };
 
-const maximum = (attribute: THREE.BufferAttribute | undefined): number => {
+const floatAttribute = (
+  mesh: THREE.Mesh,
+  name: string,
+): THREE.BufferAttribute =>
+  mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
+
+const maximum = (
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+): number => {
   let found = Number.NEGATIVE_INFINITY;
-  for (let index = 0; index < (attribute?.count ?? 0); ++index)
-    found = Math.max(found, attribute!.getX(index));
+  for (let index = 0; index < attribute.count; ++index)
+    found = Math.max(found, attribute.getX(index));
   return found;
 };
 

@@ -61,24 +61,24 @@ export const test_mcp_production_source_link = (): void => {
   const chain = link({
     "src/shots/one.ts": [
       'import { defineShot } from "@automovie/engine";',
-      'import { army } from "../formations/army";',
-      "export const one = defineShot('one', { build: () => army });",
+      'import { chorus } from "../formations/chorus";',
+      "export const one = defineShot('one', { build: () => chorus });",
     ].join("\n"),
-    "src/formations/army.ts": [
+    "src/formations/chorus.ts": [
       'import { member } from "../units/member";',
-      "export const army = [member];",
+      "export const chorus = [member];",
     ].join("\n"),
     "src/units/member.ts": "export const member = 1;",
   });
   TestValidator.equals(
     "modules arrive in dependency order with the entry last",
     paths(chain),
-    ["src/units/member.ts", "src/formations/army.ts", "src/shots/one.ts"],
+    ["src/units/member.ts", "src/formations/chorus.ts", "src/shots/one.ts"],
   );
   TestValidator.equals(
     "the entry's own specifiers are stated rather than searched for",
     chain.entryImports,
-    { "../formations/army": "src/formations/army.ts" },
+    { "../formations/chorus": "src/formations/chorus.ts" },
   );
 
   const diamond = link({

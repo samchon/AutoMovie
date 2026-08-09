@@ -2153,22 +2153,18 @@ const validateFormationDressing = (
     "layout.dressing.depth",
   );
   if (layout.kind === "arc") {
+    // An arc of one member has no neighbour, so there is no interval to keep
+    // and no divisor to take. Every comparison against an unreachable chord is
+    // false, which is how that case declines without a rule of its own.
     const chord =
       formation.count < 2
         ? Number.POSITIVE_INFINITY
         : 2 *
           layout.radius *
           Math.sin(
-            (layout.arcDegrees * Math.PI) /
-              180 /
-              (2 * (formation.count - 1)),
+            (layout.arcDegrees * Math.PI) / 180 / (2 * (formation.count - 1)),
           );
-    if (
-      measurable(dressing.lateral) &&
-      measurable(dressing.depth) &&
-      measurable(chord) &&
-      2 * Math.hypot(dressing.lateral, dressing.depth) >= chord
-    )
+    if (2 * Math.hypot(dressing.lateral, dressing.depth) >= chord)
       invalid(
         diagnostics,
         "design-range-invalid",
