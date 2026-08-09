@@ -216,32 +216,32 @@ const bone = (
  *    other, which is exactly what a gate looping one unit at a time cannot see.
  *    The refusal names both units and the member of each.
  * 5. Two units clear at both ends of a cue and passing through one another in
- *    between are refused at a time inside the cue's own ends, which reading only
- *    the ends cannot see.
- * 6. A cue closing a unit's intervals below its members' own width is refused,
- *    and one that keeps them above it is accepted: what a unit is laid out at is
+ *    between are refused at a time inside the cue's own ends, which reading
+ *    only the ends cannot see.
+ * 6. A cue closing a unit's intervals below its members' own width is refused, and
+ *    one that keeps them above it is accepted: what a unit is laid out at is
  *    not the only arrangement it ever holds.
  * 7. A member the shot has taken out is not measured, because nothing can stand
  *    inside a body that is not there.
- * 8. Two units in one place at different heights are accepted, because bodies
- *    that never meet in height never share a place: the reading is a column and
- *    not a footprint.
+ * 8. Two units in one place at different heights are accepted, because bodies that
+ *    never meet in height never share a place: the reading is a column and not
+ *    a footprint.
  * 9. A unit whose runtime this shot does not carry, whose tier list is empty, or
  *    whose geometry fills no column at all is not measured rather than measured
  *    against a stand-in, and a shot with no measurable unit answers nothing.
  * 10. A unit measured by a second shot answers the same as by the first, because
  *     its members are found once and remembered, and what a remembered answer
  *     may change is nothing.
- * 11. Every primitive states the disc inside it: a sphere its radius, a capsule
- *     and a cylinder theirs over their shaft, a cone half its base over its
- *     wider half, a box its narrower side over its height. A plane has no
- *     thickness and a mesh states no dimensions, so neither holds a column, and
- *     nor does a shape whose dimensions are not real.
- * 12. A part is measured where its bone rests, added up the chain however the
- *     bones are ordered, and left out when the chain leaves the axis, when the
- *     part's own transform does, or when it turns about anything but the
- *     vertical. A part's scale is applied rather than refused, and one that
- *     scales a column away leaves nothing to measure.
+ * 11. Every primitive states the disc inside it: a sphere its radius, a capsule and
+ *     a cylinder theirs over their shaft, a cone half its base over its wider
+ *     half, a box its narrower side over its height. A plane has no thickness
+ *     and a mesh states no dimensions, so neither holds a column, and nor does
+ *     a shape whose dimensions are not real.
+ * 12. A part is measured where its bone rests, added up the chain however the bones
+ *     are ordered, and left out when the chain leaves the axis, when the part's
+ *     own transform does, or when it turns about anything but the vertical. A
+ *     part's scale is applied rather than refused, and one that scales a column
+ *     away leaves nothing to measure.
  */
 export const test_mcp_production_formation_overlap = (): void => {
   const wide = post({ id: "post", radius: 0.4 });
@@ -478,8 +478,14 @@ export const test_mcp_production_formation_overlap = (): void => {
   TestValidator.equals(
     "a unit measured by a second shot is measured the same as by the first",
     namedFacts([
-      ["first", () => codes({ models: [wide], formations: [staged] }).length === 1],
-      ["again", () => codes({ models: [wide], formations: [staged] }).length === 1],
+      [
+        "first",
+        () => codes({ models: [wide], formations: [staged] }).length === 1,
+      ],
+      [
+        "again",
+        () => codes({ models: [wide], formations: [staged] }).length === 1,
+      ],
     ]),
     { first: true, again: true },
   );

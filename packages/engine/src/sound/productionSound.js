@@ -1,0 +1,578 @@
+import { resolveCameraAt } from "../film/cameraProjection";
+import { sampleFormationMotion, transformFormationBounds, transformFormationPoint, } from "../formation";
+import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
+import { sampleClipSequence } from "../resolve/sampleClip";
+/**
+ * Lower semantic shot events, authored score cues, and shared caption timing
+ * into one immutable sound plan on the finished-film clock.
+ *
+ * Each event's source is the extended incoherent mass its subjects add up to
+ * ({@link resolveSourceMass}), not a bare point: the plan carries how many
+ * members sound ({@link IAutoMovieProductionSoundEvent.memberCount}), how far
+ * they are spread ({@link IAutoMovieProductionSoundEvent.spreadRadiusMeters}),
+ * and the `sqrt(N)` level that many uncorrelated sources produce
+ * ({@link IAutoMovieProductionSoundEvent.densityGain}), so a mass sounds like a
+ * mass and a crowd's size is audible rather than assumed. A lone actor is a
+ * one-member mass of zero radius and plans exactly as it always did.
+ */
+export const deriveProductionSoundPlan = (props) => {
+    const events = [];
+    props.timeline.segments.forEach((segment, segmentIndex) => {
+        const contract = props.contracts.get(segment.shot);
+        const compiled = props.compiled.get(segment.shot);
+        if (contract === undefined || compiled === undefined)
+            throw new Error(`Sound planning requires current contract and compiled source for shot "${segment.shot}".`);
+        const camera = compiled.scene.cameras.find((candidate) => candidate.id === compiled.shot.camera);
+        if (camera === undefined)
+            throw new Error(`Sound planning cannot find shot "${segment.shot}" camera "${compiled.shot.camera}".`);
+        for (const sample of compiled.eventSamples) {
+            const event = contract.events.find((candidate) => candidate.id === sample.id);
+            if (event === undefined)
+                throw new Error(`Compiled shot "${segment.shot}" sampled undeclared event "${sample.id}".`);
+            const sourceFrame = Math.round(sample.time * props.timeline.fps);
+            if (sourceFrame < segment.sourceInFrame ||
+                sourceFrame >= segment.sourceOutFrame)
+                continue;
+            const frame = segment.startFrame + sourceFrame - segment.sourceInFrame;
+            const listener = resolveCameraAt(camera.transform, compiled.shot.cameraMotion, camera.id, sample.time);
+            const mass = resolveSourceMass(compiled, event.subjects, sample.time);
+            const emitter = mass.centroid;
+            const delta = Vector3.subtract(emitter, listener.position);
+            const distanceMeters = Vector3.length(delta);
+            const local = Quaternion.rotateVector(Quaternion.inverse(listener.rotation), delta);
+            // The listener is not `distanceMeters` from a source that has size: it is
+            // that far from the CENTROID. Substituting the root-mean-square
+            // source/listener distance is the whole of the extended-source model, and
+            // it serves the pan and the attenuation from one number.
+            const spreadRadiusMeters = Math.sqrt(mass.variance);
+            const rmsDistanceMeters = Math.hypot(distanceMeters, spreadRadiusMeters);
+            events.push({
+                id: `${segmentIndex}:${segment.shot}:${event.id}`,
+                shot: segment.shot,
+                event: event.id,
+                kind: event.kind,
+                frame,
+                timeSeconds: frame / props.timeline.fps,
+                emitter,
+                listener: listener.position,
+                distanceMeters,
+                memberCount: mass.count,
+                spreadRadiusMeters,
+                densityGain: Math.sqrt(mass.count),
+                pan: clamp(local.x / Math.max(rmsDistanceMeters, 1e-9), -1, 1),
+                attenuation: 1 / (1 + 0.08 * rmsDistanceMeters * rmsDistanceMeters),
+                seed: soundSeed(`${props.timeline.inputFingerprint}|${segmentIndex}|${segment.shot}|${event.id}|${frame}`),
+            });
+        }
+    });
+    return {
+        version: 1,
+        inputFingerprint: props.timeline.inputFingerprint,
+        fps: props.timeline.fps,
+        totalFrames: props.timeline.totalFrames,
+        sampleRate: 48_000,
+        channels: 2,
+        events: events.sort((left, right) => left.frame - right.frame || compareCodeUnits(left.id, right.id)),
+        cues: props.timeline.tracks.audio.map((cue) => ({
+            id: cue.id,
+            startFrame: cue.startFrame,
+            durationFrames: cue.durationFrames,
+            sourceOffsetFrame: cue.sourceOffsetFrame,
+            sourceDurationFrames: cue.sourceDurationFrames,
+            gain: cue.gain,
+            fadeInFrames: cue.fadeInFrames,
+            fadeOutFrames: cue.fadeOutFrames,
+            bus: cue.bus,
+            seed: soundSeed(`${props.timeline.inputFingerprint}|cue|${cue.id}|${cue.asset}`),
+        })),
+        dialogue: props.timeline.tracks.captions.map((line) => ({ ...line })),
+    };
+};
+/**
+ * Render the event palette, procedural score, and already synthesized dialogue
+ * into exact-runtime PCM. Dialogue buffers are mono and keyed by line id.
+ */
+export const renderProductionSound = (props) => {
+    const sampleFrames = Math.round((props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate);
+    const pcm = new Float32Array(sampleFrames * 2);
+    for (const event of props.plan.events)
+        mixEvent(pcm, props.plan, event);
+    for (const cue of props.plan.cues)
+        mixCue(pcm, props.plan, cue);
+    for (const line of props.plan.dialogue) {
+        const source = props.dialogue?.get(line.id);
+        if (source === undefined)
+            continue;
+        const start = frameToSample(props.plan, line.startFrame);
+        const end = frameToSample(props.plan, line.endFrame);
+        const fitted = resampleMono(source, Math.max(0, end - start));
+        for (let index = 0; index < fitted.length && start + index < sampleFrames; ++index) {
+            const envelope = edgeEnvelope(index, fitted.length, 240);
+            const value = fitted[index] * envelope * 0.72;
+            pcm[(start + index) * 2] += value;
+            pcm[(start + index) * 2 + 1] += value;
+        }
+    }
+    let peak = 0;
+    for (const value of pcm)
+        peak = Math.max(peak, Math.abs(value));
+    if (peak > 0.95) {
+        const scale = 0.95 / peak;
+        for (let index = 0; index < pcm.length; ++index)
+            pcm[index] = Math.fround(pcm[index] * scale);
+    }
+    return { pcm, analysis: analyzeProductionSound(props.plan, pcm) };
+};
+/** Derive a bounded frame-normalized VRM mouth sequence from Kokoro phonemes. */
+export const productionPhonemesToVisemes = (props) => {
+    const duration = props.endFrame - props.startFrame;
+    if (duration <= 0 || props.sourceSamples <= 0)
+        return [];
+    const output = [];
+    let cursor = props.startFrame;
+    for (const chunk of props.chunks) {
+        const tokens = Array.from(chunk.phonemes.normalize("NFKC")).filter((token) => /\s/u.test(token) === false);
+        if (tokens.length === 0)
+            continue;
+        const chunkStart = Math.max(cursor, props.startFrame +
+            Math.floor((duration * chunk.startSample) / props.sourceSamples));
+        const chunkEnd = props.startFrame +
+            Math.max(1, Math.ceil((duration * chunk.endSample) / props.sourceSamples));
+        const frames = Math.max(1, Math.min(props.endFrame, chunkEnd) - chunkStart);
+        if (chunkStart >= props.endFrame) {
+            const previous = output.at(-1);
+            if (previous !== undefined)
+                previous.phoneme += tokens.join("");
+            continue;
+        }
+        const bins = Math.min(tokens.length, frames);
+        for (let index = 0; index < bins; ++index) {
+            const tokenStart = Math.floor((tokens.length * index) / bins);
+            const tokenEnd = Math.floor((tokens.length * (index + 1)) / bins);
+            const phonemes = tokens.slice(tokenStart, tokenEnd).join("");
+            output.push({
+                phoneme: phonemes,
+                viseme: phonemeViseme(tokens[tokenStart]),
+                startFrame: chunkStart + Math.floor((frames * index) / bins),
+                endFrame: chunkStart + Math.floor((frames * (index + 1)) / bins),
+            });
+        }
+        cursor = chunkStart + frames;
+    }
+    if (output.length === 0)
+        return [
+            {
+                phoneme: "",
+                viseme: "rest",
+                startFrame: props.startFrame,
+                endFrame: props.endFrame,
+            },
+        ];
+    return output;
+};
+/** Draw sample extrema as deterministic waveform evidence. */
+export const productionSoundWaveform = (pcm, width = 960, height = 240) => {
+    assertRasterSize(width, height);
+    if (pcm.length % 2 !== 0)
+        throw new Error("Production waveform requires interleaved stereo PCM.");
+    const rgba = rasterBackground(width, height);
+    const frames = pcm.length / 2;
+    const middle = Math.floor(height / 2);
+    for (let x = 0; x < width; ++x) {
+        const from = Math.floor((frames * x) / width);
+        const to = Math.max(from + 1, Math.floor((frames * (x + 1)) / width));
+        let amplitude = 0;
+        for (let sample = from; sample < Math.min(to, frames); ++sample)
+            amplitude = Math.max(amplitude, Math.abs(pcm[sample * 2]), Math.abs(pcm[sample * 2 + 1]));
+        const radius = Math.round(amplitude * (height / 2 - 2));
+        for (let y = middle - radius; y <= middle + radius; ++y)
+            setPixel(rgba, width, x, y, 75, 222, 190);
+    }
+    return { width, height, rgba };
+};
+/** Draw a fixed-window log-magnitude spectrogram from exact mixed PCM. */
+export const productionSoundSpectrogram = (pcm, width = 512, height = 192) => {
+    assertRasterSize(width, height);
+    if (pcm.length % 2 !== 0)
+        throw new Error("Production spectrogram requires interleaved stereo PCM.");
+    const rgba = new Uint8Array(width * height * 4);
+    const frames = pcm.length / 2;
+    const windowSize = 256;
+    for (let x = 0; x < width; ++x) {
+        const center = Math.floor((frames * x) / width);
+        for (let y = 0; y < height; ++y) {
+            const bin = 1 + Math.floor(((height - 1 - y) * 127) / height);
+            let real = 0;
+            let imaginary = 0;
+            for (let offset = 0; offset < windowSize; ++offset) {
+                const sample = center + offset - windowSize / 2;
+                if (sample < 0 || sample >= frames)
+                    continue;
+                const mono = (pcm[sample * 2] + pcm[sample * 2 + 1]) * 0.5;
+                const window = 0.5 - 0.5 * Math.cos((2 * Math.PI * offset) / 255);
+                const phase = (2 * Math.PI * bin * offset) / windowSize;
+                real += mono * window * Math.cos(phase);
+                imaginary -= mono * window * Math.sin(phase);
+            }
+            const level = clamp((20 * Math.log10(Math.hypot(real, imaginary) / 128 + 1e-7) + 100) / 100, 0, 1);
+            const red = Math.round(255 * level * level);
+            const green = Math.round(255 * Math.sqrt(level));
+            const blue = Math.round(180 * (1 - level) + 50 * level);
+            setPixel(rgba, width, x, y, red, green, blue);
+        }
+    }
+    return { width, height, rgba };
+};
+/**
+ * Where an event's sound comes from, how much of it there is, and how far it is
+ * spread: the extended incoherent source its subjects add up to.
+ *
+ * A subject is a scene node (one member, no size), a formation, or an instance
+ * set (a member count and a compiled bounding box). Only the count and the box
+ * are read, never the individual slots: a compact formation deliberately never
+ * stores its members, and a source that had to expand a hundred thousand of
+ * them to be heard would not be heard at all.
+ *
+ * ## Combining subjects
+ *
+ * Each member is one equal, mutually uncorrelated source, so the group's
+ * acoustic center is the member-count-weighted mean of the subject centroids,
+ * not their arithmetic mean. The unweighted mean was the second half of the
+ * scale defect: an event naming one soldier and the army behind him emitted
+ * from the empty midpoint between them, as though the army were one person.
+ *
+ * The combined spread follows by the parallel-axis identity, which makes it
+ * exact rather than approximate:
+ *
+ *     variance = sum_i n_i * (variance_i + |centroid_i - centroid|^2) / sum_i n_i
+ *
+ * ## A group's own radius
+ *
+ * The compiled runtime publishes a member count and an axis-aligned box, so the
+ * members are taken as uniformly distributed over that box, the only
+ * distribution its two facts support. For a uniform box with half-extents `h`,
+ * the mean squared distance from the center is `(hx^2 + hy^2 + hz^2)/3`, one
+ * third of the squared half-diagonal.
+ *
+ * A formation's box is transformed by its live cue first
+ * ({@link transformFormationBounds}), because a cue that rescales spacing
+ * changes the crowd's size, and a crowd closing ranks should tighten in the mix
+ * exactly as it tightens on screen.
+ *
+ * Throwing when nothing resolves also covers the degenerate group: a subject
+ * table that names only empty sets contributes no sources, and no sources is
+ * silence, which is a contradiction in an event the contract says is audible.
+ */
+const resolveSourceMass = (compiled, subjects, time) => {
+    const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
+    const resolved = subjects.flatMap((subject) => {
+        const node = compiled.scene.nodes.find((candidate) => candidate.id === subject);
+        if (node !== undefined) {
+            const translation = sampled.get(`node:${subject}:translation`)?.value;
+            return [
+                {
+                    centroid: translation === undefined
+                        ? node.transform.translation
+                        : { x: translation[0], y: translation[1], z: translation[2] },
+                    count: 1,
+                    variance: 0,
+                },
+            ];
+        }
+        const formation = compiled.formations.find((candidate) => candidate.id === subject);
+        if (formation !== undefined) {
+            const motion = sampleFormationMotion(compiled.formationMotions ?? [], formation.id, time);
+            return [
+                {
+                    centroid: transformFormationPoint(formation.centroid, formation.anchor, motion, formation.facingDeg),
+                    count: formation.count,
+                    variance: boxVariance(transformFormationBounds(formation.bounds, formation.anchor, motion, formation.facingDeg)),
+                },
+            ];
+        }
+        const instances = compiled.instanceSets.find((candidate) => candidate.id === subject);
+        return instances === undefined
+            ? []
+            : [
+                {
+                    centroid: instances.centroid,
+                    count: instances.count,
+                    variance: boxVariance(instances.bounds),
+                },
+            ];
+    });
+    const count = resolved.reduce((sum, mass) => sum + mass.count, 0);
+    if (count === 0)
+        throw new Error(`Sound event in shot "${compiled.shot.id}" has no spatially resolved subject among ${subjects.join(", ")}.`);
+    const centroid = Vector3.scale(resolved.reduce((sum, mass) => Vector3.add(sum, Vector3.scale(mass.centroid, mass.count)), Vector3.create()), 1 / count);
+    const variance = resolved.reduce((sum, mass) => {
+        const offset = Vector3.length(Vector3.subtract(mass.centroid, centroid));
+        return sum + mass.count * (mass.variance + offset * offset);
+    }, 0) / count;
+    return { centroid, count, variance };
+};
+/**
+ * The mean squared distance from the center of an axis-aligned box to a point
+ * drawn uniformly inside it: `(hx^2 + hy^2 + hz^2)/3` over its half-extents.
+ *
+ * Each axis is independent and uniform over `[-h, h]`, whose second moment is
+ * `h^2/3`; summing the three gives the whole. A degenerate box (one slot, or a
+ * line of them) correctly yields zero on the collapsed axes, so a single-member
+ * formation is a point source and mixes exactly as it did before size existed.
+ */
+const boxVariance = (bounds) => {
+    const x = (bounds.max.x - bounds.min.x) / 2;
+    const y = (bounds.max.y - bounds.min.y) / 2;
+    const z = (bounds.max.z - bounds.min.z) / 2;
+    return (x * x + y * y + z * z) / 3;
+};
+const mixEvent = (pcm, plan, event) => {
+    const durationSeconds = {
+        contact: 0.22,
+        arrival: 0.7,
+        break: 0.48,
+        reveal: 1.1,
+        transition: 0.55,
+    };
+    const start = frameToSample(plan, event.frame);
+    const length = Math.round(durationSeconds[event.kind] * plan.sampleRate);
+    const left = Math.sqrt((1 - event.pan) * 0.5);
+    const right = Math.sqrt((1 + event.pan) * 0.5);
+    for (let index = 0; index < length && start + index < pcm.length / 2; ++index) {
+        const t = index / plan.sampleRate;
+        const normalized = index / Math.max(1, length - 1);
+        const envelope = Math.exp(-5 * normalized);
+        const noise = seededNoise(event.seed, index);
+        const base = {
+            contact: Math.sin(2 * Math.PI * 115 * t) + noise * 0.45,
+            arrival: Math.sin(2 * Math.PI * (58 + 42 * normalized) * t),
+            break: noise * 0.9 + Math.sin(2 * Math.PI * 190 * t) * 0.3,
+            reveal: Math.sin(2 * Math.PI * (220 + 440 * normalized) * t) * 0.7 +
+                Math.sin(2 * Math.PI * 330 * t) * 0.3,
+            transition: noise * 0.25 + Math.sin(2 * Math.PI * 88 * t) * 0.5,
+        };
+        const impulse = index === 0 ? 1 : 0;
+        // `densityGain` is applied unbounded and un-fudged: it IS the incoherent
+        // summation result, and clamping it would be an opinion about how loud a
+        // crowd is allowed to be. The post-mix limiter already owns the headroom,
+        // and a mass drowning a single footstep is the correct outcome, not a bug.
+        const value = (base[event.kind] * envelope * 0.28 + impulse * 0.5) *
+            event.attenuation *
+            event.densityGain;
+        pcm[(start + index) * 2] += value * left;
+        pcm[(start + index) * 2 + 1] += value * right;
+    }
+};
+const mixCue = (pcm, plan, cue) => {
+    if (cue.gain === 0)
+        return;
+    const start = frameToSample(plan, cue.startFrame);
+    const length = Math.max(0, frameToSample(plan, cue.durationFrames));
+    const fadeIn = frameToSample(plan, cue.fadeInFrames);
+    const fadeOut = frameToSample(plan, cue.fadeOutFrames);
+    for (let index = 0; index < length && start + index < pcm.length / 2; ++index) {
+        const source = frameToSample(plan, cue.sourceOffsetFrame) + index;
+        const t = source / plan.sampleRate;
+        const fade = Math.min(1, fadeIn === 0 ? 1 : index / fadeIn) *
+            Math.min(1, fadeOut === 0 ? 1 : (length - index) / fadeOut);
+        const noise = seededNoise(cue.seed, source);
+        const signal = cue.bus === "music"
+            ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +
+                Math.sin(2 * Math.PI * 165 * t) * 0.12 +
+                Math.sin(2 * Math.PI * 220 * t) * 0.08
+            : cue.bus === "ambience"
+                ? noise * 0.09 + Math.sin(2 * Math.PI * 48 * t) * 0.04
+                : cue.bus === "effects"
+                    ? noise * 0.16
+                    : Math.sin(2 * Math.PI * 175 * t) * 0.08;
+        const value = signal * cue.gain * fade;
+        pcm[(start + index) * 2] += value;
+        pcm[(start + index) * 2 + 1] += value;
+    }
+};
+const analyzeProductionSound = (plan, pcm) => {
+    let peak = 0;
+    let clippingSamples = 0;
+    let longestSilence = 0;
+    let silence = 0;
+    for (let frame = 0; frame < pcm.length / 2; ++frame) {
+        const left = pcm[frame * 2];
+        const right = pcm[frame * 2 + 1];
+        peak = Math.max(peak, Math.abs(left), Math.abs(right));
+        if (Math.abs(left) > 1)
+            clippingSamples += 1;
+        if (Math.abs(right) > 1)
+            clippingSamples += 1;
+        if (Math.max(Math.abs(left), Math.abs(right)) < 1e-5) {
+            silence += 1;
+            longestSilence = Math.max(longestSilence, silence);
+        }
+        else
+            silence = 0;
+    }
+    const sampleFrames = pcm.length / 2;
+    return {
+        version: 1,
+        sampleRate: 48_000,
+        sampleFrames,
+        runtimeSeconds: sampleFrames / plan.sampleRate,
+        integratedLoudness: integratedLoudness(pcm, plan.sampleRate),
+        samplePeak: peak,
+        clippingSamples,
+        longestSilenceSeconds: longestSilence / plan.sampleRate,
+        eventAlignment: plan.events.map((event) => {
+            const expected = frameToSample(plan, event.frame);
+            const radius = Math.max(1, frameToSample(plan, 1));
+            let peakSample = expected;
+            let peakValue = -1;
+            for (let sample = Math.max(0, expected - radius); sample <= Math.min(sampleFrames - 1, expected + radius); ++sample) {
+                const value = Math.max(Math.abs(pcm[sample * 2]), Math.abs(pcm[sample * 2 + 1]));
+                if (value > peakValue) {
+                    peakValue = value;
+                    peakSample = sample;
+                }
+            }
+            const errorFrames = (Math.abs(peakSample - expected) * plan.fps) / plan.sampleRate;
+            return {
+                id: event.id,
+                expectedSeconds: expected / plan.sampleRate,
+                peakSeconds: peakSample / plan.sampleRate,
+                errorFrames,
+                passed: peakValue > 1e-5 && errorFrames <= 1,
+            };
+        }),
+    };
+};
+const integratedLoudness = (pcm, sampleRate) => {
+    if (pcm.every((sample) => sample === 0))
+        return null;
+    const weighted = new Float64Array(pcm.length);
+    for (let channel = 0; channel < 2; ++channel) {
+        const first = biquadChannel(pcm, channel, [1.53512485958697, -2.69169618940638, 1.19839281085285], [1, -1.69065929318241, 0.73248077421585]);
+        const second = biquadChannel(first, 0, [1, -2, 1], [1, -1.99004745483398, 0.99007225036621], 1);
+        for (let frame = 0; frame < second.length; ++frame)
+            weighted[frame * 2 + channel] = second[frame];
+    }
+    const frames = pcm.length / 2;
+    const blockFrames = Math.min(frames, Math.round(sampleRate * 0.4));
+    const hopFrames = Math.max(1, Math.round(sampleRate * 0.1));
+    const energies = [];
+    for (let start = 0; start + blockFrames <= frames; start += hopFrames) {
+        let energy = 0;
+        for (let frame = start; frame < start + blockFrames; ++frame) {
+            const left = weighted[frame * 2];
+            const right = weighted[frame * 2 + 1];
+            energy += left * left + right * right;
+        }
+        energies.push(energy / blockFrames);
+        if (start + blockFrames === frames)
+            break;
+    }
+    const aboveAbsolute = energies.filter((energy) => loudnessOfEnergy(energy) >= -70);
+    if (aboveAbsolute.length === 0)
+        return null;
+    const relativeGate = loudnessOfEnergy(aboveAbsolute.reduce((sum, energy) => sum + energy, 0) /
+        aboveAbsolute.length) - 10;
+    const gated = aboveAbsolute.filter((energy) => loudnessOfEnergy(energy) >= relativeGate);
+    return loudnessOfEnergy(gated.reduce((sum, energy) => sum + energy, 0) / gated.length);
+};
+const biquadChannel = (interleaved, channel, numerator, denominator, channels = 2) => {
+    const frames = Math.floor(interleaved.length / channels);
+    const output = new Float64Array(frames);
+    let x1 = 0;
+    let x2 = 0;
+    let y1 = 0;
+    let y2 = 0;
+    for (let frame = 0; frame < frames; ++frame) {
+        const input = interleaved[frame * channels + channel];
+        const value = numerator[0] * input +
+            numerator[1] * x1 +
+            numerator[2] * x2 -
+            denominator[1] * y1 -
+            denominator[2] * y2;
+        output[frame] = value;
+        x2 = x1;
+        x1 = input;
+        y2 = y1;
+        y1 = value;
+    }
+    return output;
+};
+const loudnessOfEnergy = (energy) => energy <= 0 ? -Infinity : -0.691 + 10 * Math.log10(energy);
+const resampleMono = (source, length) => {
+    const output = new Float32Array(length);
+    if (source.length === 0 || length === 0)
+        return output;
+    if (source.length === 1) {
+        output.fill(source[0]);
+        return output;
+    }
+    for (let index = 0; index < length; ++index) {
+        const position = length === 1 ? 0 : (index * (source.length - 1)) / (length - 1);
+        const left = Math.floor(position);
+        const right = Math.min(source.length - 1, left + 1);
+        const weight = position - left;
+        output[index] = Math.fround(source[left] * (1 - weight) + source[right] * weight);
+    }
+    return output;
+};
+const frameToSample = (plan, frame) => Math.round((frame / plan.fps) * plan.sampleRate);
+const edgeEnvelope = (index, length, edge) => Math.min(1, index / edge, (length - index) / edge);
+const phonemeViseme = (phoneme) => {
+    const token = phoneme.toLocaleLowerCase("en-US");
+    const matches = (characters) => Array.from(token).some((character) => characters.includes(character));
+    if (matches("aɑɒæʌə"))
+        return "aa";
+    if (matches("iɪɨ"))
+        return "ih";
+    if (matches("uʊw"))
+        return "ou";
+    if (matches("eɛj"))
+        return "ee";
+    if (matches("oɔ"))
+        return "oh";
+    return "rest";
+};
+const seededNoise = (seed, index) => {
+    let value = (seed ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0;
+    value ^= value << 13;
+    value ^= value >>> 17;
+    value ^= value << 5;
+    return ((value >>> 0) / 0x7fffffff - 1) * 0.999999;
+};
+const soundSeed = (value) => {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < value.length; ++index) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return hash >>> 0;
+};
+const assertRasterSize = (width, height) => {
+    if (Number.isSafeInteger(width) === false ||
+        Number.isSafeInteger(height) === false ||
+        width <= 0 ||
+        height <= 0)
+        throw new Error("Sound evidence raster dimensions must be positive integers.");
+};
+const rasterBackground = (width, height) => {
+    const rgba = new Uint8Array(width * height * 4);
+    for (let index = 0; index < rgba.length; index += 4) {
+        rgba[index] = 8;
+        rgba[index + 1] = 15;
+        rgba[index + 2] = 28;
+        rgba[index + 3] = 255;
+    }
+    return rgba;
+};
+const setPixel = (rgba, width, x, y, red, green, blue) => {
+    const index = (y * width + x) * 4;
+    rgba[index] = red;
+    rgba[index + 1] = green;
+    rgba[index + 2] = blue;
+    rgba[index + 3] = 255;
+};
+const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+const compareCodeUnits = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+//# sourceMappingURL=productionSound.js.map

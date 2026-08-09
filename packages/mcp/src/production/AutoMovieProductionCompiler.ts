@@ -3081,7 +3081,16 @@ const formationGroundMembers = (
       outermost[index] = member;
     }
   }
-  const members = [...new Set(outermost.filter((member) => member !== null))];
+  // A type predicate rather than a plain test: `filter` does not narrow on
+  // its own, so the null the loop starts from would travel into every
+  // consumer of a member's slot.
+  const members = [
+    ...new Set(
+      outermost.filter(
+        (member): member is IFormationGroundMember => member !== null,
+      ),
+    ),
+  ];
   formationGroundMemberCache.set(formation, members);
   return members;
 };
@@ -3378,18 +3387,23 @@ export const validateAutoMovieFormationGround = (
       carried: number | null;
     } | null = null;
     for (const time of [...(resting ? [null] : []), ...times]) {
-      const motion =
-        time === null ? null : sampleFormationMotion(own, formation.id, time);
-      for (const member of members.values()) {
-        // At rest no cue of either kind has begun, so the member is exactly
-        // where its design put it and is read as the designed point rather than
-        // through an identity transform that would only round it.
-        if (motion === null) {
+      // The rest pass is its own loop rather than a branch inside the moving
+      // one. At rest no cue of either kind has begun, so the member is exactly
+      // where its design put it and is read as the designed point rather than
+      // through an identity transform that would only round it -- and asking
+      // the question here is what tells the sampler below that it has a time.
+      if (time === null) {
+        for (const member of members.values()) {
           const off = formationGroundEscape(space, member.point);
           if (off === null) continue;
           escape = { time, place: member.point, ...off };
           break;
         }
+        if (escape !== null) break;
+        continue;
+      }
+      const motion = sampleFormationMotion(own, formation.id, time);
+      for (const member of members.values()) {
         const placed = placeFormationSlot({
           position: member.point,
           facingDeg: formation.facingDeg,
@@ -3628,8 +3642,8 @@ const vertical = (value: { x: number; z: number }): boolean =>
  * because the part's scale stretches the two reaches by different factors and
  * the disc inside the result is the narrower of them. A cone tapers, so what it
  * certainly holds is half its base reach over its wider half; a plane has no
- * thickness, so nothing is ever inside one; a mesh states no dimensions here and
- * is left to the parts that do.
+ * thickness, so nothing is ever inside one; a mesh states no dimensions here
+ * and is left to the parts that do.
  */
 const columnOfShape = (
   geometry: IAutoMovieModel["parts"][number]["geometry"],

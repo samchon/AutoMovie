@@ -1,0 +1,191 @@
+import { Matrix4 } from "../math/Matrix4";
+import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
+import { applyIterativeIK } from "./iterativeIK";
+import { blendVec, readWorld, recompose, rotationBetween, validateInfluence, } from "./worldShared";
+const VECTOR_AXES = ["x", "y", "z"];
+/**
+ * The world-space DRIVE pass: drivers that need the composed hierarchy (a
+ * node's world position/orientation) rather than just other channels. It runs
+ * **after** the initial compose, reads world matrices, recomputes the owner's
+ * world transform, and recomposes the owner's subtree so descendants follow.
+ *
+ * This step resolves {@link IAutoMovieAimDriver} (look-at: orient a node so one
+ * of its axes points at a target: eyes, head, a camera),
+ * {@link IAutoMovieParentDriver} (Child-Of: make a node inherit another's world
+ * frame, per component: a sword following a hand), the analytic two-bone
+ * {@link IAutoMovieIKDriver} (back-solve a 3-node limb so its tip reaches a
+ * goal: arms, legs), and the iterative `ccd`/`fabrik` solvers for longer chains
+ * ({@link applyIterativeIK}, fixed budgets, S2 of the core wiring). Only
+ * `spring` still defers here: it is stateful, and steps inside
+ * {@link resolveFrame} when the caller provides `dt` + state, or in the host's
+ * own pass otherwise; nothing is silently dropped.
+ *
+ * @author Samchon
+ */
+export const resolveWorldDrivers = (drivers, world, localById, childrenById) => {
+    const deferred = [];
+    for (const d of drivers)
+        if (d.type === "aim")
+            applyAim(d, world, localById, childrenById);
+        else if (d.type === "parent")
+            applyParent(d, world, localById, childrenById);
+        else if (d.type === "ik" && d.solver === "twoBone" && d.chain.length === 3)
+            applyTwoBoneIK(d, world, localById, childrenById);
+        else if (d.type === "ik" && (d.solver === "ccd" || d.solver === "fabrik"))
+            applyIterativeIK(d, world, localById, childrenById);
+        else
+            deferred.push(d);
+    return deferred;
+};
+/** Build the parent → children adjacency the recompose walk needs. */
+export const childrenIndex = (nodes) => {
+    const map = new Map();
+    for (const n of nodes)
+        if (n.parent !== null) {
+            const siblings = map.get(n.parent);
+            if (siblings !== undefined)
+                siblings.push(n.id);
+            else
+                map.set(n.parent, [n.id]);
+        }
+    return map;
+};
+const applyAim = (d, world, localById, childrenById) => {
+    validateInfluence("aim", d.influence);
+    validateAimVector("aimAxis", d.aimAxis);
+    validateAimVector("upAxis", d.upAxis);
+    validateAimVector("worldUp", d.worldUp);
+    const dec = Matrix4.decompose(readWorld(world, d.owner, "aim owner"));
+    const dir = Vector3.subtract(Matrix4.position(readWorld(world, d.target, "aim target")), dec.position);
+    const aimed = aimRotation(dir, d.aimAxis, d.upAxis, d.worldUp);
+    const blended = Quaternion.slerp(dec.rotation, aimed, d.influence);
+    world.set(d.owner, Matrix4.compose(dec.position, blended, dec.scale));
+    recompose(d.owner, world, localById, childrenById);
+};
+/**
+ * Child-Of: the owner inherits the parent node's world frame, component by
+ * component (translation / rotation / scale), keeping its own value for the
+ * components the flags leave off. Then its subtree recomposes.
+ */
+const applyParent = (d, world, localById, childrenById) => {
+    validateParentFlag(d.translation, "translation");
+    validateParentFlag(d.rotation, "rotation");
+    validateParentFlag(d.scale, "scale");
+    const own = Matrix4.decompose(readWorld(world, d.owner, "parent owner"));
+    const par = Matrix4.decompose(readWorld(world, d.parent, "parent parent"));
+    world.set(d.owner, Matrix4.compose(d.translation ? par.position : own.position, d.rotation ? par.rotation : own.rotation, d.scale ? par.scale : own.scale));
+    recompose(d.owner, world, localById, childrenById);
+};
+const validateParentFlag = (value, label) => {
+    if (typeof value !== "boolean")
+        throw new Error(`world driver parent ${label} flag must be boolean, but was ${value}`);
+};
+/**
+ * Analytic two-bone IK: rotate a 3-node limb (`root → mid → tip`) so the tip
+ * reaches `goal`, bending in the plane the pole picks (or the limb's current
+ * plane). The interior angles come from the law of cosines over the two bone
+ * lengths and the (reach-clamped) root→goal distance; the tip lands on the goal
+ * exactly when the goal is reachable. Bone lengths are preserved, the result is
+ * blended by `influence`, and the tip's subtree recomposes.
+ *
+ * Operates directly on the chain's world matrices (the renderer consumes world
+ * transforms), so it needs no world→local round-trip.
+ */
+const applyTwoBoneIK = (d, world, localById, childrenById) => {
+    validateInfluence("two-bone IK", d.influence);
+    if (d.pole !== null)
+        validatePoleAngle(d.pole.angle);
+    const rootId = d.chain[0];
+    const midId = d.chain[1];
+    const tipId = d.chain[2];
+    const rootM = readWorld(world, rootId, "two-bone IK root");
+    const midM = readWorld(world, midId, "two-bone IK mid");
+    const tipM = readWorld(world, tipId, "two-bone IK tip");
+    const rootP = Matrix4.position(rootM);
+    const midP = Matrix4.position(midM);
+    const tipP = Matrix4.position(tipM);
+    const goalP = Matrix4.position(readWorld(world, d.goal, "two-bone IK goal"));
+    const upper = Vector3.subtract(midP, rootP);
+    const lower = Vector3.subtract(tipP, midP);
+    const l1 = Vector3.length(upper);
+    const l2 = Vector3.length(lower);
+    if (!(l1 > 0))
+        throw new Error(`world driver two-bone IK upper bone length must be > 0, but was ${l1}`);
+    if (!(l2 > 0))
+        throw new Error(`world driver two-bone IK lower bone length must be > 0, but was ${l2}`);
+    const toGoal = Vector3.subtract(goalP, rootP);
+    const goalLen = Vector3.length(toGoal);
+    const reach = clamp(goalLen, Math.abs(l1 - l2) + 1e-5, l1 + l2 - 1e-5);
+    const dir = goalLen < 1e-8
+        ? Vector3.normalize(upper)
+        : Vector3.scale(toGoal, 1 / goalLen);
+    // Bend plane: from the pole (when one is wired) else the limb's current bend.
+    const poleRef = d.pole !== null && d.pole.node !== null
+        ? Vector3.subtract(Matrix4.position(readWorld(world, d.pole.node, "two-bone IK pole")), rootP)
+        : upper;
+    let axis = Vector3.cross(dir, poleRef);
+    if (Vector3.length(axis) < 1e-8)
+        axis = anyPerp(dir);
+    if (d.pole !== null && d.pole.angle !== 0)
+        axis = Quaternion.rotateVector(Quaternion.fromAxisAngle(dir, d.pole.angle), axis);
+    axis = Vector3.normalize(axis);
+    const cosRoot = clamp((l1 * l1 + reach * reach - l2 * l2) / (2 * l1 * reach), -1, 1);
+    const bend = Quaternion.fromAxisAngle(axis, (Math.acos(cosRoot) * 180) / Math.PI);
+    const newMid = Vector3.add(rootP, Vector3.scale(Quaternion.rotateVector(bend, dir), l1));
+    const newTip = Vector3.add(rootP, Vector3.scale(dir, reach));
+    const rootDelta = rotationBetween(Vector3.normalize(upper), Vector3.normalize(Vector3.subtract(newMid, rootP)));
+    const midDelta = rotationBetween(Vector3.normalize(lower), Vector3.normalize(Vector3.subtract(newTip, newMid)));
+    const rootDec = Matrix4.decompose(rootM);
+    const midDec = Matrix4.decompose(midM);
+    const tipDec = Matrix4.decompose(tipM);
+    const t = d.influence;
+    world.set(rootId, Matrix4.compose(rootP, Quaternion.slerp(rootDec.rotation, Quaternion.multiply(rootDelta, rootDec.rotation), t), rootDec.scale));
+    world.set(midId, Matrix4.compose(blendVec(midP, newMid, t), Quaternion.slerp(midDec.rotation, Quaternion.multiply(midDelta, midDec.rotation), t), midDec.scale));
+    world.set(tipId, Matrix4.compose(blendVec(tipP, newTip, t), tipDec.rotation, tipDec.scale));
+    recompose(tipId, world, localById, childrenById);
+};
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const validatePoleAngle = (angle) => {
+    if (!Number.isFinite(angle))
+        throw new Error(`world driver two-bone IK pole angle must be finite, but was ${angle}`);
+};
+const validateAimVector = (label, value) => {
+    for (const axis of VECTOR_AXES)
+        if (!Number.isFinite(value[axis]))
+            throw new Error(`world driver aim ${label}.${axis} must be finite, but was ${value[axis]}`);
+    if (Vector3.length(value) === 0)
+        throw new Error(`world driver aim ${label} must be non-zero`);
+};
+/** Some unit vector perpendicular to `v` (for a straight limb's free bend). */
+const anyPerp = (v) => {
+    const c = Vector3.cross(v, { x: 0, y: 1, z: 0 });
+    return Vector3.length(c) > 1e-6
+        ? Vector3.normalize(c)
+        : Vector3.normalize(Vector3.cross(v, { x: 1, y: 0, z: 0 }));
+};
+/**
+ * The world-space orientation that points `aimAxis` (owner-local) along `dir`,
+ * then twists about `dir` to bring `upAxis` as close as possible to `worldUp`
+ * (the standard two-step aim constraint). If `worldUp` (or the rolled up
+ * vector) is parallel to `dir` the roll is undefined and skipped.
+ */
+const aimRotation = (dir, aimAxis, upAxis, worldUp) => {
+    const f = Vector3.normalize(dir);
+    const r1 = rotationBetween(Vector3.normalize(aimAxis), f);
+    const desired = projectPerp(worldUp, f);
+    const current = projectPerp(Quaternion.rotateVector(r1, upAxis), f);
+    const dl = Vector3.length(desired);
+    const cl = Vector3.length(current);
+    if (dl < 1e-8 || cl < 1e-8)
+        return r1;
+    const du = Vector3.scale(desired, 1 / dl);
+    const cu = Vector3.scale(current, 1 / cl);
+    const cos = Math.max(-1, Math.min(1, Vector3.dot(cu, du)));
+    const sin = Vector3.dot(Vector3.cross(cu, du), f);
+    const r2 = Quaternion.fromAxisAngle(f, (Math.atan2(sin, cos) * 180) / Math.PI);
+    return Quaternion.multiply(r2, r1);
+};
+/** Component of `v` perpendicular to the unit axis `f`. */
+const projectPerp = (v, f) => Vector3.subtract(v, Vector3.scale(f, Vector3.dot(v, f)));
+//# sourceMappingURL=worldDrivers.js.map

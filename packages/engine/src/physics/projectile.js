@@ -1,0 +1,85 @@
+import { aimRotation } from "../kinematics/aimRotation";
+import { Vector3 } from "../math/Vector3";
+/** A projectile model faces +Z; its trajectory rotates that onto the flight. */
+const PROJECTILE_FORWARD = { x: 0, y: 0, z: 1 };
+const VECTOR_AXES = ["x", "y", "z"];
+const assertFiniteVector = (name, vector) => {
+    for (const axis of VECTOR_AXES)
+        if (!Number.isFinite(vector[axis]))
+            throw new RangeError(`projectile ${name}.${axis} must be finite, but was ${vector[axis]}`);
+};
+/**
+ * Evaluate a {@link IAutoMovieProjectile} at time `t` seconds (closed form, no
+ * integration error): `p = origin + v·t + ½·g·t²`, `v(t) = v + g·t`. The
+ * velocity also gives the flight direction, so a renderer can orient the arrow
+ * along its arc (e.g. via `aimRotation`).
+ *
+ * @author Samchon
+ */
+export const projectileAt = (p, t) => {
+    if (!Number.isFinite(t))
+        throw new RangeError(`projectile time must be finite, but was ${t}`);
+    assertFiniteVector("origin", p.origin);
+    assertFiniteVector("velocity", p.velocity);
+    assertFiniteVector("gravity", p.gravity);
+    return {
+        position: Vector3.add(Vector3.add(p.origin, Vector3.scale(p.velocity, t)), Vector3.scale(p.gravity, 0.5 * t * t)),
+        velocity: Vector3.add(p.velocity, Vector3.scale(p.gravity, t)),
+    };
+};
+/**
+ * Bake a projectile's flight into an {@link IAutoMovieClip} for its scene node:
+ * position sampled from {@link projectileAt} at `fps`, plus a rotation track
+ * that keeps the model's forward (+Z) pointing down the arc's velocity, so the
+ * arrow noses over as it falls. This is the projectile half of the `launch`
+ * verb (paired with the aim `solveBallisticLaunch` computed): the host applies
+ * the clip to the thrown prop and plays it through `sampleClip`.
+ *
+ * Samples the closed-form solution, so there is no integration drift; the last
+ * key lands exactly on `duration`.
+ *
+ * @author Samchon
+ */
+export const projectileTrajectory = (node, p, duration, fps = 30) => {
+    if (!Number.isFinite(duration))
+        throw new RangeError(`projectile trajectory duration must be finite, but was ${duration}`);
+    if (!(duration > 0))
+        throw new RangeError(`projectile trajectory duration must be > 0 seconds, but was ${duration}`);
+    if (!Number.isFinite(fps))
+        throw new RangeError(`projectile trajectory fps must be finite, but was ${fps}`);
+    if (!(fps > 0))
+        throw new RangeError(`projectile trajectory fps must be > 0, but was ${fps}`);
+    const count = Math.max(1, Math.round(duration * fps));
+    const times = [];
+    const pos = [];
+    const rot = [];
+    for (let i = 0; i <= count; ++i) {
+        const t = (i / count) * duration;
+        const { position, velocity } = projectileAt(p, t);
+        times.push(t);
+        pos.push(position.x, position.y, position.z);
+        const q = aimRotation(PROJECTILE_FORWARD, velocity);
+        rot.push(q.x, q.y, q.z, q.w);
+    }
+    return {
+        id: `trajectory:${node}`,
+        name: null,
+        duration,
+        loop: false,
+        tracks: [
+            {
+                channel: { kind: "node", node, path: "translation" },
+                times,
+                values: pos,
+                interpolation: "linear",
+            },
+            {
+                channel: { kind: "node", node, path: "rotation" },
+                times,
+                values: rot,
+                interpolation: "linear",
+            },
+        ],
+    };
+};
+//# sourceMappingURL=projectile.js.map

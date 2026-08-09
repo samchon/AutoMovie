@@ -13,9 +13,10 @@ import { IAutoMovieFog } from "@automovie/interface";
  * vFogDepth * vFogDepth)` (`three.js` `fog_fragment.glsl`, `FOG_EXP2` branch)
  * over `vFogDepth = -mvPosition.z` (`fog_vertex.glsl`). Reproducing that exact
  * expression here, rather than the physically purer Beer-Lambert `exp(-density
- * * d)`, is what makes this function a PREDICTION of the painted pixel instead
- * of an estimate of it: an offline artifact and a review frame state the same
- * atmosphere, or the artifact is lying about the film.
+ *
+ * - D)`, is what makes this function a PREDICTION of the painted pixel instead of
+ *   an estimate of it: an offline artifact and a review frame state the same
+ *   atmosphere, or the artifact is lying about the film.
  *
  * `depthMeters` is camera-space depth (distance along the camera's forward
  * axis, `projectToNdc`'s `depth`), not radial distance, again because that is

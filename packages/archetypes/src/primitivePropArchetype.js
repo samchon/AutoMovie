@@ -1,0 +1,112 @@
+import { numberOf, numberParameter, stringParameter, } from "./parameterValues";
+/** Dimension keys each supported shape consumes, and no others. */
+const DIMENSIONS = {
+    box: ["width", "height", "depth"],
+    sphere: ["radius"],
+    capsule: ["radius", "height"],
+    cylinder: ["radius", "height"],
+    cone: ["radius", "height"],
+    plane: ["width", "depth"],
+};
+/**
+ * The catalogue's static single primitive: one shape and its own dimensions.
+ *
+ * `shape` discriminates the parameter map, so the plan below narrows both the
+ * required and the accepted keys to the ones that shape actually consumes. A
+ * dimension the selected shape ignores is refused rather than stored, because a
+ * stored value nothing reads is a claim the render never honours.
+ */
+export const PRIMITIVE_PROP_ARCHETYPE = {
+    id: "primitive-prop",
+    capabilities: [],
+    bones: [],
+    parameters: {
+        shape: { kind: "string" },
+        width: { kind: "number", minimum: 0.001, maximum: 100 },
+        height: { kind: "number", minimum: 0.001, maximum: 100 },
+        depth: { kind: "number", minimum: 0.001, maximum: 100 },
+        radius: { kind: "number", minimum: 0.001, maximum: 50 },
+    },
+    plan: (parameters) => {
+        const shape = typeof parameters.shape === "string" ? parameters.shape : null;
+        const dimensions = shape === null ? undefined : DIMENSIONS[shape];
+        return {
+            required: ["shape", ...(dimensions ?? [])],
+            accepted: dimensions === undefined ? null : ["shape", ...dimensions],
+            refusals: shape !== null && dimensions === undefined
+                ? [
+                    {
+                        code: "model-parameter-invalid",
+                        message: `Primitive-prop shape "${shape}" is unsupported. Use box, sphere, capsule, cylinder, cone, or plane in the tracked model recipe record.`,
+                    },
+                ]
+                : [],
+        };
+    },
+    projectionRadius: (parameters) => projectionRadius(parameters),
+    build: (input) => build(input),
+};
+const projectionRadius = (parameters) => {
+    const shape = parameters.shape;
+    const number = (key) => numberOf(parameters, key);
+    if (shape === "sphere")
+        return number("radius");
+    if (shape === "capsule")
+        return number("radius") + number("height") / 2;
+    if (shape === "cylinder" || shape === "cone")
+        return Math.hypot(number("radius"), number("height") / 2);
+    if (shape === "plane")
+        return Math.hypot(number("width"), number("depth")) / 2;
+    return Math.hypot(number("width"), number("height"), number("depth")) / 2;
+};
+const build = (input) => ({
+    skeleton: null,
+    parts: [
+        {
+            id: "primitive",
+            name: "primitive",
+            geometry: {
+                type: "primitive",
+                shape: shapeOf(input.parameters, stringParameter(input.parameters, "shape")),
+            },
+            material: input.material,
+            attachedBone: null,
+            transform: null,
+        },
+    ],
+});
+const shapeOf = (parameters, shape) => {
+    if (shape === "box")
+        return {
+            type: "box",
+            width: numberParameter(parameters, "width"),
+            height: numberParameter(parameters, "height"),
+            depth: numberParameter(parameters, "depth"),
+        };
+    if (shape === "sphere")
+        return { type: "sphere", radius: numberParameter(parameters, "radius") };
+    if (shape === "capsule")
+        return {
+            type: "capsule",
+            radius: numberParameter(parameters, "radius"),
+            height: numberParameter(parameters, "height"),
+        };
+    if (shape === "cylinder")
+        return {
+            type: "cylinder",
+            radius: numberParameter(parameters, "radius"),
+            height: numberParameter(parameters, "height"),
+        };
+    if (shape === "cone")
+        return {
+            type: "cone",
+            radius: numberParameter(parameters, "radius"),
+            height: numberParameter(parameters, "height"),
+        };
+    return {
+        type: "plane",
+        width: numberParameter(parameters, "width"),
+        depth: numberParameter(parameters, "depth"),
+    };
+};
+//# sourceMappingURL=primitivePropArchetype.js.map

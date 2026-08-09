@@ -1,0 +1,620 @@
+import { cubicHermiteValue } from "../math/cubicHermite";
+import { LIGHT_CHANNEL_PROPERTIES, parseLightPointer, } from "../resolve/lightChannel";
+import { asArray, isRecord, pushViolation, validateArrayArtifact, validateNonEmptyId, validateObjectArtifact, validateRange, validateUniqueBy, validateUniqueIds, validateVectorArtifact, } from "./artifactShape";
+import { NODE_CHANNEL_PATHS, channelValueWidth, clipLoopFault, clipTrackShapeFaults, } from "./clipTrackShape";
+import { toValidation } from "./violation";
+/**
+ * The shot artifact's structural contract, owned by the engine that produces
+ * it.
+ *
+ * It used to live only beside the MCP commit gate, so `performShot` could emit
+ * a shot no consumer would accept and report success: the same failure recurred
+ * five times (#1224, #1308, #1314, #1316, #1318), each fixed by teaching the
+ * producer one more field. The rules now have a single home, on the side that
+ * both the producer and every consumer can reach (#1320).
+ *
+ * What stays with the host: whether a slice is committable, whether a resident
+ * registry supplies the referenced clips, and how a project addresses its
+ * files. Those are questions about a deployment, not about the artifact.
+ *
+ * @author Samchon
+ */
+export const validateShotArtifact = (shot, scene, 
+/**
+ * Ids the shot's `performances[].motion` may reference, or `null` to skip
+ * that cross-check. The caller resolves the registry: the engine knows what a
+ * valid reference IS, not where a host keeps its clips.
+ */
+motionIds) => {
+    const violations = [];
+    if (!validateObjectArtifact(shot, "$input", "shot", violations))
+        return toValidation(violations);
+    validateNonEmptyId(shot.id, "$input.id", "shot id", violations);
+    validateNonEmptyId(shot.scene, "$input.scene", "shot scene", violations);
+    validateNonEmptyId(shot.camera, "$input.camera", "shot camera", violations);
+    const sceneId = isRecord(scene) ? scene.id : undefined;
+    if (shot.scene !== sceneId)
+        pushViolation(violations, "type", "$input.scene", `shot scene "${shot.scene}" must match scene "${sceneId}"`, shot.scene);
+    const sceneCameras = asArray(isRecord(scene) ? scene.cameras : undefined);
+    if (typeof shot.camera === "string" &&
+        !sceneCameras.some((camera) => isRecord(camera) && camera.id === shot.camera))
+        pushViolation(violations, "type", "$input.camera", `shot camera "${shot.camera}" must reference a scene camera`, shot.camera);
+    validateRange(shot.duration, "$input.duration", 0, Infinity, "shot duration", violations, false);
+    const nodeIds = new Set(asArray(isRecord(scene) ? scene.nodes : undefined)
+        .filter(isRecord)
+        .map((node) => node.id)
+        .filter((id) => typeof id === "string"));
+    validateUniqueBy(asArray(shot.performances).map((performance, index) => ({
+        id: isRecord(performance) ? performance.node : undefined,
+        path: `$input.performances[${index}].node`,
+    })), "shot performance node", violations);
+    validateArrayArtifact(shot.performances, "$input.performances", "shot performances", violations);
+    asArray(shot.performances).forEach((performance, i) => {
+        const path = `$input.performances[${i}]`;
+        if (!validateObjectArtifact(performance, path, "shot performance", violations))
+            return;
+        validateNonEmptyId(performance.node, `${path}.node`, "performance node", violations);
+        if (typeof performance.node === "string" && !nodeIds.has(performance.node))
+            pushViolation(violations, "type", `${path}.node`, `performance node "${performance.node}" must reference a scene node`, performance.node);
+        validateRange(performance.startOffset, `${path}.startOffset`, 0, shot.duration, "performance startOffset", violations);
+        if (performance.motion !== null) {
+            validateNonEmptyId(performance.motion, `${path}.motion`, "performance motion", violations);
+            if (motionIds !== null &&
+                typeof performance.motion === "string" &&
+                !motionIds.has(performance.motion))
+                pushViolation(violations, "type", `${path}.motion`, `performance motion "${performance.motion}" must reference a compiled motion`, performance.motion);
+        }
+    });
+    if (shot.cameraMotion === undefined)
+        pushViolation(violations, "type", "$input.cameraMotion", "shot cameraMotion must be null or a clip", shot.cameraMotion);
+    else if (shot.cameraMotion !== null)
+        validateClipArtifact(shot.cameraMotion, "$input.cameraMotion", violations);
+    validateUniqueIds(shot.objectMotions, "$input.objectMotions", "object motion clip id", violations);
+    asArray(shot.objectMotions).forEach((clip, i) => {
+        validateClipArtifact(clip, `$input.objectMotions[${i}]`, violations);
+    });
+    appendLightMotionsArtifact(shot.lightMotions, "$input.lightMotions", stagedLightKinds(scene), violations);
+    appendShotMetadataArtifact(shot, "$input", new Set(sceneCameras
+        .filter(isRecord)
+        .map((camera) => camera.id)
+        .filter((id) => typeof id === "string")), violations);
+    return toValidation(violations);
+};
+/** The closed event-kind union, gated the way the engine's compilers emit it. */
+const EVENT_KINDS = new Set([
+    "contact",
+    "hit",
+    "grab",
+    "release",
+    "attach",
+    "detach",
+    "fall",
+]);
+/**
+ * The slack the shot-local event clock carries at its upper bound, matching
+ * `performShot`'s own landing comparison so the two cannot disagree about an
+ * event that lands exactly on the shot end.
+ */
+const EVENT_TIME_EPSILON = 1e-9;
+/** The closed event-source union. */
+const EVENT_SOURCES = new Set([
+    "collisionSolver",
+    "scriptedCue",
+    "sampledProximity",
+    "impactOutput",
+]);
+/** The closed framing union, the same set `performShot` gates a frame action by. */
+const CAMERA_FRAMINGS = new Set(["wide", "full", "medium", "close"]);
+/** The closed move union, the same set `performShot` gates a frame action by. */
+const CAMERA_MOVES = new Set([
+    "static",
+    "follow",
+    "orbit",
+    "push-in",
+    "truck",
+    "whip",
+]);
+/**
+ * The three shot fields the validators used to pass ungated: `events`,
+ * `cameraIntent`, and `coverage`.
+ *
+ * A field the engine emits and a consumer dereferences is part of the artifact
+ * contract, not decoration: `playbackEvents` and `reviewVisualRead` iterate
+ * `shot.events` (a non-iterable value throws with no path), and a render or
+ * diffusion host reads `cameraIntent` and `coverage` as the structural guide
+ * metadata #1187 promised it. All three are optional on {@link IAutoMovieShot}
+ * and documented as "absent means legacy", so absence stays valid; only a
+ * PRESENT value is inspected.
+ *
+ * `sceneCameras` is the scene's camera-id set when the caller has a scene to
+ * cross-reference (the submitted-artifact path) and `null` when it does not
+ * (the stored-slice path, which reads one file with no scene beside it).
+ */
+export const appendShotMetadataArtifact = (
+/**
+ * Structural, not `IAutoMovieShot`, so both callers pass their own value
+ * without a cast: the submitted artifact arrives already narrowed to a
+ * record, the stored slice arrives as the typed shot.
+ */
+shot, path, sceneCameras, violations) => {
+    const duration = typeof shot.duration === "number" ? shot.duration : Infinity;
+    if (shot.events !== undefined)
+        appendShotEventsArtifact(shot.events, `${path}.events`, duration, violations);
+    if (shot.cameraIntent !== undefined)
+        appendCameraIntentArtifact(shot.cameraIntent, `${path}.cameraIntent`, duration, violations);
+    if (shot.coverage !== undefined)
+        appendShotCoverageArtifact(shot.coverage, `${path}.coverage`, duration, shot.camera, sceneCameras, violations);
+};
+const appendShotEventsArtifact = (events, path, duration, violations) => {
+    if (!validateArrayArtifact(events, path, "shot events", violations))
+        return;
+    events.forEach((event, i) => {
+        const eventPath = `${path}[${i}]`;
+        if (!validateObjectArtifact(event, eventPath, "shot event", violations))
+            return;
+        validateNonEmptyId(event.id, `${eventPath}.id`, "shot event id", violations);
+        if (typeof event.kind !== "string" || !EVENT_KINDS.has(event.kind))
+            pushViolation(violations, "type", `${eventPath}.kind`, `shot event kind must be one of ${[...EVENT_KINDS].join(", ")}, but was "${String(event.kind)}"`, event.kind);
+        if (typeof event.source !== "string" || !EVENT_SOURCES.has(event.source))
+            pushViolation(violations, "type", `${eventPath}.source`, `shot event source must be one of ${[...EVENT_SOURCES].join(", ")}, but was "${String(event.source)}"`, event.source);
+        // The shot-local clock: `playbackEvents` maps this onto the output timeline,
+        // so a time outside the shot lands somewhere no entry plays. The upper bound
+        // carries the SAME slack `performShot`'s landing gate allows (it refuses a
+        // hit only past `duration + 1e-9`), or a launch that lands exactly on the
+        // shot end would produce a shot this validator refuses: validator/engine
+        // drift in the direction #1097 warned about.
+        const time = event.time;
+        if (typeof time !== "number" ||
+            !Number.isFinite(time) ||
+            time < 0 ||
+            time > duration + EVENT_TIME_EPSILON)
+            pushViolation(violations, "temporal", `${eventPath}.time`, `shot event time must be finite and within [0, ${duration}] (the shot), but was ${String(time)}`, time);
+        for (const field of ["actor", "target", "object", "reaction"])
+            if (event[field] !== null)
+                validateNonEmptyId(event[field], `${eventPath}.${field}`, `shot event ${field}`, violations);
+        // A non-finite point makes `reviewVisualRead`'s contact distance NaN, and
+        // `NaN > contactRadius` is false, so a genuine miss reads as a connect.
+        if (event.point !== null)
+            validateVectorArtifact(event.point, `${eventPath}.point`, "shot event point", violations);
+        if (event.actionIndex !== null && !Number.isInteger(event.actionIndex))
+            pushViolation(violations, "range", `${eventPath}.actionIndex`, `shot event actionIndex must be null or an integer, but was ${String(event.actionIndex)}`, event.actionIndex);
+    });
+};
+const appendCameraIntentArtifact = (intents, path, duration, violations) => {
+    if (!validateArrayArtifact(intents, path, "camera intent spans", violations))
+        return;
+    intents.forEach((intent, i) => {
+        const intentPath = `${path}[${i}]`;
+        if (!validateObjectArtifact(intent, intentPath, "camera intent", violations))
+            return;
+        validateRange(intent.start, `${intentPath}.start`, 0, duration, "camera intent start", violations);
+        if (typeof intent.framing !== "string" ||
+            !CAMERA_FRAMINGS.has(intent.framing))
+            pushViolation(violations, "type", `${intentPath}.framing`, `camera intent framing must be one of ${[...CAMERA_FRAMINGS].join(", ")}, but was "${String(intent.framing)}"`, intent.framing);
+        if (typeof intent.move !== "string" || !CAMERA_MOVES.has(intent.move))
+            pushViolation(violations, "type", `${intentPath}.move`, `camera intent move must be one of ${[...CAMERA_MOVES].join(", ")}, but was "${String(intent.move)}"`, intent.move);
+        if (intent.focus !== null)
+            validateVectorArtifact(intent.focus, `${intentPath}.focus`, "camera intent focus", violations);
+        // The input gate refuses a focal length <= 0 mm; the artifact must agree.
+        if (intent.focalLength !== null)
+            validateRange(intent.focalLength, `${intentPath}.focalLength`, 0, Infinity, "camera intent focal length", violations, false);
+    });
+};
+const appendShotCoverageArtifact = (coverage, path, duration, heroCamera, sceneCameras, violations) => {
+    if (!validateArrayArtifact(coverage, path, "shot coverage", violations))
+        return;
+    const seen = new Map();
+    coverage.forEach((take, i) => {
+        const takePath = `${path}[${i}]`;
+        if (!validateObjectArtifact(take, takePath, "coverage take", violations))
+            return;
+        validateNonEmptyId(take.camera, `${takePath}.camera`, "coverage camera", violations);
+        if (typeof take.camera === "string") {
+            if (sceneCameras !== null && !sceneCameras.has(take.camera))
+                pushViolation(violations, "type", `${takePath}.camera`, `coverage camera "${take.camera}" must reference a scene camera`, take.camera);
+            // The same rule the engine enforces when compiling the take: coverage
+            // plays ANOTHER angle, so the hero camera can never also cover the beat,
+            // and one camera never covers it twice.
+            if (take.camera === heroCamera)
+                pushViolation(violations, "type", `${takePath}.camera`, `coverage plays another angle of the beat, but "${take.camera}" is already this shot's live camera`, take.camera);
+            const first = seen.get(take.camera);
+            if (first !== undefined)
+                pushViolation(violations, "type", `${takePath}.camera`, `coverage camera "${take.camera}" is duplicated; first declared at ${path}[${first}].camera`, take.camera);
+            else
+                seen.set(take.camera, i);
+        }
+        if (take.cameraMotion === undefined)
+            pushViolation(violations, "type", `${takePath}.cameraMotion`, "coverage cameraMotion must be null or a clip", take.cameraMotion);
+        else if (take.cameraMotion !== null)
+            validateClipArtifact(take.cameraMotion, `${takePath}.cameraMotion`, violations);
+        appendCameraIntentArtifact(take.cameraIntent, `${takePath}.cameraIntent`, duration, violations);
+    });
+};
+/**
+ * One clip's structural contract, to the depth every consumer dereferences it.
+ *
+ * Exported because the shot artifact is not its only gate: the project store
+ * validates stored clips on READ, and a gate that exists to catch a corrupted
+ * file must check what its consumers dereference (#1324).
+ *
+ * The keyframe payload comes from the contract `sampleClip` itself reads
+ * ({@link clipTrackShapeFaults}), rather than from a second hand-maintained copy
+ * of it. Holding the rule twice is what let this gate learn ONE of the
+ * sampler's checks and none of the other seven, so a clip with an uneven value
+ * stride, an empty keyframe list, a wrong value width, an unsupported
+ * interpolation, a non-triplet `cubicspline` stride, a non-boolean `loop`, or
+ * an unknown node channel path validated clean here and threw out of the engine
+ * when something played it (#1353).
+ *
+ * The clip's own `duration` stays stricter here than the sampler's rule: a
+ * committed clip must last longer than zero seconds, while the sampler
+ * tolerates a zero-length clip by normalizing every query to its start. A gate
+ * stricter than its consumer refuses more, never less, so it cannot let a throw
+ * escape.
+ *
+ * Two orthogonal questions, and every clip is asked both. The SHAPE of a track
+ * ({@link clipTrackShapeFaults}) is the same for every clip a shot carries,
+ * `lightMotions` included, and `channelValueWidth` already reads a pointer
+ * channel's width from its `valueType`, so nothing about that contract is
+ * node-only. Which channel a track may ADDRESS is the shot FIELD's own rule,
+ * because a field admits exactly what its applier writes, and that is what
+ * `channelGate` carries.
+ */
+export const validateClipArtifact = (clip, path, violations, 
+/**
+ * Which channels this clip's tracks may address. Defaults to the node gate
+ * every transform clip (`cameraMotion`, `objectMotions`, a coverage take, a
+ * stored slice) is held to; `lightMotions` passes its own.
+ */
+channelGate = validateHonorableChannel) => {
+    if (!validateObjectArtifact(clip, path, "clip", violations))
+        return;
+    validateNonEmptyId(clip.id, `${path}.id`, "clip id", violations);
+    validateRange(clip.duration, `${path}.duration`, 0, Infinity, "clip duration", violations, false);
+    const loop = clipLoopFault(clip.loop);
+    if (loop !== null)
+        pushViolation(violations, loop.kind, `${path}.${loop.field}`, `clip ${loop.message}`, loop.value);
+    validateArrayArtifact(clip.tracks, `${path}.tracks`, "clip tracks", violations);
+    validateUniqueBy(asArray(clip.tracks).map((track, index) => ({
+        id: isRecord(track)
+            ? `${String(isRecord(track.channel) ? track.channel.kind : undefined)}:${JSON.stringify(track.channel)}`
+            : undefined,
+        path: `${path}.tracks[${index}].channel`,
+    })), "clip track channel", violations);
+    asArray(clip.tracks).forEach((track, i) => {
+        const trackPath = `${path}.tracks[${i}]`;
+        if (!validateObjectArtifact(track, trackPath, "clip track", violations))
+            return;
+        const channel = track.channel;
+        if (validateObjectArtifact(channel, `${trackPath}.channel`, "clip track channel", violations))
+            channelGate(channel, `${trackPath}.channel`, violations);
+        validateArrayArtifact(track.times, `${trackPath}.times`, "clip track times", violations);
+        validateArrayArtifact(track.values, `${trackPath}.values`, "clip track values", violations);
+        for (const fault of clipTrackShapeFaults(track, clip.duration))
+            pushViolation(violations, fault.kind, `${trackPath}.${fault.field}`, `track ${fault.message}`, fault.value);
+    });
+};
+/**
+ * A TRANSFORM clip's track must address a channel the pipeline can HONOR
+ * (#1339).
+ *
+ * `IAutoMovieChannel` has two arms, and only one of them is applied when a shot
+ * plays a transform clip. `resolveFrame` and the viewer's `applyObjectMotion`
+ * each write node channels onto the node they name and `continue` past
+ * everything else, so a pointer track (`/materials/2/baseColor`,
+ * `/cameras/0/fovY`, a rig DOF) validated clean, persisted to
+ * `shots/<beat>.json`, was read back unchanged by `getShot`, and then silently
+ * did nothing: the committed artifact said the candle dims and the film never
+ * dimmed it.
+ *
+ * A validator that passes an instruction no consumer executes is a false green,
+ * and the guide corpus tells an agent to trust exactly this verdict. So the
+ * artifact contract refuses what the pipeline cannot perform, naming the
+ * supported set, rather than accepting and discarding it.
+ *
+ * The set widens where an applier lands, and only there: `lightMotions` carries
+ * light pointers because {@link resolveShotLighting} writes them (#1348), and
+ * this gate is unchanged because `applyObjectMotion` still does not. Widening
+ * it here without an applier would restore the exact false green #1339 closed.
+ *
+ * The gate is scoped to CLIP TRACKS on purpose. The other user of
+ * `IAutoMovieChannel` is the driver graph (a prop profile's `source`/`output`,
+ * `IAutoMovieChannelLimit.channel`), where `resolve/drivers` does read pointer
+ * keys out of the sampled map. Those stay untouched.
+ */
+const validateHonorableChannel = (channel, path, violations) => {
+    if (channel.kind !== "node") {
+        pushViolation(violations, "type", `${path}.kind`, `clip track channel kind must be "node"; the pipeline resolves node channels (translation/rotation/scale/weights) onto scene nodes and honors no other target on a transform clip (a light change belongs in the shot's lightMotions), but was ${JSON.stringify(channel.kind)}`, channel.kind);
+        return;
+    }
+    // The node arm's own address. `channelKey` builds `node:<id>:<path>` from the
+    // same set and throws for anything outside it, so a track naming a property
+    // like `opacity` used to validate clean here and take the sampler's throw
+    // instead of a violation (#1353): the pointer arm was closed and the node
+    // arm's unknown paths were left open, which is the same false green one
+    // discriminator over.
+    if (!NODE_CHANNEL_PATHS.has(channel.path))
+        pushViolation(violations, "type", `${path}.path`, `clip track channel path must be one of ${[...NODE_CHANNEL_PATHS].join(", ")}; the pipeline writes no other property of a node, but was ${JSON.stringify(channel.path)}`, channel.path);
+};
+/**
+ * A LIGHT clip's track must address one staged light's animatable property, and
+ * exactly the ones {@link resolveShotLighting} writes (#1348).
+ *
+ * Admission is read out of `LIGHT_CHANNEL_PROPERTIES`, the same table the
+ * applier folds its sampled values through. There is no second list to keep in
+ * step: a property the table does not carry is refused here and unreachable
+ * there, and a property added to the table becomes admissible and applied in
+ * one edit. That is the mechanical form of the rule two of this campaign's
+ * defects sit on either side of: a validated axis with no applier (#1339), and
+ * an applier that silently ignores part of its input (#1349).
+ *
+ * `stagedLights` is the scene's light id → `type` index when the caller has a
+ * scene to cross-reference (the submitted-artifact path) and `null` when it
+ * does not (the stored-slice path, which reads one file with no scene beside
+ * it). Without it the pointer grammar and value type are still gated; only the
+ * "does this light exist, and does its kind carry this" pair defers.
+ */
+export const lightClipChannelGate = (stagedLights) => (channel, path, violations) => {
+    if (channel.kind !== "pointer") {
+        pushViolation(violations, "type", `${path}.kind`, `light clip track channel kind must be "pointer" addressing /lights/<light id>/<property>, but was ${JSON.stringify(channel.kind)}`, channel.kind);
+        return;
+    }
+    const target = parseLightPointer(channel.pointer);
+    if (target === null) {
+        pushViolation(violations, "type", `${path}.pointer`, `light clip track pointer must be /lights/<light id>/<property> with property one of ${[...Object.keys(LIGHT_CHANNEL_PROPERTIES)].join(", ")}, but was ${JSON.stringify(channel.pointer)}`, channel.pointer);
+        return;
+    }
+    const property = LIGHT_CHANNEL_PROPERTIES[target.property];
+    if (channel.valueType !== property.valueType)
+        pushViolation(violations, "type", `${path}.valueType`, `light clip track "${target.property}" resolves to ${property.valueType}, but was ${JSON.stringify(channel.valueType)}`, channel.valueType);
+    if (stagedLights === null)
+        return;
+    const kind = stagedLights.get(target.light);
+    if (kind === undefined)
+        pushViolation(violations, "type", `${path}.pointer`, `light clip track must address a staged scene light, but "${target.light}" is not one`, channel.pointer);
+    else if (!property.carries(kind))
+        pushViolation(violations, "type", `${path}.pointer`, `light clip track addresses "${target.property}", which a ${String(kind)} light does not carry`, channel.pointer);
+};
+/**
+ * The scene's light id → `type` index, keyed by the only thing a pointer can
+ * name.
+ *
+ * A light is addressable exactly when it is an object with a string id and a
+ * `type`, which is what a `Map.get` miss states in one read: an entry left out
+ * and an entry stored with no kind both answer `undefined`, and neither can be
+ * the target of a track. Such a scene is malformed either way, and
+ * `validateSceneArtifact` is the gate that says so.
+ */
+const stagedLightKinds = (scene) => {
+    const index = new Map();
+    for (const light of asArray(isRecord(scene) ? scene.lights : undefined))
+        if (isRecord(light) && typeof light.id === "string")
+            index.set(light.id, light.type);
+    return index;
+};
+/**
+ * The shot's `lightMotions`, gated the way every other optional shot field is:
+ * absent stays valid ("absent means legacy"), a present value is inspected in
+ * full.
+ *
+ * Each clip goes through {@link validateClipArtifact} unchanged, so a light clip
+ * is held to the SAME track-shape contract `sampleClip` reads (#1353): strictly
+ * increasing times inside the duration, a whole-number stride, the width the
+ * channel's `valueType` fixes, a supported interpolation, a boolean `loop`.
+ * Those rules are about a track, not about a node, and re-deciding them here
+ * would re-split the contract that issue just made single.
+ *
+ * Beyond that shape, three rules are this field's alone: which channel a track
+ * may address, which light kinds carry the property, and the value's own
+ * range.
+ *
+ * Two of them are worth stating.
+ *
+ * No two tracks in the whole field may address the same light property. Within
+ * one clip `validateClipArtifact` already refuses a duplicate channel, but two
+ * CLIPS both dimming the same candle would resolve last-writer-wins, which is a
+ * deterministic answer to a question the artifact never meant to ask. Refusing
+ * it keeps the committed film's lighting single-valued at every instant.
+ *
+ * And every keyframe value is held to the property's own bounds
+ * ({@link appendLightValueBounds}), because the light a track drives has a
+ * documented range that the scene gate already enforces on the staged value.
+ */
+export const appendLightMotionsArtifact = (lightMotions, path, 
+/**
+ * The scene's light id → kind index, or `null` with no scene to check
+ * against.
+ */
+stagedLights, violations) => {
+    if (lightMotions === undefined)
+        return;
+    if (!validateArrayArtifact(lightMotions, path, "shot lightMotions", violations))
+        return;
+    validateUniqueIds(lightMotions, path, "light motion clip id", violations);
+    const gate = lightClipChannelGate(stagedLights);
+    const addressed = [];
+    lightMotions.forEach((clip, i) => {
+        const clipPath = `${path}[${i}]`;
+        validateClipArtifact(clip, clipPath, violations, gate);
+        asArray(isRecord(clip) ? clip.tracks : undefined).forEach((track, j) => {
+            const trackPath = `${clipPath}.tracks[${j}]`;
+            // A track that is not an object addresses nothing; `validateClipArtifact`
+            // has already refused it at its own index. Narrowing here rather than
+            // re-asking further down keeps the bounds pass free of a guard its caller
+            // has already decided, which no input could ever reach.
+            if (!isRecord(track)) {
+                addressed.push({ id: undefined, path: `${trackPath}.channel` });
+                return;
+            }
+            const channel = track.channel;
+            const target = isRecord(channel)
+                ? parseLightPointer(channel.pointer)
+                : null;
+            addressed.push({
+                id: target === null ? undefined : `${target.light}/${target.property}`,
+                path: `${trackPath}.channel`,
+            });
+            if (target !== null)
+                appendLightValueBounds(track, target.property, trackPath, violations);
+        });
+    });
+    validateUniqueBy(addressed, "light motion channel", violations);
+};
+/**
+ * Every keyframe value of one light track, held to the property's own bounds:
+ * the same `validateRange` call, with the same numbers, the scene gate makes on
+ * the staged light. A film must not be able to state through time what
+ * `commitScene` refuses outright.
+ *
+ * A `cubicspline` interleaves in-tangent, value, and out-tangent per keyframe.
+ * Tangents are derivatives and remain unbounded; the key values and the curve
+ * they produce do not. Its interior extrema are the roots of the Hermite
+ * polynomial's derivative, evaluated through the SAME {@link cubicHermiteValue}
+ * playback uses (#1371).
+ */
+const appendLightValueBounds = (track, property, path, violations) => {
+    const { bounds } = LIGHT_CHANNEL_PROPERTIES[property];
+    if (track.interpolation === "cubicspline") {
+        appendCubicLightValueBounds(track, property, path, violations);
+        return;
+    }
+    asArray(track.values).forEach((value, k) => {
+        // Finiteness belongs to the shared track-shape contract
+        // (`clipTrackShapeFaults`), which reports it at this very path. Adding a
+        // range verdict on top would read as two separate faults for one mistake.
+        if (!Number.isFinite(value))
+            return;
+        validateRange(value, `${path}.values[${k}]`, bounds.min, bounds.max, `light ${property}`, violations, bounds.inclusiveMin);
+    });
+    appendLightKeyValueFaults(track, property, path, false, violations);
+};
+/**
+ * The per-keyframe value width of one light property, read from the SAME table
+ * `clipTrackShapeFaults` measures a track against.
+ *
+ * Never `undefined` here: that answer is reserved for a `weights` channel,
+ * whose width is the model's morph-target count, and no light property declares
+ * one. Deriving the width locally is what let this file's cubic pass carry
+ * `scalar ? 1 : 3`, a rule that was right only while every non-scalar axis
+ * happened to be a `vec3`.
+ */
+const lightValueWidth = (property) => channelValueWidth({
+    kind: "pointer",
+    valueType: LIGHT_CHANNEL_PROPERTIES[property].valueType,
+});
+/**
+ * The whole-value rule of one light property
+ * ({@link IAutoMovieLightChannelProperty.valueFault}), applied to every keyframe
+ * of one track.
+ *
+ * Separate from the per-component pass because it reads a keyframe as a unit: a
+ * light `rotation` is unit-length or it is not, and that question cannot be
+ * asked one component at a time. `cubic` says where the value sits inside a
+ * stored keyframe, which is the whole difference between the two payload
+ * layouts — a `cubicspline` keyframe is in-tangent / value / out-tangent, so
+ * the value starts one width in. Tangents are derivatives and carry no such
+ * rule.
+ *
+ * A payload whose length is not a whole number of keyframes states no keyframe
+ * to judge; the shared shape gate has already refused it, and slicing one out
+ * of it anyway would report a fault about a value the author never wrote.
+ */
+const appendLightKeyValueFaults = (track, property, path, cubic, violations) => {
+    const { valueFault } = LIGHT_CHANNEL_PROPERTIES[property];
+    if (valueFault === undefined)
+        return;
+    const width = lightValueWidth(property);
+    const stride = cubic ? width * 3 : width;
+    const values = asArray(track.values);
+    if (values.length === 0 || values.length % stride !== 0)
+        return;
+    for (let key = 0; key * stride < values.length; ++key) {
+        const base = key * stride + (cubic ? width : 0);
+        const value = values.slice(base, base + width);
+        const fault = valueFault(value);
+        if (fault !== null)
+            pushViolation(violations, "range", `${path}.values`, `light ${property} keyframe ${key} ${fault}`, value);
+    }
+};
+/** A finite scalar lies inside one light property's documented range. */
+const lightValueInBounds = (value, property) => {
+    const { min, max, inclusiveMin } = LIGHT_CHANNEL_PROPERTIES[property].bounds;
+    return (inclusiveMin ? value >= min : value > min) && value <= max;
+};
+/** Roots of `a*t² + b*t + c` strictly inside the normalized segment `(0, 1)`. */
+const interiorQuadraticRoots = (a, b, c) => {
+    const epsilon = 1e-12;
+    const roots = Math.abs(a) < epsilon
+        ? Math.abs(b) < epsilon
+            ? []
+            : [-c / b]
+        : (() => {
+            const discriminant = b * b - 4 * a * c;
+            if (discriminant < 0)
+                return [];
+            const root = Math.sqrt(discriminant);
+            return root < epsilon
+                ? [-b / (2 * a)]
+                : [(-b - root) / (2 * a), (-b + root) / (2 * a)];
+        })();
+    return roots.filter((root) => root > 0 && root < 1);
+};
+/** Validate cubic key values and every interior Hermite extremum. */
+const appendCubicLightValueBounds = (track, property, path, violations) => {
+    const times = asArray(track.times);
+    const values = asArray(track.values);
+    const width = lightValueWidth(property);
+    const stride = width * 3;
+    // The shared clip-shape gate owns every malformed case. Stop here rather
+    // than deriving ranges from a stride or clock it has already refused.
+    if (times.length === 0 ||
+        values.length !== times.length * stride ||
+        !times.every((time) => Number.isFinite(time)) ||
+        !values.every((value) => Number.isFinite(value)) ||
+        times.some((time, index) => index > 0 && !(time > times[index - 1])))
+        return;
+    let keysInBounds = true;
+    for (let key = 0; key < times.length; ++key)
+        for (let component = 0; component < width; ++component) {
+            const index = key * stride + width + component;
+            const value = values[index];
+            if (!lightValueInBounds(value, property))
+                keysInBounds = false;
+            validateRange(value, `${path}.values[${index}]`, LIGHT_CHANNEL_PROPERTIES[property].bounds.min, LIGHT_CHANNEL_PROPERTIES[property].bounds.max, `light ${property}`, violations, LIGHT_CHANNEL_PROPERTIES[property].bounds.inclusiveMin);
+        }
+    appendLightKeyValueFaults(track, property, path, true, violations);
+    if (!keysInBounds)
+        return;
+    // A rotation is renormalized AT PLAYBACK: `sampleClip`'s `cubicHermite` puts
+    // an interpolated quaternion back on the unit sphere before anything reads
+    // it, so the value the film actually plays is unit at every interior instant
+    // and every component of it is inside `[-1, 1]` by construction. The Hermite
+    // overshoot this analysis hunts for therefore cannot reach the light, and
+    // reporting it would refuse a declaration that renders correctly. The keys
+    // themselves are still judged above, because the sampler returns a boundary
+    // key VERBATIM, without that renormalization.
+    if (LIGHT_CHANNEL_PROPERTIES[property].valueType === "quaternion")
+        return;
+    for (let segment = 0; segment + 1 < times.length; ++segment) {
+        const span = times[segment + 1] - times[segment];
+        for (let component = 0; component < width; ++component) {
+            const leftBase = segment * stride;
+            const rightBase = (segment + 1) * stride;
+            const left = values[leftBase + width + component];
+            const outTangent = values[leftBase + 2 * width + component];
+            const right = values[rightBase + width + component];
+            const inTangent = values[rightBase + component];
+            // Derivative of the shared Hermite cubic in normalized segment time.
+            const a = 6 * left + 3 * span * outTangent - 6 * right + 3 * span * inTangent;
+            const b = -6 * left - 4 * span * outTangent + 6 * right - 2 * span * inTangent;
+            const c = span * outTangent;
+            for (const t of interiorQuadraticRoots(a, b, c)) {
+                const value = cubicHermiteValue(left, outTangent, right, inTangent, span, t);
+                if (lightValueInBounds(value, property))
+                    continue;
+                pushViolation(violations, "range", `${path}.values`, `light ${property} cubicspline segment ${segment} component ${component} leaves its documented range at t=${t} (value ${value})`, value);
+            }
+        }
+    }
+};
+//# sourceMappingURL=validateShotArtifact.js.map

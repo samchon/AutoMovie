@@ -1,0 +1,193 @@
+import { addPositiveModulo, positiveModulo } from "../math/positiveModulo";
+import { cubicBezierEasing, ease } from "./easing";
+const IDENTITY_ROOT = {
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+};
+/** Wrap a cycle position into `[0, 1)`. */
+const wrap01 = (x) => positiveModulo(x, 1);
+const gaitPhaseEase = (curve, bezier, t) => curve === "cubicBezier" && bezier !== undefined && bezier !== null
+    ? cubicBezierEasing(bezier, t)
+    : ease(curve ?? "linear", t);
+/**
+ * One limb's flexion (degrees) at cycle time `t`. Over its **stance** fraction
+ * (`duty`) the limb sweeps from `+amplitude` (forward-planted) to `−amplitude`
+ * (pushed back), driving the body; over the remaining **swing** fraction it
+ * lifts and recovers from `−amplitude` back to `+amplitude`. The `phase` offset
+ * slides the whole cycle so limbs fall in sequence, and the swing is centered
+ * on the limb's `neutral` (default 0) so a one-way joint like a knee stays on
+ * its anatomical side of zero. Optional stance/swing easing curves shape each
+ * half separately while preserving the same endpoints.
+ *
+ * @author Samchon
+ */
+export const gaitLimbFlexion = (limb, t, period) => {
+    if (!Number.isFinite(period))
+        throw new Error("gait period must be finite and positive");
+    if (!(period > 0))
+        throw new Error("gait period must be finite and positive");
+    if (!Number.isFinite(limb.phase))
+        throw new Error("gait limb phase must be finite");
+    if (!Number.isFinite(limb.duty))
+        throw new Error("gait limb duty must be finite and in (0, 1)");
+    if (!(limb.duty > 0))
+        throw new Error("gait limb duty must be finite and in (0, 1)");
+    if (!(limb.duty < 1))
+        throw new Error("gait limb duty must be finite and in (0, 1)");
+    if (!Number.isFinite(limb.amplitude))
+        throw new Error("gait limb amplitude must be finite");
+    if (limb.neutral !== undefined)
+        if (!Number.isFinite(limb.neutral))
+            throw new Error("gait limb neutral must be finite");
+    const u = wrap01(t / period + limb.phase);
+    const a = limb.amplitude;
+    const swing = u < limb.duty
+        ? a *
+            (1 -
+                2 *
+                    gaitPhaseEase(limb.stanceEasing, limb.stanceBezier, u / limb.duty))
+        : -a +
+            2 *
+                a *
+                gaitPhaseEase(limb.swingEasing, limb.swingBezier, (u - limb.duty) / (1 - limb.duty));
+    return (limb.neutral ?? 0) + swing;
+};
+const gaitRoot = (gait, time) => {
+    if (gait.rootBob === undefined)
+        return null;
+    const rootBob = gait.rootBob;
+    if (!Number.isFinite(rootBob.amplitude))
+        throw new Error("gait root bob amplitude must be finite");
+    if (!Number.isFinite(rootBob.phase))
+        throw new Error("gait root bob phase must be finite");
+    if (!Number.isFinite(rootBob.center))
+        throw new Error("gait root bob center must be finite");
+    const cycle = wrap01(time / gait.period + rootBob.phase);
+    return {
+        translation: {
+            x: 0,
+            y: rootBob.center + rootBob.amplitude * Math.sin(cycle * Math.PI * 2),
+            z: 0,
+        },
+        rotation: IDENTITY_ROOT.rotation,
+        scale: IDENTITY_ROOT.scale,
+    };
+};
+const gaitJoints = (limbs, time, period) => {
+    const joints = new Map();
+    for (const limb of limbs) {
+        let joint = joints.get(limb.bone);
+        if (joint === undefined) {
+            joint = {
+                bone: limb.bone,
+                flexion: null,
+                abduction: null,
+                twist: null,
+            };
+            joints.set(limb.bone, joint);
+        }
+        joint[limb.axis ?? "flexion"] = gaitLimbFlexion(limb, time, period);
+    }
+    return [...joints.values()];
+};
+const assertUniqueGaitAxes = (limbs) => {
+    const seen = new Set();
+    for (const limb of limbs) {
+        const axis = limb.axis ?? "flexion";
+        const key = `${limb.bone}:${axis}`;
+        if (seen.has(key))
+            throw new Error(`duplicate gait row for ${limb.bone}.${axis}`);
+        seen.add(key);
+    }
+};
+const assertUniqueProfileGaitNames = (gaits) => {
+    const seen = new Set();
+    for (const gait of gaits) {
+        if (seen.has(gait.name))
+            throw new Error(`duplicate profile gait name ${gait.name}`);
+        seen.add(gait.name);
+    }
+};
+/**
+ * Synthesise a **declarative gait** ({@link IAutoMovieGait}) into a looping
+ * {@link IAutoMovieMotion}: the engine fattening a creature's characteristic
+ * locomotion (per-limb phase / duty / amplitude) into per-frame flexion. The
+ * result is an ordinary one-cycle clip (sampled at `samples` even steps, the
+ * closing keyframe repeating the first for a seamless loop) that
+ * `locomoteMotion` / `travelMotion` can drive across the floor.
+ *
+ * The same synthesiser produces a human walk, a horse's lateral-sequence walk,
+ * a cat's stalk. The difference lives entirely in the gait data, not the code.
+ *
+ * `phase` slides the whole cycle by that many seconds (#1176): the clip's
+ * keyframe at local time `t` samples the gait at `t + phase`, so a beat that
+ * opens mid-stride resumes exactly where the previous beat's end-state
+ * (`gaitPhase`) left the cycle instead of restarting it, the difference between
+ * a continuous walk and a stutter at every cut. The wrapped cycle stays a
+ * seamless loop for any constant phase.
+ *
+ * @author Samchon
+ */
+export const gaitMotion = (id, skeleton, gait, samples, phase = 0) => {
+    if (!Number.isInteger(samples))
+        throw new Error("gait samples must be a positive integer");
+    if (samples < 1)
+        throw new Error("gait samples must be a positive integer");
+    if (!Number.isFinite(gait.period))
+        throw new Error("gait period must be finite and positive");
+    if (!(gait.period > 0))
+        throw new Error("gait period must be finite and positive");
+    if (!Number.isFinite(phase))
+        throw new Error("gait phase must be finite");
+    assertUniqueGaitAxes(gait.limbs);
+    const phaseAt = positiveModulo(phase, gait.period);
+    const keyframes = [];
+    for (let i = 0; i <= samples; ++i) {
+        const time = (i / samples) * gait.period;
+        const sampleTime = addPositiveModulo(phaseAt, time, gait.period);
+        keyframes.push({
+            time,
+            pose: {
+                skeleton,
+                root: gaitRoot(gait, sampleTime),
+                joints: gaitJoints(gait.limbs, sampleTime, gait.period),
+            },
+            expression: null,
+            easing: "linear",
+            bezier: null,
+        });
+    }
+    return {
+        id,
+        skeleton,
+        duration: gait.period,
+        loop: true,
+        keyframes,
+        // The bake IS one cycle; a phase-seeded bake starts mid-stride, so its
+        // local t = 0 sits at `phase` within the cycle: phase(t) = (phase + t) %
+        // period, and the NEXT beat's end-state records the true stride position.
+        gaitCycle: {
+            period: gait.period,
+            phaseAt,
+        },
+    };
+};
+/**
+ * Bind a profile's gait set ({@link IAutoMovieProfile.gaits}) onto a concrete
+ * skeleton, synthesising each named gait into a clip for **this** body. The
+ * point of a profile binding: the _same_ profile applied to a horse skeleton
+ * and a pony skeleton yields each its own gait clips, so one declarative gait
+ * set drives many bodies. Returns the clips keyed by gait name (empty when the
+ * profile declares no gaits).
+ *
+ * @author Samchon
+ */
+export const bindProfileGaits = (profile, skeleton, samples) => {
+    const gaits = profile.gaits ?? [];
+    assertUniqueProfileGaitNames(gaits);
+    const clips = {};
+    for (const gait of gaits)
+        clips[gait.name] = gaitMotion(`${profile.id}:${gait.name}`, skeleton, gait, samples);
+    return clips;
+};
+//# sourceMappingURL=gait.js.map

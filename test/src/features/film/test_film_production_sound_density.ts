@@ -227,8 +227,9 @@ const amplitudeAt = (pcm: Float32Array, frame: number): number =>
  * 1. `memberCount` is the unit's real count, and `densityGain` is exactly its
  *    square root, for a node (one, no size), a formation, and an instance set.
  * 2. A unit has a size: `spreadRadiusMeters` is the RMS radius of the uniform box
- *    the compiled bounds describe, zero for a lone node, and `attenuation` is
- *    taken at `hypot(distance, spread)`, not at the centroid alone.
+ *    the compiled bounds describe, and `attenuation` is taken at
+ *    `hypot(distance, spread)`, not at the centroid alone, which is strictly
+ *    less than the centroid-only gain the mixer used to apply.
  * 3. The controlled pair: two units in the SAME footprint at the SAME distance,
  *    64x apart in count, come out exactly 8x apart in level, in the plan AND in
  *    the rendered PCM, which is `sqrt(64)` and nothing else.

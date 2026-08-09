@@ -1,0 +1,107 @@
+import { createHash } from "node:crypto";
+/** Versioned review-fingerprint protocol. */
+export const AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL = "automovie.review.fingerprint.v4";
+/** Versioned production-compiler input protocol. */
+export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL = "automovie.compile.input.v2";
+/** Normalize source without erasing meaningful whitespace. */
+export const normalizeAutoMovieSource = (source) => {
+    let text = Buffer.from(source).toString("utf8");
+    if (text.charCodeAt(0) === 0xfeff)
+        text = text.slice(1);
+    return Buffer.from(text.replace(/\r\n?/g, "\n"), "utf8");
+};
+/** Return a stable SHA-256 content digest. */
+export const digestAutoMovieBytes = (bytes) => `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+/**
+ * Encode one persisted id as a portable filename segment.
+ *
+ * `encodeURIComponent` deliberately leaves `*`, `!`, `'`, `(` and `)`
+ * untouched, while `*` is illegal in a Windows filename. Windows device
+ * basenames such as `CON` remain reserved even with an extension. Escape the
+ * complete RFC 3986 reserved tail and the first character of a device name so
+ * every accepted string has one reversible cross-platform representation.
+ */
+export const encodeAutoMoviePathSegment = (value) => {
+    let encoded = encodeURIComponent(value).replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+    // Windows strips trailing dots from path components, while "." and ".."
+    // retain traversal meaning on every supported filesystem. Percent-escape
+    // those spellings so two logical ids never resolve to one physical leaf.
+    if (encoded === "." || encoded === ".." || encoded.endsWith("."))
+        encoded = `${encoded.slice(0, -1)}%2E`;
+    if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|conin\$|conout\$)(?:\.|$)/i.test(encoded))
+        encoded = `%${encoded
+            .charCodeAt(0)
+            .toString(16)
+            .toUpperCase()
+            .padStart(2, "0")}${encoded.slice(1)}`;
+    if (Buffer.byteLength(encoded, "utf8") > 180)
+        encoded = `~sha256-${createHash("sha256")
+            .update(Buffer.from(value, "utf8"))
+            .digest("hex")}`;
+    return encoded;
+};
+/** Decode a segment produced by {@link encodeAutoMoviePathSegment}. */
+export const decodeAutoMoviePathSegment = (value) => value.startsWith("~sha256-")
+    ? (() => {
+        throw new Error("Hashed path segments are decoded from file content.");
+    })()
+    : decodeURIComponent(value);
+/** Canonicalize a JSON-compatible value with lexicographically sorted keys. */
+export const canonicalizeAutoMovieJson = (value) => {
+    const encode = (current, arrayItem) => {
+        if (current === undefined ||
+            typeof current === "function" ||
+            typeof current === "symbol")
+            return arrayItem ? "null" : undefined;
+        if (current === null || typeof current === "boolean")
+            return JSON.stringify(current);
+        if (typeof current === "string")
+            return JSON.stringify(current);
+        if (typeof current === "number") {
+            if (Number.isFinite(current) === false)
+                throw new TypeError("AutoMovie canonical JSON refuses non-finite numbers.");
+            return JSON.stringify(current);
+        }
+        if (typeof current === "bigint")
+            throw new TypeError("AutoMovie canonical JSON refuses bigint values.");
+        if (Array.isArray(current))
+            return `[${current.map((item) => encode(item, true)).join(",")}]`;
+        if (typeof current === "object") {
+            const record = current;
+            const entries = Object.keys(record)
+                .sort(compareCodeUnits)
+                .flatMap((key) => {
+                const encoded = encode(record[key], false);
+                return encoded === undefined
+                    ? []
+                    : [`${JSON.stringify(key)}:${encoded}`];
+            });
+            return `{${entries.join(",")}}`;
+        }
+    };
+    const encoded = encode(value, false);
+    if (encoded === undefined)
+        throw new TypeError("AutoMovie canonical JSON requires a serializable root value.");
+    return encoded;
+};
+/** Canonical JSON bytes for a fingerprint field. */
+export const canonicalAutoMovieJsonBytes = (value) => Buffer.from(canonicalizeAutoMovieJson(value), "utf8");
+/** Hash an ordered role/kind/payload stream with u64be length prefixes. */
+export const fingerprintAutoMovieFields = (fields) => {
+    const hash = createHash("sha256");
+    for (const field of fields)
+        for (const value of [
+            Buffer.from(field.role, "utf8"),
+            Buffer.from(field.kind, "utf8"),
+            Buffer.from(field.payload),
+        ]) {
+            const size = Buffer.alloc(8);
+            size.writeBigUInt64BE(BigInt(value.length));
+            hash.update(size);
+            hash.update(value);
+        }
+    return `sha256:${hash.digest("hex")}`;
+};
+/** Compare UTF-16 code units for deterministic filesystem and JSON ordering. */
+export const compareCodeUnits = (left, right) => left < right ? -1 : left > right ? 1 : 0;
+//# sourceMappingURL=contentIdentity.js.map

@@ -26,13 +26,14 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  *
  * The squared exponent is not a choice. It is exactly what the renderer's fog
  * shader computes, `fogFactor = 1.0 - exp(-fogDensity * fogDensity * vFogDepth
- * * vFogDepth)` in `three.js`'s `fog_fragment.glsl` under `FOG_EXP2`, with
- * `vFogDepth = -mvPosition.z` from `fog_vertex.glsl`. A physically pure
- * Beer-Lambert medium would extinguish as `exp(-density * d)`; adopting the
- * shader's own law instead means the number an offline consumer derives on the
- * CPU is the number the GPU actually painted, rather than an approximation of
- * it that drifts with distance. {@link sceneFogTransmittance} is that single
- * shared derivation.
+ *
+ * - VFogDepth)`in`three.js`'s `fog_fragment.glsl`under`FOG_EXP2`, with `vFogDepth
+ *   = -mvPosition.z`from`fog_vertex.glsl`. A physically pure Beer-Lambert
+ *   medium would extinguish as `exp(-density * d)`; adopting the shader's own
+ *   law instead means the number an offline consumer derives on the CPU is the
+ *   number the GPU actually painted, rather than an approximation of it that
+ *   drifts with distance. {@link sceneFogTransmittance} is that single shared
+ *   derivation.
  *
  * Because the law is even in `d`, a point behind the camera attenuates like one
  * the same distance in front. That too is the shader's behavior; a caller that

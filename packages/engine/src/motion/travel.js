@@ -1,0 +1,111 @@
+import { Quaternion } from "../math/Quaternion";
+const IDENTITY_ROT = { x: 0, y: 0, z: 0, w: 1 };
+const IDENTITY_SCALE = { x: 1, y: 1, z: 1 };
+const assertFiniteVector = (label, vector) => {
+    if (!Number.isFinite(vector.x))
+        throw new Error(`${label}.x must be finite`);
+    if (!Number.isFinite(vector.y))
+        throw new Error(`${label}.y must be finite`);
+    if (!Number.isFinite(vector.z))
+        throw new Error(`${label}.z must be finite`);
+};
+const assertFiniteQuaternion = (label, quaternion) => {
+    if (!Number.isFinite(quaternion.x))
+        throw new Error(`${label}.x must be finite`);
+    if (!Number.isFinite(quaternion.y))
+        throw new Error(`${label}.y must be finite`);
+    if (!Number.isFinite(quaternion.z))
+        throw new Error(`${label}.z must be finite`);
+    if (!Number.isFinite(quaternion.w))
+        throw new Error(`${label}.w must be finite`);
+};
+/**
+ * Bake continuous root **travel** onto an in-place locomotion cycle, turning a
+ * walk/run that marches on the spot into one that actually crosses the floor.
+ *
+ * A locomotion clip (walk, run) is authored looping and stationary so its
+ * footwork reads cleanly; to move the character through the world you add root
+ * translation. Doing that per keyframe by hand is tedious and snaps back at
+ * every loop boundary. `travelMotion` instead repeats `base` `cycles` times and
+ * adds a root offset that grows **linearly with elapsed time** (`velocity · t`,
+ * world meters/second). Because the offset is a continuous function of the
+ * global time, not reset per cycle, it carries smoothly across every seam, so
+ * the figure glides forward while its legs keep cycling. Any root transform the
+ * base already carries (e.g. a hop's vertical bob) is preserved and the travel
+ * is added on top.
+ *
+ * The result is an ordinary non-looping {@link IAutoMovieMotion} (it has a
+ * finite extent in space), sampled like any other clip, and a camera can follow
+ * its root to keep the moving character in frame.
+ *
+ * `facing`, when given, orients the root by that rotation (composed onto any
+ * rotation the base root already carries), so a walk that travels sideways can
+ * turn the body to face where it is going instead of strafing.
+ *
+ * @author Samchon
+ */
+export const travelMotion = (id, base, cycles, velocity, facing) => {
+    if (!Number.isInteger(cycles))
+        throw new Error("travel cycles must be a positive integer");
+    if (cycles < 1)
+        throw new Error("travel cycles must be a positive integer");
+    assertFiniteVector("travel velocity", velocity);
+    if (facing !== undefined)
+        assertFiniteQuaternion("travel facing", facing);
+    const keyframes = [];
+    for (let c = 0; c < cycles; ++c) {
+        for (const k of base.keyframes) {
+            // drop the duplicate seam keyframe (a later cycle's time:0) so times stay
+            // strictly increasing, the prior cycle's final frame covers the pose,
+            // but the seam must carry the INCOMING cycle's first-segment easing
+            // (sampleMotion eases each segment from its starting keyframe, #1012)
+            if (c > 0 && k.time === 0) {
+                const seam = keyframes[keyframes.length - 1];
+                keyframes[keyframes.length - 1] = {
+                    ...seam,
+                    easing: k.easing,
+                    bezier: k.bezier,
+                };
+                continue;
+            }
+            const globalT = c * base.duration + k.time;
+            const baseRoot = k.pose.root;
+            // The base root (a bob or sway) lives in the model frame; under a
+            // facing turn it must rotate with the body before the world travel is
+            // added, or a lateral sway would stay world-axis-aligned (#1012).
+            const baseTranslation = facing === undefined || baseRoot === null
+                ? baseRoot?.translation
+                : Quaternion.rotateVector(facing, baseRoot.translation);
+            keyframes.push({
+                ...k,
+                time: globalT,
+                pose: {
+                    ...k.pose,
+                    root: {
+                        translation: {
+                            x: (baseTranslation?.x ?? 0) + velocity.x * globalT,
+                            y: (baseTranslation?.y ?? 0) + velocity.y * globalT,
+                            z: (baseTranslation?.z ?? 0) + velocity.z * globalT,
+                        },
+                        rotation: facing === undefined
+                            ? (baseRoot?.rotation ?? IDENTITY_ROT)
+                            : Quaternion.multiply(facing, baseRoot?.rotation ?? IDENTITY_ROT),
+                        scale: baseRoot?.scale ?? IDENTITY_SCALE,
+                    },
+                },
+            });
+        }
+    }
+    return {
+        id,
+        skeleton: base.skeleton,
+        duration: cycles * base.duration,
+        loop: false,
+        keyframes,
+        // Travel repeats the base cyclically, so the composite's stride clock is
+        // the base's own: carry its cycle, or stamp one from the repeated base (a
+        // hand-authored loop clip is still a cycle of its own duration).
+        gaitCycle: base.gaitCycle ?? { period: base.duration, phaseAt: 0 },
+    };
+};
+//# sourceMappingURL=travel.js.map
