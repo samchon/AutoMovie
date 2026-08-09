@@ -119,7 +119,7 @@ const realizationOf = (
 export const test_mcp_production_story_clock = (): void => {
   const starter: IAutoMovieProductionDesignGraph = {
     production: productionDesign(),
-    models: new Map([["sentinel", modelRecipe()]]),
+    models: new Map([["soloist", modelRecipe()]]),
     world: worldDesign(),
     formations: new Map([["line", formationDesign()]]),
     shots: new Map([["opening", shotContract()]]),

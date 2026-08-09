@@ -52,7 +52,7 @@ import {
 export const test_mcp_production_design_validation = (): void => {
   const valid: IAutoMovieProductionDesignGraph = {
     production: productionDesign(),
-    models: new Map([["sentinel", modelRecipe()]]),
+    models: new Map([["soloist", modelRecipe()]]),
     world: worldDesign(),
     formations: new Map([["line", formationDesign()]]),
     shots: new Map([["opening", shotContract()]]),
@@ -702,7 +702,7 @@ export const test_mcp_production_design_validation = (): void => {
       target: { kind: "shot", id: "opening" },
       criterion: {
         kind: "frame",
-        frame: "signal-apex",
+        frame: "cue-apex",
         pass: "depth",
         expectation: "The requested pass must exist.",
       },
@@ -947,7 +947,7 @@ export const test_mcp_production_design_validation = (): void => {
     id: "missing-pass",
     criterion: {
       kind: "frame" as const,
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "depth" as const,
       expectation: "The requested pass must exist.",
     },
@@ -1267,7 +1267,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "opening",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The film contains the current signal apex frame.",
     },
@@ -1296,7 +1296,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "absent",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The named shot must own this frame.",
     },
@@ -1307,7 +1307,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "another-shot",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The target shot must own this frame.",
     },

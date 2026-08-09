@@ -763,7 +763,7 @@ export const test_mcp_production_project = (): void => {
         ],
         [
           "projectDesign2",
-          () => project.design({ kind: "model", id: "sentinel" }) !== null,
+          () => project.design({ kind: "model", id: "soloist" }) !== null,
         ],
         ["projectDesign3", () => project.design({ kind: "world" }) !== null],
         [
@@ -1273,7 +1273,7 @@ export const test_mcp_production_project = (): void => {
       criterion: {
         kind: "frame" as const,
         shot: "opening",
-        frame: "signal-apex",
+        frame: "cue-apex",
         pass: "beauty" as const,
         expectation: "The film retains the opening signal frame.",
       },
@@ -1453,30 +1453,30 @@ export const test_mcp_production_project = (): void => {
     project.setFormationDesign(formationDesign());
     const dependentModel = {
       ...modelRecipe(),
-      id: "sentinel-variant",
+      id: "soloist-variant",
       lod: [
-        { tier: "hero" as const, maxDistance: 10, recipe: "sentinel" },
+        { tier: "hero" as const, maxDistance: 10, recipe: "soloist" },
         {
           tier: "far" as const,
           maxDistance: null,
-          recipe: "sentinel-variant",
+          recipe: "soloist-variant",
         },
       ],
     };
     const dependentModelMutation = project.setModelRecipe(dependentModel);
     const transitiveDependentModel = {
       ...modelRecipe(),
-      id: "sentinel-variant-far",
+      id: "soloist-variant-far",
       lod: [
         {
           tier: "hero" as const,
           maxDistance: 10,
-          recipe: "sentinel-variant",
+          recipe: "soloist-variant",
         },
         {
           tier: "far" as const,
           maxDistance: null,
-          recipe: "sentinel-variant-far",
+          recipe: "soloist-variant-far",
         },
       ],
     };
@@ -1539,7 +1539,7 @@ export const test_mcp_production_project = (): void => {
         dependencyCycleFixture.root,
       ).eraseDesignArtifact({
         kind: "model",
-        id: "sentinel",
+        id: "soloist",
       });
       cyclicDependencyTraversal = true;
     } catch (error) {
@@ -1553,7 +1553,7 @@ export const test_mcp_production_project = (): void => {
     }
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
-      id: "sentinel",
+      id: "soloist",
     });
     TestValidator.equals(
       "model consequences and erasure include dependent LOD models and formations",
@@ -1574,7 +1574,7 @@ export const test_mcp_production_project = (): void => {
               (target) =>
                 target.kind === "design" &&
                 target.design.kind === "model" &&
-                target.design.id === "sentinel-variant",
+                target.design.id === "soloist-variant",
             ),
         ],
         [
@@ -1584,7 +1584,7 @@ export const test_mcp_production_project = (): void => {
               (target) =>
                 target.kind === "design" &&
                 target.design.kind === "model" &&
-                target.design.id === "sentinel-variant-far",
+                target.design.id === "soloist-variant-far",
             ),
         ],
         [
@@ -1592,7 +1592,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             refusedModelErase.diagnostics.some(
               (item) =>
-                item.message.includes("model:sentinel-variant") ||
+                item.message.includes("model:soloist-variant") ||
                 item.message.includes("formation:line"),
             ),
         ],
@@ -2236,8 +2236,8 @@ export const test_mcp_production_project = (): void => {
         ".automovie/design/shared/models",
       );
       fs.copyFileSync(
-        path.join(modelRoot, "sentinel.json"),
-        path.join(outsideState, "sentinel.json"),
+        path.join(modelRoot, "soloist.json"),
+        path.join(outsideState, "soloist.json"),
       );
       fs.rmSync(modelRoot, { force: true, recursive: true });
       fs.symlinkSync(outsideState, modelRoot, "junction");

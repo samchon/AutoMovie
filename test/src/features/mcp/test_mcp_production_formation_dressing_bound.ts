@@ -27,7 +27,7 @@ const graph = (
   count = 6,
 ): IAutoMovieProductionDesignGraph => ({
   production: productionDesign(),
-  models: new Map([["sentinel", modelRecipe()]]),
+  models: new Map([["soloist", modelRecipe()]]),
   world: worldDesign(),
   formations: new Map([["line", { ...formationDesign(layout), count }]]),
   shots: new Map([["opening", shotContract()]]),

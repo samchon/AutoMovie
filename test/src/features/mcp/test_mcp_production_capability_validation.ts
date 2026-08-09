@@ -46,7 +46,7 @@ const capabilityProfile = (): IAutoMovieProfile => ({
 
 const instances = (): IAutoMovieInstanceSetDesign => ({
   id: "crowd",
-  modelRecipe: "sentinel",
+  modelRecipe: "soloist",
   count: 100,
   layout: {
     kind: "grid",

@@ -67,7 +67,7 @@ export const test_mcp_production_review_design_edges = (): void => {
       ...modelRecipe(),
       id: "review-model",
       lod: [
-        { tier: "hero" as const, maxDistance: 10, recipe: "sentinel" },
+        { tier: "hero" as const, maxDistance: 10, recipe: "soloist" },
         {
           tier: "far" as const,
           maxDistance: null,
@@ -260,7 +260,7 @@ export const test_mcp_production_review_design_edges = (): void => {
       criterion: {
         kind: "frame" as const,
         shot: "opening",
-        frame: "signal-apex",
+        frame: "cue-apex",
         pass: "beauty" as const,
         expectation: "The film preserves the opening signal frame.",
       },
@@ -422,7 +422,7 @@ export const test_mcp_production_review_design_edges = (): void => {
         criterion: {
           kind: "frame",
           shot: "absent-criterion-shot",
-          frame: "signal-apex",
+          frame: "cue-apex",
           pass: "beauty",
           expectation: "A deliberately dangling review dependency.",
         },

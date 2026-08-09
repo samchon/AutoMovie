@@ -1,6 +1,8 @@
+import { HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationMotion,
+  IAutoMovieGait,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieShotSourceOutput,
@@ -447,7 +449,7 @@ export const test_mcp_production_materialization = (): void => {
     const contract = {
       ...shotContract(),
       participants: [
-        { kind: "actor" as const, id: "sentinel" },
+        { kind: "actor" as const, id: "soloist" },
         { kind: "formation" as const, id: formation.id },
       ],
     };
@@ -617,6 +619,79 @@ export const test_mcp_production_materialization = (): void => {
         ],
       ]),
       { validCueDiagnosticsLength: true, atMostUnique: true },
+    );
+
+    // A cue naming an action its figures cannot perform, refused where the
+    // author wrote it. The viewer refuses the same cue when it bakes the unit's
+    // cycle, which is far from the source that stated it and after a whole
+    // compile has reported success; the two read the same repertoire through
+    // one engine answer, so what compiles here is what draws there.
+    const tiers = materialized.value.formations[0]!.lod.map(
+      (tier) => tier.model,
+    );
+    const performers = (gaits: IAutoMovieGait[]) =>
+      materialized.value.models.map((model) =>
+        tiers.includes(model.id)
+          ? {
+              ...model,
+              profiles: [
+                {
+                  id: "member",
+                  name: "member",
+                  controls: [],
+                  drivers: [],
+                  limits: [],
+                  gaits,
+                },
+              ],
+            }
+          : model,
+      );
+    const gaitDiagnostics = (
+      gait: string | undefined,
+      gaits: IAutoMovieGait[],
+    ) =>
+      validateAutoMovieFormationMotions(contract, {
+        ...materialized.value,
+        models: performers(gaits),
+        formationMotions: [
+          { ...validCue, ...(gait === undefined ? {} : { gait }) },
+        ],
+      }).filter((diagnostic) => diagnostic.message.includes("gaits"));
+    const declared = [HUMANOID_GAITS.walk, HUMANOID_GAITS.run];
+    const refused = gaitDiagnostics("gallop", declared);
+    TestValidator.equals(
+      "a cue may only call for an action the unit's own figures declare",
+      namedFacts([
+        ["oneRefusal", () => refused.length === 1],
+        [
+          "namesWhatItAsked",
+          () => refused[0]!.message.includes('rather than "gallop"'),
+        ],
+        ["namesWhatItCould", () => refused[0]!.message.includes("(run, walk)")],
+        [
+          "aDeclaredOneIsLeftAlone",
+          () => gaitDiagnostics("walk", declared).length === 0,
+        ],
+        [
+          "namingNoneIsLeftAlone",
+          () => gaitDiagnostics(undefined, declared).length === 0,
+        ],
+        // A unit of props declares no repertoire, so it has none to disagree
+        // with: refusing here would refuse every crowd that is not a figure.
+        [
+          "aCrowdOfPropsIsLeftAlone",
+          () => gaitDiagnostics("gallop", []).length === 0,
+        ],
+      ]),
+      {
+        oneRefusal: true,
+        namesWhatItAsked: true,
+        namesWhatItCould: true,
+        aDeclaredOneIsLeftAlone: true,
+        namingNoneIsLeftAlone: true,
+        aCrowdOfPropsIsLeftAlone: true,
+      },
     );
     const collisionSource = structuredClone(source);
     collisionSource.scene.nodes.push({

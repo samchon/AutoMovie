@@ -54,9 +54,9 @@ const OPENING_CONTRACT = ${JSON.stringify(registrationOf(opening))};
 const ANSWER_CONTRACT = ${JSON.stringify(registrationOf(answer))};
 
 const program = (context, moving) => {
-  const model = context.runtimeModels.sentinel;
+  const model = context.runtimeModels.soloist;
   if (model === undefined || model.skeleton === null)
-    throw new Error("sentinel runtime rig is required");
+    throw new Error("soloist runtime rig is required");
   const pose = (x) => ({
     skeleton: model.skeleton.id,
     root: {
@@ -85,19 +85,19 @@ const program = (context, moving) => {
   };
   return {
     actors: [
-      { node: "sentinel", model: "sentinel", speed: 1, eyeHeight: 1.6 },
+      { node: "soloist", model: "soloist", speed: 1, eyeHeight: 1.6 },
     ],
     script: {
       logline: "One actor crosses a hard cut without resetting.",
       theme: "continuity is measured state",
       cast: [
-        { node: "sentinel", character: "sentinel", modelRef: model.id },
+        { node: "soloist", character: "soloist", modelRef: model.id },
       ],
       beats: [
         {
           id: context.contract.beat,
           name: context.contract.beat,
-          summary: "the sentinel keeps the established root",
+          summary: "the soloist keeps the established root",
           durationHint: context.contract.durationSeconds,
         },
       ],
@@ -110,7 +110,7 @@ const program = (context, moving) => {
       plan: "The second source deliberately repeats the original mark.",
       actors: [
         {
-          node: "sentinel",
+          node: "soloist",
           position: { x: 0, y: 0, z: 0 },
           facingDeg: 0,
         },
@@ -119,7 +119,7 @@ const program = (context, moving) => {
         {
           node: "camera",
           position: { x: 0, y: 1.4, z: 5 },
-          lookAt: { kind: "node", node: "sentinel" },
+          lookAt: { kind: "node", node: "soloist" },
           fovDeg: 40,
         },
       ],
@@ -136,11 +136,11 @@ const program = (context, moving) => {
       beat: context.contract.beat,
       analysis: "The root must remain continuous at the cut.",
       rationale: "A fixed wide shot exposes any reset across the full move.",
-      actors: [{ node: "sentinel", beats: "continues from the prior mark" }],
+      actors: [{ node: "soloist", beats: "continues from the prior mark" }],
       camera: {
         framing: "wide",
         move: "static",
-        on: { kind: "node", node: "sentinel" },
+        on: { kind: "node", node: "soloist" },
       },
       duration: context.contract.durationSeconds,
     },
@@ -153,14 +153,14 @@ const program = (context, moving) => {
         moving
           ? {
               verb: "enact",
-              actor: "sentinel",
+              actor: "soloist",
               start: 0,
               duration: context.contract.durationSeconds,
               clip: clip.id,
             }
           : {
               verb: "hold",
-              actor: "sentinel",
+              actor: "soloist",
               start: 0,
               duration: context.contract.durationSeconds,
             },
@@ -171,7 +171,7 @@ const program = (context, moving) => {
           duration: "auto",
           framing: "wide",
           move: "static",
-          on: { kind: "node", node: "sentinel" },
+          on: { kind: "node", node: "soloist" },
         },
       ],
       revise: { review: "The hard-cut root remains continuous.", final: null },
@@ -333,7 +333,7 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
                 project.readGeneratedFile("shots/answer.json"),
               ).toString("utf8"),
             ) as IAutoMovieCompiledShotSource
-          ).scene.nodes.find((node) => node.id === "sentinel")?.transform
+          ).scene.nodes.find((node) => node.id === "soloist")?.transform
             .translation.x ?? null);
 
     const output = compileFilm(fullHardCut(), 12);
@@ -435,7 +435,7 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
         predicates: [
           {
             kind: "position",
-            subject: { kind: "node", id: "sentinel" },
+            subject: { kind: "node", id: "soloist" },
             axis: "x",
             operator: "==",
             value: 0,

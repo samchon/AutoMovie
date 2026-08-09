@@ -459,7 +459,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
     const aliasedReviewFrameShot = shotContract();
     aliasedReviewFrameShot.reviewFrames.push({
-      id: "signal-apex-alternate-criterion",
+      id: "cue-apex-alternate-criterion",
       time: 2,
       passes: ["beauty"],
     });
@@ -537,7 +537,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         `current asset turntable ${view.pose}/${view.angleDeg}/${pass}`,
         (
           await oracle.preview({
-            target: { kind: "asset", id: "sentinel", ...view },
+            target: { kind: "asset", id: "soloist", ...view },
             time: 0,
             pass,
             width: 16,
@@ -546,7 +546,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         ).captured,
       );
     const assetPrepared = review.prepare({
-      target: { kind: "asset", id: "sentinel" },
+      target: { kind: "asset", id: "soloist" },
     });
     const missingAssetView = worksheet(project, assetPrepared);
     for (const check of missingAssetView.checks)
@@ -586,7 +586,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
               .entries.some(
                 (entry) =>
                   entry.target.kind === "asset" &&
-                  entry.target.id === "sentinel" &&
+                  entry.target.id === "soloist" &&
                   entry.state === "complete",
               ),
         ],
@@ -658,7 +658,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         `second-production asset turntable ${view.pose}/${view.angleDeg}/${pass}`,
         (
           await secondOracle.preview({
-            target: { kind: "asset", id: "sentinel", ...view },
+            target: { kind: "asset", id: "soloist", ...view },
             time: 0,
             pass,
             width: 16,
@@ -667,7 +667,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         ).captured,
       );
     const secondAssetPrepared = secondReview.prepare({
-      target: { kind: "asset", id: "sentinel" },
+      target: { kind: "asset", id: "soloist" },
     });
     const secondAssetSubmitted = secondReview.submit(
       worksheet(secondProject, secondAssetPrepared),
@@ -739,7 +739,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
               .entries.some(
                 (entry) =>
                   entry.target.kind === "asset" &&
-                  entry.target.id === "sentinel" &&
+                  entry.target.id === "soloist" &&
                   entry.state === "stale",
               ),
         ],

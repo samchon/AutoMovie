@@ -44,7 +44,9 @@ const field = (half: number): IAutoMovieSpace => ({
  *
  * A member standing in one arm and ending in the other stands on floor at both
  * ends and on nothing in the quadrant between them, which is the shape a gate
- * reading only the ends of a cue cannot see.
+ * reading only the ends of a cue cannot see. Paired below with the same two
+ * endpoints over unbroken floor, so what separates the two answers is the
+ * ground under the path and not the path itself.
  */
 const crossroads = (arm: number, halfWidth: number): IAutoMovieSpace => ({
   id: "crossroads",
@@ -471,7 +473,8 @@ export const test_mcp_production_formation_slot_motion = (): void => {
   const floor = field(3);
   const crowd = unit(9);
   // One member alone, standing in the north arm and ending in the east one. Both
-  // ends are carried; the straight path between them is not.
+  // ends are carried; the straight path between them is not, and the gate walks
+  // that path rather than only its ends.
   const lone = alone({ x: 0, y: 0, z: 4 });
   const crosses: IAutoMovieFormationSlotMotion = {
     ...steps([0], 0, "cross"),
@@ -504,14 +507,13 @@ export const test_mcp_production_formation_slot_motion = (): void => {
         "aMemberCrossingBetweenTwoRoadsIsRefusedInTheMiddle",
         () => codes(crossroads(6, 1), [lone], [crosses]).length === 1,
       ],
+      // The same member, the same two endpoints, the same cue -- over unbroken
+      // floor wide enough to carry the diagonal. What separates this answer
+      // from the refusal above is only the ground under the path, so neither
+      // reading is about the endpoints and neither is about crossing as such.
       [
-        "thatMemberStandsOnFloorAtBothEnds",
-        () =>
-          codes(
-            crossroads(6, 1),
-            [lone],
-            [{ ...crosses, end: crosses.start + 1e-9 }],
-          ).length === 0,
+        "theSameCrossingOverUnbrokenFloorIsNotRefused",
+        () => codes(field(6), [lone], [crosses]).length === 0,
       ],
       [
         "aShotThatStagedNoSpaceIsNotMeasured",
@@ -523,7 +525,7 @@ export const test_mcp_production_formation_slot_motion = (): void => {
       aMemberWalkedOffTheFloorIsRefused: true,
       aMemberRemovedBeforeItLeavesIsNotRefused: true,
       aMemberCrossingBetweenTwoRoadsIsRefusedInTheMiddle: true,
-      thatMemberStandsOnFloorAtBothEnds: true,
+      theSameCrossingOverUnbrokenFloorIsNotRefused: true,
       aShotThatStagedNoSpaceIsNotMeasured: true,
     },
   );

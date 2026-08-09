@@ -113,12 +113,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     project.setWorldDesign(routedWorld);
     project.setFormationDesign({
       ...formationDesign(),
-      heroOverrides: [{ slot: 1, actor: "sentinel" }],
+      heroOverrides: [{ slot: 1, actor: "soloist" }],
     });
     setProductionFixtureShotContract(project, {
       ...shotContract(),
       participants: [
-        { kind: "actor", id: "sentinel" },
+        { kind: "actor", id: "soloist" },
         { kind: "formation", id: "line" },
       ],
     });
@@ -240,7 +240,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
                 oracle.query({
                   request: {
                     query: "pose",
-                    actor: "sentinel",
+                    actor: "soloist",
                     shot: "opening",
                     time,
                   },
@@ -253,7 +253,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
             oracle.query({
               request: {
                 query: "distance",
-                from: { kind: "actor", actor: "sentinel" },
+                from: { kind: "actor", actor: "soloist" },
                 to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
                 shot: "opening",
                 time: 999,
@@ -270,7 +270,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const physicalReach = oracle.query({
       request: {
         query: "reach",
-        actor: "sentinel",
+        actor: "soloist",
         shot: "opening",
         target: { kind: "landmark", landmark: "signal-ground" },
         time: 2,
@@ -311,7 +311,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       oracle.query({
         request: {
           query: "reach",
-          actor: "sentinel",
+          actor: "soloist",
           target: { kind: "landmark", landmark: "signal-ground" },
         },
       }).result?.kind === "measurement",
@@ -326,8 +326,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const boneDistance = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel", bone: "head" },
-        to: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist", bone: "head" },
+        to: { kind: "actor", actor: "soloist" },
       },
     }).result;
     TestValidator.equals(
@@ -433,7 +433,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
             oracle.query({
               request: {
                 query: "pose",
-                actor: "sentinel",
+                actor: "soloist",
                 shot: "opening",
                 time: 2,
               },
@@ -459,7 +459,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         query: "camera",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel", "absent"],
+        subjects: ["soloist", "absent"],
       },
     }).result;
     TestValidator.equals(
@@ -536,7 +536,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
                 query: "camera",
                 shot: "opening",
                 time: 2,
-                subjects: ["sentinel", "sentinel"],
+                subjects: ["soloist", "soloist"],
               },
             }).result === null,
         ],
@@ -548,7 +548,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
                 query: "camera",
                 shot: "opening",
                 time: 7,
-                subjects: ["sentinel"],
+                subjects: ["soloist"],
               },
             }).result === null,
         ],
@@ -682,7 +682,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     ) as IAutoMovieCompiledShotSource;
     const reachRequest = {
       query: "reach" as const,
-      actor: "sentinel",
+      actor: "soloist",
       shot: "opening",
       target: {
         kind: "point" as const,
@@ -860,14 +860,14 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const ambiguousActor = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
     const explicitActor = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
         shot: "opening",
       },
@@ -935,7 +935,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const staticPoseDistance = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
         shot: "opening",
         time: 2,
@@ -955,7 +955,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     };
     objectAnimated.shot.objectMotions = [
       {
-        id: "sentinel-object-motion",
+        id: "soloist-object-motion",
         name: null,
         duration: objectAnimated.shot.duration,
         loop: false,
@@ -963,7 +963,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           {
             channel: {
               kind: "node",
-              node: "sentinel",
+              node: "soloist",
               path: "translation",
             },
             times: [0, 2],
@@ -973,7 +973,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           {
             channel: {
               kind: "node",
-              node: "sentinel",
+              node: "soloist",
               path: "rotation",
             },
             times: [0, 2],
@@ -981,7 +981,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
             interpolation: "linear",
           },
           {
-            channel: { kind: "node", node: "sentinel", path: "scale" },
+            channel: { kind: "node", node: "soloist", path: "scale" },
             times: [0, 2],
             values: [1, 1, 1, 2, 2, 2],
             interpolation: "linear",
@@ -993,13 +993,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const objectMotionDistance = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
         shot: "opening",
         time: 2,
       },
     });
-    // The sentinel is also this formation's promoted hero, so its compiled node
+    // The soloist is also this formation's promoted hero, so its compiled node
     // transform is the compiler-owned slot. The pose root composes beneath that
     // transform, which is exactly what the viewer draws, so the expected
     // distance is derived from the node rather than written down.
@@ -1047,7 +1047,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         query: "camera",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel"],
+        subjects: ["soloist"],
       },
     });
     writeCorrupted(corrupted());
@@ -1062,7 +1062,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         query: "camera",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel"],
+        subjects: ["soloist"],
       },
     });
     fs.writeFileSync(productionPath, productionBytes);
@@ -1088,7 +1088,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const unriggedBone = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel", bone: "head" },
+        from: { kind: "actor", actor: "soloist", bone: "head" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
@@ -1097,7 +1097,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const missingBone = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel", bone: "jaw" },
+        from: { kind: "actor", actor: "soloist", bone: "jaw" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
@@ -1108,7 +1108,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const missingActorModel = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
@@ -1167,7 +1167,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const rootedActorDistance = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
@@ -1209,7 +1209,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const heldActorDistance = oracle.query({
       request: {
         query: "distance",
-        from: { kind: "actor", actor: "sentinel" },
+        from: { kind: "actor", actor: "soloist" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
@@ -1334,7 +1334,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const heldPose = oracle.query({
       request: {
         query: "pose",
-        actor: "sentinel",
+        actor: "soloist",
         shot: "opening",
         time: 2,
       },
@@ -1362,12 +1362,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         ...generatedShot.scene.nodes[0]!.transform,
         translation: { x: 7, y: 8, z: 9 },
       };
-    generatedShot.shot.performances[0]!.node = "sentinel";
+    generatedShot.shot.performances[0]!.node = "soloist";
     writeCorrupted(generatedShot);
     const movingWithRoot = oracle.query({
       request: {
         query: "pose",
-        actor: "sentinel",
+        actor: "soloist",
         time: 2,
       },
     });
@@ -1376,7 +1376,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const missingMotion = oracle.query({
       request: {
         query: "pose",
-        actor: "sentinel",
+        actor: "soloist",
         shot: "opening",
         time: 2,
       },
@@ -1387,7 +1387,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const missingPerformance = oracle.query({
       request: {
         query: "pose",
-        actor: "sentinel",
+        actor: "soloist",
         shot: "opening",
         time: 2,
       },
@@ -1426,7 +1426,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         heldWithoutNode: null,
         movingWithoutRootOrNode: null,
         movingWithRootKind: "measurement",
-        // The sentinel node is this formation's promoted hero slot, so an
+        // The soloist node is this formation's promoted hero slot, so an
         // authored pose root of 7 lands at the slot plus 7, exactly as the
         // viewer composes it.
         movingRootX: (

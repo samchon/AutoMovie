@@ -18,7 +18,7 @@ import { productionFixture } from "./productionFixtures";
 const continuityClaim =
   (): IAutoMovieScreenplayIndex["continuity"][number] => ({
     id: "CLAIM-HANDEDNESS",
-    text: "The sentinel raises the signal with the same hand throughout.",
+    text: "The soloist raises the signal with the same hand throughout.",
     verification: "geometry",
     proof: {
       owner: "geometry",

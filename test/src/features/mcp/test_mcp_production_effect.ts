@@ -94,7 +94,7 @@ export const test_mcp_production_effect = (): void => {
         zone: "signal-smoke",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel"],
+        subjects: ["soloist"],
       },
     });
     const inactive = new AutoMovieProductionOracleService(project).query({
@@ -111,7 +111,7 @@ export const test_mcp_production_effect = (): void => {
         zone: "signal-smoke",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel", "sentinel"],
+        subjects: ["soloist", "soloist"],
       },
     });
     const missingZone = new AutoMovieProductionOracleService(project).query({
@@ -423,7 +423,7 @@ export const test_mcp_production_effect = (): void => {
       const positioned = structuredClone(compiled!);
       positioned.shot.performances = [];
       positioned.scene.nodes.find(
-        (node) => node.id === "sentinel",
+        (node) => node.id === "soloist",
       )!.transform.translation = translation;
       writeCurrentShot(positioned);
       const output = new AutoMovieProductionOracleService(project).query({
@@ -432,7 +432,7 @@ export const test_mcp_production_effect = (): void => {
           zone: "signal-smoke",
           shot: "opening",
           time: 2,
-          subjects: ["sentinel"],
+          subjects: ["soloist"],
         },
       });
       return output.result?.kind === "measurement"

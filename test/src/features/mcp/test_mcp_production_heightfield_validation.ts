@@ -79,7 +79,7 @@ export const test_mcp_production_heightfield_validation = (): void => {
     world.surfaces = [{ ...world.surfaces[0]!, height }];
     return {
       production: productionDesign(),
-      models: new Map([["sentinel", modelRecipe()]]),
+      models: new Map([["soloist", modelRecipe()]]),
       world,
       formations: new Map([["line", formationDesign()]]),
       shots: new Map([["opening", shotContract()]]),

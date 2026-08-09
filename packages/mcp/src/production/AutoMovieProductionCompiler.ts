@@ -1,6 +1,8 @@
+import { CAT_GAITS, HORSE_GAITS, HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   IAutoMovieActorContext,
   type IAutoMovieFormationPlacement,
+  autoMovieModelGaits,
   compileDefinedShot,
   defineShot,
   formationSlotPosition,
@@ -86,7 +88,7 @@ import {
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
-  AUTOMOVIE_SANDBOX_ENGINE_EXPORTS,
+  AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
   isProjectSourceSpecifier,
   linkProductionSource,
 } from "./linkProductionSource";
@@ -1194,6 +1196,17 @@ const SANDBOX_BOOTSTRAP = `
     return surface === null ? null : worldSurfaceHeight(surface, point);
   };
   const sourceModules = {
+    // Constant tables, carried in as data rather than loaded as a package. A
+    // table has no behaviour to make non-deterministic, and serialising it here
+    // is what keeps the sandbox's answer and the package's the same numbers
+    // rather than two copies that drift.
+    "@automovie/archetypes": freeze(parse(${JSON.stringify(
+      JSON.stringify({
+        CAT_GAITS,
+        HORSE_GAITS,
+        HUMANOID_GAITS,
+      }),
+    )})),
     "@automovie/engine": freeze({
       defineShot: Object.freeze(defineShot),
       AutoMovieSubject: Object.freeze(AutoMovieSubject),
@@ -2940,11 +2953,10 @@ const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
   );
   if (runtime.length === 0) return false;
   if (isProjectSourceSpecifier(specifier)) return true;
-  if (specifier !== "@automovie/engine") return false;
+  const permitted = AUTOMOVIE_SANDBOX_MODULE_EXPORTS.get(specifier);
+  if (permitted === undefined) return false;
   return runtime.every((element) =>
-    AUTOMOVIE_SANDBOX_ENGINE_EXPORTS.has(
-      element.propertyName?.text ?? element.name.text,
-    ),
+    permitted.has(element.propertyName?.text ?? element.name.text),
   );
 };
 
@@ -4045,6 +4057,25 @@ export const validateAutoMovieFormationMotions = (
     string,
     IAutoMovieCompiledShotSource["formationMotions"][number]
   >();
+  // What each unit's own tier figures can perform, read through the engine's
+  // answer rather than a second one, so a cue this compile accepts is one the
+  // viewer's bake accepts too. A unit whose figures declare nothing is a crowd
+  // of props and has no repertoire to disagree with, exactly as the bake reads
+  // it.
+  const runtimeById = new Map(value.models.map((model) => [model.id, model]));
+  const repertoire = new Map(
+    value.formations.map((formation) => [
+      formation.id,
+      new Set(
+        formation.lod.flatMap((tier) => {
+          const model = runtimeById.get(tier.model);
+          return model === undefined
+            ? []
+            : autoMovieModelGaits(model).map((gait) => gait.name);
+        }),
+      ),
+    ]),
+  );
   for (const cue of [...value.formationMotions].sort(
     (left, right) =>
       compareCodeUnits(left.formation, right.formation) ||
@@ -4065,6 +4096,19 @@ export const validateAutoMovieFormationMotions = (
       fail(
         `formationMotion:${cue.id}.formation`,
         `must reference participating compiled formation "${cue.formation}"`,
+      );
+    const declared = repertoire.get(cue.formation);
+    if (
+      cue.gait !== undefined &&
+      declared !== undefined &&
+      declared.size !== 0 &&
+      declared.has(cue.gait) === false
+    )
+      fail(
+        `formationMotion:${cue.id}.gait`,
+        `must name one of the gaits this unit's figures declare (${[...declared]
+          .sort(compareCodeUnits)
+          .join(", ")}) rather than "${cue.gait}"`,
       );
     if (
       Number.isFinite(cue.start) === false ||
@@ -4264,7 +4308,11 @@ export const validateAutoMovieFormationSlotMotions = (
     priorBySlot.set(cue.formation, priorSlots);
     for (const slot of cue.slots) {
       const prior = priorSlots.get(slot);
-      if (prior !== undefined && cue.start < prior.end)
+      // Never against itself. A cue naming one member twice is a malformed
+      // slot list, already refused as one above; reading the second mention as
+      // an overlap would refuse the same mistake a second time and name the
+      // cue as its own prior, which is not a sentence an author can act on.
+      if (prior !== undefined && prior !== cue && cue.start < prior.end)
         fail(
           `formationSlotMotion:${cue.id}.start`,
           `must not overlap prior cue "${prior.id}" on slot ${slot} ending at ${prior.end}s`,

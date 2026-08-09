@@ -1,5 +1,6 @@
 import {
   IAutoMovieFormationCadenceSegment,
+  autoMovieModelGaits,
   gaitMotion,
 } from "@automovie/engine";
 import { IAutoMovieGait, IAutoMovieModel } from "@automovie/interface";
@@ -135,13 +136,7 @@ export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
  */
 export const formationCycleGaits = (
   model: IAutoMovieModel,
-): readonly IAutoMovieGait[] => {
-  for (const profile of model.profiles ?? []) {
-    const gaits = profile.gaits ?? [];
-    if (gaits.length !== 0) return gaits;
-  }
-  return [];
-};
+): readonly IAutoMovieGait[] => autoMovieModelGaits(model);
 
 /**
  * The cycle a runtime model performs by default, or null when it performs none.
