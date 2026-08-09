@@ -68,6 +68,7 @@ import { coupleObjects } from "./coupleObjects";
 import { bakedTransformFromClipsAt } from "./followClip";
 import { IAutoMovieStagedSet } from "./stageScene";
 import {
+  IAutoMovieFramedBox,
   IAutoMovieSubjectBox,
   formationMemberExtent,
   formationSubjectBox,
@@ -1839,45 +1840,51 @@ export const performShot = (props: {
     };
   };
   /**
-   * The world box a group target occupies at a shot-local instant, or null when
-   * none of its members resolve.
+   * What each member of a group target occupies at a shot-local instant, one
+   * box per member that resolves.
    *
    * Every member contributes what it actually occupies: a staged node its
    * placement raised by its own measured extent, a formation its whole
-   * transformed footprint under the cue playing at that instant. The union is
+   * transformed footprint under the cue playing at that instant. Their union is
    * the thing the camera has to hold, which is the datum a centroid destroyed —
    * two thousand figures and one figure have the same centroid, and only one of
    * them fits in a frame solved for a person.
+   *
+   * The list rather than the union, because WHICH members resolve is a fact
+   * about the shot's own placement and formation tables and not about the
+   * instant: a group that measured something at zero measures something at
+   * every second of the shot. Returning the union would hide that behind a
+   * `null` the re-frame below would have to answer for and could never
+   * receive.
    *
    * Node members are read at their staged placements rather than at their
    * animated bases, which is what a group subject has always been; a formation
    * is read at `seconds` because its cue is the only thing that moves a mass.
    */
-  const groupSubjectBox = (
+  const groupSubjectBoxes = (
     on: IAutoMovieGroupTarget,
     seconds: number,
-  ): IAutoMovieSubjectBox | null =>
-    unionSubjectBoxes([
-      ...on.nodes.flatMap((node) => {
-        const placement = nodePositions.get(node);
-        return placement === undefined
-          ? []
-          : [pointSubjectBox(placement, nodeVerticalExtent(node))];
-      }),
-      ...(on.formations ?? []).flatMap((id) => {
-        const formation = formationById.get(id);
-        return formation === undefined
-          ? []
-          : [
-              formationSubjectBox({
-                formation,
-                motions: formationMotions,
-                member: formationMemberExtent(formation, props.models),
-                seconds,
-              }),
-            ];
-      }),
-    ]);
+  ): IAutoMovieSubjectBox[] => [
+    ...on.nodes.flatMap((node) => {
+      const placement = nodePositions.get(node);
+      return placement === undefined
+        ? []
+        : [pointSubjectBox(placement, nodeVerticalExtent(node))];
+    }),
+    ...(on.formations ?? []).flatMap((id) => {
+      const formation = formationById.get(id);
+      return formation === undefined
+        ? []
+        : [
+            formationSubjectBox({
+              formation,
+              motions: formationMotions,
+              member: formationMemberExtent(formation, props.models),
+              seconds,
+            }),
+          ];
+    }),
+  ];
   // What a camera entry frames, resolved once for every take: the hero's frame
   // spans and each coverage angle read the SAME subject, so an alternate camera
   // frames the beat's subject exactly as the hero does, only from its own
@@ -1899,9 +1906,12 @@ export const performShot = (props: {
     // The live resolver is not consulted for it: it answers with ONE point,
     // which is exactly the datum that cannot describe a mass.
     if (on.kind === "group") {
-      const box = groupSubjectBox(on, 0);
-      if (box !== null) {
-        const framed = framedBoxOf(box);
+      // Non-null because the group measured at least one member above, and
+      // which members resolve does not vary with the instant.
+      const framedAt = (seconds: number): IAutoMovieFramedBox =>
+        framedBoxOf(unionSubjectBoxes(groupSubjectBoxes(on, seconds))!);
+      if (groupSubjectBoxes(on, 0).length !== 0) {
+        const framed = framedAt(0);
         // A cue is the only thing that moves a unit, so a group carrying one is
         // the only group a `follow` can track; without one the mass holds still
         // and `at: null` states that, the same as every group before it.
@@ -1912,13 +1922,7 @@ export const performShot = (props: {
           base: framed.base,
           height: framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
           radius: framed.radius,
-          at:
-            cued === false
-              ? null
-              : (seconds) => {
-                  const moved = groupSubjectBox(on, seconds);
-                  return moved === null ? framed.base : framedBoxOf(moved).base;
-                },
+          at: cued === false ? null : (seconds) => framedAt(seconds).base,
         };
       }
     }

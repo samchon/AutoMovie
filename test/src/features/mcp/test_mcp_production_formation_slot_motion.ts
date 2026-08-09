@@ -199,14 +199,38 @@ const contract = {
   participants: [{ kind: "formation" as const, id: "crowd" }],
 };
 
+const cueDiagnostics = (
+  cues: readonly IAutoMovieFormationSlotMotion[],
+  formations: ReturnType<typeof compiled>[] = [compiled(9)],
+) =>
+  validateAutoMovieFormationSlotMotions(contract, {
+    formations,
+    formationSlotMotions: cues,
+  });
+
 const cueCodes = (
   cues: readonly IAutoMovieFormationSlotMotion[],
   formations: ReturnType<typeof compiled>[] = [compiled(9)],
 ): string[] =>
-  validateAutoMovieFormationSlotMotions(contract, {
-    formations,
-    formationSlotMotions: cues,
-  }).map((diagnostic) => diagnostic.code);
+  cueDiagnostics(cues, formations).map((diagnostic) => diagnostic.code);
+
+/**
+ * A stated number of cues that breaks no other rule.
+ *
+ * Nine members take one window each and the next nine take the window after it,
+ * so no member is ever asked to do two things at once and the count is the only
+ * thing left for the gate to refuse. A hundredth of a second apart is far below
+ * the shot's own six and far above anything two additions could blur.
+ */
+const spread = (count: number): IAutoMovieFormationSlotMotion[] =>
+  Array.from({ length: count }, (_unused, index) => {
+    const window = Math.floor(index / 9) * 0.02;
+    return {
+      ...steps([index % 9], 2, `many-${index}`),
+      start: window,
+      end: window + 0.01,
+    };
+  });
 
 /**
  * Something may happen to one member of a crowd and not to its neighbours.
@@ -238,7 +262,9 @@ const cueCodes = (
  * 6. The cue gate refuses blank and duplicate ids, absent units, bad windows,
  *    empty, repeated and out-of-range slots, promoted heroes, unbounded state,
  *    two cues on one member at once, and either sparsity cap — while accepting
- *    two members doing different things at the same second.
+ *    two members doing different things at the same second, and accepting a
+ *    shot standing exactly on the cue cap, which is what makes the refusal
+ *    above the cap a refusal of the count rather than of anything else.
  * 7. The channel's cost is the exceptions it names and not the size of the crowd
  *    it names them in.
  */
@@ -533,6 +559,8 @@ export const test_mcp_production_formation_slot_motion = (): void => {
     },
   );
 
+  const atTheCap = cueDiagnostics(spread(256));
+  const overTheCap = cueDiagnostics(spread(257));
   TestValidator.equals(
     "the cue gate refuses every malformed exception and accepts sparse ones",
     namedFacts([
@@ -610,16 +638,13 @@ export const test_mcp_production_formation_slot_motion = (): void => {
                 .length === 1,
           ),
       ],
+      ["theCapItselfIsAccepted", () => atTheCap.length === 0],
       [
         "tooManyCuesAreRefused",
         () =>
-          cueCodes(
-            Array.from({ length: 257 }, (_, index) => ({
-              ...steps([index % 9], 2, `many-${index}`),
-              start: 0,
-              end: 0.5,
-            })),
-          ).length > 0,
+          overTheCap.length === 1 &&
+          overTheCap[0]!.code === "engine-validation-failed" &&
+          overTheCap[0]!.message.includes("at most 256 sparse per-member cues"),
       ],
       [
         "tooManyNamedMembersAreRefused",
@@ -649,6 +674,7 @@ export const test_mcp_production_formation_slot_motion = (): void => {
       everyMalformedSlotListIsRefused: true,
       aPromotedHeroIsRefusedItsOwnChannel: true,
       unboundedMemberStateIsRefused: true,
+      theCapItselfIsAccepted: true,
       tooManyCuesAreRefused: true,
       tooManyNamedMembersAreRefused: true,
     },

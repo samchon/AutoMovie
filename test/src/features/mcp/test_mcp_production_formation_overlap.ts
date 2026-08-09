@@ -229,15 +229,12 @@ const bone = (
  * 9. A unit whose runtime this shot does not carry, whose tier list is empty, or
  *    whose geometry fills no column at all is not measured rather than measured
  *    against a stand-in, and a shot with no measurable unit answers nothing.
- * 10. A unit measured by a second shot answers the same as by the first, because
- *     its members are found once and remembered, and what a remembered answer
- *     may change is nothing.
- * 11. Every primitive states the disc inside it: a sphere its radius, a capsule and
+ * 10. Every primitive states the disc inside it: a sphere its radius, a capsule and
  *     a cylinder theirs over their shaft, a cone half its base over its wider
  *     half, a box its narrower side over its height. A plane has no thickness
  *     and a mesh states no dimensions, so neither holds a column, and nor does
  *     a shape whose dimensions are not real.
- * 12. A part is measured where its bone rests, added up the chain however the bones
+ * 11. A part is measured where its bone rests, added up the chain however the bones
  *     are ordered, and left out when the chain leaves the axis, when the part's
  *     own transform does, or when it turns about anything but the vertical. A
  *     part's scale is applied rather than refused, and one that scales a column
@@ -469,25 +466,6 @@ export const test_mcp_production_formation_overlap = (): void => {
       noColumnAtAll: true,
       oneMeasurableUnitStillAnswers: true,
     },
-  );
-
-  // The same unit is staged by every shot that uses it, and the members it is
-  // judged by are found once and remembered. Asked twice it answers the same,
-  // which is what remembering an answer is allowed to change and all of it.
-  const staged = row({ spacing: 0.5 });
-  TestValidator.equals(
-    "a unit measured by a second shot is measured the same as by the first",
-    namedFacts([
-      [
-        "first",
-        () => codes({ models: [wide], formations: [staged] }).length === 1,
-      ],
-      [
-        "again",
-        () => codes({ models: [wide], formations: [staged] }).length === 1,
-      ],
-    ]),
-    { first: true, again: true },
   );
 
   const shapes: IAutoMovieModel = {

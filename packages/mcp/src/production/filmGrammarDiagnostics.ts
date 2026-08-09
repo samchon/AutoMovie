@@ -44,6 +44,12 @@ type IAutoMovieFilmSegment = IAutoMovieFilmTimeline["segments"][number];
  *
  * A declaration that excepted nothing is reported too, because an exception for
  * a break that does not exist is a claim about a film that is not there.
+ *
+ * The analyzer refuses a malformed edit by throwing, so callers hand it a
+ * timeline whose placements already hold: one unique shot per placement, each
+ * with a positive edited range. That is exactly what the compiler's own film
+ * checks establish, which is why it reads the grammar only from an edit that
+ * carries no error-level finding.
  */
 export const filmGrammarDiagnostics = (props: {
   /** Frame-normalized placements, in edited order. */
@@ -131,7 +137,10 @@ const observeSegment = (props: {
   );
   if (camera === undefined) return null;
   const start = segment.sourceInFrame / props.fps;
-  const end = segment.sourceOutFrame / props.fps;
+  // The last frame the edit SHOWS. `sourceOutFrame` is exclusive, so sampling
+  // it would measure the closing boundary from a frame the trim removed.
+  const end = (segment.sourceOutFrame - 1) / props.fps;
+  const duration = (segment.sourceOutFrame - segment.sourceInFrame) / props.fps;
   const motionById = new Map(compiled.motions.map((clip) => [clip.id, clip]));
   const performanceByNode = new Map(
     compiled.shot.performances.map((performance) => [
@@ -204,7 +213,7 @@ const observeSegment = (props: {
     subjects.length < 2 ? null : [subjects[0]!.id, subjects[1]!.id];
   return {
     id: segment.shot,
-    duration: end - start,
+    duration,
     camera: { start: cameraAt(start), end: cameraAt(end) },
     subjects,
     primarySubject: subjects.length === 0 ? null : subjects[0]!.id,
@@ -237,7 +246,7 @@ const declaredFraming = (
     .sort((left, right) => left.start - right.start)
     .filter((intent) => intent.start <= start);
   return covering.length === 0 ||
-    intents.some((intent) => intent.start > start && intent.start < end)
+    intents.some((intent) => intent.start > start && intent.start <= end)
     ? null
     : covering[covering.length - 1]!.framing;
 };

@@ -12,10 +12,18 @@ half-plane inside a shot breaks an otherwise hidden crossing.
 
 `IAutoMovieShotContract.styleIntent` records deliberate grammar exceptions.
 Each marker suppresses exactly one matching diagnostic; for example,
-`jump-cut` removes only `grammar-jump-cut`. Use
-`grammarDiagnosticsToReviewNotes` to file results through the existing visual
-review backlog. The edit-list layer supplies shot order; human or VLM aesthetic
-judgment remains outside this mechanical analyzer.
+`jump-cut` removes only `grammar-jump-cut`, and `axis-cross` only
+`grammar-axis-crossed`. Use `grammarDiagnosticsToReviewNotes` to file results
+through the existing visual review backlog. The edit-list layer supplies shot
+order; human or VLM aesthetic judgment remains outside this mechanical
+analyzer.
+
+`readFilmGrammar` is the same pass with its suppression decision visible:
+besides the surviving findings it returns the declarations that excepted
+nothing, so a marker for a break the edit never makes can be reported rather
+than read as a registered intent. `analyzeFilmGrammar` is its findings half.
+The production compiler calls it over the assembled film timeline, so the edit
+is actually read rather than merely readable.
 
 ## Seeded primitives and world kit
 

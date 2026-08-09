@@ -33,6 +33,7 @@ import {
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
+  assembleProductionChunkVideoMp4,
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
   conformProductionRenditionVideoMp4,
@@ -699,7 +700,19 @@ const currentChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
   pointer?: IRenderGcTargetSnapshot | null,
-): Promise<ICurrentRenderChunkPublication | null> => {
+): Promise<ICurrentRenderChunkPublication | null> =>
+  currentChunkPublication(plan, chunk, pointer);
+
+/**
+ * The synchronous core of {@link currentChunk}, so the final assembly can pull
+ * one chunk's verified bytes at a time from a plain iterator instead of holding
+ * every chunk of the film at once.
+ */
+const currentChunkPublication = (
+  plan: IAutoMovieProductionRenderJobPlan,
+  chunk: IAutoMovieProductionRenderChunk,
+  pointer?: IRenderGcTargetSnapshot | null,
+): ICurrentRenderChunkPublication | null => {
   try {
     const currentPointer =
       pointer === undefined ? captureCurrentChunkPointer(chunk) : pointer;
@@ -1101,7 +1114,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       });
       const video =
         timeline === null
-          ? await encodeChunkFrames(plan, deliverableChunks)
+          ? assembleChunkVideo(plan, deliverableChunks)
           : conformProductionRenditionVideoMp4({
               timeline,
               clips: new Map(
@@ -1204,7 +1217,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       renderProgress("video.guide.encode.start", {
         deliverable: deliverable.id,
       });
-      const video = await encodeChunkFrames(plan, deliverableChunks);
+      const video = assembleChunkVideo(plan, deliverableChunks);
       renderProgress("video.guide.encode.complete", {
         deliverable: deliverable.id,
       });
@@ -1491,39 +1504,47 @@ const assertMatchingProxyPublication = (
     );
 };
 
-const encodeChunkFrames = async (
+/**
+ * Assemble one deliverable's whole video from the chunk MP4s the render already
+ * committed, instead of decoding and re-encoding every frame of the film.
+ *
+ * Each chunk was encoded once, probed, and published under a receipt; the
+ * assembly copies those exact samples into one track. That keeps the same three
+ * guarantees the re-encode had -- every chunk is re-read and re-verified as
+ * current here, the output is a pure function of the receipt-bound chunk bytes,
+ * and an interrupted render resumes by reusing every chunk already committed --
+ * while removing the one encoder that had to hold the whole film. The chunks
+ * are pulled one at a time, so no more than two chunk MP4s are resident.
+ */
+const assembleChunkVideo = (
   plan: IAutoMovieProductionRenderJobPlan,
   chunks: IAutoMovieProductionRenderChunk[],
-): Promise<Uint8Array> => {
+): Uint8Array => {
   if (chunks.length === 0) throw new Error("No current chunks to encode.");
-  return encodePngFrames(async (consumeFrame) => {
-    let frameCount = 0;
-    for (const chunk of chunks.sort(
-      (left, right) => left.frameStart - right.frameStart,
-    )) {
-      const current = await currentChunk(plan, chunk);
-      if (current === null)
-        throw new Error(
-          `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
-        );
-      consumeCurrentRenderChunkFrames(current, (frame) => {
-        consumeFrame(frame.bytes);
-        frameCount += 1;
-      });
-    }
-    if (frameCount !== plan.totalFrames)
-      throw new Error(
-        `Final encode has ${frameCount} frames; expected ${plan.totalFrames}.`,
-      );
-  }, plan);
+  assertCurrentProductionEncoder(plan);
+  const ordered = [...chunks].sort(
+    (left, right) => left.frameStart - right.frameStart,
+  );
+  return assembleProductionChunkVideoMp4({
+    chunks: (function* () {
+      for (const chunk of ordered) {
+        const current = currentChunkPublication(plan, chunk);
+        if (current === null)
+          throw new Error(
+            `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
+          );
+        yield current.encoded;
+      }
+    })(),
+    frameFormat: plan.frameFormat,
+    totalFrames: plan.totalFrames,
+  });
 };
 
-const encodePngFrames = async (
-  produceFrames: (
-    consumeFrame: (frame: Uint8Array) => void,
-  ) => void | Promise<void>,
+/** Refuse to encode or publish through an encoder the plan never priced. */
+const assertCurrentProductionEncoder = (
   plan: IAutoMovieProductionRenderJobPlan,
-): Promise<Uint8Array> => {
+): void => {
   if (
     isDeepStrictEqual(
       productionEncoderIdentity(plan.frameFormat.fps),
@@ -1533,6 +1554,15 @@ const encodePngFrames = async (
     throw new Error(
       "The installed production encoder identity changed after render planning. Replan before encoding or finalizing.",
     );
+};
+
+const encodePngFrames = async (
+  produceFrames: (
+    consumeFrame: (frame: Uint8Array) => void,
+  ) => void | Promise<void>,
+  plan: IAutoMovieProductionRenderJobPlan,
+): Promise<Uint8Array> => {
+  assertCurrentProductionEncoder(plan);
   // `h264-mp4-encoder` ships CommonJS, and this script runs as ESM: depending
   // on the loader its factory arrives on the namespace or on `default`. Read
   // whichever one is callable instead of assuming the interop shape.

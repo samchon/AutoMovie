@@ -119,10 +119,13 @@ const closings = (
  *    fixes an arc's interval is its radius, its angle and its count together.
  * 8. An arc of one member has no neighbour and so no interval, and is accepted
  *    with a tolerance no arc of two could hold.
- * 9. A scatter states no tolerance and is not measured at all, which is the layout
- *    the rule has nothing to say about.
- * 10. A tolerance that is not a real measurement is refused once, as the range it
- *     is not, and never a second time as an interval nobody can read.
+ * 9. A tolerance that is not a real measurement is refused once, as the range it
+ *    is not, and never a second time as an interval nobody can read.
+ *
+ * A scatter is not among them. Its layout carries no `dressing` field at all, so
+ * "a scatter is not measured" is a fact about the type rather than about this
+ * gate: no scatter a caller can construct could make it answer otherwise, and a
+ * case asserting it would read as coverage of a rule it never reaches.
  */
 export const test_mcp_production_formation_dressing_bound = (): void => {
   TestValidator.equals(
@@ -243,12 +246,6 @@ export const test_mcp_production_formation_dressing_bound = (): void => {
   TestValidator.equals(
     "an arc of one member has no neighbour to stand on",
     closings(bow({ radius: 1, dressing: { lateral: 5, depth: 5 } }), 1),
-    [],
-  );
-
-  TestValidator.equals(
-    "a scatter states no tolerance and is not measured",
-    closings({ kind: "scatter", radius: 5, seed: 3 }),
     [],
   );
 

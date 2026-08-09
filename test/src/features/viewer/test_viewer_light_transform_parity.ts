@@ -84,6 +84,26 @@ const resolvedAt = (seconds: number): IAutoMovieLight =>
   resolveShotLighting({ lights: scene.lights, clips: [swing], seconds })[0]!;
 
 /**
+ * Where the swing's own two keys put the lamp halfway along, arrived at without
+ * the engine.
+ *
+ * The comparisons above hold the rendered direction against the direction the
+ * ENGINE resolved, so a resolve that read the clip wrongly would move both
+ * sides of them together. This one reads the keyframes straight out of the clip
+ * and interpolates them with `three.js`' own quaternion math, which is a second
+ * arithmetic over the same declaration rather than a second call into the first
+ * one.
+ */
+const keyedMidpointDirection = (): IAutoMovieVector3 => {
+  const values = swing.tracks[0]!.values;
+  const midpoint = new THREE.Quaternion()
+    .fromArray(values.slice(0, 4))
+    .slerp(new THREE.Quaternion().fromArray(values.slice(4, 8)), 0.5);
+  const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(midpoint);
+  return { x: direction.x, y: direction.y, z: direction.z };
+};
+
+/**
  * The viewer and the renderer derive the SAME direction, at build time and at
  * every frame after it.
  *
@@ -112,10 +132,12 @@ const resolvedAt = (seconds: number): IAutoMovieLight =>
  * 2. At the start, the midpoint and the end of the swing, the direction the
  *    `three.js` light shines equals the direction the engine resolved — the
  *    frame follows the declaration rather than the staging.
- * 3. The two paths agree with each other: a light built from the resolved state
- *    and a light animated to that same instant shine the same way, which is
- *    exactly the agreement a host relies on when it builds once and animates
- *    per frame.
+ * 3. The frame is right, not merely self-consistent: the animated lamp's direction
+ *    is what `three.js`' own interpolation of the clip's two keys gives, so
+ *    nothing in the engine is on both sides of the comparison. A
+ *    build-against-animate check would not say this — both paths reduce to one
+ *    `applyLightState` call, and a resolve reading the clip wrongly would carry
+ *    them together.
  */
 export const test_viewer_light_transform_parity = (): void => {
   // 1. the build path alone is already correct.
@@ -147,13 +169,10 @@ export const test_viewer_light_transform_parity = (): void => {
     { atTheStart: true, atTheMidpoint: true, atTheEnd: true },
   );
 
-  // 3. build-once and animate-per-frame agree with each other.
+  // 3. the animated frame against arithmetic the engine took no part in.
   applyLightMotion(scene.lights, [swing], 2, (id) => built.lights.get(id));
   TestValidator.predicate(
-    "a light built from a resolved state and one animated to it shine the same way",
-    vclose(
-      renderedDirection(buildLight(resolvedAt(2))),
-      renderedDirection(lamp),
-    ),
+    "the animated lamp shines where the clip's own keys put it, interpolated independently",
+    vclose(renderedDirection(lamp), keyedMidpointDirection()),
   );
 };

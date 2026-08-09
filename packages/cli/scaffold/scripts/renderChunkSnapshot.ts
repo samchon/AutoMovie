@@ -56,6 +56,8 @@ export interface ILoadedRenderChunkPublication {
 }
 
 export interface ICurrentRenderChunkPublication {
+  /** Receipt- and parser-verified chunk MP4, the assembly's input. */
+  encoded: Uint8Array;
   frames: ILoadedRenderChunkPublication["frames"];
   receipt: IAutoMovieProductionRenderChunkReceipt;
 }
@@ -308,7 +310,11 @@ export const loadCurrentRenderChunkPublication = (props: {
     Math.abs(video.fps - props.frameFormat.fps) > 1e-9
   )
     return null;
-  return { frames: loaded.frames, receipt: loaded.receipt };
+  return {
+    encoded: loaded.encoded,
+    frames: loaded.frames,
+    receipt: loaded.receipt,
+  };
 };
 
 /** Feed guide publication and final encode from the same verified frame bytes. */

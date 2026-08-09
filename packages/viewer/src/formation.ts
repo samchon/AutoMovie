@@ -177,6 +177,24 @@ export const buildInstancedFormation = (input: {
       applyFormationCycleMaterial(material, cycle);
     return [cycle];
   });
+  // A cue that calls for a gait none of the unit's figures declares is an
+  // author's mistake, not a taste to be quietly overruled: the crowd would
+  // perform something else for the whole cue and every frame would look
+  // deliberate. A unit whose figures declare nothing at all is a crowd of props
+  // and has no repertoire to disagree with.
+  const repertoire = new Set(
+    cycles.flatMap((cycle) => [...cycle.takes.keys()]),
+  );
+  if (repertoire.size !== 0)
+    for (const cue of input.motions ?? [])
+      if (
+        cue.formation === input.formation.id &&
+        cue.gait !== undefined &&
+        repertoire.has(cue.gait) === false
+      )
+        throw new Error(
+          `Formation "${input.formation.id}" cue "${cue.id}" calls for gait "${cue.gait}", which no runtime model of this unit declares.`,
+        );
   const selectionRadius = input.formation.projectionRadius;
   const chunks: IChunkObject[] = input.formation.chunks.map((chunk) => {
     const slots: IAutoMovieFormationSlot[] = [];
@@ -281,11 +299,17 @@ export const buildInstancedFormation = (input: {
         input.formation.id,
         time ?? 0,
       );
-      // The whole per-frame cost of an animated crowd: one float, once per
-      // tier. Every member reads it and lands somewhere else in the cycle,
-      // because the phase it adds is its own.
-      for (const cycle of cycles)
-        cycle.uniforms.automovieCycleTime.value = time ?? 0;
+      // What the unit has done up to this instant, cut into the intervals its
+      // cadence is made of. Every member lands somewhere else in the resulting
+      // cycle, because the phase it adds is its own; every tier folds the same
+      // intervals against its own figure's strides, because a near stickman and
+      // a far one cover ground with the same feet.
+      const cadence = formationCadenceSegments(
+        input.motions ?? [],
+        input.formation.id,
+        time ?? 0,
+      );
+      for (const cycle of cycles) applyFormationCycleCadence(cycle, cadence);
       root.position.set(
         input.formation.anchor.x + sampled.translation.x,
         input.formation.anchor.y + sampled.translation.y,
@@ -528,16 +552,14 @@ export const regenerateFormationSlot = (
  * cycle says it should be instead of where the rest pose left it, and it costs
  * four bytes per vertex of shared geometry rather than anything per member.
  *
- * Passing `cycle` additionally bakes the model's own cycle
+ * Passing `bake` additionally bakes the model's whole repertoire
  * ({@link bakeFormationCycle}); a model that declares no gait, or carries no
  * skeleton to move, returns a null cycle and renders exactly as before.
  */
 export const flattenInstancedModel = (
   model: IAutoMovieModel,
   owner = `Instanced runtime model "${model.id}"`,
-  cycle?: {
-    /** Positive seconds one cycle takes. */
-    periodSeconds: number;
+  bake?: {
     /** Even samples across the cycle. */
     samples?: number;
   },
@@ -575,14 +597,13 @@ export const flattenInstancedModel = (
     geometry,
     materials,
     cycle:
-      cycle === undefined
+      bake === undefined
         ? null
         : bakeFormationCycle({
             model,
             built,
             parts,
-            periodSeconds: cycle.periodSeconds,
-            samples: cycle.samples,
+            samples: bake.samples,
           }),
   };
 };

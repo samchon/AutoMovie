@@ -80,6 +80,9 @@ const graphOf = (
  *    back to its declared radius instead of a poisoned bound.
  */
 export const test_mcp_production_archetype_registry = (): void => {
+  const shipped = createAutoMovieArchetypeRegistry(
+    AUTOMOVIE_PRIMITIVE_ARCHETYPES,
+  );
   TestValidator.equals(
     "a catalogue registers one definition per non-blank id",
     namedFacts([
@@ -106,16 +109,38 @@ export const test_mcp_production_archetype_registry = (): void => {
             "registered twice",
           ),
       ],
+      // A size compared with a length can never read false here: the
+      // constructor throws on a repeat, so a catalogue that had collapsed two
+      // entries into one would have thrown rather than come back short. What
+      // the shipped catalogue owes is that each entry's own id is the key it
+      // answers to, which is asked by looking one up and by handing the
+      // catalogue back a definition it already holds.
+      [
+        "shippedCatalogueAnswersEachId",
+        () =>
+          AUTOMOVIE_PRIMITIVE_ARCHETYPES.every(
+            (archetype) => shipped.get(archetype.id) === archetype,
+          ),
+      ],
       [
         "shippedCatalogueCloses",
         () =>
-          createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES)
-            .size === AUTOMOVIE_PRIMITIVE_ARCHETYPES.length,
+          AUTOMOVIE_PRIMITIVE_ARCHETYPES.every((archetype) =>
+            throwsError(
+              () =>
+                createAutoMovieArchetypeRegistry([
+                  ...AUTOMOVIE_PRIMITIVE_ARCHETYPES,
+                  archetype,
+                ]),
+              `"${archetype.id}" is registered twice`,
+            ),
+          ),
       ],
     ]),
     {
       blankIdRefused: true,
       duplicateIdRefused: true,
+      shippedCatalogueAnswersEachId: true,
       shippedCatalogueCloses: true,
     },
   );
@@ -183,7 +208,7 @@ export const test_mcp_production_archetype_registry = (): void => {
 
   const registry = createAutoMovieArchetypeRegistry([REGISTERED_SHELL]);
   const shell = recipeOf("shell", REGISTERED_SHELL.id, { radius: 0.5 });
-  const shipped = recipeOf("shipped", "stickman", {
+  const shippedRecipe = recipeOf("shipped", "stickman", {
     height: 1.8,
     headRadius: 0.16,
     limbRadius: 0.06,
@@ -213,7 +238,7 @@ export const test_mcp_production_archetype_registry = (): void => {
         "unregisteredShippedRefused",
         () =>
           validateAutoMovieProductionGraph(
-            graphOf(shipped),
+            graphOf(shippedRecipe),
             "fixture-film",
             registry,
           ).some(

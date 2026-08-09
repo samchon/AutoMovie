@@ -95,9 +95,13 @@ const compiled = (): IAutoMovieCompiledShotSource =>
       name: null,
       nodes: [
         {
+          // Off the crowd's own line in BOTH axes. Sharing its depth would let
+          // any weighting at all — by member, by subject, or none — put the
+          // emitter at the crowd's `z`, and the depth fact would hold without
+          // measuring anything.
           id: "hero",
           model: "hero-model",
-          transform: transform(20, 0, -30),
+          transform: transform(20, 0, -10),
           motion: null,
           pose: null,
         },
@@ -234,10 +238,11 @@ const amplitudeAt = (pcm: Float32Array, frame: number): number =>
  * 3. The controlled pair: two units in the SAME footprint at the SAME distance,
  *    64x apart in count, come out exactly 8x apart in level, in the plan AND in
  *    the rendered PCM, which is `sqrt(64)` and nothing else.
- * 4. Several subjects combine by member count, not by subject count: one hero
- *    beside a hundred-strong crowd emits from `20/101` m, essentially the
- *    crowd's own position, where the arithmetic mean would have put the sound
- *    10 m away in empty ground.
+ * 4. Several subjects combine by member count, not by subject count: one figure
+ *    standing 20 m across and 20 m in front of a hundred-strong crowd emits
+ *    from `(20/101, -3010/101)`, essentially the crowd's own position, where
+ *    the arithmetic mean would have put the sound at `(10, -20)` — ten metres
+ *    of empty ground on either axis.
  */
 export const test_film_production_sound_density = (): void => {
   const plan = deriveProductionSoundPlan({
@@ -348,8 +353,10 @@ export const test_film_production_sound_density = (): void => {
     namedFacts([
       ["weightedX", () => nclose(mixed.emitter.x, 20 / 101, 1e-9)],
       ["notTheMidpoint", () => mixed.emitter.x < 1],
-      ["onTheCrowdsLine", () => nclose(mixed.emitter.z, -30, 1e-9)],
+      // (1 x -10 + 100 x -30) / 101. Weighting by subject instead would put it
+      // at -20, ten metres of empty ground in front of the crowd.
+      ["weightedZ", () => nclose(mixed.emitter.z, -3_010 / 101, 1e-9)],
     ]),
-    { weightedX: true, notTheMidpoint: true, onTheCrowdsLine: true },
+    { weightedX: true, notTheMidpoint: true, weightedZ: true },
   );
 };

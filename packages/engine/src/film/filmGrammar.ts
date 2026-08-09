@@ -118,16 +118,14 @@ export interface IAutoMovieGrammarStyleClaim {
  * that suppresses a finding and a declaration that suppresses nothing look
  * identical from outside — both leave the diagnostic list silent — so a shot
  * declaring an exception nobody ever broke reads as a registered intent when it
- * is in fact a claim about a film that is not there. Reporting which
- * declarations were exercised is therefore part of the same read, computed by
- * the one pass that already decides it, rather than by a second implementation
- * of the suppression table downstream.
+ * is in fact a claim about a film that is not there. Which declarations went
+ * unexercised is therefore part of the same read, computed by the one pass that
+ * already decides it, rather than by a second implementation of the suppression
+ * table downstream.
  */
 export interface IAutoMovieGrammarReading {
   /** Findings no declared exception excepted, in analyzer order. */
   reported: IAutoMovieGrammarDiagnostic[];
-  /** Declarations that excepted at least one finding, in shot order. */
-  matched: IAutoMovieGrammarStyleClaim[];
   /** Declarations that found nothing to except, in shot order. */
   unmatched: IAutoMovieGrammarStyleClaim[];
 }
@@ -238,9 +236,6 @@ export const readFilmGrammar = (
   );
   return {
     reported,
-    matched: claims.filter((claim) =>
-      exercised.has(claimKey(claim.shot, claim.intent)),
-    ),
     unmatched: claims.filter(
       (claim) => exercised.has(claimKey(claim.shot, claim.intent)) === false,
     ),

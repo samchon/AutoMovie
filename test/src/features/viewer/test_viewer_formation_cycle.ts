@@ -1,4 +1,4 @@
-import { HUMANOID_PROFILE } from "@automovie/archetypes";
+import { HUMANOID_GAITS, HUMANOID_PROFILE } from "@automovie/archetypes";
 import {
   IAutoMovieFormationDesign,
   IAutoMovieModel,
@@ -42,9 +42,9 @@ import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
  *
  * Scenarios:
  *
- * 1. A gait-bearing LOD tier bakes one part-matrix table per tier, and every chunk
- *    of that tier carries the same table beside its phase and part attributes,
- *    while a tier without a gait carries none.
+ * 1. A gait-bearing LOD tier bakes one part-matrix table per declared gait, and
+ *    every chunk of that tier carries the same tables beside its phase and part
+ *    attributes, while a tier without a gait carries none.
  * 2. The tier's material injects the phase attribute, the part attribute, and both
  *    vertex writes, and shares the tier's uniform cells; a still tier's
  *    material is left untouched.
@@ -54,13 +54,13 @@ import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
  * 4. The table is byte-identical across rebuilds and independent of crowd size,
  *    and the instance buffers stay exactly at the declared per-instance cost
  *    and inside the declared budget.
- * 5. Advancing the shot writes one time cell per tier, and an update without a
- *    time returns the unit to the top of its cycle.
+ * 5. Advancing the shot over a unit no cue moves leaves every member exactly where
+ *    it stood, and an update without a time does the same.
  * 6. Depth, normal, mask, and outline overrides carry the cycle, outline shells
  *    included, and restore returns the beauty materials untouched.
  * 7. A rigged figure with no gait, a model with no profiles, a profile with no
- *    gaits, a part outside the figure, and a non-positive period all fail
- *    closed.
+ *    gaits, a part outside the figure, and a gait whose declared period is not
+ *    a positive number all fail closed.
  */
 export const test_viewer_formation_cycle = (): void => {
   const near: IAutoMovieModelRecipe = {
@@ -136,7 +136,13 @@ export const test_viewer_formation_cycle = (): void => {
         () => marching.every((mesh) => formationCycleOf(mesh) === cycle),
       ],
       ["frozenTier", () => frozen.length === 2],
-      ["gait", () => cycle.gait === "walk"],
+      ["gait", () => cycle.fallback.gait === "walk"],
+      [
+        "wholeRepertoireIsBaked",
+        () =>
+          cycle.takes.size === HUMANOID_PROFILE.gaits!.length &&
+          HUMANOID_PROFILE.gaits!.every((gait) => cycle.takes.has(gait.name)),
+      ],
       [
         "phasePerMember",
         () =>
@@ -171,16 +177,15 @@ export const test_viewer_formation_cycle = (): void => {
         () => cycle.uniforms.automovieCycleSamples.value === cycle.samples,
       ],
       [
-        "cyclePeriodIsTheCompiledOne",
+        "takePeriodIsTheGaitsOwn",
         () =>
-          cycle.periodSeconds === formation.phase.periodSeconds &&
-          cycle.uniforms.automovieCyclePeriod.value ===
-            formation.phase.periodSeconds,
+          cycle.takes.get("walk")!.periodSeconds === HUMANOID_GAITS.walk.period,
       ],
       [
         "tableIsThreeRowsPerPart",
         () =>
-          cycle.matrices.length === cycle.names.length * 3 * cycle.samples * 4,
+          cycle.fallback.matrices.length ===
+          cycle.names.length * 3 * cycle.samples * 4,
       ],
     ]),
     {
@@ -191,12 +196,13 @@ export const test_viewer_formation_cycle = (): void => {
       marchingChunksShareOneTable: true,
       frozenTier: true,
       gait: true,
+      wholeRepertoireIsBaked: true,
       phasePerMember: true,
       partPerVertex: true,
       partsIndexTheWholeFigure: true,
       tableRows: true,
       tableColumns: true,
-      cyclePeriodIsTheCompiledOne: true,
+      takePeriodIsTheGaitsOwn: true,
       tableIsThreeRowsPerPart: true,
     },
   );
@@ -245,8 +251,8 @@ export const test_viewer_formation_cycle = (): void => {
       [
         "sharedUniformCells",
         () =>
-          injected.uniforms.automovieCycleTime ===
-            cycle.uniforms.automovieCycleTime &&
+          injected.uniforms.automovieCycleAdvance ===
+            cycle.uniforms.automovieCycleAdvance &&
           injected.uniforms.automovieCycleTexture ===
             cycle.uniforms.automovieCycleTexture,
       ],
@@ -290,8 +296,15 @@ export const test_viewer_formation_cycle = (): void => {
   const trail = scanned.reduce((chosen, slot) =>
     slot.motionPhase > chosen.motionPhase ? slot : chosen,
   );
-  const leadAt = formationCyclePosition(cycle, lead.motionPhase, 0);
-  const trailAt = formationCyclePosition(cycle, trail.motionPhase, 0);
+  // Cadence is the ground a unit's cue covers, so a member is walked through
+  // its cycle by turning the unit's own accumulator rather than by naming a
+  // second. `advance` counts whole cycles: a full one has to come back.
+  const covered = (advance: number): { advance: number; turn: number } => ({
+    advance,
+    turn: 0,
+  });
+  const leadAt = formationCyclePosition(covered(0), lead.motionPhase);
+  const trailAt = formationCyclePosition(covered(0), trail.motionPhase);
   const leadThigh = sampleFormationCycleMatrix(cycle, thigh, leadAt);
   const widestBetweenMembers = Math.max(
     ...scanned.map((slot) =>
@@ -300,7 +313,7 @@ export const test_viewer_formation_cycle = (): void => {
         sampleFormationCycleMatrix(
           cycle,
           thigh,
-          formationCyclePosition(cycle, slot.motionPhase, 0),
+          formationCyclePosition(covered(0), slot.motionPhase),
         ),
       ),
     ),
@@ -313,9 +326,8 @@ export const test_viewer_formation_cycle = (): void => {
           cycle,
           thigh,
           formationCyclePosition(
-            cycle,
+            covered(step / cycle.samples),
             lead.motionPhase,
-            (step * cycle.periodSeconds) / cycle.samples,
           ),
         ),
       ),
@@ -341,11 +353,7 @@ export const test_viewer_formation_cycle = (): void => {
             sampleFormationCycleMatrix(
               cycle,
               thigh,
-              formationCyclePosition(
-                cycle,
-                lead.motionPhase,
-                cycle.periodSeconds,
-              ),
+              formationCyclePosition(covered(1), lead.motionPhase),
             ),
           ) < 1e-9,
       ],
@@ -404,7 +412,10 @@ export const test_viewer_formation_cycle = (): void => {
   TestValidator.equals(
     "the table regenerates identically and costs nothing per member",
     namedFacts([
-      ["rebuildIsIdentical", () => same(cycle.matrices, rebuiltCycle.matrices)],
+      [
+        "rebuildIsIdentical",
+        () => same(cycle.fallback.matrices, rebuiltCycle.fallback.matrices),
+      ],
       [
         "phasesRebuildIdentically",
         () =>
@@ -418,8 +429,9 @@ export const test_viewer_formation_cycle = (): void => {
       [
         "crowdSizeDoesNotChangeTheTable",
         () =>
-          compactCycle.matrices.byteLength === cycle.matrices.byteLength &&
-          same(compactCycle.matrices, cycle.matrices),
+          compactCycle.fallback.matrices.byteLength ===
+            cycle.fallback.matrices.byteLength &&
+          same(compactCycle.fallback.matrices, cycle.fallback.matrices),
       ],
       [
         "instanceBytesAreExactlyTheDeclaredCost",
@@ -447,12 +459,15 @@ export const test_viewer_formation_cycle = (): void => {
   camera.position.set(0, 5, 20);
   camera.lookAt(0, 0, 0);
   built.update(camera, 1_080, 2.5);
-  const advanced = cycle.uniforms.automovieCycleTime.value;
+  const advanced = cycle.uniforms.automovieCycleAdvance.value;
   built.update(camera, 1_080);
+  // No cue moves this unit, and a unit that covers no ground takes no step:
+  // the whole crowd holds its attitudes while the shot runs past it. Two and a
+  // half seconds of nothing is exactly as many cycles as no seconds of it.
   TestValidator.equals(
-    "advancing the shot writes one time cell for the whole tier",
-    { advanced, rested: cycle.uniforms.automovieCycleTime.value },
-    { advanced: 2.5, rested: 0 },
+    "a shot advancing over a unit no cue moves leaves it standing",
+    { advanced, rested: cycle.uniforms.automovieCycleAdvance.value },
+    { advanced: 0, rested: 0 },
   );
 
   const scene = new THREE.Scene();
@@ -488,12 +503,12 @@ export const test_viewer_formation_cycle = (): void => {
           ),
       ],
       [
-        "everyPassSharesTheTierTimeCell",
+        "everyPassSharesTheTierCadenceCell",
         () =>
           passes.every(
             (entry) =>
-              entry.overridden.uniforms.automovieCycleTime ===
-              cycle.uniforms.automovieCycleTime,
+              entry.overridden.uniforms.automovieCycleAdvance ===
+              cycle.uniforms.automovieCycleAdvance,
           ),
       ],
       [
@@ -534,7 +549,7 @@ export const test_viewer_formation_cycle = (): void => {
     ]),
     {
       everyPassCarriesTheCycle: true,
-      everyPassSharesTheTierTimeCell: true,
+      everyPassSharesTheTierCadenceCell: true,
       noPassInventsMotionForAFrozenTier: true,
       onlyOutlineBuildsShells: true,
       outlineShellsCarryTheCycle: true,
@@ -569,9 +584,15 @@ export const test_viewer_formation_cycle = (): void => {
     model: nearModel,
     built: coarseBuilt,
     parts: instancedModelParts(coarseBuilt.object),
-    periodSeconds: 1,
     samples: 4,
   })!;
+  /** The near figure performing one gait whose declared period is `period`. */
+  const timed = (period: number): IAutoMovieModel => ({
+    ...nearModel,
+    profiles: [
+      { ...HUMANOID_PROFILE, gaits: [{ ...HUMANOID_GAITS.walk, period }] },
+    ],
+  });
   TestValidator.equals(
     "a figure with no gait to perform keeps standing, and a bad cycle fails closed",
     namedFacts([
@@ -606,7 +627,8 @@ export const test_viewer_formation_cycle = (): void => {
       ["anExplicitSampleCountIsHonoured", () => coarse.samples === 4],
       [
         "anExplicitSampleCountSizesTheTable",
-        () => coarse.matrices.length === coarse.names.length * 3 * 4 * 4,
+        () =>
+          coarse.fallback.matrices.length === coarse.names.length * 3 * 4 * 4,
       ],
       [
         "aPartAboveTheFigureIsRefused",
@@ -630,12 +652,11 @@ export const test_viewer_formation_cycle = (): void => {
           throwsError(
             () =>
               bakeFormationCycle({
-                model: nearModel,
+                model: timed(0),
                 built: coarseBuilt,
                 parts: [],
-                periodSeconds: 0,
               }),
-            "cycle period",
+            "gait period",
           ),
       ],
       [
@@ -644,12 +665,11 @@ export const test_viewer_formation_cycle = (): void => {
           throwsError(
             () =>
               bakeFormationCycle({
-                model: nearModel,
+                model: timed(Number.NaN),
                 built: coarseBuilt,
                 parts: [],
-                periodSeconds: Number.NaN,
               }),
-            "cycle period",
+            "gait period",
           ),
       ],
     ]),

@@ -268,10 +268,16 @@ export const test_mcp_production_formation_relief = (): void => {
     namedFacts([
       ["one", () => sunk.length === 1],
       ["names", () => sunk[0]!.startsWith("formation:block ")],
-      ["place", () => sunk[0]!.includes("at 0m, below the 2m")],
-      ["surface", () => sunk[0]!.includes("the surface there stands at")],
+      // One phrase, because the refusal states it as one: a second fact reading
+      // the words after the ones the first already matched holds whenever the
+      // first does.
+      [
+        "place",
+        () =>
+          sunk[0]!.includes("at 0m, below the 2m the surface there stands at"),
+      ],
     ]),
-    { one: true, names: true, place: true, surface: true },
+    { one: true, names: true, place: true },
   );
 
   TestValidator.equals(

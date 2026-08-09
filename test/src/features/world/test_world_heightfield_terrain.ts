@@ -129,6 +129,12 @@ export const test_world_heightfield_terrain = (): void => {
             1e-12,
           ),
       ],
+      // Affine over any one cell, and not over the field: this is the fact that
+      // no `plane` rule can hold this surface. The line at `z` of 0 runs -1, 0,
+      // -1 across its three samples, so a plane through its ends is level at -1
+      // and would read -1 here; the field reads -0.5. Restating the three
+      // lattice points that make that so would restate the case above, which
+      // already reads every one of them back.
       [
         "edge",
         () =>
@@ -138,20 +144,8 @@ export const test_world_heightfield_terrain = (): void => {
             1e-12,
           ),
       ],
-      // Affine over any one cell, and not over the field. The two ends of the
-      // ridge line sit at the same height, so a plane through them is level in
-      // `x` and would put the crest between them at that same height; the field
-      // puts it a metre higher. No `plane` rule can hold this surface, which is
-      // exactly why the third rule had to exist.
-      [
-        "notOnePlane",
-        () =>
-          nclose(worldSurfaceHeight(field, { x: -4, z: 0 }), -1, 1e-12) &&
-          nclose(worldSurfaceHeight(field, { x: 4, z: 0 }), -1, 1e-12) &&
-          nclose(worldSurfaceHeight(field, { x: 0, z: 0 }), 0, 1e-12),
-      ],
     ]),
-    { centre: true, edge: true, notOnePlane: true },
+    { centre: true, edge: true },
   );
 
   TestValidator.equals(
@@ -188,33 +182,17 @@ export const test_world_heightfield_terrain = (): void => {
     { beyondPositiveX: true, beyondNegativeZ: true, beyondBoth: true },
   );
 
-  const firstReading = worldSurfaceHeight(field, { x: 1.3, z: -2.7 });
-  const secondReading = worldSurfaceHeight(field, { x: 1.3, z: -2.7 });
+  // What "relief is stored numbers" comes down to, written as the numbers. The
+  // nine heights {@link hill}'s rule leaves behind, in the row-major order the
+  // builder documents — rows along `+z` from the origin, columns along `+x`
+  // inside each — as a literal rather than as a second call to the rule, which
+  // would only say that a pure function is pure. The field dips in `x` while it
+  // climbs in `z`, so a lattice stored transposed, reversed, or from another
+  // corner really is a different array here.
   TestValidator.equals(
-    "relief is stored numbers, so it reproduces exactly",
-    namedFacts([
-      [
-        // Both readings are taken into locals first. Written as one comparison
-        // the two calls sit either side of `===`, which reads as a value
-        // compared with itself and is refused as such; naming them says what
-        // is actually being claimed, that asking twice answers twice the same.
-        "twice",
-        () => firstReading === secondReading,
-      ],
-      [
-        "rebuilt",
-        () =>
-          worldSurfaceHeight(hill(), { x: 1.3, z: -2.7 }) ===
-          worldSurfaceHeight(field, { x: 1.3, z: -2.7 }),
-      ],
-      [
-        "samples",
-        () =>
-          field.height.kind === "heightfield" &&
-          field.height.samples.length === 9,
-      ],
-    ]),
-    { twice: true, rebuilt: true, samples: true },
+    "the sampler leaves nine stored heights, row-major from the origin",
+    field.height.kind === "heightfield" ? field.height.samples : null,
+    [-3, -2, -3, -1, 0, -1, 1, 2, 1],
   );
 
   const flat = worldTerrain({

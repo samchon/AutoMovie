@@ -333,3 +333,127 @@ export const answer = defineShot("answer", {
   build: (context: IAutoMovieShotBuildContext) =>
     buildCue(context, soloist.cueAbduction),
 });
+
+/**
+ * What the opening shot's frames have to show before it is accepted.
+ *
+ * A scenario lives beside the contract it measures because it cannot be written
+ * without it: the frame it inspects is one of the contract's own review frames,
+ * and naming that id from anywhere else would be a second chance to name a
+ * frame the shot never renders. The shot and the frame are therefore read from
+ * the registration above; only the pass and the observable expectation are
+ * authored, because which pass proves a claim, and what "proved" looks like in
+ * it, is a judgement no contract field contains.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-001.md Verifies the raised hand this
+ *   scene stages, against the frames the shot actually rendered.
+ */
+export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
+  {
+    id: `${opening.id}-beauty`,
+    evidence: [
+      {
+        reason:
+          "Beauty evidence verifies that the cue scene remains visually readable.",
+        scene: "SCN-001",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "beauty",
+      expectation:
+        "The full soloist, the raised hand, the promoted formation heroes, and the bounded plaza haze remain readable against the background.",
+    },
+    required: true,
+  },
+  {
+    id: `${opening.id}-effect-mask`,
+    evidence: [
+      {
+        reason: "The effect mask verifies the cue scene's bounded visual cue.",
+        scene: "SCN-001",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "mask",
+      expectation:
+        "The active plaza haze has visible bounded structural coverage without obscuring the soloist or the promoted formation heroes.",
+    },
+    required: true,
+  },
+  {
+    id: `${opening.id}-pose`,
+    evidence: [
+      {
+        reason:
+          "The pose frame is the owning visual proof for the raised-hand continuity claim.",
+        scene: "SCN-001",
+        claim: "cue-arm-readable",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "pose",
+      expectation:
+        "The hips-to-head and raised-arm bone chains are visible in the pose pass.",
+    },
+    required: true,
+  },
+];
+
+/**
+ * What the answering shot's frames have to show before it is accepted.
+ *
+ * The second shot proves itself. A scenario that pointed back at the opening
+ * shot's frames would accept an answer nobody rendered, which is why these name
+ * this shot's own review frame and say what it alone has to carry.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-002.md Verifies the answering motion
+ *   this scene stages, against the frames the shot actually rendered.
+ */
+export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [
+  {
+    id: `${answer.id}-beauty`,
+    evidence: [
+      {
+        reason:
+          "Beauty evidence verifies that the answering scene reads as a consequence.",
+        scene: "SCN-002",
+      },
+    ],
+    target: { kind: "shot", id: answer.id },
+    criterion: {
+      kind: "frame",
+      frame: ANSWER_CONTRACT.reviewFrames[0]!.id,
+      pass: "beauty",
+      expectation:
+        "The answering cue remains readable in the second shot rather than being inferred from the opening shot.",
+    },
+    required: true,
+  },
+  {
+    id: `${answer.id}-pose`,
+    evidence: [
+      {
+        reason: "The pose frame verifies the authored answering gesture.",
+        scene: "SCN-002",
+      },
+    ],
+    target: { kind: "shot", id: answer.id },
+    criterion: {
+      kind: "frame",
+      frame: ANSWER_CONTRACT.reviewFrames[0]!.id,
+      pass: "pose",
+      expectation:
+        "The second shot carries its own current hips-to-head and raised-arm pose evidence.",
+    },
+    required: true,
+  },
+];

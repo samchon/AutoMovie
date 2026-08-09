@@ -1158,6 +1158,22 @@ export const test_mcp_production_design_validation = (): void => {
     ],
     attachments: [{ id: "boot", bone: "rightFoot" }],
   };
+  // The positive control the two refusals above are only refusals against: an
+  // archetype that declares bones, carrying a socket on one of them. Without a
+  // socket the gate accepts, a pass that refused EVERY attachment would read
+  // exactly as green as one that refused the right ones.
+  const supportedAttachment: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "supported-attachment",
+    lod: [
+      {
+        tier: "hero",
+        maxDistance: null,
+        recipe: "supported-attachment",
+      },
+    ],
+    attachments: [{ id: "held", bone: "rightHand" }],
+  };
   const multiplePaletteMaterials: IAutoMovieModelRecipe = {
     ...modelRecipe(),
     id: "multiple-palette-materials",
@@ -1179,6 +1195,7 @@ export const test_mcp_production_design_validation = (): void => {
       [missingPrimitive.id, missingPrimitive],
       [attachedProp.id, attachedProp],
       [unsupportedStickmanAttachment.id, unsupportedStickmanAttachment],
+      [supportedAttachment.id, supportedAttachment],
       [multiplePaletteMaterials.id, multiplePaletteMaterials],
     ]),
     formations: new Map(),
@@ -1221,6 +1238,13 @@ export const test_mcp_production_design_validation = (): void => {
           ),
       ],
       [
+        "aSocketOnADeclaredBoneIsAccepted",
+        () =>
+          modelContractDiagnostics.every(
+            (diagnostic) => diagnostic.target !== "model:supported-attachment",
+          ),
+      ],
+      [
         "modelContractDiagnosticsSomeDiagnostic2",
         () =>
           modelContractDiagnostics.some(
@@ -1232,6 +1256,7 @@ export const test_mcp_production_design_validation = (): void => {
     ]),
     {
       modelContractDiagnosticsSomeDiagnostic: true,
+      aSocketOnADeclaredBoneIsAccepted: true,
       modelContractDiagnosticsSomeDiagnostic2: true,
     },
   );

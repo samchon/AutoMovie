@@ -1,6 +1,11 @@
 import { sceneFogTransmittance } from "@automovie/engine";
 import { IAutoMovieFog, IAutoMovieScene } from "@automovie/interface";
-import { applyRenderMode, buildModel, buildScene } from "@automovie/viewer";
+import {
+  applyRenderMode,
+  applySceneFog,
+  buildModel,
+  buildScene,
+} from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
@@ -56,33 +61,55 @@ const shaderTransmittance = (fog: THREE.FogExp2, depth: number): number =>
  *
  * Scenarios:
  *
- * 1. Absent is absent: a scene that says nothing about fog, and one that says
- *    `null`, both leave `scene.fog` unset, which is `three.js`'s own no-fog and
- *    therefore byte-identical to every frame rendered before the field existed.
- *    The engine agrees, returning a transmittance of exactly one.
+ * 1. Absent is absent, and absent clears: a scene that says nothing about fog, and
+ *    one that says `null`, both leave `scene.fog` unset, which is `three.js`'s
+ *    own no-fog and therefore byte-identical to every frame rendered before the
+ *    field existed — and a scene ALREADY carrying an atmosphere loses it, which
+ *    is the half a fresh scene cannot show, since it constructs with no fog
+ *    whether the call runs or not. The engine agrees, returning a transmittance
+ *    of exactly one.
  * 2. A declared fog reaches the renderer verbatim: the density is the authored
  *    number and the color is the authored linear triple, unconverted.
  * 3. Viewer and engine derive the same value from the same declaration, at every
- *    depth and to the shader's own formula, and the half-visibility distance is
- *    where `IAutoMovieFog` says it is.
- * 4. Distance is what fog reads: a subject twice as far keeps far less than half
- *    as much of itself, monotonically, which is the whole point of having it.
+ *    depth and to the shader's own formula; the half-visibility distance is
+ *    where `IAutoMovieFog` says it is, and twice that distance is where the
+ *    SQUARED exponent puts it rather than where a plain Beer-Lambert falloff
+ *    would.
+ * 4. Distance is what fog reads: a subject twice as far keeps less of itself,
+ *    monotonically, and is all but gone across the far plane.
  * 5. Structural guide passes suspend it and put it back: a mask must not tint its
  *    palette with distance, and the beauty pass, which IS the film, keeps it.
  */
 export const test_viewer_scene_fog = (): void => {
-  // 1. absent is absent.
+  // 1. absent is absent, and absent CLEARS.
+  //
+  // A fresh `THREE.Scene` already constructs with `fog` of null, so building
+  // one and reading null back says nothing about the call that put it there.
+  // What the field's absence has to mean is that a scene ALREADY carrying an
+  // atmosphere loses it, which is the case a host hits when it re-applies a
+  // film's declaration to a page it is reusing.
+  const clearedByNull = sceneOf(FOG);
+  const carriedFogFirst = clearedByNull.fog !== null;
+  applySceneFog(clearedByNull, null);
+  const clearedByAbsence = sceneOf(FOG);
+  applySceneFog(clearedByAbsence, undefined);
   TestValidator.equals(
-    "a scene declaring no fog builds no fog, and reads as fully transmissive",
+    "a scene declaring no fog builds no fog, clears one already standing, and reads as fully transmissive",
     namedFacts([
       ["undeclared", () => sceneOf(undefined).fog === null],
       ["explicitNull", () => sceneOf(null).fog === null],
+      ["aBuiltFogWasReallyThere", () => carriedFogFirst],
+      ["nullClearsAStandingFog", () => clearedByNull.fog === null],
+      ["absenceClearsItToo", () => clearedByAbsence.fog === null],
       ["engineUndefined", () => sceneFogTransmittance(undefined, 250) === 1],
       ["engineNull", () => sceneFogTransmittance(null, 250) === 1],
     ]),
     {
       undeclared: true,
       explicitNull: true,
+      aBuiltFogWasReallyThere: true,
+      nullClearsAStandingFog: true,
+      absenceClearsItToo: true,
       engineUndefined: true,
       engineNull: true,
     },
@@ -129,8 +156,27 @@ export const test_viewer_scene_fog = (): void => {
             1e-12,
           ),
       ],
+      // The exponent is SQUARED, so doubling the half-visibility distance
+      // quarters the exponent's own depth and leaves a sixteenth. Plain
+      // Beer-Lambert would leave `exp(-2*sqrt(ln2))`, about 0.189: a second
+      // distance is what separates the two laws, since either one can be made
+      // to agree at a single one.
+      [
+        "squaredRatherThanLinear",
+        () =>
+          nclose(
+            sceneFogTransmittance(FOG, (2 * Math.sqrt(Math.LN2)) / FOG.density),
+            1 / 16,
+            1e-12,
+          ),
+      ],
     ]),
-    { engineMatchesShader: true, atTheLens: true, halfVisibility: true },
+    {
+      engineMatchesShader: true,
+      atTheLens: true,
+      halfVisibility: true,
+      squaredRatherThanLinear: true,
+    },
   );
 
   // 4. distance is what fog reads.
@@ -147,15 +193,9 @@ export const test_viewer_scene_fog = (): void => {
                 sceneFogTransmittance(FOG, depths[index - 1]!),
           ),
       ],
-      [
-        "fasterThanLinear",
-        () =>
-          sceneFogTransmittance(FOG, 100) <
-          0.5 * sceneFogTransmittance(FOG, 50),
-      ],
       ["nearlyGoneFarOff", () => sceneFogTransmittance(FOG, 250) < 0.01],
     ]),
-    { monotone: true, fasterThanLinear: true, nearlyGoneFarOff: true },
+    { monotone: true, nearlyGoneFarOff: true },
   );
 
   // 5. structural passes suspend it; the beauty pass keeps it.

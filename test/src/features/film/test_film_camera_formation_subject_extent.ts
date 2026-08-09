@@ -41,12 +41,20 @@ const UNIT: IAutoMovieCompiledFormation = {
   chunks: [],
   heroes: [],
   lod: [],
-  phase: { seed: 1, periodSeconds: 1 },
+  phase: { seed: 1 },
   digest: "sha256:line",
 };
 
-/** One member, as tall as the stand-in the solve falls back to. */
-const MEMBER = { min: 0, max: DEFAULT_SUBJECT_HEIGHT };
+/**
+ * One member, measured rather than assumed.
+ *
+ * Deliberately unlike the stand-in {@link formationMemberExtent} falls back to
+ * and unlike the flat `y` of the unit's own bounds, so the box below can only
+ * carry these two numbers by having read THIS member: a solve that ignored the
+ * supplied extent would raise the box to 1.7 or leave it flat, and either shows
+ * up as a different number rather than as the same one.
+ */
+const MEMBER = { min: 0.2, max: 2.4 };
 
 /** The unit marches 500 m to its right over the first second. */
 const MARCH: IAutoMovieFormationMotion[] = [
@@ -129,8 +137,9 @@ const seesCentroid = (camera: IAutoMovieResolvedCamera, far = 200): boolean =>
  * A compiled formation stores where its members STAND, so its bounds are a
  * footprint: flat, and one member's body-width narrower than the unit really
  * is. The member's own extent supplies the height and the compiler's projection
- * radius the overhang, which is why the box below is `[-50.5, 50.5] × [0, 1.7]
- * × [-0.5, 20.5]` for a line designed `[-50, 50] × [0, 20]`.
+ * radius the overhang, which is why the box below is `[-50.5, 50.5] × [0.2,
+ * 2.4] × [-0.5, 20.5]` for a line designed `[-50, 50] × [0, 20]` whose member
+ * occupies `[0.2, 2.4]`.
  *
  * The readability consequence is the reason this matters. A hundred-meter line
  * cannot be inside a frame the way a person is; it reads when the frame holds
@@ -164,15 +173,17 @@ export const test_film_camera_formation_subject_extent = (): void => {
   TestValidator.equals(
     "the box is the unit's transformed bounds, padded and raised",
     namedFacts([
-      ["min", () => vclose(rest.min, { x: -50.5, y: 0, z: -0.5 })],
+      // The unit's bounds are level at `y` of 0, so every vertical number below
+      // is the member's own extent and nothing else could have supplied it.
+      ["min", () => vclose(rest.min, { x: -50.5, y: MEMBER.min, z: -0.5 })],
+      ["max", () => vclose(rest.max, { x: 50.5, y: MEMBER.max, z: 20.5 })],
       [
-        "max",
-        () => vclose(rest.max, { x: 50.5, y: DEFAULT_SUBJECT_HEIGHT, z: 20.5 }),
+        "base",
+        () => vclose(framedBoxOf(rest).base, { x: 0, y: MEMBER.min, z: 10 }),
       ],
-      ["base", () => vclose(framedBoxOf(rest).base, { x: 0, y: 0, z: 10 })],
       [
         "height",
-        () => nclose(framedBoxOf(rest).height, DEFAULT_SUBJECT_HEIGHT),
+        () => nclose(framedBoxOf(rest).height, MEMBER.max - MEMBER.min),
       ],
       [
         "radius",
