@@ -1620,7 +1620,7 @@ if (
 import {
   isWalkable,
   sampleFormationMotion,
-  transformFormationBounds,
+  transformFormationPoint,
 } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(
@@ -1635,22 +1635,27 @@ for (const [id, shot] of state.generated.shots) {
     const own = cues.filter((cue) => cue.formation === formation.id);
     const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
     const resting = own.length === 0 || Math.min(...times) > 0;
+    // The unit's own four ground corners, the same shape the compiler judges.
+    // A turned unit has a bigger axis-aligned box than itself, so measuring
+    // that box would report a point the unit does not occupy.
+    const { min, max } = formation.bounds;
+    const corners = [
+      { x: min.x, y: min.y, z: min.z },
+      { x: max.x, y: min.y, z: min.z },
+      { x: max.x, y: min.y, z: max.z },
+      { x: min.x, y: min.y, z: max.z },
+    ];
     for (const time of [...(resting ? [null] : []), ...times]) {
-      const bounds =
+      for (const corner of corners.map((point) =>
         time === null
-          ? formation.bounds
-          : transformFormationBounds(
-              formation.bounds,
+          ? point
+          : transformFormationPoint(
+              point,
               formation.anchor,
               sampleFormationMotion(cues, formation.id, time),
               formation.facingDeg,
-            );
-      for (const corner of [
-        { x: bounds.min.x, z: bounds.min.z },
-        { x: bounds.max.x, z: bounds.min.z },
-        { x: bounds.max.x, z: bounds.max.z },
-        { x: bounds.min.x, z: bounds.max.z },
-      ])
+            ),
+      ))
         if (isWalkable(space, corner.x, corner.z) === false)
           throw new Error(
             \`shot "\${id}" puts formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
