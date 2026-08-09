@@ -55,6 +55,19 @@ export class Army extends AutoMovieSubjectGroup<
   /** The deterministic seed every per-member variation is drawn from. */
   public readonly seed = 1415;
 
+  /**
+   * How far the unit advances when a shot puts it in motion, in metres.
+   *
+   * The unit owns the distance rather than each shot choosing one, because the
+   * place it stands on has to be large enough to hold the advance and a field
+   * sized to a number no shot agreed to is a field the unit walks off.
+   *
+   * Like every measured fact here it carries no citation of its own, because
+   * `@ttsc/evidence` does not yet select a class field as a unit
+   * (samchon/ttsc#1121). The instance's tag answers for it until then.
+   */
+  public readonly advanceMetres = 2;
+
   public members(): readonly ArmyMember[] {
     return [armyHero];
   }
@@ -98,6 +111,10 @@ export class Army extends AutoMovieSubjectGroup<
    * scale is held at one on both ends rather than left to whatever the caller
    * passes.
    *
+   * The distance is the unit's own {@link advanceMetres} rather than a caller's
+   * choice, because the place it stands on is sized to hold it. A shot free to
+   * pick a farther one would walk the ranks off ground nobody widened.
+   *
    * @evidence docs/characters/army.md States the ranks remain ordered while
    *   the signal is given and after it.
    */
@@ -105,7 +122,6 @@ export class Army extends AutoMovieSubjectGroup<
     id: string;
     start: number;
     end: number;
-    metres: number;
   }): IAutoMovieFormationMotion {
     const held = { lateral: 1, depth: 1 };
     return {
@@ -120,7 +136,7 @@ export class Army extends AutoMovieSubjectGroup<
         spacingScale: held,
       },
       to: {
-        translation: { x: 0, y: 0, z: props.metres },
+        translation: { x: 0, y: 0, z: -this.advanceMetres },
         facingOffsetDeg: 0,
         spacingScale: held,
       },
@@ -134,6 +150,12 @@ export class Army extends AutoMovieSubjectGroup<
    * The specification permits this only as a dramatic event, so it is a
    * separate method with an explicit scale rather than an option on
    * {@link advance}: a caller has to say it meant to break the unit.
+   *
+   * Unlike {@link advanceMetres}, the scale is the caller's, so the place is not
+   * sized for it in advance: a field cannot pre-hold every loosening a story
+   * might author. A break that pushes the ranks past the ground the shot staged
+   * is refused at compile time, naming the corner, and widening the place is
+   * the answer.
    *
    * @evidence docs/characters/army.md States any loosening is a dramatic event
    *   and must be authored as one, never left to chance.
@@ -188,7 +210,8 @@ export class Army extends AutoMovieSubjectGroup<
    * the question a place has to answer. Depth is measured from the anchor
    * outward rather than centred, because a line forms up behind its anchor
    * rather than around it, and the sign of the facing cannot make it reach less
-   * far.
+   * far, and it carries {@link advanceMetres} because a place has to hold the
+   * unit where it goes rather than only where it forms up.
    *
    * @evidence docs/characters/army.md States the unit reads by its edges,
    *   which is what this measures against the ground it stands on.
@@ -198,7 +221,7 @@ export class Army extends AutoMovieSubjectGroup<
     const anchor = this.design().anchor;
     return Math.max(
       Math.abs(anchor.x) + footprint.width / 2,
-      Math.abs(anchor.z) + footprint.depth,
+      Math.abs(anchor.z) + footprint.depth + this.advanceMetres,
     );
   }
 

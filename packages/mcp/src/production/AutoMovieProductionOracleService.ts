@@ -13,6 +13,7 @@ import {
   sampleFormationMotion,
   sampleMotion,
   selectFormationLod,
+  transformFormationBounds,
   transformFormationPoint,
   validatePose,
 } from "@automovie/engine";
@@ -20,7 +21,6 @@ import {
   AutoMovieContentDigest,
   AutoMovieProductionFrameCapture,
   IAutoMovieCompileProjectOutput,
-  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDiagnostic,
   IAutoMovieGeneratedManifest,
@@ -1541,33 +1541,6 @@ const verifiedRetainedFrames = (
       continue;
     }
   return retained;
-};
-
-const transformFormationBounds = (
-  bounds: IAutoMovieCompiledFormation["bounds"],
-  anchor: IAutoMovieVector3,
-  motion: ReturnType<typeof sampleFormationMotion>,
-  baseFacingDeg: number,
-): IAutoMovieCompiledFormation["bounds"] => {
-  const corners = [bounds.min.x, bounds.max.x].flatMap((x) =>
-    [bounds.min.y, bounds.max.y].flatMap((y) =>
-      [bounds.min.z, bounds.max.z].map((z) =>
-        transformFormationPoint({ x, y, z }, anchor, motion, baseFacingDeg),
-      ),
-    ),
-  );
-  return {
-    min: {
-      x: Math.min(...corners.map((point) => point.x)),
-      y: Math.min(...corners.map((point) => point.y)),
-      z: Math.min(...corners.map((point) => point.z)),
-    },
-    max: {
-      x: Math.max(...corners.map((point) => point.x)),
-      y: Math.max(...corners.map((point) => point.y)),
-      z: Math.max(...corners.map((point) => point.z)),
-    },
-  };
 };
 
 const pointInsideBounds = (

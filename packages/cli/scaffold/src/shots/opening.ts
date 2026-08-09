@@ -5,6 +5,7 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
+import { army } from "../formations/army";
 import { sentinel } from "../units/sentinel";
 import { signalField } from "../world/signalField";
 
@@ -277,27 +278,18 @@ const buildSignal = (
     clips: [...(performer.clips ?? [])],
     formationMotions: context.contract.participants.some(
       (participant) =>
-        participant.kind === "formation" && participant.id === "army",
+        participant.kind === "formation" && participant.id === army.id,
     )
-      ? [
-          {
+      ? // The unit owns its own advance. Spelling the cue out here loosened
+        // the intervals by five percent and turned the ranks four degrees,
+        // which `docs/characters/army.md` permits only as an authored dramatic
+        // event, and `Army.break` is what authors one.
+        [
+          army.advance({
             id: `${context.contract.id}-army-advance`,
-            formation: "army",
-            action: "advance",
             start: 0,
             end: context.contract.durationSeconds,
-            from: {
-              translation: { x: 0, y: 0, z: 0 },
-              facingOffsetDeg: 0,
-              spacingScale: { lateral: 1, depth: 1 },
-            },
-            to: {
-              translation: { x: 0, y: 0, z: -2 },
-              facingOffsetDeg: 4,
-              spacingScale: { lateral: 1.05, depth: 0.95 },
-            },
-            easing: "easeInOut",
-          },
+          }),
         ]
       : [],
     effectCues:

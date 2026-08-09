@@ -914,8 +914,21 @@ export const test_mcp_production_materialization = (): void => {
       `  const boundary = context.engine.formationSlot("${highCount.id}", ${highCount.count - 1});
   if (boundary.slot !== ${highCount.count - 1}) throw new Error("formation slot mismatch");
 ${anchor}`,
-    ).replaceAll('"army"', `"${highCount.id}"`);
+    );
     fs.writeFileSync(openingSourcePath, openingSource);
+    // The cue comes from the unit now, so its formation is the subject's own id
+    // rather than a string this fixture could rename in the shot. Renaming the
+    // subject is what keeps the participant, the design record and the cue
+    // speaking about one formation.
+    const armySourcePath = path.join(fixture.root, "src/formations/army.ts");
+    fs.writeFileSync(
+      armySourcePath,
+      rewriteSource(
+        fs.readFileSync(armySourcePath, "utf8"),
+        '  public readonly id = "army";',
+        `  public readonly id = "${highCount.id}";`,
+      ),
+    );
     const highCountCompile = compiler.compile({ scope: "source" });
     const highCountCompileSucceeded = productionCompileSucceeded(
       "high-count formation fixture",
@@ -989,13 +1002,13 @@ ${anchor}`,
           "highCountSummaryResultValues2",
           () =>
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.motionFacingOffsetDeg === 2,
+            highCountSummary.result.values.motionFacingOffsetDeg === 0,
         ],
         [
           "highCountSummaryResultValues3",
           () =>
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.lateralSpacingScale === 1.025,
+            highCountSummary.result.values.lateralSpacingScale === 1,
         ],
         [
           "highCountSummaryResultValues4",
