@@ -6,7 +6,7 @@ import {
   makeActorSynthesizer,
   realizeShotContract,
   sampleFormationMotion,
-  transformFormationBounds,
+  transformFormationPoint,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -2832,6 +2832,52 @@ const validateCompiledShot = (
   return diagnostics;
 };
 
+/** Degrees of turn between neighbouring samples inside one cue. */
+const AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES = 5;
+
+/** Samples one cue may take, so a turn nobody bounded cannot unbound the walk. */
+const AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT = 360;
+
+/**
+ * When inside one cue a staged unit is worth measuring against its ground.
+ *
+ * A cue's translation and spacing scale interpolate linearly, so with no turn
+ * every extreme is already at an end and the ends are enough. A turn is the one
+ * reason to look between them: the box swings through angles neither end holds,
+ * and its axis-aligned extent peaks somewhere inside.
+ *
+ * The interior is walked in even time steps rather than even angle steps,
+ * because the state at a time is the engine's answer and inverting an easing to
+ * hit an exact angle would be a second one. Every easing this engine has moves
+ * at most twice the average rate, so `n` even steps hold the turn between
+ * neighbours below `2 * turn / n`, and the step count is chosen from that bound
+ * rather than guessed.
+ *
+ * This samples; it does not solve. Once a cue translates and rescales as well
+ * as turns, the extreme is the root of a transcendental equation and no closed
+ * form exists, so a resolution is stated instead of a guarantee. Every sampled
+ * time is a state the unit really occupies, which is what keeps the gate from
+ * ever refusing a shot that was correct.
+ */
+const formationGroundSampleTimes = (
+  cue: IAutoMovieFormationMotion,
+): number[] => {
+  const turn = Math.abs(cue.to.facingOffsetDeg - cue.from.facingOffsetDeg);
+  const steps = Math.min(
+    AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT,
+    Math.ceil((2 * turn) / AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES),
+  );
+  const span = cue.end - cue.start;
+  return [
+    cue.start,
+    ...Array.from(
+      { length: Math.max(0, steps - 1) },
+      (_unused, index) => cue.start + (span * (index + 1)) / steps,
+    ),
+    cue.end,
+  ];
+};
+
 /**
  * Refuse a staged unit the ground it was staged on does not carry.
  *
@@ -2842,19 +2888,25 @@ const validateCompiledShot = (
  * corrected in one went on drawing a floor a third the size of its unit in the
  * other.
  *
- * The bounds are the compiler's own and the containment question goes to the
- * engine that owns it, so this compares two existing answers rather than
- * deriving a third that could disagree with both.
+ * The bounds are the compiler's own and both the placement and the containment
+ * question go to the engine that owns them, so this compares answers that
+ * already exist rather than deriving a third that could disagree with both.
+ *
+ * What is measured is the unit's own four ground corners, not the corners of
+ * its axis-aligned box. A turned box has a bigger box than itself, and refusing
+ * a unit for a point it does not occupy is the one thing this gate must never
+ * do.
  *
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
  * authored extent for a unit to leave.
  *
- * A unit is measured where it stands and at each end of every cue that moves
- * it. Translation and spacing scale interpolate linearly, so their extremes are
- * the endpoints; a facing offset turning between two angles can swing the box
- * past both, which this does not see. Every time it does sample is a state the
- * unit really occupies, so the gate never refuses a shot that was correct.
+ * A unit is measured where it stands and along every cue that moves it, at the
+ * times {@link formationGroundSampleTimes} picks: the ends always, and the
+ * interior of a turn at a stated angular resolution. Every sampled time is a
+ * state the unit really occupies, so the gate never refuses a shot that was
+ * correct, and it samples rather than solves because the extreme of a cue that
+ * turns while it translates and rescales has no closed form.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -2875,7 +2927,7 @@ export const validateAutoMovieFormationGround = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))].sort(
+    const times = [...new Set(own.flatMap(formationGroundSampleTimes))].sort(
       (left, right) => left - right,
     );
     // Where it was staged is measured only when the unit is ever there: with no
@@ -2884,29 +2936,33 @@ export const validateAutoMovieFormationGround = (
     // design bounds never describe, and measuring those would refuse a shot for
     // a position it never holds.
     const resting = own.length === 0 || (times[0] ?? 0) > 0;
-    const escape = [...(resting ? [null] : []), ...times]
-      .map((time) => ({
-        time,
-        bounds:
+    // The unit's own four ground corners, not its bounding box's. A turned box
+    // has a bigger axis-aligned box than itself, so measuring that box would
+    // refuse a unit whose every corner is on the ground for standing at an
+    // angle. Each corner goes through the same point transform the runtime
+    // places members with.
+    const design = formation.bounds;
+    const corners = [
+      { x: design.min.x, y: design.min.y, z: design.min.z },
+      { x: design.max.x, y: design.min.y, z: design.min.z },
+      { x: design.max.x, y: design.min.y, z: design.max.z },
+      { x: design.min.x, y: design.min.y, z: design.max.z },
+    ];
+    const escape = [...(resting ? [null] : []), ...times].flatMap((time) =>
+      corners
+        .map((corner) =>
           time === null
-            ? formation.bounds
-            : transformFormationBounds(
-                formation.bounds,
+            ? corner
+            : transformFormationPoint(
+                corner,
                 formation.anchor,
                 sampleFormationMotion(cues, formation.id, time),
                 formation.facingDeg,
               ),
-      }))
-      .flatMap(({ time, bounds }) =>
-        [
-          { x: bounds.min.x, z: bounds.min.z },
-          { x: bounds.max.x, z: bounds.min.z },
-          { x: bounds.max.x, z: bounds.max.z },
-          { x: bounds.min.x, z: bounds.max.z },
-        ]
-          .filter((corner) => isWalkable(space, corner.x, corner.z) === false)
-          .map((corner) => ({ time, corner })),
-      )[0];
+        )
+        .filter((corner) => isWalkable(space, corner.x, corner.z) === false)
+        .map((corner) => ({ time, corner })),
+    )[0];
     if (escape === undefined) continue;
     diagnostics.push(
       engineDiagnostic(

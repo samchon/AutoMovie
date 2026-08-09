@@ -67,6 +67,93 @@ const march = (
   easing: "easeInOut",
 });
 
+/**
+ * One cue that turns a unit through a stated angle and moves it nowhere.
+ *
+ * A long thin unit sweeps a circle of its own half-length, so a box that fits a
+ * floor lengthwise leaves it while turning and fits again once square to it.
+ */
+const turn = (
+  degrees: number,
+  formation = "army",
+): IAutoMovieFormationMotion => ({
+  ...march(0, formation),
+  to: {
+    translation: { x: 0, y: 0, z: 0 },
+    facingOffsetDeg: degrees,
+    spacingScale: { lateral: 1, depth: 1 },
+  },
+});
+
+/** One compiled unit far longer than it is wide, so a turn sweeps. */
+const lance = (halfLength: number, halfWidth: number): IUnit => ({
+  id: "army",
+  bounds: {
+    min: { x: -halfWidth, y: 0, z: -halfLength },
+    max: { x: halfWidth, y: 0, z: halfLength },
+  },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+});
+
+/**
+ * Two crossed walkable arms: a corridor along `z` and one along `x`.
+ *
+ * A long unit lies in one arm, ends the turn lying in the other, and fits in
+ * neither on the way. That is the shape a gate reading only the ends cannot
+ * see, and it is why the interior of a turn is sampled at all.
+ */
+const crossroads = (arm: number, halfWidth: number): IAutoMovieSpace => ({
+  id: "crossroads",
+  surfaces: [
+    {
+      id: "north-road",
+      kind: "floor",
+      polygon: [
+        { x: -halfWidth, y: 0, z: -arm },
+        { x: halfWidth, y: 0, z: -arm },
+        { x: halfWidth, y: 0, z: arm },
+        { x: -halfWidth, y: 0, z: arm },
+      ],
+      anchor: { x: 0, y: 0, z: 0 },
+      rampTo: null,
+    },
+    {
+      id: "east-road",
+      kind: "floor",
+      polygon: [
+        { x: -arm, y: 0, z: -halfWidth },
+        { x: arm, y: 0, z: -halfWidth },
+        { x: arm, y: 0, z: halfWidth },
+        { x: -arm, y: 0, z: halfWidth },
+      ],
+      anchor: { x: 0, y: 0, z: 0 },
+      rampTo: null,
+    },
+  ],
+  walkable: ["north-road", "east-road"],
+});
+
+/** A square floor turned on its point, so `|x| + |z|` bounds it. */
+const diamond = (reach: number): IAutoMovieSpace => ({
+  id: "diamond",
+  surfaces: [
+    {
+      id: "ground",
+      kind: "floor",
+      polygon: [
+        { x: -reach, y: 0, z: 0 },
+        { x: 0, y: 0, z: -reach },
+        { x: reach, y: 0, z: 0 },
+        { x: 0, y: 0, z: reach },
+      ],
+      anchor: { x: 0, y: 0, z: 0 },
+      rampTo: null,
+    },
+  ],
+  walkable: ["ground"],
+});
+
 const codes = (
   space: IAutoMovieSpace | null,
   formations: readonly IUnit[],
@@ -114,6 +201,12 @@ const codes = (
  * 8. A unit whose cue starts at zero is never at its design bounds, so those are
  *    not measured: every sampled time is a position the unit really holds, and
  *    a gate that refused one it never held would be worse than none.
+ * 9. A unit that lies along one arm of a crossroads and ends a quarter turn along
+ *    the other leaves the ground in between, which reading only the ends cannot
+ *    see; a turn that never leaves is still accepted.
+ * 10. A unit is judged by its own four corners rather than the box around them,
+ *     which a diamond floor separates: turned, the box reaches past ground
+ *     every corner of the unit is still standing on.
  */
 export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
@@ -252,6 +345,71 @@ export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
     "a unit whose cue starts at zero is not judged where it never stands",
     codes(offsetFloor, [unit(4)], [carried]),
+    [],
+  );
+
+  // A nine-by-one unit lies along one arm of a crossroads, ends a quarter turn
+  // lying along the other, and is diagonal to both in between. Reading only the
+  // ends says it never left the road.
+  TestValidator.equals(
+    "a unit that leaves the ground mid-turn is refused",
+    codes(crossroads(10, 1.5), [lance(9, 1)], [turn(90)]),
+    ["engine-validation-failed"],
+  );
+
+  TestValidator.equals(
+    "the mid-turn refusal names a time between the cue's own ends",
+    namedFacts([
+      [
+        "afterStart",
+        () =>
+          Number(
+            /at ([0-9.]+)s/u.exec(
+              validateAutoMovieFormationGround(
+                { id: "opening" },
+                {
+                  scene: { space: crossroads(10, 1.5) },
+                  formations: [lance(9, 1)],
+                  formationMotions: [turn(90)],
+                },
+              )[0]!.message,
+            )![1],
+          ) > 1,
+      ],
+      [
+        "beforeEnd",
+        () =>
+          Number(
+            /at ([0-9.]+)s/u.exec(
+              validateAutoMovieFormationGround(
+                { id: "opening" },
+                {
+                  scene: { space: crossroads(10, 1.5) },
+                  formations: [lance(9, 1)],
+                  formationMotions: [turn(90)],
+                },
+              )[0]!.message,
+            )![1],
+          ) < 3,
+      ],
+    ]),
+    { afterStart: true, beforeEnd: true },
+  );
+
+  TestValidator.equals(
+    "a unit that turns without leaving its ground is accepted",
+    codes(field(10), [lance(9, 1)], [turn(90)]),
+    [],
+  );
+
+  // The box around a turned unit is bigger than the unit, and on a square floor
+  // the two agree: the box's half-extents are exactly the unit's widest corners
+  // in each axis. A diamond separates them. Turned a quarter of a right angle,
+  // this unit's four corners all sit at |x| + |z| = 12.73 while its box corners
+  // sit at 14.14, so a floor reaching 13.5 carries the unit and not its box.
+  TestValidator.equals(
+    "a unit is judged by its own corners, not the box around them",
+    codes(diamond(13.5), [lance(9, 1)], [turn(45)]),
     [],
   );
 };
