@@ -2954,7 +2954,12 @@ export const validateAutoMovieFormationGround = (
     // until then. A cue starting at zero means the unit begins somewhere its
     // design bounds never describe, and measuring those would refuse a shot for
     // a position it never holds.
-    const resting = own.length === 0 || (times[0] ?? 0) > 0;
+    // Asked of the earliest sampled time itself. A unit with no cue has none,
+    // which is the same answer as a cue that starts later, and reading it once
+    // spares a fallback for a `times` that cannot be empty when `own` is not:
+    // a branch nothing can reach is a branch nothing can test.
+    const first = times[0];
+    const resting = first === undefined || first > 0;
     // The unit's own four ground corners, not its bounding box's. A turned box
     // has a bigger axis-aligned box than itself, so measuring that box would
     // refuse a unit whose every corner is on the ground for standing at an

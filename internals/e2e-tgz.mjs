@@ -1654,13 +1654,18 @@ for (const [id, shot] of state.generated.shots) {
       { x: min.x, y: min.y, z: max.z },
     ];
     for (const time of [...(resting ? [null] : []), ...times]) {
+      // One sampled state per time, not one per corner: the four corners of a
+      // unit are read at the same instant, and asking the engine four times for
+      // that one instant would be four chances to read it differently.
+      const motion =
+        time === null ? null : sampleFormationMotion(own, formation.id, time);
       for (const corner of corners.map((point) =>
-        time === null
+        motion === null
           ? point
           : transformFormationPoint(
               point,
               formation.anchor,
-              sampleFormationMotion(own, formation.id, time),
+              motion,
               formation.facingDeg,
             ),
       ))

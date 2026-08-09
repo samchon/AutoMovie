@@ -1,5 +1,6 @@
 import type {
   IAutoMovieCompiledFormation,
+  IAutoMovieDiagnostic,
   IAutoMovieFormationMotion,
   IAutoMovieSpace,
 } from "@automovie/interface";
@@ -169,6 +170,16 @@ const codes = (
   ).map((diagnostic) => diagnostic.code);
 
 /**
+ * The time a refusal names, as the refusal itself spells it.
+ *
+ * Read as text rather than as a number, so a caller can weigh both the instant
+ * and the digits it was stated to. An answer that names no time at all reads as
+ * the empty string, which no reading of it can mistake for a valid one.
+ */
+const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
+  /at ([0-9.]+)s/u.exec(diagnostics[0]?.message ?? "")?.[1] ?? "";
+
+/**
  * A shot may not stage a unit on ground it did not stage under it.
  *
  * The space a shot stages is what the scene keeps and what the viewer turns
@@ -205,13 +216,17 @@ const codes = (
  *    a gate that refused one it never held would be worse than none.
  * 9. A unit that lies along one arm of a crossroads and ends a quarter turn along
  *    the other leaves the ground in between, which reading only the ends cannot
- *    see; a turn that never leaves is still accepted.
+ *    see. The refusal names one time inside the cue's own ends, stated to the
+ *    millisecond rather than to the last digit a sample happens to carry, and a
+ *    turn that never leaves is still accepted.
  * 10. A unit is judged by its own four corners rather than the box around them,
  *     which a diamond floor separates: turned, the box reaches past ground
  *     every corner of the unit is still standing on.
- * 11. A cue turning far enough to reach the sample cap still ends and still
- *     answers. It says nothing about the sampling under the cap, because the
- *     unit it uses is already off its ground where it stands.
+ * 11. A cue turning far enough to reach the sample cap is walked from a unit that
+ *     does stand where it starts, so the walk runs rather than stopping at
+ *     rest, and it still reaches an interior sample and names it. What
+ *     resolution the cap left is not observed, only that an enormous turn is
+ *     measured and answered rather than run away with.
  */
 export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
@@ -369,31 +384,44 @@ export const test_mcp_production_formation_ground = (): void => {
   // A nine-by-one unit lies along one arm of a crossroads, ends a quarter turn
   // lying along the other, and is diagonal to both in between. Reading only the
   // ends says it never left the road.
-  TestValidator.equals(
-    "a unit that leaves the ground mid-turn is refused",
-    codes(crossroads(10, 1.5), [lance(9, 1)], [turn(90)]),
-    ["engine-validation-failed"],
+  const turned = validateAutoMovieFormationGround(
+    { id: "opening" },
+    {
+      scene: { space: crossroads(10, 1.5) },
+      formations: [lance(9, 1)],
+      formationMotions: [turn(90)],
+    },
   );
-
-  const turnedOff = Number(
-    /at ([0-9.]+)s/u.exec(
-      validateAutoMovieFormationGround(
-        { id: "opening" },
-        {
-          scene: { space: crossroads(10, 1.5) },
-          formations: [lance(9, 1)],
-          formationMotions: [turn(90)],
-        },
-      )[0]!.message,
-    )![1],
-  );
+  const turnedOff = sampledTime(turned);
   TestValidator.equals(
-    "the mid-turn refusal names a time between the cue's own ends",
+    "a unit that leaves the ground mid-turn is refused, at a time between the cue's own ends",
     namedFacts([
-      ["afterStart", () => turnedOff > 1],
-      ["beforeEnd", () => turnedOff < 3],
+      ["code", () => turned[0]?.code === "engine-validation-failed"],
+      ["one", () => turned.length === 1],
+      ["afterStart", () => Number(turnedOff) > 1],
+      ["beforeEnd", () => Number(turnedOff) < 3],
+      // A sampled interior time is a long fraction, and the reading is stated
+      // to the millisecond. Unrounded it would carry a dozen digits an author
+      // finding a place on a field has no use for.
+      ["rounded", () => /^[0-9]+(\.[0-9]{1,3})?$/u.test(turnedOff)],
+      // And so is the place. A corner swung to an angle no author chose lands
+      // on an irrational pair, and the reading is the same millimetre.
+      [
+        "roundedCorner",
+        () =>
+          /\(-?[0-9]+(\.[0-9]{1,3})?, -?[0-9]+(\.[0-9]{1,3})?\) where/u.test(
+            turned[0]?.message ?? "",
+          ),
+      ],
     ]),
-    { afterStart: true, beforeEnd: true },
+    {
+      code: true,
+      one: true,
+      afterStart: true,
+      beforeEnd: true,
+      rounded: true,
+      roundedCorner: true,
+    },
   );
 
   TestValidator.equals(
@@ -414,13 +442,27 @@ export const test_mcp_production_formation_ground = (): void => {
   );
 
   // A cue may legally turn through 360,000 degrees, which without a cap would
-  // be a hundred thousand measurements for one unit. What this pins is that the
-  // walk still ends and still answers; this unit is already off its ground
-  // where it stands, so the refusal it reports is not evidence about the
-  // sampling under the cap, and nothing here claims it is.
+  // be a hundred thousand measurements for one unit. This unit stands on the
+  // road it starts on, so the walk really runs rather than stopping at rest,
+  // and it still reaches an interior sample and reports it. What the cap left
+  // that sampling at — coarser, in proportion — is not observed here; only that
+  // an enormous turn is measured and answered rather than run away with.
+  const capped = validateAutoMovieFormationGround(
+    { id: "opening" },
+    {
+      scene: { space: crossroads(10, 1.5) },
+      formations: [lance(9, 1)],
+      formationMotions: [turn(360_000)],
+    },
+  );
+  const cappedOff = sampledTime(capped);
   TestValidator.equals(
-    "a cue turning far enough to reach the sample cap still answers",
-    codes(field(4), [lance(9, 1)], [turn(360_000)]),
-    ["engine-validation-failed"],
+    "a cue turning far enough to reach the sample cap is still walked to an answer",
+    namedFacts([
+      ["code", () => capped[0]?.code === "engine-validation-failed"],
+      ["afterStart", () => Number(cappedOff) > 1],
+      ["beforeEnd", () => Number(cappedOff) < 3],
+    ]),
+    { code: true, afterStart: true, beforeEnd: true },
   );
 };
