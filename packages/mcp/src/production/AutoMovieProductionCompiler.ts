@@ -2858,6 +2858,19 @@ const FORMATION_GROUND_SAMPLE_METRES = 0.5;
 const FORMATION_GROUND_SUPPORT_DIRECTIONS = 16;
 
 /**
+ * Members already found for one compiled formation.
+ *
+ * The set is a pure function of the formation, and the compiler hands the same
+ * compiled formation to every shot that stages it, so an army in fifty shots
+ * would otherwise regenerate every one of its members fifty times over. Keyed
+ * by the formation itself, so nothing outlives the compile that made it.
+ */
+const formationGroundMemberCache = new WeakMap<
+  IAutoMovieFormationPlacement,
+  IAutoMovieVector3[]
+>();
+
+/**
  * The members a formation is judged by: its outermost in each asked direction.
  *
  * `bounds` is the axis-aligned box over every slot, and its corners are not
@@ -2874,6 +2887,8 @@ const FORMATION_GROUND_SUPPORT_DIRECTIONS = 16;
 const formationGroundMembers = (
   formation: IAutoMovieFormationPlacement,
 ): IAutoMovieVector3[] => {
+  const remembered = formationGroundMemberCache.get(formation);
+  if (remembered !== undefined) return remembered;
   const looks = Array.from(
     { length: FORMATION_GROUND_SUPPORT_DIRECTIONS },
     (_, index) => {
@@ -2883,19 +2898,24 @@ const formationGroundMembers = (
     },
   );
   const furthest = looks.map(() => Number.NEGATIVE_INFINITY);
-  const outermost = looks.map((): number | null => null);
+  const outermost = looks.map((): IAutoMovieVector3 | null => null);
+  // The point itself is kept rather than the slot that produced it, so a
+  // formation of a hundred thousand members is asked for each of them once.
+  // A member outermost in several directions is the same object in each, which
+  // is what the set below dedupes on.
   for (let slot = 0; slot < formation.count; ++slot) {
     const point = formationSlotPosition(formation, slot);
-    looks.forEach((look, index) => {
+    for (let index = 0; index < looks.length; ++index) {
+      const look = looks[index]!;
       const reach = point.x * look.x + point.z * look.z;
-      if (reach <= furthest[index]!) return;
+      if (reach <= furthest[index]!) continue;
       furthest[index] = reach;
-      outermost[index] = slot;
-    });
+      outermost[index] = point;
+    }
   }
-  return [...new Set(outermost.filter((slot) => slot !== null))].map((slot) =>
-    formationSlotPosition(formation, slot),
-  );
+  const members = [...new Set(outermost.filter((point) => point !== null))];
+  formationGroundMemberCache.set(formation, members);
+  return members;
 };
 
 /**

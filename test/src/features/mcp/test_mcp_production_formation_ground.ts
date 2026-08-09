@@ -348,7 +348,10 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *     triangular floor carries every member and not that corner.
  * 17. A member off the floor is still refused whatever its layout, so what the
  *     three cases above buy is not a gate that has stopped looking.
- * 18. A cue turning far enough to reach the sample cap is walked from a unit that
+ * 18. The same formation staged by a second shot is measured the same as by the
+ *     first, because its members are found once and remembered, and what a
+ *     remembered answer may change is nothing.
+ * 19. A cue turning far enough to reach the sample cap is walked from a unit that
  *     does stand where it starts, so the walk runs rather than stopping at
  *     rest, and it still reaches an interior sample and names it. What
  *     resolution the cap left is not observed, only that an enormous turn is
@@ -634,6 +637,23 @@ export const test_mcp_production_formation_ground = (): void => {
     "a member off the floor is still refused, wherever its layout put it",
     codes(diamond(3), [disc(6, 200)]),
     ["engine-validation-failed"],
+  );
+
+  // The same formation is staged by every shot that uses it, and the members it
+  // is judged by are found once and remembered. Asked twice, it answers the
+  // same, which is what remembering an answer is allowed to change and all of
+  // what it is allowed to change.
+  const staged = disc(6, 200);
+  const twice = diamond(6 * Math.SQRT2);
+  TestValidator.equals(
+    "a unit staged by a second shot is measured the same as by the first",
+    namedFacts([
+      ["first", () => codes(twice, [staged]).length === 0],
+      ["again", () => codes(twice, [staged]).length === 0],
+      ["andRefused", () => codes(diamond(3), [staged]).length === 1],
+      ["stillRefused", () => codes(diamond(3), [staged]).length === 1],
+    ]),
+    { first: true, again: true, andRefused: true, stillRefused: true },
   );
 
   // A cue's turn is a plain unbounded number, and a thousand revolutions of one
