@@ -2832,18 +2832,27 @@ const validateCompiledShot = (
   return diagnostics;
 };
 
-/** Degrees of turn between neighbouring samples inside one cue. */
-const FORMATION_TURN_SAMPLE_DEGREES = 5;
+/**
+ * Metres a corner may travel between neighbouring samples inside one cue.
+ *
+ * Ground is judged in metres, so the resolution is stated in metres too. Half a
+ * metre is under the width of anything a space calls a surface, so a corner
+ * cannot step over a gap a unit could have fallen into without a sample landing
+ * in it — for gaps at that scale and wider, which is the honest extent of the
+ * claim.
+ */
+const FORMATION_GROUND_SAMPLE_METRES = 0.5;
 
 /**
- * Samples one cue may take, however far it turns.
+ * Samples one cue may take, however far it carries a unit.
  *
- * A cue may legally turn through 360,000 degrees, and holding the resolution
- * there would cost a hundred thousand samples for one unit. Past this the walk
- * stays bounded and the resolution coarsens in proportion, which is the trade a
- * gate that samples has to make somewhere and had better say out loud.
+ * A cue's turn and travel are plain unbounded numbers, and holding the
+ * resolution over a turn of a thousand revolutions would cost a hundred
+ * thousand samples for one unit. Past this the walk stays bounded and the
+ * resolution coarsens in proportion, which is the trade a gate that samples has
+ * to make somewhere and had better say out loud.
  */
-const FORMATION_TURN_SAMPLE_LIMIT = 360;
+const FORMATION_GROUND_SAMPLE_LIMIT = 360;
 
 /**
  * One reading as a reader wants it: three decimals, so a metre is stated to the
@@ -2854,25 +2863,31 @@ const round = (value: number): number => Math.round(value * 1_000) / 1_000;
 /**
  * When inside one cue a staged unit is worth measuring against its ground.
  *
- * A cue's translation and spacing scale interpolate linearly, so with no turn
- * every extreme is already at an end and the ends are enough. A turn is the one
- * reason to look between them: the box swings through angles neither end holds,
- * and its axis-aligned extent peaks somewhere inside.
+ * Reading only the ends of a cue would be enough if ground were convex, because
+ * every part of a cue interpolates monotonically and a corner therefore travels
+ * a bounded path between two ends. Ground is not convex: a space is a union of
+ * authored surfaces, so a unit can stand on one, end on another, and cross what
+ * is between them. That is true of a turn, which swings a corner through an arc
+ * neither end holds, and just as true of a straight walk between two roads.
  *
- * The interior is walked in even time steps rather than even angle steps,
- * because the state at a time is the engine's answer and inverting an easing to
- * hit an exact angle would be a second one. Every easing this engine has moves
- * at most twice the average rate, so `n` even steps hold the turn between
- * neighbours below `2 * turn / n`, and the step count is chosen from that bound
- * rather than guessed. The bound holds until {@link FORMATION_TURN_SAMPLE_LIMIT}
- * clamps the count; a cue turning far enough to reach it is measured more
- * coarsely, in proportion.
+ * So the interior is walked, at a resolution stated in the same metres the
+ * ground is. How far a corner can travel in one cue is bounded by what the cue
+ * does to it: the anchor's own travel, the arc a turn sweeps it through at its
+ * radius, and the reach a spacing change adds. The interior is walked in even
+ * time steps rather than even distance steps, because the state at a time is
+ * the engine's answer and inverting an easing to land on an exact distance
+ * would be a second one. Every easing this engine has moves at most twice the
+ * average rate, so `n` even steps hold a corner's travel between neighbours
+ * below `2 * reach / n`, and the step count is chosen from that bound rather
+ * than guessed. The bound holds until {@link FORMATION_GROUND_SAMPLE_LIMIT}
+ * clamps the count; a cue that carries a unit far enough to reach it is
+ * measured more coarsely, in proportion.
  *
- * This samples; it does not solve. Once a cue translates and rescales as well
- * as turns, the extreme is the root of a transcendental equation and no closed
- * form exists, so a resolution is stated instead of a guarantee. Every sampled
- * time is a state the unit really occupies, which is what keeps the gate from
- * ever refusing a shot that was correct.
+ * This samples; it does not solve. The set of times a unit is off its ground
+ * has no closed form — it depends on the authored polygons as much as on the
+ * cue — so a resolution is stated instead of a guarantee. Every sampled time is
+ * a state the unit really occupies, which is what keeps the gate from ever
+ * refusing a shot that was correct.
  *
  * A `step` cue holds its start state until its end, so its interior samples all
  * repeat that one state. They cost a little and answer correctly, which is the
@@ -2880,11 +2895,35 @@ const round = (value: number): number => Math.round(value * 1_000) / 1_000;
  */
 const formationGroundSampleTimes = (
   cue: IAutoMovieFormationMotion,
+  radius: number,
 ): number[] => {
-  const turn = Math.abs(cue.to.facingOffsetDeg - cue.from.facingOffsetDeg);
+  // How many times its design reach a spacing change ever holds a corner out
+  // at, so the arc a turn sweeps it through is measured at the radius it really
+  // turns on. Read as a magnitude: a negative scale mirrors a unit rather than
+  // shrinking it past nothing, and a mirrored corner travels just as far.
+  const spread = Math.max(
+    Math.abs(cue.from.spacingScale.lateral),
+    Math.abs(cue.to.spacingScale.lateral),
+    Math.abs(cue.from.spacingScale.depth),
+    Math.abs(cue.to.spacingScale.depth),
+  );
+  const reach =
+    Math.hypot(
+      cue.to.translation.x - cue.from.translation.x,
+      cue.to.translation.z - cue.from.translation.z,
+    ) +
+    ((Math.abs(cue.to.facingOffsetDeg - cue.from.facingOffsetDeg) * Math.PI) /
+      180) *
+      radius *
+      spread +
+    Math.max(
+      Math.abs(cue.to.spacingScale.lateral - cue.from.spacingScale.lateral),
+      Math.abs(cue.to.spacingScale.depth - cue.from.spacingScale.depth),
+    ) *
+      radius;
   const steps = Math.min(
-    FORMATION_TURN_SAMPLE_LIMIT,
-    Math.ceil((2 * turn) / FORMATION_TURN_SAMPLE_DEGREES),
+    FORMATION_GROUND_SAMPLE_LIMIT,
+    Math.ceil((2 * reach) / FORMATION_GROUND_SAMPLE_METRES),
   );
   const span = cue.end - cue.start;
   return [
@@ -2922,10 +2961,11 @@ const formationGroundSampleTimes = (
  *
  * A unit is measured where it stands and along every cue that moves it, at the
  * times {@link formationGroundSampleTimes} picks: the ends always, and the
- * interior of a turn at a stated angular resolution. Every sampled time is a
- * state the unit really occupies, so the gate never refuses a shot that was
- * correct, and it samples rather than solves because the extreme of a cue that
- * turns while it translates and rescales has no closed form.
+ * interior at a resolution stated in metres. The interior is walked because
+ * ground is not convex — two ends a unit stands on say nothing about what lies
+ * between them. Every sampled time is a state the unit really occupies, so the
+ * gate never refuses a shot that was correct, and it samples rather than solves
+ * because where a unit leaves authored ground has no closed form.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -2946,20 +2986,6 @@ export const validateAutoMovieFormationGround = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    const times = [...new Set(own.flatMap(formationGroundSampleTimes))].sort(
-      (left, right) => left - right,
-    );
-    // Where it was staged is measured only when the unit is ever there: with no
-    // cue it never moves, and with a cue starting after zero it stands still
-    // until then. A cue starting at zero means the unit begins somewhere its
-    // design bounds never describe, and measuring those would refuse a shot for
-    // a position it never holds.
-    // Asked of the earliest sampled time itself. A unit with no cue has none,
-    // which is the same answer as a cue that starts later, and reading it once
-    // spares a fallback for a `times` that cannot be empty when `own` is not:
-    // a branch nothing can reach is a branch nothing can test.
-    const first = times[0];
-    const resting = first === undefined || first > 0;
     // The unit's own four ground corners, not its bounding box's. A turned box
     // has a bigger axis-aligned box than itself, so measuring that box would
     // refuse a unit whose every corner is on the ground for standing at an
@@ -2972,7 +2998,32 @@ export const validateAutoMovieFormationGround = (
       { x: design.max.x, y: design.min.y, z: design.max.z },
       { x: design.min.x, y: design.min.y, z: design.max.z },
     ];
-    // Walked rather than collected, and stopped at the first escape. A turn is
+    // How far out the furthest measured corner sits, which is what turns an
+    // angle a cue sweeps into the metres that corner travels.
+    const radius = Math.max(
+      ...corners.map((corner) =>
+        Math.hypot(
+          corner.x - formation.anchor.x,
+          corner.z - formation.anchor.z,
+        ),
+      ),
+    );
+    const times = [
+      ...new Set(own.flatMap((cue) => formationGroundSampleTimes(cue, radius))),
+    ].sort((left, right) => left - right);
+    // Where it was staged is measured only when the unit is ever there: with no
+    // cue it never moves, and with a cue starting after zero it stands still
+    // until then. A cue starting at zero means the unit begins somewhere its
+    // design bounds never describe, and measuring those would refuse a shot for
+    // a position it never holds.
+    //
+    // Asked of the earliest sampled time itself. A unit with no cue has none,
+    // which is the same answer as a cue that starts later, and reading it once
+    // spares a fallback for a `times` that cannot be empty when `own` is not:
+    // a branch nothing can reach is a branch nothing can test.
+    const first = times[0];
+    const resting = first === undefined || first > 0;
+    // Walked rather than collected, and stopped at the first escape. A cue is
     // sampled up to the cap, so gathering every corner at every sampled time
     // before taking the first would measure a unit hundreds of times over to
     // report the moment it already found.

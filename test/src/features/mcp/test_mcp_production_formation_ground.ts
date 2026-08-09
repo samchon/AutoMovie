@@ -86,6 +86,29 @@ const turn = (
   },
 });
 
+/**
+ * One cue carrying a unit from one stated place to another, turning nowhere.
+ *
+ * A cue's translation interpolates linearly, so the unit walks the straight
+ * segment between the two. Both ends may stand on ground the middle does not.
+ */
+const carry = (
+  from: { x: number; z: number },
+  to: { x: number; z: number },
+): IAutoMovieFormationMotion => ({
+  ...march(0),
+  from: {
+    translation: { x: from.x, y: 0, z: from.z },
+    facingOffsetDeg: 0,
+    spacingScale: { lateral: 1, depth: 1 },
+  },
+  to: {
+    translation: { x: to.x, y: 0, z: to.z },
+    facingOffsetDeg: 0,
+    spacingScale: { lateral: 1, depth: 1 },
+  },
+});
+
 /** One compiled unit far longer than it is wide, so a turn sweeps. */
 const lance = (halfLength: number, halfWidth: number): IUnit => ({
   id: "army",
@@ -101,8 +124,9 @@ const lance = (halfLength: number, halfWidth: number): IUnit => ({
  * Two crossed walkable arms: a corridor along `z` and one along `x`.
  *
  * A long unit lies in one arm, ends the turn lying in the other, and fits in
- * neither on the way. That is the shape a gate reading only the ends cannot
- * see, and it is why the interior of a turn is sampled at all.
+ * neither on the way; a small one walks corner to corner and crosses the
+ * quadrant between the roads. Both are the shape a gate reading only the ends
+ * cannot see, and they are why the interior of a cue is sampled at all.
  */
 const crossroads = (arm: number, halfWidth: number): IAutoMovieSpace => ({
   id: "crossroads",
@@ -207,8 +231,9 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *    reports exactly one refusal and names which unit left, so a passing
  *    sibling cannot hide a failing one and the gate cannot report either.
  * 6. A unit that fits where it stands and marches off the floor is refused at the
- *    time its cue took it out, because a unit walking over a void is the defect
- *    this gate exists for and not a different one.
+ *    moment it leaves and at the corner that left, not at the end of its cue
+ *    and a corner far out over nothing: where a unit went over a void is what
+ *    an author needs, and the end of the cue is not it.
  * 7. A unit whose cue keeps it on the floor is accepted, and a cue belonging to
  *    another unit does not move this one.
  * 8. A unit whose cue starts at zero is never at its design bounds, so those are
@@ -222,7 +247,14 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  * 10. A unit is judged by its own four corners rather than the box around them,
  *     which a diamond floor separates: turned, the box reaches past ground
  *     every corner of the unit is still standing on.
- * 11. A cue turning far enough to reach the sample cap is walked from a unit that
+ * 11. Ground is not convex, so a straight walk between two places that each carry
+ *     the unit is not itself carried. One crossing a crossroads corner to
+ *     corner stands on the north road, ends on the east road, and passes over
+ *     the quadrant between them, which reading only the ends cannot see any
+ *     more for a walk than for a turn.
+ * 12. A unit carried the length of a road that does carry it is accepted, so what
+ *     the interior walk refuses is a crossing and not a journey.
+ * 13. A cue turning far enough to reach the sample cap is walked from a unit that
  *     does stand where it starts, so the walk runs rather than stopping at
  *     rest, and it still reaches an interior sample and names it. What
  *     resolution the cap left is not observed, only that an enormous turn is
@@ -313,17 +345,20 @@ export const test_mcp_production_formation_ground = (): void => {
       formationMotions: [march(20)],
     },
   );
+  const marchedOff = Number(sampledTime(marched));
   TestValidator.equals(
-    "a unit that fits at rest and marches off the floor is refused, at the time its cue took it",
+    "a unit that marches off the floor is refused where it left, not where its cue ended",
     namedFacts([
       ["code", () => marched[0]?.code === "engine-validation-failed"],
-      [
-        "time",
-        () => marched[0]!.message.includes("at 3s its cue takes the unit to"),
-      ],
-      ["corner", () => marched[0]!.message.includes("(-4, 16)")],
+      ["afterStart", () => marchedOff > 1],
+      ["beforeEnd", () => marchedOff < 3],
+      // The corner that left is just past the floor's edge, inside the half
+      // metre the resolution promises. Reading only the ends would name the
+      // cue's own end and a corner fourteen metres out over nothing, which
+      // tells an author where the unit finished rather than where it fell.
+      ["corner", () => /\(4, 10(\.[0-9]{1,3})?\)/u.test(marched[0]!.message)],
     ]),
-    { code: true, time: true, corner: true },
+    { code: true, afterStart: true, beforeEnd: true, corner: true },
   );
 
   TestValidator.equals(
@@ -438,6 +473,39 @@ export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
     "a unit is judged by its own corners, not the box around them",
     codes(diamond(13.5), [lance(9, 1)], [turn(45)]),
+    [],
+  );
+
+  // Ground is not convex, so a straight walk between two places that carry the
+  // unit is not itself carried. This unit crosses a crossroads corner to
+  // corner: it stands on the north road, ends on the east road, and passes
+  // through the quadrant between them, which is no road at all.
+  const crossed = validateAutoMovieFormationGround(
+    { id: "opening" },
+    {
+      scene: { space: crossroads(10, 1.5) },
+      formations: [unit(1)],
+      formationMotions: [carry({ x: 0, z: -8 }, { x: 8, z: 0 })],
+    },
+  );
+  const crossedOff = sampledTime(crossed);
+  TestValidator.equals(
+    "a unit carried straight across ground that is not there is refused",
+    namedFacts([
+      ["code", () => crossed[0]?.code === "engine-validation-failed"],
+      ["afterStart", () => Number(crossedOff) > 1],
+      ["beforeEnd", () => Number(crossedOff) < 3],
+    ]),
+    { code: true, afterStart: true, beforeEnd: true },
+  );
+
+  TestValidator.equals(
+    "a unit carried along ground that does carry it is accepted",
+    codes(
+      crossroads(10, 1.5),
+      [unit(1)],
+      [carry({ x: 0, z: -8 }, { x: 0, z: 8 })],
+    ),
     [],
   );
 
