@@ -11,7 +11,7 @@ description: Defines the automovie product contract, the long-haul mission, work
 
 The endgame is to represent **all objects and all motion** (rigs, range-of-motion constraints, joint dependencies/drivers, cameras, lights, scenes, time) well enough to assemble a film from objects and motion alone. The early AI/function-calling schema may stay humble (a clothed character that walks, runs, dances), but **`interface` and `engine` are built to the final goal and must stay permanently extensible**: every future axis (new rig profile, finer detail layer, camera, prop, dynamics, timeline) is additive, never a rewrite. A bare imported 3D model has no constraints or dependencies; adding that semantic layer is what makes automovie an engine rather than a model holder.
 
-This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.wiki/` revised as understanding changes and test coverage held at 100% throughout. The architecture is recorded in `.wiki/` (start at `.wiki/README.md`); decisions in `.wiki/07-decisions/`. `interia` (sibling project, interior spaces) shares automovie's philosophy and conventions and forms one set with it long-term.
+This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.wiki/` revised as understanding changes and test coverage held at 100% throughout. Architecture and decisions belong in `.wiki/` (`.wiki/07-decisions/` for the decision log), which is local to a checkout and may be empty; write there as understanding accrues rather than expecting to find it. `interia` (sibling project, interior spaces) shares automovie's philosophy and conventions and forms one set with it long-term.
 
 ## Layout
 
@@ -26,7 +26,7 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
   `AutoMovieApplication` serves guides, frame capture, optional repaint, and evidence-first review through `typia.llm.controller` + `@typia/mcp`; design/source authoring, compilation, inspection, migration, and rendering remain non-MCP package or CLI work, and the repository hosts no internal LLM.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
 - `internals/config`: shared base `tsconfig.json` and `assertBuild.js`.
-- `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). The first thing to read at session start.
+- `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). Local to a checkout and often empty; read what it holds at session start and write what it lacks.
 - `.references/` (gitignored): downloaded reference materials (specs, example models, motion datasets) used during reference study.
 
 ## Commands

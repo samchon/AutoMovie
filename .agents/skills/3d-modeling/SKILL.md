@@ -33,7 +33,7 @@ We build a parametric human head: named anatomical parameters → validated docu
 
 - Attractiveness is driven by **averageness, symmetry, and youthful sexual dimorphism**, NOT the golden ratio (φ / Marquardt mask is folklore, not empirically supported; do not wire it in).
 - The **neutral (all parameters zero) is the balanced average, the most beautiful baseline.** Parameters deviate from it toward individuality. A specific character is offsets from the ideal average, never beauty built up from an ugly base.
-- Calibrate to real human variation (Farkas anthropometry, cephalic index, vertical thirds with the lower third largest, the fifths, fissure ≈ intercanthal): a parameter's ±1 should be ≈ ±1 SD of the population, ±2 the believable edge. The full study lives in `.wiki/04-domain-research/`; read it before setting ranges.
+- Calibrate to real human variation (Farkas anthropometry, cephalic index, vertical thirds with the lower third largest, the fifths, fissure ≈ intercanthal): a parameter's ±1 should be ≈ ±1 SD of the population, ±2 the believable edge. Record the study behind a range in `.wiki/04-domain-research/`, and read that directory first if a previous session already wrote one.
 - Feminine cues raise attractiveness and are deliberate axes: softer jaw and gonial angle, smaller nose, fuller lips, a smooth (not bossed) brow ridge, larger eyes relative to the face, a higher arched brow, a smaller chin. Study how MakeHuman (CC0) decomposes these.
 - Reference real exemplars and name archetypes (e.g. cute / beauty / plain) as concrete targets to carve toward, rather than tuning in the abstract.
 

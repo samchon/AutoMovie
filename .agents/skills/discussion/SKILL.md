@@ -15,7 +15,7 @@ Form the largest practical team, up to six agents. Give every agent a self-conta
 
 Create `.discussions/<topic>/` with a short filesystem-safe name. Do not delete or overwrite an existing discussion directory unless the user explicitly requests it.
 
-Each agent maintains a personal wiki-style subdirectory under the topic directory, built from `.references/`, `.wiki/`, and external sources. Agents read the live transcript and one another's statements between turns, continue researching, and revise their own notes.
+Each agent maintains a personal wiki-style subdirectory under the topic directory, built from `.references/`, whatever `.wiki/` already holds, and external sources. Agents read the live transcript and one another's statements between turns, continue researching, and revise their own notes.
 
 ## Transcript
 
