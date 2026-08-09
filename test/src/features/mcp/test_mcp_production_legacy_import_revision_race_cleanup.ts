@@ -355,13 +355,13 @@ export const test_mcp_production_legacy_import_revision_race_cleanup =
               "letrevisionRaceCleanupFailure:ILegacyImportFixtureFailure|undefined;",
             substantive: {
               digest:
-                "16aae4a5b96e0510771358653b92502d38b1f9979c993b59c73f740fffd3d8a5",
-              tokens: 31,
+                "81bf6b5a036dcdd54b0487963a136f03c7ec21bf69032bce7a85284cb59e6331",
+              tokens: 62,
             },
             tryBody:
-              '{TestValidator.predicate("achangingresidentrevisioncannotproduceamixedimportplan",throws(()=>newAutoMovieLegacyImporter(revisionRace.root).plan(),"changedphysicalidentity",)&&changed,);}',
+              '{TestValidator.equals("achangingresidentrevisioncannotproduceamixedimportplan",namedFacts([["refused",()=>throws(()=>newAutoMovieLegacyImporter(revisionRace.root).plan(),"changedphysicalidentity",),],["changed",()=>changed],]),{refused:true,changed:true},);}',
             tryDigest:
-              "e949f80ebf942f2779dbebfd4d42c63e2d14fd898a6982502c962447c71a40ce",
+              "05ff93e6ccefe52806f1f692f95c04bd001fbaf12e1cb7d5e48e5a37f23a729b",
           },
         ],
         parseDiagnostics: [],

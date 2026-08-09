@@ -272,7 +272,7 @@ const CONTRACT = {
         "letresidentLockFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "43f7b25da3517b516689cde201d2f39484649b99ca98a25cc5882e277fb86146",
+        "fa00a345f902ac73d3b1aa8b048524bc49fca35440d57b2b39b6b56fd783ccf2",
     },
     {
       catchBodies: ["residentLockFailure2={error};", "throwerror;"],
@@ -287,7 +287,7 @@ const CONTRACT = {
         "letresidentLockFailure2:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "8c4117de59eb850bcb9361c753b0f5323c492389cafc656f6b18273c6d35a674",
+        "2a698e1c46ba1ab24e66a06c129e568928593cb1688837812637b7a026b3c793",
     },
   ],
   rawFinalizers: [],

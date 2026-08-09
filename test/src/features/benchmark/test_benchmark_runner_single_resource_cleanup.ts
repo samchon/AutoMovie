@@ -193,10 +193,10 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
   const expected = {
     count: 2,
     parentDigest:
-      "509d7c59b1744f3c68c9b102605bb02d5821ac6e30ebf6565221010d20bb002e",
+      "f3308b74b2eb1e97d98b67047fb5523a78509fc1a9212dd57e19cc651576ddfa",
     parseDiagnostics: [],
     rootDigest:
-      "3d9cbb964f788f9c6d175a8f73d74a0670766085acd73e094554483969eb48ad",
+      "b715f6078401bc31c25abe131601fc7e11ea14cf433f64ec20f5dfb44d1ba96c",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],

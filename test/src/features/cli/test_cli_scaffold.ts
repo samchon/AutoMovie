@@ -1108,14 +1108,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "utf8",
     ),
   ) as { files?: string[] };
-  TestValidator.predicate(
+  TestValidator.equals(
     "the scaffold directory is a published files entry",
-    Array.isArray(cliPackage.files) &&
-      cliPackage.files.includes(path.basename(scaffoldDir)),
+    namedFacts([
+      ["array", () => Array.isArray(cliPackage.files)],
+      [
+        "listed",
+        () =>
+          Array.isArray(cliPackage.files) &&
+          cliPackage.files.includes(path.basename(scaffoldDir)),
+      ],
+    ]),
+    { array: true, listed: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "no stale 'templates' entry lingers in files",
-    Array.isArray(cliPackage.files) && !cliPackage.files.includes("templates"),
+    namedFacts([
+      ["array", () => Array.isArray(cliPackage.files)],
+      [
+        "noTemplates",
+        () =>
+          Array.isArray(cliPackage.files) &&
+          !cliPackage.files.includes("templates"),
+      ],
+    ]),
+    { array: true, noTemplates: true },
   );
 
   const files = renderScaffold({ name: "demo-film" });
@@ -1858,10 +1875,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
     dependencies?: Record<string, string>;
     overrides?: Record<string, Record<string, string>>;
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "the project name is substituted",
-    pkg.includes('"name": "demo-film"') &&
-      files["README.md"]!.startsWith("# demo-film"),
+    namedFacts([
+      ["packageName", () => pkg.includes('"name": "demo-film"')],
+      ["readmeTitle", () => files["README.md"]!.startsWith("# demo-film")],
+    ]),
+    { packageName: true, readmeTitle: true },
   );
   TestValidator.equals(
     "the production package versions are catalog-synced",
@@ -3967,10 +3987,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
     "renderScaffold throws on a blank name",
     throws(() => renderScaffold({ name: "   " })),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "renderScaffold refuses a path-bearing production name",
-    throws(() => renderScaffold({ name: "../escape" })) &&
-      throws(() => renderScaffold({ name: "film/name" })),
+    namedFacts([
+      ["climbing", () => throws(() => renderScaffold({ name: "../escape" }))],
+      ["separated", () => throws(() => renderScaffold({ name: "film/name" }))],
+    ]),
+    { climbing: true, separated: true },
   );
 
   // 4. write half: materialize, non-empty guard, traversal guard.
@@ -4652,10 +4675,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       positiveAssetResponse,
       () => undefined,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer serves one ledger-and-closure-bound asset",
-      positiveAssetResponse.statusCode === 200 &&
-        positiveAssetResponse.body === assetBytes.toString("utf8"),
+      namedFacts([
+        ["status", () => positiveAssetResponse.statusCode === 200],
+        [
+          "body",
+          () => positiveAssetResponse.body === assetBytes.toString("utf8"),
+        ],
+      ]),
+      { status: true, body: true },
     );
     const requestRegisteredAsset = (): GeneratedViewerResponse => {
       const response: GeneratedViewerResponse = {
@@ -5799,12 +5828,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
     };
     const smallProxyPublicationWork = publishScaleFixture("scale-8", 8);
     const largeProxyPublicationWork = publishScaleFixture("scale-32", 32);
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy publication inventory work scales linearly with bundle entries",
-      largeProxyPublicationWork.observations <=
-        smallProxyPublicationWork.observations * 6 &&
-        largeProxyPublicationWork.readBytes <=
-          smallProxyPublicationWork.readBytes * 6,
+      namedFacts([
+        [
+          "observations",
+          () =>
+            largeProxyPublicationWork.observations <=
+            smallProxyPublicationWork.observations * 6,
+        ],
+        [
+          "readBytes",
+          () =>
+            largeProxyPublicationWork.readBytes <=
+            smallProxyPublicationWork.readBytes * 6,
+        ],
+      ]),
+      { observations: true, readBytes: true },
     );
     const volumeProxyTarget = path.join(proxyPublishParent, "scale-volume");
     const volumeProxyBytes = Buffer.alloc(32 * 1024 * 1024, 0x5a);
@@ -5879,9 +5919,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy verification rejects a byte-identical successor after inventory",
-      proxyMediaSwapped && proxyRaceRejected,
+      namedFacts([
+        ["swapped", () => proxyMediaSwapped],
+        ["rejected", () => proxyRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const proxyMediaDirectory = path.dirname(proxyMedia);
     const parkedProxyMediaDirectory = path.join(
@@ -5951,9 +5995,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy verification rejects a hard-linked directory successor",
-      proxyDirectorySwapped && proxyDirectoryRaceRejected,
+      namedFacts([
+        ["swapped", () => proxyDirectorySwapped],
+        ["rejected", () => proxyDirectoryRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const lateProxyFile = path.join(proxyMediaDirectory, "late.bin");
     proxyMediaObservations = 0;
@@ -5994,9 +6042,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy verification rejects a late unexpected inventory entry",
-      proxyInventoryMutated && proxyInventoryRaceRejected,
+      namedFacts([
+        ["mutated", () => proxyInventoryMutated],
+        ["rejected", () => proxyInventoryRaceRejected],
+      ]),
+      { mutated: true, rejected: true },
     );
 
     const fixtureDigest = (bytes: Uint8Array): string =>
@@ -6156,9 +6208,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ),
     );
     fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "the final proxy consumer rejects mutated and deleted payloads",
-      mutatedProxyRejected && deletedProxyRejected,
+      namedFacts([
+        ["mutated", () => mutatedProxyRejected],
+        ["deleted", () => deletedProxyRejected],
+      ]),
+      { mutated: true, deleted: true },
     );
 
     const unmanifestedProxyFile = path.join(
@@ -6426,9 +6482,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the final proxy consumer rejects a byte-identical tree successor",
-      verifiedProxyTreeSwapped && verifiedProxyTreeSuccessorRejected,
+      namedFacts([
+        ["swapped", () => verifiedProxyTreeSwapped],
+        ["rejected", () => verifiedProxyTreeSuccessorRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const lateVerifiedProxyFile = path.join(
       verifiedProxyBundle,
@@ -6511,9 +6571,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the final proxy consumer revalidates exact inventory after all reads",
-      verifiedProxyLateMutation && verifiedProxyLateMutationRejected,
+      namedFacts([
+        ["mutated", () => verifiedProxyLateMutation],
+        ["rejected", () => verifiedProxyLateMutationRejected],
+      ]),
+      { mutated: true, rejected: true },
     );
     const runtimePackage = path.join(base, "runtime-package");
     const runtimeManifest = path.join(runtimePackage, "package.json");
@@ -6612,9 +6676,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "runtime package identity rejects a byte-identical manifest successor",
-      runtimeManifestSwapped && runtimeManifestRaceRejected,
+      namedFacts([
+        ["swapped", () => runtimeManifestSwapped],
+        ["rejected", () => runtimeManifestRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const parkedRuntimeEntry = `${runtimeEntry}.parked`;
     let runtimeEntrySwapped = false;
@@ -6656,9 +6724,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "runtime package identity rejects a byte-identical entry successor",
-      runtimeEntrySwapped && runtimeEntryRaceRejected,
+      namedFacts([
+        ["swapped", () => runtimeEntrySwapped],
+        ["rejected", () => runtimeEntryRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const lateRuntimeAsset = path.join(runtimeAssets, "late.node");
     const runtimeNativeReaddir = mutableFs.readdirSync;
@@ -6700,9 +6772,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "runtime package identity rejects native asset inventory mutation",
-      runtimeInventoryMutated && runtimeInventoryRaceRejected,
+      namedFacts([
+        ["mutated", () => runtimeInventoryMutated],
+        ["rejected", () => runtimeInventoryRaceRejected],
+      ]),
+      { mutated: true, rejected: true },
     );
     const captureExecutableModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "captureExecutableSnapshot.ts"),
@@ -6801,9 +6877,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture executable snapshot rejects a byte-identical successor",
-      captureExecutableSwapped && captureExecutableRaceRejected,
+      namedFacts([
+        ["swapped", () => captureExecutableSwapped],
+        ["rejected", () => captureExecutableRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const failedCaptureExecutableCreation = path.join(
       base,
@@ -7659,9 +7739,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture metadata rejects a CLI successor between package snapshots",
-      compositeMetadataSwapped && compositeMetadataRaceRejected,
+      namedFacts([
+        ["swapped", () => compositeMetadataSwapped],
+        ["rejected", () => compositeMetadataRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const coreBrowserBytes = fs.readFileSync(coreBrowsers);
     const parkedCoreBrowsers = `${coreBrowsers}.parked`;
@@ -7704,9 +7788,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture metadata rejects a core browsers successor while captured",
-      coreBrowsersSwapped && coreBrowsersRaceRejected,
+      namedFacts([
+        ["swapped", () => coreBrowsersSwapped],
+        ["rejected", () => coreBrowsersRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const descriptorCli = path.join(base, "descriptor-cli.cjs");
     // The runner asserts that the executable's own directory did not change
@@ -7903,9 +7991,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture launch closes and rejects an executable successor during launch",
-      launchBoundaryRejected && rejectedLaunchClosed,
+      namedFacts([
+        ["rejected", () => launchBoundaryRejected],
+        ["closed", () => rejectedLaunchClosed],
+      ]),
+      { rejected: true, closed: true },
     );
     const failedLaunchCleanupSnapshot =
       captureExecutableModule.openCaptureExecutable(launchExecutable);
@@ -8054,9 +8146,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install receipt rejects a byte-identical successor",
-      captureReceiptSwapped && captureReceiptRaceRejected,
+      namedFacts([
+        ["swapped", () => captureReceiptSwapped],
+        ["rejected", () => captureReceiptRaceRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
     const installedCaptureMetadata =
       captureBrowserModule.capturePlaywrightMetadata();
@@ -8328,17 +8424,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const crashReceiptBytes = Buffer.from("interrupted receipt publication");
     fs.mkdirSync(crashReceiptDirectory, { recursive: true });
     fs.writeFileSync(crashReceiptPath, crashReceiptBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install preserves and identifies an unowned crash residue",
-      throwsWith(
-        () =>
-          captureBrowserModule.publishCaptureInstallReceipt(
-            crashReceiptProject,
-            nextCaptureReceipt,
-            () => undefined,
-          ),
-        "Manually adjudicate",
-      ) && fs.readFileSync(crashReceiptPath).equals(crashReceiptBytes),
+      namedFacts([
+        [
+          "adjudicate",
+          () =>
+            throwsWith(
+              () =>
+                captureBrowserModule.publishCaptureInstallReceipt(
+                  crashReceiptProject,
+                  nextCaptureReceipt,
+                  () => undefined,
+                ),
+              "Manually adjudicate",
+            ),
+        ],
+        [
+          "preserved",
+          () => fs.readFileSync(crashReceiptPath).equals(crashReceiptBytes),
+        ],
+      ]),
+      { adjudicate: true, preserved: true },
     );
 
     const oversizedReceiptProject = path.join(
@@ -8833,9 +8940,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install binds current-generation selection through directory read",
-      receiptReadDirectorySwapped && receiptReadDirectoryRejected,
+      namedFacts([
+        ["swapped", () => receiptReadDirectorySwapped],
+        ["rejected", () => receiptReadDirectoryRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
 
     const parkedReceiptReadRoot = `${captureProject}.read-parked`;
@@ -8890,9 +9001,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install binds current-generation selection through project-root read",
-      receiptReadRootSwapped && receiptReadRootRejected,
+      namedFacts([
+        ["swapped", () => receiptReadRootSwapped],
+        ["rejected", () => receiptReadRootRejected],
+      ]),
+      { swapped: true, rejected: true },
     );
 
     const mismatchedReceiptProject = path.join(
@@ -10400,10 +10515,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         correction: "x".repeat(64 * 1024),
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render attempt validates a failed successor before removing running evidence",
-      oversizedFailureRejected &&
-        JSON.parse(fs.readFileSync(attemptTarget, "utf8")).state === "running",
+      namedFacts([
+        ["rejected", () => oversizedFailureRejected],
+        [
+          "evidenceKept",
+          () =>
+            JSON.parse(fs.readFileSync(attemptTarget, "utf8")).state ===
+            "running",
+        ],
+      ]),
+      { rejected: true, evidenceKept: true },
     );
     renderAttemptModule.completeRenderAttempt(oversizedAttempt);
 
@@ -11490,15 +11613,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       unchangedLegacyPlanTarget,
       `${JSON.stringify(planFixture("replacement-legacy", 60), null, 2)}\n`,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan binds and protects an unchanged legacy root",
-      boundUnchangedLegacyPlan.generation !== unchangedLegacyPlan.generation &&
-        throws(() =>
-          renderPlanModule.captureRenderPlan(
-            unchangedLegacyPlanRoot,
-            unchangedLegacyPlanTarget,
-          ),
-        ),
+      namedFacts([
+        [
+          "rebound",
+          () =>
+            boundUnchangedLegacyPlan.generation !==
+            unchangedLegacyPlan.generation,
+        ],
+        [
+          "protected",
+          () =>
+            throws(() =>
+              renderPlanModule.captureRenderPlan(
+                unchangedLegacyPlanRoot,
+                unchangedLegacyPlanTarget,
+              ),
+            ),
+        ],
+      ]),
+      { rebound: true, protected: true },
     );
 
     const lateLegacyPlanRoot = path.join(base, "render-plan-late-legacy");
@@ -11638,12 +11773,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         plan: planFixture("cycle-second", 24),
       })}\n`,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan traversal rejects malformed and cyclic generations",
-      malformedPlanRejected &&
-        throws(() =>
-          renderPlanModule.captureRenderPlan(cyclePlanRoot, cyclePlanTarget),
-        ),
+      namedFacts([
+        ["malformed", () => malformedPlanRejected],
+        [
+          "cyclic",
+          () =>
+            throws(() =>
+              renderPlanModule.captureRenderPlan(
+                cyclePlanRoot,
+                cyclePlanTarget,
+              ),
+            ),
+        ],
+      ]),
+      { malformed: true, cyclic: true },
     );
     const renderLivenessModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
@@ -12152,9 +12297,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: "final",
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "malformed GC owner tokens fail closed without deleting the guard",
-      malformedGuardRejected && fs.existsSync(malformedGuard),
+      namedFacts([
+        ["rejected", () => malformedGuardRejected],
+        ["guardKept", () => fs.existsSync(malformedGuard)],
+      ]),
+      { rejected: true, guardKept: true },
     );
     fs.rmSync(malformedGuard);
     // The render command releases its lease at the end of the body that is the
@@ -13434,9 +13583,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tree: captureChunkTree(chunkPublicationRoot, byteMismatchSource),
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "publication refuses receipt facts from a byte-different temp tree",
-      byteMismatchRejected && fs.existsSync(byteMismatchPointer) === false,
+      namedFacts([
+        ["rejected", () => byteMismatchRejected],
+        ["noPointer", () => fs.existsSync(byteMismatchPointer) === false],
+      ]),
+      { rejected: true, noPointer: true },
     );
 
     const recoveryId = fixtureDigest(Buffer.from("late recovery pointer"));
@@ -13533,9 +13686,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "late recovery checks only the candidate's canonical pointer and tree",
-      recoveryProtected && recoveryDecoyOpens === 0,
+      namedFacts([
+        ["protected", () => recoveryProtected],
+        ["decoyUnopened", () => recoveryDecoyOpens === 0],
+      ]),
+      { protected: true, decoyUnopened: true },
     );
 
     const chunkGcRoot = path.join(base, "chunk-gc-project");
@@ -14329,10 +14486,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
       quarantine: gcQuarantine,
       snapshot: gcSparseSnapshot,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "render GC streams a multi-chunk publication without resident bytes",
-      gcSparseSnapshot.bytes === gcSparseBytes &&
-        fs.existsSync(gcSparsePublication) === false,
+      namedFacts([
+        ["bytes", () => gcSparseSnapshot.bytes === gcSparseBytes],
+        ["notResident", () => fs.existsSync(gcSparsePublication) === false],
+      ]),
+      { bytes: true, notResident: true },
     );
     fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
     const gcPublicationBoundarySnapshot = renderGcModule.captureRenderGcTarget(
@@ -15900,10 +16060,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "scaffold writes separate stable pathname and descriptor identity domains",
-      splitIdentityWritten &&
-        fs.readFileSync(splitIdentityTarget, "utf8") === "scaffold identity",
+      namedFacts([
+        ["written", () => splitIdentityWritten],
+        [
+          "content",
+          () =>
+            fs.readFileSync(splitIdentityTarget, "utf8") ===
+            "scaffold identity",
+        ],
+      ]),
+      { written: true, content: true },
     );
     TestValidator.predicate(
       "a traversal key is refused",
@@ -15912,40 +16080,71 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ),
     );
     const baseTargetScaffold = path.join(base, "base-target-scaffold");
-    TestValidator.predicate(
+    TestValidator.equals(
       "a scaffold key resolving to the base is refused before mutation",
-      throws(() => writeFiles(baseTargetScaffold, { ".": "blocked" })) &&
-        fs.existsSync(baseTargetScaffold) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() => writeFiles(baseTargetScaffold, { ".": "blocked" })),
+        ],
+        ["unmutated", () => fs.existsSync(baseTargetScaffold) === false],
+      ]),
+      { refused: true, unmutated: true },
     );
     const duplicateScaffold = path.join(base, "duplicate-scaffold");
-    TestValidator.predicate(
+    TestValidator.equals(
       "normalized duplicate scaffold targets are refused before mutation",
-      throws(() =>
-        writeFiles(duplicateScaffold, {
-          "nested/../same.txt": "first",
-          "same.txt": "second",
-        }),
-      ) && fs.existsSync(duplicateScaffold) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(duplicateScaffold, {
+                "nested/../same.txt": "first",
+                "same.txt": "second",
+              }),
+            ),
+        ],
+        ["unmutated", () => fs.existsSync(duplicateScaffold) === false],
+      ]),
+      { refused: true, unmutated: true },
     );
     const caseDuplicateScaffold = path.join(base, "case-duplicate-scaffold");
-    TestValidator.predicate(
+    TestValidator.equals(
       "portable case-only duplicate scaffold targets are refused before mutation",
-      throws(() =>
-        writeFiles(caseDuplicateScaffold, {
-          "A.txt": "first",
-          "a.txt": "second",
-        }),
-      ) && fs.existsSync(caseDuplicateScaffold) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(caseDuplicateScaffold, {
+                "A.txt": "first",
+                "a.txt": "second",
+              }),
+            ),
+        ],
+        ["unmutated", () => fs.existsSync(caseDuplicateScaffold) === false],
+      ]),
+      { refused: true, unmutated: true },
     );
     const collidingScaffold = path.join(base, "colliding-scaffold");
-    TestValidator.predicate(
+    TestValidator.equals(
       "scaffold file and directory target collisions are refused before mutation",
-      throws(() =>
-        writeFiles(collidingScaffold, {
-          node: "file",
-          "node/child.txt": "child",
-        }),
-      ) && fs.existsSync(collidingScaffold) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(collidingScaffold, {
+                node: "file",
+                "node/child.txt": "child",
+              }),
+            ),
+        ],
+        ["unmutated", () => fs.existsSync(collidingScaffold) === false],
+      ]),
+      { refused: true, unmutated: true },
     );
 
     const nonemptySuccessorBase = path.join(
@@ -16126,17 +16325,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const linkedScaffoldBase = path.join(base, "linked-scaffold-base");
     fs.mkdirSync(linkedScaffoldOutside);
     fs.symlinkSync(linkedScaffoldOutside, linkedScaffoldBase, "junction");
-    TestValidator.predicate(
+    TestValidator.equals(
       "a linked scaffold base cannot redirect materialization",
-      throws(() =>
-        writeFiles(
-          linkedScaffoldBase,
-          { "escaped.txt": "blocked" },
-          { force: true },
-        ),
-      ) &&
-        fs.existsSync(path.join(linkedScaffoldOutside, "escaped.txt")) ===
-          false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(
+                linkedScaffoldBase,
+                { "escaped.txt": "blocked" },
+                { force: true },
+              ),
+            ),
+        ],
+        [
+          "outsideUntouched",
+          () =>
+            fs.existsSync(path.join(linkedScaffoldOutside, "escaped.txt")) ===
+            false,
+        ],
+      ]),
+      { refused: true, outsideUntouched: true },
     );
 
     const linkedParentScaffold = path.join(base, "linked-parent-scaffold");
@@ -16145,16 +16355,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(linkedParentScaffold);
     fs.mkdirSync(linkedParentOutside);
     fs.symlinkSync(linkedParentOutside, linkedParent, "junction");
-    TestValidator.predicate(
+    TestValidator.equals(
       "a linked descendant parent cannot redirect forced materialization",
-      throws(() =>
-        writeFiles(
-          linkedParentScaffold,
-          { "linked/escaped.txt": "blocked" },
-          { force: true },
-        ),
-      ) &&
-        fs.existsSync(path.join(linkedParentOutside, "escaped.txt")) === false,
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(
+                linkedParentScaffold,
+                { "linked/escaped.txt": "blocked" },
+                { force: true },
+              ),
+            ),
+        ],
+        [
+          "outsideUntouched",
+          () =>
+            fs.existsSync(path.join(linkedParentOutside, "escaped.txt")) ===
+            false,
+        ],
+      ]),
+      { refused: true, outsideUntouched: true },
     );
 
     const linkedFileScaffold = path.join(base, "linked-file-scaffold");
@@ -16163,17 +16385,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(linkedFileScaffold);
     fs.writeFileSync(linkedFileOutside, "outside file generation");
     fs.symlinkSync(linkedFileOutside, linkedFileTarget, "file");
-    TestValidator.predicate(
+    TestValidator.equals(
       "force refuses a linked final file without changing its referent",
-      throws(() =>
-        writeFiles(
-          linkedFileScaffold,
-          { "owned.txt": "replacement" },
-          { force: true },
-        ),
-      ) &&
-        fs.readFileSync(linkedFileOutside, "utf8") ===
-          "outside file generation",
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(
+                linkedFileScaffold,
+                { "owned.txt": "replacement" },
+                { force: true },
+              ),
+            ),
+        ],
+        [
+          "referentUntouched",
+          () =>
+            fs.readFileSync(linkedFileOutside, "utf8") ===
+            "outside file generation",
+        ],
+      ]),
+      { refused: true, referentUntouched: true },
     );
 
     const hardLinkedScaffold = path.join(base, "hard-linked-scaffold");
@@ -16182,15 +16415,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(hardLinkedScaffold);
     fs.writeFileSync(hardLinkedOutside, "outside generation");
     fs.linkSync(hardLinkedOutside, hardLinkedTarget);
-    TestValidator.predicate(
+    TestValidator.equals(
       "force refuses a multiply-linked target without changing its other name",
-      throws(() =>
-        writeFiles(
-          hardLinkedScaffold,
-          { "owned.txt": "replacement" },
-          { force: true },
-        ),
-      ) && fs.readFileSync(hardLinkedOutside, "utf8") === "outside generation",
+      namedFacts([
+        [
+          "refused",
+          () =>
+            throws(() =>
+              writeFiles(
+                hardLinkedScaffold,
+                { "owned.txt": "replacement" },
+                { force: true },
+              ),
+            ),
+        ],
+        [
+          "otherNameUntouched",
+          () =>
+            fs.readFileSync(hardLinkedOutside, "utf8") === "outside generation",
+        ],
+      ]),
+      { refused: true, otherNameUntouched: true },
     );
 
     const noForceRaceBase = path.join(base, "no-force-race-scaffold");
@@ -16551,10 +16796,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a stalled scaffold write leaves its exact partial final evidence",
-      partialWriteRejected &&
-        fs.readFileSync(partialWriteTarget, "utf8") === "p",
+      namedFacts([
+        ["rejected", () => partialWriteRejected],
+        ["partial", () => fs.readFileSync(partialWriteTarget, "utf8") === "p"],
+      ]),
+      { rejected: true, partial: true },
     );
 
     const fsyncFailureBase = path.join(base, "fsync-failure-scaffold");

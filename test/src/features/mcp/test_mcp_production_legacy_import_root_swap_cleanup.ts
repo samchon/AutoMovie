@@ -471,11 +471,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letacquireRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "1668b9bcf7ea8599fb290a932ac48778692ff1c0fe883e13b65809f5c67418d3",
-            tokens: 366,
+              "aed72fc14105e1c4c34f3fb0f5491415d90edffbce3c4b8831d6921d59faa9b6",
+            tokens: 423,
           },
           tryDigest:
-            "2ea908af2601ed4b0a202fe56768987959e227a135bbfe668af63c7b8b683f9a",
+            "8f4395500ee82fa352882dcefcf7255adf6372350be8c60a7054b7884f1a6e86",
           tryPrefixes: [
             "constnamespaceLocks:string[]=[];",
             "constnativeWrite=fs.writeFileSync;",
@@ -501,13 +501,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letacquireRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "a086f2aee757381a8418698a43de0d2ef7b7d9bc2c544a8c0445017ce7de1419",
-            tokens: 69,
+              "91f99c3c921badb8e1a6fcf434248ea17c891d38438ee4c872af9c3e1adf26ed",
+            tokens: 126,
           },
           tryDigest:
-            "1a624c6219a965350ff55adf271f6df96a56972c6315b9768845c72bad126723",
+            "354c6f93fb065f4876bd54198c2e083709bcff5413929cc932abe0b4430ceb1c",
           tryPrefixes: [
-            'TestValidator.predicate("rootreplacementafternamespaceacquisitionisdetectedbeforeimport",throws(()=>newAutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),//Whicheverfencecatchesit,therefusalnamestherootidentity.//Theclaimisthattheswapiscaughtbeforeanyimportwrites,and//theabsentresidentlockbelowiswhatprovesthat."rootidentity",)&&fs.existsSync(path.join(replacementTarget,"revision.lock"))===false&&namespaceLocks.length===2&&namespaceLocks.every((file)=>fs.existsSync(file)===false),);',
+            'TestValidator.equals("rootreplacementafternamespaceacquisitionisdetectedbeforeimport",namedFacts([[//Whicheverfencecatchesit,therefusalnamestheroot//identity.Theclaimisthattheswapiscaughtbeforeany//importwrites,andtheabsentresidentlockbelowprovesit."refused",()=>throws(()=>newAutoMovieLegacyImporter(replacedDuringAcquire.root,).apply(),"rootidentity",),],["noResidentLock",()=>fs.existsSync(path.join(replacementTarget,"revision.lock"))===false,],["twoNamespaceLocks",()=>namespaceLocks.length===2],["namespaceLocksReleased",()=>namespaceLocks.every((file)=>fs.existsSync(file)===false),],]),{refused:true,noResidentLock:true,twoNamespaceLocks:true,namespaceLocksReleased:true,},);',
           ],
         },
       ],
