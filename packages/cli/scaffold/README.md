@@ -15,11 +15,6 @@ leaves the coverage ledger. Catalog entries bind explicitly to shared model,
 formation, and world-landmark ids; continuity claims name the exact passing
 outcome or acceptance scenario that proves them.
 
-`src/examples/lineBattle.ts` demonstrates the behavior-library boundary:
-typed weapon/profile facts and seeded engine outcomes feed agent-owned drill
-code, while 100 civilians and 1,000 trees use compact non-formation instance
-sets instead of scene-node expansion.
-
 Every distributable file matched by the asset lint configuration belongs in
 `.automovie/assets.json`. Record its source URL, license, original/current
 SHA-256, processing chain, and reasoned use before referencing it. External

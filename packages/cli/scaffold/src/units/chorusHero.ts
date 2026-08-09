@@ -7,18 +7,18 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
-import { sentinel } from "./sentinel";
+import { soloist } from "./soloist";
 
 /**
- * One member of the army, at hero detail, with its two coarser tiers.
+ * One member of the chorus, at hero detail, with its two coarser tiers.
  *
- * A member never appears alone: the film asks the audience to read the mass,
+ * A member never appears alone: the film asks the audience to read the group,
  * not an individual inside it. So this subject renders nothing on its own and
  * the formation that holds it is what a shot stages. What it owns is the
  * member's measured facts and the LOD ladder those facts imply.
  */
-export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
-  public readonly id = "army-hero";
+export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  public readonly id = "chorus-hero";
 
   /**
    * A head, in metres, at this production's human scale.
@@ -32,7 +32,7 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * Kept beside the derivation so the two can be compared. The document says
    * both things at once, that a member is 1.7 m and that it is a head shorter
-   * than the sentinel, and a subject that only derived would go on being
+   * than the soloist, and a subject that only derived would go on being
    * internally consistent while drifting away from the number the film was
    * written around.
    */
@@ -50,18 +50,18 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * Member height in metres, stated against the production's reference scale.
    *
-   * "A head shorter than the sentinel" is the specification's own phrasing, so
-   * it is derived from the sentinel rather than restated as a second number
+   * "A head shorter than the soloist" is the specification's own phrasing, so
+   * it is derived from the soloist rather than restated as a second number
    * that could drift from it. {@link design} is what checks the derivation still
    * lands on {@link SPECIFIED_HEIGHT}.
    */
-  public readonly height = sentinel.height - ArmyMember.HEAD;
+  public readonly height = soloist.height - ChorusMember.HEAD;
 
   /**
-   * The measured recipe, with the tier ladder the unit is seen through.
+   * The measured recipe, with the tier ladder the group is seen through.
    *
-   * The ladder exists because the unit is seen at every distance from a close
-   * rank to the far edge of the field; a single tier would either cost too much
+   * The ladder exists because the group is seen at every distance from a close
+   * row to the far edge of the plaza; a single tier would either cost too much
    * at the back or lose the interval at the front.
    *
    * The scale is checked here rather than in a constructor. A subclass that
@@ -70,8 +70,8 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * has. `design()` is where the record leaves the class, which makes it the
    * one place every construction has to pass through.
    *
-   * @evidence docs/characters/army.md Requires ranks and files to stay legible
-   *   at every distance, which is what the tier ladder answers for.
+   * @evidence docs/characters/chorus.md Requires rows and columns to stay
+   *   legible at every distance, which is what the tier ladder answers for.
    */
   public design(): IAutoMovieModelRecipe {
     // Compared within a tolerance, not exactly. The height is a difference of
@@ -79,11 +79,11 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
     // float representation rather than a scale the document did not state:
     // refusing 1.75 less 0.05 would be refusing arithmetic.
     if (
-      Math.abs(this.height - ArmyMember.SPECIFIED_HEIGHT) >
-      ArmyMember.SCALE_TOLERANCE
+      Math.abs(this.height - ChorusMember.SPECIFIED_HEIGHT) >
+      ChorusMember.SCALE_TOLERANCE
     )
       throw new Error(
-        `docs/characters/army.md states a member is ${ArmyMember.SPECIFIED_HEIGHT} m, a head shorter than the sentinel, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
+        `docs/characters/chorus.md states a member is ${ChorusMember.SPECIFIED_HEIGHT} m, a head shorter than the soloist, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
       );
     return {
       id: this.id,
@@ -96,11 +96,11 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
       },
       palette: { body: "#8f9d74" },
       lod: [
-        { tier: "hero", maxDistance: 5, recipe: "army-hero" },
-        { tier: "near", maxDistance: 12, recipe: "army-near" },
-        { tier: "far", maxDistance: null, recipe: "army-far" },
+        { tier: "hero", maxDistance: 5, recipe: "chorus-hero" },
+        { tier: "near", maxDistance: 12, recipe: "chorus-near" },
+        { tier: "far", maxDistance: null, recipe: "chorus-far" },
       ],
-      capabilities: ["signal"],
+      capabilities: ["cue"],
       attachments: [],
     };
   }
@@ -113,7 +113,7 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * engine's. A member that did render individually would also be the first
    * step toward two thousand scene nodes.
    *
-   * @evidence docs/characters/army.md States the unit is one subject and the
+   * @evidence docs/characters/chorus.md States the group is one subject and the
    *   film never asks the audience to follow an individual inside it.
    */
   public render(
@@ -124,12 +124,12 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
 }
 
 /**
- * The production's one army-member recipe.
+ * The production's one chorus-member recipe.
  *
  * Carries the subject's citation until a class can carry its own
  * (samchon/ttsc#1121).
  *
- * @evidence docs/characters/army.md Implements the member scale and the
- *   rank-and-file readability that specification requires at every distance.
+ * @evidence docs/characters/chorus.md Implements the member scale and the
+ *   row-and-column readability that specification requires at every distance.
  */
-export const armyHero = new ArmyMember();
+export const chorusHero = new ChorusMember();

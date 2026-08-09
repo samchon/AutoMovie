@@ -106,13 +106,7 @@ export interface IAutoMovieModelRecipe {
   /** Production role. */
   role: "performer" | "mount" | "prop" | "set";
   /** Supported primitive archetype. */
-  archetype:
-    | "stickman"
-    | "horse"
-    | "artillery"
-    | "flag"
-    | "weapon"
-    | "primitive-prop";
+  archetype: "stickman" | "primitive-prop";
   /**
    * Registered external appearance asset, or omitted for compiler-generated
    * primitive geometry. The active production asset ledger must carry one

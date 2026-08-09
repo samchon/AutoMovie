@@ -12,14 +12,14 @@ import type {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
-import { army } from "../formations/army";
+import { chorus } from "../formations/chorus";
 
 /**
  * A piece of the world: a surface, a landmark, a region where something
  * happens.
  *
- * A place is made of things the same way a unit is made of members, and each of
- * those things is a subject. Its geometry does not depend on the shot it
+ * A place is made of things the same way a group is made of members, and each
+ * of those things is a subject. Its geometry does not depend on the shot it
  * appears in, so a piece states it through {@link place} and its `render` simply
  * hands the same answer to whichever shot asks. That split is the point:
  * geometry is context-free and performance is not, and a class that pretended
@@ -60,23 +60,24 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
  */
-export class SignalGround extends WorldPiece {
+export class PlazaGround extends WorldPiece {
   public readonly id = "ground";
 
   /** Clear ground kept beyond the farthest member, in metres. */
   public readonly margin: number = 1;
 
   /**
-   * Half-extent of the square field, in metres.
+   * Half-extent of the square plaza, in metres.
    *
-   * Derived from the unit that stands on it rather than authored beside it. The
-   * specification states its requirement as a relation, that the ranks must end
-   * inside the place, and two independently authored numbers is how this field
-   * came to be a third the size of its own army. Deriving makes the relation
-   * true by construction, so a change to the unit carries the ground with it.
+   * Derived from the group that stands on it rather than authored beside it.
+   * The specification states its requirement as a relation, that the rows must
+   * end inside the place, and two independently authored numbers is how this
+   * plaza came to be a third the size of its own chorus. Deriving makes the
+   * relation true by construction, so a change to the group carries the ground
+   * with it.
    */
   public halfExtent(): number {
-    return army.reach() + this.margin;
+    return chorus.reach() + this.margin;
   }
 
   public place(): IAutoMovieSubjectContribution {
@@ -103,12 +104,12 @@ export class SignalGround extends WorldPiece {
    *
    * The question is asked of the record this piece emits, through the engine
    * function that owns the answer. A class that read `height.value` itself
-   * would be right for a level field and wrong the day the piece slopes, and a
+   * would be right for a level plaza and wrong the day the piece slopes, and a
    * second answer that agrees until it does not is the failure the whole
    * one-owner rule exists to prevent.
    *
-   * @evidence docs/world/signal-field.md Requires one level open place, which
-   *   is the height this returns everywhere inside it.
+   * @evidence docs/world/plaza.md Requires one level open place, which is the
+   *   height this returns everywhere inside it.
    */
   public heightAt(point: { x: number; z: number }): number {
     return worldSurfaceHeight(this.place().surfaces![0]!, point);
@@ -120,11 +121,11 @@ export class SignalGround extends WorldPiece {
    * Measured once. A shot that spelled these corners out again would be a
    * second ground beside this one, and the second is the one that decides
    * pixels: the scene keeps the space a shot staged, and the viewer builds its
-   * meshes from it. That is how a field corrected in the design record went on
-   * drawing a floor a third the size of the unit standing on it.
+   * meshes from it. That is how a plaza corrected in the design record went on
+   * drawing a floor a third the size of the group standing on it.
    *
-   * @evidence docs/world/signal-field.md Requires the ranks to end inside the
-   *   place, which is a claim about the ground the audience sees.
+   * @evidence docs/world/plaza.md Requires the rows to end inside the place,
+   *   which is a claim about the ground the audience sees.
    */
   public patches(): readonly IAutoMovieSurface[] {
     const half = this.halfExtent();
@@ -147,14 +148,14 @@ export class SignalGround extends WorldPiece {
 }
 
 /**
- * The named point the sentinel steps to.
+ * The named point the soloist steps to.
  *
  * A landmark exists so a shot contract can say where the gesture happened
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
  */
-export class SignalGroundMark extends WorldPiece {
-  public readonly id = "signal-ground";
+export class PlazaCenterMark extends WorldPiece {
+  public readonly id = "plaza-center";
 
   /** Readable radius around the marked point, in metres. */
   public readonly radius: number = 3;
@@ -174,17 +175,17 @@ export class SignalGroundMark extends WorldPiece {
 }
 
 /**
- * Drifting smoke, and the region it drifts in.
+ * Drifting haze, and the region it drifts in.
  *
  * The recipe and the zone travel together because neither means anything alone:
  * a recipe nothing activates is dead configuration, and a zone with no recipe
  * has nothing to emit.
  */
-export class BattleSmoke extends WorldPiece {
-  public readonly id = "signal-smoke";
+export class PlazaHaze extends WorldPiece {
+  public readonly id = "plaza-haze";
 
   /** Recipe identity the zone activates. */
-  public readonly recipe = "battle-smoke";
+  public readonly recipe = "plaza-haze-smoke";
 
   /** Deterministic seed for the emission, declared rather than drawn. */
   public readonly seed: number = 1416;
@@ -228,25 +229,25 @@ export class BattleSmoke extends WorldPiece {
 }
 
 /**
- * The signal field, as the one world this production stages on.
+ * The plaza, as the one world this production stages on.
  *
  * The world is a group like any other: it holds pieces and is composed from
- * them. Its record is the merge of what its pieces place, so adding a hill
+ * them. Its record is the merge of what its pieces place, so adding a step
  * means adding a piece rather than editing an array in the middle of a blob.
  */
-export class SignalField extends AutoMovieSubjectGroup<
+export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
   WorldPiece
 > {
   public readonly id = "starter-world";
 
-  /** The ground, its named point, and the smoke that drifts over it. */
-  public readonly ground = new SignalGround();
-  public readonly mark = new SignalGroundMark();
-  public readonly smoke = new BattleSmoke();
+  /** The ground, its named point, and the haze that drifts over it. */
+  public readonly ground = new PlazaGround();
+  public readonly mark = new PlazaCenterMark();
+  public readonly haze = new PlazaHaze();
 
   public members(): readonly WorldPiece[] {
-    return [this.ground, this.mark, this.smoke];
+    return [this.ground, this.mark, this.haze];
   }
 
   /**
@@ -257,8 +258,8 @@ export class SignalField extends AutoMovieSubjectGroup<
    * no standable-but-forbidden top; a world that grows one states it where the
    * piece is defined rather than here.
    *
-   * @evidence docs/world/signal-field.md Requires one open level place, which
-   *   is what a shot stands its figures on.
+   * @evidence docs/world/plaza.md Requires one open level place, which is what
+   *   a shot stands its figures on.
    */
   public space(): IAutoMovieSpace {
     const surfaces = this.members().flatMap((piece) => [...piece.patches()]);
@@ -272,8 +273,8 @@ export class SignalField extends AutoMovieSubjectGroup<
   /**
    * The world record, assembled from what its pieces place.
    *
-   * @evidence docs/world/signal-field.md Requires one place carrying the named
-   *   point and the extent, which this composes rather than transcribes.
+   * @evidence docs/world/plaza.md Requires one place carrying the named point
+   *   and the extent, which this composes rather than transcribes.
    */
   public design(): IAutoMovieWorldDesign {
     const placed = mergeAutoMovieSubjectContributions(
@@ -287,9 +288,9 @@ export class SignalField extends AutoMovieSubjectGroup<
       routes: [...(placed.routes ?? [])],
       effectRecipes: [...(placed.effectRecipes ?? [])],
       effectZones: [...(placed.effectZones ?? [])],
-      // A piece that places a population (a forest, a field of rubble) must
-      // reach the record. Omitting the key would drop what the piece placed
-      // without saying so, which is worse than refusing it.
+      // A piece that places a population (a row of planters, a set of markers)
+      // must reach the record. Omitting the key would drop what the piece
+      // placed without saying so, which is worse than refusing it.
       ...(placed.instanceSets === undefined
         ? {}
         : { instanceSets: [...placed.instanceSets] }),
@@ -300,10 +301,10 @@ export class SignalField extends AutoMovieSubjectGroup<
 /**
  * The production's one world.
  *
- * Carries the citation for the field and every piece standing on it, until a
+ * Carries the citation for the plaza and every piece standing on it, until a
  * class can carry its own (samchon/ttsc#1121).
  *
- * @evidence docs/world/signal-field.md Implements the open level ground, the
- *   named ground point, and the extent that specification requires.
+ * @evidence docs/world/plaza.md Implements the open level ground, the named
+ *   ground point, and the extent that specification requires.
  */
-export const signalField = new SignalField();
+export const plaza = new Plaza();

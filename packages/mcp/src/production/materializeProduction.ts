@@ -804,22 +804,6 @@ const recipeProjectionRadius = (
   switch (recipe.archetype) {
     case "stickman":
       return number("height") / 2;
-    case "horse":
-      return Math.hypot(number("length"), number("height")) / 2;
-    case "artillery":
-      return (
-        Math.hypot(
-          number("barrelLength"),
-          number("wheelRadius") * 2,
-          number("gauge"),
-        ) / 2
-      );
-    case "flag":
-      return (
-        Math.hypot(number("width"), number("height"), number("poleHeight")) / 2
-      );
-    case "weapon":
-      return number("length") / 2;
     case "primitive-prop": {
       const shape = recipe.parameters.shape;
       if (shape === "sphere") return number("radius");
@@ -1011,120 +995,6 @@ const materializeGeneratedModel = (
     attachedBone: null,
     transform: local,
   });
-  if (recipe.archetype === "horse") {
-    const length = numberParameter(recipe, "length");
-    const height = numberParameter(recipe, "height");
-    const leg = numberParameter(recipe, "legLength");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "body",
-          {
-            type: "capsule",
-            radius: height * 0.22,
-            height: length * 0.62,
-          },
-          rotateZ(90, 0, height - leg, 0),
-        ),
-        staticPart(
-          "head",
-          {
-            type: "box",
-            width: height * 0.22,
-            height: height * 0.32,
-            depth: height * 0.28,
-          },
-          transform(0, height * 0.9, length * 0.35),
-        ),
-        ...[-1, 1].flatMap((xSign) =>
-          [-1, 1].map((zSign) =>
-            staticPart(
-              `leg-${xSign}-${zSign}`,
-              {
-                type: "capsule",
-                radius: height * 0.055,
-                height: leg,
-              },
-              transform(
-                xSign * height * 0.14,
-                leg * 0.5,
-                zSign * length * 0.24,
-              ),
-            ),
-          ),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "artillery") {
-    const barrel = numberParameter(recipe, "barrelLength");
-    const wheel = numberParameter(recipe, "wheelRadius");
-    const gauge = numberParameter(recipe, "gauge");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "barrel",
-          { type: "cylinder", radius: gauge * 0.12, height: barrel },
-          rotateX(90, 0, wheel * 1.2, 0),
-        ),
-        staticPart(
-          "left-wheel",
-          { type: "cylinder", radius: wheel, height: gauge * 0.12 },
-          rotateZ(90, -gauge * 0.5, wheel, 0),
-        ),
-        staticPart(
-          "right-wheel",
-          { type: "cylinder", radius: wheel, height: gauge * 0.12 },
-          rotateZ(90, gauge * 0.5, wheel, 0),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "flag") {
-    const width = numberParameter(recipe, "width");
-    const height = numberParameter(recipe, "height");
-    const pole = numberParameter(recipe, "poleHeight");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "pole",
-          {
-            type: "cylinder",
-            radius: Math.max(0.01, width * 0.015),
-            height: pole,
-          },
-          transform(0, pole * 0.5, 0),
-        ),
-        staticPart(
-          "cloth",
-          { type: "plane", width, depth: height },
-          rotateX(90, width * 0.5, pole - height * 0.5, 0),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "weapon") {
-    const length = numberParameter(recipe, "length");
-    const thickness = numberParameter(recipe, "thickness");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart("weapon", {
-          type: "box",
-          width: thickness,
-          height: length,
-          depth: thickness,
-        }),
-      ],
-    };
-  }
   const shape = stringParameter(recipe, "shape");
   return {
     ...base,
@@ -1186,8 +1056,8 @@ const materialOf = (
       a: 1,
       hex,
     },
-    metallic: recipe.archetype === "weapon" ? 0.7 : 0,
-    roughness: recipe.archetype === "weapon" ? 0.35 : 0.7,
+    metallic: 0,
+    roughness: 0.7,
     emissive: null,
     opacity: 1,
     baseColorTexture: null,

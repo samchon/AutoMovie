@@ -17,8 +17,8 @@ import type {
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
  */
-export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
-  public readonly id = "sentinel";
+export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  public readonly id = "soloist";
 
   /**
    * The production's reference human scale, in metres.
@@ -30,16 +30,16 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly height: number = 1.8;
 
   /**
-   * How far the signalling arm travels from rest, in degrees of abduction.
+   * How far the cueing arm travels from rest, in degrees of abduction.
    *
-   * The specification says the arm is raised and held; this is what "raised"
-   * measures, kept here so a shot that wants a partly raised arm scales one
+   * The specification says the hand is raised and held; this is what "raised"
+   * measures, kept here so a shot that wants a partly raised hand scales one
    * declared extent rather than inventing an angle.
    */
-  public readonly signalAbduction: number = 110;
+  public readonly cueAbduction: number = 110;
 
   /**
-   * When the raised arm arrives, in seconds from the start of the shot.
+   * When the raised hand arrives, in seconds from the start of the shot.
    *
    * The gesture has to be complete while the event that measures it is sampled,
    * so this is the subject's own claim about its timing rather than a number
@@ -50,7 +50,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * The measured recipe the production derives its design record from.
    *
-   * @evidence docs/characters/sentinel.md Implements the upright single
+   * @evidence docs/characters/soloist.md Implements the upright single
    *   silhouette and the one claimed capability, at the stated scale.
    */
   public design(): IAutoMovieModelRecipe {
@@ -65,23 +65,23 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
       },
       palette: { body: "#d7b56d" },
       lod: [{ tier: "hero", maxDistance: null, recipe: this.id }],
-      capabilities: ["signal"],
+      capabilities: ["cue"],
       attachments: [],
     };
   }
 
   /**
-   * Raise the signalling arm and hold it for the rest of the shot.
+   * Raise the cueing arm and hold it for the rest of the shot.
    *
-   * The hold is the point: the specification dramatizes a signal that stays
-   * legible, so the arm arrives and stops rather than returning. Passing the
+   * The hold is the point: the specification dramatizes a cue that stays
+   * legible, so the hand arrives and stops rather than returning. Passing the
    * opening abduction lets a following shot begin where the previous one ended,
    * which is what an untrimmed cut between two shots requires.
    *
-   * @evidence docs/characters/sentinel.md Implements the raise-and-hold this
+   * @evidence docs/characters/soloist.md Implements the raise-and-hold this
    *   specification claims as the figure's only capability.
    */
-  public signal(
+  public cue(
     context: IAutoMovieShotBuildContext,
     props: { from: number } = { from: 0 },
   ): IAutoMovieMotion {
@@ -117,7 +117,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
       bezier: null,
     });
     return {
-      id: `${context.contract.id}-signal`,
+      id: `${context.contract.id}-cue`,
       skeleton,
       duration,
       loop: false,
@@ -126,12 +126,12 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
       // `arrivalSeconds` and hold, because the raise has to be complete while
       // the event that measures it is sampled, not still travelling.
       keyframes:
-        props.from >= this.signalAbduction
+        props.from >= this.cueAbduction
           ? [key(0, props.from, "linear"), key(duration, props.from, "linear")]
           : [
               key(0, props.from, "easeInOut"),
-              key(this.arrivalSeconds, this.signalAbduction, "linear"),
-              key(duration, this.signalAbduction, "linear"),
+              key(this.arrivalSeconds, this.cueAbduction, "linear"),
+              key(duration, this.cueAbduction, "linear"),
             ],
       gaitCycle: null,
     };
@@ -144,7 +144,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * the figure's scale cannot leave the camera aiming where the head used to
    * be. The ratio is the anthropometric one; only the scale is authored.
    *
-   * @evidence docs/characters/sentinel.md Fixes the scale this measurement is
+   * @evidence docs/characters/soloist.md Fixes the scale this measurement is
    *   derived from, and this value states nothing that specification does not.
    */
   public eyeHeight(): number {
@@ -159,8 +159,8 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * capability, and the compiler owns the rig that realizes them. Refusing
    * loudly here keeps every motion from having to re-check it.
    *
-   * @evidence docs/characters/sentinel.md Requires an articulated figure that
-   *   raises an arm, which is a claim on a rig this source does not own.
+   * @evidence docs/characters/soloist.md Requires an articulated figure that
+   *   raises a hand, which is a claim on a rig this source does not own.
    */
   public skeleton(context: IAutoMovieShotBuildContext): string {
     const model = context.runtimeModels[this.id];
@@ -179,7 +179,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * cast entry that echoed the design id would reference a model the scene has
    * no node for.
    *
-   * @evidence docs/characters/sentinel.md Specifies the figure whose built
+   * @evidence docs/characters/soloist.md Specifies the figure whose built
    *   model this resolves, and nothing about how the compiler names it.
    */
   public modelRef(context: IAutoMovieShotBuildContext): string {
@@ -194,7 +194,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * Stage this figure and the clip it performs.
    *
-   * @evidence docs/characters/sentinel.md Stages the single separated figure
+   * @evidence docs/characters/soloist.md Stages the single separated figure
    *   this specification requires the camera to be able to follow.
    */
   public render(
@@ -210,21 +210,21 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
           eyeHeight: this.eyeHeight(),
         },
       ],
-      clips: [this.signal(context, { from: props.from ?? 0 })],
+      clips: [this.cue(context, { from: props.from ?? 0 })],
     };
   }
 }
 
 /**
- * The production's one sentinel.
+ * The production's one soloist.
  *
- * The subject's citation lives on the instance rather than on {@link Sentinel}
+ * The subject's citation lives on the instance rather than on {@link Soloist}
  * itself, because `@ttsc/evidence` does not yet select a class as a unit
  * (samchon/ttsc#1121). Its measured facts cannot cite at all for the same
  * reason, so this one tag answers for the whole subject until they can.
  *
- * @evidence docs/characters/sentinel.md Implements the silhouette, the scale,
+ * @evidence docs/characters/soloist.md Implements the silhouette, the scale,
  *   and the single capability that specification states, and claims nothing it
  *   does not.
  */
-export const sentinel = new Sentinel();
+export const soloist = new Soloist();

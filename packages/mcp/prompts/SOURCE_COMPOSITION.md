@@ -154,4 +154,3 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 
 The starter's own vocabulary is the worked example of the subject layer. `src/units/sentinel.ts` is a leaf subject whose measured facts are fields and whose one capability is a method; `src/units/armyHero.ts` derives its scale from the sentinel rather than restating it; `src/formations/army.ts` is a group that states arrangement and answers questions about its own extent; `src/world/signalField.ts` is a group of places whose record is the merge of what its pieces put down.
 
-`src/examples/lineBattle.ts` is the worked example of a different boundary, the one between engine-owned facts and agent-owned drill code. Typed capability facts and seeded engine outcomes feed the drill, while large non-formation populations use compact instance sets instead of scene nodes. Read both before designing your own layer.
