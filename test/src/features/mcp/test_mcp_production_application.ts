@@ -479,7 +479,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       { kind: "source", path: "src/shots/opening.ts" },
       { kind: "shot", id: "opening" },
       { kind: "rendition", id: "opening" },
-      { kind: "sequence", id: "SEQ-SIGNAL" },
+      { kind: "sequence", id: "SEQ-CUE" },
       { kind: "film", id: "fixture-film" },
     ];
     for (const target of reviewTargets) {

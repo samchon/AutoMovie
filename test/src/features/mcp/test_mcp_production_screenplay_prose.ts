@@ -180,7 +180,7 @@ export const test_mcp_production_screenplay_prose = (): void => {
       treatmentDocumentAbsent: (() => {
         const codes = after(() =>
           editIndex((value) => {
-            value.treatment.sequences[0]!.path = "docs/nowhere/SEQ-SIGNAL.md";
+            value.treatment.sequences[0]!.path = "docs/nowhere/SEQ-CUE.md";
           }),
         );
         return (

@@ -125,20 +125,6 @@ export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
 };
 
 /**
- * The gaits a runtime model can perform, in the order its recipe declares them.
- *
- * The first profile that declares any owns the repertoire, which keeps the
- * choice in the recipe, where an author already orders them, instead of in a
- * viewer that would have to guess what a crowd is doing. Every one of them is
- * baked, because which one a member performs is decided by a cue at a time the
- * bake has long finished, and a repertoire of five costs a hundred kilobytes
- * once per tier against an instance budget measured in megabytes.
- */
-export const formationCycleGaits = (
-  model: IAutoMovieModel,
-): readonly IAutoMovieGait[] => autoMovieModelGaits(model);
-
-/**
  * The cycle a runtime model performs by default, or null when it performs none.
  *
  * A gait is declarative profile data ({@link IAutoMovieGait}): per-limb phase,
@@ -151,7 +137,7 @@ export const formationCycleGaits = (
  */
 export const formationCycleGait = (
   model: IAutoMovieModel,
-): IAutoMovieGait | null => formationCycleGaits(model)[0] ?? null;
+): IAutoMovieGait | null => autoMovieModelGaits(model)[0] ?? null;
 
 /**
  * Bake one runtime model's whole repertoire into rigid part-matrix tables.
@@ -178,7 +164,7 @@ export const bakeFormationCycle = (input: {
   samples?: number;
 }): IAutoMovieFormationCycle | null => {
   const skeleton = input.model.skeleton;
-  const gaits = formationCycleGaits(input.model);
+  const gaits = autoMovieModelGaits(input.model);
   if (skeleton === null || gaits.length === 0) return null;
   const samples = input.samples ?? AUTOMOVIE_FORMATION_CYCLE_SAMPLES;
   const rest = input.parts.map((part) => part.matrixWorld.clone().invert());

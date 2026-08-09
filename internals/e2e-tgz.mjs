@@ -1628,9 +1628,23 @@ import {
   sampleFormationSlotMotion,
 } from "@automovie/engine";
 
-const state = requireCurrentAutoMovieProjectState(
-  loadAutoMovieProjectState({ root: process.cwd() }),
-);
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+// Named before it is refused. "stale" alone sends a reader back through every
+// step that ran since the compile; the two fingerprints and the stored
+// diagnostics say which input moved and why the compile was not accepted.
+if (loaded.freshness?.status !== "current")
+  console.error(
+    "freshness",
+    JSON.stringify(
+      {
+        revision: loaded.revision,
+        freshness: loaded.freshness,
+      },
+      null,
+      2,
+    ),
+  );
+const state = requireCurrentAutoMovieProjectState(loaded);
 let checked = 0;
 for (const [id, shot] of state.generated.shots) {
   const space = shot.scene.space;

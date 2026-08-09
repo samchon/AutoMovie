@@ -1114,7 +1114,7 @@ export const test_mcp_production_project = (): void => {
     });
     const caseCollision = project.setModelRecipe({
       ...modelRecipe(),
-      id: "SENTINEL",
+      id: "SOLOIST",
     });
     const nonCanonicalSources = [
       "/src/shots/opening.ts",
@@ -1669,7 +1669,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             secondShotMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1692,7 +1692,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             acceptanceMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
       ]),
@@ -1806,7 +1806,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             repaintedShotMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1822,7 +1822,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             movedSequenceShotMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1875,7 +1875,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             movedAcceptanceMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1911,7 +1911,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             worldMutation.consequences.staleReviews.some(
               (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+                target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
