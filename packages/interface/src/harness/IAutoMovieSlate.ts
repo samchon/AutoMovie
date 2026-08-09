@@ -9,7 +9,7 @@ export interface IAutoMovieBeat {
   /** Stable id, referenced by the shot built from it. */
   id: string;
 
-  /** Short title ("the charge", "the rear"). */
+  /** Short title ("the arrival", "the rear"). */
   name: string;
 
   /** What happens in this beat, in prose: the brief the blocking stage works to. */

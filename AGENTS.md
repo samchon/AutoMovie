@@ -53,7 +53,7 @@ Default solo repository-wide issue discovery, main-agent-vetted issue publicatio
 
 ### Experiment
 
-Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, driven by a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out or drive the MCP tools by hand.
+Ad-hoc experimentation: a disposable working-tree sandbox under `experimental/`, driven by a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out or drive the MCP tools by hand.
 
 ### 3D Modeling
 

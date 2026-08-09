@@ -17,8 +17,8 @@ import type {
  *
  * A shot program is assembled from many subjects, so no subject returns one.
  * Each returns only the parts it owns, and the shot merges them. That is what
- * lets a regiment be its squadrons and a village be its buildings without any
- * of them knowing they were composed.
+ * lets a crowd be its clusters and a village be its buildings without any of
+ * them knowing they were composed.
  *
  * Every field is optional because most subjects fill one or two. A prop
  * standing in the background contributes world geometry and nothing else; a
@@ -131,14 +131,14 @@ export abstract class AutoMovieSubject<TDesign> {
 /**
  * A subject that is a collection of subjects.
  *
- * A squadron holds soldiers, a regiment holds squadrons, a village holds
- * buildings, a map holds everything standing on it. The shape is the same at
- * every level, which is what makes a line battle authorable: a regiment
- * advancing is one call rather than two thousand.
+ * A cluster holds figures, a crowd holds clusters, a village holds buildings, a
+ * map holds everything standing on it. The shape is the same at every level,
+ * which is what makes a mass scene authorable: a crowd advancing is one call
+ * rather than two thousand.
  *
  * `render` composes its members by default, so a group states what it holds and
  * how it is arranged, not how to draw it. A group that needs to add something
- * of its own (a banner, a dust cue, a shared route) overrides `render` and
+ * of its own (a shared prop, a dust cue, a shared route) overrides `render` and
  * merges its own contribution with `super.render`, rather than replacing what
  * its members said.
  */

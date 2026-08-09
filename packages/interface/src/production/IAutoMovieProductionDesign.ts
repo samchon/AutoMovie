@@ -109,7 +109,6 @@ export interface IAutoMovieModelRecipe {
   archetype:
     | "stickman"
     | "horse"
-    | "artillery"
     | "flag"
     | "weapon"
     | "primitive-prop";
@@ -392,8 +391,6 @@ export type AutoMovieFormationCapability =
   | "hold"
   | "advance"
   | "wheel"
-  | "charge"
-  | "fire-volley"
   | "break"
   | "retreat";
 
@@ -416,14 +413,14 @@ export type IAutoMovieFormationLayout =
       /**
        * How far a member may stand off its exact slot, in meters.
        *
-       * Formed troops are dressed to a tolerance, not to a lattice, and that
-       * tolerance is what makes a unit read as many people holding a line
+       * Formed groups are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a group read as many people holding a line
        * rather than one figure repeated on a grid. Omit it, or leave both
        * numbers at zero, for exact geometry.
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same formation.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -433,7 +430,7 @@ export type IAutoMovieFormationLayout =
       };
     }
   | {
-      /** March column. */
+      /** Column. */
       kind: "column";
       /** Integer ranks from 1 through count. */
       ranks: number;
@@ -449,14 +446,14 @@ export type IAutoMovieFormationLayout =
       /**
        * How far a member may stand off its exact slot, in meters.
        *
-       * Formed troops are dressed to a tolerance, not to a lattice, and that
-       * tolerance is what makes a unit read as many people holding a line
+       * Formed groups are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a group read as many people holding a line
        * rather than one figure repeated on a grid. Omit it, or leave both
        * numbers at zero, for exact geometry.
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same formation.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -480,14 +477,14 @@ export type IAutoMovieFormationLayout =
       /**
        * How far a member may stand off its exact slot, in meters.
        *
-       * Formed troops are dressed to a tolerance, not to a lattice, and that
-       * tolerance is what makes a unit read as many people holding a line
+       * Formed groups are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a group read as many people holding a line
        * rather than one figure repeated on a grid. Omit it, or leave both
        * numbers at zero, for exact geometry.
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same formation.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -517,14 +514,14 @@ export type IAutoMovieFormationLayout =
       /**
        * How far a member may stand off its exact slot, in meters.
        *
-       * Formed troops are dressed to a tolerance, not to a lattice, and that
-       * tolerance is what makes a unit read as many people holding a line
+       * Formed groups are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a group read as many people holding a line
        * rather than one figure repeated on a grid. Omit it, or leave both
        * numbers at zero, for exact geometry.
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same formation.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -543,14 +540,14 @@ export type IAutoMovieFormationLayout =
       /**
        * How far a member may stand off its exact slot, in meters.
        *
-       * Formed troops are dressed to a tolerance, not to a lattice, and that
-       * tolerance is what makes a unit read as many people holding a line
+       * Formed groups are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a group read as many people holding a line
        * rather than one figure repeated on a grid. Omit it, or leave both
        * numbers at zero, for exact geometry.
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same formation.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -708,7 +705,7 @@ export interface IAutoMovieShotEventContract {
   /** Stable event id. */
   id: string;
   /** Event family. */
-  kind: "contact" | "arrival" | "volley" | "break" | "reveal" | "transition";
+  kind: "contact" | "arrival" | "break" | "reveal" | "transition";
   /** Inclusive finite event window inside the owning shot's duration. */
   window: {
     /** Earliest valid time. */

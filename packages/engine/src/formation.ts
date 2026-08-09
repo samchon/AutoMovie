@@ -293,11 +293,11 @@ export const composeFormationHeroTransform = (
  * Offset one slot by its dressing tolerance, deterministically.
  *
  * Formed layouts place members on exact geometry, which reads as one figure
- * repeated on a grid rather than as troops holding a line. `dressing` states
- * how far a member may stand off its slot, and the deviation is drawn from the
- * formation seed and the slot index, the same machinery `scatter` placement and
- * `motionPhase` already use. Nothing is stored per member: the same design
- * regenerates the same army on every machine and every run.
+ * repeated on a grid rather than as many people holding a line. `dressing`
+ * states how far a member may stand off its slot, and the deviation is drawn
+ * from the formation seed and the slot index, the same machinery `scatter`
+ * placement and `motionPhase` already use. Nothing is stored per member: the
+ * same design regenerates the same formation on every machine and every run.
  *
  * A layout without `dressing`, or with both tolerances at zero, returns the
  * exact point, so an existing production compiles unchanged.

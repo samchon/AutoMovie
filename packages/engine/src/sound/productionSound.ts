@@ -354,7 +354,6 @@ const mixEvent = (
   const durationSeconds: Record<typeof event.kind, number> = {
     contact: 0.22,
     arrival: 0.7,
-    volley: 0.85,
     break: 0.48,
     reveal: 1.1,
     transition: 0.55,
@@ -375,9 +374,6 @@ const mixEvent = (
     const base: Record<typeof event.kind, number> = {
       contact: Math.sin(2 * Math.PI * 115 * t) + noise * 0.45,
       arrival: Math.sin(2 * Math.PI * (58 + 42 * normalized) * t),
-      volley:
-        noise * (0.65 + 0.35 * Math.cos(2 * Math.PI * 13 * t)) +
-        Math.sin(2 * Math.PI * 72 * t) * 0.4,
       break: noise * 0.9 + Math.sin(2 * Math.PI * 190 * t) * 0.3,
       reveal:
         Math.sin(2 * Math.PI * (220 + 440 * normalized) * t) * 0.7 +

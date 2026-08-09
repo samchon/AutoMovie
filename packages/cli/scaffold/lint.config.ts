@@ -12,9 +12,14 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * population, every pair is its own 100% obligation, and an unpaid one is a
  * compile error rather than something a reader has to notice.
  *
- * Read each entry as one sentence. Files under `files` must each cite a unit
- * under `reference`, and a citation toward one reference never counts toward
- * another.
+ * Read each entry as one sentence. Every unit under `reference` must be cited
+ * by a file under `files`, and a citation toward one reference never counts
+ * toward another. The obligation runs that way round on purpose: it is the
+ * evidence that has to be answered for, so a claim file with nothing to say
+ * stays silent while a piece of evidence nobody answers for fails the build.
+ * A population that matches no file at all is a configuration error rather
+ * than a free pass, which is why every reference here keeps a member that is
+ * always present.
  *
  * The design records under `.automovie/design` are absent on purpose. Evidence
  * graphs Markdown, Prisma, TypeScript, and Swagger; JSON cannot host a
@@ -61,6 +66,37 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         files: ["docs/*/04-scenes/*.md"],
+        symbol: "file",
+      },
+    },
+    // A specification that states a measured fact answers for whatever fixed
+    // it, and a fact the production did not decide for itself was fixed
+    // somewhere outside it: a published standard, a recorded observation, an
+    // attested account, a maker's figure. Each of those is one document in the
+    // ledger, one source per file for the same reason a scene is one file, so
+    // a specification names a source rather than a paragraph inside a document
+    // holding every source. The obligation runs from the ledger outward, so a
+    // source no specification uses is one the film is not really leaning on,
+    // while a subject the story invents outright cites nothing and owes
+    // nothing here. Filing a source is what opts a production into this, which
+    // is why a spec library resting on no outside source is untouched by it.
+    {
+      type: "markdown",
+      files: [
+        "docs/characters/*.md",
+        "docs/objects/*.md",
+        "docs/world/*.md",
+        // Art direction states measured facts too, and it is the document that
+        // decides how far the look departs from what a source attests.
+        "docs/art-direction.md",
+      ],
+      reference: {
+        type: "markdown",
+        // The notes document is the ledger's standing entry, present before a
+        // production has filed its first separate source, which is what keeps
+        // this population from matching nothing on a project that has not
+        // needed one yet.
+        files: ["docs/historical-notes.md", "docs/research/*.md"],
         symbol: "file",
       },
     },

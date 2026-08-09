@@ -2,5 +2,5 @@
 
 # BEAT-ANSWER-1 — The answering motion
 
-The sentinel holds the field, then gives the answering motion. The army stays
+The soloist holds the plaza, then gives the answering motion. The chorus stays
 the visible consequence of the exchange.

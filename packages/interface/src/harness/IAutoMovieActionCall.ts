@@ -312,7 +312,7 @@ export interface IAutoMovieEnactAction extends IAutoMovieActionBase {
 
 /**
  * The camera is an actor; this is how it moves. A _list_ of camera actions
- * composes a move that changes mid-shot ("follow the charge, then hold static
+ * composes a move that changes mid-shot ("follow the runner, then hold static
  * on the fall"). The engine realises the framing/move against the target as a
  * camera-node clip (`cameraMotion` on the shot).
  */
