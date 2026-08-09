@@ -64,6 +64,23 @@ export class Army extends AutoMovieSubjectGroup<
   public readonly seed: number = 1415;
 
   /**
+   * Where the front of the unit stands, in metres.
+   *
+   * A field rather than a literal inside the record, because the place that
+   * holds the unit has to know it: {@link reach} measures from here, and
+   * reaching into `design()` for one number would run the record's own
+   * validation to read a coordinate.
+   */
+  public readonly anchor: { x: number; y: number; z: number } = {
+    x: 0,
+    y: 0,
+    z: -5,
+  };
+
+  /** Which way the ranks face, in degrees. */
+  public readonly facingDeg: number = 180;
+
+  /**
    * How far the unit advances when a shot puts it in motion, in metres.
    *
    * The unit owns the distance rather than each shot choosing one, because the
@@ -112,8 +129,8 @@ export class Army extends AutoMovieSubjectGroup<
         files: this.files,
         spacing: this.spacing,
       },
-      anchor: { x: 0, y: 0, z: -5 },
-      facingDeg: 180,
+      anchor: this.anchor,
+      facingDeg: this.facingDeg,
       seed: this.seed,
       capabilities: ["advance", "break"],
       heroOverrides: [
@@ -237,10 +254,9 @@ export class Army extends AutoMovieSubjectGroup<
    */
   public reach(): number {
     const footprint = this.footprint();
-    const anchor = this.design().anchor;
     return Math.max(
-      Math.abs(anchor.x) + footprint.width / 2,
-      Math.abs(anchor.z) + footprint.depth + this.advanceMetres,
+      Math.abs(this.anchor.x) + footprint.width / 2,
+      Math.abs(this.anchor.z) + footprint.depth + this.advanceMetres,
     );
   }
 
