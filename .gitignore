@@ -32,3 +32,8 @@ packages/playground/montage-three.png
 # transpiled output that lands beside a source rather than in `lib/`
 packages/*/src/**/*.js
 packages/*/src/**/*.js.map
+# the scaffold nests a whole project, so its own sources need the same rule
+packages/cli/scaffold/src/**/*.js
+packages/cli/scaffold/src/**/*.js.map
+packages/cli/scaffold/scripts/**/*.js
+packages/cli/scaffold/scripts/**/*.js.map
