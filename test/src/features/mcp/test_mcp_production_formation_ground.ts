@@ -180,17 +180,24 @@ export const test_mcp_production_formation_ground = (): void => {
     ["engine-validation-failed"],
   );
 
+  const marched = validateAutoMovieFormationGround(
+    { id: "opening" },
+    {
+      scene: { space: field(10) },
+      formations: [unit(4)],
+      formationMotions: [march(20)],
+    },
+  )[0]!;
   TestValidator.equals(
-    "the refusal names the time its cue took the unit out",
-    validateAutoMovieFormationGround(
-      { id: "opening" },
-      {
-        scene: { space: field(10) },
-        formations: [unit(4)],
-        formationMotions: [march(20)],
-      },
-    )[0]!.message.includes("at 3s its cue takes the unit to"),
-    true,
+    "the refusal names the time its cue took the unit out and where to",
+    namedFacts([
+      [
+        "time",
+        () => marched.message.includes("at 3s its cue takes the unit to"),
+      ],
+      ["corner", () => marched.message.includes("(-4, 16)")],
+    ]),
+    { time: true, corner: true },
   );
 
   TestValidator.equals(

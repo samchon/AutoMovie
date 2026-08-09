@@ -1617,7 +1617,11 @@ if (
   loadAutoMovieProjectState,
   requireCurrentAutoMovieProjectState,
 } from "@automovie/cli";
-import { isWalkable } from "@automovie/engine";
+import {
+  isWalkable,
+  sampleFormationMotion,
+  transformFormationBounds,
+} from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({ root: process.cwd() }),
@@ -1626,19 +1630,34 @@ let checked = 0;
 for (const [id, shot] of state.generated.shots) {
   const space = shot.scene.space;
   if (space === undefined || space === null) continue;
+  const cues = shot.formationMotions ?? [];
   for (const formation of shot.formations) {
-    const { min, max } = formation.bounds;
-    for (const corner of [
-      { x: min.x, z: min.z },
-      { x: max.x, z: min.z },
-      { x: max.x, z: max.z },
-      { x: min.x, z: max.z },
-    ])
-      if (isWalkable(space, corner.x, corner.z) === false)
-        throw new Error(
-          \`shot "\${id}" stages formation "\${formation.id}" reaching (\${corner.x}, \${corner.z}), which the ground it staged does not carry.\`,
-        );
-    checked++;
+    const own = cues.filter((cue) => cue.formation === formation.id);
+    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
+    const resting = own.length === 0 || Math.min(...times) > 0;
+    for (const time of [...(resting ? [null] : []), ...times]) {
+      const bounds =
+        time === null
+          ? formation.bounds
+          : transformFormationBounds(
+              formation.bounds,
+              formation.anchor,
+              sampleFormationMotion(cues, formation.id, time),
+              formation.facingDeg,
+            );
+      for (const corner of [
+        { x: bounds.min.x, z: bounds.min.z },
+        { x: bounds.max.x, z: bounds.min.z },
+        { x: bounds.max.x, z: bounds.max.z },
+        { x: bounds.min.x, z: bounds.max.z },
+      ])
+        if (isWalkable(space, corner.x, corner.z) === false)
+          throw new Error(
+            \`shot "\${id}" puts formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
+              \` \${time === null ? "where it stands" : \`at \${time}s\`}, which the ground it staged does not carry.\`,
+          );
+      checked++;
+    }
   }
 }
 if (checked === 0)

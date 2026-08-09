@@ -278,7 +278,7 @@ const buildSignal = (
     clips: [...(performer.clips ?? [])],
     formationMotions: context.contract.participants.some(
       (participant) =>
-        participant.kind === "formation" && participant.id === "army",
+        participant.kind === "formation" && participant.id === army.id,
     )
       ? // The unit owns its own advance. Spelling the cue out here loosened
         // the intervals by five percent and turned the ranks four degrees,

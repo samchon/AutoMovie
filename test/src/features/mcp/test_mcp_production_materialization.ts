@@ -914,7 +914,7 @@ export const test_mcp_production_materialization = (): void => {
       `  const boundary = context.engine.formationSlot("${highCount.id}", ${highCount.count - 1});
   if (boundary.slot !== ${highCount.count - 1}) throw new Error("formation slot mismatch");
 ${anchor}`,
-    ).replaceAll('"army"', `"${highCount.id}"`);
+    );
     fs.writeFileSync(openingSourcePath, openingSource);
     // The cue comes from the unit now, so its formation is the subject's own id
     // rather than a string this fixture could rename in the shot. Renaming the
