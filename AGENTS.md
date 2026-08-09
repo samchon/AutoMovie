@@ -37,7 +37,7 @@ Default solo Self-Review, unqualified review, and exhaustive solo issue-discover
 
 ### Multi-Agent Workflows
 
-Explicitly parallel review, issue-campaign, and benchmark-campaign variants live under one overview skill, `.agents/skills/multi-agent/SKILL.md`, with separate detailed topic documents. Read it only when the user explicitly asks for a team, parallel, or multi-agent workflow. Multi-agent issue campaigns parallelize discovery and implementation by default, and switch to solo implementation only when the user explicitly asks for parallel discovery with solo implementation. Self-Review remains solo.
+Explicitly parallel review and issue-campaign variants live under one overview skill, `.agents/skills/multi-agent/SKILL.md`, with separate detailed topic documents. Read it only when the user explicitly asks for a team, parallel, or multi-agent workflow. Multi-agent issue campaigns parallelize discovery and implementation by default, and switch to solo implementation only when the user explicitly asks for parallel discovery with solo implementation. Self-Review remains solo.
 
 ### Discussion
 
@@ -49,11 +49,7 @@ Default solo repository-wide issue discovery, main-agent-vetted issue publicatio
 
 ### Experiment
 
-Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, driven by a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out or drive the MCP tools by hand; a scored corpus belongs to the benchmark campaign instead.
-
-### Benchmark Campaign
-
-Default solo empirical MCP benchmark loop: authoring a persistent short/medium/long scenario corpus, driving the live MCP surface with an external agent (Claude, Codex), scoring and attributing each run, publishing main-agent-vetted defect and gap issues, developing every one before the next run, `.agents/skills/benchmark-campaign/SKILL.md`. Read when the user wants to benchmark the pipeline through real MCP runs or turn benchmark shortfalls into an issue-to-pull-request campaign without explicitly requesting parallel agents; do not use it for a static code audit (issue-campaign) or one already-defined issue.
+Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, driven by a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out or drive the MCP tools by hand.
 
 ### 3D Modeling
 
@@ -91,4 +87,4 @@ Update AGENTS.md only for repository-contract changes: a new skill area, a renam
 - **Create or merge.** Add a skill when a substantial repository concern would otherwise inflate AGENTS.md beyond an index. Merge sibling concerns when they share most of their structure.
 - **Repository skill files only.** Keep repository skills to `SKILL.md` and conditionally loaded sibling documents. Do not create separate `multi-agent-*` skills or `agents/openai.yaml`; parallel variants belong under `multi-agent/`.
 - **Headings are plain.** No chapter numbers in skill or AGENTS.md headings. Use descriptive titles.
-- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `benchmark-campaign`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.
+- **Current set.** The repository skills are `project`, `development`, `documentation`, `review`, `multi-agent`, `discussion`, `issue-campaign`, `experiment`, `3d-modeling`, `viewer-verification`, `mcp`, and `pull-request`.

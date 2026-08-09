@@ -1,6 +1,6 @@
 ---
 name: multi-agent
-description: Defines the explicitly parallel variants of automovie review, issue campaigns, and benchmark campaigns. Use only when the user explicitly requests a team, parallel, or multi-agent review or campaign. Route review work to review.md, issue campaigns to issue-campaign.md, and benchmark campaigns to benchmark-campaign.md. Self-Review and unqualified review remain solo. Multi-agent issue campaigns parallelize discovery and implementation by default, but an explicit request may limit parallelism to discovery and return implementation to the solo campaign.
+description: Defines the explicitly parallel variants of automovie review and issue campaigns. Use only when the user explicitly requests a team, parallel, or multi-agent review or campaign. Route review work to review.md and issue campaigns to issue-campaign.md. Self-Review and unqualified review remain solo. Multi-agent issue campaigns parallelize discovery and implementation by default, but an explicit request may limit parallelism to discovery and return implementation to the solo campaign.
 ---
 
 # Multi-Agent Workflows
@@ -11,7 +11,6 @@ This skill is the single entry point for every explicitly parallel review or cam
 | --- | --- | --- |
 | Team, parallel, or multi-agent review | [review](../review/SKILL.md) | [review.md](review.md) |
 | Parallel or multi-agent issue campaign | [issue-campaign](../issue-campaign/SKILL.md) | [issue-campaign.md](issue-campaign.md) |
-| Parallel or multi-agent benchmark campaign | [benchmark-campaign](../benchmark-campaign/SKILL.md) | [benchmark-campaign.md](benchmark-campaign.md) |
 
 Do not load this skill for Self-Review, an unqualified review, or a campaign that does not explicitly request parallel agents.
 

@@ -27,7 +27,7 @@ Each reviewer still inspects the complete change surface and relevant sources in
 
 ## Parallel Issue Discovery Rounds
 
-Use this mode only through the multi-agent issue or benchmark campaign procedure.
+Use this mode only through the multi-agent issue campaign procedure.
 
 1. Give every discovery reviewer the entire declared campaign scope and require AGENTS.md `## Attitude`, the project, development, review, and relevant campaign skills in its brief.
 2. Each reviewer independently audits source, tests, documentation, CI, packaging, rendered output, platform behavior, sibling-repository and upstream provenance, and open and closed issue or pull-request history. Audit the development skill's **Forbidden** section as part of the current code and history.
