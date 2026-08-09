@@ -2836,12 +2836,6 @@ const validateCompiledShot = (
 const FORMATION_TURN_SAMPLE_DEGREES = 5;
 
 /**
- * One reading as a reader wants it: three decimals, so a metre is stated to the
- * millimetre and a second to the millisecond.
- */
-const round = (value: number): number => Math.round(value * 1_000) / 1_000;
-
-/**
  * Samples one cue may take, however far it turns.
  *
  * A cue may legally turn through 360,000 degrees, and holding the resolution
@@ -2850,6 +2844,12 @@ const round = (value: number): number => Math.round(value * 1_000) / 1_000;
  * gate that samples has to make somewhere and had better say out loud.
  */
 const FORMATION_TURN_SAMPLE_LIMIT = 360;
+
+/**
+ * One reading as a reader wants it: three decimals, so a metre is stated to the
+ * millimetre and a second to the millisecond.
+ */
+const round = (value: number): number => Math.round(value * 1_000) / 1_000;
 
 /**
  * When inside one cue a staged unit is worth measuring against its ground.
@@ -2873,6 +2873,10 @@ const FORMATION_TURN_SAMPLE_LIMIT = 360;
  * form exists, so a resolution is stated instead of a guarantee. Every sampled
  * time is a state the unit really occupies, which is what keeps the gate from
  * ever refusing a shot that was correct.
+ *
+ * A `step` cue holds its start state until its end, so its interior samples all
+ * repeat that one state. They cost a little and answer correctly, which is the
+ * trade taken rather than a branch here for the one easing that does not move.
  */
 const formationGroundSampleTimes = (
   cue: IAutoMovieFormationMotion,

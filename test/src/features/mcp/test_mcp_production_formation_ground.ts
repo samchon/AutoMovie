@@ -207,9 +207,9 @@ const codes = (
  * 10. A unit is judged by its own four corners rather than the box around them,
  *     which a diamond floor separates: turned, the box reaches past ground
  *     every corner of the unit is still standing on.
- * 11. A cue turning far enough to reach the sample cap still answers in bounded
- *     time, because a cue may legally turn through 360,000 degrees and one unit
- *     may not cost a hundred thousand measurements.
+ * 11. A cue turning far enough to reach the sample cap still ends and still
+ *     answers. It says nothing about the sampling under the cap, because the
+ *     unit it uses is already off its ground where it stands.
  */
 export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
@@ -398,9 +398,11 @@ export const test_mcp_production_formation_ground = (): void => {
     [],
   );
 
-  // A cue may legally turn through 360,000 degrees, and the sample count is
-  // capped so one unit cannot cost a hundred thousand measurements. The cap has
-  // to still answer, and still catch a unit this far off its ground.
+  // A cue may legally turn through 360,000 degrees, which without a cap would
+  // be a hundred thousand measurements for one unit. What this pins is that the
+  // walk still ends and still answers; this unit is already off its ground
+  // where it stands, so the refusal it reports is not evidence about the
+  // sampling under the cap, and nothing here claims it is.
   TestValidator.equals(
     "a cue turning far enough to reach the sample cap still answers",
     codes(field(4), [lance(9, 1)], [turn(360_000)]),

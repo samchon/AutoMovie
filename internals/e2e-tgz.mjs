@@ -1660,7 +1660,7 @@ for (const [id, shot] of state.generated.shots) {
           : transformFormationPoint(
               point,
               formation.anchor,
-              sampleFormationMotion(cues, formation.id, time),
+              sampleFormationMotion(own, formation.id, time),
               formation.facingDeg,
             ),
       ))
