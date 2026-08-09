@@ -25,7 +25,7 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * The one place the phrase "a head shorter" becomes a number.
    */
-  public static readonly HEAD = 0.1;
+  public static readonly HEAD: number = 0.1;
 
   /**
    * The height the specification states, in metres.
@@ -36,7 +36,7 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * internally consistent while drifting away from the number the film was
    * written around.
    */
-  public static readonly SPECIFIED_HEIGHT = 1.7;
+  public static readonly SPECIFIED_HEIGHT: number = 1.7;
 
   /**
    * Member height in metres, stated against the production's reference scale.

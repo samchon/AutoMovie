@@ -34,14 +34,19 @@ export class Army extends AutoMovieSubjectGroup<
    * Authored rather than derived from ranks times files, because the last rank
    * is deliberately short: a unit whose every rank is exactly full reads as a
    * lattice, and the silhouette this specification asks for is a real edge.
+   *
+   * Typed `number` rather than left to infer `2049`. A measurement is not the
+   * one value it currently holds, and a literal type says a specialisation of
+   * this unit may never state a different one, which is the composition the
+   * class layer exists for.
    */
-  public readonly count = 2049;
+  public readonly count: number = 2049;
 
   /** Rows deep, front to back. */
-  public readonly ranks = 33;
+  public readonly ranks: number = 33;
 
   /** Members across one rank. */
-  public readonly files = 64;
+  public readonly files: number = 64;
 
   /**
    * The interval between members, in metres.
@@ -50,10 +55,13 @@ export class Army extends AutoMovieSubjectGroup<
    * subject, which makes this the unit's load-bearing measurement rather than a
    * layout convenience.
    */
-  public readonly spacing = { lateral: 0.5, depth: 1 };
+  public readonly spacing: { lateral: number; depth: number } = {
+    lateral: 0.5,
+    depth: 1,
+  };
 
   /** The deterministic seed every per-member variation is drawn from. */
-  public readonly seed = 1415;
+  public readonly seed: number = 1415;
 
   /**
    * How far the unit advances when a shot puts it in motion, in metres.
@@ -66,7 +74,7 @@ export class Army extends AutoMovieSubjectGroup<
    * `@ttsc/evidence` does not yet select a class field as a unit
    * (samchon/ttsc#1121). The instance's tag answers for it until then.
    */
-  public readonly advanceMetres = 2;
+  public readonly advanceMetres: number = 2;
 
   public members(): readonly ArmyMember[] {
     return [armyHero];

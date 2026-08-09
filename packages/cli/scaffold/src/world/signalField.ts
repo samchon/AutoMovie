@@ -64,7 +64,7 @@ export class SignalGround extends WorldPiece {
   public readonly id = "ground";
 
   /** Clear ground kept beyond the farthest member, in metres. */
-  public readonly margin = 1;
+  public readonly margin: number = 1;
 
   /**
    * Half-extent of the square field, in metres.
@@ -157,7 +157,7 @@ export class SignalGroundMark extends WorldPiece {
   public readonly id = "signal-ground";
 
   /** Readable radius around the marked point, in metres. */
-  public readonly radius = 3;
+  public readonly radius: number = 3;
 
   public place(): IAutoMovieSubjectContribution {
     return {
@@ -187,7 +187,7 @@ export class BattleSmoke extends WorldPiece {
   public readonly recipe = "battle-smoke";
 
   /** Deterministic seed for the emission, declared rather than drawn. */
-  public readonly seed = 1416;
+  public readonly seed: number = 1416;
 
   public place(): IAutoMovieSubjectContribution {
     return {
