@@ -115,6 +115,25 @@ export const test_viewer_semantic_mask = (): void => {
     },
   );
 
+  // A crowd that marched in the beauty pass has to march in the mask: the
+  // replacement material carries the mesh's baked cycle, and a mesh with no
+  // cycle keeps three's own default program key so nothing pays for an
+  // injection it does not use.
+  const programKey = (mesh: THREE.Mesh): string =>
+    (mesh.material as THREE.Material).customProgramCacheKey();
+  TestValidator.equals(
+    "the mask deforms exactly as the beauty pass does",
+    {
+      cycled: programKey(built.meshes.get("tower/hall-wall")!),
+      // Three's own default key is the stringified no-op `onBeforeCompile`, so
+      // the fact asserted is that the still mesh did NOT get the injection.
+      still:
+        programKey(built.meshes.get("__automovie_space")!) ===
+        "automovie-formation-cycle",
+    },
+    { cycled: "automovie-formation-cycle", still: false },
+  );
+
   const instanceHex = (mesh: THREE.InstancedMesh, index: number): string =>
     `#${new THREE.Color()
       .fromBufferAttribute(mesh.instanceColor!, index)
