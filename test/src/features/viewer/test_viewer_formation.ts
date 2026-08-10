@@ -1,5 +1,12 @@
-import { transformFormationPoint } from "@automovie/engine";
-import { IAutoMovieModelRecipe } from "@automovie/interface";
+import {
+  composeFormationHeroTransform,
+  formationSlotPosition,
+  transformFormationPoint,
+} from "@automovie/engine";
+import {
+  IAutoMovieCompiledFormation,
+  IAutoMovieModelRecipe,
+} from "@automovie/interface";
 import {
   materializeCompiledFormation,
   materializeFormationSlot,
@@ -7,6 +14,7 @@ import {
 } from "@automovie/mcp";
 import {
   buildInstancedFormation,
+  flattenInstancedObject,
   regenerateFormationSlot,
   sampleFormationMotion,
   selectFormationLod,
@@ -51,8 +59,18 @@ const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
  * 4. Motion sampling covers every easing, before/between/after intervals,
  *    end-exclusive handoff, unrelated formations, deterministic equal starts,
  *    spacing, and base-facing point transforms.
- * 5. Missing runtime LOD models throw, while an all-hero chunk emits no zero-count
- *    instance mesh.
+ * 5. Missing runtime LOD models throw, unmergeable rigid parts are refused by
+ *    name, a regenerated hero slot names its actor, and an all-hero chunk emits
+ *    no zero-count instance mesh.
+ * 6. A re-forming unit draws the arrangement it is travelling to rather than the
+ *    one it designed, and a frame that repeats the same instant rewrites
+ *    nothing.
+ * 7. Heroes handed over bare — no host objects at all, or objects with neither a
+ *    source nor a pose root — are counted and placed from what the host did
+ *    give.
+ * 8. At a heading the rounded degree-to-radian conversion gets wrong, the renderer
+ *    still puts a chunk's mass on the exact double the engine's placement law
+ *    does, proven at an LOD boundary laid on that value from both sides.
  */
 export const test_viewer_formation = (): void => {
   const hero = propRecipe("chorus-hero", 0.6);
@@ -751,6 +769,56 @@ export const test_viewer_formation = (): void => {
     })(),
   );
 
+  // Parts that cannot merge into one geometry are refused by name rather than
+  // batched into whichever of them the merge kept. One draw call per chunk is
+  // the whole promise of this path, and a merge that quietly dropped a part
+  // would keep that promise over a figure missing a limb.
+  TestValidator.predicate(
+    "rigid parts that cannot merge into one geometry are refused",
+    (() => {
+      const mismatched = new THREE.Group();
+      const textured = new THREE.BufferGeometry();
+      textured.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
+      );
+      textured.setAttribute(
+        "uv",
+        new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1], 2),
+      );
+      const untextured = new THREE.BufferGeometry();
+      untextured.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 0, 1], 3),
+      );
+      mismatched.add(
+        new THREE.Mesh(textured, new THREE.MeshStandardMaterial()),
+      );
+      mismatched.add(
+        new THREE.Mesh(untextured, new THREE.MeshStandardMaterial()),
+      );
+      try {
+        flattenInstancedObject({ object: mismatched, bones: new Map() });
+        return false;
+      } catch (error) {
+        return (
+          error instanceof Error &&
+          error.message.includes("cannot be flattened for instancing")
+        );
+      }
+    })(),
+  );
+
+  // A compiled record spells a promoted hero as a slot that names an actor,
+  // which is the one thing the viewer's regeneration has to say differently
+  // from the placement law it otherwise defers to.
+  const heroSlot = regenerateFormationSlot(formation, 511);
+  TestValidator.equals(
+    "a regenerated hero slot names its actor instead of a generated node",
+    { actor: heroSlot.actor, node: heroSlot.node },
+    { actor: "lead", node: "lead" },
+  );
+
   const heroesOnly = materializeCompiledFormation(
     {
       ...design,
@@ -773,6 +841,342 @@ export const test_viewer_formation = (): void => {
     buildInstancedFormation({ formation: heroesOnly, models }).object.children
       .length === 0,
   );
+
+  // A re-form is the other way an arrangement moves, and the only one that
+  // changes which place a member is walking to rather than how far apart the
+  // places are. It goes through the same rewrite spacing does, so the drawn
+  // member has to be the engine's re-formed placement and not the designed one
+  // it left: a renderer that ignored the cue would keep drawing a line while
+  // the gate reports a wedge.
+  const reformed = {
+    ...motion,
+    id: "chorus-reform",
+    layout: {
+      kind: "wedge" as const,
+      // 46 rows: the smallest square that covers a 2,049-strong unit.
+      depth: 46,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    },
+    to: {
+      translation: { x: 0, y: 0, z: 0 },
+      facingOffsetDeg: 0,
+      spacingScale: { lateral: 1, depth: 1 },
+    },
+  };
+  const reforming = buildInstancedFormation({
+    formation,
+    models,
+    motions: [reformed],
+  });
+  const reformProgress = 0.5;
+  reforming.update(camera, 1_080, reformed.end * reformProgress);
+  const reformMesh = reforming.object.children.find(
+    (object): object is THREE.InstancedMesh =>
+      object instanceof THREE.InstancedMesh &&
+      object.name === `${formation.id}:0:near`,
+  )!;
+  const reformMatrix = new THREE.Matrix4();
+  reformMesh.getMatrixAt(0, reformMatrix);
+  const reformDrawn = new THREE.Vector3().setFromMatrixPosition(reformMatrix);
+  const reformExpected = transformFormationPoint(
+    formationSlotPosition(formation, 0, {
+      layout: reformed.layout,
+      progress: reformProgress,
+    }),
+    formation.anchor,
+    {
+      translation: { x: 0, y: 0, z: 0 },
+      facingOffsetDeg: 0,
+      spacingScale: { lateral: 1, depth: 1 },
+    },
+    formation.facingDeg,
+  );
+  const designedInPlace = regenerateFormationSlot(formation, 0).position;
+  const reformBefore = reformMatrix.elements.join(",");
+  reforming.update(camera, 1_080, reformed.end * reformProgress);
+  const reformRepeat = new THREE.Matrix4();
+  reformMesh.getMatrixAt(0, reformRepeat);
+  const reformStable = reformRepeat.elements.join(",") === reformBefore;
+  TestValidator.equals(
+    "a re-forming unit draws its members at the arrangement it is travelling to",
+    namedFacts([
+      [
+        "drawnWhereTheEngineReformsIt",
+        () =>
+          nclose(reformDrawn.x, reformExpected.x - formation.anchor.x, 1e-4) &&
+          nclose(reformDrawn.z, reformExpected.z - formation.anchor.z, 1e-4),
+      ],
+      // Negative twin: the designed place is metres away, so agreeing with the
+      // engine above is a claim about the cue and not about the two answers
+      // being indistinguishable.
+      [
+        "theReformActuallyMovedIt",
+        () =>
+          Math.hypot(
+            reformExpected.x - designedInPlace.x,
+            reformExpected.z - designedInPlace.z,
+          ) > 1,
+      ],
+      // A frame that changes neither spacing nor arrangement writes nothing, so
+      // the second reading at the same instant has to be the first one.
+      ["aRepeatedFrameRewritesNothing", () => reformStable],
+    ]),
+    {
+      drawnWhereTheEngineReformsIt: true,
+      theReformActuallyMovedIt: true,
+      aRepeatedFrameRewritesNothing: true,
+    },
+  );
+
+  // A host may hand over none of a unit's promoted heroes, or hand one over
+  // without saying where its own source put it. Neither is an error: the first
+  // leaves every hero to whatever else placed it and counts none of them, and
+  // the second reads the transform captured when the unit was built — which is
+  // the transform the host itself handed over — and culls from the hero object
+  // rather than from a pose root it never supplied.
+  const unhosted = buildInstancedFormation({ formation, models });
+  unhosted.update(camera, 1_080, 3);
+  const bareHero = heroObjects.get("second")!;
+  const bareSource = {
+    translation: point(bareHero.position),
+    rotation: rotation(bareHero.quaternion),
+    scale: point(bareHero.scale),
+  };
+  const captured = buildInstancedFormation({
+    formation,
+    models,
+    motions: [motion],
+    heroObjects,
+  });
+  captured.update(camera, 1_080, 3);
+  const bareExpected = composeFormationHeroTransform(
+    formation.heroes.find((hero) => hero.actor === "second")!.transform,
+    bareSource,
+    formation.anchor,
+    sampledMotion,
+    formation.facingDeg,
+  );
+  TestValidator.equals(
+    "a unit whose heroes arrive bare is still placed from what the host handed over",
+    namedFacts([
+      [
+        "noHostObjectsLeavesEveryHeroUncounted",
+        () => unhosted.stats.visible.hero === 0,
+      ],
+      [
+        "theCrowdIsStillAccountedFor",
+        () =>
+          unhosted.stats.visible.near +
+            unhosted.stats.visible.far +
+            unhosted.stats.culled ===
+          formation.anonymousCount,
+      ],
+      [
+        "aSourcelessHeroReadsItsBuildTimeCapture",
+        () =>
+          nclose(bareHero.position.x, bareExpected.translation.x, 1e-9) &&
+          nclose(bareHero.position.z, bareExpected.translation.z, 1e-9),
+      ],
+      // Negative twin: the composed place is not merely the transform that was
+      // captured, so agreeing with it is a claim about the composition.
+      [
+        "theCaptureWasActuallyComposed",
+        () =>
+          Math.hypot(
+            bareExpected.translation.x - bareSource.translation.x,
+            bareExpected.translation.z - bareSource.translation.z,
+          ) > 1,
+      ],
+    ]),
+    {
+      noHostObjectsLeavesEveryHeroUncounted: true,
+      theCrowdIsStillAccountedFor: true,
+      aSourcelessHeroReadsItsBuildTimeCapture: true,
+      theCaptureWasActuallyComposed: true,
+    },
+  );
+
+  // A heading is where a renderer and the law it renders can quietly part. The
+  // viewer turns a unit's interior itself, and `deg * (PI / 180)` is not the
+  // same double as `(deg * PI) / 180`: three degrees separates them, and the
+  // separation is one unit in the last place, so it is invisible in a pixel and
+  // gone the moment an instance matrix rounds to float32. Where it survives is
+  // the accounting the viewer keeps in doubles: a chunk's world centre, and the
+  // tier that centre's distance selects. A column puts that centre hundreds of
+  // metres off the anchor while the camera stands twenty away, so one ulp of
+  // the centre is several ulps of the distance, and the engine's own placement
+  // of the same mass is the oracle the boundary is laid on. The case is run
+  // from both sides of that boundary, so a renderer landing on any other double
+  // falls off one side or the other whichever way it is wrong.
+  const parityDesign = {
+    ...formationDesign({
+      kind: "column",
+      ranks: 8,
+      files: 1_024,
+      spacing: { lateral: 0.8, depth: 0.9 },
+    }),
+    id: "parity",
+    modelRecipe: hero.id,
+    count: 8_192,
+    facingDeg: 3,
+    heroOverrides: [],
+  };
+  const parityFormation = materializeCompiledFormation(parityDesign, recipes);
+  const parityChunk = parityFormation.chunks[0]!;
+  const parityViewportHeight = 1_080;
+  const parityCentre = transformFormationPoint(
+    parityChunk.centroid,
+    parityFormation.anchor,
+    {
+      translation: { x: 0, y: 0, z: 0 },
+      facingOffsetDeg: 0,
+      spacingScale: { lateral: 1, depth: 1 },
+    },
+    parityFormation.facingDeg,
+  );
+  const parityCamera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 4_000);
+  parityCamera.position.set(
+    parityCentre.x,
+    parityCentre.y + 6,
+    parityCentre.z + 20,
+  );
+  parityCamera.lookAt(parityCentre.x, parityCentre.y, parityCentre.z);
+  parityCamera.updateMatrixWorld(true);
+  parityCamera.updateProjectionMatrix();
+  // The same mass, turned the way `THREE.MathUtils.degToRad` turns it. It is
+  // never asserted as an expectation, only as the answer the renderer must NOT
+  // agree with, which is what keeps the fixture from passing by coincidence.
+  const roundedCentre = ((): { x: number; y: number; z: number } => {
+    const radians = THREE.MathUtils.degToRad(parityFormation.facingDeg);
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+    const deltaX = parityChunk.centroid.x - parityFormation.anchor.x;
+    const deltaZ = parityChunk.centroid.z - parityFormation.anchor.z;
+    const localX = deltaX * cosine - deltaZ * sine;
+    const localZ = deltaX * sine + deltaZ * cosine;
+    return {
+      x: parityFormation.anchor.x + localX * cosine + localZ * sine,
+      y: parityChunk.centroid.y,
+      z: parityFormation.anchor.z - localX * sine + localZ * cosine,
+    };
+  })();
+  const effectiveDistanceTo = (centre: {
+    x: number;
+    y: number;
+    z: number;
+  }): number => {
+    const world = new THREE.Vector3(centre.x, centre.y, centre.z);
+    const eye = new THREE.Vector3();
+    parityCamera.getWorldPosition(eye);
+    const distance = Math.max(0.001, eye.distanceTo(world));
+    const depth = Math.max(
+      0.001,
+      -world.clone().applyMatrix4(parityCamera.matrixWorldInverse).z,
+    );
+    const halfY = Math.tan(THREE.MathUtils.degToRad(parityCamera.fov) / 2);
+    const projectedPixels =
+      (parityFormation.projectionRadius * parityViewportHeight) /
+      (halfY * depth);
+    return distance * (24 / Math.max(1, projectedPixels));
+  };
+  const parityBoundary = effectiveDistanceTo(parityCentre);
+  const atBoundary = buildInstancedFormation({
+    formation: withNearBoundary(parityFormation, parityBoundary),
+    models,
+  });
+  atBoundary.update(parityCamera, parityViewportHeight);
+  const pastBoundary = buildInstancedFormation({
+    formation: withNearBoundary(
+      parityFormation,
+      previousDouble(parityBoundary),
+    ),
+    models,
+  });
+  pastBoundary.update(parityCamera, parityViewportHeight);
+  // The camera stands beside chunk zero and every other chunk of the column is
+  // hundreds of metres down the line, so the tier is read off that one chunk's
+  // own batches rather than off a total the other chunks also contribute to.
+  const tierVisible = (
+    unit: ReturnType<typeof buildInstancedFormation>,
+    tier: string,
+  ): boolean =>
+    unit.object.children.some(
+      (object) =>
+        object instanceof THREE.InstancedMesh &&
+        object.name === `${parityFormation.id}:${parityChunk.index}:${tier}` &&
+        object.visible,
+    );
+  TestValidator.equals(
+    "the renderer places a unit's mass on the engine's own double, not a rounded one",
+    namedFacts([
+      // Two tiers, the near one bounded and the far one open, so the boundary
+      // below is the only thing deciding which of the two is drawn.
+      [
+        "boundedNearOpenFar",
+        () =>
+          parityFormation.lod.map((lod) => lod.tier).join(",") === "near,far" &&
+          parityFormation.lod[1]!.maxDistance === null,
+      ],
+      [
+        "boundaryApplied",
+        () =>
+          withNearBoundary(parityFormation, parityBoundary).lod.find(
+            (lod) => lod.tier === "near",
+          )?.maxDistance === parityBoundary,
+      ],
+      // The witness that this heading discriminates at all: the rounded
+      // conversion puts the same mass at a different effective distance, so
+      // neither comparison below can pass by coincidence.
+      [
+        "roundedConversionDiffers",
+        () => effectiveDistanceTo(roundedCentre) !== parityBoundary,
+      ],
+      // Exactly at the boundary the comparison is `<=`, so the near tier is
+      // kept; one double below it, the near tier is out and the open far tier
+      // is what remains. A centre off by any amount at all fails one of the two.
+      ["atBoundaryStaysNear", () => tierVisible(atBoundary, "near")],
+      ["atBoundaryDropsFar", () => tierVisible(atBoundary, "far") === false],
+      ["pastBoundaryFallsToFar", () => tierVisible(pastBoundary, "far")],
+      [
+        "pastBoundaryDropsNear",
+        () => tierVisible(pastBoundary, "near") === false,
+      ],
+    ]),
+    {
+      boundedNearOpenFar: true,
+      boundaryApplied: true,
+      roundedConversionDiffers: true,
+      atBoundaryStaysNear: true,
+      atBoundaryDropsFar: true,
+      pastBoundaryFallsToFar: true,
+      pastBoundaryDropsNear: true,
+    },
+  );
+};
+
+/** The same compiled unit with its bounded tier ending at `maxDistance`. */
+const withNearBoundary = (
+  formation: IAutoMovieCompiledFormation,
+  maxDistance: number,
+): IAutoMovieCompiledFormation => ({
+  ...formation,
+  lod: formation.lod.map((lod) =>
+    lod.tier === "near" ? { ...lod, maxDistance } : lod,
+  ),
+});
+
+/**
+ * The largest double strictly below a positive finite `value`.
+ *
+ * A boundary one unit in the last place away is the whole point: the two
+ * conversions differ by about that much, so a tolerance would hide exactly what
+ * the case exists to see.
+ */
+const previousDouble = (value: number): number => {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, value);
+  view.setBigUint64(0, view.getBigUint64(0) - 1n);
+  return view.getFloat64(0);
 };
 
 const point = (value: { x: number; y: number; z: number }) => ({

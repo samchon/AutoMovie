@@ -41,6 +41,9 @@ import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
  *    keeps the viewer's anonymous inventory adding up.
  * 5. The same compiled crowd and the same cues reproduce the same instance
  *    matrices.
+ * 6. A cue naming a member the batches do not hold — a promoted hero, or an index
+ *    past the unit — singles nobody out, and a frame drawn without a time reads
+ *    the cues at zero.
  */
 export const test_viewer_formation_slot_motion = (): void => {
   const recipe: IAutoMovieModelRecipe = {
@@ -394,6 +397,84 @@ export const test_viewer_formation_slot_motion = (): void => {
     {
       everySampledTimeAgreesBetweenTwoBuilds: true,
       theTimesAreNotAllTheSameDrawing: true,
+    },
+  );
+
+  // A cue may name a member no instance buffer holds. A promoted hero is a
+  // scene node rather than an instance, and an index past the unit is not a
+  // member at all; the compiler's own gate refuses both, so what is left here
+  // is that the renderer locates nobody rather than writing into whatever
+  // index the arithmetic happened to land on.
+  const withHero = materializeCompiledFormation(
+    { ...design, heroOverrides: [{ slot: 3, actor: "captain" }] },
+    recipes,
+  );
+  const heroObject = new THREE.Object3D();
+  const strayCues: IAutoMovieFormationSlotMotion[] = [
+    { ...aside, id: "crowd-hero-aside", slots: [3] },
+    { ...aside, id: "crowd-past-the-end", slots: [design.count + 4] },
+  ];
+  const strayBuild = (cues: readonly IAutoMovieFormationSlotMotion[]) =>
+    buildInstancedFormation({
+      formation: withHero,
+      models,
+      motions: [advance],
+      slotMotions: cues,
+      heroObjects: new Map([["captain", heroObject]]),
+    });
+  const strayed = strayBuild(strayCues);
+  const unstrayed = strayBuild([]);
+  const heroMesh = (built: ReturnType<typeof strayBuild>) =>
+    built.object.children.find(
+      (object): object is THREE.InstancedMesh =>
+        object instanceof THREE.InstancedMesh,
+    )!;
+  const heroMatrices = (built: ReturnType<typeof strayBuild>): string =>
+    Array.from({ length: withHero.anonymousCount }, (_, index) => {
+      const matrix = new THREE.Matrix4();
+      heroMesh(built).getMatrixAt(index, matrix);
+      return matrix.elements.join(",");
+    }).join("|");
+  strayed.update(camera, 720, 3);
+  unstrayed.update(camera, 720, 3);
+  const strayedDrawing = heroMatrices(strayed);
+  // Drawn with no time at all: the cues are read at zero, which for these two
+  // is before they start, so the crowd stands exactly where a frame at zero
+  // puts it rather than where the frame just before it did.
+  const timeless = strayBuild([aside]);
+  timeless.update(camera, 720);
+  const timelessDrawing = heroMatrices(timeless);
+  const zeroed = strayBuild([aside]);
+  zeroed.update(camera, 720, 0);
+  TestValidator.equals(
+    "a cue naming a member no batch holds singles nobody out",
+    namedFacts([
+      [
+        "aHeroAndAnOutOfRangeIndexChangeNothing",
+        () => strayedDrawing === heroMatrices(unstrayed),
+      ],
+      ["nobodyIsCountedRemoved", () => strayed.stats.removed === 0],
+      [
+        "theHeroIsStillPromotedOutOfTheBatch",
+        () => heroMesh(strayed).count === withHero.anonymousCount,
+      ],
+      [
+        "aFrameWithNoTimeReadsTheCuesAtZero",
+        () => timelessDrawing === heroMatrices(zeroed),
+      ],
+      // Negative twin: zero is not simply every time, so agreeing with it is a
+      // claim about the default and not about the cue doing nothing.
+      [
+        "andZeroIsNotJustAnyTime",
+        () => timelessDrawing !== heroMatrices(strayed),
+      ],
+    ]),
+    {
+      aHeroAndAnOutOfRangeIndexChangeNothing: true,
+      nobodyIsCountedRemoved: true,
+      theHeroIsStillPromotedOutOfTheBatch: true,
+      aFrameWithNoTimeReadsTheCuesAtZero: true,
+      andZeroIsNotJustAnyTime: true,
     },
   );
 };
