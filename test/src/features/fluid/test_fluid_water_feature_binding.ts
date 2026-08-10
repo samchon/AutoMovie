@@ -69,7 +69,8 @@ const withoutCells = (): IAutoMovieBuiltEnvironment => {
  *    duplicated feature ids, a duplicated rim, and duplicated domain ids.
  * 4. The closed vocabularies are closed: an unknown kind and an unknown mode.
  * 5. A domain that is invalid on its own terms fails the binding too, with its
- *    violations re-pathed onto the domain that carries them.
+ *    violations re-pathed onto the domain that carries them and its kind,
+ *    severity and measured overshoot carried through unchanged.
  * 6. Geometry: a lattice standing outside its basin is refused, and a basin
  *    declared as a purely semantic container — a space with no convex cells —
  *    is deliberately not geometrically checked.
@@ -186,6 +187,22 @@ export const test_fluid_water_feature_binding = (): void => {
     features: [waterFeature()],
     domains: [pondDomain({ depth: new Array(16).fill(-1) })],
   });
+  const unstable = validateWaterFeatures({
+    environment,
+    features: [waterFeature()],
+    domains: [
+      pondDomain({
+        solver: {
+          fixedStepSeconds: 1,
+          gravity: 8,
+          drag: 0,
+          dryDepth: 0,
+          referenceDepth: 2,
+          maxSteps: 100,
+        },
+      }),
+    ],
+  });
   TestValidator.equals(
     "closed vocabularies stay closed and a broken domain breaks its binding",
     namedFacts([
@@ -201,8 +218,24 @@ export const test_fluid_water_feature_binding = (): void => {
         "domainViolations",
         () => hasViolation(broken, "range", "$input.domains[0].depth[0]"),
       ],
+      [
+        "overshootSurvives",
+        () =>
+          unstable.success === false &&
+          unstable.violations.some(
+            (item) =>
+              item.path === "$input.domains[0].solver.fixedStepSeconds" &&
+              item.severity === "error" &&
+              nclose(item.overshoot ?? -1, 1 * 4 * Math.sqrt(8) - 1, 1e-9),
+          ),
+      ],
     ]),
-    { kind: true, mode: true, domainViolations: true },
+    {
+      kind: true,
+      mode: true,
+      domainViolations: true,
+      overshootSurvives: true,
+    },
   );
 
   const outside = validateWaterFeatures({

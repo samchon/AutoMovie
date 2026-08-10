@@ -71,14 +71,16 @@ export const validateWaterFeatures = (props: {
       );
     seenDomains.add(domain.id);
     const validation = validateFluidDomain({ domain });
+    // Re-path rather than re-word: the domain's own violation keeps its kind,
+    // its measured overshoot and its severity, so a binding report reads as the
+    // same finding `validateFluidDomain` would give, at the address the binding
+    // knows the domain by.
     if (validation.success === false)
       for (const item of validation.violations)
-        out.push(
-          item.kind,
-          item.path.replace("$input", `${root}.domains[${index}]`),
-          item.expected,
-          item.value,
-        );
+        out.items.push({
+          ...item,
+          path: item.path.replace("$input", `${root}.domains[${index}]`),
+        });
   });
 
   const seenFeatures = new Set<string>();
