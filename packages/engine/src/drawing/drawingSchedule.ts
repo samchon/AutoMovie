@@ -16,6 +16,7 @@ import {
 } from "./drawingOpening";
 import {
   autoMovieDrawingPartTriangles,
+  autoMovieDrawingRange,
   autoMovieDrawingWorldMatrices,
   roundAutoMovieDrawingScalar,
   transformAutoMovieDrawingTriangles,
@@ -256,10 +257,11 @@ const connectorOccurrences = (
       kind: connector.kind,
       model: null,
       width: roundAutoMovieDrawingScalar(
-        Math.min(...sections.map((section) => section.width)),
+        autoMovieDrawingRange(sections.map((section) => section.width)).min,
       ),
       height: roundAutoMovieDrawingScalar(
-        Math.min(...sections.map((section) => section.clearHeight)),
+        autoMovieDrawingRange(sections.map((section) => section.clearHeight))
+          .min,
       ),
       basis: "profile" as const,
     };

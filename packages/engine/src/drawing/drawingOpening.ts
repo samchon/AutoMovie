@@ -14,6 +14,7 @@ import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import {
   IAutoMovieDrawingTriangle,
+  autoMovieDrawingRange,
   roundAutoMovieDrawingScalar,
 } from "./drawingProjection";
 
@@ -338,5 +339,7 @@ const arcOf = (
   };
 };
 
-const span = (values: readonly number[]): number =>
-  Math.max(...values) - Math.min(...values);
+const span = (values: readonly number[]): number => {
+  const range = autoMovieDrawingRange(values);
+  return range.max - range.min;
+};

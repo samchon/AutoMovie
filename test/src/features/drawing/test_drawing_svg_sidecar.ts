@@ -41,7 +41,9 @@ import { namedFacts, throwsError } from "../internal/predicates";
  *    element with their own status.
  * 5. Text is XML-escaped, so a note containing markup is a note and not markup.
  * 6. Every gap the drawing declared reaches the sheet.
- * 7. A drawing with nothing on it is a sheet of margins rather than a crash.
+ * 7. A drawing with nothing on it is a sheet of margins rather than a crash, and a
+ *    sheet whose only content is a dimension and a note is sized to hold them
+ *    instead of pushing them off the page.
  * 8. The same drawing serializes to the same bytes twice.
  * 9. A pen that does not belong to the drawing, and a pen with a bad weight, dash
  *    or text height, are each refused at their own message.
@@ -349,6 +351,95 @@ export const test_drawing_svg_sidecar = (): void => {
         .length,
     ],
     [true, 0],
+  );
+
+  // A sheet whose only content is its own annotation is still that sheet's size.
+  const slabFeature = (
+    kind: "vertex" | "centroid",
+    index: number,
+    element: string,
+  ) => ({ element, part: null, kind, index, count: null }) as const;
+  const noteOnly = (element: string): IAutoMovieDrawingView =>
+    drawingView({
+      id: "note-only",
+      // Nothing is drafted and no cell is sectioned, so the linework and the
+      // regions contribute no extent at all and the annotation is the whole of
+      // what the sheet has to hold.
+      elementKinds: ["nothing-of-this-kind"],
+      spaces: ["roof-deck"],
+      dimensions: [
+        {
+          id: "slab-diagonal",
+          from: slabFeature("vertex", 0, element),
+          to: slabFeature("vertex", 7, element),
+          measure: "page",
+        },
+      ],
+      annotations: [
+        {
+          id: "slab-note",
+          text: "screed",
+          target: slabFeature("centroid", 0, element),
+        },
+      ],
+    });
+  const noteOnlySheet = (element: string): string[] =>
+    autoMovieDrawingToSvg({
+      drawing: deriveAutoMovieDrawing({
+        environment,
+        view: noteOnly(element),
+      }),
+      view: noteOnly(element),
+    }).split("\n");
+  const annotated = noteOnlySheet("floor-slab");
+  TestValidator.equals(
+    "a sheet whose only content is its annotation is sized to hold it",
+    namedFacts([
+      [
+        "the page is the annotated span at 1:50 plus a margin on every side",
+        () =>
+          annotated[0]!.startsWith(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="220.000mm" height="140.000mm" viewBox="0 0 220.000 140.000"',
+          ),
+      ],
+      [
+        // The slab's far corners are page (0, 0) and (10, -6) and its centre is
+        // page (5, -3); at 1:50 with a 10 mm margin those are the two ends of
+        // the sheet's own diagonal and its middle, so nothing sits outside the
+        // viewBox the way it did when the box was taken from linework alone.
+        "the dimension runs corner to corner of the page it sized",
+        () =>
+          annotated.some(
+            (line) =>
+              line.includes('data-id="slab-diagonal"') &&
+              line.includes(
+                'x1="10.000" y1="10.000" x2="210.000" y2="130.000"',
+              ),
+          ),
+      ],
+      [
+        "the note sits at the middle of that page",
+        () =>
+          annotated.some(
+            (line) =>
+              line.includes('data-id="slab-note"') &&
+              line.includes('x="110.000" y="70.000"'),
+          ),
+      ],
+      [
+        "a target that resolves to nothing sizes nothing, so the sheet is margins",
+        () =>
+          noteOnlySheet("no-such-slab")[0]!.startsWith(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="20.000mm" height="20.000mm"',
+          ),
+      ],
+    ]),
+    {
+      "the page is the annotated span at 1:50 plus a margin on every side": true,
+      "the dimension runs corner to corner of the page it sized": true,
+      "the note sits at the middle of that page": true,
+      "a target that resolves to nothing sizes nothing, so the sheet is margins": true,
+    },
   );
 
   TestValidator.equals(

@@ -3,6 +3,7 @@ import {
   autoMovieDrawingFrame,
   autoMovieDrawingHasCut,
   autoMovieDrawingPartTriangles,
+  autoMovieDrawingRange,
   autoMovieDrawingSilhouetteEdges,
   autoMovieDrawingWorldMatrices,
   deriveAutoMovieDrawing,
@@ -13,6 +14,7 @@ import {
   IAutoMovieBuiltEnvironment,
   IAutoMovieDrawing,
   IAutoMovieDrawingLine,
+  IAutoMovieDrawingView,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -64,12 +66,15 @@ const byText = (left: string, right: string): number =>
  * 7. The world transform the drawing derives is the world transform
  *    `lowerBuiltEnvironment` stages, element for element.
  * 8. A boundary that carries a face and no element draws itself as a closed solid;
- *    one realized by an element does not, so no wall is drafted twice.
+ *    one realized by an element does not, so no wall is drafted twice; and a
+ *    separation between two rooms is drawn on both of their sheets.
  * 9. An element citing a runtime model, an element with no geometry and a view
  *    that draws nothing are each reported rather than silently omitted.
  * 10. A degenerate view — zero direction, zero up, parallel up, bad scale, bad
  *     depth, non-finite origin — is refused at its own message, and an invalid
  *     design is refused before anything is drawn.
+ * 11. A fifty-thousand-triangle model is sectioned rather than overflowing the call
+ *     stack, and the fold that makes that true answers where a spread cannot.
  */
 export const test_drawing_plan_derivation = (): void => {
   const environment = drawingEnvironment();
@@ -548,6 +553,60 @@ export const test_drawing_plan_derivation = (): void => {
     plan.lines.some((line) => line.owner === "north"),
     false,
   );
+  const parapetLines = (
+    where: IAutoMovieBuiltEnvironment,
+    overrides: Partial<IAutoMovieDrawingView>,
+  ): IAutoMovieDrawingLine[] =>
+    deriveAutoMovieDrawing({
+      environment: where,
+      view: drawingView({ origin: { x: 0, y: 3.05, z: 0 }, ...overrides }),
+    }).lines.filter((line) => line.owner === "parapet");
+  TestValidator.equals(
+    "a separation between two rooms is drawn on both of their sheets",
+    namedFacts([
+      [
+        "either separated room, and their parent, draws the wall between them",
+        () =>
+          ["hall", "roof-deck", "site"].every(
+            (space) =>
+              parapetLines(partyParapet(environment), {
+                id: `party-${space}`,
+                spaces: [space],
+              }).length === 8,
+          ),
+      ],
+      [
+        "the wall carries its own first space on both sheets, not the filter's",
+        () =>
+          ["hall", "roof-deck"].every((space) =>
+            parapetLines(partyParapet(environment), {
+              id: `party-space-${space}`,
+              spaces: [space],
+            }).every((line) => line.space === "hall"),
+          ),
+      ],
+      [
+        "a room the separation does not touch still does not draw it",
+        () =>
+          parapetLines(environment, { id: "hall-only", spaces: ["hall"] })
+            .length === 0,
+      ],
+      [
+        "a discipline that draws no parapet draws none of it either",
+        () =>
+          parapetLines(partyParapet(environment), {
+            id: "party-walls-only",
+            elementKinds: ["wall"],
+          }).length === 0,
+      ],
+    ]),
+    {
+      "either separated room, and their parent, draws the wall between them": true,
+      "the wall carries its own first space on both sheets, not the filter's": true,
+      "a room the separation does not touch still does not draw it": true,
+      "a discipline that draws no parapet draws none of it either": true,
+    },
+  );
 
   TestValidator.equals(
     "a room finished throughout in one material names it, whatever else it holds",
@@ -953,6 +1012,85 @@ export const test_drawing_plan_derivation = (): void => {
       "negative zero rounds to zero so one coordinate has one spelling": true,
     },
   );
+
+  // 11. A building-sized model.
+  TestValidator.equals(
+    "a real model's worth of triangles is sectioned rather than overflowing the stack",
+    namedFacts([
+      [
+        "the fold answers over a run no spread could pass as arguments",
+        () => {
+          // `Math.min(...values)` passes one argument per element and gives up
+          // somewhere above a hundred thousand of them. The exact ceiling is
+          // the platform's own stack, so the twin below is what pins that this
+          // run is genuinely past it rather than merely large.
+          const values = Array.from({ length: 200_000 }, (_, index) =>
+            index === 12_345 ? -7 : index,
+          );
+          const range = autoMovieDrawingRange(values);
+          return (
+            range.min === -7 &&
+            range.max === 199_999 &&
+            throwsError(() => Math.min(...values), "call stack")
+          );
+        },
+      ],
+      [
+        "an empty run folds to the identities rather than to a value",
+        () => {
+          const range = autoMovieDrawingRange([]);
+          return (
+            range.min === Number.POSITIVE_INFINITY &&
+            range.max === Number.NEGATIVE_INFINITY
+          );
+        },
+      ],
+      [
+        "a single value is both extremes, and an unsorted run keeps both ends",
+        () => {
+          const one = autoMovieDrawingRange([4]);
+          const many = autoMovieDrawingRange([3, 1, 2]);
+          return (
+            one.min === 4 && one.max === 4 && many.min === 1 && many.max === 3
+          );
+        },
+      ],
+      [
+        "a fifty-thousand-triangle model is sectioned at its own true radius",
+        () => {
+          // 160 bands is 50,880 triangles, so the classifier folds 152,640
+          // corner distances: comfortably past the ceiling a spread has.
+          const cut = deriveAutoMovieDrawing({
+            environment: hugeMesh(environment, 160),
+            view: drawingView({ id: "huge" }),
+          }).lines.filter(
+            (line) => line.owner === "door-leaf" && line.role === "cut",
+          );
+          const across = autoMovieDrawingRange(
+            cut.flatMap((line) => [line.from.x, line.to.x]),
+          );
+          // The leaf becomes a unit sphere centred at world (1.5, 1.05, 0.1),
+          // and the plan cuts it 0.15 m above that centre, so the section is a
+          // circle of radius sqrt(1 - 0.15^2) about page x = 1.5. The drafted
+          // ring is the inscribed polygon, so it falls short of that circle by
+          // the sagitta of one band and by no more.
+          const radius = Math.sqrt(1 - 0.15 * 0.15);
+          const sagitta = radius * (1 - Math.cos(Math.PI / 160));
+          return (
+            cut.length >= 160 &&
+            nclose(across.min, 1.5 - radius, sagitta) &&
+            nclose(across.max, 1.5 + radius, sagitta)
+          );
+        },
+      ],
+    ]),
+    {
+      "the fold answers over a run no spread could pass as arguments": true,
+      "an empty run folds to the identities rather than to a value": true,
+      "a single value is both extremes, and an unsorted run keeps both ends": true,
+      "a fifty-thousand-triangle model is sectioned at its own true radius": true,
+    },
+  );
 };
 
 /** A throwaway model whose only job is to carry one probe part. */
@@ -1233,6 +1371,89 @@ const oneLayer = (
     element.id === "footing" ? { ...element, kind: "slab" } : element,
   ),
 });
+
+/** The same design with the parapet separating the hall from the deck above it. */
+const partyParapet = (
+  environment: IAutoMovieBuiltEnvironment,
+): IAutoMovieBuiltEnvironment => ({
+  ...environment,
+  boundaries: environment.boundaries.map((boundary) =>
+    boundary.id === "parapet"
+      ? { ...boundary, spaces: ["hall", "roof-deck"] }
+      : boundary,
+  ),
+});
+
+/**
+ * The same design with the door leaf replaced by a UV sphere of `bands` bands,
+ * which is `2 * bands * (bands - 1)` triangles.
+ *
+ * Closed rather than a heap of loose faces because a real imported model is
+ * closed, and a sphere because its section is one ring however finely it is
+ * tessellated: the case has to put a building's worth of geometry through the
+ * derivation without also asking the suite to sort a hundred thousand strokes.
+ */
+const hugeMesh = (
+  environment: IAutoMovieBuiltEnvironment,
+  bands: number,
+): IAutoMovieBuiltEnvironment => {
+  const positions: number[] = [0, 1, 0];
+  for (let ring = 1; ring < bands; ++ring) {
+    const polar = (Math.PI * ring) / bands;
+    for (let step = 0; step < bands; ++step) {
+      const azimuth = (2 * Math.PI * step) / bands;
+      positions.push(
+        Math.sin(polar) * Math.cos(azimuth),
+        Math.cos(polar),
+        Math.sin(polar) * Math.sin(azimuth),
+      );
+    }
+  }
+  positions.push(0, -1, 0);
+  const south = positions.length / 3 - 1;
+  const at = (ring: number, step: number): number =>
+    1 + (ring - 1) * bands + (step % bands);
+  const indices: number[] = [];
+  for (let step = 0; step < bands; ++step)
+    indices.push(0, at(1, step + 1), at(1, step));
+  for (let ring = 1; ring + 1 < bands; ++ring)
+    for (let step = 0; step < bands; ++step)
+      indices.push(
+        at(ring, step),
+        at(ring, step + 1),
+        at(ring + 1, step),
+        at(ring, step + 1),
+        at(ring + 1, step + 1),
+        at(ring + 1, step),
+      );
+  for (let step = 0; step < bands; ++step)
+    indices.push(south, at(bands - 1, step), at(bands - 1, step + 1));
+  return {
+    ...environment,
+    models: environment.models.map((model) =>
+      model.id === "leaf"
+        ? {
+            ...model,
+            parts: [
+              {
+                ...model.parts[0]!,
+                geometry: {
+                  type: "mesh" as const,
+                  mesh: {
+                    positions,
+                    normals: null,
+                    uvs: null,
+                    indices,
+                    skin: null,
+                  },
+                },
+              },
+            ],
+          }
+        : model,
+    ),
+  };
+};
 
 /** The same design with the slab's model carrying an empty mesh. */
 const emptyGeometry = (

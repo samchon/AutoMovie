@@ -121,8 +121,12 @@ export interface IAutoMovieDrawingOpeningMark {
   basis: AutoMovieDrawingOpeningBasis;
 
   /**
-   * The void's outline projected onto the page, or empty when `basis` is
-   * `none`.
+   * The void's own outline projected onto the page, and empty for every other
+   * basis.
+   *
+   * A `fill` mark carries a size and no outline on purpose: it measures the
+   * leaf standing in the hole, and drafting that leaf's extent as the void's
+   * shape would put a rectangle on the sheet the building has no hole for.
    *
    * Arc edges are drafted as chords at a fixed density, which is what vector
    * linework is; the dimensions below are computed from the arcs themselves and
@@ -239,7 +243,15 @@ export interface IAutoMovieDrawing {
   /** Page basis the view resolved to. */
   frame: IAutoMovieDrawingFrame;
 
-  /** Page bounding box of every drawn line and region, or `null` when empty. */
+  /**
+   * Page bounding box of everything the sheet draws, or `null` when it draws
+   * nothing.
+   *
+   * Linework, region outlines, opening voids and every dimension and note that
+   * resolved. The annotation is inside the box on purpose: a dimension string
+   * sits beside the plan rather than across it, and a page sized from the
+   * geometry alone would put the sheet's own annotation off the paper.
+   */
   extent: IAutoMovieDrawingExtent | null;
 
   /** Drafted segments, in canonical order. */
@@ -248,7 +260,16 @@ export interface IAutoMovieDrawing {
   /** Logical volume cross-sections, in canonical order; empty for an elevation. */
   regions: IAutoMovieDrawingRegion[];
 
-  /** Every opening of every drawn boundary, in canonical order. */
+  /**
+   * Every opening whose host boundary reaches a space this view covers, in
+   * canonical order.
+   *
+   * The view's element-kind filter deliberately does not reach these. A mark is
+   * how a sheet and the design are reconciled by id, so a lighting plan of a
+   * room still answers for the room's doors rather than reporting a room with
+   * none; what the kind filter decides is which linework is drafted, not which
+   * openings exist.
+   */
   openings: IAutoMovieDrawingOpeningMark[];
 
   /** Resolved dimensions, in the order the view authored them. */

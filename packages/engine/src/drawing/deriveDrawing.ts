@@ -42,6 +42,7 @@ import {
   autoMovieDrawingPartTriangles,
   autoMovieDrawingPlaneDistance,
   autoMovieDrawingPolygonArea,
+  autoMovieDrawingRange,
   autoMovieDrawingSilhouetteEdges,
   autoMovieDrawingWorldMatrices,
   clipAutoMovieDrawingTriangles,
@@ -138,10 +139,19 @@ export const deriveAutoMovieDrawing = (props: {
     // face and nothing else is the only thing in the design that knows where
     // that separation is, so it draws itself.
     if (boundary.face === undefined || boundary.elements.length !== 0) continue;
+    // A separation belongs to both the spaces it separates, so a view filtered
+    // to either of them draws it. Asking only about the first would drop the
+    // party wall from every sheet that names the room on the far side of it,
+    // and which side that is would be decided by the order the design happened
+    // to list the two rooms in. The openings on the same boundary already read
+    // it that way, and the boundary must not disagree with its own openings.
+    if (!boundary.spaces.some((candidate) => drawn(boundary.kind, candidate)))
+      continue;
     // Validation already refused a boundary that cites no space, so the first
-    // one always exists and drafting it needs no absent case.
+    // one always exists and drafting it needs no absent case. The line carries
+    // that first space rather than whichever one the filter reached, so a wall
+    // reads the same on both of its rooms' sheets.
     const space = boundary.spaces[0]!;
-    if (!drawn(boundary.kind, space)) continue;
     drawables.push({
       id: boundary.id,
       kind: boundary.kind,
@@ -152,21 +162,25 @@ export const deriveAutoMovieDrawing = (props: {
 
   for (const drawable of drawables) {
     if (drawable.triangles.length === 0) continue;
-    const distances = drawable.triangles.flatMap((triangle) =>
-      [triangle.a, triangle.b, triangle.c].map((corner) =>
-        autoMovieDrawingPlaneDistance(frame, corner),
+    // Signed distances from the cut plane, positive on the viewer's side, so
+    // the smallest is the deepest corner of the thing and the largest the one
+    // closest to the viewer. Every band below is a question about one of those
+    // two and about nothing in between.
+    const distance = autoMovieDrawingRange(
+      drawable.triangles.flatMap((triangle) =>
+        [triangle.a, triangle.b, triangle.c].map((corner) =>
+          autoMovieDrawingPlaneDistance(frame, corner),
+        ),
       ),
     );
-    const nearest = Math.min(...distances);
-    const furthest = Math.max(...distances);
-    if (cut && nearest > AUTOMOVIE_DRAWING_EPSILON) {
+    if (cut && distance.min > AUTOMOVIE_DRAWING_EPSILON) {
       // Wholly on the viewer's side: the cut removed it, and it is drafted as
       // overhead only while it stays inside the band the view declared.
-      if (view.overhead === null || nearest > view.overhead) continue;
+      if (view.overhead === null || distance.min > view.overhead) continue;
       push(drafted, drawable, "overhead", frame, drawable.triangles, cut);
       continue;
     }
-    if (view.depth !== null && furthest < -view.depth) {
+    if (view.depth !== null && distance.max < -view.depth) {
       push(drafted, drawable, "hidden", frame, drawable.triangles, cut);
       continue;
     }
@@ -399,7 +413,7 @@ export const deriveAutoMovieDrawing = (props: {
     scale: view.scale,
     environment: environment.id,
     frame: roundFrame(frame),
-    extent: extentOf(lines, regions, openings),
+    extent: extentOf(lines, regions, openings, dimensions, annotations),
     lines,
     regions,
     openings,
@@ -640,26 +654,41 @@ const compareLines = (
   comparePoints(left.from, right.from) ||
   comparePoints(left.to, right.to);
 
+/**
+ * The page box that holds everything the sheet puts on paper.
+ *
+ * Dimensions and notes count, and they are why this is not simply the box
+ * around the linework. A dimension string is drawn beside the plan rather than
+ * across it and a note is led out past the wall it describes, so a box taken
+ * from the geometry alone is a sheet whose own annotation hangs off the edge of
+ * it - and the serializer sizes the page from this box, so what falls outside
+ * is not merely close to the border, it is outside the viewBox and gone. A
+ * stale target is left out because it has no place on the page to be at.
+ */
 const extentOf = (
   lines: readonly IAutoMovieDrawingLine[],
   regions: readonly IAutoMovieDrawingRegion[],
   openings: readonly IAutoMovieDrawingOpeningMark[],
+  dimensions: readonly IAutoMovieDrawingDimension[],
+  annotations: readonly IAutoMovieDrawingAnnotation[],
 ): IAutoMovieDrawingExtent | null => {
   const points = [
     ...lines.flatMap((line) => [line.from, line.to]),
     ...regions.flatMap((region) => region.polygon),
     ...openings.flatMap((mark) => mark.polygon),
+    ...dimensions.flatMap((dimension) =>
+      dimension.status === "resolved" ? [dimension.from!, dimension.to!] : [],
+    ),
+    ...annotations.flatMap((annotation) =>
+      annotation.status === "resolved" ? [annotation.at!] : [],
+    ),
   ];
   if (points.length === 0) return null;
+  const xs = autoMovieDrawingRange(points.map((point) => point.x));
+  const ys = autoMovieDrawingRange(points.map((point) => point.y));
   return {
-    min: {
-      x: Math.min(...points.map((point) => point.x)),
-      y: Math.min(...points.map((point) => point.y)),
-    },
-    max: {
-      x: Math.max(...points.map((point) => point.x)),
-      y: Math.max(...points.map((point) => point.y)),
-    },
+    min: { x: xs.min, y: ys.min },
+    max: { x: xs.max, y: ys.max },
   };
 };
 
