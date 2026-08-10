@@ -56,8 +56,8 @@ const wet = (
  *    negative twin of scenarios 1 and 2.
  * 4. A one-layer build-up that wraps lines from the first face only, so no depth
  *    is counted twice.
- * 5. A hand-built build-up whose only wrapping layer sits behind one that stops
- *    at the jamb lines nothing, because the lining is the run reachable from a
+ * 5. A hand-built build-up whose only wrapping layer sits behind one that stops at
+ *    the jamb lines nothing, because the lining is the run reachable from a
  *    face and not the flag. Validation refuses that build-up; this pins that it
  *    could not narrow an opening even if it reached the reveal unvalidated.
  * 6. A non-positive opening dimension is refused, and so is a lining that would
