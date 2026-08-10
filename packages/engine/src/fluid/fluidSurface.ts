@@ -30,6 +30,12 @@ import {
  * surrounding face velocities. A renderer scrolls ripples along it and never
  * re-derives it.
  *
+ * Throws when the state was not solved from this domain. Two water features
+ * over two lattices is the ordinary case, so handing the second one's state to
+ * the first one's grid is the ordinary mistake, and a lattice reading depths
+ * that were never indexed for it emits `NaN` positions a renderer draws as
+ * nothing at all — a silent empty pond in place of a named refusal.
+ *
  * @author Samchon
  */
 export const fluidSurfaceGeometry = (props: {
@@ -37,6 +43,10 @@ export const fluidSurfaceGeometry = (props: {
   state: IAutoMovieFluidState;
 }): IAutoMovieFluidSurface => {
   const { domain, state } = props;
+  if (state.domain !== domain.id)
+    throw new Error(
+      `fluid domain "${domain.id}" cannot draw a surface from a state of "${state.domain}"`,
+    );
   const columns = domain.grid.columns;
   const rows = domain.grid.rows;
   const dx = domain.grid.cellX;

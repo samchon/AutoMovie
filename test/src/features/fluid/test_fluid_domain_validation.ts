@@ -79,14 +79,19 @@ const spray = (
  * 2. Identity and schema: an empty id, a wrong schema version, and non-metre units
  *    are each refused.
  * 3. The lattice: a fractional column count, a zero row count, a non-positive cell
- *    size, a non-finite origin, and a lattice past the cell budget.
+ *    size, a non-finite origin, a lattice past the cell budget, a lattice whose
+ *    two legal side lengths multiply past the safe-integer range — the only
+ *    grids nobody can afford are exactly the ones a counted budget can stop
+ *    counting — and its twin, an unbounded side that is named as itself rather
+ *    than as a cell count.
  * 4. The solver: a non-positive step, gravity, and reference depth; a negative
  *    drag and dry depth; a step budget past `FLUID_MAX_STEPS`.
  * 5. Stability: a Courant number above one is refused with the overshoot, while a
  *    domain exactly on the limit is accepted; a non-finite Courant number is
  *    reported through its own fields rather than as a stability failure.
  * 6. State arrays: wrong lengths, a negative depth, a depth past the declared
- *    reference depth, a non-finite bed, and water sitting in solid matter.
+ *    reference depth, a non-finite bed, water sitting in solid matter, and a
+ *    solidity flag that is not a boolean beside a sibling flag that is.
  * 7. Boundaries: an unknown edge kind on each of the four edges.
  * 8. Declared flows: empty and duplicate ids, counts past the budget, cells off
  *    the lattice in all three ways an index can be wrong, cells inside solid
@@ -152,6 +157,33 @@ export const test_fluid_domain_validation = (): void => {
       solid: new Array(90_000).fill(false),
     }),
   });
+  // Both side lengths are perfectly legal safe integers; only their product,
+  // 2⁶⁰ cells, is unaffordable, and it is past `Number.MAX_SAFE_INTEGER`.
+  const overflowing = validateFluidDomain({
+    domain: basin({
+      grid: {
+        columns: 2 ** 30,
+        rows: 2 ** 30,
+        cellX: 1,
+        cellZ: 1,
+        origin: { x: 0, y: 0, z: 0 },
+      },
+    }),
+  });
+  // The twin one property away: a side that is not a number at all has no
+  // countable product, so it is named as the side it is rather than dressed up
+  // as a budget the author could have met with a smaller grid.
+  const boundless = validateFluidDomain({
+    domain: basin({
+      grid: {
+        columns: Number.POSITIVE_INFINITY,
+        rows: 4,
+        cellX: 1,
+        cellZ: 1,
+        origin: { x: 0, y: 0, z: 0 },
+      },
+    }),
+  });
   TestValidator.equals(
     "the lattice must be a whole, positive, affordable grid",
     namedFacts([
@@ -162,6 +194,21 @@ export const test_fluid_domain_validation = (): void => {
       ["origin", () => hasViolation(lattice, "range", "$input.grid.origin.y")],
       ["budget", () => hasViolation(huge, "range", "$input.grid")],
       ["budgetValue", () => FLUID_MAX_CELLS === 65_536],
+      ["overflow", () => hasViolation(overflowing, "range", "$input.grid")],
+      [
+        "overflowSides",
+        () =>
+          hasViolation(overflowing, "type", "$input.grid.columns") === false &&
+          hasViolation(overflowing, "type", "$input.grid.rows") === false,
+      ],
+      [
+        "boundlessSide",
+        () => hasViolation(boundless, "type", "$input.grid.columns"),
+      ],
+      [
+        "boundlessNotBudget",
+        () => hasViolation(boundless, "range", "$input.grid") === false,
+      ],
     ]),
     {
       columns: true,
@@ -171,6 +218,10 @@ export const test_fluid_domain_validation = (): void => {
       origin: true,
       budget: true,
       budgetValue: true,
+      overflow: true,
+      overflowSides: true,
+      boundlessSide: true,
+      boundlessNotBudget: true,
     },
   );
 
@@ -299,6 +350,15 @@ export const test_fluid_domain_validation = (): void => {
   const wetPier = validateFluidDomain({
     domain: basin({ solid, depth: new Array(16).fill(0.25) }),
   });
+  // A flag that is neither `true` nor `false` answers "no" to both readers of
+  // it, so the solver would push water through a pier the surface refuses to
+  // draw around. The sibling cell one index away is the twin: it is a real
+  // boolean, and nothing is reported about it.
+  const flags: unknown[] = new Array(16).fill(false);
+  flags[7] = 1;
+  const flagged = validateFluidDomain({
+    domain: basin({ solid: flags as boolean[] }),
+  });
   TestValidator.equals(
     "the state arrays must be one finite, non-negative value per cell",
     namedFacts([
@@ -317,6 +377,11 @@ export const test_fluid_domain_validation = (): void => {
             "$input.solid",
           ),
       ],
+      ["solidFlag", () => hasViolation(flagged, "type", "$input.solid[7]")],
+      [
+        "solidFlagTwin",
+        () => hasViolation(flagged, "type", "$input.solid[6]") === false,
+      ],
     ]),
     {
       bedLength: true,
@@ -326,6 +391,8 @@ export const test_fluid_domain_validation = (): void => {
       depthTooDeep: true,
       wetPier: true,
       solidLength: true,
+      solidFlag: true,
+      solidFlagTwin: true,
     },
   );
 

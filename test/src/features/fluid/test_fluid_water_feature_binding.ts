@@ -47,6 +47,59 @@ const withoutCells = (): IAutoMovieBuiltEnvironment => {
   };
 };
 
+/** The `y`/`z` walls both halves of the notched basin share. */
+const SIDES = [
+  { normal: { x: 0, y: -1, z: 0 }, offset: 1 },
+  { normal: { x: 0, y: 1, z: 0 }, offset: 4 },
+  { normal: { x: 0, y: 0, z: -1 }, offset: 2 },
+  { normal: { x: 0, y: 0, z: 1 }, offset: 2 },
+];
+
+/**
+ * The same basin written as the two convex cells a non-convex room splits into:
+ * a west half over `x ∈ [-2, -0.5]`, an east half over `x ∈ [0.5, 2]`, and the
+ * notch between them belonging to neither.
+ */
+const notchedEnvironment = (): IAutoMovieBuiltEnvironment => {
+  const environment = basinEnvironment();
+  return {
+    ...environment,
+    spaces: environment.spaces.map((space) => ({
+      ...space,
+      cells: [
+        {
+          id: "west-half",
+          planes: [
+            { normal: { x: -1, y: 0, z: 0 }, offset: 2 },
+            { normal: { x: 1, y: 0, z: 0 }, offset: -0.5 },
+            ...SIDES,
+          ],
+        },
+        {
+          id: "east-half",
+          planes: [
+            { normal: { x: -1, y: 0, z: 0 }, offset: -0.5 },
+            { normal: { x: 1, y: 0, z: 0 }, offset: 2 },
+            ...SIDES,
+          ],
+        },
+      ],
+    })),
+  };
+};
+
+/** A 4×4 lattice of the given cell size, cornered on the given origin. */
+const placed = (props: { cell: number; x: number }) =>
+  pondDomain({
+    grid: {
+      columns: 4,
+      rows: 4,
+      cellX: props.cell,
+      cellZ: 0.5,
+      origin: { x: props.x, y: 0, z: -1 },
+    },
+  });
+
 /**
  * The water-feature binding is the one place a building and an independent
  * fluid domain meet, and it is the only place their agreement can be checked.
@@ -74,7 +127,14 @@ const withoutCells = (): IAutoMovieBuiltEnvironment => {
  * 6. Geometry: a lattice standing outside its basin is refused, and a basin
  *    declared as a purely semantic container — a space with no convex cells —
  *    is deliberately not geometrically checked.
- * 7. `lowerWaterFeature` gives a renderer the state, the surface and the spray in
+ * 7. A basin written as several convex cells is not convex, so it is checked cell
+ *    by cell rather than at the lattice's corners: a lattice bridging the notch
+ *    between two halves is refused even though all four of its corners stand in
+ *    the room, while a lattice wholly inside one half is accepted. An unsound
+ *    domain is not measured at all — a grid that failed its own validation has
+ *    no placement to answer for, and a second verdict derived from the first
+ *    bad one would be a finding about nothing.
+ * 8. `lowerWaterFeature` gives a renderer the state, the surface and the spray in
  *    one frame; a `static` feature always reads step 0 while `flowing` and
  *    `simulated` read the fixed-step solve at that second.
  */
@@ -140,6 +200,8 @@ export const test_fluid_water_feature_binding = (): void => {
       waterFeature({ id: "twin" }),
       waterFeature({ id: "twin" }),
       waterFeature({ id: "double-rim", boundaries: ["coping", "coping"] }),
+      waterFeature({ id: "blank-material", material: "  " }),
+      waterFeature({ id: "named-material", material: "water-glass" }),
     ],
     domains: [domain, { ...domain }],
   });
@@ -163,12 +225,24 @@ export const test_fluid_water_feature_binding = (): void => {
         "duplicateDomain",
         () => hasViolation(identity, "type", "$input.domains[1].id"),
       ],
+      [
+        "blankMaterial",
+        () => hasViolation(identity, "type", "$input.features[4].material"),
+      ],
+      [
+        "namedMaterial",
+        () =>
+          hasViolation(identity, "type", "$input.features[5].material") ===
+          false,
+      ],
     ]),
     {
       emptyId: true,
       duplicateFeature: true,
       duplicateRim: true,
       duplicateDomain: true,
+      blankMaterial: true,
+      namedMaterial: true,
     },
   );
 
@@ -278,6 +352,63 @@ export const test_fluid_water_feature_binding = (): void => {
       ["semanticContainer", () => semantic.success === true],
     ]),
     { outside: true, semanticContainer: true },
+  );
+
+  // Cell centres −0.75, −0.25, 0.25, 0.75: the two ends stand in the two halves
+  // of the notched basin while the middle two stand over the notch, so the
+  // lattice's own corners say nothing about where its water is.
+  const notched = notchedEnvironment();
+  const bridging = validateWaterFeatures({
+    environment: notched,
+    features: [waterFeature()],
+    domains: [placed({ cell: 0.5, x: -1 })],
+  });
+  // Centres −1.75, −1.5, −1.25, −1: wholly inside the west half.
+  const seated = validateWaterFeatures({
+    environment: notched,
+    features: [waterFeature()],
+    domains: [placed({ cell: 0.25, x: -1.875 })],
+  });
+  const unsound = validateWaterFeatures({
+    environment,
+    features: [waterFeature()],
+    domains: [
+      pondDomain({
+        depth: new Array(16).fill(-1),
+        grid: {
+          columns: 4,
+          rows: 4,
+          cellX: 0.5,
+          cellZ: 0.5,
+          origin: { x: 100, y: 0, z: 0 },
+        },
+      }),
+    ],
+  });
+  TestValidator.equals(
+    "a basin split into convex cells is measured cell by cell",
+    namedFacts([
+      [
+        "bridgesTheNotch",
+        () => hasViolation(bridging, "type", "$input.features[0].domain"),
+      ],
+      ["seatedInOneHalf", () => seated.success === true],
+      [
+        "unsoundDomainReported",
+        () => hasViolation(unsound, "range", "$input.domains[0].depth[0]"),
+      ],
+      [
+        "unsoundDomainNotPlaced",
+        () =>
+          hasViolation(unsound, "type", "$input.features[0].domain") === false,
+      ],
+    ]),
+    {
+      bridgesTheNotch: true,
+      seatedInOneHalf: true,
+      unsoundDomainReported: true,
+      unsoundDomainNotPlaced: true,
+    },
   );
 
   const still = lowerWaterFeature({

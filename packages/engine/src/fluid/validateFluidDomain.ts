@@ -99,7 +99,12 @@ export const validateFluidDomain = (props: {
       Infinity,
     );
   const cells = columns * rows;
-  if (Number.isSafeInteger(cells) && cells > FLUID_MAX_CELLS)
+  // Finite rather than safe-integer: a 2³⁰ × 2³⁰ lattice counts 2⁶⁰ cells,
+  // which is past `Number.MAX_SAFE_INTEGER`, and a guard that skipped exactly
+  // the grids too large to count would let the only ones nobody can afford
+  // past the one budget written to refuse them. A non-finite product means
+  // `columns` or `rows` is itself unusable and has already been named.
+  if (Number.isFinite(cells) && cells > FLUID_MAX_CELLS)
     out.push(
       "range",
       `${root}.grid`,
@@ -210,6 +215,21 @@ export const validateFluidDomain = (props: {
         "type",
         `${root}.depth[${index}]`,
         "a solid cell must hold no water",
+        value,
+      );
+  });
+  // A cell is solid or it is not, and the two readers of this flag ask the
+  // question in opposite directions: the solver blocks a face when the cell
+  // `=== true`, the surface draws a quad when it `=== false`. A value that is
+  // neither answers no to both, so the water would flow through a pier the
+  // renderer refuses to draw around. Refusing the flag here is what keeps the
+  // solve and the surface one statement.
+  domain.solid.forEach((value, index) => {
+    if (typeof value !== "boolean")
+      out.push(
+        "type",
+        `${root}.solid[${index}]`,
+        "a solidity flag must be a boolean",
         value,
       );
   });
