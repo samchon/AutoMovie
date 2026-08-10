@@ -26,8 +26,10 @@ import { throwsError } from "../internal/predicates";
  *    untouched.
  * 2. The same question asked twice about the same identity deduplicates rather
  *    than doubling the answer.
- * 3. Changing an imported asset's bytes invalidates the outputs that cite it even
- *    though no line of the design moved.
+ * 3. Changing an imported asset's bytes invalidates the outputs that read it even
+ *    though no line of the design moved, including the one alternative's
+ *    comparison render that lays that texture, while the other alternative's
+ *    render stands.
  * 4. A derived artifact named as changed invalidates itself and its dependents.
  * 5. Two unrelated changes union their impact rather than one shadowing the other.
  * 6. Changing nothing invalidates nothing and leaves every artifact accounted for,
@@ -68,11 +70,16 @@ export const test_architecture_design_lineage_change_impact = (): void => {
   );
 
   TestValidator.equals(
-    "changing an imported asset's bytes invalidates the outputs citing it",
+    "changing an imported asset's bytes invalidates the outputs reading it",
     designLineageImpact(lineage, ["oak-texture"]),
     {
       changed: ["oak-texture"],
-      invalidated: ["cut-floor-oak", "quantity-finishes", "render-lobby"],
+      invalidated: [
+        "cut-floor-oak",
+        "quantity-finishes",
+        "render-lobby",
+        "render-warm",
+      ],
       unaffected: [
         "cut-floor-west",
         "mesh-door-leaf",
@@ -80,7 +87,6 @@ export const test_architecture_design_lineage_change_impact = (): void => {
         "mesh-wall-west",
         "render-cool",
         "render-strip-phase",
-        "render-warm",
         "render-west",
       ],
     },

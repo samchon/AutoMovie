@@ -37,6 +37,11 @@ export const RENOVATION_TEXTURE_DIGEST = lineageDigest("7e");
  * an answer about incomparable branches rather than about elapsed time, and
  * `structure` closes the diamond over both.
  *
+ * `oak-texture` is the one subject whose content is bytes rather than authored
+ * source, so it is the one the derived artifacts have to quote back. Two of
+ * them read it and one of the two alternatives does not, which is what keeps
+ * the citation rule from being satisfied by quoting every asset everywhere.
+ *
  * Every call returns a fresh object so a refusal case can edit one field
  * without leaking the edit into the next case.
  */
@@ -195,6 +200,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "mesh-wall-north",
       kind: "mesh",
       inputs: ["wall-north", "opening-door"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -207,6 +213,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "mesh-wall-west",
       kind: "mesh",
       inputs: ["wall-west"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -219,6 +226,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "mesh-door-leaf",
       kind: "mesh",
       inputs: ["door-leaf", "opening-door"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -231,6 +239,9 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "cut-floor-oak",
       kind: "cut",
       inputs: ["floor-oak", "oak-texture", "mesh-wall-north"],
+      // The one output that reads bytes nobody authored, so it is the one that
+      // has to say which bytes it read.
+      assets: [{ subject: "oak-texture", digest: RENOVATION_TEXTURE_DIGEST }],
       stamp: {
         revision: "r2",
         variant: null,
@@ -243,6 +254,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "cut-floor-west",
       kind: "cut",
       inputs: ["floor-oak", "mesh-wall-west"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -255,6 +267,9 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "quantity-finishes",
       kind: "quantity",
       inputs: ["cut-floor-oak", "cut-floor-west"],
+      // Reached by the texture only through the cut above, which is why a
+      // citation here would be a claim about bytes this output never opened.
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -267,6 +282,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "render-lobby",
       kind: "render",
       inputs: ["mesh-wall-north", "mesh-door-leaf", "cut-floor-oak"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -279,6 +295,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "render-west",
       kind: "render",
       inputs: ["mesh-wall-west", "cut-floor-west"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -291,6 +308,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "render-strip-phase",
       kind: "phase-render",
       inputs: ["wall-south", "wall-north"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -300,9 +318,14 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       digest: lineageDigest("99"),
     },
     {
+      // The warm scheme lays the imported oak, so its comparison render opens
+      // the same bytes the finish cut did; the stone scheme below never does.
+      // Two outputs citing one asset and a third that must not is what keeps
+      // the rule from reading as "every render cites every texture".
       id: "render-warm",
       kind: "comparison-render",
-      inputs: ["floor-oak", "pendant-lamp"],
+      inputs: ["floor-oak", "pendant-lamp", "oak-texture"],
+      assets: [{ subject: "oak-texture", digest: RENOVATION_TEXTURE_DIGEST }],
       stamp: {
         revision: "r2",
         variant: "warm-oak",
@@ -315,6 +338,7 @@ export const renovationLineage = (): IAutoMovieDesignLineage => ({
       id: "render-cool",
       kind: "comparison-render",
       inputs: ["floor-oak", "pendant-lamp"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: "cool-stone",

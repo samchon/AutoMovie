@@ -51,6 +51,13 @@ import { ExampleBuilding } from "./buildings";
  * settings. A derived artifact that does not cite all three cannot be checked
  * against anything, and one still stamping a superseded revision is refused as
  * stale rather than quietly served.
+ *
+ * Imported bytes need one extra step, because a revision cannot pin them.
+ * Replacing a texture moves no line of the design, so an output that opened the
+ * file quotes the digest it read in its own `assets` list; when the two copies
+ * stop agreeing, the record says the output is stale. An output that opened
+ * nothing imported quotes nothing, which is why the rule cannot be satisfied by
+ * listing every asset everywhere.
  */
 export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
   version: 1,
@@ -82,9 +89,10 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
     { id: "fitout", label: "fit-out", requires: ["structure"] },
     { id: "handover", label: "handover", requires: ["fitout"] },
   ],
-  // Ids owned by `examples/buildings.ts`. The `graph` label says where each one
-  // came from and is an open string, so a fold that lands later registers its
-  // own ids under its own name without this schema moving.
+  // Ids owned by `examples/buildings.ts`, plus one owned by the asset manifest.
+  // The `graph` label says where each one came from and is an open string, so a
+  // fold that lands later registers its own ids under its own name without this
+  // schema moving, and one lineage spans as many graphs as the work touches.
   subjects: [
     { id: "tower-partition-1", graph: "element", digest: null },
     { id: "tower-partition-2", graph: "element", digest: null },
@@ -92,6 +100,16 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
     { id: "tower-facade-ladder", graph: "element", digest: null },
     { id: "tower-door-2", graph: "opening", digest: null },
     { id: "tower-room-2", graph: "space", digest: null },
+    // The one subject whose content is bytes rather than authored source. Its
+    // digest is the file as it was read; every output that opens the file has
+    // to quote that value back, because replacing a texture moves no line of
+    // the design and would otherwise leave those outputs reading as current.
+    {
+      id: "oak-floor-texture",
+      graph: "asset",
+      digest:
+        "sha256:eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111",
+    },
   ],
   // Exactly one entry per subject. There is no default: every default would
   // assert something the author did not, either that a thing predates the work
@@ -114,6 +132,8 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
     },
     { subject: "tower-door-2", introducedIn: "fitout", removedIn: null },
     { subject: "tower-room-2", introducedIn: null, removedIn: null },
+    // An imported file is not installed by the work and not taken out by it.
+    { subject: "oak-floor-texture", introducedIn: null, removedIn: null },
   ],
   // Two schemes over one revision. Neither copies the building; each names only
   // what it changes, and every subject it does not name keeps the id, the
@@ -180,6 +200,7 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "mesh-tower-partition-2",
       kind: "mesh",
       inputs: ["tower-partition-2", "tower-door-2"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -194,6 +215,9 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "mesh-tower-partition-1",
       kind: "mesh",
       inputs: ["tower-partition-1"],
+      // Nothing imported goes into this mesh, so it quotes nothing. The rule is
+      // bounded by what an output actually opened.
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -208,6 +232,7 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "mesh-tower-door-leaf-2",
       kind: "mesh",
       inputs: ["tower-door-leaf-2", "tower-door-2"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -221,7 +246,17 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
     {
       id: "cut-room-2-finish",
       kind: "cut",
-      inputs: ["tower-room-2", "mesh-tower-partition-2"],
+      inputs: ["tower-room-2", "mesh-tower-partition-2", "oak-floor-texture"],
+      // This one reads the imported file, so it quotes the bytes it read. Swap
+      // the texture without moving this value and the record refuses the cut as
+      // stale instead of serving a finish nobody can check.
+      assets: [
+        {
+          subject: "oak-floor-texture",
+          digest:
+            "sha256:eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111eeee1111",
+        },
+      ],
       stamp: {
         revision: "r2",
         variant: null,
@@ -236,6 +271,9 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "quantity-room-2",
       kind: "quantity",
       inputs: ["cut-room-2-finish"],
+      // The texture reaches this schedule line only through the cut above, and
+      // a quote here would claim bytes this take-off never opened.
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -254,6 +292,7 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
         "mesh-tower-door-leaf-2",
         "cut-room-2-finish",
       ],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: null,
@@ -271,6 +310,7 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "render-room-2-warm",
       kind: "comparison-render",
       inputs: ["tower-room-2"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: "warm-oak",
@@ -285,6 +325,7 @@ export const EXAMPLE_RENOVATION: IAutoMovieDesignLineage = {
       id: "render-room-2-cool",
       kind: "comparison-render",
       inputs: ["tower-room-2"],
+      assets: [],
       stamp: {
         revision: "r2",
         variant: "cool-stone",
@@ -321,6 +362,16 @@ export const exampleBuildingIdentities = (): string[] => {
 };
 
 /**
+ * The asset ids `.automovie/assets.json` registers for this example.
+ *
+ * Lineage spans every graph a production publishes ids from, not only the
+ * building, so the roll-call it is checked against has to span them too. The
+ * asset manifest is one of those graphs: a texture is an identity with bytes,
+ * and phasing or impact-tracing it is the same act as phasing a wall.
+ */
+export const exampleRegisteredAssets = (): string[] => ["oak-floor-texture"];
+
+/**
  * Check the lineage against itself and against the building it annotates.
  *
  * Both halves are needed and neither implies the other. The first refuses a
@@ -336,7 +387,7 @@ export const checkExampleRenovation = (): void => {
     );
   const bound = validateDesignLineageBinding({
     lineage: EXAMPLE_RENOVATION,
-    known: exampleBuildingIdentities(),
+    known: [...exampleBuildingIdentities(), ...exampleRegisteredAssets()],
   });
   if (bound.success === false)
     throw new Error(

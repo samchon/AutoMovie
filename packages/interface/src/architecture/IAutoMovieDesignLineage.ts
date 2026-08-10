@@ -54,9 +54,10 @@ export interface IAutoMovieDesignSubject {
    *
    * An imported texture, mesh, or drawing is an input whose content can change
    * without one character of the design changing, so a derived artifact that
-   * cites it has to cite its bytes too. Authored subjects carry null because
-   * their content is the revision's own digest, and repeating it here would be
-   * a second copy free to disagree with the first.
+   * cites it has to cite its bytes too; that is what
+   * {@link IAutoMovieDesignAssetCitation} is for. Authored subjects carry null
+   * because their content is the revision's own digest, and repeating it here
+   * would be a second copy free to disagree with the first.
    */
   digest: AutoMovieContentDigest | null;
 }
@@ -182,6 +183,27 @@ export interface IAutoMovieDesignStamp {
 }
 
 /**
+ * The bytes of one imported input, as they stood when an artifact read them.
+ *
+ * A stamp says which design the artifact was produced from, and the revision
+ * digest pins that design exactly. Imported bytes are the one input the
+ * revision cannot pin: a texture, a mesh, or a scanned drawing can be replaced
+ * without one character of the design moving, and an output baked from the old
+ * bytes then goes on looking current. Recording the digest the artifact
+ * actually read is what turns that into a disagreement somebody can detect.
+ *
+ * The record is deliberately a second copy of {@link IAutoMovieDesignSubject}'s
+ * digest, for the same reason a stamp repeats the revision the work is on: the
+ * two disagreeing is not the flaw, it is the signal.
+ */
+export interface IAutoMovieDesignAssetCitation {
+  /** Declared subject id whose bytes were read. */
+  subject: string;
+  /** SHA-256 that subject carried at the moment this artifact was produced. */
+  digest: AutoMovieContentDigest;
+}
+
+/**
  * One output computed from stable identities under one lineage stamp.
  *
  * A mesh, a finish cut, a schedule line, an analysis result, and a render frame
@@ -196,6 +218,15 @@ export interface IAutoMovieDerivedArtifact {
   kind: string;
   /** Subject or artifact ids this output was computed from; at least one. */
   inputs: string[];
+  /**
+   * The imported bytes it read: exactly one citation per input carrying any.
+   *
+   * This sits beside the stamp rather than inside it because the two answer
+   * different questions. A stamp is the view, and two alternatives being
+   * compared share one; the bytes are this computation's own, and an output
+   * derived only from authored identities cites none at all.
+   */
+  assets: IAutoMovieDesignAssetCitation[];
   /** The view it was computed under. */
   stamp: IAutoMovieDesignStamp;
   /** SHA-256 of the output's own bytes. */

@@ -2,6 +2,7 @@ import { validateDesignLineage } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  RENOVATION_TEXTURE_DIGEST,
   brokenLineage,
   lineageDigest,
   refusesLineage as refuses,
@@ -19,8 +20,17 @@ const accepts = (edit: Parameters<typeof brokenLineage>[0]): boolean =>
  * when it applies to a revision nobody recorded, when it edits one aspect of
  * one subject twice, or when a decision compares schemes that were never on the
  * same footing. A derived output stops being evidence when it stamps a
- * superseded revision, when it disagrees with the inputs it was computed from,
- * or when it claims a design identity as its own.
+ * superseded revision, when it reads imported bytes that have since been
+ * replaced, when it disagrees with the inputs it was computed from, or when it
+ * claims a design identity as its own.
+ *
+ * Imported bytes are the one input a revision cannot pin, which is why an
+ * output has to quote the digest it actually read. Replacing a texture moves no
+ * line of the design, so without the quote every output baked from the old file
+ * goes on reading as current; with it, the two copies disagree and the record
+ * says so. The rule is bounded by what an output opened: a citation for an
+ * identity it never read, or for an input whose content is authored source
+ * rather than bytes, is refused just as hard as a missing one.
  *
  * Comparison fairness is checked rather than assumed. Two alternatives whose
  * comparison renders were baked under different configurations or at different
@@ -44,10 +54,18 @@ const accepts = (edit: Parameters<typeof brokenLineage>[0]): boolean =>
  * 6. Artifact stamps: malformed output and configuration digests, a superseded
  *    revision, an unknown variant, a variant belonging to another revision, an
  *    unknown phase, and a stamp disagreeing with an input's stamp.
- * 7. Comparison fairness is refused for a differing configuration and for a
+ * 7. Asset citations: an output reading imported bytes without quoting them, a
+ *    quote of bytes the identity never carried, replaced bytes leaving every
+ *    output that read them stale, a quote for an identity the output never
+ *    read, a quote for an input whose content is authored source, and one
+ *    identity quoted twice.
+ * 8. Asset citations are accepted when they track the inputs: an output that drops
+ *    both the input and the citation, and bytes replaced together with every
+ *    quote of them.
+ * 9. Comparison fairness is refused for a differing configuration and for a
  *    differing phase, and accepted once the pair agrees on either.
- * 8. An alternative that changes nothing is accepted: an empty change set is a
- *    scheme that keeps the base, not a malformed record.
+ * 10. An alternative that changes nothing is accepted: an empty change set is a
+ *     scheme that keeps the base, not a malformed record.
  */
 export const test_architecture_design_lineage_derivation_refusals =
   (): void => {
@@ -325,6 +343,80 @@ export const test_architecture_design_lineage_derivation_refusals =
             }, "$input.derived[6].inputs[0]"),
         ],
         [
+          "an output reading imported bytes without quoting them is refused",
+          () =>
+            refuses((draft) => {
+              draft.derived[3]!.assets = [];
+            }, "$input.derived[3].assets"),
+        ],
+        [
+          "an output quoting bytes the identity never carried is refused",
+          () =>
+            refuses((draft) => {
+              draft.derived[3]!.assets[0]!.digest = lineageDigest("5d");
+            }, "$input.derived[3].assets[0].digest"),
+        ],
+        [
+          "replacing a texture leaves the finish cut that read it stale",
+          () =>
+            refuses((draft) => {
+              draft.subjects[10]!.digest = lineageDigest("5d");
+            }, "$input.derived[3].assets[0].digest"),
+        ],
+        [
+          "replacing a texture leaves the alternative render that read it stale",
+          () =>
+            refuses((draft) => {
+              draft.subjects[10]!.digest = lineageDigest("5d");
+            }, "$input.derived[9].assets[0].digest"),
+        ],
+        [
+          "a quote for an identity the output never read is refused",
+          () =>
+            refuses((draft) => {
+              draft.derived[1]!.assets = [
+                { subject: "oak-texture", digest: RENOVATION_TEXTURE_DIGEST },
+              ];
+            }, "$input.derived[1].assets[0].subject"),
+        ],
+        [
+          "a quote for an input whose content is authored source is refused",
+          () =>
+            refuses((draft) => {
+              draft.derived[1]!.assets = [
+                { subject: "wall-west", digest: RENOVATION_TEXTURE_DIGEST },
+              ];
+            }, "$input.derived[1].assets[0].subject"),
+        ],
+        [
+          "one identity quoted twice by one output is refused",
+          () =>
+            refuses((draft) => {
+              draft.derived[3]!.assets.push({
+                subject: "oak-texture",
+                digest: RENOVATION_TEXTURE_DIGEST,
+              });
+            }, "$input.derived[3].assets[1].subject"),
+        ],
+        [
+          "an output dropping both the imported input and its quote is accepted",
+          () =>
+            accepts((draft) => {
+              draft.derived[3]!.inputs = ["floor-oak", "mesh-wall-north"];
+              draft.derived[3]!.assets = [];
+            }),
+        ],
+        [
+          "bytes replaced together with every quote of them are accepted",
+          () =>
+            accepts((draft) => {
+              const replaced = lineageDigest("5d");
+              draft.subjects[10]!.digest = replaced;
+              draft.derived[3]!.assets[0]!.digest = replaced;
+              draft.derived[9]!.assets[0]!.digest = replaced;
+            }),
+        ],
+        [
           "two comparison renders under different configurations are refused",
           () =>
             refuses((draft) => {
@@ -371,6 +463,15 @@ export const test_architecture_design_lineage_derivation_refusals =
         "an artifact applying another revision's alternative is refused": true,
         "an artifact stamping an unknown phase is refused": true,
         "an artifact disagreeing with the input it was computed from is refused": true,
+        "an output reading imported bytes without quoting them is refused": true,
+        "an output quoting bytes the identity never carried is refused": true,
+        "replacing a texture leaves the finish cut that read it stale": true,
+        "replacing a texture leaves the alternative render that read it stale": true,
+        "a quote for an identity the output never read is refused": true,
+        "a quote for an input whose content is authored source is refused": true,
+        "one identity quoted twice by one output is refused": true,
+        "an output dropping both the imported input and its quote is accepted": true,
+        "bytes replaced together with every quote of them are accepted": true,
         "two comparison renders under different configurations are refused": true,
         "two comparison renders at different phases are refused": true,
         "the same pair moved onto one shared configuration is accepted": true,

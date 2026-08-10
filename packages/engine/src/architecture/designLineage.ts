@@ -31,7 +31,14 @@ const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
  * plan that requires itself, an alternative applying to a revision nobody
  * recorded, two edits of the same aspect inside one alternative, a subject
  * removed before it was ever installed, and a derived artifact still stamping a
- * superseded revision or disagreeing with the inputs it was computed from.
+ * superseded revision, reading imported bytes that have since been replaced, or
+ * disagreeing with the inputs it was computed from.
+ *
+ * Staleness is a refusal rather than a warning, which makes the order of a
+ * rebake explicit: ask {@link designLineageImpact} what a change reaches while
+ * the record still describes the outputs on disk, then move the revision or the
+ * imported digest and the outputs together. A record caught mid-rebake is
+ * invalid on purpose; the alternative is serving an output nobody can check.
  *
  * Lifecycle coverage is total by the same reasoning
  * {@link IAutoMovieDesignLifecycle} states: a subject with no lifecycle would
@@ -328,6 +335,11 @@ export const validateDesignLineage = (props: {
   const derivedById = new Map(
     lineage.derived.map((artifact) => [artifact.id, artifact] as const),
   );
+  const subjectBytes = new Map(
+    lineage.subjects.flatMap((subject) =>
+      subject.digest === null ? [] : [[subject.id, subject.digest] as const],
+    ),
+  );
   lineage.derived.forEach((artifact, index) => {
     const path = `${root}.derived[${index}]`;
     if (subjectIds.has(artifact.id))
@@ -409,6 +421,48 @@ export const validateDesignLineage = (props: {
           input,
         );
     });
+    const importedInputs = new Set(
+      artifact.inputs.filter((input) => subjectBytes.has(input)),
+    );
+    const cited = new Set<string>();
+    artifact.assets.forEach((citation, citationIndex) => {
+      const citationPath = `${path}.assets[${citationIndex}]`;
+      const current = subjectBytes.get(citation.subject);
+      if (!importedInputs.has(citation.subject))
+        out.push(
+          "type",
+          `${citationPath}.subject`,
+          `derived artifact "${artifact.id}" cites bytes for "${citation.subject}", which is not one of its inputs carrying imported bytes`,
+          citation.subject,
+        );
+      else if (cited.has(citation.subject))
+        out.push(
+          "type",
+          `${citationPath}.subject`,
+          `derived artifact "${artifact.id}" cites the bytes of "${citation.subject}" twice`,
+          citation.subject,
+        );
+      else if (citation.digest !== current)
+        out.push(
+          "type",
+          `${citationPath}.digest`,
+          `derived artifact "${artifact.id}" is stale against imported input "${citation.subject}": it was computed from ${citation.digest} while that identity now carries ${String(current)}`,
+          citation.digest,
+        );
+      cited.add(citation.subject);
+    });
+    // In input order, like every other per-artifact complaint above; the set
+    // was filled from `artifact.inputs`, so iterating it keeps that order.
+    [...importedInputs]
+      .filter((input) => !cited.has(input))
+      .forEach((input) =>
+        out.push(
+          "type",
+          `${path}.assets`,
+          `derived artifact "${artifact.id}" reads imported input "${input}" without citing the bytes it read`,
+          artifact.assets,
+        ),
+      );
   });
   appendCycles(
     lineage.derived.map((artifact, index) => ({
@@ -831,6 +885,12 @@ export const designLineageDigest = (
           ...[...decision.options].sort(compareCodeUnits),
         ),
       ),
+    // An artifact's asset citations are deliberately not digested. This runs
+    // only on a validated record, and there a citation exists for exactly the
+    // inputs that carry imported bytes, at exactly the digests those subjects
+    // declare; both facts are already in the subject and derived lines. Two
+    // valid lineages therefore cannot differ in citations without differing in
+    // something serialized here, so digesting them would certify nothing new.
     ...[...lineage.derived]
       .sort((a, b) => compareCodeUnits(a.id, b.id))
       .map((artifact) =>

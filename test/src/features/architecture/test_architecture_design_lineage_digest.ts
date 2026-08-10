@@ -43,7 +43,9 @@ import { throwsError } from "../internal/predicates";
  *    differs from both.
  * 6. The same alternative at two phases digests differently.
  * 7. An imported texture's bytes move the view digest although not one line of the
- *    design moved.
+ *    design moved. Replacing the file and requoting it in the outputs that read
+ *    it is a single edit, because a record that moved only one of the two is
+ *    refused as stale before it can be digested at all.
  * 8. Two designs that a bare-delimiter serialization would collide digest
  *    differently.
  * 9. An unknown alternative or phase is refused rather than digested.
@@ -139,8 +141,15 @@ export const test_architecture_design_lineage_digest = (): void => {
     "an imported texture's bytes move the view although the design did not",
     designLineageViewDigest(
       brokenLineage((draft) => {
+        // Replacing the file and rebaking what read it is one edit, not two:
+        // the outputs that quoted the old bytes are stale until they quote the
+        // new ones, so a record that moved only the subject is refused.
+        const replaced = lineageDigest("5d");
         draft.subjects.find((subject) => subject.id === "oak-texture")!.digest =
-          lineageDigest("5d");
+          replaced;
+        for (const artifact of draft.derived)
+          for (const citation of artifact.assets)
+            if (citation.subject === "oak-texture") citation.digest = replaced;
       }),
       { variant: "warm-oak", phase: "finishes" },
     ) !== warm,
