@@ -68,6 +68,8 @@ Complete all four steps before writing that something is missing.
 
 When the steps turn up a declared position, the finding is not "this is missing" but "this was deferred, and here is what now lets it be done deliberately and within stated bounds", which carries a different burden of proof.
 
+"It is already there" needs the same discipline, because a symbol's existence is not a path's existence. One round withdrew a real gap after finding an ingest function and a retargeter, and the capability was still unreachable: nothing in the pipeline called the ingester, the asset manifest had no kind to declare the file under, and the retargeter was absent from the sandbox surface an authoring agent may import. Before writing that a capability exists, confirm all four: the contract gives an author somewhere to declare it, something in the compiler or runtime calls it, the author can reach the symbol, and the result shows up in a frame or in evidence.
+
 ## Explicit Multi-Agent Reviews
 
 When the user explicitly asks for a team, parallel, or multi-agent review, load the [multi-agent skill](../multi-agent/SKILL.md) and its review procedure instead of this workflow. It inherits the same whole-surface and fresh-round law while defining independent parallel reviewers and lead adjudication.
