@@ -417,7 +417,7 @@ export interface IAutoMoviePatternTextureTransform {
     /** Scale along the texture's own V axis. */
     y: number;
   };
-  /** UV rotation in degrees, within `(-180, 180]`. */
+  /** UV rotation in degrees, within `[-180, 180]`. */
   rotationDeg: number;
 }
 
@@ -683,11 +683,15 @@ export const autoMoviePatternInstanceTransforms = (props: {
  * size, rotation, grain, and flip into that transform, so a book-matched pair
  * is a real mirrored image rather than two slabs a viewer cannot tell apart.
  *
- * The piece's own mesh UV is taken to span `[0, 1]` across its footprint, which
- * is what a unit-square prototype and a cut piece built from the occurrence
- * outline both give. The sheet is turned by the piece's own
- * {@link IAutoMoviePatternPlacement.grainDeg}, so a board whose grain runs along
- * it samples straight while a slab set across the grain samples across it.
+ * The mesh UV this is applied to is a point's place inside the module rectangle
+ * the occurrence was generated at, normalized. A whole piece therefore spans
+ * `[0, 1]` on both axes, which is what a unit-square prototype gives, and a cut
+ * piece spans the sub-rectangle the cut left it rather than being renormalized
+ * over its own outline, because a renormalized cut piece would show the whole
+ * image squeezed into the surviving sliver. The sheet is turned by the piece's
+ * own {@link IAutoMoviePatternPlacement.grainDeg}, so a board whose grain runs
+ * along it samples straight while a slab set across the grain samples across
+ * it.
  *
  * One call states one material's sheet. A run whose zones carry different
  * materials calls it once per material and keeps the occurrences belonging to

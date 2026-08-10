@@ -205,7 +205,9 @@ export const test_architecture_surface_pattern_herringbone = (): void => {
         "crossings",
         () =>
           turning.findings.every((one) => {
-            const kinds = one.occurrences.map((id) => id.charAt(5));
+            const kinds = one.occurrences.map((id) =>
+              id.slice(id.indexOf("/") + 1).charAt(0),
+            );
             return kinds.length === 2 && kinds[0] !== kinds[1];
           }),
       ],
@@ -220,7 +222,7 @@ export const test_architecture_surface_pattern_herringbone = (): void => {
             pattern: floor({ grainToleranceDeg: 90 }),
           }).findings.length === 0,
       ],
-      ["unscanned", () => laid.findings.length === 0],
+      ["noTolerance", () => laid.findings.length === 0],
     ]),
     {
       raised: true,
@@ -228,7 +230,7 @@ export const test_architecture_surface_pattern_herringbone = (): void => {
       crossings: true,
       rightAngle: true,
       tolerated: true,
-      unscanned: true,
+      noTolerance: true,
     },
   );
 

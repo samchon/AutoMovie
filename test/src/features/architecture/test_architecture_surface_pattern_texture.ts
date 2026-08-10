@@ -4,7 +4,12 @@ import {
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { pattern, rectangle, zone } from "../internal/patternFixtures";
+import {
+  pattern,
+  rectangle,
+  stackBond,
+  zone,
+} from "../internal/patternFixtures";
 import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 /** One slab per lattice column, flipped on the odd ones: a book match. */
@@ -71,19 +76,24 @@ const sample = (
  *    piece sits decides what it shows: the first square takes a quarter by a
  *    half at the origin, the last takes the far corner, and the eight of them
  *    walk the sheet once.
- * 3. A mirrored piece reverses its own U axis: the scale goes negative and the
+ * 3. Turning the grain turns the sheet the pieces are cut out of, so a field laid
+ *    across a face sheet reads its offsets in the sheet's own axes rather than
+ *    the face's; the straight twin of the same field does not turn at all.
+ * 4. A piece flipped on a face sheet keeps the span it was cut from and swaps its
+ *    two ends, which is what a mirror is: the same image, run the other way.
+ * 5. A mirrored piece reverses its own U axis: the scale goes negative and the
  *    offset moves to the far edge, so the image runs back the way it came. The
  *    unflipped twin of the same pair does not.
- * 4. The mirror is not a grain turn: a book-matched pair whose grain runs one way
+ * 6. The mirror is not a grain turn: a book-matched pair whose grain runs one way
  *    reports no grain break at a zero-degree tolerance.
- * 5. Grain rotates the sheet under the piece rather than the piece: a square laid
+ * 7. Grain rotates the sheet under the piece rather than the piece: a square laid
  *    square with its grain at 45 degrees samples a rotated image whose centre
  *    is still the piece's centre.
- * 6. A long piece turned off its grain by something other than a right angle needs
+ * 8. A long piece turned off its grain by something other than a right angle needs
  *    a shear the transform has no term for and is reported by id, while a
  *    square piece at the same angle samples exactly.
- * 7. A non-positive texture turn and a non-finite sheet origin are refused.
- * 8. The same run transformed twice produces the same bytes.
+ * 9. A non-positive texture turn and a non-finite sheet origin are refused.
+ * 10. The same run transformed twice produces the same bytes.
  */
 export const test_architecture_surface_pattern_texture = (): void => {
   const field = generateAutoMovieSurfacePattern({ pattern: pattern() });
@@ -168,6 +178,96 @@ export const test_architecture_surface_pattern_texture = (): void => {
       ],
     ]),
     { scale: true, walk: true, first: true, last: true },
+  );
+
+  const acrossSheet = autoMoviePatternTextureTransforms({
+    result: generateAutoMovieSurfacePattern({
+      pattern: pattern({
+        id: "across-grain",
+        zones: [zone({ generate: stackBond(0.5, 90) })],
+      }),
+    }),
+    tile: { u: 2, v: 1 },
+    sheet: { kind: "face", origin: { u: 0, v: 0 } },
+  });
+  TestValidator.equals(
+    "a sheet turned by the grain is read in the sheet's own axes",
+    namedFacts([
+      [
+        "turnedBack",
+        () =>
+          nclose(acrossSheet.transforms[0]!.rotationDeg, 90, 1e-12) &&
+          nclose(acrossSheet.transforms[0]!.scale.x, 0.25, 1e-12) &&
+          nclose(acrossSheet.transforms[0]!.scale.y, 0.5, 1e-12),
+      ],
+      [
+        "corner",
+        () => {
+          const low = sample(acrossSheet.transforms[0]!, 0, 0);
+          const high = sample(acrossSheet.transforms[0]!, 1, 1);
+          return (
+            nclose(low.x, 0, 1e-12) &&
+            nclose(low.y, 0, 1e-12) &&
+            nclose(high.x, 0.25, 1e-12) &&
+            nclose(high.y, -0.5, 1e-12)
+          );
+        },
+      ],
+      [
+        "straightTwin",
+        () => nclose(perFace.transforms[0]!.rotationDeg, 0, 1e-12),
+      ],
+    ]),
+    { turnedBack: true, corner: true, straightTwin: true },
+  );
+
+  const flippedField = autoMoviePatternTextureTransforms({
+    result: generateAutoMovieSurfacePattern({
+      pattern: pattern({
+        id: "flipped-field",
+        zones: [
+          zone({
+            generate: ({ column, row, origin }) => [
+              {
+                id: `t-${column}-${row}`,
+                center: { u: origin.u + 0.25, v: origin.v + 0.25 },
+                size: { u: 0.5, v: 0.5 },
+                rotationDeg: 0,
+                grainDeg: 0,
+                mirror: true,
+              },
+            ],
+          }),
+        ],
+      }),
+    }),
+    tile: { u: 2, v: 1 },
+    sheet: { kind: "face", origin: { u: 0, v: 0 } },
+  });
+  TestValidator.equals(
+    "a flipped piece cut from a face sheet keeps its span and swaps its ends",
+    namedFacts([
+      [
+        "swapped",
+        () => {
+          const low = sample(flippedField.transforms[0]!, 0, 0);
+          const high = sample(flippedField.transforms[0]!, 1, 1);
+          return (
+            nclose(low.x, 0.25, 1e-12) &&
+            nclose(low.y, 0, 1e-12) &&
+            nclose(high.x, 0, 1e-12) &&
+            nclose(high.y, 0.5, 1e-12)
+          );
+        },
+      ],
+      [
+        "sameSpan",
+        () =>
+          nclose(flippedField.transforms[0]!.scale.x, -0.25, 1e-12) &&
+          nclose(flippedField.transforms[0]!.scale.y, 0.5, 1e-12),
+      ],
+    ]),
+    { swapped: true, sameSpan: true },
   );
 
   const matched = generateAutoMovieSurfacePattern({
