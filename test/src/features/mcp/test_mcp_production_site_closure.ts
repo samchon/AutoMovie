@@ -203,14 +203,30 @@ export const test_mcp_production_site_closure = (): void => {
       withoutBinding.filter((code) => code === "asset-texture-unclosed"),
       [],
     );
+    // The ledger closes over what the production SAMPLES, so a model nobody
+    // stages samples nothing. The panel is authored and then staged, which is
+    // the only arrangement under which the closure has an image to refuse.
+    const sceneAnchor =
+      '      scene: { id: sceneId, name: "starter plaza ground" },';
     const materialAnchor = "    actors: [...(performer.actors ?? [])],";
     fs.writeFileSync(
       openingSourcePath,
       rewriteSource(
-        fs.readFileSync(openingSourcePath, "utf8"),
+        rewriteSource(
+          fs.readFileSync(openingSourcePath, "utf8"),
+          sceneAnchor,
+          `${sceneAnchor}
+      set: [
+        {
+          node: "site-panel",
+          model: "site-panel",
+          position: { x: 2, y: 0, z: 0 },
+        },
+      ],`,
+        ),
         materialAnchor,
         `${materialAnchor}
-    authoredModels: [
+    models: [
       {
         id: "site-panel",
         name: null,
@@ -224,7 +240,7 @@ export const test_mcp_production_site_closure = (): void => {
             geometry: {
               type: "primitive" as const,
               shape: {
-                kind: "box" as const,
+                type: "box" as const,
                 width: 1,
                 height: 1,
                 depth: 0.1,
@@ -238,7 +254,12 @@ export const test_mcp_production_site_closure = (): void => {
         materials: [
           {
             id: "panel-finish",
-            color: { r: 1, g: 1, b: 1, a: null, hex: null },
+            name: null,
+            baseColor: { r: 1, g: 1, b: 1, a: 1, hex: null },
+            metallic: 0,
+            roughness: 1,
+            emissive: null,
+            opacity: 1,
             baseColorTexture: "assets/textures/unregistered-tile.png",
           },
         ],
