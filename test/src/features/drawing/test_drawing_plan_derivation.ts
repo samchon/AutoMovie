@@ -608,6 +608,25 @@ export const test_drawing_plan_derivation = (): void => {
     }).lines.some((line) => line.owner === "floor-slab"),
     false,
   );
+  TestValidator.equals(
+    "an edge that points at the viewer has no page length and is not drafted",
+    deriveAutoMovieDrawing({
+      environment: standingBlade(environment),
+      view: drawingView({ id: "blade" }),
+    })
+      .lines.filter((line) => line.owner === "blade")
+      .map((line) => [line.from, line.to]),
+    // The blade is one open triangle standing on edge. Its upright edge runs
+    // along the view direction and projects onto a single point, so there is no
+    // stroke to draw; its other two edges both run between the same two page
+    // points, so they are one stroke and not two.
+    [
+      [
+        { x: 0.5, y: -1 },
+        { x: 2.5, y: -3 },
+      ],
+    ],
+  );
   const substituted = deriveAutoMovieDrawing({
     environment: leafOnlyOpenings(environment),
     view: drawingView({ id: "substituted" }),
@@ -1099,6 +1118,53 @@ const splitHall = (
         }
       : space,
   ),
+});
+
+/**
+ * The same design plus one open triangle standing on edge below the cut.
+ *
+ * An open mesh is the only thing whose silhouette can contain an edge pointing
+ * straight at the viewer: on a closed solid such an edge is shared by two faces
+ * that agree, so it never becomes an outline. Here all three edges are boundary
+ * edges, and one of them has no page length at all.
+ */
+const standingBlade = (
+  environment: IAutoMovieBuiltEnvironment,
+): IAutoMovieBuiltEnvironment => ({
+  ...environment,
+  models: [
+    ...environment.models,
+    {
+      ...environment.models.find((model) => model.id === "leaf")!,
+      id: "blade-model",
+      parts: [
+        {
+          ...environment.models.find((model) => model.id === "leaf")!.parts[0]!,
+          geometry: {
+            type: "mesh" as const,
+            mesh: {
+              positions: [0, 0, 0, 0, 1, 0, 2, 0, 2],
+              normals: null,
+              uvs: null,
+              indices: [0, 1, 2],
+              skin: null,
+            },
+          },
+        },
+      ],
+    },
+  ],
+  elements: [
+    ...environment.elements,
+    {
+      id: "blade",
+      kind: "blade",
+      parent: "shell",
+      transform: drawingPlace(0.5, 0, 1),
+      model: "blade-model",
+      space: "hall",
+    },
+  ],
 });
 
 /**

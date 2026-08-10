@@ -30,9 +30,10 @@ export const AUTOMOVIE_DRAWING_SVG_MARGIN = 10;
  * scale` millimetres on the page, so a 1:50 plan prints at 1:50 and a stroke
  * weight given in page millimetres means what it says at every scale.
  *
- * Output is byte-deterministic. Coordinates are formatted to fixed decimals
- * with negative zero normalized away, and every element is emitted in the order
- * the drawing already canonicalized, so one design yields one file.
+ * Output is byte-deterministic. Coordinates are rounded and then formatted to
+ * fixed decimals, which is also what keeps a value a whisker either side of an
+ * axis from printing a sign; every element is emitted in the order the drawing
+ * already canonicalized, so one design yields one file.
  *
  * @author Samchon
  */
