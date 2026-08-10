@@ -252,14 +252,23 @@ export interface IAutoMovieServicePenetration {
   boundary: string;
 
   /**
-   * Id of the declared opening of that boundary the sleeve coincides with, or
-   * `null` when the sleeve is a bare cored hole. Citing an opening is how a
-   * penetration becomes locatable on the boundary's own face once boundaries
-   * and openings carry geometry.
+   * Id of the declared opening of that boundary the sleeve passes through, or
+   * `null` when the sleeve is a bare cored hole.
+   *
+   * Citing one is a stronger claim than citing the boundary alone: where that
+   * opening states a profile, the sleeve is held inside the void it names
+   * rather than merely somewhere on the same wall.
    */
   opening: string | null;
 
-  /** World position of the sleeve centre, in metres. */
+  /**
+   * World position of the sleeve centre, in metres.
+   *
+   * Where the pierced boundary declares a face, this is read in that boundary's
+   * own frame and held inside its outline and its thickness. Where it declares
+   * none, the position is only held against the runs that cite the sleeve, and
+   * `serviceAnalysisSupport` reports the difference by name.
+   */
   position: IAutoMovieVector3;
 
   /** Clear radius of the sleeve in metres; greater than `0`. */
