@@ -445,18 +445,6 @@ export const test_drawing_annotation_resolution = (): void => {
     ],
   );
 
-  // 8. What the sheet sized, and what it could not.
-  TestValidator.equals(
-    "a sheet with a note says it sized the anchor and not the lettering",
-    [
-      before.gaps.find((gap) => gap.subject === "note-text-extent")?.status,
-      // Every note on this one is stale, so no text was set and there is no
-      // unmeasured run of glyphs to declare.
-      broken.gaps.some((gap) => gap.subject === "note-text-extent"),
-    ],
-    ["unsupported", false],
-  );
-
   // 7. Canonical order is a property of the geometry, not of the file.
   const forward = twoPartWall(environment, false);
   const reversed = twoPartWall(environment, true);
@@ -488,6 +476,18 @@ export const test_drawing_annotation_resolution = (): void => {
         .count,
     ],
     [2, 1],
+  );
+
+  // 8. What the sheet sized, and what it could not.
+  TestValidator.equals(
+    "a sheet with a note says it sized the anchor and not the lettering",
+    [
+      before.gaps.find((gap) => gap.subject === "note-text-extent")?.status,
+      // Every note on this one is stale, so no text was set and there is no
+      // unmeasured run of glyphs to declare.
+      broken.gaps.some((gap) => gap.subject === "note-text-extent"),
+    ],
+    ["unsupported", false],
   );
 };
 
