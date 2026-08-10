@@ -47,8 +47,9 @@ export interface IAutoMoviePropArticulation {
  * carry everything the engine validates and simulates.
  *
  * The spec is what the FORGE stage's object side (`forgeProp`) gates: the model
- * must be a generated, skeleton-less prop whose id equals `node` (the staged
- * scene joins on it, exactly as a forged cast member does), and the
+ * must be a skeleton-less prop whose id equals `node` (the staged scene joins
+ * on it, exactly as a forged cast member does), generated unless
+ * {@link modelRef} names the registration its imported bytes came from, and the
  * articulation, when present, must bind its profile onto the declared nodes
  * without a dangling reference.
  *
@@ -59,9 +60,11 @@ export interface IAutoMoviePropSpec {
   node: string;
 
   /**
-   * The prop model: `origin: "generated"`, `skeleton: null` (a riggable actor
-   * goes through `forgeCast` instead), primitive parts, optional body and
-   * affordances.
+   * The prop model: `skeleton: null` (a riggable actor goes through `forgeCast`
+   * instead), primitive parts, optional body and affordances. `origin` is
+   * `"generated"` for a prop drawn from those parts and `"imported"` for one
+   * drawing a registered external appearance, which {@link modelRef} names and
+   * gates.
    */
   model: IAutoMovieModel;
 
@@ -74,6 +77,42 @@ export interface IAutoMoviePropSpec {
    * staged without claiming a building relation or a keep-out volume.
    */
   placement?: IAutoMoviePropPlacement;
+
+  /**
+   * The compiler-owned model registration whose imported bytes draw this prop,
+   * or absent / `null` for a prop drawn from its own generated parts.
+   *
+   * This is the escape hatch to an external asset, and it deliberately buys the
+   * appearance alone. A manufacturer's chair arrives as a mesh with no mass, no
+   * seat face, no hinge and no keep-out volume, so a prop that cited one and
+   * nothing else would be a picture standing where furniture should be. Stating
+   * the reference therefore moves no meaning out of this spec: {@link model}'s
+   * parts stay the deterministic proxy every geometric judgment is made against
+   * (occupancy, bearing on a support, clearance, containment, passage
+   * intrusion), its `body` and `affordances` stay the contact semantics, and
+   * {@link articulation} and {@link placement} stay the prop's own. That is the
+   * same split the compiler already makes when it materializes a registered
+   * external appearance: the visible primitives become one registered collision
+   * proxy and the imported bytes are kept for the viewer.
+   *
+   * The value names a registration the compiler owns, a model recipe id or the
+   * runtime model id it materializes, exactly as a built environment's
+   * `modelReferences` entries do. It is not the spelling a cast member's
+   * `modelRef` uses. There, a reference means "do not forge me", because an
+   * imported rig carries the bones a performer is driven through; here it means
+   * "forge me as an imported appearance", because nothing a prop means can be
+   * imported at all.
+   *
+   * Stating it is what opens `forgeProp`'s origin gate, and it opens it exactly
+   * as far as the record can be checked: `origin` must be `"imported"`, `asset`
+   * must name the bytes, and the compiler-sealed `imported` closure must be a
+   * rigid `gltf-static-v1` appearance whose hero LOD binds those bytes under a
+   * well-formed digest its own ledger covers. A humanoid appearance is a
+   * performer and goes through `forgeCast`. Whether those digests match bytes
+   * on disk, and whether the reference resolves to a registration at all, are
+   * the compiler's own gates, where the registry and the files are.
+   */
+  modelRef?: string | null;
 }
 
 /**
