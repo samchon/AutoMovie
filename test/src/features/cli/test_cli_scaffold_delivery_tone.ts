@@ -122,6 +122,83 @@ export const test_cli_scaffold_delivery_tone = (): void => {
       throws: true,
     },
   );
+
+  // The regression this pins is the one that killed the packaged lane: the
+  // guard once refused a run that had no bundle to read, and a proxy review
+  // capture commits none. One throw, guarded by the disagreement, and a plain
+  // `not-run` return at the end is the shape that cannot do it again.
+  TestValidator.equals(
+    "the only way out of the walk without a bundle is a reported `not-run`",
+    toneCheckExits(render),
+    { throws: 1, guardedThrows: 1, tail: "return uncheckedDeliveryTone" },
+  );
+};
+
+/**
+ * How the delivery-tone walk can leave: how many refusals it contains, how many
+ * of those sit under the disagreement test, and what its last statement does.
+ *
+ * A walk that ends in a `throw` is a walk that refuses a run with no bundle to
+ * read, which is the exact failure this shape exists to make impossible.
+ */
+const toneCheckExits = (
+  text: string,
+): { throws: number; guardedThrows: number; tail: string } => {
+  const source = parse("scripts/render.ts", text);
+  let exits: { throws: number; guardedThrows: number; tail: string } | null =
+    null;
+  const visit = (node: ts.Node): void => {
+    if (
+      exits === null &&
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "checkCapturedDeliveryTone" &&
+      node.initializer !== undefined &&
+      ts.isArrowFunction(node.initializer) &&
+      ts.isBlock(node.initializer.body)
+    ) {
+      const body = node.initializer.body;
+      let throws = 0;
+      let guardedThrows = 0;
+      const collect = (current: ts.Node): void => {
+        if (ts.isThrowStatement(current)) {
+          throws += 1;
+          let cursor: ts.Node | undefined = current.parent;
+          while (cursor !== undefined && cursor !== body) {
+            if (
+              ts.isIfStatement(cursor) &&
+              cursor.expression
+                .getText(source)
+                .includes("!== PRODUCTION_DELIVERY_TONE_MAPPING")
+            ) {
+              guardedThrows += 1;
+              break;
+            }
+            cursor = cursor.parent;
+          }
+        }
+        ts.forEachChild(current, collect);
+      };
+      collect(body);
+      const last = body.statements[body.statements.length - 1];
+      exits = {
+        throws,
+        guardedThrows,
+        tail:
+          last !== undefined &&
+          ts.isReturnStatement(last) &&
+          last.expression !== undefined &&
+          ts.isCallExpression(last.expression)
+            ? `return ${last.expression.expression.getText(source)}`
+            : (last?.getText(source).split("(")[0] ?? "absent"),
+      };
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  if (exits === null)
+    throw new Error("scripts/render.ts no longer walks its committed bundles");
+  return exits;
 };
 
 /**
