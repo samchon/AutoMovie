@@ -1,4 +1,5 @@
 import {
+  autoMovieDrawingRange,
   autoMovieDrawingToSvg,
   deriveAutoMovieDrawing,
   deriveAutoMovieDrawingSchedule,
@@ -44,7 +45,8 @@ import { namedFacts, nclose } from "../internal/predicates";
  * 3. Adding one door to the design adds it to the plan, the schedule and the
  *    take-off at once, at the void's own area.
  * 4. Moving one wall changes every sheet that draws it and no sheet that the cut
- *    already removed it from.
+ *    already removed it from, and the leaf hung on that wall moves with it on
+ *    the elevation, by the wall's own half metre.
  * 5. The finish plan fills the room its boundaries agree on and the ceiling plan
  *    names none, and each artifact declares the derivation it cannot perform
  *    rather than drawing a building that does not need it.
@@ -190,6 +192,30 @@ export const test_drawing_sheet_set = (): void => {
       // A services plan draws footings, and the wall is not one.
       ["services-plan", false],
     ],
+  );
+
+  const facadeSpan = (drawing: IAutoMovieDrawing, owner: string) =>
+    autoMovieDrawingRange(
+      drawing.lines
+        .filter((line) => line.owner === owner)
+        .flatMap((line) => [line.from.x, line.to.x]),
+    );
+  TestValidator.predicate(
+    "the leaf hung on the facade moves on the elevation exactly as its wall does",
+    (() => {
+      // The leaf is the wall's child, so the wall's half metre is the leaf's;
+      // the elevation's page right axis runs against world x, so both ends of
+      // its span move by -0.5. The void the leaf fills does not move with it,
+      // because a boundary's face is its own record and not the element's.
+      const before = facadeSpan(sheets["north-elevation"]!, "door-leaf");
+      const after = facadeSpan(movedSheets["north-elevation"]!, "door-leaf");
+      return (
+        nclose(before.min, -1.95) &&
+        nclose(before.max, -1.05) &&
+        nclose(after.min - before.min, -0.5) &&
+        nclose(after.max - before.max, -0.5)
+      );
+    })(),
   );
 
   // 5. What each sheet fills in, and what it refuses to.
