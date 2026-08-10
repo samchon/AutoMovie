@@ -24,6 +24,7 @@ import type {
   IAutoMovieBuildingUnit,
   IAutoMovieBuiltEnvironment,
   IAutoMovieDrawing,
+  IAutoMovieDrawingGap,
   IAutoMovieDrawingSchedule,
   IAutoMovieDrawingStyle,
   IAutoMovieDrawingView,
@@ -150,20 +151,14 @@ export interface IAutoMovieBuildingStudies {
 /**
  * One thing this report could not answer, in the same words its records use.
  *
- * `unsupported` is a derivation that does not exist; `not-run` is one that
- * exists and had no input. Keeping the distinction is what separates "this
- * repository cannot draw a pipe" from "you declared no pipe".
+ * The drawing gap's own shape, aliased rather than restated, because a roll-up
+ * spanning sheets, schedules, take-offs, services and studies has to speak one
+ * vocabulary or a reader has to learn five. `unsupported` is a derivation that
+ * does not exist; `not-run` is one that exists and had no input. Keeping that
+ * distinction is what separates "this repository cannot draw a pipe" from "you
+ * declared no pipe".
  */
-export interface IAutoMovieBuildingGap {
-  /** What was not answered, as a stable machine-readable subject. */
-  subject: string;
-  /** Whether the derivation does not exist or merely had no input. */
-  status: "unsupported" | "not-run";
-  /** Exactly what is absent, naming the declaration that needed it. */
-  reason: string;
-  /** Exactly what would make the derivation produce a result. */
-  remedy: string;
-}
+export type IAutoMovieBuildingGap = IAutoMovieDrawingGap;
 
 /** One derived sheet: the question, the answer, and the page a human opens. */
 export interface IAutoMovieBuildingSheet {

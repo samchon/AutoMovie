@@ -3800,6 +3800,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "deriveAutoMovieDrawing",
         ),
       },
+      // The two sheets the standard set asks for and the derivation cannot
+      // serve. A service network and a material assembly are separate records
+      // from the built environment, so both come back as `unsupported` gaps;
+      // dropping the requests would leave those gaps on no page at all and let
+      // a discipline label read as a second model.
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes( \'discipline: "services"\', )',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          'discipline: "services"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes(\'discipline: "finish"\')',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          'discipline: "finish"',
+        ),
+      },
       {
         contract:
           'files["scripts/verify.ts"]!.includes(\'.lint({ scope: "final" })\')',
