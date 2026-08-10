@@ -30,8 +30,8 @@ Do not load this skill for Self-Review, an unqualified review, or a campaign tha
 - Partition implementation only through verified dependency and file-ownership boundaries. One agent owns one coarse batch, branch, pull request, and worktree.
 - Keep the lead active on fact-checking, integration, conflict resolution, and decisions that do not duplicate an assigned agent.
 - Do not let agents re-delegate.
-- One reviewer covers one whole declared surface. A campaign's issue owners each review their own issue and the lead reviews the integrated diff; no surface is ever split across agents.
-- Create worktrees only when the user asked for isolated implementation batches. Ordinary campaigns, ordinary pull requests, and every Self-Review use the current checkout and one topic branch.
+- One reviewer covers one whole declared surface, and Self-Review stays solo for every author and every implementation branch. A campaign's issue owners each review their own issue and the lead reviews the integrated diff; no surface is ever split across agents.
+- Create worktrees only when the user asked for isolated implementation batches, plus the one integrated cleanup worktree those batches end in. Ordinary campaigns, ordinary pull requests, and every Self-Review use the current checkout and one topic branch.
 - Remove every finished worktree, local branch, process, and assignment-owned temporary asset before declaring its assignment complete.
 
 The user's phase boundary controls the topology. A multi-agent issue campaign adds parallel discovery to the parallel implementation the ordinary campaign already performs, and isolates that implementation into per-batch worktrees, branches, and pull requests. When the user wants parallel implementation without that isolation, the ordinary [issue-campaign](../issue-campaign/SKILL.md) workflow is already the answer.
