@@ -65,7 +65,12 @@ const emit = (props: {
     y: domain.grid.origin.y + domain.bed[cell] + props.state.depth[cell],
     z: domain.grid.origin.z + (spray.row + 0.5) * domain.grid.cellZ,
   };
-  const stride = 1 + Math.floor(props.cameraDistance / spray.lodDistance);
+  // Clamped at the near end so a caller that hands back a signed depth rather
+  // than a distance thins nothing instead of everything: an unclamped negative
+  // gives a stride of zero, and `index % 0` is NaN, which silently rejects
+  // every particle and reads as "the fountain stopped".
+  const stride =
+    1 + Math.floor(Math.max(0, props.cameraDistance) / spray.lodDistance);
   const newest = Math.floor(props.time * spray.rate);
   const oldest = Math.floor((props.time - spray.lifetime) * spray.rate);
   const gravity = domain.solver.gravity;

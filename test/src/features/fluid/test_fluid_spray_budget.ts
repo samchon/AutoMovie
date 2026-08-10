@@ -150,6 +150,15 @@ export const test_fluid_spray_budget = (): void => {
           "3,6",
       ],
       [
+        "negativeDistanceThinsNothing",
+        () =>
+          sampleFluidSpray({
+            domain,
+            state,
+            cameraDistance: -40,
+          }).particles.length === 8,
+      ],
+      [
         "lodDeterministic",
         () =>
           thinnedAgain.particles.every((particle, at) =>
@@ -157,7 +166,12 @@ export const test_fluid_spray_budget = (): void => {
           ),
       ],
     ]),
-    { cap: true, lod: true, lodDeterministic: true },
+    {
+      cap: true,
+      lod: true,
+      negativeDistanceThinsNothing: true,
+      lodDeterministic: true,
+    },
   );
 
   const spread = sampleFluidSpray({
