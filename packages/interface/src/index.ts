@@ -1,6 +1,8 @@
 export * from "./core";
+export * from "./analysis";
 export * from "./architecture";
 export * from "./cinematics";
+export * from "./drawing";
 export * from "./geometry";
 export * from "./color";
 export * from "./model";
@@ -12,6 +14,8 @@ export * from "./motion";
 export * from "./material";
 export * from "./scene";
 export * from "./fluid";
+export * from "./soft";
+export * from "./service";
 export * from "./validation";
 export * from "./authoring";
 export * from "./harness";

@@ -1,3 +1,4 @@
+export * from "./analysisOverlay";
 export * from "./geometry";
 export * from "./buildModel";
 export * from "./applyPose";
@@ -21,3 +22,6 @@ export * from "./formationCycle";
 export * from "./instanceSet";
 export * from "./effect";
 export * from "./fluidSurface";
+export * from "./softBodySurface";
+export * from "./plantingInstances";
+export * from "./plantingInstances";

@@ -1,5 +1,7 @@
 export * from "./math";
+export * from "./analysis";
 export * from "./architecture";
+export * from "./drawing";
 export * from "./text";
 export * from "./film";
 export * from "./kinematics";
@@ -17,6 +19,8 @@ export * from "./formationSlot";
 export * from "./subject";
 export * from "./effect";
 export * from "./fluid";
+export * from "./soft";
+export * from "./service";
 export * from "./worldKit";
 export * from "./scene";
 export * from "./space";
