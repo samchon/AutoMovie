@@ -1656,6 +1656,32 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       canonicalShotBytes,
       `${canonicalizeAutoMovieJson(JSON.parse(canonicalShotBytes))}\n`,
     );
+    // Eleven folds this cycle added ride the artifact when a production
+    // declares them. A production that declares none must be byte-identical to
+    // what it was before they existed: the artifact is content-addressed, so an
+    // empty array per fold would rewrite the digest of every production that
+    // has never heard of water.
+    TestValidator.equals(
+      "a production declaring none of the new folds carries none of their keys",
+      Object.keys(
+        JSON.parse(canonicalShotBytes) as Record<string, unknown>,
+      ).filter((key) =>
+        [
+          "designReferences",
+          "designEvidence",
+          "designLineages",
+          "fluidDomains",
+          "waterFeatures",
+          "softBodyDomains",
+          "softFurnishings",
+          "plantingDomains",
+          "plantingClusters",
+          "plantingInstallations",
+          "serviceNetworks",
+        ].includes(key),
+      ),
+      [],
+    );
     const boundSourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const boundSourceBytes = fs.readFileSync(boundSourcePath);
     fs.writeFileSync(
