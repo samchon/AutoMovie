@@ -1,5 +1,10 @@
-import { IAutoMovieMesh, IAutoMovieVector3 } from "@automovie/interface";
+import {
+  IAutoMovieMesh,
+  IAutoMovieQuaternion,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
+import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { convexHull2D } from "../math/hull";
 import { tessellateToMesh } from "./tessellate";
@@ -26,6 +31,62 @@ export interface IAutoMovieWallOpening {
   height: number;
 }
 
+/** A rigid translate / unit-quaternion rotate / per-axis scale placement. */
+export interface IAutoMovieMeshTransform {
+  /** Metres added after rotation and scale; omitted means the origin. */
+  translation?: IAutoMovieVector3;
+  /** Unit quaternion applied after scale; omitted means identity. */
+  rotation?: IAutoMovieQuaternion;
+  /** Per-axis scale applied first; omitted means unit scale. */
+  scale?: IAutoMovieVector3;
+}
+
+/** One named member of an assembly, optionally placed by its own transform. */
+export interface IAutoMovieMeshPart {
+  /** Stable member identity, unique inside one assembly. */
+  id: string;
+  /** The member's geometry in its own local frame. */
+  mesh: IAutoMovieMesh;
+  /** Where the member sits in the assembly frame. */
+  transform?: IAutoMovieMeshTransform;
+}
+
+/** The index range one assembly member occupies in the merged mesh. */
+export interface IAutoMovieMeshGroup {
+  /** The contributing {@link IAutoMovieMeshPart.id}. */
+  id: string;
+  /** First index of the member's triangles inside the merged index array. */
+  start: number;
+  /** How many indices the member contributes; always a multiple of three. */
+  count: number;
+}
+
+/** One merged mesh plus the material groups its members occupy. */
+export interface IAutoMovieMeshAssembly {
+  /** The merged rigid mesh. */
+  mesh: IAutoMovieMesh;
+  /** Declaration-ordered index ranges, one per contributing member. */
+  groups: IAutoMovieMeshGroup[];
+}
+
+/** What a mesh's triangle topology actually is, measured rather than assumed. */
+export interface IAutoMovieMeshTopology {
+  /** Triangle count, including degenerate ones. */
+  triangles: number;
+  /** Triangles whose welded corners are not three distinct points. */
+  degenerate: number;
+  /** Position, normal, or uv components that are not finite numbers. */
+  nonFinite: number;
+  /** Welded edges used by exactly one triangle: the open boundary. */
+  boundaryEdges: number;
+  /** Welded edges used by three or more triangles. */
+  nonManifoldEdges: number;
+  /** True when every welded edge is shared by exactly two triangles. */
+  watertight: boolean;
+  /** Divergence-theorem signed volume; exact for a closed polyhedron. */
+  volume: number;
+}
+
 /** Extrude a convex XY profile along local Z into a closed triangle mesh. */
 export const extrudeAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -50,14 +111,20 @@ export const extrudeAutoMovieProfile = (props: {
   return meshOf(positions, indices);
 };
 
-/** Revolve a radius/height profile around local Y into a closed surface. */
+/**
+ * Revolve a radius/height profile around local Y into a closed surface.
+ *
+ * Unlike extrusion and sweep, the meridian is taken as authored rather than
+ * hulled, so an arbitrary silhouette polyline is allowed here; only its radii
+ * must be non-negative.
+ */
 export const revolveAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
   segments: number;
 }): IAutoMovieMesh => {
   if (props.profile.length < 2)
     throw new Error("revolve profile needs at least two points");
-  segments(props.segments, "revolve segments");
+  countAtLeast(props.segments, 3, "revolve segments");
   props.profile.forEach((point, index) => {
     finitePoint(point, `revolve profile[${index}]`);
     if (point.x < 0)
@@ -133,6 +200,66 @@ export const sweepAutoMovieProfile = (props: {
     indices.push(last, last + point, last + point + 1);
   }
   return meshOf(positions, indices);
+};
+
+/**
+ * Build a boundary representation from planar polygonal faces.
+ *
+ * Extrusion, revolution, and sweep each impose a shape on the result; this is
+ * the general escape for a solid whose faces are simply stated, such as a
+ * ridged roof, a wedge, or a chamfered pier, without dropping to authored
+ * vertex arrays. Each face owns its corners, so its normal stays flat across
+ * the seam and its UV frame is the face's own plane measured in metres.
+ *
+ * Faces are refused, never quietly repaired: fewer than three corners, a
+ * non-finite corner, a collinear face carrying no area, and a corner off the
+ * face's own plane each raise their own diagnostic. Whether the result is a
+ * closed shell is the caller's declaration to make and
+ * {@link inspectAutoMovieMeshTopology}'s to check.
+ */
+export const buildAutoMoviePolyhedron = (
+  faces: ReadonlyArray<readonly IAutoMovieVector3[]>,
+): IAutoMovieMesh => {
+  if (faces.length === 0) throw new Error("polyhedron needs at least one face");
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+  faces.forEach((corners, face) => {
+    if (corners.length < 3)
+      throw new Error(`polyhedron face[${face}] needs at least three corners`);
+    corners.forEach((corner, index) =>
+      finiteVector(corner, `polyhedron face[${face}] corner[${index}]`),
+    );
+    const origin = corners[0]!;
+    const spans = Vector3.cross(
+      Vector3.subtract(corners[1]!, origin),
+      Vector3.subtract(corners[corners.length - 1]!, origin),
+    );
+    if (Vector3.length(spans) <= FACE_EPSILON)
+      throw new Error(`polyhedron face[${face}] encloses no area`);
+    const normal = Vector3.normalize(spans);
+    if (
+      corners.some(
+        (corner) =>
+          Math.abs(Vector3.dot(Vector3.subtract(corner, origin), normal)) >
+          FACE_EPSILON,
+      )
+    )
+      throw new Error(`polyhedron face[${face}] is not planar`);
+    const axisU = Vector3.normalize(Vector3.subtract(corners[1]!, origin));
+    const axisV = Vector3.cross(normal, axisU);
+    const base = positions.length / 3;
+    for (const corner of corners) {
+      const delta = Vector3.subtract(corner, origin);
+      positions.push(corner.x, corner.y, corner.z);
+      normals.push(normal.x, normal.y, normal.z);
+      uvs.push(Vector3.dot(delta, axisU), Vector3.dot(delta, axisV));
+    }
+    for (let index = 1; index + 1 < corners.length; ++index)
+      indices.push(base, base + index, base + index + 1);
+  });
+  return { positions, normals, uvs, indices, skin: null };
 };
 
 /**
@@ -257,6 +384,184 @@ export const mergeAutoMovieMeshes = (
   };
 };
 
+/**
+ * Place a rigid mesh by translation, unit quaternion, and per-axis scale.
+ *
+ * Positions take the full placement, normals take the inverse transpose (so a
+ * non-uniform scale does not tilt them off the surface), and a mirroring scale
+ * flips triangle winding so the outward face stays outward. UVs ride along
+ * untouched, because a placement moves a surface without re-cutting its atlas.
+ */
+export const transformAutoMovieMesh = (
+  mesh: IAutoMovieMesh,
+  transform: IAutoMovieMeshTransform,
+): IAutoMovieMesh => {
+  if (mesh.skin !== null)
+    throw new Error("procedural mesh transform does not accept skinning");
+  const translation = transform.translation ?? { x: 0, y: 0, z: 0 };
+  finiteVector(translation, "mesh transform translation");
+  const rotation = transform.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
+  if (
+    ![rotation.x, rotation.y, rotation.z, rotation.w].every(Number.isFinite) ||
+    Math.abs(Math.hypot(rotation.x, rotation.y, rotation.z, rotation.w) - 1) >
+      1e-6
+  )
+    throw new Error("mesh transform rotation must be a unit quaternion");
+  const scale = transform.scale ?? { x: 1, y: 1, z: 1 };
+  finiteVector(scale, "mesh transform scale");
+  if (scale.x === 0 || scale.y === 0 || scale.z === 0)
+    throw new Error("mesh transform scale may not collapse an axis");
+  const positions: number[] = [];
+  for (let index = 0; index < mesh.positions.length; index += 3) {
+    const placed = Quaternion.rotateVector(rotation, {
+      x: mesh.positions[index]! * scale.x,
+      y: mesh.positions[index + 1]! * scale.y,
+      z: mesh.positions[index + 2]! * scale.z,
+    });
+    positions.push(
+      placed.x + translation.x,
+      placed.y + translation.y,
+      placed.z + translation.z,
+    );
+  }
+  const source = mesh.normals ?? [];
+  const normals: number[] = [];
+  for (let index = 0; index < source.length; index += 3) {
+    const turned = Vector3.normalize(
+      Quaternion.rotateVector(rotation, {
+        x: source[index]! / scale.x,
+        y: source[index + 1]! / scale.y,
+        z: source[index + 2]! / scale.z,
+      }),
+    );
+    normals.push(turned.x, turned.y, turned.z);
+  }
+  const mirrored = scale.x * scale.y * scale.z < 0;
+  const triangles =
+    mesh.indices ??
+    Array.from({ length: mesh.positions.length / 3 }, (_, index) => index);
+  const indices: number[] = [];
+  for (let index = 0; index < triangles.length; index += 3)
+    indices.push(
+      triangles[index]!,
+      triangles[index + (mirrored ? 2 : 1)]!,
+      triangles[index + (mirrored ? 1 : 2)]!,
+    );
+  return {
+    positions,
+    normals: mesh.normals === null ? null : normals,
+    uvs: mesh.uvs === null ? null : [...mesh.uvs],
+    indices,
+    skin: null,
+  };
+};
+
+/**
+ * Merge placed rigid members and report the index range each one owns.
+ *
+ * A material group is what lets one merged draw call still say which triangles
+ * are the tread and which are the riser, so a finish, a budget, or a quantity
+ * take-off can address a member after the buffers were concatenated.
+ */
+export const mergeAutoMovieMeshParts = (
+  parts: readonly IAutoMovieMeshPart[],
+): IAutoMovieMeshAssembly => {
+  const seen = new Set<string>();
+  for (const part of parts) {
+    if (part.id.trim().length === 0)
+      throw new Error("mesh part id must be non-empty");
+    if (seen.has(part.id))
+      throw new Error(`mesh part id "${part.id}" must be unique`);
+    seen.add(part.id);
+  }
+  const placed = parts.map((part) =>
+    part.transform === undefined
+      ? part.mesh
+      : transformAutoMovieMesh(part.mesh, part.transform),
+  );
+  const groups: IAutoMovieMeshGroup[] = [];
+  let start = 0;
+  placed.forEach((mesh, index) => {
+    const count = mesh.indices?.length ?? mesh.positions.length / 3;
+    groups.push({ id: parts[index]!.id, start, count });
+    start += count;
+  });
+  return { mesh: mergeAutoMovieMeshes(placed), groups };
+};
+
+/**
+ * Measure a mesh's triangle topology instead of assuming it.
+ *
+ * Vertices weld by position, because a builder that gives each face its own
+ * corners is still one closed shell. A closed solid must report `watertight`;
+ * an assembly of members that share faces, or a surface meant to stay open,
+ * reports its boundary and non-manifold edge counts rather than pretending.
+ */
+export const inspectAutoMovieMeshTopology = (
+  mesh: IAutoMovieMesh,
+): IAutoMovieMeshTopology => {
+  const nonFinite = [
+    ...mesh.positions,
+    ...(mesh.normals ?? []),
+    ...(mesh.uvs ?? []),
+  ].filter((value) => Number.isFinite(value) === false).length;
+  const indices =
+    mesh.indices ??
+    Array.from({ length: mesh.positions.length / 3 }, (_, index) => index);
+  const key = (at: number): string =>
+    [0, 1, 2]
+      .map((axis) => Math.round(mesh.positions[at * 3 + axis]! * WELD_SCALE))
+      .join(",");
+  const edges = new Map<string, number>();
+  let degenerate = 0;
+  for (let index = 0; index < indices.length; index += 3) {
+    const corners = [0, 1, 2].map((corner) => key(indices[index + corner]!));
+    if (new Set(corners).size < 3) {
+      degenerate += 1;
+      continue;
+    }
+    for (let edge = 0; edge < 3; ++edge) {
+      // The degenerate skip above leaves three distinct corner keys, so the
+      // two ends of an edge can never compare equal here.
+      const name = [corners[edge]!, corners[(edge + 1) % 3]!]
+        .sort((left, right) => (left < right ? -1 : 1))
+        .join("|");
+      edges.set(name, (edges.get(name) ?? 0) + 1);
+    }
+  }
+  let boundaryEdges = 0;
+  let nonManifoldEdges = 0;
+  for (const count of edges.values())
+    if (count === 1) boundaryEdges += 1;
+    else if (count > 2) nonManifoldEdges += 1;
+  let sixVolume = 0;
+  const p = mesh.positions;
+  for (let index = 0; index < indices.length; index += 3) {
+    const a = indices[index]! * 3;
+    const b = indices[index + 1]! * 3;
+    const c = indices[index + 2]! * 3;
+    sixVolume +=
+      p[a]! * (p[b + 1]! * p[c + 2]! - p[b + 2]! * p[c + 1]!) +
+      p[a + 1]! * (p[b + 2]! * p[c]! - p[b]! * p[c + 2]!) +
+      p[a + 2]! * (p[b]! * p[c + 1]! - p[b + 1]! * p[c]!);
+  }
+  return {
+    triangles: indices.length / 3,
+    degenerate,
+    nonFinite,
+    boundaryEdges,
+    nonManifoldEdges,
+    watertight: edges.size > 0 && boundaryEdges === 0 && nonManifoldEdges === 0,
+    volume: sixVolume / 6,
+  };
+};
+
+/** Welding grid for topology queries: 1 nm, far below any building tolerance. */
+const WELD_SCALE = 1e9;
+
+/** Largest out-of-plane or degenerate-area slack one authored face may carry. */
+const FACE_EPSILON = 1e-9;
+
 const profileHull = (
   profile: readonly IAutoMovieProfilePoint[],
 ): IAutoMovieProfilePoint[] => {
@@ -374,7 +679,7 @@ const positive = (value: number, label: string): void => {
     throw new Error(`${label} must be a finite number > 0`);
 };
 
-const segments = (value: number, label: string): void => {
-  if (!Number.isSafeInteger(value) || value < 3)
-    throw new Error(`${label} must be a safe integer >= 3`);
+const countAtLeast = (value: number, least: number, label: string): void => {
+  if (!Number.isSafeInteger(value) || value < least)
+    throw new Error(`${label} must be a safe integer >= ${least}`);
 };
