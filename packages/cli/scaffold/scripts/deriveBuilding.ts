@@ -155,16 +155,49 @@ const studies: IAutoMovieBuildingStudies = {
 
 const reportRoot = path.join(state.root, "reports");
 
-/** Write one sidecar, creating the directory the first time it is needed. */
+/**
+ * Write one sidecar, creating the directory the first time it is needed.
+ *
+ * The reported path is POSIX on every host, so two machines deriving one design
+ * print one log and a reader comparing them is comparing the derivation rather
+ * than the separator their operating system happened to use.
+ */
 const emit = (file: string, text: string): void => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text, "utf8");
-  process.stdout.write(`wrote ${path.relative(state.root, file)}\n`);
+  const relative = path.relative(state.root, file).split(path.sep).join("/");
+  process.stdout.write(`wrote ${relative}\n`);
 };
 
-/** Print one gap the way its own record states it, never as a bare count. */
-const announce = (gap: IAutoMovieBuildingGap): void => {
-  process.stdout.write(`  ${gap.status} ${gap.subject}: ${gap.reason}\n`);
+/**
+ * Print each gap once, with its remedy and how many artifacts declared it.
+ *
+ * Every sheet declares the same three limits of the drawing derivation, so a
+ * work of two units prints thirty-six copies of them unless they are collapsed,
+ * and the gaps that are actually about this building disappear underneath. The
+ * sidecar still carries every row beside the artifact that raised it; this is
+ * the reading, and the remedy is half of what a gap is for.
+ */
+const announce = (gaps: readonly IAutoMovieBuildingGap[]): void => {
+  const counted = new Map<
+    string,
+    { gap: IAutoMovieBuildingGap; count: number }
+  >();
+  for (const gap of gaps) {
+    const seen = counted.get(`${gap.status}\n${gap.reason}\n${gap.remedy}`);
+    if (seen === undefined)
+      counted.set(`${gap.status}\n${gap.reason}\n${gap.remedy}`, {
+        gap,
+        count: 1,
+      });
+    else ++seen.count;
+  }
+  for (const entry of counted.values())
+    process.stdout.write(
+      `  ${entry.gap.status} ${entry.gap.subject}${
+        entry.count === 1 ? "" : ` (and ${entry.count - 1} more like it)`
+      }: ${entry.gap.reason}\n    remedy: ${entry.gap.remedy}\n`,
+    );
 };
 
 if (environments.length === 0)
@@ -206,5 +239,5 @@ for (const environment of environments) {
   process.stdout.write(
     `${environment.id}: ${report.gaps.length} declared gap(s)\n`,
   );
-  for (const gap of report.gaps) announce(gap);
+  announce(report.gaps);
 }

@@ -45,7 +45,15 @@ import type {
  */
 export const AUTOMOVIE_BUILDING_SHEET_SCALE = 100;
 
-/** Height of a floor plan's cut plane above the work's own origin, in metres. */
+/**
+ * Height of a floor plan's cut plane above the work's own origin, in metres.
+ *
+ * One height, so the standard set draws one plan per building unit and not one
+ * per storey: a tower of four floors cut at 1.2 m is a plan of its ground floor
+ * with whatever lies below drawn as projected, exactly as the declared plane
+ * says. A work that wants a sheet per storey adds one view per storey with its
+ * own height rather than expecting this constant to mean four things.
+ */
 export const AUTOMOVIE_BUILDING_PLAN_CUT = 1.2;
 
 /** Height of a reflected ceiling plan's cut plane, in metres. */
