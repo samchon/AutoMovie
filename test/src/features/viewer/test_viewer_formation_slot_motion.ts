@@ -409,7 +409,6 @@ export const test_viewer_formation_slot_motion = (): void => {
     { ...design, heroOverrides: [{ slot: 3, actor: "captain" }] },
     recipes,
   );
-  const heroObject = new THREE.Object3D();
   const strayCues: IAutoMovieFormationSlotMotion[] = [
     { ...aside, id: "crowd-hero-aside", slots: [3] },
     { ...aside, id: "crowd-past-the-end", slots: [design.count + 4] },
@@ -420,7 +419,10 @@ export const test_viewer_formation_slot_motion = (): void => {
       models,
       motions: [advance],
       slotMotions: cues,
-      heroObjects: new Map([["captain", heroObject]]),
+      // Its own object per build: a hero handed to two units is written by
+      // both, and the second unit would then capture whatever the first left
+      // behind rather than what this fixture staged.
+      heroObjects: new Map([["captain", new THREE.Object3D()]]),
     });
   const strayed = strayBuild(strayCues);
   const unstrayed = strayBuild([]);

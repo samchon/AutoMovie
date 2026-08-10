@@ -141,6 +141,11 @@ export const buildInstancedFormation = (input: {
   /**
    * Sparse per-member cues, so one member of a crowd can do what its neighbours
    * do not: leave, stop, step out, or stop being drawn at all.
+   *
+   * Read once, here. Which members the cues single out is settled while the
+   * batches are built, so a caller that swapped this list afterwards would be
+   * sampling cues against a set of exceptions that no longer answers to them;
+   * rebuild the unit instead.
    */
   slotMotions?: readonly IAutoMovieFormationSlotMotion[];
   /** Explicit scene wrappers keyed by promoted hero actor id. */
