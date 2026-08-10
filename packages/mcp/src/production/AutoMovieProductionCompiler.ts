@@ -10,14 +10,17 @@ import {
   inheritProductionLighting,
   makeActorSynthesizer,
   placeFormationSlot,
+  readAutoMovieImageFacts,
   realizeShotContract,
   sampleFormationMotion,
   sampleFormationSlotMotion,
+  unsupportedAutoMovieMaterialExtensions,
   validateBuiltEnvironment,
   validateModel,
   validateMotion,
   validatePropPlacements,
   validateShotArtifact,
+  validateTextureAssets,
 } from "@automovie/engine";
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
@@ -610,6 +613,40 @@ export class AutoMovieProductionCompiler {
           reviews,
         ),
       );
+    // Close the loop between what the compiled production SAMPLES and what its
+    // ledger AUTHORIZES. This runs here rather than beside the asset inventory
+    // because it is decided against compiled models and scenes, which do not
+    // exist until every shot has compiled. A design-scope compile has no
+    // compiled artifact to close, so it states nothing rather than guessing.
+    if (input.scope !== "design" && compiled.size !== 0) {
+      const bytesOf = new Map(
+        (contentInputs ?? []).map((entry) => [entry.path, entry.bytes]),
+      );
+      const models = new Map<string, IAutoMovieModel>();
+      for (const shot of compiled.values())
+        for (const model of shot.models) models.set(model.id, model);
+      const closure = validateTextureAssets({
+        production: graph.production?.id ?? this.project.productionId,
+        models: [...models.values()],
+        scenes: [...compiled.values()].map((shot) => ({
+          shot: shot.shot.id,
+          environment: shot.scene.environment,
+        })),
+        assets: assetRecords,
+        facts: (asset) =>
+          readAutoMovieImageFacts(bytesOf.get(asset)) ?? undefined,
+      });
+      if (closure.success === false)
+        for (const violation of closure.violations)
+          diagnostics.push({
+            code: "asset-texture-unclosed",
+            category: "error",
+            phase: "compile",
+            target: "asset-manifest",
+            path: ".automovie/manifest.json",
+            message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
+          });
+    }
     diagnostics.sort(compareDiagnostics);
     const inputRaceFailure = (
       message: string,
@@ -5758,6 +5795,24 @@ const compilerAssetInventory = (
       message,
     });
   };
+  /**
+   * Report something the compiler cannot restate without refusing the asset.
+   *
+   * Compilation succeeds when no diagnostic is an `error`, so this states a
+   * fact the author should know while leaving the decision with them. Refusing
+   * a licensed model because it carries a material lobe this engine has no
+   * field for would be the compiler deciding what art a production may buy.
+   */
+  const warning = (code: string, target: string, message: string): void => {
+    diagnostics.push({
+      code,
+      category: "warning",
+      phase: "project",
+      target,
+      path: manifestPath,
+      message,
+    });
+  };
   const manifestInput = inputs.find((entry) => entry.path === manifestPath);
   if (manifestInput?.bytes === null || manifestInput === undefined) {
     diagnostic(
@@ -6030,6 +6085,19 @@ const compilerAssetInventory = (
           `External model "${asset.path}" cannot be ingested with profile "${asset.model.ingestProfile}": ${errorMessage(error)} Restore valid fixed bytes or select the correct supported profile.`,
         );
       }
+    // After `ingested` is decided, because this is a report rather than a
+    // refusal and must not turn a sound ingest into a failed one.
+    if (inspection !== undefined) {
+      const unsupported = unsupportedAutoMovieMaterialExtensions(
+        inspection.extensions,
+      );
+      if (unsupported.length !== 0)
+        warning(
+          "asset-model-material-unsupported",
+          asset.path,
+          `External model "${asset.path}" declares material extensions automovie cannot restate: ${unsupported.join(", ")}. Its appearance will not match a generated material, and no validator in this repository has an opinion about it.`,
+        );
+    }
     const collision = resolveExternalCollisionProxy({
       owner: asset.path,
       reference: asset.model.collisionProxy,
