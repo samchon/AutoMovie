@@ -1,4 +1,5 @@
 import {
+  IAutoMovieFormationReform,
   composeFormationHeroTransform,
   formationCadenceSegments,
   formationSlotPosition,
@@ -276,6 +277,9 @@ export const buildInstancedFormation = (input: {
     exceptions.push({ slot, chunk, index, designed: chunk.slots[index]! });
   }
   let spacing = { lateral: 1, depth: 1 };
+  // The arrangement currently written into the instance matrices, so a
+  // frame that changes neither spacing nor arrangement writes nothing.
+  let reform: IAutoMovieFormationReform | null = null;
   const initialHeroSources = new Map(
     [...(input.heroObjects ?? [])].map(
       ([actor, object]) => [actor, objectTransform(object)] as const,
@@ -319,18 +323,35 @@ export const buildInstancedFormation = (input: {
         new THREE.Vector3(0, 1, 0),
         THREE.MathUtils.degToRad(sampled.facingOffsetDeg),
       );
+      // Spacing opens and closes an arrangement; a re-form changes which
+      // arrangement it is. Both move a member relative to its neighbours, so
+      // neither can ride on the group transform above and both rewrite the
+      // same instance matrices -- together, so a frame that changes both pays
+      // for one pass and cannot apply one against the other's stale reading.
       if (
         sampled.spacingScale.lateral !== spacing.lateral ||
-        sampled.spacingScale.depth !== spacing.depth
+        sampled.spacingScale.depth !== spacing.depth ||
+        sampled.reform?.layout !== reform?.layout ||
+        sampled.reform?.progress !== reform?.progress
       ) {
         spacing = { ...sampled.spacingScale };
+        reform = sampled.reform;
         for (const chunk of chunks)
           for (const mesh of chunk.tiers.values()) {
             chunk.slots.forEach((slot, index) => {
               mesh.setMatrixAt(
                 index,
                 slotMatrix(
-                  slot,
+                  reform === null
+                    ? slot
+                    : {
+                        ...slot,
+                        position: formationSlotPosition(
+                          input.formation,
+                          slot.slot,
+                          reform,
+                        ),
+                      },
                   input.formation.anchor,
                   spacing,
                   input.formation.facingDeg,

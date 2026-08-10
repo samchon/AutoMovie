@@ -3214,6 +3214,7 @@ const round = (value: number): number => Math.round(value * 1_000) / 1_000;
 const formationGroundSampleTimes = (
   cue: IAutoMovieFormationMotion,
   radius: number,
+  reformReach: number,
 ): number[] => {
   // How many times its design reach a spacing change ever holds a member out
   // at, so the arc a turn sweeps it through is measured at the radius it really
@@ -3238,7 +3239,13 @@ const formationGroundSampleTimes = (
       Math.abs(cue.to.spacingScale.lateral - cue.from.spacingScale.lateral),
       Math.abs(cue.to.spacingScale.depth - cue.from.spacingScale.depth),
     ) *
-      radius;
+      radius +
+    // A re-form moves members without moving the unit, so none of the terms
+    // above sees it: a crowd changing shape in place has zero translation,
+    // zero turn and unit spacing, and would be sampled at its two ends only.
+    // The ground between two arrangements is exactly what an author cannot see
+    // from either of them.
+    reformReach;
   const steps = Math.min(
     FORMATION_GROUND_SAMPLE_LIMIT,
     Math.ceil((2 * reach) / FORMATION_GROUND_SAMPLE_METRES),
@@ -3427,7 +3434,32 @@ export const validateAutoMovieFormationGround = (
     );
     const times = [
       ...new Set([
-        ...own.flatMap((cue) => formationGroundSampleTimes(cue, radius)),
+        ...own.flatMap((cue) =>
+          formationGroundSampleTimes(
+            cue,
+            radius,
+            // How far the furthest member this gate measures travels between
+            // the two arrangements. Read off the members it walks rather than
+            // bounded by the layouts' radii, so the sampling density is the
+            // density of what is actually being asked.
+            cue.layout === undefined
+              ? 0
+              : Math.max(
+                  0,
+                  ...[...members.values()].map((member) => {
+                    const target = formationSlotPosition(
+                      formation,
+                      member.slot,
+                      { layout: cue.layout!, progress: 1 },
+                    );
+                    return Math.hypot(
+                      target.x - member.point.x,
+                      target.z - member.point.z,
+                    );
+                  }),
+                ),
+          ),
+        ),
         ...ownSlots.flatMap(formationSlotGroundSampleTimes),
       ]),
     ].sort((left, right) => left - right);
@@ -3470,8 +3502,17 @@ export const validateAutoMovieFormationGround = (
       }
       const motion = sampleFormationMotion(own, formation.id, time);
       for (const member of members.values()) {
+        // Re-read where the design puts this member when a cue is re-forming
+        // the unit: the arrangement itself is moving, so the point the cached
+        // sweep found is where the member stood before the re-form began. Read
+        // once per member per sampled time, and only when a re-form is under
+        // way -- a unit that keeps its arrangement pays nothing.
+        const designed =
+          motion.reform === null
+            ? member.point
+            : formationSlotPosition(formation, member.slot, motion.reform);
         const placed = placeFormationSlot({
-          position: member.point,
+          position: designed,
           facingDeg: formation.facingDeg,
           anchor: formation.anchor,
           baseFacingDeg: formation.facingDeg,
@@ -3980,8 +4021,16 @@ export const validateAutoMovieFormationOverlap = (
     for (const unit of units) {
       const motion = sampleFormationMotion(cues, unit.formation.id, time);
       for (const member of unit.members) {
+        // Where the design puts this member NOW: a re-forming unit is moving
+        // its own arrangement, so the cached point is where the member stood
+        // before the cue began. Members crossing each other mid-re-form is
+        // exactly the collision this gate exists to catch.
+        const designed =
+          motion.reform === null
+            ? member.point
+            : formationSlotPosition(unit.formation, member.slot, motion.reform);
         const placed = placeFormationSlot({
-          position: member.point,
+          position: designed,
           facingDeg: unit.formation.facingDeg,
           anchor: unit.formation.anchor,
           baseFacingDeg: unit.formation.facingDeg,
@@ -4121,6 +4170,33 @@ export const validateAutoMovieFormationMotions = (
         `formationMotion:${cue.id}.formation`,
         `must reference participating compiled formation "${cue.formation}"`,
       );
+    // The arrangement a cue re-forms into has to be one this unit can stand
+    // in. A lattice narrower than the unit is a member with no place, and a
+    // lattice of zero files is a division by zero inside the placement itself
+    // -- neither is a picture, and both are the author's to correct here
+    // rather than the renderer's to discover.
+    const target = cue.layout;
+    const unit = value.formations.find(
+      (formation) => formation.id === cue.formation,
+    );
+    if (target !== undefined && unit !== undefined) {
+      const lattice =
+        target.kind === "line" || target.kind === "column"
+          ? { ranks: target.ranks, files: target.files }
+          : null;
+      if (
+        lattice !== null &&
+        (Number.isSafeInteger(lattice.ranks) === false ||
+          Number.isSafeInteger(lattice.files) === false ||
+          lattice.ranks < 1 ||
+          lattice.files < 1 ||
+          lattice.ranks * lattice.files < unit.count)
+      )
+        fail(
+          `formationMotion:${cue.id}.layout`,
+          `must seat all ${unit.count} members in whole ranks and files rather than ${lattice.ranks} x ${lattice.files}`,
+        );
+    }
     const declared = repertoire.get(cue.formation);
     if (
       cue.gait !== undefined &&
