@@ -77,9 +77,10 @@ export interface IAutoMovieDrawingRegion {
    * Material id a finish view fills this region with, or `null`.
    *
    * Resolved from the material bound to the elements realizing the space's
-   * boundaries. It is a surface material and not a construction build-up: layer
-   * order, thickness and pattern do not exist in the design yet, and the
-   * drawing declares that as a gap rather than inventing them.
+   * boundaries. It is a surface material and not a construction build-up: a
+   * material assembly is a separate record from the built environment, a
+   * drawing is derived from the environment alone, and the drawing declares
+   * that reach as a gap rather than inventing a layer order it cannot see.
    */
   finish: string | null;
 }
