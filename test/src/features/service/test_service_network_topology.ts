@@ -50,15 +50,20 @@ import {
  *    one it was authored in, which a `from-root` system does not.
  * 4. A shut valve leaves validation clean, is walked straight through by default,
  *    and isolates the basin when the operating question is asked.
- * 5. A system whose root does not resolve reaches nothing rather than reaching a
+ * 5. The same isolation is asked of a de-energised distribution panel, because an
+ *    inline device is one record whatever it carries: a rule that only worked
+ *    on water would be a plumbing special case wearing a general name.
+ * 6. A system whose root does not resolve reaches nothing rather than reaching a
  *    name, and reach and schematic both refuse an unknown system id.
- * 6. The cold schematic reproduces the graph with hand-computed totals: three
+ * 7. The cold schematic reproduces the graph with hand-computed totals: three
  *    nodes, two edges, 8.6 m of run, 0.0002 m³/s of demand, nothing unreached.
- * 7. Support is reported honestly: the structural rules are `supported`, the
+ * 8. The waste schematic is read in its own direction: a stack reports the 0.001
+ *    m³/s discharged into it, not the zero an inlet-shaped reading gives it.
+ * 9. Support is reported honestly: the structural rules are `supported`, the
  *    boundary-face placement of a sleeve is `unsupported`, one performance
- *    entry per declared discipline is `unsupported` rather than absent, and the
- *    crossing check drops to `unsupported` for a building whose partitions
- *    declare no volume for a run to be seen leaving.
+ *    entry per declared discipline is `unsupported` rather than absent, and
+ *    both the crossing check and the placement check drop to `unsupported` for
+ *    a building whose partitions declare no volume at all.
  */
 export const test_service_network_topology = (): void => {
   const environment = serviceEnvironment();
@@ -177,6 +182,53 @@ export const test_service_network_topology = (): void => {
     },
   );
 
+  const deEnergised = withNode(network, "panel", (node) => ({
+    ...node,
+    state: { name: "off", opening: 0 },
+  }));
+  TestValidator.equals(
+    "a device isolates the same way whatever medium it holds back",
+    namedFacts([
+      [
+        "stillValid",
+        () =>
+          validateServiceNetwork({ network: deEnergised, environment }).success,
+      ],
+      [
+        "designReach",
+        () =>
+          serviceSystemReach({
+            network: deEnergised,
+            system: "lighting",
+          }).join() === "panel,bath-light",
+      ],
+      [
+        "operatingReach",
+        () =>
+          serviceSystemReach({
+            network: deEnergised,
+            system: "lighting",
+            closedValvesBlock: true,
+          }).join() === "panel",
+      ],
+      [
+        "liveCircuitPasses",
+        () =>
+          serviceSystemReach({
+            network,
+            system: "lighting",
+            closedValvesBlock: true,
+          }).join() === "panel,bath-light",
+      ],
+    ]),
+    {
+      stillValid: true,
+      designReach: true,
+      operatingReach: true,
+      liveCircuitPasses: true,
+    },
+  );
+
   const rootless = withSystem(network, "cold", (system) => ({
     ...system,
     root: "no-such-node",
@@ -266,6 +318,35 @@ export const test_service_network_topology = (): void => {
     },
   );
 
+  const stack = serviceNetworkSchematic({ network, system: "waste" });
+  TestValidator.equals(
+    "a stack's schematic reports what discharges into it",
+    namedFacts([
+      [
+        "nodes",
+        () =>
+          stack.nodes.map((entry) => entry.id).join() ===
+          "stack,basin,waste-tee,floor-gully",
+      ],
+      [
+        "edges",
+        () =>
+          stack.edges.map((edge) => edge.id).join() ===
+          "waste-basin,waste-gully,waste-main",
+      ],
+      ["totalLength", () => nclose(stack.totalLength, 11, 1e-12)],
+      ["totalDemand", () => nclose(stack.totalDemand, 0.001, 1e-15)],
+      ["unreachable", () => stack.unreachable.length === 0],
+    ]),
+    {
+      nodes: true,
+      edges: true,
+      totalLength: true,
+      totalDemand: true,
+      unreachable: true,
+    },
+  );
+
   const broken = serviceNetworkSchematic({
     network: {
       ...network,
@@ -291,7 +372,7 @@ export const test_service_network_topology = (): void => {
   TestValidator.equals(
     "what cannot be answered is named rather than implied",
     namedFacts([
-      ["count", () => support.length === 12],
+      ["count", () => support.length === 13],
       [
         "structural",
         () =>
@@ -299,10 +380,10 @@ export const test_service_network_topology = (): void => {
             .filter((entry) => entry.status === "supported")
             .map((entry) => entry.check)
             .join() ===
-          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,boundary-penetration,penetration-on-boundary-face,waterproof-coverage",
+          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,fixture-placement,boundary-penetration,penetration-on-boundary-face,waterproof-coverage",
       ],
       [
-        "crossingUnsupportedWithoutVolumes",
+        "volumelessDropsBothPlacementAnswers",
         () =>
           serviceAnalysisSupport({
             network,
@@ -313,11 +394,11 @@ export const test_service_network_topology = (): void => {
                 cells: [],
               })),
             },
-          }).some(
-            (entry) =>
-              entry.check === "boundary-penetration" &&
-              entry.status === "unsupported",
-          ),
+          })
+            .filter((entry) => entry.status === "unsupported")
+            .map((entry) => entry.check)
+            .join()
+            .startsWith("fixture-placement,boundary-penetration"),
       ],
       [
         "boundaryFace",
@@ -388,7 +469,7 @@ export const test_service_network_topology = (): void => {
     {
       count: true,
       structural: true,
-      crossingUnsupportedWithoutVolumes: true,
+      volumelessDropsBothPlacementAnswers: true,
       boundaryFace: true,
       facelessBoundaryDropsIt: true,
       unresolvedBoundaryDropsItToo: true,

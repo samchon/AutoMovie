@@ -25,6 +25,7 @@ import {
   serviceMaintenanceBounds,
   serviceSegmentClashes,
   serviceSegmentSpanBounds,
+  serviceSystemLoad,
   serviceSystemReach,
 } from "./serviceNetwork";
 
@@ -110,11 +111,12 @@ const MEDIUM_UNITS: Record<
  * and it is deliberately structural rather than quantitative. It answers
  * whether the graph is whole — every port carrying a run, every node reached
  * from its system's root, every medium and unit repeated consistently, every
- * run leaving an emitter and arriving at a consumer, every wall crossing
- * declared, and nothing occupying another discipline's cubic metre or an
- * engineer's access space. It does not answer head loss, voltage drop or duct
- * pressure; `serviceAnalysisSupport` names those as `unsupported` rather than
- * letting a clean result imply they passed.
+ * run leaving an emitter and arriving at a consumer, every fitting and the
+ * ports it offers standing in the room it claims, every wall crossing declared,
+ * and nothing occupying another discipline's cubic metre or an engineer's
+ * access space. It does not answer head loss, voltage drop or duct pressure;
+ * `serviceAnalysisSupport` names those as `unsupported` rather than letting a
+ * clean result imply they passed.
  *
  * The network is checked **against** an environment rather than nested inside
  * one. Every architectural name it repeats — a logical space, an element, a
@@ -287,19 +289,15 @@ export const validateServiceNetwork = (props: {
         `service node space "${node.space}" does not resolve in built environment "${environment.id}"`,
         node.space,
       );
-    else if (
-      !propSpaceContainsBounds({
-        environment,
-        space: node.space,
-        bounds: { min: node.position, max: node.position },
-      })
-    )
-      out.push(
-        "type",
-        `${path}.position`,
-        `service node "${node.id}" stands outside logical space "${node.space}"`,
-        node.position,
-      );
+    appendInsideSpace({
+      environment,
+      spaceIds,
+      space: node.space,
+      point: node.position,
+      path: `${path}.position`,
+      subject: `service node "${node.id}"`,
+      out,
+    });
     if (node.element !== null && !elementIds.has(node.element))
       out.push(
         "type",
@@ -393,6 +391,15 @@ export const validateServiceNetwork = (props: {
         "service port position",
         out,
       );
+      appendInsideSpace({
+        environment,
+        spaceIds,
+        space: node.space,
+        point: port.position,
+        path: `${portPath}.position`,
+        subject: `service port "${port.id}" of node "${node.id}"`,
+        out,
+      });
     });
   });
 
@@ -616,21 +623,12 @@ export const validateServiceNetwork = (props: {
   });
 
   network.systems.forEach((system, index) => {
-    // Load is summed over consuming ports alone. A junction passing the medium
-    // on declares nothing, and counting a bidirectional tap on both sides would
-    // inflate a ring by exactly the amount that makes the total useless. This
-    // is a declaration check, not a hydraulic or electrical one: nothing here
-    // diversifies, and `serviceAnalysisSupport` says so by name.
-    const load = network.nodes.reduce(
-      (sum, node) =>
-        sum +
-        node.ports
-          .filter(
-            (port) => port.system === system.id && port.direction === "in",
-          )
-          .reduce((total, port) => total + port.demand, 0),
-      0,
-    );
+    // Read at the end facing away from the root, so a drainage stack is
+    // measured by what discharges into it rather than by the zero a
+    // supply-shaped reading would hand it. This is a declaration check, not a
+    // hydraulic or electrical one: nothing here diversifies, and
+    // `serviceAnalysisSupport` says so by name.
+    const load = serviceSystemLoad({ network, system });
     if (Number.isFinite(system.capacity) && load > system.capacity)
       out.push(
         "range",
@@ -682,6 +680,51 @@ export const validateServiceNetwork = (props: {
   });
 
   return out.toValidation();
+};
+
+/**
+ * Hold one authored world point inside the logical space its node stands in.
+ *
+ * A node is placed in a room, and a port is the point a run is anchored to, so
+ * the two answer the same question and are held by the same predicate the
+ * architecture holds a prop with. A port allowed to drift out of its node's
+ * room is the hole the crossing rule is evaded through: a crossing is read
+ * _between_ consecutive route points, so a duct whose terminal port sits in the
+ * plant room can be routed entirely inside that room, never appear to leave
+ * anywhere, need no sleeve, and still render as the thing that serves the
+ * hall.
+ *
+ * A point that is not finite has already been reported for being unreadable,
+ * and a space that does not resolve has already been reported for not existing.
+ * Neither is accused a second time of standing in the wrong place, which would
+ * send an author looking for a second mistake at one address.
+ */
+const appendInsideSpace = (props: {
+  environment: IAutoMovieBuiltEnvironment;
+  spaceIds: ReadonlySet<string>;
+  space: string;
+  point: IAutoMovieVector3;
+  path: string;
+  subject: string;
+  out: ViolationCollector;
+}): void => {
+  if (!props.spaceIds.has(props.space)) return;
+  for (const axis of ["x", "y", "z"] as const)
+    if (!Number.isFinite(props.point[axis])) return;
+  if (
+    propSpaceContainsBounds({
+      environment: props.environment,
+      space: props.space,
+      bounds: { min: props.point, max: props.point },
+    })
+  )
+    return;
+  props.out.push(
+    "type",
+    props.path,
+    `${props.subject} stands outside logical space "${props.space}"`,
+    props.point,
+  );
 };
 
 /**

@@ -107,8 +107,13 @@ export interface IAutoMovieServiceSystem {
   root: string;
 
   /**
-   * Design capacity in {@link unit}; a finite number greater than `0`. The
-   * engine sums the demand every consuming port declares against it.
+   * Design capacity in {@link unit}; a finite number greater than `0`.
+   *
+   * The engine sums the demand declared at the ports facing away from
+   * {@link root} against it, which is the end a system is loaded from: what the
+   * `in` ports of a `from-root` or `undirected` system draw, and what the `out`
+   * ports of a `to-root` system discharge. A `bidirectional` port is counted at
+   * neither end, so a ring tap states its draw on the port that draws it.
    */
   capacity: number;
 }
@@ -185,6 +190,11 @@ export interface IAutoMovieServicePort {
   /**
    * Design flow, load or bandwidth through this port in {@link unit}; a finite
    * number `>= 0`. A junction that merely passes the medium on declares `0`.
+   *
+   * It is the port's own terminal that states it: a basin states what it draws
+   * on its `in` supply port and what it discharges on its `out` waste port, so
+   * a supply system and a drainage system are each loaded by the end that
+   * actually loads them.
    */
   demand: number;
 
@@ -194,7 +204,15 @@ export interface IAutoMovieServicePort {
    */
   section: number | null;
 
-  /** World position of the connection point, in metres. */
+  /**
+   * World position of the connection point, in metres.
+   *
+   * It stands inside the same logical space its node stands in. A run is
+   * anchored to this point at both ends, and a wall crossing is read between
+   * consecutive route points, so a port allowed to sit in another room would
+   * let a run terminate where its fitting is not and never appear to cross
+   * anything.
+   */
   position: IAutoMovieVector3;
 }
 

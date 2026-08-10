@@ -1,7 +1,17 @@
-import { validateServiceNetwork } from "@automovie/engine";
+import { serviceSystemLoad, validateServiceNetwork } from "@automovie/engine";
+import {
+  AutoMovieServiceDiscipline,
+  AutoMovieServiceMedium,
+  AutoMovieServiceUnit,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, namedFacts, nclose } from "../internal/predicates";
+import {
+  hasViolation,
+  namedFacts,
+  nclose,
+  violationCount,
+} from "../internal/predicates";
 import {
   node,
   port,
@@ -12,6 +22,7 @@ import {
   system,
   withNode,
   withPort,
+  withSegment,
   withSystem,
 } from "../internal/serviceFixtures";
 
@@ -46,22 +57,31 @@ const refuse = (network = serviceNetwork()) =>
  * 4. A discipline refuses a medium it does not carry, and a medium refuses a unit
  *    it is not measured in — at the system, and again at every port repeating
  *    it.
- * 5. A port carrying the wrong medium or the wrong unit is caught on its own, with
+ * 5. The two disciplines the bathhouse itself does not carry answer to the same
+ *    table: a data circuit is legal as a bit rate and refused as a control
+ *    signal, and a control circuit is the mirror of it.
+ * 6. A port carrying the wrong medium or the wrong unit is caught on its own, with
  *    the system left alone.
- * 6. A port no run joins is refused as a stub, and nothing else is.
- * 7. Declared demand beyond declared capacity is refused with the measured
+ * 7. A port no run joins is refused as a stub, and nothing else is.
+ * 8. Declared demand beyond declared capacity is refused with the measured
  *    overshoot.
- * 8. Deleting one branch produces exactly the three findings it causes: two stubs
- *    and one orphan.
- * 9. A root is refused when it does not resolve, when it carries no port on its
- *    own system, when a supply is rooted where the medium only arrives, and
- *    when a drain is rooted where it only leaves.
- * 10. A node is refused when its space does not resolve, when its element does not,
+ * 9. A system is loaded at the end facing away from its root, so a drainage stack
+ *    is measured by what discharges into it rather than by the zero a
+ *    supply-shaped reading would hand it.
+ * 10. A port standing outside the logical space its own node stands in is refused,
+ *     without accusing the node that did stand in it.
+ * 11. Deleting one branch produces exactly the three findings it causes: two stubs
+ *     and one orphan.
+ * 12. A root is refused when it does not resolve, when it carries no port on its
+ *     own system, when a supply is rooted where the medium only arrives, and
+ *     when a drain is rooted where it only leaves.
+ * 13. A node is refused when its space does not resolve, when its element does not,
  *     and when it stands outside the space it claims.
- * 11. Operating state and access volumes are range-checked: a blank state name, an
+ * 14. Operating state and access volumes are range-checked: a blank state name, an
  *     opening past 1, a collapsed envelope and a non-finite one.
- * 12. Non-finite and negative numbers are refused wherever a position, a demand or
- *     a section is required.
+ * 15. Non-finite and negative numbers are refused wherever a position, a demand or
+ *     a section is required, and a point nobody can read is not additionally
+ *     accused of standing in the wrong room.
  */
 export const test_service_network_defects = (): void => {
   const clean = serviceNetwork();
@@ -239,6 +259,69 @@ export const test_service_network_defects = (): void => {
     },
   );
 
+  const circuit = (
+    discipline: AutoMovieServiceDiscipline,
+    medium: AutoMovieServiceMedium,
+    unit: AutoMovieServiceUnit,
+  ) =>
+    refuse(
+      withPort(
+        withPort(
+          withSystem(clean, "lighting", (entry) => ({
+            ...entry,
+            discipline,
+            medium,
+            unit,
+          })),
+          "panel-out",
+          (entry) => ({ ...entry, medium, unit }),
+        ),
+        "bath-light-in",
+        (entry) => ({ ...entry, medium, unit }),
+      ),
+    );
+  TestValidator.equals(
+    "the two disciplines this building never carries answer to the same table",
+    namedFacts([
+      [
+        "dataCarriesABitRate",
+        () => circuit("data", "data-signal", "bit-per-second").success === true,
+      ],
+      [
+        "controlCarriesADimensionlessSignal",
+        () =>
+          circuit("control", "control-signal", "dimensionless").success ===
+          true,
+      ],
+      [
+        "dataRefusesAControlSignal",
+        () => {
+          const wrong = circuit("data", "control-signal", "dimensionless");
+          return (
+            hasViolation(wrong, "type", "$input.systems[4].medium") &&
+            violationCount(wrong) === 1
+          );
+        },
+      ],
+      [
+        "controlRefusesABitRate",
+        () => {
+          const wrong = circuit("control", "control-signal", "bit-per-second");
+          return (
+            hasViolation(wrong, "type", "$input.systems[4].unit") &&
+            violationCount(wrong) === 1
+          );
+        },
+      ],
+    ]),
+    {
+      dataCarriesABitRate: true,
+      controlCarriesADimensionlessSignal: true,
+      dataRefusesAControlSignal: true,
+      controlRefusesABitRate: true,
+    },
+  );
+
   const portMedium = refuse(
     withPort(clean, "basin-cold", (entry) => ({
       ...entry,
@@ -317,6 +400,107 @@ export const test_service_network_defects = (): void => {
       ],
     ]),
     { reported: true, overshoot: true, alone: true },
+  );
+
+  const discharging = refuse(
+    withSystem(clean, "waste", (entry) => ({ ...entry, capacity: 0.0005 })),
+  );
+  TestValidator.equals(
+    "a stack is loaded by what discharges into it, not by what it receives",
+    namedFacts([
+      [
+        "supplyReadsItsInlets",
+        () =>
+          nclose(
+            serviceSystemLoad({ network: clean, system: clean.systems[0]! }),
+            0.0002,
+            1e-15,
+          ),
+      ],
+      [
+        "stackReadsItsOutlets",
+        () =>
+          nclose(
+            serviceSystemLoad({ network: clean, system: clean.systems[2]! }),
+            0.001,
+            1e-15,
+          ),
+      ],
+      [
+        "refused",
+        () => hasViolation(discharging, "range", "$input.systems[2].capacity"),
+      ],
+      [
+        "overshoot",
+        () =>
+          discharging.success === false &&
+          discharging.violations.some((item) =>
+            nclose(item.overshoot ?? -1, 0.0005, 1e-15),
+          ),
+      ],
+      ["alone", () => violationCount(discharging) === 1],
+    ]),
+    {
+      supplyReadsItsInlets: true,
+      stackReadsItsOutlets: true,
+      refused: true,
+      overshoot: true,
+      alone: true,
+    },
+  );
+
+  const strayPort = refuse(
+    withSegment(
+      withPort(clean, "bath-light-in", (entry) => ({
+        ...entry,
+        position: { x: 8.2, y: 2.95, z: 3 },
+      })),
+      "lighting-run",
+      (run) => ({
+        ...run,
+        route: [
+          { x: 8.5, y: 2.95, z: 3 },
+          { x: 8.2, y: 2.95, z: 3 },
+        ],
+        penetrations: [],
+      }),
+    ),
+  );
+  TestValidator.equals(
+    "a port may not stand in a room its own fitting is not in",
+    namedFacts([
+      [
+        "refused",
+        () =>
+          hasViolation(strayPort, "type", "$input.nodes[13].ports[0].position"),
+      ],
+      [
+        "named",
+        () =>
+          strayPort.success === false &&
+          strayPort.violations.some((item) =>
+            item.expected.includes(
+              'service port "bath-light-in" of node "bath-light" stands outside logical space "bath"',
+            ),
+          ),
+      ],
+      [
+        "nodeUnaccused",
+        () =>
+          strayPort.success === false &&
+          strayPort.violations.every(
+            (item) => item.path !== "$input.nodes[13].position",
+          ),
+      ],
+      [
+        "onlyDefect",
+        () =>
+          strayPort.success === false &&
+          strayPort.violations.filter((item) => item.severity === "error")
+            .length === 1,
+      ],
+    ]),
+    { refused: true, named: true, nodeUnaccused: true, onlyDefect: true },
   );
 
   const orphan = refuse({
@@ -483,12 +667,23 @@ export const test_service_network_defects = (): void => {
         () =>
           hasViolation(numbers, "range", "$input.nodes[9].ports[0].position.y"),
       ],
+      [
+        "nodeNotAlsoEvicted",
+        () => !hasViolation(numbers, "type", "$input.nodes[9].position"),
+      ],
+      [
+        "portNotAlsoEvicted",
+        () =>
+          !hasViolation(numbers, "type", "$input.nodes[9].ports[0].position"),
+      ],
     ]),
     {
       nodePosition: true,
       demand: true,
       section: true,
       portPosition: true,
+      nodeNotAlsoEvicted: true,
+      portNotAlsoEvicted: true,
     },
   );
 

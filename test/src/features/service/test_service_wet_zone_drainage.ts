@@ -16,6 +16,7 @@ import {
 import {
   serviceEnvironment,
   serviceNetwork,
+  wetZone,
   withNode,
   withPort,
   withZone,
@@ -96,13 +97,19 @@ const bathFloor = (
  *    named.
  * 6. Every handover to a drier region must be declared; two regions of the same
  *    grade need no threshold, which a zone lowered to `dry` proves.
- * 7. A tanked zone must fall, and must fall to at least one drain.
- * 8. A drain must resolve, stand in the zone's space, and carry an outgoing waste
+ * 7. The grades are ordered rather than merely tanked-or-not: an `immersed` basin
+ *    takes the same obligations a `wet` room does, and still hands over to a
+ *    `wet` neighbour — the pair a binary reading would call equal — while the
+ *    wetter side of that same boundary needs no threshold of its own.
+ * 8. A tanked zone must fall, and must fall to at least one drain.
+ * 9. A drain must resolve, stand in the zone's space, and carry an outgoing waste
  *    port; a duplicate is refused.
- * 9. The lowering composes into a valid fluid domain: authored inflows first, then
- *    one source per supply port in the room and one drain per gully, at the
- *    cells they stand over, with the gully's own bed as its sill.
- * 10. It refuses rather than repairs: an unknown zone, an unknown drain node, a
+ * 10. The lowering composes into a valid fluid domain: authored inflows first, then
+ *     one source per supply port in the room and one drain per gully, at the
+ *     cells they stand over, with the gully's own bed as its sill. The grade is
+ *     a waterproofing statement and not a hydraulic one, so an `immersed` basin
+ *     lowers to exactly what the `wet` room lowers to.
+ * 11. It refuses rather than repairs: an unknown zone, an unknown drain node, a
  *     node off the lattice on either side, a non-finite position, and a derived
  *     id that would shadow an authored source or drain.
  */
@@ -277,6 +284,65 @@ export const test_service_wet_zone_drainage = (): void => {
     },
   );
 
+  const basin = withZone(clean, "bath-zone", (zone) => ({
+    ...zone,
+    grade: "immersed",
+  }));
+  const tiered = refuse({
+    ...clean,
+    zones: [
+      { ...basin.zones[0]!, thresholds: [] },
+      wetZone({
+        id: "hall-zone",
+        space: "hall",
+        grade: "wet",
+        membrane: ["bath-hall", "hall-plant"],
+        upturn: 0.1,
+        slope: 0.01,
+        thresholds: ["hall-plant"],
+      }),
+      clean.zones[1]!,
+    ],
+  });
+  TestValidator.equals(
+    "the grades are an order, not a pair of buckets",
+    namedFacts([
+      ["immersedTakesTheSameObligations", () => refuse(basin).success === true],
+      [
+        "immersedHandsOverToWet",
+        () =>
+          tiered.success === false &&
+          tiered.violations.some(
+            (item) =>
+              item.path === "$input.zones[0].thresholds" &&
+              item.expected.includes(
+                'boundary "bath-hall" hands a "immersed" zone over to drier space "hall"',
+              ),
+          ),
+      ],
+      [
+        "theWetterSideOwesNothingThere",
+        () =>
+          tiered.success === false &&
+          tiered.violations.every(
+            (item) => item.path !== "$input.zones[1].thresholds",
+          ),
+      ],
+      [
+        "andTheHallStillOwesItsOwnDrain",
+        () => hasViolation(tiered, "coverage", "$input.zones[1].drains"),
+      ],
+      ["exactly", () => violationCount(tiered) === 2],
+    ]),
+    {
+      immersedTakesTheSameObligations: true,
+      immersedHandsOverToWet: true,
+      theWetterSideOwesNothingThere: true,
+      andTheHallStillOwesItsOwnDrain: true,
+      exactly: true,
+    },
+  );
+
   const flat = refuse(
     withZone(clean, "bath-zone", (zone) => ({
       ...zone,
@@ -402,6 +468,22 @@ export const test_service_wet_zone_drainage = (): void => {
         "latticeUntouched",
         () => lowered.grid === bathFloor().grid || lowered.grid.columns === 4,
       ],
+      [
+        "gradeIsNotHydraulic",
+        () => {
+          const deeper = lowerWetZoneDrainage({
+            network: basin,
+            zone: "bath-zone",
+            domain: bathFloor(),
+          });
+          return (
+            deeper.sources.map((entry) => entry.id).join() ===
+              lowered.sources.map((entry) => entry.id).join() &&
+            deeper.drains.map((entry) => entry.id).join() ===
+              lowered.drains.map((entry) => entry.id).join()
+          );
+        },
+      ],
     ]),
     {
       sourceIds: true,
@@ -416,6 +498,7 @@ export const test_service_wet_zone_drainage = (): void => {
       neverCloses: true,
       stillValid: true,
       latticeUntouched: true,
+      gradeIsNotHydraulic: true,
     },
   );
 
