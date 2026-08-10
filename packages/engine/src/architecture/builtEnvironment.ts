@@ -4,13 +4,15 @@ import {
   IAutoMovieBuiltEnvironment,
   IAutoMovieBuiltOpening,
   IAutoMovieBuiltSpace,
+  IAutoMovieConnectorCarriage,
   IAutoMovieConnectorSection,
+  IAutoMovieConnectorState,
   IAutoMovieMovablePanel,
   IAutoMovieOpeningProfile,
-  IAutoMoviePanelMotion,
   IAutoMoviePlanarPoint,
   IAutoMovieQuaternion,
   IAutoMovieSpace,
+  IAutoMovieTravelMotion,
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -46,6 +48,8 @@ const CONNECTOR_KINDS = [
   "bridge",
   "other",
 ] as const;
+/** The three ways a powered run may stand: driven either way, or not at all. */
+const CONNECTOR_DRIVES = ["forward", "reverse", "still"] as const;
 const PLANE_NORMAL_EPSILON = 1e-12;
 const MATRIX_ROUND_TRIP_EPSILON = 1e-8;
 const CONTAINMENT_EPSILON = 1e-9;
@@ -505,6 +509,15 @@ export const validateBuiltEnvironment = (props: {
       "building element",
       collector,
     );
+    validateConnectorLandings(connector, path, spaceIds, collector);
+    validateConnectorOperation({
+      connector,
+      path,
+      elements: elementIds,
+      environment,
+      driven: drivenElements,
+      collector,
+    });
   });
 
   environment.surfaces.forEach((entry, index) => {
@@ -529,6 +542,7 @@ export const validateBuiltEnvironment = (props: {
 
   if (!collector.items.some((item) => item.severity === "error")) {
     validatePanelFit(environment, root, boundaryFaces, openingHulls, collector);
+    validateCarriageService(environment, root, collector);
     const matrices = worldMatricesOf(environment, operationDeltas(environment));
     environment.elements.forEach((element, index) => {
       const world = matrices.get(element.id)!;
@@ -647,7 +661,15 @@ export const builtEnvironmentContainsPoint = (
   );
 };
 
-/** Return spaces directly joined by a boundary or traversal connector. */
+/**
+ * Return spaces directly joined by a boundary or traversal connector.
+ *
+ * A run reaches every stop it declares, not only its two ends: a lift serving
+ * four floors makes all four reachable from each other, because the floors it
+ * stops at are the floors it joins. A one-way run reaches only stops further
+ * along its own route, which is the same rule its two-ended form has always
+ * followed, generalized to the stops between them.
+ */
 export const builtEnvironmentAdjacentSpaces = (
   environment: IAutoMovieBuiltEnvironment,
   spaceId: string,
@@ -659,9 +681,13 @@ export const builtEnvironmentAdjacentSpaces = (
       for (const candidate of boundary.spaces)
         if (candidate !== spaceId) adjacent.add(candidate);
   for (const connector of environment.connectors) {
-    if (connector.from === spaceId) adjacent.add(connector.to);
-    if (connector.to === spaceId && connector.bidirectional)
-      adjacent.add(connector.from);
+    const stops = connectorStops(connector);
+    const here = stops.indexOf(spaceId);
+    if (here === -1) continue;
+    stops.forEach((stop, index) => {
+      if (index !== here && (connector.bidirectional || index > here))
+        adjacent.add(stop);
+    });
   }
   return [...adjacent];
 };
@@ -675,18 +701,19 @@ export const builtEnvironmentAdjacentSpaces = (
  * pair of ids, because a stair's rise and a bridge's span are the part a shot
  * stages and a later pathfinder would have to re-derive.
  *
- * Endpoints are matched exactly, not through containment: a connector declares
- * the two spaces it actually lands in, so asking a building root returns the
- * connectors declared on the root itself rather than every connector inside it.
- * That is the same rule {@link builtEnvironmentAdjacentSpaces} follows.
+ * Stops are matched exactly, not through containment: a connector declares the
+ * spaces it actually lands in — its two ends and any landing between them — so
+ * asking a building root returns the connectors declared on the root itself
+ * rather than every connector inside it. That is the same rule
+ * {@link builtEnvironmentAdjacentSpaces} follows.
  */
 export const builtEnvironmentSpaceConnectors = (
   environment: IAutoMovieBuiltEnvironment,
   spaceId: string,
 ): IAutoMovieBuiltConnector[] => {
   requireSpace(environment, spaceId);
-  return environment.connectors.filter(
-    (connector) => connector.from === spaceId || connector.to === spaceId,
+  return environment.connectors.filter((connector) =>
+    connectorStops(connector).includes(spaceId),
   );
 };
 
@@ -827,6 +854,36 @@ export interface IAutoMovieConnectorGeometry {
   slope: number;
   /** The route's own stations, in authored order. */
   stations: IAutoMovieConnectorStation[];
+  /** The further spaces the run stops at, placed on its own route. */
+  landings: IAutoMovieConnectorLandingAt[];
+}
+
+/** One further space a run stops at, placed on the route that reaches it. */
+export interface IAutoMovieConnectorLandingAt {
+  /** Logical space served at this stop. */
+  space: string;
+  /** Arc-length fraction of the route, as authored. */
+  at: number;
+  /** World position of that point of the route. */
+  position: IAutoMovieVector3;
+}
+
+/** Where one carriage of a run stands, in world space, at one state. */
+export interface IAutoMovieConnectorCarriagePlacement {
+  /** Carriage id inside its connector. */
+  carriage: string;
+  /** The visible element the carriage drives. */
+  element: string;
+  /** The staged node id {@link lowerBuiltEnvironment} emits for that element. */
+  node: string;
+  /** World translation of the carriage's element. */
+  position: IAutoMovieVector3;
+  /** World rotation of the carriage's element, as a unit quaternion. */
+  rotation: IAutoMovieQuaternion;
+  /** World per-axis scale of the carriage's element. */
+  scale: IAutoMovieVector3;
+  /** Logical space this carriage stands at in that state, or null. */
+  serves: string | null;
 }
 
 /** The usable section of a connector at one point of its route. */
@@ -931,7 +988,7 @@ export const builtOpeningPanelPlacements = (
   );
   return operation.panels.map((panel) => {
     const world = Matrix4.decompose(
-      requirePanelMatrix(environment, matrices, panel),
+      requireTravellerMatrix(environment, matrices, panel, "panel"),
     );
     return {
       panel: panel.id,
@@ -979,10 +1036,11 @@ export const builtOpeningSweepEnvelope = (
     // environment's current state puts it.
     const held = new Map(staged);
     held.delete(panel.element);
-    const base = requirePanelMatrix(
+    const base = requireTravellerMatrix(
       environment,
       worldMatricesOf(environment, held),
       panel,
+      "panel",
     );
     const corners: IAutoMovieVector3[] = [
       { x: 0, y: 0, z: 0 },
@@ -1036,7 +1094,62 @@ export const builtConnectorGeometry = (
       rotation: connector.orientations?.[index] ?? null,
       at: cumulative[index]! / total,
     })),
+    landings: (connector.landings ?? []).map((landing) => ({
+      space: landing.space,
+      at: landing.at,
+      position: routePointAt(connector.route, cumulative, total, landing.at),
+    })),
   };
+};
+
+/**
+ * Where a run's carriages stand, in world space, at one named state.
+ *
+ * Omitting the state answers for the state the record itself stands in, which
+ * is the placement {@link lowerBuiltEnvironment} stages. Naming another one
+ * answers for that state without editing the record, so a shot can ask where
+ * the car would be at the top landing while the design still holds it at the
+ * bottom. The space each carriage serves is handed back beside its placement,
+ * because "where the car is" and "which floor that is" are one answer and
+ * making a caller rejoin them invites two.
+ */
+export const builtConnectorCarriagePlacements = (
+  environment: IAutoMovieBuiltEnvironment,
+  connectorId: string,
+  stateId?: string,
+): IAutoMovieConnectorCarriagePlacement[] => {
+  const connector = requireConnector(environment, connectorId);
+  const operation = connector.operation;
+  if (operation === undefined) return [];
+  if (
+    stateId !== undefined &&
+    !operation.states.some((state) => state.id === stateId)
+  )
+    throw new Error(
+      `connector "${connectorId}" of built environment "${environment.id}" has no operating state "${stateId}"`,
+    );
+  const wanted = stateId ?? operation.state;
+  const state = operation.states.find((candidate) => candidate.id === wanted);
+  const matrices = worldMatricesOf(
+    environment,
+    operationDeltas(environment, stateId),
+  );
+  return operation.carriages.map((carriage) => {
+    const world = Matrix4.decompose(
+      requireTravellerMatrix(environment, matrices, carriage, "carriage"),
+    );
+    return {
+      carriage: carriage.id,
+      element: carriage.element,
+      node: `${environment.id}/${carriage.element}`,
+      position: world.position,
+      rotation: Quaternion.normalize(world.rotation),
+      scale: world.scale,
+      serves:
+        state?.carriages.find((entry) => entry.carriage === carriage.id)
+          ?.serves ?? null,
+    };
+  });
 };
 
 /**
@@ -1152,15 +1265,16 @@ const requireEnumerableTravel = (
     );
 };
 
-const requirePanelMatrix = (
+const requireTravellerMatrix = (
   environment: IAutoMovieBuiltEnvironment,
   matrices: ReadonlyMap<string, number[]>,
-  panel: IAutoMovieMovablePanel,
+  traveller: { id: string; element: string },
+  label: string,
 ): number[] => {
-  const world = matrices.get(panel.element);
+  const world = matrices.get(traveller.element);
   if (world === undefined)
     throw new Error(
-      `built environment "${environment.id}" has no element "${panel.element}" for panel "${panel.id}"`,
+      `built environment "${environment.id}" has no element "${traveller.element}" for ${label} "${traveller.id}"`,
     );
   return world;
 };
@@ -1355,8 +1469,11 @@ const worldMatricesOf = (
   return matrices;
 };
 
-/** The element-local displacement one panel carries at one travel value. */
-const panelDelta = (motion: IAutoMoviePanelMotion, value: number): number[] => {
+/** The element-local displacement one moving member carries at one value. */
+const travelDelta = (
+  motion: IAutoMovieTravelMotion,
+  value: number,
+): number[] => {
   const axis = Vector3.normalize(motion.axis);
   if (motion.kind === "prismatic")
     return Matrix4.compose(
@@ -1385,15 +1502,21 @@ const panelDelta = (motion: IAutoMoviePanelMotion, value: number): number[] => {
 };
 
 /**
- * The element-local displacement every panel carries in a named state.
+ * The element-local displacement every moving member carries in a named state.
  *
  * The default is the environment's own current state; a caller asking for
  * another state gets that one instead, which is how a shot stages the same
- * building with its doors open without editing the record. An opening that has
- * no such state simply does not move, so asking for `open` swings the doors
- * that can open and leaves every other opening exactly where it was.
+ * building with its doors open without editing the record. An opening or run
+ * that has no such state simply does not move, so asking for `open` swings the
+ * doors that can open and leaves every other opening, and every lift, exactly
+ * where it was.
  *
- * A state that names no value for a panel leaves that panel at rest.
+ * Openings and runs share one table because they share one rule: an element
+ * carries one displacement. Validation refuses a work where two members claim
+ * the same element, so the table is a merge of disjoint keys rather than a
+ * race, and whichever member owns the element owns it everywhere.
+ *
+ * A state that names no value for a member leaves that member at rest.
  * `validateBuiltEnvironment` refuses such a record by name, and answering at
  * rest is what keeps a query over an unvalidated one from failing on a value it
  * was never given.
@@ -1412,10 +1535,33 @@ const operationDeltas = (
     for (const panel of operation.panels) {
       const entry = state.panels.find((value) => value.panel === panel.id);
       if (entry === undefined) continue;
-      deltas.set(panel.element, panelDelta(panel.motion, entry.value));
+      deltas.set(panel.element, travelDelta(panel.motion, entry.value));
     }
   }
+  for (const connector of environment.connectors) {
+    const operation = connector.operation;
+    if (operation === undefined) continue;
+    const wanted = stateId ?? operation.state;
+    const state = operation.states.find((candidate) => candidate.id === wanted);
+    if (state === undefined) continue;
+    applyCarriageState(operation.carriages, state, deltas);
+  }
   return deltas;
+};
+
+/** Place every carriage of one run at the travel a named state gives it. */
+const applyCarriageState = (
+  carriages: readonly IAutoMovieConnectorCarriage[],
+  state: IAutoMovieConnectorState,
+  deltas: Map<string, number[]>,
+): void => {
+  for (const carriage of carriages) {
+    const entry = state.carriages.find(
+      (value) => value.carriage === carriage.id,
+    );
+    if (entry === undefined) continue;
+    deltas.set(carriage.element, travelDelta(carriage.motion, entry.value));
+  }
 };
 
 const descendantSpaces = (
@@ -1686,7 +1832,10 @@ const validateOpeningOperation = (props: {
     "panel",
     collector,
   );
-  const owned = fillDescendants(props.environment, opening.fill);
+  const owned = descendantElements(
+    props.environment,
+    opening.fill === null ? [] : [opening.fill],
+  );
   operation.panels.forEach((panel, index) => {
     const panelPath = `${base}.panels[${index}]`;
     if (!props.elements.has(panel.element))
@@ -1722,7 +1871,12 @@ const validateOpeningOperation = (props: {
       );
     positive(panel.width, `${panelPath}.width`, "panel width", collector);
     positive(panel.height, `${panelPath}.height`, "panel height", collector);
-    validatePanelMotion(panel.motion, `${panelPath}.motion`, collector);
+    validateTravelMotion(
+      panel.motion,
+      `${panelPath}.motion`,
+      "panel",
+      collector,
+    );
   });
   if (operation.states.length === 0)
     collector.push(
@@ -1798,41 +1952,48 @@ const validateOpeningOperation = (props: {
   });
 };
 
-/** Validate the one degree of freedom a panel travels on. */
-const validatePanelMotion = (
-  motion: IAutoMoviePanelMotion,
+/**
+ * Validate the one degree of freedom a moving member travels on.
+ *
+ * The label names what is moving so the refusal reads as the author wrote it: a
+ * door leaf and a lift car share this arithmetic, and a message that called a
+ * car a panel would send its author looking through the openings for it.
+ */
+const validateTravelMotion = (
+  motion: IAutoMovieTravelMotion,
   path: string,
+  label: string,
   collector: ViolationCollector,
 ): void => {
-  finiteVector(motion.axis, `${path}.axis`, "panel travel axis", collector);
+  finiteVector(motion.axis, `${path}.axis`, `${label} travel axis`, collector);
   if (Vector3.length(motion.axis) <= PLANE_NORMAL_EPSILON)
     collector.push(
       "range",
       `${path}.axis`,
-      "panel travel axis must be non-zero",
+      `${label} travel axis must be non-zero`,
       motion.axis,
     );
   if (motion.kind === "revolute")
-    finiteVector(motion.pivot, `${path}.pivot`, "panel pivot", collector);
+    finiteVector(motion.pivot, `${path}.pivot`, `${label} pivot`, collector);
   if (!Number.isFinite(motion.min) || motion.min > 0)
     collector.push(
       "range",
       `${path}.min`,
-      `panel travel is measured from its rest pose, so the lowest value must be a finite number <= 0, but was ${motion.min}`,
+      `${label} travel is measured from its rest pose, so the lowest value must be a finite number <= 0, but was ${motion.min}`,
       motion.min,
     );
   if (!Number.isFinite(motion.max) || motion.max < 0)
     collector.push(
       "range",
       `${path}.max`,
-      `panel travel is measured from its rest pose, so the highest value must be a finite number >= 0, but was ${motion.max}`,
+      `${label} travel is measured from its rest pose, so the highest value must be a finite number >= 0, but was ${motion.max}`,
       motion.max,
     );
   else if (motion.max <= motion.min)
     collector.push(
       "range",
       `${path}.max`,
-      `a movable panel needs travel, but its range was [${motion.min}, ${motion.max}]`,
+      `a movable ${label} needs travel, but its range was [${motion.min}, ${motion.max}]`,
       motion.max,
     );
   else if (
@@ -1842,19 +2003,304 @@ const validatePanelMotion = (
     collector.push(
       "range",
       `${path}.max`,
-      `a turning panel may travel at most a full turn, but its range spanned ${motion.max - motion.min} radians`,
+      `a turning ${label} may travel at most a full turn, but its range spanned ${motion.max - motion.min} radians`,
       motion.max,
     );
 };
 
-/** The filling element of an opening and every element below it. */
-const fillDescendants = (
+/**
+ * Validate the further spaces a run serves along its own route.
+ *
+ * A landing is a stop, and a stop stated twice, stated at an end the run
+ * already names, or stated out of order is a stop later work cannot place. The
+ * fraction is strictly inside `(0, 1)` because both ends are already served by
+ * the run's own `from` and `to`.
+ */
+const validateConnectorLandings = (
+  connector: IAutoMovieBuiltConnector,
+  path: string,
+  spaces: ReadonlySet<string>,
+  collector: ViolationCollector,
+): void => {
+  const landings = connector.landings;
+  if (landings === undefined) return;
+  const seen = new Set<string>();
+  landings.forEach((landing, index) => {
+    const landingPath = `${path}.landings[${index}]`;
+    if (!spaces.has(landing.space))
+      collector.push(
+        "type",
+        `${landingPath}.space`,
+        `connector landing space "${landing.space}" does not resolve`,
+        landing.space,
+      );
+    if (landing.space === connector.from || landing.space === connector.to)
+      collector.push(
+        "type",
+        `${landingPath}.space`,
+        `connector landing "${landing.space}" restates an endpoint of connector "${connector.id}"`,
+        landing.space,
+      );
+    if (seen.has(landing.space))
+      collector.push(
+        "type",
+        `${landingPath}.space`,
+        `connector landing "${landing.space}" is stated twice`,
+        landing.space,
+      );
+    seen.add(landing.space);
+    if (!Number.isFinite(landing.at) || landing.at <= 0 || landing.at >= 1)
+      collector.push(
+        "range",
+        `${landingPath}.at`,
+        `a connector landing stops between the run's own ends, so its arc-length fraction must be within (0, 1), but was ${landing.at}`,
+        landing.at,
+      );
+    else if (index > 0 && !(landing.at > landings[index - 1]!.at))
+      collector.push(
+        "range",
+        `${landingPath}.at`,
+        `connector landings must strictly increase along the route, but ${landing.at} followed ${landings[index - 1]!.at}`,
+        landing.at,
+      );
+  });
+};
+
+/** Validate the travelling carriages, named states, and stops of one run. */
+const validateConnectorOperation = (props: {
+  connector: IAutoMovieBuiltConnector;
+  path: string;
+  elements: ReadonlySet<string>;
+  environment: IAutoMovieBuiltEnvironment;
+  /** Which member already drives an element, across the whole work. */
+  driven: Map<string, string>;
+  collector: ViolationCollector;
+}): void => {
+  const { connector, path, collector } = props;
+  const operation = connector.operation;
+  if (operation === undefined) return;
+  const base = `${path}.operation`;
+  if (connector.elements.length === 0)
+    collector.push(
+      "type",
+      `${path}.elements`,
+      `connector "${connector.id}" drives a carriage, so it must name the elements it is built from`,
+      connector.elements,
+    );
+  if (operation.carriages.length === 0)
+    collector.push(
+      "range",
+      `${base}.carriages`,
+      `connector "${connector.id}" declares an operation with no carriage`,
+      operation.carriages.length,
+    );
+  const carriageIds = collectIds(
+    operation.carriages,
+    `${base}.carriages`,
+    "carriage",
+    collector,
+  );
+  const owned = descendantElements(props.environment, connector.elements);
+  operation.carriages.forEach((carriage, index) => {
+    const carriagePath = `${base}.carriages[${index}]`;
+    if (!props.elements.has(carriage.element))
+      collector.push(
+        "type",
+        `${carriagePath}.element`,
+        `carriage element "${carriage.element}" does not resolve`,
+        carriage.element,
+      );
+    else if (connector.elements.length !== 0 && !owned.has(carriage.element))
+      collector.push(
+        "type",
+        `${carriagePath}.element`,
+        `carriage element "${carriage.element}" must be one of the elements connector "${connector.id}" is built from, or descend from one`,
+        carriage.element,
+      );
+    // One element carries one displacement, and doors and runs draw from the
+    // same table, so a leaf that is also a lift car would lose whichever travel
+    // was written first rather than gaining a second degree of freedom.
+    const already = props.driven.get(carriage.element);
+    if (already !== undefined)
+      collector.push(
+        "type",
+        `${carriagePath}.element`,
+        `carriage element "${carriage.element}" is already driven by ${already}`,
+        carriage.element,
+      );
+    else
+      props.driven.set(
+        carriage.element,
+        `carriage "${carriage.id}" of connector "${connector.id}"`,
+      );
+    validateTravelMotion(
+      carriage.motion,
+      `${carriagePath}.motion`,
+      "carriage",
+      collector,
+    );
+  });
+  const stops = new Set(connectorStops(connector));
+  if (operation.states.length === 0)
+    collector.push(
+      "range",
+      `${base}.states`,
+      `connector "${connector.id}" declares an operation with no named state`,
+      operation.states.length,
+    );
+  collectIds(operation.states, `${base}.states`, "operating state", collector);
+  operation.states.forEach((state, index) => {
+    const statePath = `${base}.states[${index}]`;
+    if (!CONNECTOR_DRIVES.includes(state.drive))
+      collector.push(
+        "type",
+        `${statePath}.drive`,
+        `unknown connector drive "${String(state.drive)}"`,
+        state.drive,
+      );
+    else if (state.drive === "reverse" && connector.bidirectional === false)
+      collector.push(
+        "type",
+        `${statePath}.drive`,
+        `operating state "${state.id}" drives connector "${connector.id}" in reverse, but the run is one-way`,
+        state.drive,
+      );
+    const seen = new Set<string>();
+    state.carriages.forEach((entry, valueIndex) => {
+      const valuePath = `${statePath}.carriages[${valueIndex}]`;
+      if (!carriageIds.has(entry.carriage))
+        collector.push(
+          "type",
+          `${valuePath}.carriage`,
+          `operating state "${state.id}" drives unknown carriage "${entry.carriage}"`,
+          entry.carriage,
+        );
+      if (seen.has(entry.carriage))
+        collector.push(
+          "type",
+          `${valuePath}.carriage`,
+          `operating state "${state.id}" drives carriage "${entry.carriage}" twice`,
+          entry.carriage,
+        );
+      seen.add(entry.carriage);
+      if (entry.serves !== null && !stops.has(entry.serves))
+        collector.push(
+          "type",
+          `${valuePath}.serves`,
+          `operating state "${state.id}" has carriage "${entry.carriage}" serve "${entry.serves}", which is neither an endpoint nor a landing of connector "${connector.id}"`,
+          entry.serves,
+        );
+      const carriage = operation.carriages.find(
+        (candidate) => candidate.id === entry.carriage,
+      );
+      if (carriage === undefined) return;
+      if (
+        !Number.isFinite(entry.value) ||
+        entry.value < carriage.motion.min ||
+        entry.value > carriage.motion.max
+      )
+        collector.push(
+          "range",
+          `${valuePath}.value`,
+          `operating state "${state.id}" drives carriage "${carriage.id}" to ${entry.value}, outside its travel [${carriage.motion.min}, ${carriage.motion.max}]`,
+          entry.value,
+        );
+    });
+    for (const carriage of operation.carriages)
+      if (!seen.has(carriage.id))
+        collector.push(
+          "type",
+          `${statePath}.carriages`,
+          `operating state "${state.id}" gives carriage "${carriage.id}" no value`,
+          carriage.id,
+        );
+  });
+  if (!operation.states.some((state) => state.id === operation.state))
+    collector.push(
+      "type",
+      `${base}.state`,
+      `current operating state "${operation.state}" does not resolve`,
+      operation.state,
+    );
+};
+
+/**
+ * Refuse a carriage that does not stand in the space its state says it serves.
+ *
+ * A named stop is a claim about geometry, so it is settled against geometry:
+ * the state is applied, the element the carriage drives is placed, and its own
+ * origin has to land inside the space. A space that bounds nothing is skipped
+ * rather than failed, because a purely semantic container has no inside for the
+ * car to be in and refusing it would outlaw a run through an unbounded region.
+ *
+ * Every other member stands where the environment's current state puts it, the
+ * same rule the swept envelope follows, so a state is measured as the one
+ * change it makes rather than against a configuration nothing declared.
+ */
+const validateCarriageService = (
   environment: IAutoMovieBuiltEnvironment,
-  fill: string | null,
+  root: string,
+  collector: ViolationCollector,
+): void => {
+  const staged = operationDeltas(environment);
+  environment.connectors.forEach((connector, index) => {
+    const operation = connector.operation;
+    if (operation === undefined) return;
+    operation.states.forEach((state, stateIndex) => {
+      if (state.carriages.every((entry) => entry.serves === null)) return;
+      const deltas = new Map(staged);
+      applyCarriageState(operation.carriages, state, deltas);
+      const matrices = worldMatricesOf(environment, deltas);
+      state.carriages.forEach((entry, valueIndex) => {
+        const serves = entry.serves;
+        if (serves === null || !spaceSubtreeIsBounded(environment, serves))
+          return;
+        const carriage = operation.carriages.find(
+          (candidate) => candidate.id === entry.carriage,
+        )!;
+        const world = matrices.get(carriage.element)!;
+        const point: IAutoMovieVector3 = {
+          x: world[12]!,
+          y: world[13]!,
+          z: world[14]!,
+        };
+        if (builtEnvironmentContainsPoint(environment, serves, point) === false)
+          collector.push(
+            "range",
+            `${root}.connectors[${index}].operation.states[${stateIndex}].carriages[${valueIndex}].serves`,
+            `operating state "${state.id}" stands carriage "${carriage.id}" at (${point.x}, ${point.y}, ${point.z}), which is outside the space "${serves}" it serves`,
+            serves,
+          );
+      });
+    });
+  });
+};
+
+/** Whether a logical space or any space under it bounds a volume at all. */
+const spaceSubtreeIsBounded = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): boolean => {
+  const included = descendantSpaces(environment.spaces, spaceId);
+  return environment.spaces.some(
+    (space) => included.has(space.id) && space.cells.length !== 0,
+  );
+};
+
+/** The spaces one run serves, in the order its own route reaches them. */
+const connectorStops = (connector: IAutoMovieBuiltConnector): string[] => [
+  connector.from,
+  ...(connector.landings ?? []).map((landing) => landing.space),
+  connector.to,
+];
+
+/** The named elements and every element below them. */
+const descendantElements = (
+  environment: IAutoMovieBuiltEnvironment,
+  roots: readonly string[],
 ): Set<string> => {
-  const owned = new Set<string>();
-  if (fill === null) return owned;
-  owned.add(fill);
+  const owned = new Set<string>(roots);
+  if (owned.size === 0) return owned;
   let changed = true;
   while (changed) {
     changed = false;
@@ -2071,6 +2517,36 @@ const cumulativeRouteLengths = (
   return lengths;
 };
 
+/**
+ * The point one arc-length fraction reaches along a route polyline.
+ *
+ * Measuring by arc length rather than by point index is what keeps a landing on
+ * an unevenly spaced route where its author put it, exactly as a connector
+ * section is placed. Only {@link builtConnectorGeometry} calls this, and it has
+ * already refused a route with no measurable length, so the segment the
+ * fraction falls in always exists.
+ */
+const routePointAt = (
+  route: readonly IAutoMovieVector3[],
+  cumulative: readonly number[],
+  total: number,
+  at: number,
+): IAutoMovieVector3 => {
+  const target = at * total;
+  let index = 0;
+  while (index + 2 < route.length && cumulative[index + 1]! < target)
+    index += 1;
+  const span = cumulative[index + 1]! - cumulative[index]!;
+  const ratio = span <= 0 ? 0 : (target - cumulative[index]!) / span;
+  const from = route[index]!;
+  const to = route[index + 1]!;
+  return {
+    x: from.x + (to.x - from.x) * ratio,
+    y: from.y + (to.y - from.y) * ratio,
+    z: from.z + (to.z - from.z) * ratio,
+  };
+};
+
 /** Climb, horizontal run, 3D length, and slope of one route polyline. */
 const routeMetrics = (
   route: readonly IAutoMovieVector3[],
@@ -2181,7 +2657,7 @@ const applyDirection = (
 /** The world bounds one leaf corner reaches across a panel's whole travel. */
 const sweptCornerBounds = (
   base: readonly number[],
-  motion: IAutoMoviePanelMotion,
+  motion: IAutoMovieTravelMotion,
   corner: IAutoMovieVector3,
 ): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
   const axis = Vector3.normalize(motion.axis);

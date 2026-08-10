@@ -313,19 +313,26 @@ export interface IAutoMovieMovablePanel {
   /** Positive leaf extent along the element's local Y, in metres. */
   height: number;
   /** The one degree of freedom this panel travels on. */
-  motion: IAutoMoviePanelMotion;
+  motion: IAutoMovieTravelMotion;
 }
 
-/** The single degree of freedom a movable panel travels on. */
-export type IAutoMoviePanelMotion =
-  | IAutoMoviePanelMotion.IRevolute
-  | IAutoMoviePanelMotion.IPrismatic;
-export namespace IAutoMoviePanelMotion {
-  /** A hinge: the leaf turns about an axis through a pivot. */
+/**
+ * The single degree of freedom one moving member travels on.
+ *
+ * A door leaf and a lift car are the same arithmetic under different names, so
+ * they share one record rather than each growing a private one: the value a
+ * named state gives is a displacement from the element's own rest pose, and the
+ * engine composes it after that pose so it rides down the hierarchy.
+ */
+export type IAutoMovieTravelMotion =
+  | IAutoMovieTravelMotion.IRevolute
+  | IAutoMovieTravelMotion.IPrismatic;
+export namespace IAutoMovieTravelMotion {
+  /** A hinge: the member turns about an axis through a pivot. */
   export interface IRevolute {
     /** Discriminator. */
     kind: "revolute";
-    /** Non-zero turn axis in the panel element's own local frame. */
+    /** Non-zero turn axis in the moving element's own local frame. */
     axis: IAutoMovieVector3;
     /** A point on that axis in the same local frame. */
     pivot: IAutoMovieVector3;
@@ -335,11 +342,11 @@ export namespace IAutoMoviePanelMotion {
     max: number;
   }
 
-  /** A slide: the leaf travels along an axis without turning. */
+  /** A slide: the member travels along an axis without turning. */
   export interface IPrismatic {
     /** Discriminator. */
     kind: "prismatic";
-    /** Non-zero travel axis in the panel element's own local frame. */
+    /** Non-zero travel axis in the moving element's own local frame. */
     axis: IAutoMovieVector3;
     /** Lowest travel in metres along the unit axis; at most `0`. */
     min: number;
@@ -375,15 +382,16 @@ export interface IAutoMovieOpeningHardware {
 }
 
 /**
- * A navigable relation between two logical spaces, and the shape it has.
+ * A navigable relation between logical spaces, and the shape it has.
  *
  * The record is deliberately the traversal geometry a later analysis reads, not
  * a verdict about that analysis: whether a person can actually pass, how they
  * would route, and how a building evacuates are separate work. What lives here
  * is the measurable shape — where the route runs, which way each station faces,
- * how wide and how clear it is there, how steeply it climbs, and what one step
- * is — so that later work has something exact to read instead of re-deriving it
- * from whatever happened to be modelled.
+ * how wide and how clear it is there, how steeply it climbs, what one step is,
+ * which further spaces it stops at, and where its car stands — so that later
+ * work has something exact to read instead of re-deriving it from whatever
+ * happened to be modelled.
  */
 export interface IAutoMovieBuiltConnector {
   /** Stable connector identity. */
@@ -393,8 +401,9 @@ export interface IAutoMovieBuiltConnector {
    *
    * `escalator` and `moving-walk` are named because a powered run is not a
    * stair with a different label: it has a direction of drive and a running
-   * state a stair does not have. Anything the set does not cover is `other`
-   * plus the visible elements, never a mislabelled neighbour.
+   * state a stair does not have, and {@link operation} is where it states them.
+   * Anything the set does not cover is `other` plus the visible elements, never
+   * a mislabelled neighbour.
    */
   kind:
     | "passage"
@@ -406,12 +415,27 @@ export interface IAutoMovieBuiltConnector {
     | "ladder"
     | "bridge"
     | "other";
-  /** Logical space at one end. */
+  /** Logical space at the start of the route. */
   from: string;
-  /** Logical space at the other end. */
+  /** Logical space at the end of the route. */
   to: string;
   /** Whether traversal is permitted in both directions. */
   bidirectional: boolean;
+  /**
+   * Further spaces this one run serves between its two endpoints.
+   *
+   * A lift passing five floors is one shaft, not five relations, and a stair
+   * with a half-landing stops somewhere its two ends do not name. Stating those
+   * stops here is what keeps them in the graph: an adjacency or connector query
+   * answers with them, so the floors a run reaches cannot quietly become floors
+   * only its geometry knows about.
+   *
+   * Omitting the field leaves the run the two-ended relation it has always
+   * been. Landings are ordered by strictly increasing
+   * {@link IAutoMovieConnectorLanding.at}, and neither endpoint is restated as
+   * one, because a stop stated twice is two stops that can disagree.
+   */
+  landings?: IAutoMovieConnectorLanding[];
   /** World-space center route, including both endpoints. */
   route: IAutoMovieVector3[];
   /**
@@ -458,8 +482,116 @@ export interface IAutoMovieBuiltConnector {
   slope?: number;
   /** The repeated step of a stepped run, or nothing for a smooth one. */
   steps?: IAutoMovieConnectorSteps;
+  /**
+   * Travelling cars and the named states they stand in, or nothing for a run
+   * that never moves.
+   *
+   * A stair is the whole of itself at all times; a lift, escalator, moving
+   * walk, or turning gate is not. Omitting the field keeps the static record a
+   * stair, ramp, bridge, or ladder has always been, so an environment written
+   * before this field lowers and validates byte-for-byte as it did.
+   */
+  operation?: IAutoMovieConnectorOperation;
   /** Visible elements realizing the connector, such as steps or a lift car. */
   elements: string[];
+}
+
+/**
+ * One further space a run serves at a point along its own route.
+ *
+ * Where the stop is on the route is stated; whether that point falls inside the
+ * space it serves is not checked, because a run may legitimately serve a space
+ * it only reaches the edge of — a facade ladder leaves a storey from outside
+ * the storey's own volume. Where a **carriage** stands is checked, because a
+ * carriage is a body with a place rather than a station on a centreline.
+ */
+export interface IAutoMovieConnectorLanding {
+  /** Logical space served here; neither of the run's own endpoints. */
+  space: string;
+  /**
+   * Arc-length fraction of the 3D route polyline where the run serves it,
+   * strictly between `0` (the {@link IAutoMovieBuiltConnector.from} end) and `1`
+   * (the {@link IAutoMovieBuiltConnector.to} end).
+   */
+  at: number;
+}
+
+/**
+ * The moving part of a lift, escalator, moving walk, or turning gate.
+ *
+ * This is the connector's counterpart to {@link IAutoMovieOpeningOperation}, and
+ * deliberately the same shape: a member that travels on one degree of freedom,
+ * named states that place every member at once, and the one state the design
+ * currently stands in. What a run adds is where the travel leaves somebody —
+ * the space a car stands at, and which way the run is driven — since that is
+ * the part a stair answers by standing still and a lift cannot.
+ *
+ * Nothing here judges traversal. Whether a person can board, how long they
+ * wait, and how a building empties are separate work; this is the measurable
+ * configuration such work would read.
+ */
+export interface IAutoMovieConnectorOperation {
+  /** Travelling cars, carriages, or step bands; at least one. */
+  carriages: IAutoMovieConnectorCarriage[];
+  /** Named states; at least one, and each gives every carriage a value. */
+  states: IAutoMovieConnectorState[];
+  /** The state the design currently stands in; names one of {@link states}. */
+  state: string;
+}
+
+/**
+ * One member of a run that travels on a single degree of freedom.
+ *
+ * The carriage drives a visible element whose own local transform is its rest
+ * pose, exactly as a door panel does, so a lift car is placed once and moved by
+ * its states rather than being placed again per state. The element is one the
+ * run already declares in {@link IAutoMovieBuiltConnector.elements}, or one
+ * below it: a car that belongs to no run is a car nobody can point at.
+ */
+export interface IAutoMovieConnectorCarriage {
+  /** Stable carriage identity within the connector. */
+  id: string;
+  /** Visible element this carriage drives; its transform is the rest pose. */
+  element: string;
+  /** The one degree of freedom this carriage travels on. */
+  motion: IAutoMovieTravelMotion;
+}
+
+/** One named operating state of a run and the travel it gives each carriage. */
+export interface IAutoMovieConnectorState {
+  /** Stable state name such as `level-3`, `ascending`, or a production term. */
+  id: string;
+  /** One value per carriage; every carriage of the operation appears once. */
+  carriages: IAutoMovieCarriageValue[];
+  /**
+   * Which way the run is driven while it stands in this state.
+   *
+   * `forward` runs from {@link IAutoMovieBuiltConnector.from} towards
+   * {@link IAutoMovieBuiltConnector.to} and `reverse` the other way, so a
+   * one-way run may not declare a state driven against its own direction.
+   * `still` is a run that is not being driven at all, which is what a stopped
+   * car and a switched-off escalator have in common.
+   */
+  drive: "forward" | "reverse" | "still";
+}
+
+/** The travel one named state gives one carriage. */
+export interface IAutoMovieCarriageValue {
+  /** Carriage id inside the same operation. */
+  carriage: string;
+  /** Radians for a revolute carriage, metres for a prismatic one. */
+  value: number;
+  /**
+   * Logical space this carriage stands at under this state, or null.
+   *
+   * It names an endpoint of the run or one of its
+   * {@link IAutoMovieBuiltConnector.landings}, and the element the carriage
+   * drives must actually be inside that space once the state is applied. That
+   * is what makes "the car is at level three" a fact the engine settles rather
+   * than a label beside a number: a counterweight travelling the other way
+   * simply serves nothing and says so.
+   */
+  serves: string | null;
 }
 
 /** The usable section of a connector at one point along its route. */
