@@ -37,9 +37,10 @@ import { boxCell, buildingFixture } from "../internal/renderFixtures";
  * 10. A stop naming a space the design never declares — an environment the
  *     validator refuses — reaches the closure and leaves the answer as it found
  *     it, because the culler owes a record nobody validated totality.
- * 11. From a landing of a one-way shaft, sight reaches the stop below it, the stop
- *     above it, and the other landing, which no `from`/`to` join could
- *     produce.
+ * 11. From a landing of a one-way shaft, every other stop of the run is visible —
+ *     the stop below it, the stop above it, and the other landing — which a
+ *     `from`/`to` join could not produce at all, because the camera's own space
+ *     would not be a node of the graph.
  */
 export const test_render_room_visibility = (): void => {
   const inside = autoMovieRoomVisibility({
@@ -276,7 +277,7 @@ export const test_render_room_visibility = (): void => {
     camera: { x: 13, y: 4, z: 5 },
   });
   TestValidator.equals(
-    "a landing of a one-way shaft sees the stops before it, after it, and beside it",
+    "a landing of a one-way shaft sees every other stop of its run",
     {
       camera: fromLanding.camera,
       placement: fromLanding.cameraPlacement,
@@ -284,6 +285,9 @@ export const test_render_room_visibility = (): void => {
       inconclusive: fromLanding.inconclusive,
     },
     {
+      // The camera is standing in a space the graph only has because the run
+      // stops there, which is what a `from`/`to` join could not have produced:
+      // there would have been no node to start the closure from.
       camera: "middle-mezzanine",
       placement: "interior",
       // `ground-hall` is behind the drive, `upper-loft` is ahead of it, and
