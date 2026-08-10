@@ -69,7 +69,7 @@ const CLAIMS: ICapabilityClaim[] = [
   },
   {
     guide: "SHOT_CONTRACT",
-    probe: "Three optional returns are source-owned by design",
+    probe: "returns below are source-owned by design",
     files: ["authoring/IAutoMovieAuthoring.ts"],
   },
   {

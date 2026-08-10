@@ -87,9 +87,13 @@ export const renderPathStem = (target: string): string => {
  * The ffmpeg argument vector that encodes a {@link frameName} sequence into the
  * spec's video. Pinned for reproducible, broadly-playable output: H.264
  * (`libx264`) at the spec's `pixelFormat` and `crf`, with the input/output
- * frame rate fixed to `fps` and `+faststart` for progressive playback. Tone
- * mapping is applied upstream in the renderer (per
- * {@link IAutoMovieRenderSpec}), not here.
+ * frame rate fixed to `fps` and `+faststart` for progressive playback. Nothing
+ * here tone maps: the frames arrive as sRGB images and are re-encoded
+ * unchanged. The curve that produced them is a renderer setting the capture
+ * host applies from the scene's `environment`, and
+ * {@link IAutoMovieRenderSpec}'s `toneMapping` is the delivery default for a
+ * scene that declares none, which no capture path in this repository hands to a
+ * renderer yet.
  *
  * The output size is pinned to the spec with `-s {width}x{height}` (#1251): a
  * validated `width`/`height` that never reached the encoder made the rendered
