@@ -1513,8 +1513,11 @@ export const test_viewer_instance_set = async (): Promise<void> => {
     instanceMeshes(builtColorless.object).every(
       (mesh) =>
         mesh.count === 2 &&
+        // The negative twin of the neutralized two-material batch, read through
+        // the same channel: there is no diffuse to override, and the batch is
+        // built anyway.
         (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).every(
-          (material) => "color" in material === false,
+          (material) => diffuseHex(material) === null,
         ),
     ),
   );
