@@ -3781,9 +3781,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       // nobody can run.
       {
         contract:
-          'files["package.json"]!.includes(\'"building": "tsx scripts/deriveBuilding.ts"\')',
+          'files["package.json"]!.includes(\'"building:report": "tsx scripts/deriveBuilding.ts"\')',
         satisfied: files["package.json"]!.includes(
-          '"building": "tsx scripts/deriveBuilding.ts"',
+          '"building:report": "tsx scripts/deriveBuilding.ts"',
         ),
       },
       {
