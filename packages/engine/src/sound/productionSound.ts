@@ -550,48 +550,49 @@ const mixCue = (
   const length = Math.max(0, frameToSample(plan, cue.durationFrames));
   const fadeIn = frameToSample(plan, cue.fadeInFrames);
   const fadeOut = frameToSample(plan, cue.fadeOutFrames);
-  for (
-    let index = 0;
-    index < length && start + index < pcm.length / 2;
-    ++index
-  ) {
-    const sourceSample = frameToSample(plan, cue.sourceOffsetFrame) + index;
-    const t = sourceSample / plan.sampleRate;
+  const frames = pcm.length / 2;
+  // Everything constant across the cue, read once. A film-length cue runs this
+  // loop tens of millions of times, so a value derived inside it is derived per
+  // sample: at half an hour that is the difference between a mix that costs its
+  // buffer and one that costs several.
+  const offset = frameToSample(plan, cue.sourceOffsetFrame);
+  const rate =
+    cue.durationFrames === 0
+      ? 1
+      : cue.sourceDurationFrames / cue.durationFrames;
+  const played = source !== undefined;
+  for (let index = 0; index < length && start + index < frames; ++index) {
     const fade =
       Math.min(1, fadeIn === 0 ? 1 : index / fadeIn) *
       Math.min(1, fadeOut === 0 ? 1 : (length - index) / fadeOut);
-    const noise = seededNoise(cue.seed, sourceSample);
-    // The asset the cue names, when the caller decoded it. Read at its own
-    // rate from the offset the edit begins at, and stretched only by the ratio
-    // the author asked for: a cue whose source span equals its film span plays
-    // at native pitch, and one that differs asked for that difference. Past the
-    // end of the buffer it is silent rather than looped, because a cue longer
-    // than its asset is a fact about the edit and not a licence to repeat it.
-    const played =
-      source === undefined
-        ? null
-        : (() => {
-            const rate =
-              cue.durationFrames === 0
-                ? 1
-                : cue.sourceDurationFrames / cue.durationFrames;
-            const at = Math.round(
-              frameToSample(plan, cue.sourceOffsetFrame) + index * rate,
-            );
-            return at >= 0 && at < source.length ? source[at]! : 0;
-          })();
-    const signal =
-      played !== null
-        ? played
-        : cue.bus === "music"
+    // The asset the cue names, when the caller decoded it. Read at its own rate
+    // from the offset the edit begins at, and stretched only by the ratio the
+    // author asked for: a cue whose source span equals its film span plays at
+    // native pitch, and one that differs asked for that difference. Past the end
+    // of the buffer it is silent rather than looped, because a cue longer than
+    // its asset is a fact about the edit and not a licence to repeat it.
+    let signal: number;
+    if (played) {
+      const at = Math.round(offset + index * rate);
+      signal = at >= 0 && at < source!.length ? source![at]! : 0;
+    } else {
+      // Derived only where it is used: a cue playing its asset never needs the
+      // stand-in, and a film-length cue that computed one anyway would pay for
+      // a sound nobody hears.
+      const sourceSample = offset + index;
+      const t = sourceSample / plan.sampleRate;
+      signal =
+        cue.bus === "music"
           ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +
             Math.sin(2 * Math.PI * 165 * t) * 0.12 +
             Math.sin(2 * Math.PI * 220 * t) * 0.08
           : cue.bus === "ambience"
-            ? noise * 0.09 + Math.sin(2 * Math.PI * 48 * t) * 0.04
+            ? seededNoise(cue.seed, sourceSample) * 0.09 +
+              Math.sin(2 * Math.PI * 48 * t) * 0.04
             : cue.bus === "effects"
-              ? noise * 0.16
+              ? seededNoise(cue.seed, sourceSample) * 0.16
               : Math.sin(2 * Math.PI * 175 * t) * 0.08;
+    }
     const value = signal * cue.gain * fade;
     pcm[(start + index) * 2] += value;
     pcm[(start + index) * 2 + 1] += value;
