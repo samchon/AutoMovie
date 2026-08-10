@@ -49,7 +49,10 @@ const FOLIAGE = {
  *    it.
  * 4. Every instance matrix is finite and every batch reports a bounding sphere, so
  *    nothing is culled against an unset volume.
- * 5. A bare structure with no foliage rule produces no leaf batch at all rather
+ * 5. A branch the envelope cut to nothing keeps its instance slot and collapses to
+ *    a zero-height cylinder, rather than being skipped — which would shift
+ *    every later branch's index — or drawn with an undefined axis.
+ * 6. A bare structure with no foliage rule produces no leaf batch at all rather
  *    than an empty one, and disposing releases what the object created while
  *    leaving a borrowed material alone.
  */
@@ -285,6 +288,53 @@ export const test_viewer_planting_instances = (): void => {
     arrangement,
     branchMaterial: borrowed,
   });
+  const cut = growPlanting(
+    plantingRecipe({
+      structure: { ...plantingRecipe().structure, length: 2 },
+      pruning: {
+        kind: "box",
+        min: { x: -1, y: -1, z: -1 },
+        max: { x: 1, y: 1, z: 1 },
+      },
+    }),
+  );
+  const pruned = buildPlantingObject({ plant: cut, arrangement });
+  const stub = new THREE.Matrix4();
+  pruned.branches.getMatrixAt(cut.branches.length - 1, stub);
+  TestValidator.equals(
+    "a branch pruned to nothing keeps its slot and collapses instead of skewing",
+    namedFacts([
+      [
+        "zeroLength",
+        () => {
+          const tip = cut.branches[cut.branches.length - 1];
+          return (
+            tip.start.x === tip.end.x &&
+            tip.start.y === tip.end.y &&
+            tip.start.z === tip.end.z
+          );
+        },
+      ],
+      ["finite", () => stub.elements.every((value) => Number.isFinite(value))],
+      [
+        "collapsed",
+        () => {
+          const scale = new THREE.Vector3();
+          stub.decompose(new THREE.Vector3(), new THREE.Quaternion(), scale);
+          return scale.y === 0;
+        },
+      ],
+      [
+        "slots",
+        () =>
+          pruned.branchCount ===
+          arrangement.placements.length * cut.branches.length,
+      ],
+    ]),
+    { zeroLength: true, finite: true, collapsed: true, slots: true },
+  );
+  pruned.dispose();
+
   TestValidator.equals(
     "a bare structure has no leaf batch, and a borrowed material is left alone",
     namedFacts([

@@ -1,4 +1,4 @@
-import { growPlanting } from "@automovie/engine";
+import { growPlanting, plantingStateDigest } from "@automovie/engine";
 import { IAutoMoviePruningEnvelope } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -45,8 +45,12 @@ const clipped = (pruning: IAutoMoviePruningEnvelope) =>
  * 4. A branch whose own base already lies outside the envelope is not grown at
  *    all, so an envelope that misses the plant entirely yields nothing and
  *    `null` bounds rather than a stub at the origin.
- * 5. A box the whole plant fits inside cuts nothing, so the pruned flag is a
+ * 5. An envelope the whole plant fits inside — of either shape — cuts nothing and
+ *    derives exactly the unpruned structure, so the pruned flag is a
  *    measurement and not a property of having declared an envelope.
+ * 6. A cut structure digests differently from an uncut one and reproduces its own
+ *    digest, so pruning is carried by the derived record rather than by a flag
+ *    nobody reads.
  */
 export const test_planting_pruning_envelope = (): void => {
   const free = clipped({ kind: "none" });
@@ -141,13 +145,53 @@ export const test_planting_pruning_envelope = (): void => {
     min: { x: -4, y: -4, z: -4 },
     max: { x: 4, y: 4, z: 4 },
   });
+  const wide = clipped({
+    kind: "sphere",
+    center: { x: 0, y: 0, z: 0 },
+    radius: 10,
+  });
   TestValidator.equals(
     "an envelope the plant fits inside cuts nothing",
     namedFacts([
       ["count", () => roomy.branches.length === 7],
       ["flag", () => roomy.branches.every((branch) => branch.pruned === false)],
       ["end", () => vclose(roomy.branches[0].end, { x: 0, y: 1, z: 0 })],
+      ["sphereCount", () => wide.branches.length === 7],
+      ["sphereFlag", () => wide.branches.every((branch) => !branch.pruned)],
+      [
+        "sameAsUnpruned",
+        () => plantingStateDigest(wide) === plantingStateDigest(free),
+      ],
     ]),
-    { count: true, flag: true, end: true },
+    {
+      count: true,
+      flag: true,
+      end: true,
+      sphereCount: true,
+      sphereFlag: true,
+      sameAsUnpruned: true,
+    },
+  );
+
+  TestValidator.equals(
+    "a cut structure digests differently from an uncut one",
+    namedFacts([
+      [
+        "differs",
+        () => plantingStateDigest(boxed) !== plantingStateDigest(free),
+      ],
+      [
+        "stable",
+        () =>
+          plantingStateDigest(
+            clipped({
+              kind: "box",
+              min: { x: -1, y: -1, z: -1 },
+              max: { x: 1, y: 0.75, z: 1 },
+            }),
+          ) === plantingStateDigest(boxed),
+      ],
+    ]),
+    { differs: true, stable: true },
   );
 };

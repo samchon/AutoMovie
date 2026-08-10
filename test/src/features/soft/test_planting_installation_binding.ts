@@ -92,8 +92,9 @@ const check = (props: {
  *    supplied.
  * 4. Aquatic geometry: a member rooted below the authored free surface is
  *    accepted, one rooted above it is refused with the overshoot measured, and
- *    one standing outside the lattice entirely is named as such rather than
- *    read off the edge of an array.
+ *    one standing outside the lattice — past its last column, and separately
+ *    past its last row — is named as such rather than read off the edge of an
+ *    array.
  * 5. Containment: members landing outside the room are refused, while a purely
  *    semantic space with no convex cells is not geometrically checked at all.
  * 6. A recipe's or a cluster's own refusal is re-pathed onto the binding, and the
@@ -463,7 +464,7 @@ export const test_planting_installation_binding = (): void => {
           ),
       ],
       [
-        "outsideLattice",
+        "outsideColumn",
         () =>
           hasViolation(
             check(aquatic({ x: 5, y: 0, z: 0 })),
@@ -471,8 +472,22 @@ export const test_planting_installation_binding = (): void => {
             "installations[0].irrigation.fluidDomain",
           ),
       ],
+      [
+        "outsideRow",
+        () =>
+          hasViolation(
+            check(aquatic({ x: 0, y: 0, z: 5 })),
+            "type",
+            "installations[0].irrigation.fluidDomain",
+          ),
+      ],
     ]),
-    { submerged: true, aboveSurface: true, outsideLattice: true },
+    {
+      submerged: true,
+      aboveSurface: true,
+      outsideColumn: true,
+      outsideRow: true,
+    },
   );
 
   TestValidator.equals(

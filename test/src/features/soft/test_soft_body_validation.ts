@@ -1,4 +1,4 @@
-import { validateSoftBodyDomain } from "@automovie/engine";
+import { simulateSoftBody, validateSoftBodyDomain } from "@automovie/engine";
 import {
   AutoMovieViolationKind,
   IAutoMovieSoftBodyDomain,
@@ -90,7 +90,11 @@ const refuses = (
  * 4. Solver: a non-positive step, a non-finite gravity component, a negative drag,
  *    an iteration count outside its range, a stiffness outside `[0, 1]`, a
  *    non-positive reference speed and a step budget outside its range.
- * 5. Geometry: two coincident rest particles along a row and along a column.
+ * 5. Geometry: two coincident rest particles along a row and along a column. The
+ *    refusal is what the pass is for, because a constraint between two points
+ *    at the same place has no direction: solving such a panel anyway skips that
+ *    constraint and stays finite rather than dividing by zero, which is a
+ *    quietly wrong panel and exactly what the refusal exists to prevent.
  * 6. Anchors and states: a blank id, a duplicated id, an out-of-range particle,
  *    two anchors on one particle, a non-finite anchor position, a state citing
  *    an unknown anchor, a state posing one anchor twice, and a budget
@@ -98,7 +102,9 @@ const refuses = (
  * 7. Colliders: a duplicated id, a zero and a non-finite plane normal, a
  *    non-positive radius, an inverted box, a collider budget overflow, and a
  *    plane whose degenerate normal makes the embedding test unanswerable rather
- *    than wrong.
+ *    than wrong. A panel that starts buried in a box is refused, while one
+ *    clear of that box on a single axis is not: the embedding test reads all
+ *    three axes rather than concluding from the first two.
  * 8. Wind: a zero direction, a non-finite acceleration, a negative gust amplitude
  *    and a negative gust frequency.
  */
@@ -272,9 +278,26 @@ export const test_soft_body_validation = (): void => {
     },
   );
 
+  const stacked = (): IAutoMovieSoftBodyDomain => {
+    const rest = sound().rest.slice();
+    rest[3] = rest[0];
+    rest[4] = rest[1];
+    rest[5] = rest[2];
+    return sound({ rest, anchors: [], states: [], colliders: [] });
+  };
   TestValidator.equals(
     "coincident rest particles are named on both lattice axes",
     namedFacts([
+      [
+        "solvedAnyway",
+        () => {
+          const state = simulateSoftBody(stacked(), 2);
+          return (
+            state.positions.every((value) => Number.isFinite(value)) &&
+            Object.is(state.positions[0], state.positions[3])
+          );
+        },
+      ],
       [
         "row",
         () => {
@@ -296,7 +319,7 @@ export const test_soft_body_validation = (): void => {
         },
       ],
     ]),
-    { row: true, column: true },
+    { solvedAnyway: true, row: true, column: true },
   );
 
   TestValidator.equals(
@@ -578,6 +601,40 @@ export const test_soft_body_validation = (): void => {
           ),
       ],
       [
+        "clearOnlyOnOneAxis",
+        () =>
+          validateSoftBodyDomain({
+            domain: sound({
+              colliders: [
+                {
+                  kind: "box",
+                  id: "beam",
+                  min: { x: -4, y: -4, z: -4 },
+                  max: { x: 4, y: 4, z: -0.5 },
+                },
+              ],
+            }),
+          }).success === true,
+      ],
+      [
+        "embeddedInBox",
+        () =>
+          refuses(
+            {
+              colliders: [
+                {
+                  kind: "box",
+                  id: "beam",
+                  min: { x: -4, y: -4, z: -4 },
+                  max: { x: 4, y: 4, z: 4 },
+                },
+              ],
+            },
+            "type",
+            "colliders[0]",
+          ),
+      ],
+      [
         "budget",
         () =>
           refuses(
@@ -601,6 +658,8 @@ export const test_soft_body_validation = (): void => {
       offset: true,
       radius: true,
       invertedBox: true,
+      clearOnlyOnOneAxis: true,
+      embeddedInBox: true,
       budget: true,
     },
   );

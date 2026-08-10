@@ -1,8 +1,8 @@
-import { arrangePlantingCluster } from "@automovie/engine";
+import { arrangePlantingCluster, plantingBudget } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, qunit } from "../internal/predicates";
-import { plantingCluster } from "../internal/softFixtures";
+import { plantingCluster, plantingRecipe } from "../internal/softFixtures";
 
 /** Smallest horizontal distance between any two accepted members. */
 const closestPair = (
@@ -48,6 +48,9 @@ const closestPair = (
  *    cluster with zero yaw jitter hands out the exact identity rotation; and a
  *    cluster whose extent is zero but whose spacing is positive rejects every
  *    slot after the first.
+ * 6. The cost of the whole bed is derived from the recipe and the cluster alone,
+ *    with no branch grown: the complete `k`-ary tree times the member count, so
+ *    a production can be refused before anything is derived.
  */
 export const test_planting_cluster_arrangement = (): void => {
   const cluster = plantingCluster();
@@ -239,6 +242,20 @@ export const test_planting_cluster_arrangement = (): void => {
       onlyOneFits: true,
       restRefused: true,
       degenerateBounds: true,
+    },
+  );
+
+  TestValidator.equals(
+    "the cluster's cost is derived from the two records alone",
+    plantingBudget({ domain: plantingRecipe(), cluster }),
+    {
+      domain: "fern",
+      worstCaseBranches: 7,
+      maxBranches: 64,
+      maxLeaves: 512,
+      members: 6,
+      worstCaseBranchInstances: 42,
+      worstCaseLeafInstances: 3_072,
     },
   );
 };

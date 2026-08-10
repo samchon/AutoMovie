@@ -51,8 +51,10 @@ const dropped = (colliders: IAutoMovieSoftCollider[]) =>
  *    stated to leave upward, at exactly `centre.y + radius`, rather than
  *    dividing by zero. The same authored panel is refused by the validator,
  *    which is why the case is degenerate rather than ordinary.
- * 5. A box is escaped by its least-penetrated face: a strip entering through the
- *    top leaves through the top, and a strip that is nowhere near the box is
+ * 5. A box is escaped by its least-penetrated face, on either side of it: a strip
+ *    falling onto a crate leaves through the crate's top, a strip pressed
+ *    upward against a beam leaves through the beam's underside rather than
+ *    being pushed out the far side, and a strip that is nowhere near the box is
  *    not touched at all and reports zero contacts.
  */
 export const test_soft_body_collision = (): void => {
@@ -191,6 +193,43 @@ export const test_soft_body_collision = (): void => {
       ["contacts", () => crate.contacts === 1],
     ]),
     { restsOnTop: true, notPushedSideways: true, contacts: true },
+  );
+
+  const canopy = simulateSoftBody(
+    softPanel({
+      columns: 1,
+      rows: 2,
+      overrides: {
+        id: "canopy",
+        solver: {
+          fixedStepSeconds: 0.015625,
+          gravity: { x: 0, y: 8, z: 0 },
+          drag: 0,
+          iterations: 2,
+          stiffness: { structural: 1, shear: 1, bend: 1 },
+          referenceSpeed: 4,
+          maxSteps: 512,
+        },
+        colliders: [
+          {
+            kind: "box",
+            id: "beam",
+            min: { x: -1, y: 0.5, z: -1 },
+            max: { x: 1, y: 1.5, z: 1 },
+          },
+        ],
+      },
+    }),
+    64,
+  );
+  TestValidator.equals(
+    "a panel pressed up against a beam leaves by the face it entered",
+    namedFacts([
+      ["restsUnder", () => Object.is(canopy.positions[1], 0.5)],
+      ["notPushedThrough", () => canopy.positions[1] < 1.5],
+      ["contacts", () => canopy.contacts === 1],
+    ]),
+    { restsUnder: true, notPushedThrough: true, contacts: true },
   );
 
   const missed = simulateSoftBody(

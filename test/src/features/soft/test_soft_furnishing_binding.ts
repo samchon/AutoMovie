@@ -68,7 +68,10 @@ const check = (props: {
  *    knows it by, keeping its original kind and severity.
  * 4. A panel hanging outside the room is refused, while a purely semantic space
  *    with no convex cells is not geometrically checked at all — inventing a
- *    volume would be the design deciding a fact nobody stated.
+ *    volume would be the design deciding a fact nobody stated. A panel whose
+ *    rest array is the wrong length is refused for that and **not**
+ *    additionally accused of hanging outside the room: an unmeasurable panel is
+ *    reported once, at the field that made it unmeasurable.
  * 5. The lowering's capability matrix: an invalid domain is `not-run` with no
  *    geometry, an undeclared named state is `not-run`, a request for
  *    cloth-on-cloth contact is `unsupported` and returns the rest configuration
@@ -252,8 +255,29 @@ export const test_soft_furnishing_binding = (): void => {
         "semantic",
         () => check({ domains: [outside], semantic: true }).success === true,
       ],
+      [
+        "unmeasurable",
+        () =>
+          hasViolation(
+            check({ domains: [panel({ rest: [0, 0, 0] })] }),
+            "type",
+            "domains[0].rest",
+          ),
+      ],
+      [
+        "notAlsoGuessed",
+        () => {
+          const validation = check({ domains: [panel({ rest: [0, 0, 0] })] });
+          return (
+            validation.success === false &&
+            validation.violations.every(
+              (item) => item.path.includes("furnishings[0].domain") === false,
+            )
+          );
+        },
+      ],
     ]),
-    { refused: true, semantic: true },
+    { refused: true, semantic: true, unmeasurable: true, notAlsoGuessed: true },
   );
 
   const frame = (

@@ -79,7 +79,9 @@ const seekable = () =>
  * 5. An unreachable seek is refused rather than guessed: a fractional step, a
  *    negative step, a step past the declared budget, a non-finite sample time
  *    and an undeclared named state each throw with the domain named, while the
- *    exact budget boundary is reachable.
+ *    exact budget boundary is reachable. A solve that genuinely leaves the
+ *    reals is named at the step it first did so, rather than turning into NaN
+ *    frames a renderer would draw as nothing at all.
  */
 export const test_soft_body_seek_determinism = (): void => {
   const domain = seekable();
@@ -215,6 +217,32 @@ export const test_soft_body_seek_determinism = (): void => {
           ),
       ],
       [
+        "runaway",
+        () =>
+          throwsError(
+            () =>
+              simulateSoftBody(
+                softPanel({
+                  columns: 2,
+                  rows: 2,
+                  overrides: {
+                    id: "runaway",
+                    solver: {
+                      ...domain.solver,
+                      gravity: { x: 0, y: Number.NEGATIVE_INFINITY, z: 0 },
+                    },
+                    anchors: [],
+                    states: [],
+                    colliders: [],
+                    wind: null,
+                  },
+                }),
+                1,
+              ),
+            ['soft body "runaway" produced a non-finite state at step 1'],
+          ),
+      ],
+      [
         "unknownState",
         () =>
           throwsError(
@@ -230,6 +258,7 @@ export const test_soft_body_seek_determinism = (): void => {
       atBudget: true,
       nonFiniteTime: true,
       unknownState: true,
+      runaway: true,
     },
   );
 };

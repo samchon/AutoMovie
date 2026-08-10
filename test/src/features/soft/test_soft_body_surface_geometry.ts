@@ -43,6 +43,9 @@ const rug = (columns: number, rows: number) =>
  * 5. A lattice one particle wide emits no triangle and reports `null` bounds: a
  *    single row of particles is a cord, not a surface. Its normals fall back to
  *    `(0, 1, 0)` rather than dividing by a zero-length accumulation.
+ * 6. The mirror boundary — one particle deep rather than one wide — behaves the
+ *    same way, and its UV rule degenerates on the other axis: the `u` extreme
+ *    is still reached while every `v` is exactly zero.
  */
 export const test_soft_body_surface_geometry = (): void => {
   const flat = rug(3, 3);
@@ -137,5 +140,31 @@ export const test_soft_body_surface_geometry = (): void => {
       ["uvs", () => (thread.mesh.uvs ?? [])[0] === 0],
     ]),
     { indices: true, bounds: true, vertices: true, normals: true, uvs: true },
+  );
+
+  const batten = softPanel({
+    columns: 4,
+    rows: 1,
+    overrides: { id: "batten" },
+  });
+  const rail = softBodySurfaceGeometry({
+    domain: batten,
+    state: simulateSoftBody(batten, 0),
+  });
+  TestValidator.equals(
+    "a one-particle-deep lattice is the mirror boundary of the cord",
+    namedFacts([
+      ["indices", () => (rail.mesh.indices ?? []).length === 0],
+      ["bounds", () => rail.bounds === null],
+      ["u", () => (rail.mesh.uvs ?? [])[6] === 1],
+      [
+        "v",
+        () =>
+          (rail.mesh.uvs ?? []).every(
+            (value, index) => index % 2 === 0 || value === 0,
+          ),
+      ],
+    ]),
+    { indices: true, bounds: true, u: true, v: true },
   );
 };

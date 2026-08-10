@@ -53,7 +53,9 @@ const drape = (step: number) => {
  * 3. `update` re-uploads a newly solved step: the positions change, the step in
  *    `userData` follows, and the vertex count does not.
  * 4. A cord carries no triangle, so the object is hidden and its bounding sphere
- *    collapses to a point rather than culling against an invented volume.
+ *    collapses to a point rather than culling against an invented volume, and a
+ *    surface carrying no normals, UVs or indices at all uploads empty buffers
+ *    rather than failing on the missing attribute.
  * 5. Cloth is drawn double-sided by default, and a supplied material is used as-is
  *    and not disposed by the object that borrowed it, while the default
  *    material is.
@@ -168,14 +170,46 @@ export const test_viewer_soft_body_panel = (): void => {
       state: simulateSoftBody(cord, 0),
     }),
   });
+  const sparse = buildSoftBodyObject({
+    surface: {
+      domain: "sparse",
+      step: 0,
+      mesh: {
+        positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+        normals: null,
+        uvs: null,
+        indices: null,
+        skin: null,
+      },
+      bounds: null,
+    },
+  });
   TestValidator.equals(
-    "a cord is hidden and culls to a point",
+    "a cord is hidden, and an attribute-less surface uploads empty buffers",
     namedFacts([
       ["hidden", () => thread.object.visible === false],
       ["radius", () => thread.object.geometry.boundingSphere?.radius === 0],
+      [
+        "normals",
+        () => sparse.object.geometry.getAttribute("normal").count === 0,
+      ],
+      ["uvs", () => sparse.object.geometry.getAttribute("uv").count === 0],
+      ["indices", () => sparse.object.geometry.getIndex()?.count === 0],
+      [
+        "positions",
+        () => sparse.object.geometry.getAttribute("position").count === 3,
+      ],
     ]),
-    { hidden: true, radius: true },
+    {
+      hidden: true,
+      radius: true,
+      normals: true,
+      uvs: true,
+      indices: true,
+      positions: true,
+    },
   );
+  sparse.dispose();
 
   const borrowed = new THREE.MeshBasicMaterial();
   const lent = buildSoftBodyObject({ surface, material: borrowed });
