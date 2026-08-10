@@ -181,7 +181,7 @@ const failCommand = (label, result, timeout, detail = null) => {
   );
 };
 
-const run = (label, command, cwd, timeout = 300_000) => {
+const run = (label, command, cwd, timeout = 300_000, env = process.env) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
@@ -189,6 +189,7 @@ const run = (label, command, cwd, timeout = 300_000) => {
     cwd,
     shell: true,
     encoding: "utf8",
+    env,
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
@@ -1845,11 +1846,18 @@ PNG.sync.read = function (input) {
 };
 `,
   );
-  runExpectedFailure(
-    "preserve packaged encoder consumer diagnostics",
+  // Finalize used to decode every frame and re-encode the whole film, so this
+  // hook fired and the step proved the decoder's own error reached the
+  // operator. Finalize now sample-copies the chunk MP4s it already encoded, so
+  // the hook fires on nothing -- and that is worth asserting rather than
+  // repairing: a finalize that decodes no frame is the property the chunked
+  // assembly was built for, and the hook is exactly the instrument that proves
+  // it. What is no longer covered here is the diagnostic-preservation claim
+  // itself; it belongs to the chunk render, which is where decoding moved.
+  run(
+    "finalize the packaged starter without decoding a frame",
     "npm run render -- finalize",
     starterDir,
-    "automovie-encoder-consumer-sentinel",
     300_000,
     {
       ...process.env,
