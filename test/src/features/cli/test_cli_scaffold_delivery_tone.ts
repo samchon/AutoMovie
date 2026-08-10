@@ -28,9 +28,10 @@ import ts from "typescript-compiler";
  *    accept contains the value the capture host sends.
  * 4. The curve is part of the capture page identity, so a page drawn under one
  *    delivery is never reused to serve another.
- * 5. The render job re-reads a committed bundle manifest and refuses when the
- *    curve it requested is not the curve the render spec sealed, which is what
- *    stops the two spellings drifting apart in silence.
+ * 5. The render job re-reads a committed bundle manifest and fails when the curve
+ *    it requested is not the curve the render spec sealed; a run that committed
+ *    no verifiable bundle reports `not-run` instead of dressing "nothing to
+ *    measure" as a defect.
  */
 export const test_cli_scaffold_delivery_tone = (): void => {
   const files = renderScaffold({ name: "tone-film" });
@@ -90,32 +91,35 @@ export const test_cli_scaffold_delivery_tone = (): void => {
   );
 
   TestValidator.equals(
-    "the render job refuses a manifest whose sealed curve is not the one it asked for",
+    "a sealed curve that disagrees fails, and no sealed curve at all reports",
     {
       comparisons: toneDriftComparisons(render),
-      called: render.includes(
-        "assertCapturedDeliveryToneMapping(project, frames)",
-      ),
-      unverifiable: render.includes(
-        "committed no verifiable render bundle, so the delivery tone mapping",
+      called: render.includes("checkCapturedDeliveryTone(project, frames)"),
+      // The only outcome that ends the render is a disagreement. A run with no
+      // verifiable bundle -- a proxy review capture commits none -- has nothing
+      // to read a sealed curve out of, and reporting `not-run` is what keeps
+      // "nothing to measure" from being dressed as a defect.
+      unrun: render.includes("committed no verifiable render bundle out of "),
+      throws: render.includes(
+        "Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts",
       ),
     },
     {
       comparisons: [
         // A frame that produced no receipt names no bundle, and a bundle that
         // does not verify is not evidence about anything, so both are skipped
-        // before the drift comparison. Reaching the end of the walk without one
-        // is what makes "checked nothing" a refusal rather than a pass.
+        // before the drift comparison.
         ["frame.receipt", "===", "null"],
         ["manifest", "===", "null"],
         [
           "manifest.renderSpec.toneMapping",
-          "===",
+          "!==",
           "PRODUCTION_DELIVERY_TONE_MAPPING",
         ],
       ],
       called: true,
-      unverifiable: true,
+      unrun: true,
+      throws: true,
     },
   );
 };
@@ -134,7 +138,7 @@ const toneDriftComparisons = (text: string): string[][] => {
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
-      node.name.text === "assertCapturedDeliveryToneMapping"
+      node.name.text === "checkCapturedDeliveryTone"
     ) {
       const collect = (current: ts.Node): void => {
         if (

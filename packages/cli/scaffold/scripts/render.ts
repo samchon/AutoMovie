@@ -17,6 +17,7 @@ import type {
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionTtsReceipt,
+  IAutoMovieRenderSpec,
   IAutoMovieRepaintReceipt,
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
@@ -304,10 +305,21 @@ const main = async (): Promise<void> => {
     const current = await currentPlan();
     const budget = enforceRenderBudget(current);
     if (action === "plan") {
-      output({ ...current, budget });
+      output({
+        ...current,
+        budget,
+        deliveryTone: uncheckedDeliveryTone(
+          "planning captures no review evidence, so no committed bundle states the sealed delivery curve",
+        ),
+      });
       return;
     }
-    if (action === "all") await captureReviewEvidence();
+    const deliveryTone =
+      action === "all"
+        ? (await captureReviewEvidence()).deliveryTone
+        : uncheckedDeliveryTone(
+            `the "${action}" action captures no review evidence, so no committed bundle states the sealed delivery curve`,
+          );
     if (action === "run" || action === "all") {
       recoverAbandonedTemporaryDirectories(current.chunks);
       quarantineStaleSlotOutputs(current.chunks);
@@ -330,6 +342,7 @@ const main = async (): Promise<void> => {
           tier: current.tier,
         },
         budget,
+        deliveryTone,
         capture: productionFrameCaptureMetrics(),
         result,
         chunks: await renderStatus(current),
@@ -360,7 +373,46 @@ const sourceFingerprint = (): AutoMovieContentDigest => {
   return checked.compiler.inputFingerprint;
 };
 
-const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
+/**
+ * What the render job learned about the delivery curve the frames were drawn
+ * under.
+ *
+ * `not-run` is a first-class outcome, not a softened failure. A proxy review
+ * capture commits no verifiable render bundle at all, so there is no sealed
+ * render spec to read the curve out of, and refusing the render for that would
+ * be dressing "nothing to measure" as "something is wrong" -- the exact move
+ * this evidence exists to prevent, pointed the other way.
+ */
+interface IDeliveryToneCheck {
+  /** Curve the capture host asked the viewer page for. */
+  requested: IAutoMovieRenderSpec["toneMapping"];
+
+  /** Whether a sealed render spec was actually read. */
+  status: "checked" | "not-run";
+
+  /** Bundle whose manifest answered, or `null` when none did. */
+  bundle: string | null;
+
+  /** Curve that manifest sealed, or `null` when nothing was read. */
+  recorded: IAutoMovieRenderSpec["toneMapping"] | null;
+
+  /** Why nothing was read, or `null` when something was. */
+  reason: string | null;
+}
+
+/** The check no action ran, stated as such rather than left out. */
+const uncheckedDeliveryTone = (reason: string): IDeliveryToneCheck => ({
+  requested: PRODUCTION_DELIVERY_TONE_MAPPING,
+  status: "not-run",
+  bundle: null,
+  recorded: null,
+  reason,
+});
+
+const captureReviewEvidence = async (): Promise<{
+  frames: IAutoMovieCaptureFrame[];
+  deliveryTone: IDeliveryToneCheck;
+}> => {
   const app = productionApplication();
   const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
@@ -409,13 +461,11 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
         failed,
       )}`,
     );
-  assertCapturedDeliveryToneMapping(project, frames);
-  return frames;
+  return { frames, deliveryTone: checkCapturedDeliveryTone(project, frames) };
 };
 
 /**
- * Prove the curve the capture asked the page for is the curve the committed
- * bundle records.
+ * Read the curve a committed bundle sealed and hold the capture host to it.
  *
  * The viewer cannot read a render spec, so the capture host hands it the
  * delivery curve on the page URL while the production oracle seals that same
@@ -429,13 +479,16 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
  * re-read and re-digest every review frame the capture just wrote, to re-answer
  * a question whose answer cannot differ between two bundles of one production.
  *
- * A run whose frames produced no verifiable manifest checks nothing and says
- * so, rather than passing on the absence of evidence.
+ * Only a disagreement fails. A run whose frames committed no verifiable bundle
+ * has nothing to read a sealed curve out of, and that is a state rather than a
+ * defect: it reports `not-run` and the render continues. Promoting "there was
+ * nothing to measure" to a refusal is the same false claim as calling it a
+ * pass, made in the opposite direction.
  */
-const assertCapturedDeliveryToneMapping = (
+const checkCapturedDeliveryTone = (
   project: AutoMovieProductionProject,
   frames: readonly IAutoMovieCaptureFrame[],
-): void => {
+): IDeliveryToneCheck => {
   const bundles = [
     ...new Set(
       frames.flatMap((frame) =>
@@ -448,14 +501,20 @@ const assertCapturedDeliveryToneMapping = (
       path.join(project.renderRoot(), ...bundle.split("/"), "manifest.json"),
     );
     if (manifest === null) continue;
-    if (manifest.renderSpec.toneMapping === PRODUCTION_DELIVERY_TONE_MAPPING)
-      return;
-    throw new Error(
-      `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but bundle "${bundle}" records "${manifest.renderSpec.toneMapping}". Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
-    );
+    if (manifest.renderSpec.toneMapping !== PRODUCTION_DELIVERY_TONE_MAPPING)
+      throw new Error(
+        `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but bundle "${bundle}" records "${manifest.renderSpec.toneMapping}". Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
+      );
+    return {
+      requested: PRODUCTION_DELIVERY_TONE_MAPPING,
+      status: "checked",
+      bundle,
+      recorded: manifest.renderSpec.toneMapping,
+      reason: null,
+    };
   }
-  throw new Error(
-    "Review capture committed no verifiable render bundle, so the delivery tone mapping the capture requested could not be checked against the manifest that records it.",
+  return uncheckedDeliveryTone(
+    `review capture committed no verifiable render bundle out of ${bundles.length}, so no sealed render spec states the delivery curve for this run`,
   );
 };
 
