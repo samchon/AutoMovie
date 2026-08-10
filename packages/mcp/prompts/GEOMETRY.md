@@ -34,7 +34,7 @@ Compose with `transformAutoMovieMesh(mesh, { translation, rotation, scale })` an
 
 Measure what you built before you ship it. `inspectAutoMovieMeshTopology(mesh)` reports triangle count, degenerate triangles, non-finite components, open boundary edges, non-manifold edges, whether the surface is watertight, and the signed volume, which is exact for a closed polyhedron. A shell that is not watertight is a shell light and camera get inside; a volume that comes back negative is a face wound the wrong way; a non-finite component is arithmetic that went wrong upstream and will reach the renderer as nothing at all. Read those numbers rather than the render.
 
-`tessellateSurface(surface)` turns one declared support surface into triangles through the engine's own height rule, evaluating a heightfield at every lattice cut inside the footprint. Use it so what is drawn and what feet stand on are one bilinear evaluation instead of two that drift.
+`tessellateSurface(surface)` turns one declared support surface into triangles through the engine's own height rule, evaluating a heightfield at every lattice cut inside the footprint, and drawing a concave footprint's notch and a holed one's void open rather than filled. Use it so what is drawn and what feet stand on are one bilinear evaluation instead of two that drift.
 
 ```ts
 import {

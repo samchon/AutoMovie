@@ -50,9 +50,9 @@ export type AutoMovieRingPlacement = "outside" | "boundary" | "inside";
  * One closed ring of a footprint, with the plan projection and the signed area
  * the queries read.
  *
- * The planar copy exists so a query never allocates: `spaceGround` is called
- * per foot per frame, and mapping `(x, z)` to `(x, y)` inside the loop would
- * turn one containment test into one array.
+ * The planar copy is kept rather than derived per call: `spaceGround` is asked
+ * per foot per frame, and mapping `(x, z)` to `(x, y)` inside that loop would
+ * build one array per containment test.
  *
  * @author Samchon
  */
