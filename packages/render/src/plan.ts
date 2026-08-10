@@ -90,10 +90,12 @@ export const renderPathStem = (target: string): string => {
  * frame rate fixed to `fps` and `+faststart` for progressive playback. Nothing
  * here tone maps: the frames arrive as sRGB images and are re-encoded
  * unchanged. The curve that produced them is a renderer setting the capture
- * host applies from the scene's `environment`, and
- * {@link IAutoMovieRenderSpec}'s `toneMapping` is the delivery default for a
- * scene that declares none, which no capture path in this repository hands to a
- * renderer yet.
+ * host applies, owned by the scene's own `environment`, with
+ * {@link IAutoMovieRenderSpec}'s `toneMapping` as the delivery default for a
+ * scene that declares none. That default reaches a renderer only when the
+ * viewer page carries a `tone` parameter, and nothing in this repository
+ * derives that parameter from the spec, so a delivery curve is honored today
+ * only by a caller that puts it on the URL itself.
  *
  * The output size is pinned to the spec with `-s {width}x{height}` (#1251): a
  * validated `width`/`height` that never reached the encoder made the rendered

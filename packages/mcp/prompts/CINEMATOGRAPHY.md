@@ -46,6 +46,8 @@ Image lighting is what makes a physically-based interior read. An equirectangula
 
 Tone mapping has one owner. The render spec's `toneMapping` is the delivery default across a whole sequence; a scene that declares an environment overrides it, because the curve is chosen against that scene's own exposure and lighting and a night interior and a noon exterior do not share one. A scene that declares no environment keeps the spec's value, which is exactly what every production authored before environments existed renders.
 
+That is the contract; the frame in front of you may be narrower. A scene's own environment always reaches the renderer, while the delivery default reaches it only when the page drawing the frame carries a `tone` parameter, and the scaffold's capture script does not set one. So judge a delivery curve from a page you opened with it, and read a captured review frame as the scene's own response until that gap closes.
+
 Shadows are a declared cost, not a default. Enable them in the environment, choose the filter family deliberately, and give every casting light explicit map size, bias, normal bias, and near/far. A light that claims to cast without those settings is refused rather than staged with whatever a renderer happens to default to.
 
 Reach for a rectangular area source when the light in the room comes from a surface: a window, a softbox, a strip, a luminous coffer. It is the one light kind with extent, and the soft wrap it gives is a function of its declared width and height rather than of an intensity tuned to imitate one. It lights physically-based materials only, and it casts no shadow map at all, so pair it with a punctual key when the shot needs occlusion; declaring `castShadow` on one is refused rather than silently ignored.
