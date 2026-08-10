@@ -7,7 +7,6 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { convexHull2D } from "../math/hull";
-import { tessellateToMesh } from "./tessellate";
 
 /** One point of a code-authored 2D construction profile. */
 export interface IAutoMovieProfilePoint {
@@ -87,7 +86,14 @@ export interface IAutoMovieMeshTopology {
   volume: number;
 }
 
-/** Extrude a convex XY profile along local Z into a closed triangle mesh. */
+/**
+ * Extrude a convex XY profile along local Z into a closed triangle mesh.
+ *
+ * The result carries generated vertex normals and no UV atlas: where a prism's
+ * seam falls is a finish decision this kernel does not make for the caller, and
+ * {@link buildAutoMoviePolyhedron} is the builder that does lay one out, by
+ * measuring each face's own plane in metres.
+ */
 export const extrudeAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
   depth: number;
@@ -95,8 +101,9 @@ export const extrudeAutoMovieProfile = (props: {
   positive(props.depth, "extrusion depth");
   const profile = profileHull(props.profile);
   const half = props.depth / 2;
-  const positions = profile.flatMap((point) => [point.x, point.y, half]);
-  positions.push(...profile.flatMap((point) => [point.x, point.y, -half]));
+  const positions: number[] = [];
+  for (const point of profile) positions.push(point.x, point.y, half);
+  for (const point of profile) positions.push(point.x, point.y, -half);
   const count = profile.length;
   const indices: number[] = [];
   for (let index = 1; index + 1 < count; ++index) {
@@ -117,6 +124,11 @@ export const extrudeAutoMovieProfile = (props: {
  * Unlike extrusion and sweep, the meridian is taken as authored rather than
  * hulled, so an arbitrary silhouette polyline is allowed here; only its radii
  * must be non-negative.
+ *
+ * Closure follows the meridian and is the caller's to declare: a meridian that
+ * starts and ends on the axis closes into a solid whose pole rings collapse to
+ * zero-area triangles, and one that does not is an open tube with a rim at each
+ * end. Neither is repaired, and no UV atlas is generated.
  */
 export const revolveAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -155,6 +167,8 @@ export const revolveAutoMovieProfile = (props: {
  *
  * This is the code path for moulding, rails, pipes, arches, and other members
  * whose section repeats along a path. Adjacent path points must be distinct.
+ * Both ends are capped, so a sweep along a simple path is a closed solid; no UV
+ * atlas is generated.
  */
 export const sweepAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -282,9 +296,31 @@ export const buildAutoMoviePolyhedron = (
 /**
  * Build a local XY wall around rectangular door/window openings.
  *
- * The wall is partitioned at every opening edge and each occupied cell becomes
- * one box. Openings therefore remain real holes in beauty, depth, normal, and
- * mask passes instead of metadata painted over an uncut wall.
+ * The wall is partitioned at every opening edge, the cells an opening covers
+ * are dropped, and each surviving cell contributes only the faces no
+ * neighbouring cell hides. Openings therefore remain real holes in beauty,
+ * depth, normal, and mask passes instead of metadata painted over an uncut
+ * wall, and the standing wall is one closed 2-manifold solid.
+ *
+ * Dropping the hidden faces is what earns that. A union of one box per cell
+ * carries an interior face between every adjacent pair, so each shared edge
+ * belongs to four triangles; `validateMeshTopology` reads that as non-manifold
+ * and `validateModel` therefore refuses any model carrying the wall, leaving a
+ * builder whose own output the rest of the engine cannot accept. Those interior
+ * faces are also triangles no camera can reach, and a budget counts them.
+ *
+ * Every cell corner is a lattice coordinate minus one half-extent, so the face
+ * two adjacent cells share is the same pair of doubles read from both sides,
+ * bit for bit. Deriving a corner from the cell's own centre and half-width
+ * instead would round it, and two edges a rounding apart neither weld nor
+ * cancel.
+ *
+ * Two openings that meet at a corner are refused rather than cut. The standing
+ * region would touch itself along one line, and an edge four triangles share is
+ * not a surface; separating it needs the general boolean this kernel does not
+ * have, so it raises its own diagnostic instead of emitting a pinched solid.
+ *
+ * The result carries flat per-face normals and no UV atlas.
  */
 export const buildAutoMovieWall = (props: {
   width: number;
@@ -334,43 +370,85 @@ export const buildAutoMovieWall = (props: {
       opening.y + opening.height,
     ]),
   ]);
-  const cells: IAutoMovieMesh[] = [];
-  for (let x = 0; x + 1 < xs.length; ++x)
-    for (let y = 0; y + 1 < ys.length; ++y) {
+  const columns = xs.length - 1;
+  const rows = ys.length - 1;
+  const standing: boolean[] = [];
+  for (let x = 0; x < columns; ++x)
+    for (let y = 0; y < rows; ++y) {
       const centerX = (xs[x]! + xs[x + 1]!) / 2;
       const centerY = (ys[y]! + ys[y + 1]!) / 2;
-      if (
-        props.openings.some(
+      standing.push(
+        props.openings.every(
           (opening) =>
-            centerX > opening.x &&
-            centerX < opening.x + opening.width &&
-            centerY > opening.y &&
-            centerY < opening.y + opening.height,
-        )
-      )
-        continue;
-      cells.push(
-        translateMesh(
-          tessellateToMesh({
-            type: "box",
-            width: xs[x + 1]! - xs[x]!,
-            height: ys[y + 1]! - ys[y]!,
-            depth: props.depth,
-          }),
-          {
-            x: centerX - props.width / 2,
-            y: centerY - props.height / 2,
-            z: 0,
-          },
+            centerX <= opening.x ||
+            centerX >= opening.x + opening.width ||
+            centerY <= opening.y ||
+            centerY >= opening.y + opening.height,
         ),
       );
     }
-  if (cells.length === 0)
+  const stands = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < columns && y < rows && standing[x * rows + y]!;
+  if (standing.some((cell) => cell) === false)
     throw new Error("wall openings remove the entire wall");
-  return mergeAutoMovieMeshes(cells);
+  for (let x = 1; x < columns; ++x)
+    for (let y = 1; y < rows; ++y) {
+      const lowerLeft = stands(x - 1, y - 1);
+      const lowerRight = stands(x, y - 1);
+      const upperLeft = stands(x - 1, y);
+      const upperRight = stands(x, y);
+      if (
+        (lowerLeft && upperRight && !lowerRight && !upperLeft) ||
+        (lowerRight && upperLeft && !lowerLeft && !upperRight)
+      )
+        throw new Error(
+          `wall openings meet at (${xs[x]!}, ${ys[y]!}) and pinch the wall to a line`,
+        );
+    }
+
+  const halfWidth = props.width / 2;
+  const halfHeight = props.height / 2;
+  const halfDepth = props.depth / 2;
+  const target: { positions: number[]; normals: number[]; indices: number[] } =
+    { positions: [], normals: [], indices: [] };
+  for (let x = 0; x < columns; ++x)
+    for (let y = 0; y < rows; ++y) {
+      if (stands(x, y) === false) continue;
+      const min = [
+        xs[x]! - halfWidth,
+        ys[y]! - halfHeight,
+        -halfDepth,
+      ] as const;
+      const max = [
+        xs[x + 1]! - halfWidth,
+        ys[y + 1]! - halfHeight,
+        halfDepth,
+      ] as const;
+      for (const [axis, outward, alongX, alongY] of WALL_CELL_SIDES)
+        if (stands(x + alongX, y + alongY) === false)
+          pushCellFace(target, min, max, axis, outward);
+      pushCellFace(target, min, max, 2, 1);
+      pushCellFace(target, min, max, 2, -1);
+    }
+  return {
+    positions: target.positions,
+    normals: target.normals,
+    uvs: null,
+    indices: target.indices,
+    skin: null,
+  };
 };
 
-/** Merge rigid meshes, rebasing their indices in declared order. */
+/**
+ * Merge rigid meshes, rebasing their indices in declared order.
+ *
+ * Every buffer is appended element by element rather than by spreading the
+ * source into `push`. A spread is an argument list, and an argument list has a
+ * length limit in the low hundreds of thousands: `push(...positions)` throws
+ * `Maximum call stack size exceeded` once one member passes roughly forty
+ * thousand vertices. Merging a building's members past that size is the whole
+ * reason this function exists, so the limit is not one worth inheriting.
+ */
 export const mergeAutoMovieMeshes = (
   meshes: readonly IAutoMovieMesh[],
 ): IAutoMovieMesh => {
@@ -385,12 +463,12 @@ export const mergeAutoMovieMeshes = (
   for (const mesh of meshes) {
     const base = positions.length / 3;
     const count = mesh.positions.length / 3;
-    positions.push(...mesh.positions);
-    if (keepNormals) normals.push(...mesh.normals!);
-    if (keepUvs) uvs.push(...mesh.uvs!);
-    const sourceIndices =
-      mesh.indices ?? Array.from({ length: count }, (_, index) => index);
-    indices.push(...sourceIndices.map((index) => index + base));
+    for (const value of mesh.positions) positions.push(value);
+    if (keepNormals) for (const value of mesh.normals!) normals.push(value);
+    if (keepUvs) for (const value of mesh.uvs!) uvs.push(value);
+    if (mesh.indices === null)
+      for (let index = 0; index < count; ++index) indices.push(index + base);
+    else for (const index of mesh.indices) indices.push(index + base);
   }
   return {
     positions,
@@ -512,15 +590,19 @@ export const mergeAutoMovieMeshParts = (
  * corners is still one closed shell. A closed solid must report `watertight`;
  * an assembly of members that share faces, or a surface meant to stay open,
  * reports its boundary and non-manifold edge counts rather than pretending.
+ *
+ * This measures; it does not judge. `validateMeshTopology` is the engine's
+ * verdict on the same surface, adding winding consistency and an `expectClosed`
+ * declaration, and it is what `validateModel` runs over every mesh a model
+ * carries. A builder that wants a pass or a fail asks that one.
  */
 export const inspectAutoMovieMeshTopology = (
   mesh: IAutoMovieMesh,
 ): IAutoMovieMeshTopology => {
-  const nonFinite = [
-    ...mesh.positions,
-    ...(mesh.normals ?? []),
-    ...(mesh.uvs ?? []),
-  ].filter((value) => Number.isFinite(value) === false).length;
+  const nonFinite =
+    countNonFinite(mesh.positions) +
+    countNonFinite(mesh.normals) +
+    countNonFinite(mesh.uvs);
   const indices = triangleIndicesOf(mesh, "mesh topology");
   const key = (at: number): string =>
     [0, 1, 2]
@@ -594,6 +676,68 @@ const triangleIndicesOf = (mesh: IAutoMovieMesh, label: string): number[] => {
   )
     throw new Error(`${label} indexes a vertex the mesh does not carry`);
   return indices;
+};
+
+/**
+ * The four in-plane sides of a wall cell, each with the neighbour that hides
+ * it. The two depth faces have no neighbour in a one-cell-deep wall and are
+ * always emitted, so they are not listed.
+ */
+const WALL_CELL_SIDES: ReadonlyArray<
+  readonly [axis: 0 | 1, outward: 1 | -1, alongX: number, alongY: number]
+> = [
+  [0, 1, 1, 0],
+  [0, -1, -1, 0],
+  [1, 1, 0, 1],
+  [1, -1, 0, -1],
+];
+
+/**
+ * Append one outward face of an axis-aligned cell, wound counter-clockwise seen
+ * from outside.
+ *
+ * The two in-plane axes are taken in the cyclic order after the face's own
+ * axis, so the corner cycle's right-hand normal IS the face's outward normal by
+ * construction. A hand-written corner table would instead have to be kept in
+ * step with the winding it claims, which is the kind of table that goes stale
+ * without saying so.
+ */
+const pushCellFace = (
+  target: { positions: number[]; normals: number[]; indices: number[] },
+  min: readonly [number, number, number],
+  max: readonly [number, number, number],
+  axis: 0 | 1 | 2,
+  outward: 1 | -1,
+): void => {
+  const u = (axis + 1) % 3;
+  const v = (axis + 2) % 3;
+  const plane = outward === 1 ? max[axis]! : min[axis]!;
+  const corners: ReadonlyArray<readonly [number, number]> =
+    outward === 1
+      ? [
+          [min[u]!, min[v]!],
+          [max[u]!, min[v]!],
+          [max[u]!, max[v]!],
+          [min[u]!, max[v]!],
+        ]
+      : [
+          [min[u]!, min[v]!],
+          [min[u]!, max[v]!],
+          [max[u]!, max[v]!],
+          [max[u]!, min[v]!],
+        ];
+  const normal = [0, 0, 0];
+  normal[axis] = outward;
+  const base = target.positions.length / 3;
+  for (const [alongU, alongV] of corners) {
+    const point = [0, 0, 0];
+    point[axis] = plane;
+    point[u] = alongU;
+    point[v] = alongV;
+    target.positions.push(point[0]!, point[1]!, point[2]!);
+    target.normals.push(normal[0]!, normal[1]!, normal[2]!);
+  }
+  target.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
 };
 
 /** Welding grid for topology queries: 1 nm, far below any building tolerance. */
@@ -672,19 +816,18 @@ const normalsOf = (positions: number[], indices: number[]): number[] => {
   return normals;
 };
 
-const translateMesh = (
-  mesh: IAutoMovieMesh,
-  translation: IAutoMovieVector3,
-): IAutoMovieMesh => ({
-  ...mesh,
-  positions: mesh.positions.map((value, index) => {
-    const axis = index % 3;
-    return (
-      value +
-      (axis === 0 ? translation.x : axis === 1 ? translation.y : translation.z)
-    );
-  }),
-});
+/**
+ * How many components of one optional attribute buffer are not finite numbers.
+ *
+ * Counted in place rather than over a concatenation, so measuring a merged
+ * building does not first allocate a second copy of all of it.
+ */
+const countNonFinite = (values: readonly number[] | null): number => {
+  if (values === null) return 0;
+  let count = 0;
+  for (const value of values) if (Number.isFinite(value) === false) ++count;
+  return count;
+};
 
 const sortedCuts = (values: number[]): number[] =>
   [...new Set(values)].sort((left, right) => left - right);

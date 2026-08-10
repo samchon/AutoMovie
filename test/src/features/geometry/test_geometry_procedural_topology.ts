@@ -50,9 +50,10 @@ const summary = (
  *    volumes equal to their hand-computed `w·h·d` and `w·h·d/2`.
  * 2. A single triangle is an open surface: three boundary edges, not watertight,
  *    zero volume.
- * 3. Three triangles sharing one edge report that edge as non-manifold, and a wall
- *    cut into cells that share faces reports the same rather than passing as a
- *    solid.
+ * 3. Three triangles sharing one edge report that edge as non-manifold, while a
+ *    cut wall closes into one solid: it drops the face between every adjacent
+ *    pair of standing cells, so it emits exactly the 32 outward quads its
+ *    lattice leaves and no interior wall a camera could never reach.
  * 4. A collapsed triangle is counted as degenerate and contributes no edges.
  * 5. Non-finite positions, normals, and uvs are all counted; an attribute-free
  *    mesh counts none of them.
@@ -61,7 +62,8 @@ const summary = (
  * 7. An empty mesh is not watertight, because no edges is not the same as no
  *    holes.
  * 8. Negative twins: an empty face list, a two-corner face, a non-finite corner, a
- *    collinear face, and a non-planar face are each refused.
+ *    collinear face, a reflex face, and a self-intersecting bow-tie face are
+ *    each refused, as is a non-planar face.
  */
 export const test_geometry_procedural_topology = (): void => {
   const prism = extrudeAutoMovieProfile({
@@ -144,7 +146,7 @@ export const test_geometry_procedural_topology = (): void => {
     openings: [{ id: "window", x: 1, y: 1, width: 1, height: 1 }],
   });
   TestValidator.equals(
-    "a shared edge and a cell assembly are reported non-manifold, not watertight",
+    "a shared edge is non-manifold while a cut wall closes into one solid",
     namedFacts([
       [
         "fin",
@@ -158,14 +160,27 @@ export const test_geometry_procedural_topology = (): void => {
         },
       ],
       [
-        "assembly",
+        "wall",
         () => {
           const report = inspectAutoMovieMeshTopology(cutWall);
-          return report.nonManifoldEdges > 0 && report.watertight === false;
+          return (
+            report.watertight &&
+            report.nonManifoldEdges === 0 &&
+            report.boundaryEdges === 0 &&
+            report.degenerate === 0
+          );
         },
       ],
       [
-        "assemblyVolume",
+        // The lattice is 3 x 3 cells with the centre one removed, so 8 cells
+        // stand and 8 adjacent pairs hide a face from each other: 8 x 6 - 2 x 8
+        // = 32 quads survive, which is 64 triangles. A union of boxes would
+        // emit all 48 quads and bury 16 of them inside the wall.
+        "faces",
+        () => inspectAutoMovieMeshTopology(cutWall).triangles === 64,
+      ],
+      [
+        "wallVolume",
         () =>
           nclose(
             inspectAutoMovieMeshTopology(cutWall).volume,
@@ -174,7 +189,7 @@ export const test_geometry_procedural_topology = (): void => {
           ),
       ],
     ]),
-    { fin: true, assembly: true, assemblyVolume: true },
+    { fin: true, wall: true, faces: true, wallVolume: true },
   );
 
   TestValidator.equals(
@@ -268,6 +283,22 @@ export const test_geometry_procedural_topology = (): void => {
             { x: 1, y: 0, z: 1 },
             { x: 1, y: 0, z: 3 },
             { x: 0, y: 0, z: 3 },
+          ],
+        ]),
+      "polyhedron face[0] must be convex",
+    ],
+    [
+      // A bow tie is four corners in convex position wound so the ring crosses
+      // itself. Its area is real, its plane is real, and its first corner still
+      // fans, so nothing but the turn test can tell it from a quad.
+      "self-intersecting face",
+      () =>
+        buildAutoMoviePolyhedron([
+          [
+            { x: 0, y: 0, z: 0 },
+            { x: 1, y: 0, z: 1 },
+            { x: 1, y: 0, z: 0 },
+            { x: 0, y: 0, z: 1 },
           ],
         ]),
       "polyhedron face[0] must be convex",

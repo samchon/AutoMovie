@@ -47,12 +47,17 @@ const finiteMesh = (mesh: IAutoMovieMesh): boolean =>
  * 3. A bent sweep and a vertical sweep both close, exercising both arms of the
  *    frame-guide choice that keeps the local frame stable.
  * 4. A wall cut by a door and a window emits exactly the surviving lattice cells,
- *    and its volume equals the wall solid minus both openings.
+ *    and its volume equals the wall solid minus both openings. An L-shaped
+ *    remainder is built, and the diagonal remainder that would pinch the wall
+ *    to a line is refused instead.
  * 5. Merge rebases indexed and non-indexed inputs and keeps only attributes every
  *    input carries.
- * 6. Determinism: two builds from the same input are byte-identical.
- * 7. Regression: primitive tessellation is untouched by the procedural kernel.
- * 8. Negative twins: every guard refuses, one property away from a positive.
+ * 6. Merge at building scale: two members past the argument limit of a spread call
+ *    still concatenate, which `push(...positions)` cannot do.
+ * 7. Determinism: two builds from the same input are byte-identical, for every
+ *    builder in the kernel rather than for the two easiest ones.
+ * 8. Regression: primitive tessellation is untouched by the procedural kernel.
+ * 9. Negative twins: every guard refuses, one property away from a positive.
  */
 export const test_geometry_procedural_architecture = (): void => {
   const extrusion = extrudeAutoMovieProfile({ profile: square, depth: 0.5 });
@@ -191,6 +196,65 @@ export const test_geometry_procedural_architecture = (): void => {
     },
   );
 
+  // An opening in one corner leaves an L, whose inner corner is a node three
+  // cells meet at: legal, and one cell away from the diagonal that is not.
+  const elbow = buildAutoMovieWall({
+    width: 2,
+    height: 2,
+    depth: 0.2,
+    openings: [{ id: "corner", x: 0, y: 0, width: 1, height: 1 }],
+  });
+  TestValidator.equals(
+    "an L-shaped remainder stands while a diagonal one is refused as a pinch",
+    namedFacts([
+      ["closed", () => inspectAutoMovieMeshTopology(elbow).watertight],
+      [
+        "volume",
+        () =>
+          nclose(
+            inspectAutoMovieMeshTopology(elbow).volume,
+            (2 * 2 - 1) * 0.2,
+            1e-12,
+          ),
+      ],
+      [
+        "pinch",
+        () =>
+          throwsError(
+            () =>
+              buildAutoMovieWall({
+                width: 2,
+                height: 2,
+                depth: 0.2,
+                openings: [
+                  { id: "low", x: 0, y: 0, width: 1, height: 1 },
+                  { id: "high", x: 1, y: 1, width: 1, height: 1 },
+                ],
+              }),
+            "wall openings meet at (1, 1) and pinch the wall to a line",
+          ),
+      ],
+      [
+        "mirroredPinch",
+        () =>
+          throwsError(
+            () =>
+              buildAutoMovieWall({
+                width: 2,
+                height: 2,
+                depth: 0.2,
+                openings: [
+                  { id: "high", x: 0, y: 1, width: 1, height: 1 },
+                  { id: "low", x: 1, y: 0, width: 1, height: 1 },
+                ],
+              }),
+            "wall openings meet at (1, 1) and pinch the wall to a line",
+          ),
+      ],
+    ]),
+    { closed: true, volume: true, pinch: true, mirroredPinch: true },
+  );
+
   const nonIndexed: IAutoMovieMesh = {
     positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
     normals: null,
@@ -226,8 +290,38 @@ export const test_geometry_procedural_architecture = (): void => {
     },
   );
 
+  // A member of 48,004 vertices is 144,012 position components, well past the
+  // argument list a spread call can build, so `push(...positions)` throws
+  // `Maximum call stack size exceeded` on the first member. A building whose
+  // members merge to that size is the ordinary case, not the extreme one.
+  const dense = revolveAutoMovieProfile({
+    profile: [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 1, y: 3 },
+      { x: 0, y: 3 },
+    ],
+    segments: 12000,
+  });
+  const denseMerge = mergeAutoMovieMeshes([dense, dense]);
   TestValidator.equals(
-    "the same authored input rebuilds byte-identically",
+    "two members past the spread argument limit still merge",
+    {
+      positions: denseMerge.positions.length,
+      indices: denseMerge.indices!.length,
+      rebased: denseMerge.indices!.at(-1)!,
+      lastPosition: denseMerge.positions.at(-1)!,
+    },
+    {
+      positions: dense.positions.length * 2,
+      indices: dense.indices!.length * 2,
+      rebased: dense.indices!.at(-1)! + dense.positions.length / 3,
+      lastPosition: dense.positions.at(-1)!,
+    },
+  );
+
+  TestValidator.equals(
+    "the same authored input rebuilds byte-identically, for every builder",
     [
       JSON.stringify(extrudeAutoMovieProfile({ profile: square, depth: 0.5 })),
       JSON.stringify(
@@ -241,8 +335,37 @@ export const test_geometry_procedural_architecture = (): void => {
           ],
         }),
       ),
+      JSON.stringify(
+        revolveAutoMovieProfile({
+          profile: [
+            { x: 0, y: -1 },
+            { x: 1, y: -1 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 },
+          ],
+          segments: 8,
+        }),
+      ),
+      JSON.stringify(
+        sweepAutoMovieProfile({
+          profile: square.map((point) => ({
+            x: point.x * 0.1,
+            y: point.y * 0.1,
+          })),
+          path: [
+            { x: 0, y: 0, z: 0 },
+            { x: 2, y: 0, z: 0 },
+            { x: 2, y: 2, z: 0 },
+          ],
+        }),
+      ),
     ],
-    [JSON.stringify(extrusion), JSON.stringify(wall)],
+    [
+      JSON.stringify(extrusion),
+      JSON.stringify(wall),
+      JSON.stringify(revolved),
+      JSON.stringify(swept),
+    ],
   );
 
   const box = tessellate({ type: "box", width: 2, height: 2, depth: 0.2 });
