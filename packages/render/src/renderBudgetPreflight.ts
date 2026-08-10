@@ -261,6 +261,10 @@ export interface IAutoMovieRenderBudgetEvidence {
    * job refuses on `over` and reports the other two as what they are, because
    * an unmeasured cost has not been cleared and saying otherwise is the exact
    * false capability claim this evidence exists to prevent.
+   *
+   * A document over no shots at all is `not-run`, never `within`: nothing was
+   * measured, and a verdict over an empty set is the cheapest way a report ends
+   * up clearing a production it never read.
    */
   status: IAutoMovieRenderBudgetAssessment["status"];
 
@@ -282,6 +286,12 @@ const STATUS_ORDER: Readonly<
  * republishing the same evidence for an unchanged production lands on the same
  * content address and an immutable evidence store never fights itself.
  *
+ * `budgets` is the production's whole declaration, read for `declaredTiers` and
+ * for whether this tier was budgeted at all. The assessments must already have
+ * been made against {@link selectAutoMovieRenderBudget}'s answer for the same
+ * tier; hand them a different budget and `budgeted` describes the declaration
+ * while every finding describes something else.
+ *
  * @author Samchon
  */
 export const autoMovieRenderBudgetEvidence = (props: {
@@ -295,11 +305,16 @@ export const autoMovieRenderBudgetEvidence = (props: {
   const shots = [...props.assessments].sort((left, right) =>
     compareAutoMovieRenderIds(left.shot, right.shot),
   );
-  const status = shots.reduce<IAutoMovieRenderBudgetAssessment["status"]>(
-    (worst, shot) =>
-      STATUS_ORDER[shot.status] > STATUS_ORDER[worst] ? shot.status : worst,
-    "within",
-  );
+  const status =
+    shots.length === 0
+      ? "not-run"
+      : shots.reduce<IAutoMovieRenderBudgetAssessment["status"]>(
+          (worst, shot) =>
+            STATUS_ORDER[shot.status] > STATUS_ORDER[worst]
+              ? shot.status
+              : worst,
+          "within",
+        );
   const declaredTiers = [
     ...new Set((props.budgets ?? []).map((budget) => budget.tier)),
   ].sort(compareAutoMovieRenderIds);

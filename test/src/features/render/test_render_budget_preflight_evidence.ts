@@ -39,7 +39,8 @@ import { BOX_TRIANGLES } from "../internal/renderFixtures";
  * 4. Withholding the texture dimensions of a bound asset makes the tier
  *    `incomplete`, and `incomplete` does not refuse the render.
  * 5. The worst outcome wins: `over` beats `not-run` beats `incomplete` beats
- *    `within`, whichever order the shots arrive in.
+ *    `within`, whichever order the shots arrive in, and a document over no
+ *    shots at all is `not-run` rather than a verdict over an empty set.
  * 6. The evidence digest is a property of the verdicts, not of shot order, and
  *    changes when a verdict does.
  * 7. An over verdict carrying no finding still refuses and still names the shot,
@@ -226,7 +227,9 @@ export const test_render_budget_preflight_evidence = (): void => {
       unrun: "not-run",
       over: "over",
       reversed: "over",
-      empty: "within",
+      // A document over no shots measured nothing, and a verdict over an empty
+      // set is the cheapest way a report ends up clearing what it never read.
+      empty: "not-run",
     },
   );
 
