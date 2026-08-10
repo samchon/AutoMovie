@@ -32,6 +32,8 @@ export * from "./production/productionRegistry";
 export * from "./production/renditionIdentity";
 export * from "./production/renderIdentity";
 export * from "./production/rootNamespaceLock";
+export * from "./production/sandboxEngineBridge";
+export * from "./production/sandboxEngineSurface";
 export * from "./production/storySyncDiagnostics";
 export * from "./production/openAutoMovieProduction";
 export * from "./production/validateProductionDesign";

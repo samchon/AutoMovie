@@ -113,6 +113,11 @@ import {
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
+import {
+  AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
+  callAutoMovieSandboxEngine,
+} from "./sandboxEngineBridge";
+import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "./sandboxEngineSurface";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
@@ -1124,12 +1129,36 @@ const SANDBOX_BOOTSTRAP = `
     }
     return value;
   };
+  // The engine's own answer, fetched across the boundary as text. The sandbox
+  // holds the host's forwarding function in this closure only and drops the
+  // global immediately, so authored source can neither call it nor take a
+  // Function constructor off it, and nothing structured is ever shared.
+  const engineCall = globalThis.__automovieEngineCall;
+  delete globalThis.__automovieEngineCall;
+  const finiteArgument = (key, value) => {
+    if (typeof value === "number" && Number.isFinite(value) === false)
+      throw new Error(
+        "An engine call may not pass " +
+          String(value) +
+          ' at "' +
+          key +
+          '", because JSON carries it across the boundary as a hole rather than as a number.',
+      );
+    return value;
+  };
+  const engineBridge =
+    (name) =>
+    (...args) => {
+      const answer = parse(engineCall(name, stringify(args, finiteArgument)));
+      if (answer.ok !== true) throw new Error(answer.message);
+      return answer.value;
+    };
   const defineShot = (id, definition) =>
     freeze({ id, ...definition });
-  // The subject vocabulary is reimplemented here rather than loaded from the
-  // package, exactly as defineShot already is. A deterministic build may not
-  // reach outside its sandbox for behavior, so the sandbox owns a stand-in for
-  // every engine name a source module is allowed to import.
+  // The subject vocabulary is defined here rather than loaded from the package,
+  // exactly as defineShot is: a class carries a prototype and defineShot closes
+  // over a definition, and neither survives the JSON round trip that carries
+  // every other engine name to its own implementation.
   class AutoMovieSubject {
     design() {
       throw new Error("A subject must implement design().");
@@ -1138,39 +1167,13 @@ const SANDBOX_BOOTSTRAP = `
       throw new Error("A subject must implement render().");
     }
   }
-  // Exactly the keys of IAutoMovieSubjectContribution. The stand-in and the
-  // engine are two spellings of one contract, and a key here that the type
-  // does not declare is a merge that silently carries a field nothing else
-  // knows about.
-  const CONTRIBUTION_KEYS = [
-    "models",
-    "set",
-    "spaces",
-    "builtEnvironments",
-    "props",
-    "actors",
-    "clips",
-    "formationMotions",
-    "formationSlotMotions",
-    "effectCues",
-    "landmarks",
-    "surfaces",
-    "routes",
-    "effectRecipes",
-    "effectZones",
-    "instanceSets",
-  ];
-  const mergeAutoMovieSubjectContributions = (contributions) => {
-    const merged = {};
-    for (const contribution of contributions)
-      for (const key of CONTRIBUTION_KEYS) {
-        const values = contribution?.[key];
-        if (values === undefined || values.length === 0) continue;
-        if (merged[key] === undefined) merged[key] = [];
-        for (const value of values) merged[key].push(value);
-      }
-    return merged;
-  };
+  // The engine's merge, not a second one. A group's contribution keys are the
+  // keys of IAutoMovieSubjectContribution, and a sandbox copy of that list is a
+  // copy that goes stale the moment the contract gains a fold: it would drop
+  // the new key silently, which is the failure a merge can least afford.
+  const mergeAutoMovieSubjectContributions = engineBridge(
+    "mergeAutoMovieSubjectContributions",
+  );
   class AutoMovieSubjectGroup extends AutoMovieSubject {
     members() {
       throw new Error("A subject group must implement members().");
@@ -1181,716 +1184,6 @@ const SANDBOX_BOOTSTRAP = `
       );
     }
   }
-  const buildingMatrixCompose = (transform) => {
-    const r = transform.rotation;
-    const s = transform.scale;
-    const t = transform.translation;
-    const x2 = r.x + r.x;
-    const y2 = r.y + r.y;
-    const z2 = r.z + r.z;
-    const xx = r.x * x2;
-    const xy = r.x * y2;
-    const xz = r.x * z2;
-    const yy = r.y * y2;
-    const yz = r.y * z2;
-    const zz = r.z * z2;
-    const wx = r.w * x2;
-    const wy = r.w * y2;
-    const wz = r.w * z2;
-    return [
-      (1 - (yy + zz)) * s.x,
-      (xy + wz) * s.x,
-      (xz - wy) * s.x,
-      0,
-      (xy - wz) * s.y,
-      (1 - (xx + zz)) * s.y,
-      (yz + wx) * s.y,
-      0,
-      (xz + wy) * s.z,
-      (yz - wx) * s.z,
-      (1 - (xx + yy)) * s.z,
-      0,
-      t.x,
-      t.y,
-      t.z,
-      1,
-    ];
-  };
-  const buildingMatrixMultiply = (a, b) => {
-    const out = new Array(16);
-    for (let column = 0; column < 4; ++column)
-      for (let row = 0; row < 4; ++row) {
-        let sum = 0;
-        for (let index = 0; index < 4; ++index)
-          sum += a[index * 4 + row] * b[column * 4 + index];
-        out[column * 4 + row] = sum;
-      }
-    return out;
-  };
-  const buildingQuaternionNormalize = (rotation) => {
-    const length = Math.hypot(
-      rotation.x,
-      rotation.y,
-      rotation.z,
-      rotation.w,
-    );
-    return length === 0
-      ? { x: 0, y: 0, z: 0, w: 1 }
-      : {
-          x: rotation.x / length,
-          y: rotation.y / length,
-          z: rotation.z / length,
-          w: rotation.w / length,
-        };
-  };
-  const buildingMatrixDecompose = (matrix) => {
-    const sx = Math.hypot(matrix[0], matrix[1], matrix[2]);
-    const sy = Math.hypot(matrix[4], matrix[5], matrix[6]);
-    const sz = Math.hypot(matrix[8], matrix[9], matrix[10]);
-    const nx = Math.max(sx, Number.EPSILON);
-    const ny = Math.max(sy, Number.EPSILON);
-    const nz = Math.max(sz, Number.EPSILON);
-    const r00 = matrix[0] / nx;
-    const r10 = matrix[1] / nx;
-    const r20 = matrix[2] / nx;
-    const r01 = matrix[4] / ny;
-    const r11 = matrix[5] / ny;
-    const r21 = matrix[6] / ny;
-    const r02 = matrix[8] / nz;
-    const r12 = matrix[9] / nz;
-    const r22 = matrix[10] / nz;
-    const trace = r00 + r11 + r22;
-    let x;
-    let y;
-    let z;
-    let w;
-    if (trace > 0) {
-      const factor = 0.5 / Math.sqrt(trace + 1);
-      w = 0.25 / factor;
-      x = (r21 - r12) * factor;
-      y = (r02 - r20) * factor;
-      z = (r10 - r01) * factor;
-    } else if (r00 > r11 && r00 > r22) {
-      const factor = 2 * Math.sqrt(1 + r00 - r11 - r22);
-      w = (r21 - r12) / factor;
-      x = 0.25 * factor;
-      y = (r01 + r10) / factor;
-      z = (r02 + r20) / factor;
-    } else if (r11 > r22) {
-      const factor = 2 * Math.sqrt(1 + r11 - r00 - r22);
-      w = (r02 - r20) / factor;
-      x = (r01 + r10) / factor;
-      y = 0.25 * factor;
-      z = (r12 + r21) / factor;
-    } else {
-      const factor = 2 * Math.sqrt(1 + r22 - r00 - r11);
-      w = (r10 - r01) / factor;
-      x = (r02 + r20) / factor;
-      y = (r12 + r21) / factor;
-      z = 0.25 * factor;
-    }
-    return {
-      position: { x: matrix[12], y: matrix[13], z: matrix[14] },
-      rotation: buildingQuaternionNormalize({ x, y, z, w }),
-      scale: { x: sx, y: sy, z: sz },
-    };
-  };
-  const lowerBuiltEnvironment = (environment) => {
-    const elements = Object.fromEntries(
-      environment.elements.map((element) => [element.id, element]),
-    );
-    const matrices = {};
-    const active = {};
-    const matrixOf = (id) => {
-      if (matrices[id] !== undefined) return matrices[id];
-      if (active[id] === true)
-        throw new Error(
-          'Built environment "' + environment.id + '" has a cyclic element hierarchy.',
-        );
-      const element = elements[id];
-      if (element === undefined)
-        throw new Error(
-          'Built environment "' + environment.id + '" has no element "' + id + '".',
-        );
-      active[id] = true;
-      const local = buildingMatrixCompose(element.transform);
-      const world =
-        element.parent === null
-          ? local
-          : buildingMatrixMultiply(matrixOf(element.parent), local);
-      active[id] = false;
-      matrices[id] = world;
-      return world;
-    };
-    for (const element of environment.elements) matrixOf(element.id);
-    return {
-      models: environment.models,
-      set: environment.elements
-        .filter((element) => element.model !== null)
-        .map((element) => {
-          const world = buildingMatrixDecompose(matrices[element.id]);
-          return {
-            node: environment.id + "/" + element.id,
-            model: element.model,
-            position: world.position,
-            rotation: world.rotation,
-            scale: world.scale,
-          };
-        }),
-      spaces: environment.spaces.map((space) => {
-        const surfaces = environment.surfaces
-          .filter((entry) => entry.space === space.id)
-          .map((entry) => entry.surface);
-        const surfaceIds = new Set(surfaces.map((surface) => surface.id));
-        return {
-          id: environment.id + "/" + space.id,
-          surfaces,
-          walkable: environment.walkable.filter((id) => surfaceIds.has(id)),
-        };
-      }),
-      builtEnvironments: [environment],
-    };
-  };
-  const mergeAutoMovieSpaces = (id, spaces) => ({
-    id,
-    surfaces: spaces.flatMap((space) => space.surfaces),
-    walkable: spaces.flatMap((space) => space.walkable),
-  });
-  const builtEnvironmentDescendants = (spaces, root) => {
-    const included = new Set([root]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const space of spaces)
-        if (
-          space.parent !== null &&
-          included.has(space.parent) &&
-          !included.has(space.id)
-        ) {
-          included.add(space.id);
-          changed = true;
-        }
-    }
-    return included;
-  };
-  const builtEnvironmentContainsPoint = (environment, spaceId, point) => {
-    if (!environment.spaces.some((space) => space.id === spaceId))
-      throw new Error(
-        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
-      );
-    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
-    return environment.spaces.some(
-      (space) =>
-        included.has(space.id) &&
-        space.cells.some((cell) =>
-          cell.planes.every(
-            (plane) =>
-              plane.normal.x * point.x +
-                plane.normal.y * point.y +
-                plane.normal.z * point.z <=
-              plane.offset + 1e-9,
-          ),
-        ),
-    );
-  };
-  const builtEnvironmentAdjacentSpaces = (environment, spaceId) => {
-    if (!environment.spaces.some((space) => space.id === spaceId))
-      throw new Error(
-        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
-      );
-    const adjacent = new Set();
-    for (const boundary of environment.boundaries)
-      if (boundary.spaces.includes(spaceId))
-        for (const candidate of boundary.spaces)
-          if (candidate !== spaceId) adjacent.add(candidate);
-    for (const connector of environment.connectors) {
-      if (connector.from === spaceId) adjacent.add(connector.to);
-      if (connector.to === spaceId && connector.bidirectional)
-        adjacent.add(connector.from);
-    }
-    return [...adjacent];
-  };
-  const builtEnvironmentRequireSpace = (environment, spaceId) => {
-    if (!environment.spaces.some((space) => space.id === spaceId))
-      throw new Error(
-        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
-      );
-  };
-  const builtEnvironmentSpaceConnectors = (environment, spaceId) => {
-    builtEnvironmentRequireSpace(environment, spaceId);
-    return environment.connectors.filter(
-      (connector) => connector.from === spaceId || connector.to === spaceId,
-    );
-  };
-  const builtEnvironmentSpaceSurfaces = (environment, spaceId) => {
-    builtEnvironmentRequireSpace(environment, spaceId);
-    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
-    const walkable = new Set(environment.walkable);
-    return environment.surfaces
-      .filter((entry) => included.has(entry.space))
-      .map((entry) => ({
-        space: entry.space,
-        surface: entry.surface.id,
-        walkable: walkable.has(entry.surface.id),
-      }));
-  };
-  const builtEnvironmentSpaceNodes = (environment, spaceId) => {
-    builtEnvironmentRequireSpace(environment, spaceId);
-    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
-    return environment.elements
-      .filter(
-        (element) =>
-          element.model !== null &&
-          element.space !== null &&
-          included.has(element.space),
-      )
-      .map((element) => environment.id + "/" + element.id);
-  };
-  const builtEnvironmentBuildingOfSpace = (environment, spaceId) => {
-    builtEnvironmentRequireSpace(environment, spaceId);
-    const owner = environment.buildings.find((building) =>
-      builtEnvironmentDescendants(environment.spaces, building.space).has(spaceId),
-    );
-    if (owner === undefined)
-      throw new Error(
-        'Built environment "' + environment.id + '" has no building unit owning logical space "' + spaceId + '".',
-      );
-    return owner.id;
-  };
-  const proceduralCross = (left, right) => ({
-    x: left.y * right.z - left.z * right.y,
-    y: left.z * right.x - left.x * right.z,
-    z: left.x * right.y - left.y * right.x,
-  });
-  const proceduralSubtract = (left, right) => ({
-    x: left.x - right.x,
-    y: left.y - right.y,
-    z: left.z - right.z,
-  });
-  const proceduralNormalize = (value) => {
-    const length = Math.sqrt(
-      value.x * value.x + value.y * value.y + value.z * value.z,
-    );
-    if (length === 0) return { x: 0, y: 0, z: 0 };
-    // Vector3.normalize scales by the reciprocal. Dividing each component
-    // rounds twice and drifts one ulp from the engine this must reproduce
-    // byte for byte.
-    const inverse = 1 / length;
-    return {
-      x: value.x * inverse,
-      y: value.y * inverse,
-      z: value.z * inverse,
-    };
-  };
-  const proceduralHullCross = (origin, left, right) =>
-    (left.x - origin.x) * (right.z - origin.z) -
-    (left.z - origin.z) * (right.x - origin.x);
-  const proceduralConvexHull2D = (points) => {
-    const seen = new Set();
-    const unique = [];
-    for (const point of points) {
-      const key = String(point.x) + "," + String(point.z);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      unique.push(point);
-    }
-    if (unique.length <= 2) return unique;
-    const sorted = [...unique].sort(
-      (left, right) => left.x - right.x || left.z - right.z,
-    );
-    const lower = [];
-    for (const point of sorted) {
-      while (
-        lower.length >= 2 &&
-        proceduralHullCross(
-          lower[lower.length - 2],
-          lower[lower.length - 1],
-          point,
-        ) <= 0
-      )
-        lower.pop();
-      lower.push(point);
-    }
-    const upper = [];
-    for (let index = sorted.length - 1; index >= 0; --index) {
-      const point = sorted[index];
-      while (
-        upper.length >= 2 &&
-        proceduralHullCross(
-          upper[upper.length - 2],
-          upper[upper.length - 1],
-          point,
-        ) <= 0
-      )
-        upper.pop();
-      upper.push(point);
-    }
-    lower.pop();
-    upper.pop();
-    const hull = [...lower, ...upper];
-    if (hull.length >= 3) return hull;
-    const result = [];
-    const outputKeys = new Set();
-    for (const point of hull) {
-      const key = String(point.x) + "," + String(point.z);
-      if (outputKeys.has(key)) continue;
-      outputKeys.add(key);
-      result.push(point);
-    }
-    return result;
-  };
-  const proceduralFinitePoint = (point, label) => {
-    if (!Number.isFinite(point.x) || !Number.isFinite(point.y))
-      throw new Error(label + " must be finite");
-  };
-  const proceduralFiniteVector = (point, label) => {
-    if (![point.x, point.y, point.z].every(Number.isFinite))
-      throw new Error(label + " must be finite");
-  };
-  const proceduralPositive = (value, label) => {
-    if (!Number.isFinite(value) || value <= 0)
-      throw new Error(label + " must be a finite number > 0");
-  };
-  const proceduralSegments = (value, label) => {
-    if (!Number.isSafeInteger(value) || value < 3)
-      throw new Error(label + " must be a safe integer >= 3");
-  };
-  const proceduralProfileHull = (profile) => {
-    profile.forEach((point, index) =>
-      proceduralFinitePoint(point, "profile[" + index + "]"),
-    );
-    const hull = proceduralConvexHull2D(
-      profile.map((point) => ({ x: point.x, y: 0, z: point.y })),
-    ).map((point) => ({ x: point.x, y: point.z }));
-    if (hull.length < 3)
-      throw new Error("profile needs at least three non-collinear points");
-    if (hull.length !== profile.length)
-      throw new Error("profile must be convex and contain no interior points");
-    return hull;
-  };
-  const proceduralNormals = (positions, indices) => {
-    const normals = new Array(positions.length).fill(0);
-    for (let index = 0; index < indices.length; index += 3) {
-      const a = indices[index] * 3;
-      const b = indices[index + 1] * 3;
-      const c = indices[index + 2] * 3;
-      const normal = proceduralCross(
-        {
-          x: positions[b] - positions[a],
-          y: positions[b + 1] - positions[a + 1],
-          z: positions[b + 2] - positions[a + 2],
-        },
-        {
-          x: positions[c] - positions[a],
-          y: positions[c + 1] - positions[a + 1],
-          z: positions[c + 2] - positions[a + 2],
-        },
-      );
-      for (const offset of [a, b, c]) {
-        normals[offset] += normal.x;
-        normals[offset + 1] += normal.y;
-        normals[offset + 2] += normal.z;
-      }
-    }
-    for (let index = 0; index < normals.length; index += 3) {
-      const normal = proceduralNormalize({
-        x: normals[index],
-        y: normals[index + 1],
-        z: normals[index + 2],
-      });
-      normals[index] = normal.x;
-      normals[index + 1] = normal.y;
-      normals[index + 2] = normal.z;
-    }
-    return normals;
-  };
-  const proceduralMesh = (positions, indices) => ({
-    positions,
-    normals: proceduralNormals(positions, indices),
-    uvs: null,
-    indices,
-    skin: null,
-  });
-  const extrudeAutoMovieProfile = (props) => {
-    proceduralPositive(props.depth, "extrusion depth");
-    const profile = proceduralProfileHull(props.profile);
-    const half = props.depth / 2;
-    const positions = profile.flatMap((point) => [point.x, point.y, half]);
-    positions.push(
-      ...profile.flatMap((point) => [point.x, point.y, -half]),
-    );
-    const count = profile.length;
-    const indices = [];
-    for (let index = 1; index + 1 < count; ++index) {
-      indices.push(0, index, index + 1);
-      indices.push(count, count + index + 1, count + index);
-    }
-    for (let index = 0; index < count; ++index) {
-      const next = (index + 1) % count;
-      indices.push(index, count + index, next);
-      indices.push(next, count + index, count + next);
-    }
-    return proceduralMesh(positions, indices);
-  };
-  const revolveAutoMovieProfile = (props) => {
-    if (props.profile.length < 2)
-      throw new Error("revolve profile needs at least two points");
-    proceduralSegments(props.segments, "revolve segments");
-    props.profile.forEach((point, index) => {
-      proceduralFinitePoint(point, "revolve profile[" + index + "]");
-      if (point.x < 0)
-        throw new Error(
-          "revolve profile[" + index + "] radius must be >= 0",
-        );
-    });
-    const positions = [];
-    for (let segment = 0; segment <= props.segments; ++segment) {
-      const angle = (segment / props.segments) * Math.PI * 2;
-      const cosine = Math.cos(angle);
-      const sine = Math.sin(angle);
-      for (const point of props.profile)
-        positions.push(point.x * cosine, point.y, point.x * sine);
-    }
-    const count = props.profile.length;
-    const indices = [];
-    for (let segment = 0; segment < props.segments; ++segment)
-      for (let point = 0; point + 1 < count; ++point) {
-        const current = segment * count + point;
-        const next = current + count;
-        indices.push(current, current + 1, next);
-        indices.push(current + 1, next + 1, next);
-      }
-    return proceduralMesh(positions, indices);
-  };
-  const proceduralTangent = (path, index) => {
-    const from = index === 0 ? path[0] : path[index - 1];
-    const to = index + 1 === path.length ? path[index] : path[index + 1];
-    const delta = proceduralSubtract(to, from);
-    if (
-      Math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) <=
-      Number.EPSILON
-    )
-      throw new Error("sweep path around point " + index + " is degenerate");
-    return proceduralNormalize(delta);
-  };
-  const sweepAutoMovieProfile = (props) => {
-    const profile = proceduralProfileHull(props.profile);
-    if (props.path.length < 2)
-      throw new Error("sweep path needs at least two points");
-    props.path.forEach((point, index) =>
-      proceduralFiniteVector(point, "sweep path[" + index + "]"),
-    );
-    const positions = [];
-    props.path.forEach((point, index) => {
-      const tangent = proceduralTangent(props.path, index);
-      const guide =
-        Math.abs(tangent.y) < 0.9
-          ? { x: 0, y: 1, z: 0 }
-          : { x: 1, y: 0, z: 0 };
-      const right = proceduralNormalize(proceduralCross(guide, tangent));
-      const up = proceduralNormalize(proceduralCross(tangent, right));
-      for (const profilePoint of profile)
-        positions.push(
-          point.x + right.x * profilePoint.x + up.x * profilePoint.y,
-          point.y + right.y * profilePoint.x + up.y * profilePoint.y,
-          point.z + right.z * profilePoint.x + up.z * profilePoint.y,
-        );
-    });
-    const count = profile.length;
-    const indices = [];
-    for (let ring = 0; ring + 1 < props.path.length; ++ring)
-      for (let point = 0; point < count; ++point) {
-        const nextPoint = (point + 1) % count;
-        const current = ring * count + point;
-        const nextRing = current + count;
-        indices.push(current, nextPoint + ring * count, nextRing);
-        indices.push(
-          nextPoint + ring * count,
-          nextRing + nextPoint - point,
-          nextRing,
-        );
-      }
-    for (let point = 1; point + 1 < count; ++point) {
-      indices.push(0, point + 1, point);
-      const last = (props.path.length - 1) * count;
-      indices.push(last, last + point, last + point + 1);
-    }
-    return proceduralMesh(positions, indices);
-  };
-  const proceduralBox = (width, height, depth) => {
-    const x = width / 2;
-    const y = height / 2;
-    const z = depth / 2;
-    const positions = [];
-    const normals = [];
-    const indices = [];
-    const faces = [
-      [[x, -y, -z, x, y, -z, x, y, z, x, -y, z], [1, 0, 0]],
-      [[-x, -y, z, -x, y, z, -x, y, -z, -x, -y, -z], [-1, 0, 0]],
-      [[-x, y, -z, -x, y, z, x, y, z, x, y, -z], [0, 1, 0]],
-      [[-x, -y, z, -x, -y, -z, x, -y, -z, x, -y, z], [0, -1, 0]],
-      [[-x, -y, z, x, -y, z, x, y, z, -x, y, z], [0, 0, 1]],
-      [[x, -y, -z, -x, -y, -z, -x, y, -z, x, y, -z], [0, 0, -1]],
-    ];
-    for (const [vertices, normal] of faces) {
-      const base = positions.length / 3;
-      for (let index = 0; index < 4; ++index) {
-        positions.push(
-          vertices[index * 3],
-          vertices[index * 3 + 1],
-          vertices[index * 3 + 2],
-        );
-        normals.push(normal[0], normal[1], normal[2]);
-      }
-      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    }
-    return { positions, normals, uvs: null, indices, skin: null };
-  };
-  const proceduralTranslateMesh = (mesh, translation) => ({
-    ...mesh,
-    positions: mesh.positions.map((value, index) => {
-      const axis = index % 3;
-      return (
-        value +
-        (axis === 0
-          ? translation.x
-          : axis === 1
-            ? translation.y
-            : translation.z)
-      );
-    }),
-  });
-  const mergeAutoMovieMeshes = (meshes) => {
-    if (meshes.some((mesh) => mesh.skin !== null))
-      throw new Error("procedural rigid-mesh merge does not accept skinning");
-    const positions = [];
-    const normals = [];
-    const indices = [];
-    const keepNormals = meshes.every((mesh) => mesh.normals !== null);
-    const keepUvs = meshes.every((mesh) => mesh.uvs !== null);
-    const uvs = [];
-    for (const mesh of meshes) {
-      const base = positions.length / 3;
-      const count = mesh.positions.length / 3;
-      positions.push(...mesh.positions);
-      if (keepNormals) normals.push(...mesh.normals);
-      if (keepUvs) uvs.push(...mesh.uvs);
-      const sourceIndices =
-        mesh.indices ?? Array.from({ length: count }, (_, index) => index);
-      indices.push(...sourceIndices.map((index) => index + base));
-    }
-    return {
-      positions,
-      normals: keepNormals ? normals : null,
-      uvs: keepUvs ? uvs : null,
-      indices,
-      skin: null,
-    };
-  };
-  const buildAutoMovieWall = (props) => {
-    proceduralPositive(props.width, "wall width");
-    proceduralPositive(props.height, "wall height");
-    proceduralPositive(props.depth, "wall depth");
-    const ids = new Set();
-    props.openings.forEach((opening, index) => {
-      if (opening.id.trim().length === 0)
-        throw new Error("wall opening[" + index + "] id must be non-empty");
-      if (ids.has(opening.id))
-        throw new Error(
-          'wall opening id "' + opening.id + '" must be unique',
-        );
-      ids.add(opening.id);
-      proceduralFinitePoint(opening, "wall opening[" + index + "]");
-      proceduralPositive(
-        opening.width,
-        "wall opening[" + index + "] width",
-      );
-      proceduralPositive(
-        opening.height,
-        "wall opening[" + index + "] height",
-      );
-      if (
-        opening.x < 0 ||
-        opening.y < 0 ||
-        opening.x + opening.width > props.width ||
-        opening.y + opening.height > props.height
-      )
-        throw new Error(
-          'wall opening "' + opening.id + '" must stay inside the wall',
-        );
-    });
-    for (let left = 0; left < props.openings.length; ++left)
-      for (let right = left + 1; right < props.openings.length; ++right) {
-        const a = props.openings[left];
-        const b = props.openings[right];
-        if (
-          a.x < b.x + b.width &&
-          a.x + a.width > b.x &&
-          a.y < b.y + b.height &&
-          a.y + a.height > b.y
-        )
-          throw new Error(
-            'wall openings "' +
-              a.id +
-              '" and "' +
-              b.id +
-              '" overlap',
-          );
-      }
-    const xs = [
-      ...new Set([
-        0,
-        props.width,
-        ...props.openings.flatMap((opening) => [
-          opening.x,
-          opening.x + opening.width,
-        ]),
-      ]),
-    ].sort((left, right) => left - right);
-    const ys = [
-      ...new Set([
-        0,
-        props.height,
-        ...props.openings.flatMap((opening) => [
-          opening.y,
-          opening.y + opening.height,
-        ]),
-      ]),
-    ].sort((left, right) => left - right);
-    const cells = [];
-    for (let x = 0; x + 1 < xs.length; ++x)
-      for (let y = 0; y + 1 < ys.length; ++y) {
-        const centerX = (xs[x] + xs[x + 1]) / 2;
-        const centerY = (ys[y] + ys[y + 1]) / 2;
-        if (
-          props.openings.some(
-            (opening) =>
-              centerX > opening.x &&
-              centerX < opening.x + opening.width &&
-              centerY > opening.y &&
-              centerY < opening.y + opening.height,
-          )
-        )
-          continue;
-        cells.push(
-          proceduralTranslateMesh(
-            proceduralBox(
-              xs[x + 1] - xs[x],
-              ys[y + 1] - ys[y],
-              props.depth,
-            ),
-            {
-              x: centerX - props.width / 2,
-              y: centerY - props.height / 2,
-              z: 0,
-            },
-          ),
-        );
-      }
-    if (cells.length === 0)
-      throw new Error("wall openings remove the entire wall");
-    return mergeAutoMovieMeshes(cells);
-  };
   // A terrain subject answers height at a point by asking the engine rather
   // than reading the record itself, which is right for a level patch and wrong
   // the day it slopes. The arithmetic is pure and takes the record it is given,
@@ -1984,6 +1277,54 @@ const SANDBOX_BOOTSTRAP = `
     const surface = worldGroundSurface(surfaces, point);
     return surface === null ? null : worldSurfaceHeight(surface, point);
   };
+  // The names the sandbox answers itself, because each carries a closure or a
+  // prototype that no JSON round trip survives. Everything else on the surface
+  // is the engine's own function, called rather than copied.
+  const engineStandIns = {
+    defineShot,
+    AutoMovieSubject,
+    AutoMovieSubjectGroup,
+    worldSurfaceHeight,
+  };
+  const engineBridged = parse(${JSON.stringify(
+    JSON.stringify(AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS),
+  )});
+  const engineSurface = parse(${JSON.stringify(
+    JSON.stringify(AUTOMOVIE_SANDBOX_ENGINE_SURFACE),
+  )});
+  const engineSurfaceModule = {};
+  for (const name of engineSurface) {
+    const standIn = engineStandIns[name];
+    if (standIn !== undefined && engineBridged.includes(name))
+      throw new Error(
+        'The importable engine name "' +
+          name +
+          '" is both bridged to the engine and stood in for inside the sandbox. Two answers for one name is the disagreement this boundary exists to prevent; keep one.',
+      );
+    if (standIn === undefined && engineBridged.includes(name) === false)
+      throw new Error(
+        'The importable engine surface lists "' +
+          name +
+          '", which the sandbox neither bridges to the engine nor stands in for. Bridge it, add the stand-in, or drop the name from the surface.',
+      );
+    engineSurfaceModule[name] = Object.freeze(
+      standIn !== undefined ? standIn : engineBridge(name),
+    );
+  }
+  for (const name of Object.keys(engineStandIns))
+    if (engineSurface.includes(name) === false)
+      throw new Error(
+        'The sandbox stands in for "' +
+          name +
+          '", which the importable engine surface does not list, so no source module could ever reach it. List the name on the surface, or drop the stand-in.',
+      );
+  for (const name of engineBridged)
+    if (engineSurface.includes(name) === false)
+      throw new Error(
+        'The sandbox bridges "' +
+          name +
+          '", which the importable engine surface does not list, so no source module could ever reach it. List the name on the surface, or drop the bridge.',
+      );
   const sourceModules = {
     // Constant tables, carried in as data rather than loaded as a package. A
     // table has no behaviour to make non-deterministic, and serialising it here
@@ -1996,38 +1337,7 @@ const SANDBOX_BOOTSTRAP = `
         HUMANOID_GAITS,
       }),
     )})),
-    "@automovie/engine": freeze({
-      defineShot: Object.freeze(defineShot),
-      AutoMovieSubject: Object.freeze(AutoMovieSubject),
-      AutoMovieSubjectGroup: Object.freeze(AutoMovieSubjectGroup),
-      mergeAutoMovieSubjectContributions: Object.freeze(
-        mergeAutoMovieSubjectContributions,
-      ),
-      lowerBuiltEnvironment: Object.freeze(lowerBuiltEnvironment),
-      mergeAutoMovieSpaces: Object.freeze(mergeAutoMovieSpaces),
-      builtEnvironmentContainsPoint: Object.freeze(
-        builtEnvironmentContainsPoint,
-      ),
-      builtEnvironmentAdjacentSpaces: Object.freeze(
-        builtEnvironmentAdjacentSpaces,
-      ),
-      builtEnvironmentSpaceConnectors: Object.freeze(
-        builtEnvironmentSpaceConnectors,
-      ),
-      builtEnvironmentSpaceSurfaces: Object.freeze(
-        builtEnvironmentSpaceSurfaces,
-      ),
-      builtEnvironmentSpaceNodes: Object.freeze(builtEnvironmentSpaceNodes),
-      builtEnvironmentBuildingOfSpace: Object.freeze(
-        builtEnvironmentBuildingOfSpace,
-      ),
-      extrudeAutoMovieProfile: Object.freeze(extrudeAutoMovieProfile),
-      revolveAutoMovieProfile: Object.freeze(revolveAutoMovieProfile),
-      sweepAutoMovieProfile: Object.freeze(sweepAutoMovieProfile),
-      buildAutoMovieWall: Object.freeze(buildAutoMovieWall),
-      mergeAutoMovieMeshes: Object.freeze(mergeAutoMovieMeshes),
-      worldSurfaceHeight: Object.freeze(worldSurfaceHeight),
-    }),
+    "@automovie/engine": freeze(engineSurfaceModule),
   };
   // A module's own import map, resolved once by the compiler and handed in.
   // The sandbox looks a specifier up rather than resolving it a second time,
@@ -3130,6 +2440,10 @@ const compileDeterministicSource = <T>(
       name: `automovie:${props.target}`,
     },
   );
+  // Handed in before the bootstrap runs, and dropped by the bootstrap itself.
+  // Only strings cross it in either direction, so the sandbox never holds a
+  // structured value from this realm.
+  sandbox.__automovieEngineCall = callAutoMovieSandboxEngine;
   let registrationScene: string | undefined;
   try {
     new vm.Script(SANDBOX_BOOTSTRAP, {
