@@ -23,6 +23,15 @@ import { closestPointOnSegmentXZ, convexHull2D } from "../math/hull";
  * for a boundary's own local XY metres is `architecture/planarGeometry`, whose
  * crossing test is reused here rather than written a second time.
  *
+ * **This is not `triangulateAutoMovieRegion` under another name, and merging
+ * the two would break both.** That one is a mesh constructor: it is handed an
+ * authored profile, it raises a diagnostic for every defect it finds, and it
+ * may because nothing is standing on its output yet. This one is a query: it is
+ * handed whatever a record happens to say, including what `validateSpace`
+ * refuses, and it has to answer a foot rather than throw under one. It also
+ * leaves a convex footprint as its own hull, so every patch authored before
+ * holes existed tessellates to the same bytes it always did.
+ *
  * @author Samchon
  */
 
@@ -180,6 +189,14 @@ export const footprintArea = (footprint: IAutoMovieFootprint): number =>
  * crossings by even-odd parity, so a hole is a pair of crossings that closes
  * the band rather than a case anybody has to name. A degenerate region yields
  * nothing.
+ *
+ * **A ring that crosses itself has no region, and this does not invent one.**
+ * Both readings of such a footprint stay finite and deterministic — nothing
+ * throws, nothing is `NaN` — but the pieces here and what
+ * {@link footprintContains} answers need not describe the same shape, because
+ * there is no shape for them to agree on. That is why `validateSpace` refuses a
+ * self-crossing ring outright rather than leaving either reading to stand for
+ * it.
  */
 export const footprintConvexPieces = (
   footprint: IAutoMovieFootprint,
@@ -228,8 +245,11 @@ export const footprintInteriorPoint = (
  *
  * This is the predicate `validateSpace` enforced while footprints had to be
  * convex, kept because it is still the question that decides whether a region
- * needs decomposing at all. A hull too small to enclose area holds no vertex on
- * its boundary, so a degenerate ring answers `false` without a case of its own.
+ * needs decomposing at all. For a simple ring it is exactly right: all vertices
+ * on the hull and no crossing means the ring **is** the hull.
+ *
+ * A hull too small to enclose area holds no vertex on its boundary, so a
+ * degenerate ring answers `false` without a case of its own.
  */
 const isConvexRing = (
   ring: IAutoMovieFootprintRing,

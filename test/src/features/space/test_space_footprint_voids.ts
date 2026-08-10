@@ -182,6 +182,10 @@ const pieceArea = (piece: { x: number; z: number }[]): number =>
  *     them is thinner than the tolerance and is skipped, so the decomposition
  *     is still exactly the region rather than the region plus a piece whose own
  *     arithmetic divides by nearly nothing.
+ * 15. A ring that crosses itself has no region to be decomposed into, and none is
+ *     invented for it: both readings stay finite and deterministic, and
+ *     validation refuses the ring rather than letting either of them stand for
+ *     a shape nobody wrote.
  */
 export const test_space_footprint_voids = (): void => {
   const holed = surfaceFootprint(plate);
@@ -686,6 +690,39 @@ export const test_space_footprint_voids = (): void => {
       itStillSumsToTheRegion: true,
       noPieceIsASliver: true,
       theNotchIsStillOut: true,
+    },
+  );
+
+  const crossing = { ...ell, polygon: [v(0, 0), v(4, 4), v(4, 0), v(0, 6)] };
+  const bowtie = surfaceFootprint(crossing);
+  TestValidator.equals(
+    "a ring that crosses itself is refused, not resolved",
+    namedFacts([
+      [
+        "validationRefusesIt",
+        () => validateSpace({ space: spaceOf(crossing) }).success === false,
+      ],
+      [
+        "theDecompositionStaysFinite",
+        () =>
+          footprintConvexPieces(bowtie).every((piece) =>
+            piece.every(
+              (point) =>
+                Number.isFinite(point.x) &&
+                Number.isFinite(point.z) &&
+                Number.isFinite(point.y),
+            ),
+          ),
+      ],
+      [
+        "andContainmentStaysABoolean",
+        () => typeof footprintContains(bowtie, 2, 2) === "boolean",
+      ],
+    ]),
+    {
+      validationRefusesIt: true,
+      theDecompositionStaysFinite: true,
+      andContainmentStaysABoolean: true,
     },
   );
 };
