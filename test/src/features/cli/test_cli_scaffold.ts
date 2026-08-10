@@ -58,6 +58,23 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
   }
 };
 
+/**
+ * True when a source names a relative specifier inside an `examples` directory.
+ *
+ * The scaffold's examples are reading material: each one demonstrates an
+ * authoring technique against placeholder geometry, and the generated project
+ * is told to copy the technique out rather than call it. An import is how that
+ * turns into a content library nobody agreed to publish, so the import is the
+ * fact worth detecting rather than any particular example's name.
+ *
+ * The specifier is matched from its relative prefix through the directory
+ * segment, which is what separates a real reach into the folder (`./examples/`
+ * from a sibling, `../../src/examples/` from the viewer) from a package name or
+ * a prose mention that happens to contain the word.
+ */
+const importsScaffoldExample = (source: string): boolean =>
+  /["']\.{1,2}\/(?:[^"']*\/)?examples\/[^"']+["']/.test(source);
+
 /** The thrown value of `fn`, or `null` when it returned. */
 const captureFailure = (fn: () => unknown): unknown => {
   try {
@@ -1788,6 +1805,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "docs/characters/chorus.md",
       "docs/characters/soloist.md",
       "docs/objects/.gitkeep",
+      "docs/objects/gate.md",
       "docs/research/.gitkeep",
       "docs/world/.gitkeep",
       "docs/world/plaza.md",
@@ -1810,12 +1828,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "public/audio/starter-tone.json",
       "renders/README.md",
       "scripts/assertProxyBundle.ts",
+      "scripts/buildingReport.ts",
       "scripts/capture-browser.ts",
       "scripts/capture-doctor.ts",
       "scripts/capture-install.ts",
       "scripts/capture.ts",
       "scripts/captureExecutableSnapshot.ts",
       "scripts/compile.ts",
+      "scripts/deriveBuilding.ts",
       "scripts/dialogueCacheSnapshot.ts",
       "scripts/emitDesign.ts",
       "scripts/generatedShotPlugin.ts",
@@ -1826,6 +1846,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/publishProxyBundle.ts",
       "scripts/render.ts",
       "scripts/renderAttemptSnapshot.ts",
+      "scripts/renderBudgetSnapshot.ts",
       "scripts/renderChunkSnapshot.ts",
       "scripts/renderGcSnapshot.ts",
       "scripts/renderLiveness.ts",
@@ -1836,11 +1857,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/verify.ts",
       "scripts/withKokoroRuntimeOverrides.cjs",
       "src/design/.gitkeep",
+      "src/examples/buildings.ts",
+      "src/examples/designReferences.ts",
+      "src/examples/drawings.ts",
+      "src/examples/finishes.ts",
+      "src/examples/furnishings.ts",
       "src/examples/instanceSets.ts",
+      "src/examples/props.ts",
+      "src/examples/renderBudgets.ts",
+      "src/examples/renovation.ts",
+      "src/examples/services.ts",
+      "src/examples/waterFeatures.ts",
       "src/film.ts",
       "src/formations/.gitkeep",
       "src/formations/chorus.ts",
       "src/objects/.gitkeep",
+      "src/objects/gate.ts",
       "src/production.ts",
       "src/shots/opening.ts",
       "src/units/.gitkeep",
@@ -2250,6 +2282,71 @@ export const test_cli_scaffold = async (): Promise<void> => {
       filesScripts3Scoped: true,
       filesREADME: true,
       filesREADME2: true,
+    },
+  );
+  const swept = Object.entries(files).filter(
+    ([name]) =>
+      name.endsWith(".ts") && name.startsWith("src/examples/") === false,
+  );
+  TestValidator.equals(
+    "the shipped examples stay reading material instead of becoming a library",
+    namedFacts([
+      // The contract the generated project reads. Without it the directory is
+      // just unexplained source, and unexplained source gets called.
+      [
+        "agentsStatesTheExampleBoundary",
+        () =>
+          files["AGENTS.md"]!.includes(
+            "`src/examples` is reading material, not a library",
+          ),
+      ],
+      // Both spellings a reach into the folder can take: a sibling under `src`,
+      // and the viewer climbing back out of its own tree.
+      [
+        "theDetectorFiresOnASiblingReach",
+        () =>
+          importsScaffoldExample(
+            'import { latticeRepeat } from "../examples/instanceSets";',
+          ),
+      ],
+      [
+        "theDetectorFiresOnADeeperReach",
+        () =>
+          importsScaffoldExample(
+            'import { ExampleBuilding } from "../../src/examples/buildings";',
+          ),
+      ],
+      // And the counter-example, without which the sweep below would be a fact
+      // about a regular expression that matches everything it is shown.
+      [
+        "theDetectorIgnoresOrdinaryImports",
+        () =>
+          importsScaffoldExample(
+            'import { lowerBuiltEnvironment } from "@automovie/engine";\nimport { plaza } from "../world/plaza";',
+          ) === false,
+      ],
+      // A sweep over nothing passes for free, so the population is checked
+      // before the property is.
+      [
+        "theSweepReadsTheProjectsOwnSources",
+        () =>
+          ["src/film.ts", "viewer/src/shot.ts", "scripts/compile.ts"].every(
+            (expected) => swept.some(([name]) => name === expected),
+          ),
+      ],
+      [
+        "noProjectSourceImportsAnExample",
+        () =>
+          swept.every(([, source]) => importsScaffoldExample(source) === false),
+      ],
+    ]),
+    {
+      agentsStatesTheExampleBoundary: true,
+      theDetectorFiresOnASiblingReach: true,
+      theDetectorFiresOnADeeperReach: true,
+      theDetectorIgnoresOrdinaryImports: true,
+      theSweepReadsTheProjectsOwnSources: true,
+      noProjectSourceImportsAnExample: true,
     },
   );
   TestValidator.equals(
@@ -3677,6 +3774,51 @@ export const test_cli_scaffold = async (): Promise<void> => {
           '"verify": "tsx scripts/verify.ts"',
         ),
       },
+      // The construction-document path an authoring agent is told to use. A
+      // guide that teaches a drawing, a take-off or a daylight study is
+      // teaching a call no shot source may make, so the starter has to ship the
+      // command that does make it; an unregistered script is a call site
+      // nobody can run.
+      {
+        contract:
+          'files["package.json"]!.includes(\'"building:report": "tsx scripts/deriveBuilding.ts"\')',
+        satisfied: files["package.json"]!.includes(
+          '"building:report": "tsx scripts/deriveBuilding.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/deriveBuilding.ts"]!.includes( "requireCurrentAutoMovieProjectState", )',
+        satisfied: files["scripts/deriveBuilding.ts"]!.includes(
+          "requireCurrentAutoMovieProjectState",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes("deriveAutoMovieDrawing")',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          "deriveAutoMovieDrawing",
+        ),
+      },
+      // The two sheets the standard set asks for and the derivation cannot
+      // serve. A service network and a material assembly are separate records
+      // from the built environment, so both come back as `unsupported` gaps;
+      // dropping the requests would leave those gaps on no page at all and let
+      // a discipline label read as a second model.
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes( \'discipline: "services"\', )',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          'discipline: "services"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes(\'discipline: "finish"\')',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          'discipline: "finish"',
+        ),
+      },
       {
         contract:
           'files["scripts/verify.ts"]!.includes(\'.lint({ scope: "final" })\')',
@@ -4062,6 +4204,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "docs/demo-film/04-scenes/SCN-001.md",
         "docs/demo-film/04-scenes/SCN-002.md",
         "docs/objects/.gitkeep",
+        "docs/objects/gate.md",
         "docs/research/.gitkeep",
         "docs/world/.gitkeep",
         "docs/world/plaza.md",
@@ -4072,12 +4215,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "public/audio/starter-tone.json",
         "renders/README.md",
         "scripts/assertProxyBundle.ts",
+        "scripts/buildingReport.ts",
         "scripts/capture-browser.ts",
         "scripts/capture-doctor.ts",
         "scripts/capture-install.ts",
         "scripts/capture.ts",
         "scripts/captureExecutableSnapshot.ts",
         "scripts/compile.ts",
+        "scripts/deriveBuilding.ts",
         "scripts/dialogueCacheSnapshot.ts",
         "scripts/emitDesign.ts",
         "scripts/generatedShotPlugin.ts",
@@ -4088,6 +4233,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/publishProxyBundle.ts",
         "scripts/render.ts",
         "scripts/renderAttemptSnapshot.ts",
+        "scripts/renderBudgetSnapshot.ts",
         "scripts/renderChunkSnapshot.ts",
         "scripts/renderGcSnapshot.ts",
         "scripts/renderLiveness.ts",
@@ -4098,11 +4244,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/verify.ts",
         "scripts/withKokoroRuntimeOverrides.cjs",
         "src/design/.gitkeep",
+        "src/examples/buildings.ts",
+        "src/examples/designReferences.ts",
+        "src/examples/drawings.ts",
+        "src/examples/finishes.ts",
+        "src/examples/furnishings.ts",
         "src/examples/instanceSets.ts",
+        "src/examples/props.ts",
+        "src/examples/renderBudgets.ts",
+        "src/examples/renovation.ts",
+        "src/examples/services.ts",
+        "src/examples/waterFeatures.ts",
         "src/film.ts",
         "src/formations/.gitkeep",
         "src/formations/chorus.ts",
         "src/objects/.gitkeep",
+        "src/objects/gate.ts",
         "src/production.ts",
         "src/shots/opening.ts",
         "src/units/.gitkeep",

@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: Defines how an automovie production is authored inside the scaffold - the docs ladder from logline to scene, the spec library, subjects as classes under src, and the evidence graph in lint.config.ts that makes each stage answer for the one above it. Use before authoring or reviewing production content, whether in packages/cli/scaffold itself or in a project generated from it.
+description: Defines how an automovie production is authored inside the scaffold - the docs ladder from logline to scene, the spec library, subjects as classes under src, why an example teaches a technique instead of shipping content, and the evidence graph in lint.config.ts that makes each stage answer for the one above it. Use before authoring or reviewing production content, whether in packages/cli/scaffold itself or in a project generated from it.
 ---
 
 # Authoring a production
@@ -49,8 +49,9 @@ shot, and cites its scene.
 `packages/engine/src/subject.ts` carries the layer: a subject contributes an
 `IAutoMovieSubjectContribution`, and `mergeAutoMovieSubjectContributions` folds
 a group's leaves into one contribution. The scaffold is written that way --
-`Sentinel` and `ArmyMember` extend `AutoMovieSubject`, `Army` and `SignalField`
-extend `AutoMovieSubjectGroup`, and `WorldPiece` is the abstract world leaf.
+`Soloist`, `ChorusMember` and `ChorusTier` extend `AutoMovieSubject`, `Chorus`
+and `Plaza` extend `AutoMovieSubjectGroup`, and `WorldPiece` is the abstract
+world leaf that `PlazaGround`, `PlazaCenterMark` and `PlazaHaze` specialize.
 
 The evidence graph selects `["type", "property", "function"]` over those files,
 which is one obligation per grain: the class answers for the subject, a field
@@ -82,9 +83,31 @@ a design record is a way of writing something no document answers for.
 
 State these to whoever is authoring rather than letting them discover it.
 
-- **`docs/objects/` and `src/objects/` ship empty.** The prop slot has never had
-  an inhabitant, because the shipped screenplay calls for no prop. A production
-  that wants artillery, colours or a drum is the first to exercise that path.
+- **`docs/objects/` and `src/objects/` ship one inhabitant, and only one.**
+  `gate.md` and `gate.ts` are the rung's worked example: a specification the
+  answering scene calls for, a class that forges as an `IAutoMoviePropSpec`,
+  one hinge under a declared travel the engine clamps against, and a placement
+  read off the staged ground rather than authored beside it. Two boxes stand in
+  for the geometry, deliberately. A production that wants artillery, colours or
+  a drum copies the shape and not the gate.
+
+  **No shipped shot stages it, and that is a coupling rather than an oversight.**
+  `test_mcp_production_compiler` builds its architecture fixture by rewriting
+  `src/shots/opening.ts` at string anchors, and one of them inserts a `set:` key
+  into the staged object. A `set:` the scaffold already carries becomes a
+  duplicate key, and whichever the literal writes last silently removes the
+  other. Staging the gate therefore takes a fixture change first: make that
+  insertion merge with the shot's own set rather than adding a second key.
+- **`src/examples/` is outside the ladder and outside the production.** Nothing
+  imports it and no claim cites it, so an example owes no specification and
+  cannot be caught drifting from one. Each file teaches one authoring technique
+  against placeholder geometry, and the shipped `AGENTS.md` tells the reader to
+  copy the technique out and delete the rest. A finished part added here is a
+  content library shipped to every generated project, so add the technique and
+  never the part. `slopedFacadeWindows` is the standard: its JSDoc says why a
+  raked facade needs a full three-dimensional placement rather than a ground grid
+  with a shared heading. Its spacings, anchors, palettes and seeds are sample
+  values the author edits, and nothing may depend on them.
 - **`docs/research/` is outside the ladder**, as is `docs/art-direction.md`.
   They cite nothing and nothing cites them, so sourced research is currently
   unowned by the obligation graph. A production whose value rests on sources

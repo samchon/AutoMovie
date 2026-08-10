@@ -5,12 +5,14 @@ import { IAutoMovieSurface } from "./IAutoMovieSurface";
  * actor may walk on: the first-class representation behind what the engine
  * previously assumed as one scalar ground plane.
  *
- * This is the seam the sibling project **interia** (indoor spaces) will refine:
- * interia owns rooms, walls, and full indoor semantics; automovie holds the
- * minimal surface set its motion, support, and contact math need (`heightAt`,
- * support contacts, walkability). Vertical surfaces, collision volumes, and
- * pathfinding over the walkable region are deliberately out of scope here: the
- * space answers "how high is the ground and may I stand there", nothing more.
+ * This low-level record intentionally owns only the surface facts needed by
+ * motion, support, and contact math (`heightAt`, support contacts,
+ * walkability). Rooms, storeys, boundaries, openings, and traversal connectors
+ * live in {@link IAutoMovieBuiltEnvironment}; its lowering produces one or more
+ * of these support spaces. A plain outdoor world may still author this type
+ * directly. The space answers "how high is the ground and may I stand there",
+ * while the higher-level owner answers where the region begins and how it is
+ * connected.
  *
  * @author Samchon
  */

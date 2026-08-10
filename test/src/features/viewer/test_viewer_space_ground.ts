@@ -95,11 +95,13 @@ const faceNormal = (triangle: THREE.Vector3[]): THREE.Vector3 =>
  * 3. A ramp lifts each vertex to its own interpolated height: over a 2 m axis
  *    climbing 1 m, every vertex sits at `x / 2` and every face normal is the
  *    hand-computed plane normal `(-1, 2, 0)/√5`.
- * 4. A collinear footprint encloses no area and contributes no mesh, so a
+ * 4. Heightfield relief is tessellated at its internal lattice, not flattened to
+ *    the footprint corners.
+ * 5. A collinear footprint encloses no area and contributes no mesh, so a
  *    degenerate surface never reaches the GPU as invalid geometry.
- * 5. Both sides of the absent-space branch: `null` and an omitted field add no
+ * 6. Both sides of the absent-space branch: `null` and an omitted field add no
  *    group, leaving the pre-space scene byte-for-byte as it was.
- * 6. A structural pass really does pick the ground up: the depth override swaps
+ * 7. A structural pass really does pick the ground up: the depth override swaps
  *    the ground mesh's material along with the actor's, which is exactly what
  *    the hidden grid never allowed.
  */
@@ -116,10 +118,13 @@ export const test_viewer_space_ground = (): void => {
       },
     ]),
   );
+  // A node group now carries its own scene id, so this reads the ordering it
+  // always meant to pin and additionally proves the node is addressable by
+  // name rather than only by its position among the children.
   TestValidator.equals(
     "the space group is appended after the nodes and lights",
     floor.scene.children.map((child) => child.name),
-    ["", "", SPACE_GROUP_NAME],
+    ["node-a", "", SPACE_GROUP_NAME],
   );
   const ground = floor.scene.children[2]!;
   TestValidator.equals(
@@ -173,7 +178,45 @@ export const test_viewer_space_ground = (): void => {
     ),
   );
 
-  // 4. a degenerate footprint contributes nothing.
+  // 4. heightfield relief reaches an internal viewer vertex.
+  const relief = sceneOf(
+    spaceOf([
+      {
+        id: "relief",
+        kind: "floor",
+        polygon: [
+          { x: 0, y: 0, z: 0 },
+          { x: 2, y: 0, z: 0 },
+          { x: 2, y: 0, z: 2 },
+          { x: 0, y: 0, z: 2 },
+        ],
+        height: {
+          kind: "heightfield",
+          originX: 0,
+          originZ: 0,
+          spacingX: 1,
+          spacingZ: 1,
+          columns: 3,
+          rows: 3,
+          samples: [0, 0, 0, 0, 2, 0, 0, 0, 0],
+        },
+      },
+    ]),
+  );
+  const reliefPosition = (
+    relief.scene.children[2]!.children[0] as THREE.Mesh
+  ).geometry.getAttribute("position");
+  TestValidator.predicate(
+    "the visible heightfield contains its raised center sample",
+    Array.from({ length: reliefPosition.count }, (_, index) => index).some(
+      (index) =>
+        nclose(reliefPosition.getX(index), 1) &&
+        nclose(reliefPosition.getY(index), 2) &&
+        nclose(reliefPosition.getZ(index), 1),
+    ),
+  );
+
+  // 5. a degenerate footprint contributes nothing.
   const collinear = sceneOf(
     spaceOf([
       {
@@ -195,7 +238,7 @@ export const test_viewer_space_ground = (): void => {
     0,
   );
 
-  // 5. both sides of the absent-space branch.
+  // 6. both sides of the absent-space branch.
   TestValidator.equals(
     "a null space adds no group",
     sceneOf(null).scene.children.length,
@@ -207,7 +250,7 @@ export const test_viewer_space_ground = (): void => {
     2,
   );
 
-  // 6. the ground reaches a structural pass like any other geometry.
+  // 7. the ground reaches a structural pass like any other geometry.
   const groundMesh = ground.children[0] as THREE.Mesh;
   const beauty = groundMesh.material;
   const handle = applyRenderMode(floor.scene, "depth");

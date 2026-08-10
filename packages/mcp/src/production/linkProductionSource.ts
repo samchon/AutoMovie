@@ -1,5 +1,7 @@
 import ts from "typescript-compiler";
 
+import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "./sandboxEngineSurface";
+
 /** One project source module the compiler linked into a deterministic build. */
 export interface IAutoMovieLinkedSourceModule {
   /** Project-relative path, which is also the specifier it is required by. */
@@ -39,20 +41,16 @@ export interface IAutoMovieSourceLinkResult {
 }
 
 /**
- * The engine surface a deterministic source module may import at runtime.
+ * The engine names a deterministic source module may import at runtime.
  *
- * The sandbox reimplements each of these rather than loading the package, so
- * this list is the contract between the two: a name here must have a
- * deterministic stand-in in the sandbox bootstrap, and a name with a stand-in
- * must be listed here or no source can reach it.
+ * Derived from {@link AUTOMOVIE_SANDBOX_ENGINE_SURFACE} rather than spelled a
+ * second time, because a second list is exactly what let a stand-in exist that
+ * no source could reach: the gate refused the import, the compile failed, and
+ * the byte-parity gate reported a mismatch for a comparison it never ran.
  */
-export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set([
-  "defineShot",
-  "AutoMovieSubject",
-  "AutoMovieSubjectGroup",
-  "mergeAutoMovieSubjectContributions",
-  "worldSurfaceHeight",
-]);
+export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set(
+  AUTOMOVIE_SANDBOX_ENGINE_SURFACE,
+);
 
 /**
  * The archetype surface a deterministic source module may import at runtime.

@@ -1,6 +1,6 @@
 # Multi-Agent Review
 
-Read this document only through the multi-agent skill for an explicitly requested team, parallel, or multi-agent review. The base review skill's Non-Negotiable Review Law still governs every reviewer: one agent performs one complete review of the entire declared surface from scratch.
+Read this document only through the multi-agent skill for an explicitly requested team, parallel, or multi-agent review. The base review skill's [Non-Negotiable Review Law](../review/SKILL.md#non-negotiable-review-law) still governs every reviewer: one agent performs one complete review of the entire declared surface from scratch.
 
 Do not use this procedure for Self-Review. The author always completes Self-Review alone even when a separate team review is also authorized.
 
@@ -27,15 +27,15 @@ Each reviewer still inspects the complete change surface and relevant sources in
 
 ## Parallel Issue Discovery Rounds
 
-Use this mode only through the multi-agent issue campaign procedure.
+Use this mode only through the [multi-agent issue campaign procedure](issue-campaign.md).
 
 1. Give every discovery reviewer the entire declared campaign scope and require AGENTS.md `## Attitude`, the project, development, review, and relevant campaign skills in its brief.
-2. Each reviewer independently audits source, tests, documentation, CI, packaging, rendered output, platform behavior, sibling-repository and upstream provenance, and open and closed issue or pull-request history. Audit the development skill's **Forbidden** section as part of the current code and history.
+2. Each reviewer independently audits source, tests, documentation, CI, packaging, rendered output, platform behavior, sibling-repository and upstream provenance, and open and closed issue or pull-request history. Audit the development skill's [Forbidden](../development/SKILL.md#forbidden) section as part of the current code and history.
 3. Each reviewer records its own evidence-backed raw candidates without seeing or negotiating a shared candidate list.
-4. The lead reopens every candidate from primary evidence, reproduces it, checks ownership and provenance, traces the consequence surface, and records accept, partial acceptance, rewrite, combine, split, reject, or defer in `.wiki`.
-5. If any meaningful candidate survived this round, return to step 1 with a fresh reviewer set over the entire scope at the same repository state. Rounds repeat until one of them adds no meaningful candidate.
-6. Take the pool that empty round closes into the authorized campaign cycle.
-7. Reopen at step 1 over the integrated state once that cycle merges.
-8. End discovery only when every reviewer completes the whole scope and no meaningful candidate survives lead verification.
+4. The lead reopens every candidate from primary evidence, reproduces it, checks ownership and provenance, traces the consequence surface, and records accept, partial acceptance, rewrite, combine, split, reject, or defer in `.wiki/08-campaigns/<campaign>/`.
+5. If any meaningful candidate survived this round, finish adjudicating it, keep publication and implementation closed, end the current discovery team, and begin another complete parallel round with a fresh reviewer set over the entire scope at the same recorded pre-development integrated state.
+6. Repeat step 5 without a round limit. Earlier team rounds, candidate rechecks, and sampled areas do not count toward the new round.
+7. End the cycle's discovery phase only when every reviewer in one fresh round completes the whole scope and no meaningful candidate survives lead verification. That empty round opens the authorized publication, which covers the whole pool the preceding nonempty rounds accumulated rather than only what the last productive round produced, and hands implementation every implementation-ready issue in it.
+8. After the integrated implementation merges, start the next cycle's discovery from the new integrated state. End the campaign only when an empty round leaves no accepted campaign issue unresolved.
 
-An unresolved accepted issue or incomplete implementation prevents a successful campaign conclusion.
+The gate that opens implementation is an empty round, not an empty issue set, so implementation begins with every accepted issue the earlier rounds accumulated still unimplemented. Campaign conclusion is the stricter test: an unresolved accepted issue or an incomplete implementation prevents it.

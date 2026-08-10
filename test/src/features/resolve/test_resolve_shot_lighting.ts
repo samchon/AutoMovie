@@ -63,7 +63,7 @@ const pointer = (
 
 /** A resolved light's falloff range, or `-1` when its kind carries none. */
 const rangeOf = (light: IAutoMovieLight): number =>
-  light.type === "directional" ? -1 : light.range;
+  light.type === "point" || light.type === "spot" ? light.range : -1;
 
 /** A resolved light's cone half-angle, or `-1` when it is not a spot. */
 const coneOf = (light: IAutoMovieLight): number =>

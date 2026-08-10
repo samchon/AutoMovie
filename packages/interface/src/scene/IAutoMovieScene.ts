@@ -2,6 +2,7 @@ import { IAutoMovieStage } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieCamera } from "./IAutoMovieCamera";
 import { IAutoMovieFog } from "./IAutoMovieFog";
 import { IAutoMovieLight } from "./IAutoMovieLight";
+import { IAutoMovieSceneEnvironment } from "./IAutoMovieSceneEnvironment";
 import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
 import { IAutoMovieSpace } from "./IAutoMovieSpace";
 
@@ -11,9 +12,9 @@ import { IAutoMovieSpace } from "./IAutoMovieSpace";
  *
  * The scene is the composition layer above individual rigs: it says _where_
  * characters stand, _what_ they are doing (which motion/pose), and _how_ the
- * frame is lit and framed. It is the natural integration point with a spatial
- * host such as interia, which would own the room and hand automovie the world
- * frame its nodes live in.
+ * frame is lit and framed. A structured building owns rooms and lowers the
+ * world transforms of its visible elements here, while actors and props remain
+ * ordinary scene nodes in that same frame.
  *
  * @author Samchon
  */
@@ -32,6 +33,9 @@ export interface IAutoMovieScene {
 
   /** Scene lights. */
   lights: IAutoMovieLight[];
+
+  /** Optional physical render environment; omitted preserves legacy output. */
+  environment?: IAutoMovieSceneEnvironment | null;
 
   /**
    * The scene's space: standable surfaces and walkability (#605). Absent or

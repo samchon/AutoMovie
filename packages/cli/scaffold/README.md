@@ -184,6 +184,17 @@ manifest must account for the exact regular-file inventory, and every declared
 payload length and digest must still match before the proxy can satisfy the final
 plan gate.
 
+Every planning, run, and full-sequence render first measures what the tier is
+about to draw and checks it against the `renderBudgets` entry whose `tier`
+matches this render tier (`proxy` or `final`). The verdict is published as an
+immutable, content-addressed document under
+`.automovie/productions/<production>/render-job/<tier>/render-budget`, and its
+summary is part of the command's own output. Only `over` refuses the render, and
+it names the dominant owner and the source to edit. `incomplete` and `not-run`
+are reported exactly as they are: an unmeasured cost has not been cleared, and a
+production declaring no budget for this tier reads `unbudgeted` with its declared
+tiers named rather than passing silently.
+
 `npm run render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete. Its terminal commit

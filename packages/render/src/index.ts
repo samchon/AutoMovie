@@ -9,6 +9,7 @@ export * from "./plan";
 export * from "./poseKeypointPlan";
 export * from "./poseKeypointSidecar";
 export * from "./renderAndSee";
+export * from "./renderBudgetPreflight";
 export * from "./renderVideo";
 export * from "./screenplay";
 export * from "./sequenceRenderPlan";

@@ -17,6 +17,7 @@ import type {
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionTtsReceipt,
+  IAutoMovieRenderSpec,
   IAutoMovieRepaintReceipt,
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
@@ -60,6 +61,7 @@ import {
   verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
+import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import * as HME from "h264-mp4-encoder";
 import { BoxParser, createFile } from "mp4box";
 import { randomUUID } from "node:crypto";
@@ -76,6 +78,7 @@ import {
   inspectPublishedProxyBundle,
 } from "./assertProxyBundle";
 import {
+  PRODUCTION_DELIVERY_TONE_MAPPING,
   captureProductionFrame,
   closeProductionFrameCapture,
   productionFrameCaptureMetrics,
@@ -97,6 +100,10 @@ import {
   listRenderAttempts,
   readRenderAttempt,
 } from "./renderAttemptSnapshot";
+import {
+  assessProductionRenderBudget,
+  publishRenderBudgetEvidence,
+} from "./renderBudgetSnapshot";
 import {
   type ICurrentRenderChunkPublication,
   captureRenderChunkPublicationFromPointer,
@@ -296,11 +303,23 @@ const main = async (): Promise<void> => {
       return;
     }
     const current = await currentPlan();
+    const budget = enforceRenderBudget(current);
     if (action === "plan") {
-      output(current);
+      output({
+        ...current,
+        budget,
+        deliveryTone: uncheckedDeliveryTone(
+          "planning captures no review evidence, so no committed bundle states the sealed delivery curve",
+        ),
+      });
       return;
     }
-    if (action === "all") await captureReviewEvidence();
+    const deliveryTone =
+      action === "all"
+        ? (await captureReviewEvidence()).deliveryTone
+        : uncheckedDeliveryTone(
+            `the "${action}" action captures no review evidence, so no committed bundle states the sealed delivery curve`,
+          );
     if (action === "run" || action === "all") {
       recoverAbandonedTemporaryDirectories(current.chunks);
       quarantineStaleSlotOutputs(current.chunks);
@@ -322,6 +341,8 @@ const main = async (): Promise<void> => {
           editFingerprint: current.editFingerprint,
           tier: current.tier,
         },
+        budget,
+        deliveryTone,
         capture: productionFrameCaptureMetrics(),
         result,
         chunks: await renderStatus(current),
@@ -352,7 +373,46 @@ const sourceFingerprint = (): AutoMovieContentDigest => {
   return checked.compiler.inputFingerprint;
 };
 
-const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
+/**
+ * What the render job learned about the delivery curve the frames were drawn
+ * under.
+ *
+ * `not-run` is a first-class outcome, not a softened failure. A proxy review
+ * capture commits no verifiable render bundle at all, so there is no sealed
+ * render spec to read the curve out of, and refusing the render for that would
+ * be dressing "nothing to measure" as "something is wrong" -- the exact move
+ * this evidence exists to prevent, pointed the other way.
+ */
+interface IDeliveryToneCheck {
+  /** Curve the capture host asked the viewer page for. */
+  requested: IAutoMovieRenderSpec["toneMapping"];
+
+  /** Whether a sealed render spec was actually read. */
+  status: "checked" | "not-run";
+
+  /** Bundle whose manifest answered, or `null` when none did. */
+  bundle: string | null;
+
+  /** Curve that manifest sealed, or `null` when nothing was read. */
+  recorded: IAutoMovieRenderSpec["toneMapping"] | null;
+
+  /** Why nothing was read, or `null` when something was. */
+  reason: string | null;
+}
+
+/** The check no action ran, stated as such rather than left out. */
+const uncheckedDeliveryTone = (reason: string): IDeliveryToneCheck => ({
+  requested: PRODUCTION_DELIVERY_TONE_MAPPING,
+  status: "not-run",
+  bundle: null,
+  recorded: null,
+  reason,
+});
+
+const captureReviewEvidence = async (): Promise<{
+  frames: IAutoMovieCaptureFrame[];
+  deliveryTone: IDeliveryToneCheck;
+}> => {
   const app = productionApplication();
   const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
@@ -401,7 +461,121 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
         failed,
       )}`,
     );
-  return frames;
+  return { frames, deliveryTone: checkCapturedDeliveryTone(project, frames) };
+};
+
+/**
+ * Read the curve a committed bundle sealed and hold the capture host to it.
+ *
+ * The viewer cannot read a render spec, so the capture host hands it the
+ * delivery curve on the page URL while the production oracle seals that same
+ * curve into every bundle manifest. Two spellings of one fact drift silently by
+ * nature, so the render job re-reads a manifest it just produced and refuses
+ * when they disagree: without this, a spec that started delivering ACES would
+ * keep photographing untone-mapped frames and label them ACES.
+ *
+ * The delivery curve is one production-wide fact, so the first bundle that
+ * verifies settles it and the walk stops there. Verifying every bundle would
+ * re-read and re-digest every review frame the capture just wrote, to re-answer
+ * a question whose answer cannot differ between two bundles of one production.
+ *
+ * Only a disagreement fails. A run whose frames committed no verifiable bundle
+ * has nothing to read a sealed curve out of, and that is a state rather than a
+ * defect: it reports `not-run` and the render continues. Promoting "there was
+ * nothing to measure" to a refusal is the same false claim as calling it a
+ * pass, made in the opposite direction.
+ */
+const checkCapturedDeliveryTone = (
+  project: AutoMovieProductionProject,
+  frames: readonly IAutoMovieCaptureFrame[],
+): IDeliveryToneCheck => {
+  const bundles = [
+    ...new Set(
+      frames.flatMap((frame) =>
+        frame.receipt === null ? [] : [frame.receipt.bundle],
+      ),
+    ),
+  ].sort(compareCodeUnits);
+  for (const bundle of bundles) {
+    const manifest = project.verifiedRenderManifest(
+      path.join(project.renderRoot(), ...bundle.split("/"), "manifest.json"),
+    );
+    if (manifest === null) continue;
+    if (manifest.renderSpec.toneMapping !== PRODUCTION_DELIVERY_TONE_MAPPING)
+      throw new Error(
+        `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but bundle "${bundle}" records "${manifest.renderSpec.toneMapping}". Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
+      );
+    return {
+      requested: PRODUCTION_DELIVERY_TONE_MAPPING,
+      status: "checked",
+      bundle,
+      recorded: manifest.renderSpec.toneMapping,
+      reason: null,
+    };
+  }
+  return uncheckedDeliveryTone(
+    `review capture committed no verifiable render bundle out of ${bundles.length}, so no sealed render spec states the delivery curve for this run`,
+  );
+};
+
+/**
+ * Measure this tier's artifact against the budget the production declares for
+ * it, publish the evidence, and refuse an over-budget render.
+ *
+ * The check belongs here and nowhere earlier. A budget verdict is a claim about
+ * a specific renderer drawing specific bytes at a specific raster, and only the
+ * render job knows all three: the compiler never sees a GPU, and the plan's own
+ * capture preflight is the first moment WebGL has answered.
+ *
+ * Only `over` refuses. `incomplete` and `not-run` are published exactly as they
+ * are, because an unmeasured cost has not been cleared and dressing it as a
+ * pass is the one failure this evidence exists to prevent.
+ */
+const enforceRenderBudget = (plan: IAutoMovieProductionRenderJobPlan) => {
+  const project = AutoMovieProductionProject.open(root, productionId);
+  const graph = project.graph();
+  if (graph.production === null)
+    throw new Error("Render budget preflight requires a production design.");
+  const timeline = readAutoMovieFilmTimeline(project, plan.compileFingerprint);
+  const evidence = assessProductionRenderBudget({
+    project,
+    production: graph.production,
+    tier: plan.tier.kind,
+    shots: [...new Set(timeline.segments.map((segment) => segment.shot))],
+    frameFormat: plan.frameFormat,
+    // The recorded browser scale, not an assumed one: the viewer pins the
+    // renderer's own pixel ratio to match it, and a fingerprint carrying a
+    // number nobody measured could not detect a host that changed it.
+    pixelRatio: plan.runtimeIdentity.capture.mode.deviceScaleFactor,
+    delivery: PRODUCTION_DELIVERY_TONE_MAPPING,
+    graphics: plan.runtimeIdentity.capture.graphics,
+    audioAssets: new Set(timeline.tracks.audio.map((cue) => cue.asset)),
+  });
+  const published = publishRenderBudgetEvidence({ stateRoot, evidence });
+  const relative = path
+    .relative(root, published.path)
+    .split(path.sep)
+    .join("/");
+  const refusal = autoMovieRenderBudgetRefusal(evidence);
+  if (refusal !== null)
+    throw new Error(
+      `${refusal} Raise the limit for tier "${evidence.tier}" deliberately or reduce the named owners, then replan. The evidence is at ${relative}.`,
+    );
+  return {
+    tier: evidence.tier,
+    status: evidence.status,
+    budgeted: evidence.budgeted,
+    declaredTiers: evidence.declaredTiers,
+    digest: evidence.digest,
+    evidence: relative,
+    shots: evidence.shots.map((shot) => ({
+      shot: shot.shot,
+      status: shot.status,
+      reason: shot.reason,
+      report: shot.report?.digest ?? null,
+      target: shot.target?.digest ?? null,
+    })),
+  };
 };
 
 const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {

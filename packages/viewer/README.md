@@ -33,6 +33,12 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `buildInstancedFormation` / `regenerateFormationSlot` | 컴파일된 formation 청크를 LOD tier별 `InstancedMesh`로 올리고, 카메라 갱신마다 청크 컬링·LOD 히스테리시스를 적용한다. hero 슬롯은 인스턴스 버퍼에서 빠지고 host가 넘긴 pre-formation 소스 스냅샷 위에 formation 모션을 합성한다. `slotMotions`로 지목된 소수의 멤버만 매 프레임 자기 상태로 다시 써서, 한 명이 이탈·정지하거나 아예 그려지지 않게 한다. 비용은 예외 수에 비례하며 군중 크기와 무관하고, 사라진 멤버는 `stats.removed`로 따로 센다(`near + far + culled + removed = anonymousCount`). |
 | `bakeFormationCycle` / `formationCyclePosition` / `sampleFormationCycleMatrix` / `applyFormationCycleMaterial` | LOD tier의 런타임 모델이 gait를 선언하면 한 사이클을 rigid part 행렬 표로 한 번 굽고, 각 멤버가 자기 `motionPhase`에서 그 표를 정점 단계에서 읽게 한다. 표는 tier당 하나라 멤버가 열 명이든 십만 명이든 인스턴스 버퍼는 그대로이고, 한 프레임이 갱신하는 것은 시간 uniform 하나뿐이다. gait가 없는 모델은 표를 갖지 않고 예전처럼 정지한 채 남는다. |
 | `buildInstancedEffect` | 컴파일된 fog/smoke/dust 볼륨을 고정 스텝으로 샘플링해 인스턴스 파티클로 그리고, 파티클 상한과 LOD 거리 컬링을 강제한다. |
+| `buildFluidSurfaceObject` / `buildFluidSprayObject` | 엔진이 푼 유체 상태의 자유수면과 분무를 그대로 올린다. 표면은 평범한 `Mesh`라 구조 가이드 패스가 모든 메시의 머티리얼을 바꾸는 것만으로 beauty/normal/depth/mask에 나타나고, bounding sphere도 엔진이 준 그려지는 범위를 쓴다. 분무는 `Points`라 같은 패스들이 의도적으로 숨긴다. 장식 안개가 segmentation mask를 물들이면 안 되기 때문이다. |
+| `applySceneEnvironment` / `applyRendererEnvironment` | 씬이 선언한 이미지 조명·배경·노출·톤매핑·그림자 정책을 렌더러에 싣고, 구조 가이드 패스 동안 그 상태를 유예했다가 정확히 되돌린다. 환경을 선언한 씬이 자기 beauty 패스의 곡선과 노출을 소유하고, `IAutoMovieRenderSpec.toneMapping`은 환경을 선언하지 않은 씬에만 적용되는 배송 기본값이다. 그래서 환경을 말한 적 없는 기존 프로덕션의 바이트가 그대로 남는다. |
+| `applyAutoMovieSemanticMask` / `IAutoMovieSemanticMaskHandle` | 엔진이 도출한 시맨틱 마스크를 씬에 입히고 되돌린다. 색은 노드 배열 순서가 아니라 안정적 semantic id에서 나오므로, 무관한 소품이 하나 늘어도 기존 색은 한 바이트도 바뀌지 않는다. 안개·이미지 조명·헬퍼는 이 패스 동안 유예된다. 장식이 정체성을 덮어쓰면 마스크가 말하려던 것이 사라지기 때문이다. |
+| `observeAutoMovieSceneRender` / `auditAutoMovieRenderObservation` | 실제로 그려진 것을 세어 예산 리포트가 주장한 값과 대조한다. 리포트를 넘겨 그린 씬은 여기서 걸리며, 관찰값은 설계의 source of truth를 대체하지 않고 어긋났다는 사실만 보고한다. |
+| `buildSoftBodyObject` / `buildPlantingObject` | 엔진이 전진시킨 연성체 상태를 그대로 메시로 올리고, 실내 식재 군집을 인스턴스로 올린다. 상태와 시드는 엔진이 소유하므로 같은 입력은 같은 프레임을 낸다. |
+| `buildAnalysisOverlayObject` / `autoMovieAnalysisRampColor` | 분석 결과를 씬 위에 얹는다. 램프 색은 정의된 구간에서만 의미가 있고 바깥은 고정되며, 빌린 머티리얼은 처분하지 않고 스스로 만든 것만 처분한다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
 

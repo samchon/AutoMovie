@@ -80,6 +80,7 @@ export const resolveTemplateVersions = () => ({
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
   mcp: packageVersion("packages/mcp"),
+  render: packageVersion("packages/render"),
   viewer: packageVersion("packages/viewer"),
   huggingFaceTransformers: exactCatalogVersion(
     "media",
@@ -106,9 +107,9 @@ export const resolveTemplateVersions = () => ({
 });
 
 /**
- * The `{{version:*}}` keys that name a package published from this monorepo.
- * A workspace-linked project replaces these with `workspace:^` so it consumes
- * the working tree instead of npm.
+ * The `{{version:*}}` keys that name a package published from this monorepo. A
+ * workspace-linked project replaces these with `workspace:^` so it consumes the
+ * working tree instead of npm.
  */
 export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
   "archetypes",
@@ -116,5 +117,6 @@ export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
   "engine",
   "interface",
   "mcp",
+  "render",
   "viewer",
 ]);

@@ -8,6 +8,12 @@
  *
  * A conjunction of two is counted too: naming both is what turns a failure into
  * a diagnosis, and two is where the ambiguity starts.
+ *
+ * `test_workspace_folded_assertions` spawns this script and reads what it
+ * prints, which is what keeps the count at zero rather than letting it climb
+ * back the way it did once already. So the last line and the per-file listing
+ * are a contract, not a convenience: change either and re-derive the
+ * expectations in that case from its own reported output.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";

@@ -7,3 +7,4 @@ export * from "./AutoMovieSurfaceKind";
 export * from "./IAutoMovieSurface";
 export * from "./IAutoMovieSpace";
 export * from "./IAutoMovieScene";
+export * from "./IAutoMovieSceneEnvironment";

@@ -24,7 +24,8 @@
     "test": "tsx test/opening.test.ts",
     "verify": "tsx scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json",
-    "design": "tsx scripts/emitDesign.ts"
+    "design": "tsx scripts/emitDesign.ts",
+    "building:report": "tsx scripts/deriveBuilding.ts"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",
@@ -32,6 +33,7 @@
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",
+    "@automovie/render": "{{version:render}}",
     "@automovie/viewer": "{{version:viewer}}",
     "@huggingface/transformers": "{{version:huggingFaceTransformers}}",
     "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",

@@ -28,7 +28,7 @@ automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정�
 automovie는 **glTF / VRM 규약**을 따른다.
 
 - **공간:** 오른손 좌표계, **y-up**. +x = 캐릭터 기준 좌(left), +y = 위, +z = 앞(front). glTF 2.0 / VRM 1.0과 동일.
-- **길이:** **미터(float).** VRM 휴머노이드가 미터 스케일이다. (interia가 정수 mm인 것과 대비: 캐릭터 공간은 작고 부동소수 누적이 문제되지 않는다.)
+- **길이:** **미터(float).** VRM 휴머노이드, 건축 요소, 장면 배치가 하나의 미터 기반 좌표계를 사용한다.
 - **각도:** LLM이 보는 표면은 **의미 각도(도, degree)**: 굴곡/외전/축회전. 엔진이 본 로컬축 기준 쿼터니언으로 변환한다.
 - **시간:** **초(seconds, float).**
 - **정규화 가중치:** **0..1** (블렌드쉐입, 머티리얼 계수 등).
@@ -57,8 +57,15 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `expression/` | 표정: ARKit 52 채널, VRM expression preset                                                                                                                                                                       |
 | `face/`       | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다.                                               |
 | `motion/`     | 시간 모션: 키프레임 + 이징                                                                                                                                                                                       |
-| `material/`   | PBR 머티리얼                                                                                                                                                                                                     |
+| `material/`   | 세 층으로 나뉜 재료: 빛에만 답하는 PBR 표면(`IAutoMovieMaterial`), 밀도·열전도·비열·흡음·투습저항·내용연수를 담는 물질(`IAutoMovieMaterialSubstance`), 적층 방향·기준면 오프셋·노출면·개구부 감쌈을 가진 구성 적층(`IAutoMovieMaterialAssembly`, `IAutoMovieMaterialLayer`)                                                                                                                                                                                                     |
 | `scene/`      | 씬그래프: 모델/카메라/조명 배치                                                                                                                                                                                  |
+| `architecture/` | 건물 동 소유권과 두 계층: 여러 독립 건물 단위를 담는 `IAutoMovieBuiltEnvironment`, 보이는 요소 계층과 논리 공간 계층, 경계·개구부·연결자·지지면 그래프, 설계가 인용만 하고 대체되지는 않는 관찰 근거 `IAutoMovieDesignReference`, 어떤 그래프의 stable id에도 붙는 공사 단계·설계 대안·파생 계보 `IAutoMovieDesignLineage` |
+| `render/`     | 렌더 예산과 의미 증거: 삼각형·드로우·텍스처·그림자·인스턴스·유체 예산과 초과 소유자, 순서에 의존하지 않는 시맨틱 마스크, 대상 지문과 경계 있는 리포트                                                            |
+| `service/`    | 건물이 공급받는 배분 그래프: 급수·급탕·배수·통기·순환·전기·공조·소방의 port와 network, 젖은 구역과 방수 범위, 관통 슬리브와 유지보수 부피. 간섭은 run 전체가 아니라 직선 leg마다 판정한다 |
+| `soft/`       | 커튼·러그·쿠션 같은 연성체와 실내 식재의 상태: 고정 스텝 상태와 결정적 시드, 충돌, 군집 배치 |
+| `drawing/`    | 하나의 설계에서 파생되는 산출물: 평면·입면·단면·상세, 주석, 창호/마감 일람, 물량. 파생물은 설계의 두 번째 진실이 되지 않는다 |
+| `analysis/`   | 읽기 전용 대지 문맥(태양·하늘·기준 지면·인접 차폐 매스)과 채광·열·습기·공기·음향 분석 아티팩트. 지원하지 않거나 실행하지 않은 값은 `unsupported`/`not-run`으로 이유와 함께 남고 숫자를 지어내지 않는다 |
+| `fluid/`      | 건축과 독립된 유체 도메인: 고정 격자·고정 스텝 shallow-water 설계(`IAutoMovieFluidDomain`), 절대 스텝 상태·표면·분무·예산(`IAutoMovieFluidState`), 건물이 논리 공간에 묶는 수경 바인딩(`IAutoMovieWaterFeature`)                                       |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
 | `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 MCP 표면이 아님                                                      |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |

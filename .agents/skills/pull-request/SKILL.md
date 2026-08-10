@@ -13,7 +13,7 @@ Permission to open is not permission to merge. Merge only when the user explicit
 
 Branch from the PR target (`master` unless stated otherwise); never commit to the target directly. Name the branch to reflect the change: `feat/<scope>`, `fix/<scope>`, `test/<scope>`, `docs/<scope>`, `ci/<scope>`.
 
-Ordinary pull requests, solo campaigns, and Self-Review use the current checkout and one topic branch. Do not create another clone or worktree for them. If unrelated or protected work prevents a safe branch switch, preserve it and report the blocker rather than stashing, reverting, mixing it, or creating a worktree.
+Ordinary pull requests, issue campaigns, and Self-Review use the current checkout and one topic branch. This holds even when a campaign runs several issue owners at once: they share that checkout and that branch, each committing only its own paths. Do not create another clone or worktree for them. If unrelated or protected work prevents a safe branch switch, preserve it and report the blocker rather than stashing, reverting, mixing it, or creating a worktree.
 
 Only an explicitly selected multi-agent campaign creates isolated worktrees, under that campaign's file-ownership and cleanup rules.
 
@@ -33,11 +33,13 @@ The title describes the merged outcome in `<type>(<scope>)` style, not the work 
 
 ## Campaign Override
 
-Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Solo issue campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout. Campaigns with parallel implementation use `.agents/skills/multi-agent/issue-campaign.md`. Their ownership, worktree, commit-message, check-cadence, CI-repair, and cleanup rules override the ordinary flow here.
+Before a campaign implementation push or pull request, complete the selected campaign's development procedure. Ordinary issue campaigns use `.agents/skills/issue-campaign/development.md` in the current checkout, including when several issue owners implement at once. Campaigns the user asked to isolate into per-batch worktrees, branches, or pull requests use `.agents/skills/multi-agent/issue-campaign.md`. Their ownership, worktree, commit-message, check-cadence, CI-repair, and cleanup rules override the ordinary flow here.
+
+A campaign owner pushes its own commits. It stages explicit paths, never `git add -A`, and never rewrites or force-pushes a branch other owners are committing onto.
 
 ## Watch Checks After Every Push
 
-After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` (the 100% coverage gate) must pass; do not treat a green unrelated job as acceptance for a failed required surface.
+After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` must pass; do not treat a green unrelated job as acceptance for a failed required surface. `test` fails on a failing scenario, not on coverage: the coverage obligation is per change and the author reads the reported gaps, which the development skill explains.
 
 A campaign implementation cycle reads CI once per settled head instead, under its own development procedure. Its intermediate commits are not gates, and its merge still requires the settled head's green required checks.
 

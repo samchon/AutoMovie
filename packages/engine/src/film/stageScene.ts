@@ -18,6 +18,7 @@ import {
   isAutoMovieLightType,
 } from "../resolve/lightChannel";
 import { isRecord } from "../validation/artifactShape";
+import { validateSceneEnvironment } from "../validation/validateSceneEnvironment";
 import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
@@ -68,21 +69,44 @@ const lightTypeOf = (
 const DEFAULT_CONE_ANGLE = 45;
 
 /**
+ * The rectangular panel's extent as a placement may carry it.
+ *
+ * Read through one accessor rather than off the placement type for the same
+ * reason {@link lightTypeOf} reads `type` that way: the gate must be able to
+ * doubt a value an author supplied, and a field asserted before it is checked
+ * is a field that stopped being checked. Both axes are `unknown` here and
+ * become numbers only once {@link validateLightExtent} has said so.
+ */
+interface IAutoMovieStageLightExtent {
+  /** Declared panel width, unchecked. */
+  width?: unknown;
+  /** Declared panel height, unchecked. */
+  height?: unknown;
+}
+
+/** A placement's declared panel extent, before any of it is believed. */
+const lightExtentOf = (
+  light: IAutoMovieStageLight,
+): IAutoMovieStageLightExtent => light as IAutoMovieStageLightExtent;
+
+/**
  * The staging light contract, per kind (#1341).
  *
  * `stage` used to accept `{node, role, direction, intensity}` and lower every
  * entry to a white directional light, so a candle, a sunset, a neon sign, and a
  * window shaft were all the same frame, and an author who wanted a warm lamp
  * had to hand-patch `scene.lights` after `stage` and lose the referential
- * integrity `stage` exists to give. The placement now spans the same three
- * kinds {@link IAutoMovieLight} already models, which makes each kind's
- * parameter set exact rather than advisory:
+ * integrity `stage` exists to give. The placement now spans every kind
+ * {@link IAutoMovieLight} models, which makes each kind's parameter set exact
+ * rather than advisory:
  *
- * - An aimed light (`directional`, `spot`) needs a finite non-zero `direction`
- *   and a `point` light must not carry one, since it radiates every way;
- * - A positioned light (`point`, `spot`) needs a finite `position` and a
+ * - An aimed light (`directional`, `spot`, `area`) needs a finite non-zero
+ *   `direction` and a `point` light must not carry one, since it radiates every
+ *   way;
+ * - A positioned light (`point`, `spot`, `area`) needs a finite `position` and a
  *   `directional` light must not carry one, since it is infinitely distant;
- * - `range` belongs to the falloff kinds and `coneAngle` to `spot` alone.
+ * - `range` belongs to the two punctual falloff kinds, `coneAngle` to `spot`
+ *   alone, and `width`/`height` to `area` alone.
  *
  * A parameter that cannot act is refused rather than ignored: silently dropping
  * a `coneAngle` on a point light is the same false green the campaign is
@@ -104,8 +128,12 @@ const validateLightPlacementShape = (
     );
     return;
   }
-  const aimed = type === "directional" || type === "spot";
-  const positioned = type === "point" || type === "spot";
+  const aimed = type !== "point";
+  const positioned = type !== "directional";
+  // Distance falloff is narrower than "has a position": an area panel stands
+  // somewhere and still takes no range, because its falloff follows from the
+  // panel's own extent.
+  const falloff = type === "point" || type === "spot";
 
   if (light.direction === undefined) {
     if (aimed)
@@ -138,7 +166,7 @@ const validateLightPlacementShape = (
       out.push(
         "type",
         `${path}.position`,
-        `a ${type} light falls off with distance and needs a position`,
+        `a ${type} light stands somewhere in the world and needs a position`,
         light.position,
       );
   } else if (!positioned)
@@ -157,11 +185,11 @@ const validateLightPlacementShape = (
     );
 
   if (light.range !== undefined) {
-    if (!positioned)
+    if (!falloff)
       out.push(
         "type",
         `${path}.range`,
-        `a directional light has no distance falloff and takes no range`,
+        `a ${type} light has no distance falloff and takes no range`,
         light.range,
       );
     else if (!Number.isFinite(light.range) || light.range < 0)
@@ -194,7 +222,146 @@ const validateLightPlacementShape = (
       );
   }
 
+  validateLightExtent(light, type, path, out);
   if (light.color !== undefined) validateLightColor(light.color, path, out);
+  validateLightShadow(light, type, path, out);
+};
+
+/**
+ * The panel's extent: required exactly on an `area` light, refused elsewhere.
+ *
+ * Both axes are checked, not just the first missing one, so an author who typed
+ * neither is told both rather than being walked through the same placement one
+ * recompile at a time.
+ */
+const validateLightExtent = (
+  light: IAutoMovieStageLight,
+  type: IAutoMovieLight["type"],
+  path: string,
+  out: ViolationCollector,
+): void => {
+  const extent = lightExtentOf(light);
+  for (const axis of ["width", "height"] as const) {
+    const value = extent[axis];
+    if (value === undefined) {
+      if (type === "area")
+        out.push(
+          "type",
+          `${path}.${axis}`,
+          `an area light is a rectangular panel and needs a ${axis}`,
+          value,
+        );
+    } else if (type !== "area")
+      out.push(
+        "type",
+        `${path}.${axis}`,
+        `only an area light has extent; a ${type} light takes no ${axis}`,
+        value,
+      );
+    else if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+      out.push(
+        "range",
+        `${path}.${axis}`,
+        `area ${axis} must be a finite number greater than zero, but was ${String(value)}`,
+        value,
+      );
+  }
+};
+
+const validateLightShadow = (
+  light: IAutoMovieStageLight,
+  type: IAutoMovieLight["type"],
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (light.castShadow !== undefined && typeof light.castShadow !== "boolean")
+    out.push(
+      "type",
+      `${path}.castShadow`,
+      "castShadow must be boolean",
+      light.castShadow,
+    );
+  // A rectangular area source is integrated analytically, so `three.js` renders
+  // no shadow map for it. Accepting the flag would stage a light that says it
+  // occludes and never does, which is exactly the false green this campaign is
+  // closing; the correction is a spot or directional key beside the panel. The
+  // refusal replaces the shadow-settings demand rather than joining it: asking
+  // an author to tune a map that will never be rendered is worse advice than
+  // none.
+  else if (light.castShadow === true && type === "area") {
+    out.push(
+      "type",
+      `${path}.castShadow`,
+      "an area light is analytically integrated and casts no shadow map; use a punctual key light for occlusion",
+      light.castShadow,
+    );
+    return;
+  }
+  if (light.shadow === undefined) {
+    if (light.castShadow === true)
+      out.push(
+        "type",
+        `${path}.shadow`,
+        "a shadow-casting light requires deterministic shadow settings",
+        light.shadow,
+      );
+    return;
+  }
+  if (light.castShadow !== true)
+    out.push(
+      "type",
+      `${path}.shadow`,
+      "shadow settings require castShadow to be true",
+      light.shadow,
+    );
+  if (!isRecord(light.shadow)) {
+    out.push(
+      "type",
+      `${path}.shadow`,
+      "shadow must be a JSON object",
+      light.shadow,
+    );
+    return;
+  }
+  const shadow = light.shadow;
+  if (!Number.isSafeInteger(shadow.mapSize) || (shadow.mapSize as number) <= 0)
+    out.push(
+      "range",
+      `${path}.shadow.mapSize`,
+      "shadow mapSize must be a positive safe integer",
+      shadow.mapSize,
+    );
+  for (const key of ["bias", "normalBias"] as const)
+    if (typeof shadow[key] !== "number" || !Number.isFinite(shadow[key]))
+      out.push(
+        "range",
+        `${path}.shadow.${key}`,
+        `shadow ${key} must be finite`,
+        shadow[key],
+      );
+  if (
+    typeof shadow.near !== "number" ||
+    !Number.isFinite(shadow.near) ||
+    shadow.near <= 0
+  )
+    out.push(
+      "range",
+      `${path}.shadow.near`,
+      "shadow near must be finite and greater than zero",
+      shadow.near,
+    );
+  if (
+    typeof shadow.far !== "number" ||
+    !Number.isFinite(shadow.far) ||
+    typeof shadow.near !== "number" ||
+    shadow.far <= shadow.near
+  )
+    out.push(
+      "range",
+      `${path}.shadow.far`,
+      "shadow far must be finite and greater than near",
+      shadow.far,
+    );
 };
 
 /**
@@ -345,6 +512,8 @@ const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
     },
     color: light.color ?? { r: 1, g: 1, b: 1, a: null, hex: null },
     intensity: light.intensity,
+    ...(light.castShadow === undefined ? {} : { castShadow: light.castShadow }),
+    ...(light.shadow === undefined ? {} : { shadow: light.shadow }),
   };
   if (type === "point") return { ...base, type, range: light.range ?? 0 };
   if (type === "spot")
@@ -354,6 +523,18 @@ const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
       range: light.range ?? 0,
       coneAngle: light.coneAngle ?? DEFAULT_CONE_ANGLE,
     };
+  // A panel has no defaultable extent: an unstated width is not "some usual
+  // softbox", it is an author who has not decided how big the window is, so the
+  // placement gate refuses it and lowering reads what was decided.
+  if (type === "area") {
+    const extent = lightExtentOf(light);
+    return {
+      ...base,
+      type,
+      width: extent.width as number,
+      height: extent.height as number,
+    };
+  }
   return { ...base, type };
 };
 
@@ -429,7 +610,7 @@ export namespace IAutoMovieStagedSet {
  * rotation; a set piece's optional `scale` becomes the node transform's scale
  * (one primitive at many sizes); a camera's `lookAt` resolves to a point and
  * the shortest-arc rotation aims its −Z there; a light placement lowers to the
- * scene light its `type` names (directional, point, or spot), aimed by
+ * scene light its `type` names (directional, point, spot, or area), aimed by
  * `direction` and placed at `position`, in its authored color.
  *
  * The environment is two halves of one thing (#1173): `set` pieces are the
@@ -581,6 +762,36 @@ export const stageScene = (
         `set facingDeg must be finite when present, but was ${piece.facingDeg}`,
         piece.facingDeg,
       );
+    if (piece.facingDeg !== undefined && piece.rotation !== undefined)
+      out.push(
+        "type",
+        `$input.set[${i}].rotation`,
+        "set rotation and facingDeg are mutually exclusive",
+        piece.rotation,
+      );
+    if (piece.rotation !== undefined) {
+      const length = Math.hypot(
+        piece.rotation.x,
+        piece.rotation.y,
+        piece.rotation.z,
+        piece.rotation.w,
+      );
+      if (
+        ![
+          piece.rotation.x,
+          piece.rotation.y,
+          piece.rotation.z,
+          piece.rotation.w,
+        ].every(Number.isFinite) ||
+        Math.abs(length - 1) > 1e-6
+      )
+        out.push(
+          "range",
+          `$input.set[${i}].rotation`,
+          `set rotation must be a finite unit quaternion, but length was ${length}`,
+          piece.rotation,
+        );
+    }
     if (piece.scale !== undefined) {
       const scale = setPieceScale(piece.scale);
       // Zero collapses the piece to nothing (a set piece that draws no pixels
@@ -620,6 +831,17 @@ export const stageScene = (
   // placement rules rather than in a module of its own.
   if (staging.fog !== undefined)
     validateFogPlacement(staging.fog, "$input.fog", out);
+  if (staging.environment !== undefined) {
+    const validated = validateSceneEnvironment({
+      environment: staging.environment,
+    });
+    if (validated.success === false)
+      for (const item of validated.violations)
+        out.items.push({
+          ...item,
+          path: item.path.replace("$input", "$input.environment"),
+        });
+  }
 
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
@@ -710,10 +932,12 @@ export const stageScene = (
         model: piece.model,
         transform: {
           translation: piece.position,
-          rotation: Quaternion.fromAxisAngle(
-            { x: 0, y: 1, z: 0 },
-            piece.facingDeg ?? 0,
-          ),
+          rotation:
+            piece.rotation ??
+            Quaternion.fromAxisAngle(
+              { x: 0, y: 1, z: 0 },
+              piece.facingDeg ?? 0,
+            ),
           scale: setPieceScale(piece.scale),
         },
         motion: null,
@@ -765,6 +989,9 @@ export const stageScene = (
       // would change the bytes, and therefore the content digest, of every
       // production that never mentioned fog. Absent already means none.
       ...(staging.fog === undefined ? {} : { fog: staging.fog }),
+      ...(staging.environment === undefined
+        ? {}
+        : { environment: staging.environment }),
     },
     mounts,
   };

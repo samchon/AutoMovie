@@ -8,7 +8,7 @@ import type { AutoMovieGuidePass, IAutoMovieModel } from "@automovie/interface";
 import { applyPose, applyRenderMode, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
-import { loadCompiledModel } from "./loadCompiledModel";
+import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 import { viewerDocument } from "./viewerDocument";
 
 const { canvas, status } = viewerDocument();
@@ -24,7 +24,10 @@ if (response.ok === false)
     `Compiled model "${assetId}" is unavailable (${response.status}). Run npm run compile.`,
   );
 const model = (await response.json()) as IAutoMovieModel;
-const built = await loadCompiledModel(model);
+// This page shows one model for as long as it is open, so its cache is the
+// page's own: the model's maps decode once and the browser reclaims them with
+// the document. A textured model reaching `buildModel` without one throws.
+const built = await loadCompiledModel(model, createShotTextureCache());
 const pose = parameters.get("pose") ?? "rest";
 if (pose !== "rest" && pose !== "rom-extremes")
   throw new Error('?pose must be "rest" or "rom-extremes".');
@@ -74,7 +77,15 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
   handle.restore();
   status.textContent = `${model.id}  angle=${angle.toFixed(1)}° elevation=${elevation.toFixed(1)}°  ${pass}`;
 };
-window.__automovieCapture = { ready: true, seek };
+// An asset turntable stages no compiled shot, so it has no palette to paint a
+// mask with and no compiled inventory to hold a live one against. Both answer
+// null rather than a shape that would read as evidence about a production.
+window.__automovieCapture = {
+  ready: true,
+  seek,
+  observe: () => null,
+  sidecar: () => null,
+};
 seek(0, "beauty");
 
 function finiteParameter(name: string): number | null {

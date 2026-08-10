@@ -50,6 +50,12 @@ export const createImportedModelObject = (
   // state, the same asset composed differently on an incidental instanceof.
   object: wrapObject(options.object),
   bones: normalizeBones(options.bones),
+  // An imported appearance is one runtime object rather than the authored
+  // parts a generated model is built from, so there is nothing here to address
+  // by part id. A prop drawing imported bytes therefore cannot hang a joint on
+  // a named piece of them; its articulation still turns, and what it turns is
+  // whatever the joint's own subtree holds.
+  parts: new Map(),
   expressionTargets: options.expressionTargets,
   afterAutoMovieFrame: options.afterAutoMovieFrame,
 });

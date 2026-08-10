@@ -15,7 +15,8 @@ import { hasViolation, namedFacts, vclose } from "../internal/predicates";
  *    cast: model ids kept verbatim, the floor unrotated (identity), the wall's
  *    yaw encoded exactly like an actor's facing, motion/pose null.
  * 2. A camera may `lookAt` a set piece: its −Z aims at the piece's position.
- * 3. The gates: a set node colliding with a cast id, a blank node id, a blank
+ * 3. Full quaternion rotation stages sloped or vertical architecture.
+ * 4. The gates: a set node colliding with a cast id, a blank node id, a blank
  *    model id, a non-finite position, and a non-finite `facingDeg` are all
  *    refused in one round at their `$input.set[i]` paths; an omitted
  *    `facingDeg` is NOT a violation.
@@ -31,6 +32,12 @@ export const test_film_stage_scene_set = (): void => {
           model: "wall",
           position: { x: 3, y: 0, z: 0 },
           facingDeg: 90,
+        },
+        {
+          node: "sloped-roof",
+          model: "roof",
+          position: { x: 0, y: 3, z: 0 },
+          rotation: { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 },
         },
       ],
       cameras: [
@@ -49,7 +56,7 @@ export const test_film_stage_scene_set = (): void => {
   TestValidator.equals(
     "set nodes follow the cast in the scene",
     staged.scene.nodes.map((n) => n.id),
-    ["knightA", "knightB", "floor", "wall-east"],
+    ["knightA", "knightB", "floor", "wall-east", "sloped-roof"],
   );
   const floor = staged.scene.nodes[2]!;
   const wall = staged.scene.nodes[3]!;
@@ -74,6 +81,11 @@ export const test_film_stage_scene_set = (): void => {
       Quaternion.rotateVector(wall.transform.rotation, { x: 0, y: 0, z: 1 }),
       { x: 1, y: 0, z: 0 },
     ),
+  );
+  TestValidator.equals(
+    "a full set rotation is kept for non-yaw architecture",
+    staged.scene.nodes[4]!.transform.rotation,
+    { x: 0, y: 0, z: Math.SQRT1_2, w: Math.SQRT1_2 },
   );
 
   // 2. the camera aims its −Z from its position at the piece.
@@ -109,6 +121,19 @@ export const test_film_stage_scene_set = (): void => {
           model: "arch",
           position: { x: 0, y: 0, z: 0 },
           facingDeg: Number.POSITIVE_INFINITY,
+        },
+        {
+          node: "conflicted",
+          model: "roof",
+          position: { x: 0, y: 0, z: 0 },
+          facingDeg: 0,
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+        },
+        {
+          node: "bad-rotation",
+          model: "roof",
+          position: { x: 0, y: 0, z: 0 },
+          rotation: { x: Number.NaN, y: 0, z: 0, w: 2 },
         },
       ],
     }),
@@ -147,6 +172,18 @@ export const test_film_stage_scene_set = (): void => {
           refused.success === false &&
           hasViolation(refused, "range", "$input.set[4].facingDeg"),
       ],
+      [
+        "hasRotationConflict",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.set[5].rotation"),
+      ],
+      [
+        "hasInvalidRotation",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[6].rotation"),
+      ],
     ]),
     {
       refusedSuccess: true,
@@ -155,6 +192,8 @@ export const test_film_stage_scene_set = (): void => {
       hasViolationRefusedType3: true,
       hasViolationRefusedRange: true,
       hasViolationRefusedRange2: true,
+      hasRotationConflict: true,
+      hasInvalidRotation: true,
     },
   );
 };

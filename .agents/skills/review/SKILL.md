@@ -1,13 +1,15 @@
 ---
 name: review
-description: Defines exhaustive solo review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the default review mode inside issue campaigns. This skill never spawns review agents; use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
+description: Defines exhaustive review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the review mode inside issue campaigns, where each parallel issue owner reviews its own surface and the main agent then reviews the integrated diff. One reviewer always covers one whole declared surface; this skill never splits a surface across agents. Use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
 ---
 
 # Review
 
 ## Non-Negotiable Review Law
 
-One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill. The [commit early-warning pass](#commit-early-warning-pass) is not a review under this skill and is the sole read-only subagent a solo campaign author runs alongside implementation.
+One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill.
+
+The unit the law governs is one declared surface, not one person. An issue campaign runs several reviews under it: each parallel owner reviews its own issue's whole surface, and the main agent then reviews the whole base-to-head diff. Both are complete rounds under all four rules. What the law forbids is splitting one declared surface across reviewers, and it forbids the integration round inheriting any owner's round.
 
 Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every review decision. A review's duration, difficulty, and consequence surface are reasons to inspect more deeply, never reasons to pass over a sound improvement, accept an unsupported claim, or lower the completion standard.
 
@@ -31,13 +33,13 @@ Self-Review and an unqualified review request use this solo workflow:
 
 Self-Review does not authorize creating, pushing, updating, or merging a pull request. Those actions follow the pull-request skill's own authorization rules.
 
-## Commit Early-Warning Pass
+## Campaign Reviews Do Not Add Up
 
-A commit early-warning pass is not a review under this skill. It is the read-only per-commit reader a solo campaign author runs on every pushed commit while still implementing, defined by the [solo campaign development document](../issue-campaign/development.md#implement-and-write-tests).
+An issue campaign's parallel owners each complete a Self-Review over their own issue, and the main agent completes one over the integrated diff. The [campaign development document](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) defines both.
 
-It delegates nothing the Non-Negotiable Review Law governs. The law governs the author's own round, which still runs alone over the whole surface before merge under all four rules. One commit is not a declared surface, a reported candidate is not an accepted finding, and the passes do not add up to a round.
+The owners' rounds never substitute for the integration round. An owner reads the surface of one issue, so what appears only between issues is invisible to all of them: a helper two owners wrote twice, a validator whose new branch leaves a mirrored DTO stale, a document claiming a verification nothing performs, a limit one owner recorded honestly and another silently relied on.
 
-Never call the pass a Self-Review, and never report it as one. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
+Never report the owners' rounds as the campaign's Self-Review. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
 
 ## Solo Issue Discovery Rounds
 
@@ -52,6 +54,21 @@ Use these rounds only through the solo issue-campaign skill.
 7. After the authorized implementation cycle merges, begin again at step 1 over the integrated state.
 
 An unresolved accepted issue, external blocker, or incomplete implementation prevents a successful campaign conclusion. Report it as blocked or active rather than treating it as a clean round.
+
+## "It is missing" is a claim that needs its own evidence
+
+A failed search proves a name was not found, not that a capability is absent, and least of all that its absence was unintended. This repository records deliberate omissions in contract JSDoc and in the guide corpus rather than anywhere a grep for the capability would reach, so a candidate resting on a search result is the most common way a round produces work that has to be withdrawn; one campaign withdrew a third of what it published this way.
+
+Complete all four steps before writing that something is missing.
+
+1. Read the contract type's JSDoc. Deliberate exclusions are stated there ("the sun direction is an input, not a computation").
+2. Search `packages/mcp/prompts/*.md` in the user's vocabulary rather than the implementation's. The guides teach in a director's words (a curtain, a ridge, a reverberant room), so probing them with type names finds nothing even where the topic is covered.
+3. Check whether related fields already exist and, if they do, read why. Half a mechanism usually means the other half was deferred under another name.
+4. Confirm the probe. Verify how the target is actually spelled, count consumers by exported symbol rather than by module filename, and read checked-in source rather than a generated artifact.
+
+When the steps turn up a declared position, the finding is not "this is missing" but "this was deferred, and here is what now lets it be done deliberately and within stated bounds", which carries a different burden of proof.
+
+"It is already there" needs the same discipline, because a symbol's existence is not a path's existence. One round withdrew a real gap after finding an ingest function and a retargeter, and the capability was still unreachable: nothing in the pipeline called the ingester, the asset manifest had no kind to declare the file under, and the retargeter was absent from the sandbox surface an authoring agent may import. Before writing that a capability exists, confirm all four: the contract gives an author somewhere to declare it, something in the compiler or runtime calls it, the author can reach the symbol, and the result shows up in a frame or in evidence.
 
 ## Explicit Multi-Agent Reviews
 

@@ -24,7 +24,7 @@ A class owns four things, and the reason it is a class rather than a factory ret
 
 - **Constraints** are fields, validated where the subject is built. A measured fact (a reference height, a rated capacity, an interval that must not close) is a field so that another subject can be checked against it and so that the field itself can cite the document that measured it. A number restated in two places is two numbers.
 - **Motions** are methods. A `capabilities: ["advance"]` array names an action without owning it; a method is the action. If a caller cannot invoke it, the source never did the work the array claims.
-- **Utilities** are methods that answer questions about the subject: its extent, its footprint, whether a point is inside it, the ground height at a place, where member *n* stands. Delegate to the engine function that already computes the answer. Recomputing it in the class produces a second answer that can disagree with the first, and disagreement is worse than either answer alone.
+- **Utilities** are methods that answer questions about the subject: its extent, its footprint, whether a point is inside it, the ground height at a place, where member _n_ stands. Delegate to the engine function that already computes the answer. Recomputing it in the class produces a second answer that can disagree with the first, and disagreement is worse than either answer alone.
 - **`render(context)`** returns what this subject puts into a shot: its actors, its clips, its cues, its world geometry. Never a whole shot program: a shot is assembled from many subjects, and each one returns only the part it owns.
 
 ```ts
@@ -82,11 +82,41 @@ export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
 
 ## A group of subjects is a subject
 
-A cluster holds figures, a group holds clusters, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a mass scene authorable: a group advancing is one call, not two thousand.
+A cluster holds figures, a group holds clusters, a building holds wings and storeys, a forest holds trees, and a world holds terrain plus placed buildings. The shape is identical at every level, which is what makes a mass scene authorable: a group advancing or a repeated floor stack being raised is one call, not two thousand copied records.
 
 Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
 Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the compiler stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
+
+Buildings use the same rule without pretending they are formations. A building class emits `IAutoMovieBuiltEnvironment`; its element hierarchy carries local full TRS and reusable model ids, while its independent logical-space hierarchy carries rooms, floors, voids, boundaries, openings, and stair/lift/bridge connectivity. One such record may hold several independent building units through its `buildings` root table plus the sky-bridges that couple them, so a keep, its yawed annex, and the bridge between them are one `design()` and one `render()` rather than three subjects that have to agree. Write a repeated storey as a loop over its index: the slab, its logical space, its room, its door, and the stair up to it all derive from the same number, and the looped record must be the same artifact as the hand-expanded one. `render(context)` delegates to `lowerBuiltEnvironment(design())`, and the shot consumes that derived contribution:
+
+```ts
+import {
+  AutoMovieSubject,
+  IAutoMovieSubjectContribution,
+  mergeAutoMovieSpaces,
+} from "@automovie/engine";
+import { IAutoMovieShotBuildContext } from "@automovie/interface";
+
+export const stageTower = (
+  tower: AutoMovieSubject<unknown>,
+  context: IAutoMovieShotBuildContext,
+): IAutoMovieSubjectContribution => {
+  const architecture = tower.render(context);
+  return {
+    models: [...(architecture.models ?? [])],
+    builtEnvironments: [...(architecture.builtEnvironments ?? [])],
+    stage: {
+      // actor/camera/light fields omitted here
+      set: [...(architecture.set ?? [])],
+      space: mergeAutoMovieSpaces("shot-space", architecture.spaces ?? []),
+    },
+    // script, blocking, performance, and eventSamples remain shot-owned
+  } as IAutoMovieSubjectContribution;
+};
+```
+
+The building owns its interior, exterior envelope, roof, facade attachments, exterior stairs, ladders, rails, and helipad. Surrounding ground, parks, sky, and natural water stay in the world subject. Water simulation is its own subject/domain; an interior water feature composes it with a building space instead of making fluid an architecture-only feature.
 
 ## A shot names subjects and asks them to render
 
@@ -114,7 +144,7 @@ State the seed in the design record rather than in source, so the variation is a
 
 A factory takes the parameters that actually differ and returns the shot definition. What repeats lives in the factory; what varies lives in the table that calls it.
 
-Name factories for what the shot *is*, not for what it looks like: a factory named for an action reads at the call site, and one named for a camera move hides the beat behind the lens. Keep them honest about what they cannot know. A factory that supplies a default predicate, a default event time, or a default acceptance criterion produces shots that satisfy their contract and prove nothing, which is worse than a shot that fails to compile.
+Name factories for what the shot _is_, not for what it looks like: a factory named for an action reads at the call site, and one named for a camera move hides the beat behind the lens. Keep them honest about what they cannot know. A factory that supplies a default predicate, a default event time, or a default acceptance criterion produces shots that satisfy their contract and prove nothing, which is worse than a shot that fails to compile.
 
 Keep the module quotable while you are at it. `prepareReview` returns source selectors for only the first 512 non-blank lines of a module and warns `review-selector-truncated` past that, so everything below the cut exists but cannot be cited as review evidence. A factory module that grows beyond it has a tail no review can reach; split it along its own seams before that happens.
 
@@ -162,3 +192,4 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 
 The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
 
+`src/examples/` is the same lesson for the built environment: a building assembled by loops over its storeys, a physically-based finish and the four ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how a starter's furniture ends up in somebody's film.

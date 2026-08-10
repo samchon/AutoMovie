@@ -1,13 +1,21 @@
 ---
 name: issue-campaign
-description: Defines the default solo repository-wide issue campaign for automovie: exhaustive discovery, wiki-backed candidate adjudication, main-agent-vetted issue publication, one unified implementation pull request per cycle, CI validation, solo Self-Review, and repeated rediscovery until a full clean round. Use for broad audits, many issue candidates, or repeated issue-to-pull-request campaigns unless the user explicitly requests parallel or multi-agent execution; do not use for one already-defined issue or an ordinary pull request.
+description: Defines the repository-wide issue campaign for automovie: exhaustive solo discovery, wiki-backed candidate adjudication, main-agent-vetted issue publication, then DAG-ordered parallel implementation by one owner per issue in one checkout and one branch, each owner Self-Reviewing and pushing its own work, closed by one main-agent integration Self-Review and CI on a single cycle pull request. Use for broad audits, many issue candidates, or repeated issue-to-pull-request campaigns; do not use for one already-defined issue or an ordinary pull request.
 ---
 
 # Issue Campaign
 
-An issue campaign is a repeatable solo sequence of exhaustive discovery, issue publication, one unified implementation pull request, and renewed discovery. The main agent owns every phase and spawns no subagent other than the read-only commit early-warning pass that [development.md](development.md#implement-and-write-tests) defines.
+An issue campaign is a repeatable sequence of exhaustive discovery, issue publication, one unified implementation pull request, and renewed discovery.
 
-Use the [multi-agent skill](../multi-agent/SKILL.md) and its issue-campaign procedure instead only when the user explicitly asks for a parallel or multi-agent issue campaign.
+The phases divide differently:
+
+- **Discovery, adjudication, and publication are solo.** The main agent audits the whole declared scope itself, reproduces every candidate, and decides every disposition. Splitting discovery hides the overlaps that make two candidates one issue.
+- **Implementation is parallel.** One owner per accepted issue, dispatched in dependency-DAG waves, all in the same checkout on the same branch. Each owner Self-Reviews its own surface, commits its own paths, and pushes.
+- **The close is solo again.** The main agent integrates the shared surfaces and runs one integration Self-Review over the whole base-to-head diff.
+
+[development.md](development.md) owns that implementation procedure in full.
+
+This is the ordinary campaign shape and needs no special request. The [multi-agent skill](../multi-agent/SKILL.md) covers only the topologies this one does not use: isolated worktrees, per-batch branches, per-batch pull requests, and parallel discovery or review.
 
 The user's requested phase boundary controls how far to proceed. Do not infer permission to publish issues, push branches, open pull requests, or merge from an audit-only request. A standing autonomous mandate (see the pull-request skill) authorizes only the remote actions it explicitly names.
 
@@ -86,6 +94,6 @@ Use tables for repeated case mappings. Read the rendered issue back and keep its
 
 ## Develop And Repeat The Campaign
 
-Read [development.md](development.md) in full when the user authorizes implementation pull requests or a standing autonomous mandate covers them. It owns the one-PR cycle, empty claim, internal DAG order, test authoring, local and CI validation, solo Self-Review, red-CI repair, merge, branch cleanup, and renewed discovery.
+Read [development.md](development.md) in full when the user authorizes implementation pull requests or a standing autonomous mandate covers them. It owns the one-PR cycle, the empty claim, the DAG wave grouping, path ownership between parallel owners, per-owner Self-Review and push, integration of each owner's hand-off, local and CI validation, the integration Self-Review, red-CI repair, merge, branch cleanup, and renewed discovery.
 
 An audit or issue-publication-only campaign does not load the implementation procedure or mutate repository or GitHub state beyond the authorized publications.

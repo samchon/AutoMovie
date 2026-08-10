@@ -28,6 +28,18 @@ export interface IAutoMovieRenderSpec {
   /**
    * Tone mapping applied before sRGB encode. `none` for toon, `acesFilmic` for
    * photoreal.
+   *
+   * This is the DELIVERY default, and a scene overrides it. `IAutoMovieScene`'s
+   * optional `environment` owns the photographic response of the scene it
+   * belongs to (its image lighting, its exposure, its curve), and one render
+   * spec covers a whole sequence of scenes, so a spec-level curve forced onto
+   * every shot would flatten a night interior and a noon exterior into one
+   * response. A scene that declares no environment keeps this value, which is
+   * exactly what every pre-environment production is: unchanged.
+   *
+   * Structural passes (depth, normal, mask, outline) ignore both. Their pixels
+   * are geometric facts, so tone mapping and exposure are bypassed there rather
+   * than negotiated.
    */
   toneMapping: "none" | "acesFilmic";
 

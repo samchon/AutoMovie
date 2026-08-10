@@ -10,12 +10,28 @@ import {
   inheritProductionLighting,
   makeActorSynthesizer,
   placeFormationSlot,
+  readAutoMovieImageFacts,
   realizeShotContract,
   sampleFormationMotion,
   sampleFormationSlotMotion,
+  unsupportedAutoMovieMaterialExtensions,
+  validateAutoMovieEnvironmentContext,
+  validateBuiltEnvironment,
+  validateDesignLineage,
+  validateDesignLineageBinding,
+  validateFluidDomain,
   validateModel,
   validateMotion,
+  validatePlantingDomain,
+  validatePlantingInstallations,
+  validatePropPlacements,
+  validateServiceNetwork,
   validateShotArtifact,
+  validateSoftBodyDomain,
+  validateSoftFurnishings,
+  validateTextureAssets,
+  validateWaterFeatures,
+  validateWetZones,
 } from "@automovie/engine";
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
@@ -32,6 +48,9 @@ import {
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
+  IAutoMovieDesignEvidence,
+  IAutoMovieDesignLineage,
+  IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
@@ -59,6 +78,7 @@ import {
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
   IAutoMovieSpace,
+  IAutoMovieValidation,
   IAutoMovieVector3,
   IAutoMovieVideoEdit,
   IAutoMovieWorldDesign,
@@ -77,6 +97,10 @@ import {
   IAutoMovieProductionContentInput,
 } from "./AutoMovieProductionProject";
 import {
+  assetAcquisitionIncomplete,
+  assetProcessingOmitted,
+} from "./assetAcquisition";
+import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
   canonicalAutoMovieJsonBytes,
@@ -86,6 +110,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
@@ -103,6 +128,11 @@ import {
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
+import {
+  AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
+  callAutoMovieSandboxEngine,
+} from "./sandboxEngineBridge";
+import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "./sandboxEngineSurface";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
@@ -604,6 +634,150 @@ export class AutoMovieProductionCompiler {
           reviews,
         ),
       );
+    // Close the loop between what the compiled production SAMPLES and what its
+    // ledger AUTHORIZES. This runs here rather than beside the asset inventory
+    // because it is decided against compiled models and scenes, which do not
+    // exist until every shot has compiled. A design-scope compile has no
+    // compiled artifact to close, so it states nothing rather than guessing.
+    if (input.scope !== "design" && compiled.size !== 0) {
+      const bytesOf = new Map(
+        (contentInputs ?? []).map((entry) => [entry.path, entry.bytes]),
+      );
+      const models = new Map<string, IAutoMovieModel>();
+      for (const shot of compiled.values())
+        for (const model of shot.models) models.set(model.id, model);
+      const closure = validateTextureAssets({
+        production: graph.production?.id ?? this.project.productionId,
+        models: [...models.values()],
+        scenes: [...compiled.values()].map((shot) => ({
+          shot: shot.shot.id,
+          environment: shot.scene.environment,
+        })),
+        assets: assetRecords,
+        facts: (asset) =>
+          readAutoMovieImageFacts(bytesOf.get(asset)) ?? undefined,
+      });
+      if (closure.success === false)
+        for (const violation of closure.violations)
+          diagnostics.push({
+            code: "asset-texture-unclosed",
+            category: "error",
+            phase: "compile",
+            target: "asset-manifest",
+            path: ".automovie/manifest.json",
+            message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
+          });
+    }
+    // Hold every observation the buildings read against the bytes it claims,
+    // and every phase, alternative and derivation against the identities the
+    // buildings publish. Both run here rather than per shot: two shots that
+    // stage the same building carry the same documents, so a per-shot gate
+    // would read one production's evidence as a duplicate of itself.
+    if (input.scope !== "design" && compiled.size !== 0) {
+      const referenceOf = new Map<string, IAutoMovieDesignReference>();
+      const referenceDigests = new Map<string, AutoMovieContentDigest>();
+      const evidence: IAutoMovieDesignEvidence[] = [];
+      const lineages = new Map<string, IAutoMovieDesignLineage>();
+      const published = new Set<string>();
+      for (const shot of compiled.values()) {
+        for (const reference of shot.designReferences ?? []) {
+          const digest = digestAutoMovieBytes(
+            canonicalAutoMovieJsonBytes(reference),
+          );
+          const seen = referenceDigests.get(reference.id);
+          // The same document staged by two shots is one document. Only a
+          // second document wearing the same id is a collision, and the gate
+          // below is the one that reports it.
+          if (seen === undefined || seen !== digest)
+            referenceOf.set(reference.id, reference);
+          if (seen === undefined) referenceDigests.set(reference.id, digest);
+        }
+        for (const citation of shot.designEvidence ?? [])
+          evidence.push(citation);
+        for (const lineage of shot.designLineages ?? [])
+          lineages.set(lineage.id, lineage);
+        for (const environment of shot.builtEnvironments ?? []) {
+          for (const building of environment.buildings)
+            published.add(building.id);
+          for (const element of environment.elements) published.add(element.id);
+          for (const space of environment.spaces) published.add(space.id);
+          for (const boundary of environment.boundaries)
+            published.add(boundary.id);
+          for (const opening of environment.openings) published.add(opening.id);
+          for (const connector of environment.connectors)
+            published.add(connector.id);
+        }
+        for (const model of shot.models) published.add(model.id);
+      }
+      const production = graph.production?.id ?? this.project.productionId;
+      const uses = new Map<string, Set<string>>();
+      for (const record of assetRecords)
+        for (const use of record.uses) {
+          if (use.production !== production) continue;
+          published.add(use.consumer.id);
+          if (use.consumer.kind !== "design-reference") continue;
+          const documents = uses.get(record.path) ?? new Set<string>();
+          documents.add(use.consumer.id);
+          uses.set(record.path, documents);
+        }
+      if (referenceOf.size !== 0 || evidence.length !== 0 || uses.size !== 0)
+        diagnostics.push(
+          ...designReferenceDiagnostics({
+            path: projectManifest.assetManifest ?? ".automovie/assets.json",
+            references: [...referenceOf.values()],
+            evidence,
+            assets: new Map(
+              (contentInputs ?? []).map((entry) => [entry.path, entry.bytes]),
+            ),
+            uses,
+          }),
+        );
+      for (const lineage of lineages.values()) {
+        const bound = validateDesignLineageBinding({
+          lineage,
+          known: [...published],
+        });
+        if (bound.success === false)
+          for (const violation of bound.violations)
+            diagnostics.push({
+              code: "design-lineage-unbound",
+              category: "error",
+              phase: "compile",
+              target: `design-lineage:${lineage.id}`,
+              path: null,
+              message: `${violation.path} ${violation.expected}. Cite an identity the compiled buildings or the asset ledger publish, or drop the lineage subject.`,
+            });
+      }
+    }
+    // Hold the read-only site context to its one-way direction. A context id
+    // colliding with a building's own element, space or boundary is a mass the
+    // building would appear to own, which is exactly how external conditions
+    // stop being external.
+    const environmentContext = graph.production?.environmentContext;
+    if (environmentContext !== undefined) {
+      const reserved: string[] = [];
+      for (const shot of compiled.values())
+        for (const environment of shot.builtEnvironments ?? []) {
+          for (const element of environment.elements) reserved.push(element.id);
+          for (const space of environment.spaces) reserved.push(space.id);
+          for (const boundary of environment.boundaries)
+            reserved.push(boundary.id);
+        }
+      const site = validateAutoMovieEnvironmentContext({
+        context: environmentContext,
+        reserved,
+      });
+      if (site.success === false)
+        for (const violation of site.violations)
+          diagnostics.push({
+            code: "environment-context-invalid",
+            category: "error",
+            phase: "compile",
+            target: `environment-context:${environmentContext.id}`,
+            path: null,
+            message: `${violation.path} ${violation.expected}. Correct the declared site context, or rename the building member it collides with, before compiling.`,
+          });
+    }
     diagnostics.sort(compareDiagnostics);
     const inputRaceFailure = (
       message: string,
@@ -1051,12 +1225,36 @@ const SANDBOX_BOOTSTRAP = `
     }
     return value;
   };
+  // The engine's own answer, fetched across the boundary as text. The sandbox
+  // holds the host's forwarding function in this closure only and drops the
+  // global immediately, so authored source can neither call it nor take a
+  // Function constructor off it, and nothing structured is ever shared.
+  const engineCall = globalThis.__automovieEngineCall;
+  delete globalThis.__automovieEngineCall;
+  const finiteArgument = (key, value) => {
+    if (typeof value === "number" && Number.isFinite(value) === false)
+      throw new Error(
+        "An engine call may not pass " +
+          String(value) +
+          ' at "' +
+          key +
+          '", because JSON carries it across the boundary as a hole rather than as a number.',
+      );
+    return value;
+  };
+  const engineBridge =
+    (name) =>
+    (...args) => {
+      const answer = parse(engineCall(name, stringify(args, finiteArgument)));
+      if (answer.ok !== true) throw new Error(answer.message);
+      return answer.value;
+    };
   const defineShot = (id, definition) =>
     freeze({ id, ...definition });
-  // The subject vocabulary is reimplemented here rather than loaded from the
-  // package, exactly as defineShot already is. A deterministic build may not
-  // reach outside its sandbox for behavior, so the sandbox owns a stand-in for
-  // every engine name a source module is allowed to import.
+  // The subject vocabulary is defined here rather than loaded from the package,
+  // exactly as defineShot is: a class carries a prototype and defineShot closes
+  // over a definition, and neither survives the JSON round trip that carries
+  // every other engine name to its own implementation.
   class AutoMovieSubject {
     design() {
       throw new Error("A subject must implement design().");
@@ -1065,34 +1263,13 @@ const SANDBOX_BOOTSTRAP = `
       throw new Error("A subject must implement render().");
     }
   }
-  // Exactly the keys of IAutoMovieSubjectContribution. The stand-in and the
-  // engine are two spellings of one contract, and a key here that the type
-  // does not declare is a merge that silently carries a field nothing else
-  // knows about.
-  const CONTRIBUTION_KEYS = [
-    "actors",
-    "clips",
-    "formationMotions",
-    "formationSlotMotions",
-    "effectCues",
-    "landmarks",
-    "surfaces",
-    "routes",
-    "effectRecipes",
-    "effectZones",
-    "instanceSets",
-  ];
-  const mergeAutoMovieSubjectContributions = (contributions) => {
-    const merged = {};
-    for (const contribution of contributions)
-      for (const key of CONTRIBUTION_KEYS) {
-        const values = contribution?.[key];
-        if (values === undefined || values.length === 0) continue;
-        if (merged[key] === undefined) merged[key] = [];
-        for (const value of values) merged[key].push(value);
-      }
-    return merged;
-  };
+  // The engine's merge, not a second one. A group's contribution keys are the
+  // keys of IAutoMovieSubjectContribution, and a sandbox copy of that list is a
+  // copy that goes stale the moment the contract gains a fold: it would drop
+  // the new key silently, which is the failure a merge can least afford.
+  const mergeAutoMovieSubjectContributions = engineBridge(
+    "mergeAutoMovieSubjectContributions",
+  );
   class AutoMovieSubjectGroup extends AutoMovieSubject {
     members() {
       throw new Error("A subject group must implement members().");
@@ -1196,6 +1373,54 @@ const SANDBOX_BOOTSTRAP = `
     const surface = worldGroundSurface(surfaces, point);
     return surface === null ? null : worldSurfaceHeight(surface, point);
   };
+  // The names the sandbox answers itself, because each carries a closure or a
+  // prototype that no JSON round trip survives. Everything else on the surface
+  // is the engine's own function, called rather than copied.
+  const engineStandIns = {
+    defineShot,
+    AutoMovieSubject,
+    AutoMovieSubjectGroup,
+    worldSurfaceHeight,
+  };
+  const engineBridged = parse(${JSON.stringify(
+    JSON.stringify(AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS),
+  )});
+  const engineSurface = parse(${JSON.stringify(
+    JSON.stringify(AUTOMOVIE_SANDBOX_ENGINE_SURFACE),
+  )});
+  const engineSurfaceModule = {};
+  for (const name of engineSurface) {
+    const standIn = engineStandIns[name];
+    if (standIn !== undefined && engineBridged.includes(name))
+      throw new Error(
+        'The importable engine name "' +
+          name +
+          '" is both bridged to the engine and stood in for inside the sandbox. Two answers for one name is the disagreement this boundary exists to prevent; keep one.',
+      );
+    if (standIn === undefined && engineBridged.includes(name) === false)
+      throw new Error(
+        'The importable engine surface lists "' +
+          name +
+          '", which the sandbox neither bridges to the engine nor stands in for. Bridge it, add the stand-in, or drop the name from the surface.',
+      );
+    engineSurfaceModule[name] = Object.freeze(
+      standIn !== undefined ? standIn : engineBridge(name),
+    );
+  }
+  for (const name of Object.keys(engineStandIns))
+    if (engineSurface.includes(name) === false)
+      throw new Error(
+        'The sandbox stands in for "' +
+          name +
+          '", which the importable engine surface does not list, so no source module could ever reach it. List the name on the surface, or drop the stand-in.',
+      );
+  for (const name of engineBridged)
+    if (engineSurface.includes(name) === false)
+      throw new Error(
+        'The sandbox bridges "' +
+          name +
+          '", which the importable engine surface does not list, so no source module could ever reach it. List the name on the surface, or drop the bridge.',
+      );
   const sourceModules = {
     // Constant tables, carried in as data rather than loaded as a package. A
     // table has no behaviour to make non-deterministic, and serialising it here
@@ -1208,15 +1433,7 @@ const SANDBOX_BOOTSTRAP = `
         HUMANOID_GAITS,
       }),
     )})),
-    "@automovie/engine": freeze({
-      defineShot: Object.freeze(defineShot),
-      AutoMovieSubject: Object.freeze(AutoMovieSubject),
-      AutoMovieSubjectGroup: Object.freeze(AutoMovieSubjectGroup),
-      mergeAutoMovieSubjectContributions: Object.freeze(
-        mergeAutoMovieSubjectContributions,
-      ),
-      worldSurfaceHeight: Object.freeze(worldSurfaceHeight),
-    }),
+    "@automovie/engine": freeze(engineSurfaceModule),
   };
   // A module's own import map, resolved once by the compiler and handed in.
   // The sandbox looks a specifier up rather than resolving it a second time,
@@ -1400,21 +1617,48 @@ const SANDBOX_BOOTSTRAP = `
           " is unavailable.",
       );
     const layout = instanceSet.layout;
-    let x;
-    let z;
+    let point;
     if (layout.kind === "grid") {
       const row = Math.floor(slot / layout.columns);
       const column = slot % layout.columns;
-      x = (column - (layout.columns - 1) / 2) * layout.spacing.x;
-      z = row * layout.spacing.z;
+      point = {
+        x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+        y: 0,
+        z: row * layout.spacing.z,
+      };
     } else if (layout.kind === "scatter") {
       const radius =
         Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
         layout.radius;
       const angle =
         seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
-      x = Math.cos(angle) * radius;
-      z = Math.sin(angle) * radius;
+      point = {
+        x: Math.cos(angle) * radius,
+        y: 0,
+        z: Math.sin(angle) * radius,
+      };
+    } else if (layout.kind === "lattice") {
+      const perLayer = layout.rows * layout.columns;
+      const layer = Math.floor(slot / perLayer);
+      const within = slot % perLayer;
+      const row = Math.floor(within / layout.columns);
+      const column = within % layout.columns;
+      point = {
+        x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+        y: layer * layout.spacing.y,
+        z: row * layout.spacing.z,
+      };
+    } else if (layout.kind === "explicit") {
+      const transform = layout.transforms[slot];
+      if (transform === undefined)
+        throw new Error(
+          'Instance set "' +
+            instanceSet.id +
+            '" slot ' +
+            slot +
+            " has no explicit transform.",
+        );
+      point = transform.translation;
     } else {
       const route = instanceSet.route;
       if (route === null || route.waypoints.length < 2)
@@ -1437,6 +1681,14 @@ const SANDBOX_BOOTSTRAP = `
         (sum, segment) => sum + segment.length,
         0,
       );
+      if (Number.isFinite(total) === false || total <= 0)
+        throw new RangeError(
+          'Instance set "' +
+            instanceSet.id +
+            '" route "' +
+            layout.route +
+            '" must have finite non-zero length.',
+        );
       let remaining = ((slot + 0.5) / instanceSet.count) * total;
       let segment = segments[segments.length - 1];
       for (const candidate of segments) {
@@ -1454,14 +1706,17 @@ const SANDBOX_BOOTSTRAP = `
       const jitter =
         (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
         layout.lateralJitter;
-      x =
-        segment.left.x +
-        tangentX * ratio -
-        (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter);
-      z =
-        segment.left.z +
-        tangentZ * ratio +
-        (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter);
+      point = {
+        x:
+          segment.left.x +
+          tangentX * ratio -
+          (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter),
+        y: 0,
+        z:
+          segment.left.z +
+          tangentZ * ratio +
+          (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter),
+      };
     }
     const radians = (instanceSet.facingDeg * Math.PI) / 180;
     const cosine = Math.cos(radians);
@@ -1481,41 +1736,237 @@ const SANDBOX_BOOTSTRAP = `
           instanceSet.variation.palette.length,
       ),
     );
-    const traits = {};
-    instanceSet.variation.traits.forEach((trait, index) => {
-      const ratio = seededValue(
-        instanceSet.seed,
-        slot,
-        index,
-        0x74726169,
+    const position =
+      layout.kind === "along-route"
+        ? { x: point.x, y: instanceSet.anchor.y, z: point.z }
+        : {
+            x:
+              instanceSet.anchor.x +
+              point.x * cosine +
+              point.z * sine,
+            y: instanceSet.anchor.y + point.y,
+            z:
+              instanceSet.anchor.z -
+              point.x * sine +
+              point.z * cosine,
+          };
+    const traits = Object.fromEntries(
+      instanceSet.variation.traits.map((trait, index) => {
+        const ratio = seededValue(
+          instanceSet.seed,
+          slot,
+          index,
+          0x74726169,
+        );
+        return [
+          trait.name,
+          trait.min * (1 - ratio) + trait.max * ratio,
+        ];
+      }),
+    );
+    const explicit =
+      layout.kind === "explicit" ? layout.transforms[slot] : undefined;
+    const palette =
+      explicit?.palette ?? instanceSet.variation.palette[paletteIndex];
+    if (
+      [position.x, position.y, position.z, scale, ...values(traits)].some(
+        (value) => Number.isFinite(value) === false,
+      ) ||
+      palette === undefined
+    )
+      throw new RangeError(
+        'Instance set "' +
+          instanceSet.id +
+          '" slot ' +
+          slot +
+          " derived non-finite variation or an empty palette.",
       );
-      Object.defineProperty(traits, trait.name, {
-        configurable: true,
-        enumerable: true,
-        value: trait.min * (1 - ratio) + trait.max * ratio,
-        writable: true,
-      });
-    });
-    return freeze({
+    const choices =
+      instanceSet.prototypes ?? [
+        {
+          id: "default",
+          modelRecipe: instanceSet.modelRecipe,
+          weight: 1,
+        },
+      ];
+    const selectPrototype = () => {
+      if (explicit?.prototype !== undefined) {
+        const selected = choices.find(
+          (choice) => choice.id === explicit.prototype,
+        );
+        if (selected === undefined)
+          throw new Error(
+            'Instance set "' +
+              instanceSet.id +
+              '" slot ' +
+              slot +
+              ' references missing prototype "' +
+              explicit.prototype +
+              '".',
+          );
+        return selected;
+      }
+      const total = choices.reduce(
+        (sum, choice) => sum + choice.weight,
+        0,
+      );
+      let sample =
+        seededValue(instanceSet.seed, slot, 0x70726f74) * total;
+      for (const choice of choices) {
+        if (sample < choice.weight) return choice;
+        sample -= choice.weight;
+      }
+      return choices[choices.length - 1];
+    };
+    const selectedPrototype = selectPrototype();
+    const legacy =
+      instanceSet.prototypes === undefined &&
+      layout.kind !== "lattice" &&
+      layout.kind !== "explicit" &&
+      instanceSet.variation.scale3 === undefined &&
+      instanceSet.variation.rotationDeg === undefined &&
+      instanceSet.variation.visibleProbability === undefined;
+    const base = {
       slot,
       node:
-        "instance:" +
-        instanceSet.id +
-        ":slot:" +
-        String(slot).padStart(6, "0"),
-      modelRecipe: instanceSet.modelRecipe,
-      position:
-        layout.kind === "along-route"
-          ? { x, y: instanceSet.anchor.y, z }
-          : {
-              x: instanceSet.anchor.x + x * cosine + z * sine,
-              y: instanceSet.anchor.y,
-              z: instanceSet.anchor.z - x * sine + z * cosine,
-            },
+        explicit === undefined
+          ? "instance:" +
+            instanceSet.id +
+            ":slot:" +
+            String(slot).padStart(6, "0")
+          : "instance:" + instanceSet.id + ":" + explicit.id,
+      modelRecipe: selectedPrototype.modelRecipe,
+      position,
       facingDeg: instanceSet.facingDeg,
       scale,
-      palette: instanceSet.variation.palette[paletteIndex],
-      traits,
+      palette,
+      traits: { ...traits, ...explicit?.traits },
+    };
+    if (legacy) return freeze(base);
+    const scale3 =
+      explicit?.scale ??
+      (instanceSet.variation.scale3 === undefined
+        ? { x: scale, y: scale, z: scale }
+        : {
+            x:
+              instanceSet.variation.scale3.min.x *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637878)) +
+              instanceSet.variation.scale3.max.x *
+                seededValue(instanceSet.seed, slot, 0x73637878),
+            y:
+              instanceSet.variation.scale3.min.y *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637979)) +
+              instanceSet.variation.scale3.max.y *
+                seededValue(instanceSet.seed, slot, 0x73637979),
+            z:
+              instanceSet.variation.scale3.min.z *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637a7a)) +
+              instanceSet.variation.scale3.max.z *
+                seededValue(instanceSet.seed, slot, 0x73637a7a),
+          });
+    const quaternionMultiply = (left, right) => ({
+      x:
+        left.w * right.x +
+        left.x * right.w +
+        left.y * right.z -
+        left.z * right.y,
+      y:
+        left.w * right.y -
+        left.x * right.z +
+        left.y * right.w +
+        left.z * right.x,
+      z:
+        left.w * right.z +
+        left.x * right.y -
+        left.y * right.x +
+        left.z * right.w,
+      w:
+        left.w * right.w -
+        left.x * right.x -
+        left.y * right.y -
+        left.z * right.z,
+    });
+    const quaternionAxisAngle = (axis, angle) => {
+      const length = Math.sqrt(
+        axis.x * axis.x + axis.y * axis.y + axis.z * axis.z,
+      );
+      if (length === 0) return { x: 0, y: 0, z: 0, w: 1 };
+      // Quaternion.fromAxisAngle halves the radian angle in two steps, so
+      // folding both into a single division by 360 rounds differently and
+      // disagreed with the engine on 384 of 1441 sampled angles.
+      const half = (angle * (Math.PI / 180)) / 2;
+      const scalar = Math.sin(half) / length;
+      return {
+        x: axis.x * scalar,
+        y: axis.y * scalar,
+        z: axis.z * scalar,
+        w: Math.cos(half),
+      };
+    };
+    const ranges = instanceSet.variation.rotationDeg;
+    const sampledRotation =
+      ranges === undefined
+        ? { x: 0, y: 0, z: 0, w: 1 }
+        : [
+            [
+              { x: 1, y: 0, z: 0 },
+              ranges.x.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f7478)) +
+                ranges.x.max *
+                  seededValue(instanceSet.seed, slot, 0x726f7478),
+            ],
+            [
+              { x: 0, y: 1, z: 0 },
+              ranges.y.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f7479)) +
+                ranges.y.max *
+                  seededValue(instanceSet.seed, slot, 0x726f7479),
+            ],
+            [
+              { x: 0, y: 0, z: 1 },
+              ranges.z.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f747a)) +
+                ranges.z.max *
+                  seededValue(instanceSet.seed, slot, 0x726f747a),
+            ],
+          ]
+            .map(([axis, angle]) => quaternionAxisAngle(axis, angle))
+            .reduce(
+              (rotation, next) => quaternionMultiply(rotation, next),
+              { x: 0, y: 0, z: 0, w: 1 },
+            );
+    const combinedRotation = quaternionMultiply(
+      quaternionAxisAngle({ x: 0, y: 1, z: 0 }, instanceSet.facingDeg),
+      explicit?.rotation ?? sampledRotation,
+    );
+    const rotationLength = Math.sqrt(
+      combinedRotation.x * combinedRotation.x +
+        combinedRotation.y * combinedRotation.y +
+        combinedRotation.z * combinedRotation.z +
+        combinedRotation.w * combinedRotation.w,
+    );
+    // Quaternion.normalize scales by the reciprocal, so this divides once
+    // rather than four times and stays byte-identical to the engine.
+    const rotationInverse = rotationLength === 0 ? 0 : 1 / rotationLength;
+    const rotation =
+      rotationLength === 0
+        ? { x: 0, y: 0, z: 0, w: 1 }
+        : {
+            x: combinedRotation.x * rotationInverse,
+            y: combinedRotation.y * rotationInverse,
+            z: combinedRotation.z * rotationInverse,
+            w: combinedRotation.w * rotationInverse,
+          };
+    return freeze({
+      ...base,
+      prototype: selectedPrototype.id,
+      rotation,
+      scale3,
+      visible:
+        explicit?.visible ??
+        (instanceSet.variation.visibleProbability === undefined ||
+          seededValue(instanceSet.seed, slot, 0x76697369) <
+            instanceSet.variation.visibleProbability),
     });
   };
   const insidePolygon = (point, polygon) => {
@@ -1610,17 +2061,30 @@ const compileShotSource = (
       diagnostics: program.diagnostics,
     };
 
+  const sourceRuntime = sourceRuntimeOf({
+    program: program.value,
+    runtimeModels: props.context.runtimeModels,
+    target: `shot:${props.id}`,
+    sourcePath: props.path,
+  });
   const runtime = actorRuntimeOf(
     program.value,
-    props.context.runtimeModels,
+    sourceRuntime.runtimeModels,
     `shot:${props.id}`,
     props.path,
   );
-  if (runtime.diagnostics.length !== 0)
+  if (
+    sourceRuntime.diagnostics.length !== 0 ||
+    runtime.diagnostics.length !== 0
+  )
     return {
       value: null,
       closing: null,
-      diagnostics: [...program.diagnostics, ...runtime.diagnostics],
+      diagnostics: [
+        ...program.diagnostics,
+        ...sourceRuntime.diagnostics,
+        ...runtime.diagnostics,
+      ],
     };
   const shot = defineShot(props.id, {
     scene: program.registrationScene!,
@@ -1657,7 +2121,13 @@ const compileShotSource = (
       // none so its compiled artifact keeps the exact bytes it had before this
       // channel existed.
       lightMotions: program.value.lightMotions,
-      models: Object.values(props.context.runtimeModels),
+      // The shot's own turning things: a building panel on its opening, a
+      // prop's leaf on its hinge. Without them the performance boundary has
+      // nothing to gate, so a source could author a door swing, pass every
+      // validator, and be dropped here without a word.
+      objectMotions: program.value.objectMotions,
+      props: program.value.props,
+      models: Object.values(sourceRuntime.runtimeModels),
       previous: props.previous ?? undefined,
     },
   });
@@ -1704,6 +2174,18 @@ const compileShotSource = (
   return {
     value: {
       ...compiled.source,
+      authoredModels: structuredClone(sourceRuntime.authoredModels),
+      props: structuredClone(program.value.props ?? []),
+      builtEnvironments: structuredClone(program.value.builtEnvironments ?? []),
+      // Every fold a building binds travels with the artifact, because the
+      // renderer reads the artifact and nothing else. A record validated at
+      // compile and dropped here is a pond the compiler approved and the frame
+      // does not contain.
+      //
+      // A fold nobody declared stays absent rather than arriving as an empty
+      // array: the artifact is content-addressed, and eleven empty keys would
+      // rewrite the digest of every production that has never heard of water.
+      ...boundFolds(program.value),
       scene: { ...scene, lights: inherited },
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       formationSlotMotions: structuredClone(
@@ -1714,6 +2196,419 @@ const compileShotSource = (
     closing: compiled.continuity.closing,
     diagnostics: program.diagnostics,
   };
+};
+
+/**
+ * One binding's own address inside the program that declared it.
+ *
+ * A fold's validator is handed the records for one building, so its violation
+ * paths count within that filtered list. An author reads the program, not the
+ * filter, so each local index is mapped back to the position the record
+ * actually occupies.
+ */
+const rewriteBindingPath = (
+  path: string,
+  fields: Readonly<Record<string, { key: string; indices: readonly number[] }>>,
+): string => {
+  const matched = /^\$input\.([A-Za-z]+)\[(\d+)\]/u.exec(path);
+  if (matched === null) return `$program${path.slice("$input".length)}`;
+  const field = fields[matched[1]!];
+  if (field === undefined) return `$program${path.slice("$input".length)}`;
+  const local = Number(matched[2]);
+  return `$program.${field.key}[${field.indices[local] ?? local}]${path.slice(matched[0].length)}`;
+};
+
+/** Records of one fold that name a building, kept with where they were written. */
+const bindingsOfEnvironment = <T extends { environment: string }>(
+  items: readonly T[],
+  environment: string,
+): { items: T[]; indices: number[] } => {
+  const kept: T[] = [];
+  const indices: number[] = [];
+  items.forEach((item, index) => {
+    if (item.environment !== environment) return;
+    kept.push(item);
+    indices.push(index);
+  });
+  return { items: kept, indices };
+};
+
+/**
+ * Refuse every fold that binds itself to a building this shot does not stage.
+ *
+ * Water, cloth, planting and building services are independent domains that
+ * become architecture only through a binding, and each binding names the
+ * building it belongs to. An unresolved name is the one failure none of those
+ * folds can see for itself: each validator is handed one building and answers
+ * about that one, so a record pointing at a building nobody staged would simply
+ * never be checked by anyone.
+ */
+const buildingBoundDiagnostics = (
+  program: IAutoMovieProductionShotProgram,
+): string[] => {
+  const messages: string[] = [];
+  const environments = program.builtEnvironments ?? [];
+  const known = new Set(environments.map((environment) => environment.id));
+  const waterFeatures = program.waterFeatures ?? [];
+  const softFurnishings = program.softFurnishings ?? [];
+  const plantingInstallations = program.plantingInstallations ?? [];
+  const serviceNetworks = program.serviceNetworks ?? [];
+  const unresolved = (
+    key: string,
+    items: readonly { environment: string }[],
+  ): void => {
+    items.forEach((item, index) => {
+      if (known.has(item.environment)) return;
+      messages.push(
+        `$program.${key}[${index}].environment "${item.environment}" does not resolve to a building this shot stages. Declare that building, or bind the record to one the shot already carries.`,
+      );
+    });
+  };
+  unresolved("waterFeatures", waterFeatures);
+  unresolved("softFurnishings", softFurnishings);
+  unresolved("plantingInstallations", plantingInstallations);
+  unresolved("serviceNetworks", serviceNetworks);
+
+  const fluidDomains = program.fluidDomains ?? [];
+  const softBodyDomains = program.softBodyDomains ?? [];
+  const plantingDomains = program.plantingDomains ?? [];
+  const plantingClusters = program.plantingClusters ?? [];
+  const allOf = (items: readonly unknown[]): number[] =>
+    items.map((_, index) => index);
+  const say = (
+    validation: IAutoMovieValidation,
+    fields: Readonly<
+      Record<string, { key: string; indices: readonly number[] }>
+    >,
+    remedy: string,
+  ): void => {
+    if (validation.success === true) return;
+    for (const violation of validation.violations)
+      messages.push(
+        `${rewriteBindingPath(violation.path, fields)} ${violation.expected}. ${remedy}`,
+      );
+  };
+
+  for (const environment of environments) {
+    const water = bindingsOfEnvironment(waterFeatures, environment.id);
+    if (water.items.length !== 0)
+      say(
+        validateWaterFeatures({
+          environment,
+          features: water.items,
+          domains: [...fluidDomains],
+        }),
+        {
+          features: { key: "waterFeatures", indices: water.indices },
+          domains: { key: "fluidDomains", indices: allOf(fluidDomains) },
+        },
+        "Correct the water feature or the domain it binds before compiling the shot.",
+      );
+    const cloth = bindingsOfEnvironment(softFurnishings, environment.id);
+    if (cloth.items.length !== 0)
+      say(
+        validateSoftFurnishings({
+          environment,
+          furnishings: cloth.items,
+          domains: [...softBodyDomains],
+        }),
+        {
+          furnishings: { key: "softFurnishings", indices: cloth.indices },
+          domains: { key: "softBodyDomains", indices: allOf(softBodyDomains) },
+        },
+        "Correct the soft furnishing or the domain it hangs before compiling the shot.",
+      );
+    const planting = bindingsOfEnvironment(
+      plantingInstallations,
+      environment.id,
+    );
+    if (planting.items.length !== 0)
+      say(
+        validatePlantingInstallations({
+          environment,
+          installations: planting.items,
+          clusters: [...plantingClusters],
+          domains: [...plantingDomains],
+        }),
+        {
+          installations: {
+            key: "plantingInstallations",
+            indices: planting.indices,
+          },
+          clusters: {
+            key: "plantingClusters",
+            indices: allOf(plantingClusters),
+          },
+          domains: { key: "plantingDomains", indices: allOf(plantingDomains) },
+        },
+        "Correct the planting installation, its cluster or its recipe before compiling the shot.",
+      );
+    serviceNetworks.forEach((network, index) => {
+      if (network.environment !== environment.id) return;
+      const fields = { network: { key: "serviceNetworks", indices: [index] } };
+      say(
+        validateServiceNetwork({ network, environment }),
+        fields,
+        "Correct the port network before compiling the shot.",
+      );
+      say(
+        validateWetZones({ network, environment }),
+        fields,
+        "Correct the wet zone before compiling the shot.",
+      );
+    });
+  }
+
+  // A domain nobody bound is still a domain the production declared, and an
+  // unsound one no feature happens to cite is exactly the record an author is
+  // about to bind. It answers for itself here rather than staying unchecked
+  // until the binding exists.
+  const boundFluid = new Set(waterFeatures.map((feature) => feature.domain));
+  fluidDomains.forEach((domain, index) => {
+    if (boundFluid.has(domain.id)) return;
+    say(
+      validateFluidDomain({ domain }),
+      { domain: { key: "fluidDomains", indices: [index] } },
+      "Correct the fluid domain before compiling the shot.",
+    );
+  });
+  const boundCloth = new Set(
+    softFurnishings.map((furnishing) => furnishing.domain),
+  );
+  softBodyDomains.forEach((domain, index) => {
+    if (boundCloth.has(domain.id)) return;
+    say(
+      validateSoftBodyDomain({ domain }),
+      { domain: { key: "softBodyDomains", indices: [index] } },
+      "Correct the soft body domain before compiling the shot.",
+    );
+  });
+  const boundPlanting = new Set(
+    plantingClusters.map((cluster) => cluster.domain),
+  );
+  plantingDomains.forEach((domain, index) => {
+    if (boundPlanting.has(domain.id)) return;
+    say(
+      validatePlantingDomain({ domain }),
+      { domain: { key: "plantingDomains", indices: [index] } },
+      "Correct the planting recipe before compiling the shot.",
+    );
+  });
+  return messages;
+};
+
+/** The building-bound folds a program declared, absent when it declared none. */
+const boundFolds = (
+  program: IAutoMovieProductionShotProgram,
+): Partial<IAutoMovieShotSourceOutput> => {
+  const carried: Record<string, unknown> = {};
+  for (const key of [
+    "designReferences",
+    "designEvidence",
+    "designLineages",
+    "fluidDomains",
+    "waterFeatures",
+    "softBodyDomains",
+    "softFurnishings",
+    "plantingDomains",
+    "plantingClusters",
+    "plantingInstallations",
+    "serviceNetworks",
+  ] as const) {
+    const records = program[key];
+    if (records === undefined || records.length === 0) continue;
+    carried[key] = structuredClone(records);
+  }
+  return carried as Partial<IAutoMovieShotSourceOutput>;
+};
+
+interface ISourceRuntime {
+  runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
+  authoredModels: IAutoMovieModel[];
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
+/** Validate and bind models and buildings created by deterministic shot code. */
+const sourceRuntimeOf = (props: {
+  program: IAutoMovieProductionShotProgram;
+  runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
+  target: string;
+  sourcePath: string;
+}): ISourceRuntime => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const authoredModels: IAutoMovieModel[] = [];
+  const authoredDigests = new Map<string, AutoMovieContentDigest>();
+  const runtimeModels: Record<string, IAutoMovieModel> = {
+    ...props.runtimeModels,
+  };
+  const runtimeIds = new Set([
+    ...Object.keys(props.runtimeModels),
+    ...Object.values(props.runtimeModels).map((model) => model.id),
+  ]);
+
+  const report = (message: string): void => {
+    diagnostics.push({
+      code: "source-scene-content-invalid",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: props.sourcePath,
+      message,
+    });
+  };
+  const acceptModel = (
+    model: IAutoMovieModel,
+    modelPath: string,
+    /** The registered appearance this model borrows, when a prop cites one. */
+    modelRef: string | null = null,
+  ): void => {
+    const digest = digestAutoMovieBytes(canonicalAutoMovieJsonBytes(model));
+    const existing = authoredDigests.get(model.id);
+    if (existing !== undefined) {
+      if (existing !== digest)
+        report(
+          `${modelPath}.id "${model.id}" conflicts with another source-owned model of the same id. Keep one byte-identical generated model per id.`,
+        );
+      return;
+    }
+    authoredDigests.set(model.id, digest);
+    if (runtimeIds.has(model.id)) {
+      report(
+        `${modelPath}.id "${model.id}" shadows a compiler-owned runtime model. Rename the source model or cite the existing runtime id.`,
+      );
+      return;
+    }
+    // A prop that cites a registered appearance is the one case where source
+    // may hand back an imported model, and it is only allowed to hand back the
+    // one the compiler already sealed. Everything the prop means -- its proxy
+    // parts, its body, its affordances, its articulation -- stays in the
+    // record, so borrowing bytes never buys an escape from the semantics.
+    if (modelRef === null) {
+      if (model.origin !== "generated")
+        report(
+          `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
+        );
+    } else {
+      const registered = runtimeIds.has(modelRef)
+        ? (props.runtimeModels[modelRef] ??
+          Object.values(props.runtimeModels).find(
+            (candidate) => candidate.id === modelRef,
+          ))
+        : undefined;
+      if (registered === undefined)
+        report(
+          `${modelPath} cites modelRef "${modelRef}", which does not resolve to a compiler-owned runtime model. Register the asset or model recipe, or drop the reference.`,
+        );
+      else if (
+        registered.imported === undefined ||
+        registered.imported === null
+      )
+        report(
+          `${modelPath} cites modelRef "${modelRef}", which is not a registered external appearance. Register glTF, GLB or VRM bytes for it, or drop the reference.`,
+        );
+      else if (
+        digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(registered.imported),
+        ) !==
+        digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(model.imported ?? null),
+        )
+      )
+        report(
+          `${modelPath}.imported is not the closure the compiler sealed for "${modelRef}". Restate the registered closure verbatim, or recompile after registering the asset again.`,
+        );
+      else if (model.asset !== registered.asset)
+        report(
+          `${modelPath}.asset "${String(model.asset)}" is not the registered appearance "${String(registered.asset)}" of "${modelRef}".`,
+        );
+    }
+    const validation = validateModel({ model });
+    if (validation.success === false)
+      for (const violation of validation.violations)
+        report(
+          `${modelPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the source-owned model before compiling the shot.`,
+        );
+    // A cited appearance is judged by the reference checks rather than by its
+    // origin, so it is allowed past here; a source-authored import is not, for
+    // the same reason it was refused above.
+    if (
+      validation.success === false ||
+      (modelRef === null && model.origin !== "generated")
+    )
+      return;
+    authoredModels.push(model);
+    runtimeModels[model.id] = model;
+  };
+
+  (props.program.models ?? []).forEach((model, index) =>
+    acceptModel(model, `$program.models[${index}]`),
+  );
+  (props.program.props ?? []).forEach((prop, index) =>
+    acceptModel(
+      prop.model,
+      `$program.props[${index}].model`,
+      prop.modelRef ?? null,
+    ),
+  );
+  (props.program.builtEnvironments ?? []).forEach((environment, index) => {
+    const environmentPath = `$program.builtEnvironments[${index}]`;
+    const validation = validateBuiltEnvironment({ environment });
+    if (validation.success === false)
+      for (const violation of validation.violations)
+        report(
+          `${environmentPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the code-authored building before compiling the shot.`,
+        );
+    environment.models.forEach((model, modelIndex) =>
+      acceptModel(model, `${environmentPath}.models[${modelIndex}]`),
+    );
+    environment.modelReferences.forEach((id, referenceIndex) => {
+      if (!runtimeIds.has(id))
+        report(
+          `${environmentPath}.modelReferences[${referenceIndex}] "${id}" does not resolve to a compiler-owned runtime model. Register the asset/model recipe or remove the reference.`,
+        );
+    });
+  });
+
+  // Lineage is checked for coherence here, where the shot that authored it is
+  // in hand, and bound to published identities later, where the production's
+  // assets are. Splitting it that way is what lets a phase cite a texture the
+  // shot itself never names.
+  (props.program.designLineages ?? []).forEach((lineage, index) => {
+    const lineagePath = `$program.designLineages[${index}]`;
+    const coherent = validateDesignLineage({ lineage });
+    if (coherent.success === false)
+      for (const violation of coherent.violations)
+        report(
+          `${lineagePath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the construction phase, alternative or derivation record before compiling the shot.`,
+        );
+  });
+
+  for (const message of buildingBoundDiagnostics(props.program))
+    report(message);
+
+  const propPlacement = validatePropPlacements({
+    props: props.program.props ?? [],
+    set: props.program.stage.set ?? [],
+    builtEnvironments: props.program.builtEnvironments ?? [],
+  });
+  if (propPlacement.success === false)
+    for (const violation of propPlacement.violations)
+      report(
+        `${violation.path} ${violation.expected}. Correct the code-authored prop registry or staged placement before compiling the shot.`,
+      );
+
+  const available = new Set([
+    ...Object.keys(runtimeModels),
+    ...Object.values(runtimeModels).map((model) => model.id),
+  ]);
+  (props.program.stage.set ?? []).forEach((piece, index) => {
+    if (!available.has(piece.model))
+      report(
+        `$program.stage.set[${index}].model "${piece.model}" is unavailable. Add a generated source model or cite a compiler-owned runtime model.`,
+      );
+  });
+
+  return { runtimeModels, authoredModels, diagnostics };
 };
 
 const contractOfRegistration = (
@@ -1953,6 +2848,10 @@ const compileDeterministicSource = <T>(
       name: `automovie:${props.target}`,
     },
   );
+  // Handed in before the bootstrap runs, and dropped by the bootstrap itself.
+  // Only strings cross it in either direction, so the sandbox never holds a
+  // structured value from this realm.
+  sandbox.__automovieEngineCall = callAutoMovieSandboxEngine;
   let registrationScene: string | undefined;
   try {
     new vm.Script(SANDBOX_BOOTSTRAP, {
@@ -4648,6 +5547,24 @@ const compilerAssetInventory = (
       message,
     });
   };
+  /**
+   * Report something the compiler cannot restate without refusing the asset.
+   *
+   * Compilation succeeds when no diagnostic is an `error`, so this states a
+   * fact the author should know while leaving the decision with them. Refusing
+   * a licensed model because it carries a material lobe this engine has no
+   * field for would be the compiler deciding what art a production may buy.
+   */
+  const warning = (code: string, target: string, message: string): void => {
+    diagnostics.push({
+      code,
+      category: "warning",
+      phase: "project",
+      target,
+      path: manifestPath,
+      message,
+    });
+  };
   const manifestInput = inputs.find((entry) => entry.path === manifestPath);
   if (manifestInput?.bytes === null || manifestInput === undefined) {
     diagnostic(
@@ -4749,8 +5666,7 @@ const compilerAssetInventory = (
       );
     if (
       isSha256Digest(asset.digest) === false ||
-      isSha256Digest(asset.original.digest) === false ||
-      isHttpUrl(asset.original.url) === false ||
+      assetAcquisitionIncomplete(asset) ||
       asset.license.identifier.trim().length === 0 ||
       isHttpUrl(asset.license.url) === false ||
       asset.uses.length === 0 ||
@@ -4760,13 +5676,13 @@ const compilerAssetInventory = (
       diagnostic(
         "asset-provenance-incomplete",
         asset.path,
-        `Asset "${asset.path}" lacks a full source URL, original/current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
+        `Asset "${asset.path}" lacks a complete acquisition (exactly one of a fetched "original" with a real source URL and SHA-256, or a "generated" provider/model/prompt/output ledger), current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
       );
-    if (asset.processing.length === 0 && asset.digest !== asset.original.digest)
+    if (assetProcessingOmitted(asset))
       diagnostic(
         "asset-processing-missing",
         asset.path,
-        `Asset "${asset.path}" differs from its original digest but records no processing steps. Record the reproducible transformation chain before compiling.`,
+        `Asset "${asset.path}" differs from the digest it was acquired or generated at but records no processing steps. Record the reproducible transformation chain before compiling.`,
       );
     if (
       isExternalModelAsset(asset.path) &&
@@ -4921,6 +5837,19 @@ const compilerAssetInventory = (
           `External model "${asset.path}" cannot be ingested with profile "${asset.model.ingestProfile}": ${errorMessage(error)} Restore valid fixed bytes or select the correct supported profile.`,
         );
       }
+    // After `ingested` is decided, because this is a report rather than a
+    // refusal and must not turn a sound ingest into a failed one.
+    if (inspection !== undefined) {
+      const unsupported = unsupportedAutoMovieMaterialExtensions(
+        inspection.extensions,
+      );
+      if (unsupported.length !== 0)
+        warning(
+          "asset-model-material-unsupported",
+          asset.path,
+          `External model "${asset.path}" declares material extensions automovie cannot restate: ${unsupported.join(", ")}. Its appearance will not match a generated material, and no validator in this repository has an opinion about it.`,
+        );
+    }
     const collision = resolveExternalCollisionProxy({
       owner: asset.path,
       reference: asset.model.collisionProxy,
@@ -5305,6 +6234,21 @@ const assetConsumerExists = (
     }
     case "rendition-reference":
       return graph.shots.has(consumer.id);
+    // Like an audio cue, the reverse binding is owned by the consumer's own
+    // gate: `designReferenceDiagnostics` refuses a document whose asset carries
+    // no matching use, and refuses a use naming no declared document.
+    case "design-reference":
+      return true;
+    // Same delegation, for the same reason: a texture use is keyed by the
+    // compiled model id rather than a recipe id, and a scene environment is not
+    // in the design graph at all, so this graph cannot answer either question.
+    // `validateTextureAssets` sees the compiled models and scenes and reports
+    // both directions -- an image bound by no authorized use, and a use no
+    // compiled consumer binds any more -- so answering `false` here would
+    // double-report the same fault at a less specific path.
+    case "material-texture":
+    case "scene-environment":
+      return true;
   }
 };
 
@@ -5354,13 +6298,26 @@ const refuseUnsupportedExternalInstancing = (
         `Formation "${formation.id}" selects a registered external model for anonymous members, but imported-mesh instancing is not yet supported. Use generated anonymous tiers or named hero nodes.`,
       );
   }
-  for (const instanceSet of graph.world?.instanceSets ?? [])
-    if (externalModels.has(instanceSet.modelRecipe))
-      diagnostic(
-        "asset-model-instancing-unsupported",
-        instanceSet.id,
-        `Instance set "${instanceSet.id}" selects registered external model "${instanceSet.modelRecipe}", but imported-mesh instancing is not yet supported. Use a generated recipe or named nodes.`,
-      );
+  for (const instanceSet of graph.world?.instanceSets ?? []) {
+    const recipes = [
+      instanceSet.modelRecipe,
+      ...(instanceSet.prototypes ?? []).map(
+        (prototype) => prototype.modelRecipe,
+      ),
+    ].flatMap((recipe) => [
+      recipe,
+      ...(graph.models.get(recipe)?.lod.map((lod) => lod.recipe) ?? []),
+    ]);
+    for (const recipe of new Set(recipes)) {
+      const external = externalModels.get(recipe);
+      if (external !== undefined && external.profile !== "gltf-static-v1")
+        diagnostic(
+          "asset-model-instancing-unsupported",
+          instanceSet.id,
+          `Instance set "${instanceSet.id}" selects external model "${recipe}" with profile "${external.profile}". General instancing accepts only rigid gltf-static-v1 prototypes; use named nodes for skinned, morphed, or animated assets.`,
+        );
+    }
+  }
 };
 
 const validateCompiledAssetUses = (

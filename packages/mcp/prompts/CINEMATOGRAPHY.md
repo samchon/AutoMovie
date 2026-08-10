@@ -38,6 +38,22 @@ Design key direction, fill ratio, practical motivation, contrast, and color sepa
 
 Atmosphere is a declared value, not a mood word. A set states its `fog` as an extinction density per meter and the color an infinitely distant surface tends toward, and every drawn surface is mixed toward that color by its camera depth. Half of a subject's own color survives at roughly `0.83 / density` meters, so `0.002` reads as the barely perceptible perspective of a wide vista, `0.01` as a clear day with a soft horizon, and `0.05` as heavy weather; zero renders exactly as no atmosphere at all. Match the color to the background or the horizon cuts a visible seam where fogged geometry meets unfogged sky. Reach for it before spending the particle budget on billboards standing in for haze. Judge it from a beauty frame only: structural passes suspend fog so the channel they exist to state stays exact, so a depth or mask frame will not show the atmosphere you declared.
 
+## Render environment
+
+A scene may declare a render `environment`, and it owns the photographic response of every beauty frame that scene produces: image lighting, its intensity and world rotation, the background, exposure, the tone-mapping curve, and the shadow-map policy.
+
+Image lighting is what makes a physically-based interior read. An equirectangular HDR fills the roles a punctual rig cannot: sky through a window, bounce off a floor, the specular the metal and the glass in the shot are reflecting. State `image` for that, or a solid `background` colour for a scene with no environment to sample; the two are mutually exclusive, because a background painted over the image would be a second, contradictory sky.
+
+Tone mapping has one owner. The render spec's `toneMapping` is the delivery default across a whole sequence; a scene that declares an environment overrides it, because the curve is chosen against that scene's own exposure and lighting and a night interior and a noon exterior do not share one. A scene that declares no environment keeps the spec's value, which is exactly what every production authored before environments existed renders.
+
+That is the contract; the frame in front of you may be narrower. A scene's own environment always reaches the renderer, while the delivery default reaches it only when the page drawing the frame carries a `tone` parameter, and the scaffold's capture script does not set one. So judge a delivery curve from a page you opened with it, and read a captured review frame as the scene's own response until that gap closes.
+
+Shadows are a declared cost, not a default. Enable them in the environment, choose the filter family deliberately, and give every casting light explicit map size, bias, normal bias, and near/far. A light that claims to cast without those settings is refused rather than staged with whatever a renderer happens to default to.
+
+Reach for a rectangular area source when the light in the room comes from a surface: a window, a softbox, a strip, a luminous coffer. It is the one light kind with extent, and the soft wrap it gives is a function of its declared width and height rather than of an intensity tuned to imitate one. It lights physically-based materials only, and it casts no shadow map at all, so pair it with a punctual key when the shot needs occlusion; declaring `castShadow` on one is refused rather than silently ignored.
+
+Judge all of it from beauty frames. Structural passes suspend image lighting, exposure, tone mapping and shadows exactly as they suspend fog, so depth, normal, mask and outline stay geometric facts. Frame-to-frame the compiled artifact and the renderer settings are deterministic; the pixels themselves are attributed to the target that produced them, so cite the capture, not a remembered look.
+
 ## Intentional rule breaking
 
 Continuity rules are tools, not moral law. Break eyeline, axis, framing, exposure, focus, or stability only when the higher dramatic value is named and the result remains legible enough to achieve it. `styleIntent` records the reason and the violated rule; review checks whether the result serves that reason rather than excusing an accident.

@@ -12,6 +12,7 @@ export const AUTO_MOVIE_LIGHT_TYPES = new Set<IAutoMovieLight["type"]>([
   "directional",
   "point",
   "spot",
+  "area",
 ]);
 
 /** Whether an untyped artifact names one of the supported light kinds. */
@@ -230,7 +231,11 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   range: {
     valueType: "scalar",
     bounds: { min: 0, max: Infinity, inclusiveMin: true },
-    carries: (kind) => kind !== "directional",
+    // The two punctual kinds that fall off with distance, named positively.
+    // "Not directional" used to say the same thing and stopped being true when
+    // the area panel arrived: its falloff follows from its own area, so a
+    // `range` track on one would state a second, contradictory falloff.
+    carries: (kind) => kind === "point" || kind === "spot",
     write: (override, value) => {
       override.range = value[0]!;
     },
@@ -355,6 +360,13 @@ export const applyLightOverride = (
     transform: applyLightTransformOverride(light.transform, override),
     color: override.color ?? light.color,
     intensity: override.intensity ?? light.intensity,
+    // Shadow casting is a staged renderer policy with no channel, so it is
+    // carried rather than rebuilt. Spreading only the animated fields would let
+    // dimming a lamp silently stop it casting, and each optional key is kept
+    // ABSENT when the staged light omitted it so a folded light and an
+    // untouched one serialize to the same bytes.
+    ...(light.castShadow === undefined ? {} : { castShadow: light.castShadow }),
+    ...(light.shadow === undefined ? {} : { shadow: light.shadow }),
   };
   switch (light.type) {
     case "directional":
@@ -367,6 +379,16 @@ export const applyLightOverride = (
         type: "spot",
         range: override.range ?? light.range,
         coneAngle: override.coneAngle ?? light.coneAngle,
+      };
+    case "area":
+      // A panel's extent is staged geometry, not a timeline axis: `width` and
+      // `height` carry no channel entry, so no override can reach them and both
+      // are carried through from the staged light.
+      return {
+        ...base,
+        type: "area",
+        width: light.width,
+        height: light.height,
       };
   }
 };

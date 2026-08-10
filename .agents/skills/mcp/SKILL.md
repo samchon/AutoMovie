@@ -1,6 +1,6 @@
 ---
 name: mcp
-description: Defines the design rules for packages/mcp: server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose. Use before adding or reshaping an MCP tool or its documentation.
+description: Defines the design rules for packages/mcp: what the tool surface is and is not allowed to do for its client, server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose. Use before adding or reshaping an MCP tool or its documentation.
 ---
 
 # MCP Server Design
@@ -8,6 +8,15 @@ description: Defines the design rules for packages/mcp: server/tool arrangement 
 `packages/mcp` (`@automovie/mcp`) exposes the deterministic motion-control engine as Model Context Protocol tools: an external agent (Codex, Claude, any MCP client) drives the pipeline directly instead of the repo hosting its own LLM orchestration. The rule is "engine enforces, model creates" turned inside out.
 
 Each class (a `typia.llm.controller`) is one MCP server; each public method is one validated tool, its JSON schema and validation derived from the method's TypeScript signature and JSDoc via `@typia/mcp`.
+
+## The surface tells; it does not make
+
+The tools are a knowledge and evidence boundary, not an authoring API. A client asks what the invariants are and what the frames actually show, then writes its own screenplay, subjects and assets as ordinary repository TypeScript. Two rules follow.
+
+- **No tool builds the client's assets.** The server hands over no chair, building or costume, however convenient that would be; which assets a production has is the production's decision, under the project skill's [Capability, Not Content](../project/SKILL.md#capability-not-content) rule.
+- **No giant authoring DTO.** Normal authoring is a loop, a class, a utility. Folding that into one enormous call trades reuse, typing, diffs and review for a JSON blob, and grows the surface faster than the guides can teach it.
+
+When a client cannot author something it reasonably should, the answer is the missing engine or renderer capability plus the guide that teaches it, never a tool that produces the thing on the client's behalf. What this surface is for is delivering knowledge at the moment it is needed: a refusal carrying the name of the invariant it enforces, and a document the client can then read.
 
 ## Server/tool arrangement is not settled
 

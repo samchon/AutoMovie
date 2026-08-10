@@ -110,11 +110,27 @@ export const test_world_subject_contribution = (): void => {
   TestValidator.equals(
     "merging concatenates every key in the order given",
     mergeAutoMovieSubjectContributions([
-      { actors: [actor("a")], landmarks: [landmark("one")] },
-      { actors: [actor("b")], surfaces: [] },
-      { landmarks: [landmark("two")] },
+      {
+        models: [{ id: "model" }] as never,
+        set: [{ node: "set" }] as never,
+        actors: [actor("a")],
+        landmarks: [landmark("one")],
+      },
+      {
+        spaces: [{ id: "space" }] as never,
+        actors: [actor("b")],
+        surfaces: [],
+      },
+      {
+        builtEnvironments: [{ id: "building" }] as never,
+        landmarks: [landmark("two")],
+      },
     ]),
     {
+      models: [{ id: "model" }] as never,
+      set: [{ node: "set" }] as never,
+      spaces: [{ id: "space" }] as never,
+      builtEnvironments: [{ id: "building" }] as never,
       actors: [actor("a"), actor("b")],
       landmarks: [landmark("one"), landmark("two")],
     },

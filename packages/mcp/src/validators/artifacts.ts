@@ -9,6 +9,7 @@ import {
   validateNonEmptyId,
   validateObjectArtifact,
   validateRange,
+  validateSceneEnvironment,
   validateShotArtifact as validateShotStructure,
   validateSpace,
   validateUniqueIds,
@@ -174,6 +175,101 @@ export const validateSceneArtifact = (
         violations,
         false,
       );
+    // The one kind with extent. Both axes are gated, and gated exclusively, so
+    // an artifact cannot describe a panel with only a width nor a punctual
+    // light that quietly carries one.
+    if (validLightType && lightType === "area")
+      for (const axis of ["width", "height"] as const)
+        validateRange(
+          light[axis],
+          `${path}.${axis}`,
+          0,
+          Infinity,
+          `area ${axis}`,
+          violations,
+          false,
+        );
+    if (light.castShadow !== undefined && typeof light.castShadow !== "boolean")
+      pushViolation(
+        violations,
+        "type",
+        `${path}.castShadow`,
+        "castShadow must be boolean",
+        light.castShadow,
+      );
+    // `three.js` renders no shadow map for a rectangular area source, so the
+    // artifact may not claim one; the whole point of the gate is that a
+    // declared capability is a rendered capability.
+    else if (light.castShadow === true && lightType === "area") {
+      pushViolation(
+        violations,
+        "type",
+        `${path}.castShadow`,
+        "an area light is analytically integrated and casts no shadow map",
+        light.castShadow,
+      );
+      return;
+    }
+    const shadow = light.shadow;
+    if (light.castShadow === true && shadow === undefined)
+      pushViolation(
+        violations,
+        "type",
+        `${path}.shadow`,
+        "a shadow-casting light requires deterministic shadow settings",
+        shadow,
+      );
+    if (shadow !== undefined) {
+      if (light.castShadow !== true)
+        pushViolation(
+          violations,
+          "type",
+          `${path}.shadow`,
+          "shadow settings require castShadow to be true",
+          shadow,
+        );
+      if (
+        !validateObjectArtifact(shadow, `${path}.shadow`, "shadow", violations)
+      )
+        return;
+      const mapSize = typeof shadow.mapSize === "number" ? shadow.mapSize : NaN;
+      if (!Number.isSafeInteger(mapSize) || mapSize <= 0)
+        pushViolation(
+          violations,
+          "range",
+          `${path}.shadow.mapSize`,
+          "shadow mapSize must be a positive safe integer",
+          shadow.mapSize,
+        );
+      for (const key of ["bias", "normalBias"] as const)
+        if (!Number.isFinite(shadow[key]))
+          pushViolation(
+            violations,
+            "range",
+            `${path}.shadow.${key}`,
+            `shadow ${key} must be finite`,
+            shadow[key],
+          );
+      validateRange(
+        shadow.near,
+        `${path}.shadow.near`,
+        0,
+        Infinity,
+        "shadow near",
+        violations,
+        false,
+      );
+      const near = typeof shadow.near === "number" ? shadow.near : NaN;
+      const far = typeof shadow.far === "number" ? shadow.far : NaN;
+      if (!Number.isFinite(far) || far <= near)
+        pushViolation(
+          violations,
+          "range",
+          `${path}.shadow.far`,
+          "shadow far must be finite and greater than near",
+          shadow.far,
+        );
+    }
   });
 
   // The ground the feet obey (#1173). Absent or null is the pre-space scalar
@@ -210,6 +306,18 @@ export const validateSceneArtifact = (
       violations,
     );
     validateColorArtifact(fog.color, "$input.fog.color", violations);
+  }
+
+  const environment = scene.environment ?? null;
+  if (environment !== null) {
+    const validated = validateSceneEnvironment({ environment });
+    if (validated.success === false)
+      violations.push(
+        ...validated.violations.map((item) => ({
+          ...item,
+          path: item.path.replace("$input", "$input.environment"),
+        })),
+      );
   }
 
   return toValidation(violations);

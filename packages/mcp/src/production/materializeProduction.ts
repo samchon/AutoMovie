@@ -305,7 +305,7 @@ export const materializeInstanceSlot = (
         }
       : {
           x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
-          y: instanceSet.anchor.y,
+          y: instanceSet.anchor.y + point.y,
           z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
         };
   const traits = Object.fromEntries(
@@ -318,7 +318,12 @@ export const materializeInstanceSlot = (
       ),
     ]),
   );
-  const palette = instanceSet.variation.palette[paletteIndex];
+  const explicit =
+    instanceSet.layout.kind === "explicit"
+      ? instanceSet.layout.transforms[slot]
+      : undefined;
+  const palette =
+    explicit?.palette ?? instanceSet.variation.palette[paletteIndex];
   if (
     [position.x, position.y, position.z, scale, ...Object.values(traits)].some(
       (value) => Number.isFinite(value) === false,
@@ -328,16 +333,123 @@ export const materializeInstanceSlot = (
     throw new RangeError(
       `Instance set "${instanceSet.id}" slot ${slot} derived non-finite variation or an empty palette.`,
     );
-  return {
+  const legacy =
+    instanceSet.prototypes === undefined &&
+    instanceSet.layout.kind !== "lattice" &&
+    instanceSet.layout.kind !== "explicit" &&
+    instanceSet.variation.scale3 === undefined &&
+    instanceSet.variation.rotationDeg === undefined &&
+    instanceSet.variation.visibleProbability === undefined;
+  const base = {
     slot,
-    node: `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`,
-    modelRecipe: instanceSet.modelRecipe,
+    node:
+      explicit === undefined
+        ? `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`
+        : `instance:${instanceSet.id}:${explicit.id}`,
+    modelRecipe: selectedInstancePrototype(
+      instanceSet,
+      slot,
+      explicit?.prototype,
+    ).modelRecipe,
     position,
     facingDeg: instanceSet.facingDeg,
     scale,
     palette,
-    traits,
+    traits: { ...traits, ...explicit?.traits },
   };
+  if (legacy) return base;
+  const scale3 =
+    explicit?.scale ??
+    (instanceSet.variation.scale3 === undefined
+      ? { x: scale, y: scale, z: scale }
+      : {
+          x: stableInterpolate(
+            instanceSet.variation.scale3.min.x,
+            instanceSet.variation.scale3.max.x,
+            seededValue(instanceSet.seed, slot, 0x73637878),
+          ),
+          y: stableInterpolate(
+            instanceSet.variation.scale3.min.y,
+            instanceSet.variation.scale3.max.y,
+            seededValue(instanceSet.seed, slot, 0x73637979),
+          ),
+          z: stableInterpolate(
+            instanceSet.variation.scale3.min.z,
+            instanceSet.variation.scale3.max.z,
+            seededValue(instanceSet.seed, slot, 0x73637a7a),
+          ),
+        });
+  const rotation = Quaternion.normalize(
+    Quaternion.multiply(
+      Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, instanceSet.facingDeg),
+      explicit?.rotation ?? seededInstanceRotation(instanceSet, slot),
+    ),
+  );
+  return {
+    ...base,
+    prototype: selectedInstancePrototype(instanceSet, slot, explicit?.prototype)
+      .id,
+    rotation,
+    scale3,
+    visible:
+      explicit?.visible ??
+      (instanceSet.variation.visibleProbability === undefined ||
+        seededValue(instanceSet.seed, slot, 0x76697369) <
+          instanceSet.variation.visibleProbability),
+  };
+};
+
+const selectedInstancePrototype = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  slot: number,
+  explicit?: string,
+): { id: string; modelRecipe: string } => {
+  const choices = [
+    { id: "default", modelRecipe: instanceSet.modelRecipe, weight: 1 },
+    ...(instanceSet.prototypes ?? []),
+  ];
+  if (explicit !== undefined) {
+    const selected = choices.find((choice) => choice.id === explicit);
+    if (selected === undefined)
+      throw new Error(
+        `Instance set "${instanceSet.id}" slot ${slot} references missing prototype "${explicit}".`,
+      );
+    return selected;
+  }
+  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
+  let sample = seededValue(instanceSet.seed, slot, 0x70726f74) * total;
+  for (const choice of choices) {
+    if (sample < choice.weight) return choice;
+    sample -= choice.weight;
+  }
+  return choices.at(-1)!;
+};
+
+const seededInstanceRotation = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  slot: number,
+) => {
+  const ranges = instanceSet.variation.rotationDeg;
+  return ranges === undefined
+    ? Quaternion.identity()
+    : Quaternion.fromEuler({
+        x: stableInterpolate(
+          ranges.x.min,
+          ranges.x.max,
+          seededValue(instanceSet.seed, slot, 0x726f7478),
+        ),
+        y: stableInterpolate(
+          ranges.y.min,
+          ranges.y.max,
+          seededValue(instanceSet.seed, slot, 0x726f7479),
+        ),
+        z: stableInterpolate(
+          ranges.z.min,
+          ranges.z.max,
+          seededValue(instanceSet.seed, slot, 0x726f747a),
+        ),
+        order: "XYZ",
+      });
 };
 
 /** Materialize one general instance set for direct inspection. */
@@ -409,29 +521,67 @@ export const materializeCompiledInstanceSet = (
     0,
     instanceSet.count,
   );
-  const recipe = recipes.get(instanceSet.modelRecipe);
   const layout = instanceSet.layout;
-  const sourceLod = recipe?.lod ?? [];
-  const lod = (
-    sourceLod.length === 0
-      ? [
-          {
-            tier: "near" as const,
-            maxDistance: null,
-            recipe: instanceSet.modelRecipe,
-          },
-        ]
-      : sourceLod
-  ).map((item) => ({
-    ...item,
-    recipeDigest: lodRecipeDigest(recipes, item.recipe),
-    model: productionRuntimeModelId(item.recipe),
-  }));
+  const compilePrototype = (prototype: {
+    id: string;
+    modelRecipe: string;
+    weight: number;
+  }) => {
+    const prototypeRecipe = recipes.get(prototype.modelRecipe);
+    const sourceLod = prototypeRecipe?.lod ?? [];
+    const lod = (
+      sourceLod.length === 0
+        ? [
+            {
+              tier: "near" as const,
+              maxDistance: null,
+              recipe: prototype.modelRecipe,
+            },
+          ]
+        : sourceLod
+    ).map((item) => ({
+      ...item,
+      recipeDigest: lodRecipeDigest(recipes, item.recipe),
+      model: productionRuntimeModelId(item.recipe),
+    }));
+    return {
+      ...prototype,
+      lod,
+      projectionRadius: Math.max(
+        0.01,
+        ...lod.map(
+          (item) =>
+            recipeProjectionRadius(
+              recipes.get(item.recipe),
+              externalModels.get(item.recipe),
+              archetypes,
+            ) ??
+            recipeProjectionRadius(
+              prototypeRecipe,
+              externalModels.get(prototype.modelRecipe),
+              archetypes,
+            ) ??
+            0.5,
+        ),
+      ),
+    };
+  };
+  const defaultPrototype = compilePrototype({
+    id: "default",
+    modelRecipe: instanceSet.modelRecipe,
+    weight: 1,
+  });
+  const prototypes =
+    instanceSet.prototypes === undefined
+      ? undefined
+      : [defaultPrototype, ...instanceSet.prototypes.map(compilePrototype)];
+  const lod = defaultPrototype.lod;
   const core = {
     version: 1 as const,
     id: instanceSet.id,
     count: instanceSet.count,
     modelRecipe: instanceSet.modelRecipe,
+    ...(prototypes === undefined ? {} : { prototypes }),
     layout: structuredClone(layout),
     route:
       layout.kind === "along-route"
@@ -444,23 +594,12 @@ export const materializeCompiledInstanceSet = (
     seed: instanceSet.seed,
     variation: structuredClone(instanceSet.variation),
     ...summary,
-    projectionRadius: Math.max(
-      0.01,
-      ...lod.map(
-        (item) =>
-          recipeProjectionRadius(
-            recipes.get(item.recipe),
-            externalModels.get(item.recipe),
-            archetypes,
-          ) ??
-          recipeProjectionRadius(
-            recipe,
-            externalModels.get(instanceSet.modelRecipe),
-            archetypes,
-          ) ??
-          0.5,
-      ),
-    ),
+    projectionRadius:
+      prototypes === undefined
+        ? defaultPrototype.projectionRadius
+        : Math.max(
+            ...prototypes.map((prototype) => prototype.projectionRadius),
+          ),
     chunks,
     lod,
   };
@@ -554,7 +693,18 @@ export const materializeCompiledShot = (props: {
   }
   for (const instanceSet of Object.values(props.instanceSetRuntime ?? {})) {
     const ordinaryPrefix = `instance:${instanceSet.id}:slot:`;
+    const explicitIds = new Set(
+      instanceSet.layout.kind === "explicit"
+        ? instanceSet.layout.transforms.map(
+            (transform) => `instance:${instanceSet.id}:${transform.id}`,
+          )
+        : [],
+    );
     for (const node of source.scene.nodes) {
+      if (explicitIds.has(node.id)) {
+        collisions.push(node.id);
+        continue;
+      }
       if (node.id.startsWith(ordinaryPrefix) === false) continue;
       const suffix = node.id.slice(ordinaryPrefix.length);
       const slot = Number(suffix);
@@ -570,6 +720,8 @@ export const materializeCompiledShot = (props: {
   const modelByRuntimeId = new Map(
     [...props.runtimeModels.values()].map((model) => [model.id, model]),
   );
+  for (const model of source.authoredModels ?? [])
+    modelByRuntimeId.set(model.id, model);
   const models = [
     ...new Set([
       ...source.scene.nodes.map((node) => node.model),
@@ -577,7 +729,9 @@ export const materializeCompiledShot = (props: {
         formation.lod.map((lod) => lod.model),
       ),
       ...Object.values(props.instanceSetRuntime ?? {}).flatMap((instanceSet) =>
-        instanceSet.lod.map((lod) => lod.model),
+        (instanceSet.prototypes ?? [{ lod: instanceSet.lod }]).flatMap(
+          (prototype) => prototype.lod.map((lod) => lod.model),
+        ),
       ),
     ]),
   ]
@@ -749,13 +903,14 @@ const localInstancePoint = (
   instanceSet: IAutoMovieInstanceSetDesign,
   world: Pick<IAutoMovieWorldDesign, "routes">,
   slot: number,
-): { x: number; z: number } => {
+): { x: number; y: number; z: number } => {
   const layout = instanceSet.layout;
   if (layout.kind === "grid") {
     const row = Math.floor(slot / layout.columns);
     const column = slot % layout.columns;
     return {
       x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+      y: 0,
       z: row * layout.spacing.z,
     };
   }
@@ -766,8 +921,29 @@ const localInstancePoint = (
     const angle = seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
     return {
       x: Math.cos(angle) * radius,
+      y: 0,
       z: Math.sin(angle) * radius,
     };
+  }
+  if (layout.kind === "lattice") {
+    const perLayer = layout.rows * layout.columns;
+    const layer = Math.floor(slot / perLayer);
+    const within = slot % perLayer;
+    const row = Math.floor(within / layout.columns);
+    const column = within % layout.columns;
+    return {
+      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+      y: layer * layout.spacing.y,
+      z: row * layout.spacing.z,
+    };
+  }
+  if (layout.kind === "explicit") {
+    const transform = layout.transforms[slot];
+    if (transform === undefined)
+      throw new Error(
+        `Instance set "${instanceSet.id}" slot ${slot} has no explicit transform.`,
+      );
+    return transform.translation;
   }
   const route = world.routes.find((candidate) => candidate.id === layout.route);
   if (route === undefined || route.waypoints.length < 2)
@@ -808,6 +984,7 @@ const localInstancePoint = (
       segment.left.x +
       tangent.x * ratio -
       (tangentLength === 0 ? 0 : (tangent.z / tangentLength) * jitter),
+    y: 0,
     z:
       segment.left.z +
       tangent.z * ratio +

@@ -27,9 +27,10 @@ These four are never acceptable; choosing any one means the approach is already 
 ## Work Rules
 
 - Match existing conventions. Before adding a file, type, or test, open a nearby peer and mirror its naming, location, and style; don't create parallel structures.
-- Respect package boundaries. `three.js` is imported only inside `viewer`; computation flows through `engine`; the agent-facing surface is `mcp` (and the `cli` scaffolder), which consume `interface` + `engine`, never the reverse. The `interface` package stays pure types with **no runtime dependency**: it is the AST the LLM emits against, and its constraints live in field JSDoc, not in `typia` tags (which is why the last such tag, and interface's `typia` dependency, were removed).
+- Respect package boundaries. `three.js` is imported only inside `viewer` among the library packages (`playground` imports it as the demo application that mounts the viewer); computation flows through `engine`; the agent-facing surface is `mcp` (and the `cli` scaffolder), which consume `interface` + `engine`, never the reverse. No test enforces this, so it is read in review. The `interface` package stays pure types with **no runtime dependency**: it is the AST the LLM emits against, and its constraints live in field JSDoc, not in `typia` tags (which is why the last such tag, and interface's `typia` dependency, were removed).
 - **Rough types in `interface`.** Primitives are plain `string`/`number`: no wrapper aliases like `AutoMovieUuid`, no `typia` tag constraints (`Minimum`, `MinItems`, `Format`). Units and ranges are documented in field JSDoc and enforced at runtime by `engine` validators (this is where the ROM differentiator lives). The only structural constraints are closed `AutoMovie*` unions (bone names, ARKit channels, presets, easing). Those are allowed-value sets, not wrappers.
 - Keep changes surgical. Touch only what the request and the verified consequence surface require; do not refactor adjacent code without a product reason.
+- **A solver lands with the consumer that calls it.** A validated, fully covered fold no pipeline path reaches is a public surface with maintenance cost and no effect on any frame; one cycle shipped three of them past every gate. Wire the producer to its consumer in the same change, or state in the JSDoc and the PR that the fold is deliberately unconsumed and what would consume it.
 - Run `pnpm run format` before every commit and stage the result; never commit unformatted output.
 - Update the matching `.wiki/` doc in the same change when behavior, architecture, or a decision changes (see `documentation/SKILL.md`).
 
@@ -57,11 +58,23 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 **A structural guard re-pins from the failure's own output, never from a hash you found nearby.** Guards that pin a source digest, a statement index or a token count go red on every legitimate edit to the file they read, which is what they are for. Read the reported actual value at its own key and replace the expected value at that key; picking hashes out of the surrounding text in output order writes a real digest into the wrong field and produces a guard that passes while measuring nothing.
 
+**A measurement nothing gates goes back up.** Counting a defect class is what makes it payable, and paying it down once is not the same as keeping it down. Three counts in this repository have drifted while a tool that measured them sat unused: diagnostic codes outgrew the guides that name them, guide coverage emptied and refilled without anyone noticing, and the folded-assertion count returned after a PR drove it down. When you build the measure, wire it to a check in the same change, and fix the total rather than a per-file exemption list, because an exemption list is the thing that never shrinks.
+
 **A new compiler obligation is first a claim about every existing fixture.** A gate the compiler did not have is a gate no fixture was written against, so the first run after adding one reports defects the fixtures were already carrying. Read each as a finding about the fixture before treating it as evidence the gate is too strict; a fixture is the cheapest place a real contradiction shows up.
 
-## Coverage is always 100%
+## Coverage is 100% on what you write
 
-Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `archetypes`, `engine`, `face`, `ingest`, `render`, `viewer`, and `mcp` (see the `--src` list in the `coverage` script; it runs with `--all`, so a source no test imports is reported rather than silently absent). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow measures and reports it beside the suite but deliberately does not fail on it -- `test.yml` says why, and `internals/report-coverage-gaps.mjs` prints the exact uncovered statements, branches and functions on every run. So the gate is the author reading that output, not the build going red, and a gap that ships is a gap somebody chose.
+**Every source file a change creates or modifies ends at 100% on statements, branches, functions, and lines.** That is the obligation, it is per change, and it is not negotiable by difficulty.
+
+The repository total is a different number and always has been. `test.yml` says why: the whole measured set has never met 100%, a permanently red job told nobody anything, and it buried real regressions in the same colour. So the repository carries inherited gaps in files nobody has touched, and closing them is its own work rather than a toll on the next unrelated change.
+
+What that means in practice:
+
+- Bring a file you touched to 100%, including the parts you did not write, when your change is what makes them reachable or newly wrong. A branch your edit created is yours without argument.
+- Do not treat an inherited gap in a file you never opened as your obligation, and do not report the repository total as if it were your result.
+- Report the per-file numbers for the files you own, with the command and the moment you measured them.
+
+The measured set is `archetypes`, `engine`, `face`, `ingest`, `render`, `viewer`, `mcp`, and one file of `cli` (see the `--src` and `--include` lists in the `coverage` script; it runs with `--all`, so a source no test imports is reported rather than silently absent, and `index.ts` and `bin.ts` are excluded everywhere). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). CI measures and reports beside the suite without failing on it, and `internals/report-coverage-gaps.mjs` prints the exact uncovered statements, branches and functions on every run. So the gate is the author reading that output, not the build going red, and a gap that ships is a gap somebody chose.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 

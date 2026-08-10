@@ -17,5 +17,6 @@ sidecar too. Sidecars and non-hero LODs use `model-resource` with the hero model
 path as consumer id; JSON proxies use `model-proxy`. The compiler validates
 payload ranges and rig/profile compatibility and seals one digest closure. The
 viewer serves only that closure and uses authoritative VRM or ingested glTF
-humanoid mappings. External models are refused for anonymous formation and
-instance-set members until imported-mesh instancing is supported.
+humanoid mappings. External models are refused for anonymous formation members
+whatever their profile. An instance set may select one only on the
+`gltf-static-v1` profile; a humanoid profile is refused there too.

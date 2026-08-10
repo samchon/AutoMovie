@@ -1,13 +1,33 @@
 import {
+  IAutoMovieBuiltEnvironment,
+  IAutoMovieDesignEvidence,
+  IAutoMovieDesignLineage,
+  IAutoMovieDesignReference,
+} from "../architecture";
+import {
   IAutoMovieDefinedShot,
   IAutoMovieShotProgram,
 } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
 import { IAutoMovieClip } from "../core";
-import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieFluidDomain, IAutoMovieWaterFeature } from "../fluid";
+import {
+  IAutoMovieQuaternion,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "../geometry";
+import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
+import { IAutoMovieServiceNetwork } from "../service";
+import {
+  IAutoMoviePlantingCluster,
+  IAutoMoviePlantingDomain,
+  IAutoMoviePlantingInstallation,
+  IAutoMovieSoftBodyDomain,
+  IAutoMovieSoftFurnishing,
+} from "../soft";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -738,12 +758,20 @@ export interface IAutoMovieInstanceSlot {
   node: string;
   /** Runtime model recipe id. */
   modelRecipe: string;
+  /** Selected prototype id; omitted for a legacy single-prototype set. */
+  prototype?: string;
   /** Compiler-derived world position in meters. */
   position: IAutoMovieVector3;
   /** Compiler-derived world-space heading in degrees. */
   facingDeg: number;
   /** Positive uniform scale. */
   scale: number;
+  /** Exact full rotation for an enhanced set. */
+  rotation?: IAutoMovieQuaternion;
+  /** Exact non-uniform scale for an enhanced set. */
+  scale3?: IAutoMovieVector3;
+  /** Explicit or seeded visibility for an enhanced set. */
+  visible?: boolean;
   /** Selected exact sRGB palette value. */
   palette: string;
   /** Seed-derived numeric traits keyed by declared name. */
@@ -774,6 +802,8 @@ export interface IAutoMovieCompiledInstanceSet {
   count: number;
   /** Base design recipe. */
   modelRecipe: string;
+  /** Resolved prototype runtimes; omitted for a legacy single-prototype set. */
+  prototypes?: IAutoMovieCompiledInstancePrototype[];
   /** Exact compact placement law. */
   layout: IAutoMovieInstanceSetDesign["layout"];
   /**
@@ -803,6 +833,20 @@ export interface IAutoMovieCompiledInstanceSet {
   lod: IAutoMovieCompiledFormationLod[];
   /** Digest of every field above except this digest. */
   digest: AutoMovieContentDigest;
+}
+
+/** One compiler-resolved reusable prototype in a general instance set. */
+export interface IAutoMovieCompiledInstancePrototype {
+  /** Stable source prototype id. */
+  id: string;
+  /** Source model recipe. */
+  modelRecipe: string;
+  /** Positive deterministic selection weight. */
+  weight: number;
+  /** Ordered automatic LOD representations for this prototype. */
+  lod: IAutoMovieCompiledFormationLod[];
+  /** Conservative source-model radius before per-slot scaling. */
+  projectionRadius: number;
 }
 
 /** One compact formation-level transform state relative to its designed base. */
@@ -1003,6 +1047,34 @@ export interface IAutoMovieCompiledEffect {
 
 /** Engine-compiled shot source before production materialization is added. */
 export interface IAutoMovieShotSourceOutput {
+  /** Source-owned generated models retained for materialization and evidence. */
+  authoredModels?: IAutoMovieModel[];
+  /** Source-owned production props retained with their semantic contracts. */
+  props?: IAutoMoviePropSpec[];
+  /** Structured buildings retained for spatial queries and evidence. */
+  builtEnvironments?: IAutoMovieBuiltEnvironment[];
+  /** Observation documents the building source read, kept as provenance. */
+  designReferences?: IAutoMovieDesignReference[];
+  /** Citations from authored design members back to those observations. */
+  designEvidence?: IAutoMovieDesignEvidence[];
+  /** Phase, alternative and change-impact lineage over those identities. */
+  designLineages?: IAutoMovieDesignLineage[];
+  /** Independent deterministic fluid domains this shot's source declares. */
+  fluidDomains?: IAutoMovieFluidDomain[];
+  /** Bindings that make those domains a building's own water features. */
+  waterFeatures?: IAutoMovieWaterFeature[];
+  /** Cloth and cushion domains this shot's source declares. */
+  softBodyDomains?: IAutoMovieSoftBodyDomain[];
+  /** Bindings that hang those domains on a building's own elements. */
+  softFurnishings?: IAutoMovieSoftFurnishing[];
+  /** Growth recipes for the planting this shot's source declares. */
+  plantingDomains?: IAutoMoviePlantingDomain[];
+  /** Arrangements those recipes are grown into. */
+  plantingClusters?: IAutoMoviePlantingCluster[];
+  /** Bindings that plant those clusters in a building's own spaces. */
+  plantingInstallations?: IAutoMoviePlantingInstallation[];
+  /** Port networks that serve the buildings this shot stages. */
+  serviceNetworks?: IAutoMovieServiceNetwork[];
   /** Event sample times selected inside authoritative event windows. */
   eventSamples: Array<{
     /** Exact event-contract id. */
@@ -1184,6 +1256,47 @@ export interface IAutoMovieShotSource {
  */
 export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
   /**
+   * Source-owned generated models assembled by ordinary TypeScript. Imported
+   * assets remain compiler-owned production inputs rather than sandbox output.
+   */
+  models?: IAutoMovieModel[];
+  /** Source-owned semantic props whose model and behavior are validated. */
+  props?: IAutoMoviePropSpec[];
+  /**
+   * Code-authored buildings used by the shot. They remain structured in the
+   * compiled artifact; visible placements and support space are staged from the
+   * same record rather than transcribed into a second design.
+   */
+  builtEnvironments?: IAutoMovieBuiltEnvironment[];
+  /**
+   * Observation documents the building source read, carried as provenance.
+   *
+   * A reading is never promoted into the design. They are here so the compiler
+   * can hold each document against the bytes it claims to have observed and
+   * refuse a citation whose file has moved on.
+   */
+  designReferences?: IAutoMovieDesignReference[];
+  /** Citations from authored design members back to those observations. */
+  designEvidence?: IAutoMovieDesignEvidence[];
+  /** Phase, alternative and change-impact lineage over those identities. */
+  designLineages?: IAutoMovieDesignLineage[];
+  /** Independent deterministic fluid domains this shot's source declares. */
+  fluidDomains?: IAutoMovieFluidDomain[];
+  /** Bindings that make those domains a building's own water features. */
+  waterFeatures?: IAutoMovieWaterFeature[];
+  /** Cloth and cushion domains this shot's source declares. */
+  softBodyDomains?: IAutoMovieSoftBodyDomain[];
+  /** Bindings that hang those domains on a building's own elements. */
+  softFurnishings?: IAutoMovieSoftFurnishing[];
+  /** Growth recipes for the planting this shot's source declares. */
+  plantingDomains?: IAutoMoviePlantingDomain[];
+  /** Arrangements those recipes are grown into. */
+  plantingClusters?: IAutoMoviePlantingCluster[];
+  /** Bindings that plant those clusters in a building's own spaces. */
+  plantingInstallations?: IAutoMoviePlantingInstallation[];
+  /** Port networks that serve the buildings this shot stages. */
+  serviceNetworks?: IAutoMovieServiceNetwork[];
+  /**
    * Optional source-computed clips cited only by explicit `enact` actions.
    *
    * The host still masks, layers, ROM-checks, and assembles these clips through
@@ -1202,6 +1315,29 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * one compiled before this field existed.
    */
   lightMotions?: IAutoMovieClip[];
+  /**
+   * Optional clips turning this shot's non-performing scene nodes over its own
+   * local clock, carried onto the compiled shot's `objectMotions`.
+   *
+   * The moving half of a built world. A building's opening states where its
+   * panels stand at each named configuration and a prop states the travel of
+   * its own joints, and both were configurations rather than motion: every
+   * entry on a compiled shot's `objectMotions` was baked by the engine from a
+   * `launch` or an `attachTo`, so nothing a source authored could make a door
+   * swing on screen. One channel serves both, because both are one node in the
+   * staged graph turned over one clock: a panel is a staged set piece
+   * (`<environment>/<element>`, the ids `builtOpeningPanelPlacements` answers
+   * with) and a prop's leaf is a lowered articulation joint
+   * (`<placement>/<joint>`).
+   *
+   * The host holds each track to the shot it belongs to: the node must be one
+   * this shot staged or a joint a staged prop declares, it must not be a node a
+   * performance or a baked clip already drives, its keys must land inside the
+   * shot's own clock, and a driven prop joint must stay inside the travel that
+   * prop's profile declares. Omitted, the compiled shot carries exactly the
+   * clips the engine baked, as it always did.
+   */
+  objectMotions?: IAutoMovieClip[];
   /** Optional compact formation-level cues. */
   formationMotions?: IAutoMovieFormationMotion[];
   /** Optional sparse per-member exceptions inside compact formations. */

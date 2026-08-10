@@ -9,6 +9,7 @@ import {
   sampleFormationSlotMotion,
   seededValue,
   selectFormationLod,
+  transformFormationPoint,
 } from "@automovie/engine";
 import {
   IAutoMovieCompiledFormation,
@@ -18,11 +19,12 @@ import {
   IAutoMovieFormationSlotMotion,
   IAutoMovieModel,
   IAutoMovieTransform,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { buildModel } from "./buildModel";
+import { IAutoMovieModelObject, buildModel } from "./buildModel";
 import {
   IAutoMovieFormationCycle,
   applyFormationCycleCadence,
@@ -139,6 +141,11 @@ export const buildInstancedFormation = (input: {
   /**
    * Sparse per-member cues, so one member of a crowd can do what its neighbours
    * do not: leave, stop, step out, or stop being drawn at all.
+   *
+   * Read once, here. Which members the cues single out is settled while the
+   * batches are built, so a caller that swapped this list afterwards would be
+   * sampling cues against a set of exceptions that no longer answers to them;
+   * rebuild the unit instead.
    */
   slotMotions?: readonly IAutoMovieFormationSlotMotion[];
   /** Explicit scene wrappers keyed by promoted hero actor id. */
@@ -257,12 +264,21 @@ export const buildInstancedFormation = (input: {
       removed: 0,
     };
   });
+  // The cues a unit was built with are the cues it performs, resolved once.
+  // Which members are singled out is settled here and never revisited, so a
+  // frame that re-read the caller's list would sample cues against a set of
+  // exceptions that no longer answers to them — a member named after the build
+  // has no instance to write, and one named before it would keep performing
+  // whatever the new list happened to say. Reading it twice also left the second
+  // `?? []` an arm no input could take, since a unit whose cues are absent has
+  // no exception to sample for.
+  const slotMotions = input.slotMotions ?? [];
   // Every member a cue singles out, located once. Nothing is stored for the
   // members no cue names, which is what keeps a crowd of a hundred thousand
   // paying for the three exceptions it has and not for its own size.
   const exceptions: ISlotException[] = [];
   for (const slot of new Set(
-    (input.slotMotions ?? []).flatMap((cue) =>
+    slotMotions.flatMap((cue) =>
       cue.formation === input.formation.id ? cue.slots : [],
     ),
   )) {
@@ -373,7 +389,7 @@ export const buildInstancedFormation = (input: {
       for (const exception of exceptions) exception.chunk.removed = 0;
       for (const exception of exceptions) {
         const state = sampleFormationSlotMotion(
-          input.slotMotions ?? [],
+          slotMotions,
           input.formation.id,
           exception.slot,
           time ?? 0,
@@ -592,9 +608,55 @@ export const flattenInstancedModel = (
   const built = buildModel(model);
   built.object.updateMatrixWorld(true);
   const parts = instancedModelParts(built.object);
+  const representation = flattenRigidParts(parts, owner);
+  // Geometry first, then the bake: baking poses the built object, and the
+  // flattened vertices above are the rest-space ones the bake's matrices are
+  // measured against.
+  return {
+    ...representation,
+    cycle:
+      bake === undefined
+        ? null
+        : bakeFormationCycle({
+            model,
+            built,
+            parts,
+            samples: bake.samples,
+          }),
+  };
+};
+
+/** Flatten one already-loaded rigid generated or imported model prototype. */
+export const flattenInstancedObject = (
+  built: IAutoMovieModelObject,
+  owner = "Loaded instanced runtime model",
+): {
+  geometry: THREE.BufferGeometry;
+  materials: THREE.Material[];
+  cycle: null;
+} => {
+  built.object.updateMatrixWorld(true);
+  return {
+    ...flattenRigidParts(instancedModelParts(built.object), owner),
+    cycle: null,
+  };
+};
+
+const flattenRigidParts = (
+  parts: readonly THREE.Mesh[],
+  owner: string,
+): { geometry: THREE.BufferGeometry; materials: THREE.Material[] } => {
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
   parts.forEach((mesh, index) => {
+    if (mesh instanceof THREE.SkinnedMesh)
+      throw new Error(`${owner} has a skinned source mesh.`);
+    if (
+      Object.values(mesh.geometry.morphAttributes).some(
+        (attributes) => attributes.length > 0,
+      )
+    )
+      throw new Error(`${owner} has morph-target source geometry.`);
     if (Array.isArray(mesh.material))
       throw new Error(`${owner} has a multi-material source mesh.`);
     const flattened = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
@@ -611,22 +673,7 @@ export const flattenInstancedModel = (
   const geometry = mergeGeometries(geometries, true);
   if (geometry === null || materials.length === 0)
     throw new Error(`${owner} cannot be flattened for instancing.`);
-  // Geometry first, then the bake: baking poses the built object, and the
-  // flattened vertices above are the rest-space ones the bake's matrices are
-  // measured against.
-  return {
-    geometry,
-    materials,
-    cycle:
-      bake === undefined
-        ? null
-        : bakeFormationCycle({
-            model,
-            built,
-            parts,
-            samples: bake.samples,
-          }),
-  };
+  return { geometry, materials };
 };
 
 const slotMatrix = (
@@ -644,24 +691,64 @@ const slotMatrix = (
     new THREE.Vector3(1, 1, 1),
   );
 
+/**
+ * The group node's own origin, which every local offset is measured about.
+ *
+ * Frozen because one object stands in two of the engine's parameter slots at
+ * once, and every unit in the scene shares it: a caller that ever wrote through
+ * either slot would move the origin of every crowd at the same time.
+ */
+const ROOT_ORIGIN: IAutoMovieVector3 = Object.freeze({ x: 0, y: 0, z: 0 });
+
+/**
+ * Where one designed point stands inside the group node, once the unit's own
+ * heading and the current spacing have opened or closed the arrangement.
+ *
+ * The arithmetic is the engine's, called rather than copied: this is
+ * {@link transformFormationPoint} measured about the root's own origin, because
+ * the group node above already carries the anchor, the cue's travel and the
+ * cue's turn, so the unit state passed here is at rest apart from the spacing.
+ *
+ * A private copy is how a gate and a renderer come to disagree about where a
+ * unit is standing, and the copy that stood here did disagree. It converted the
+ * heading with `THREE.MathUtils.degToRad`, which rounds `PI / 180` before
+ * multiplying, while the engine multiplies by `Math.PI` and then divides by
+ * 180. Those are different doubles for 93 of the 361 whole-degree headings, and
+ * at a plain three degrees, once a cue rewrote their places, 886 of a
+ * 2,049-strong line's members landed on positions the engine's own placement
+ * law does not name. One unit in the last place is not a pixel, and an instance
+ * matrix rounds it away on the way to float32; what it does reach is the
+ * accounting kept in doubles beside it, where a chunk's world centre decides an
+ * LOD tier and a frustum test on every frame — cue or no cue — and a chunk far
+ * from its anchor turns that ulp into several ulps of camera distance.
+ *
+ * Only the point transform was ever affected. A heading turned into a
+ * quaternion still goes through `setFromAxisAngle`, which performs the same
+ * rounded multiply the engine's own `Quaternion.fromAxisAngle` performs, so
+ * those conversions already agree and converting them "the compiler's way" is
+ * what would break them.
+ */
 const formationSpacingOffset = (
   point: { x: number; y: number; z: number },
   anchor: IAutoMovieCompiledFormation["anchor"],
   spacing: { lateral: number; depth: number },
   baseFacingDeg: number,
 ): THREE.Vector3 => {
-  const radians = THREE.MathUtils.degToRad(baseFacingDeg);
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
-  const deltaX = point.x - anchor.x;
-  const deltaZ = point.z - anchor.z;
-  const localX = (deltaX * cosine - deltaZ * sine) * spacing.lateral;
-  const localZ = (deltaX * sine + deltaZ * cosine) * spacing.depth;
-  return new THREE.Vector3(
-    localX * cosine + localZ * sine,
-    point.y - anchor.y,
-    -localX * sine + localZ * cosine,
+  const placed = transformFormationPoint(
+    {
+      x: point.x - anchor.x,
+      y: point.y - anchor.y,
+      z: point.z - anchor.z,
+    },
+    ROOT_ORIGIN,
+    {
+      translation: ROOT_ORIGIN,
+      facingOffsetDeg: 0,
+      spacingScale: spacing,
+    },
+    baseFacingDeg,
   );
+  return new THREE.Vector3(placed.x, placed.y, placed.z);
 };
 
 const vector = (value: { x: number; y: number; z: number }): THREE.Vector3 =>
