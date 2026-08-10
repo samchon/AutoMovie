@@ -17,7 +17,7 @@ import {
 } from "@automovie/viewer";
 import type * as THREE from "three";
 
-import { loadCompiledModel, loadEnvironmentAsset } from "./loadCompiledModel";
+import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -28,24 +28,32 @@ export interface IAutoMovieCompiledShotRuntime {
     time: number,
     pass: AutoMovieGuidePass,
   ) => string;
+  /** Release every texture this shot decoded, exactly once. */
+  dispose: () => Promise<void>;
 }
 
 export const createCompiledShotRuntime = async (
   compiled: IAutoMovieCompiledShotSource,
 ): Promise<IAutoMovieCompiledShotRuntime> => {
   const models = new Map(compiled.models.map((model) => [model.id, model]));
+  const textures = createShotTextureCache();
   const built = await Promise.all(
     compiled.scene.nodes.map(async (node) => {
       const model = models.get(node.model);
       if (model === undefined)
         throw new Error(`Scene node "${node.id}" references "${node.model}".`);
-      return { node, model, object: await loadCompiledModel(model) };
+      return { node, model, object: await loadCompiledModel(model, textures) };
     }),
   );
-  const environmentTexture =
-    compiled.scene.environment?.image == null
-      ? undefined
-      : await loadEnvironmentAsset(compiled.scene.environment.image);
+  // The environment image goes through the same cache as the material maps, so
+  // a shot lighting itself from an image it also samples decodes that image
+  // once and frees it with everything else.
+  const environmentImage = compiled.scene.environment?.image ?? null;
+  let environmentTexture: THREE.Texture | undefined;
+  if (environmentImage !== null) {
+    await textures.prime([environmentImage]);
+    environmentTexture = textures.resolve(environmentImage);
+  }
   let cursor = 0;
   const scene = buildScene(
     compiled.scene,
@@ -98,7 +106,7 @@ export const createCompiledShotRuntime = async (
           throw new Error(
             `Instance prototype references missing runtime model "${modelId}".`,
           );
-        return [modelId, await loadCompiledModel(model)] as const;
+        return [modelId, await loadCompiledModel(model, textures)] as const;
       }),
     ),
   );
@@ -311,5 +319,6 @@ export const createCompiledShotRuntime = async (
     scene: scene.scene,
     camera,
     render,
+    dispose: () => textures.dispose(),
   };
 };
