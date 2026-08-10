@@ -704,6 +704,25 @@ export const test_film_prop_placement = (): void => {
           }, "$input.props[1].placement.clearance[0].x"),
       ],
       [
+        "degenerateFootprintIsNotAlsoMismeasured",
+        () => {
+          const props = propRegistry();
+          const set = propSet();
+          const environments = [propEnvironment()];
+          props[CABINET]!.placement!.footprint!.min.x = NaN;
+          const result = validate(props, set, environments);
+          return (
+            result.success === false &&
+            result.violations.some(
+              (item) => item.path === "$input.props[6].placement.footprint.x",
+            ) &&
+            result.violations.every(
+              (item) => !item.expected.includes("leaves logical space"),
+            )
+          );
+        },
+      ],
+      [
         "relationsAcrossTwoBuildingsMeasureNothing",
         () =>
           tolerated((props, _set, environments) => {
@@ -743,6 +762,7 @@ export const test_film_prop_placement = (): void => {
       unmodelledFillNeverBlocks: true,
       placementlessPropIsNeitherJudgedNorCounted: true,
       clearanceOverInvalidBoxDoesNotThrow: true,
+      degenerateFootprintIsNotAlsoMismeasured: true,
       relationsAcrossTwoBuildingsMeasureNothing: true,
       propAffordanceAloneLocatesNothing: true,
       supportingPropWithoutPlacementMakesNoClaim: true,

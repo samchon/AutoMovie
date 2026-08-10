@@ -163,6 +163,10 @@ export const propBlockedPassages = (props: {
  * answers `null`; a `boundary` answers with its first realizing element and an
  * `opening` with its filling element, because those are the only members of
  * those records that carry a transform.
+ *
+ * Lookups take the first record of a given id. Two buildings sharing one id is
+ * a contradiction {@link validatePropPlacements} refuses by name, so resolving
+ * it a second time here would report the same defect in a worse place.
  */
 export const propAnchorFrame = (props: {
   target: IAutoMoviePropRelationTarget;
@@ -680,18 +684,22 @@ const validateSupportCycles = (props: Props, out: ViolationCollector): void => {
  * Judge every volume the sound part of the registry can be measured against.
  *
  * "Sound" is deliberately narrow: a prop is only measured when it forged, when
- * its node is declared once, and when exactly one staged piece places it.
- * Measuring an ambiguous or unforged prop would report a second failure caused
- * by the first, and the author would correct the wrong line.
+ * its node is declared once, when exactly one staged piece places it, and when
+ * any footprint it declares is a real volume. Measuring an ambiguous, unforged,
+ * or degenerate prop would report a second failure caused by the first, and the
+ * author would correct the wrong line.
  */
 const validateGeometry = (
   resolved: readonly IResolvedProp[],
   environments: Environments,
   out: ViolationCollector,
 ): void => {
-  const staged = resolved.filter(
-    (entry) => entry.forged && entry.unique && entry.piece !== undefined,
-  );
+  const staged = resolved.filter((entry) => {
+    if (!entry.forged || !entry.unique || entry.piece === undefined)
+      return false;
+    const footprint = entry.value.placement?.footprint ?? null;
+    return footprint === null || finiteBox(footprint);
+  });
   const occupancy = new Map<number, IAutoMoviePropBox>(
     staged.map((entry) => [
       entry.index,
