@@ -6,6 +6,7 @@ import {
 } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
 import {
   GRAPHICS_FIXTURE,
   RENDER_BUDGET_ASSETS,
@@ -41,6 +42,9 @@ import { sceneFixture } from "../internal/renderFixtures";
  *    no report, inventory, mask or target.
  * 6. Two deliveries of one shot fingerprint differently, which is what makes a
  *    report measured under the other one detectably stale.
+ * 7. A shot the preflight cannot measure is refused by its own id, with the
+ *    engine's account of the contradiction preserved: none of those refusals
+ *    knows which shot it was reading.
  */
 export const test_render_budget_preflight_target = (): void => {
   TestValidator.equals(
@@ -188,5 +192,41 @@ export const test_render_budget_preflight_target = (): void => {
       reported: filmic.report!.target.settings.toneMapping,
     },
     { same: true, differs: true, reported: "acesFilmic" },
+  );
+
+  TestValidator.predicate(
+    "a shot the preflight cannot measure is refused by shot id and by cause",
+    throwsError(
+      () =>
+        assessAutoMovieRenderBudget({
+          compiled: compiledShotFixture({
+            scene: {
+              ...sceneFixture(),
+              nodes: [
+                {
+                  id: "ghost",
+                  model: "absent-model",
+                  transform: {
+                    translation: { x: 0, y: 0, z: 0 },
+                    rotation: { x: 0, y: 0, z: 0, w: 1 },
+                    scale: { x: 1, y: 1, z: 1 },
+                  },
+                  motion: null,
+                  pose: null,
+                },
+              ],
+            },
+          }),
+          shot: "vault-reveal",
+          budget: null,
+          renderer: autoMovieRenderTargetRendererOfGraphics(GRAPHICS_FIXTURE),
+          settings: settings({ delivery: "none" }),
+          assets: RENDER_BUDGET_ASSETS,
+        }),
+      [
+        'could not measure shot "vault-reveal"',
+        'model "absent-model" is absent',
+      ],
+    ),
   );
 };

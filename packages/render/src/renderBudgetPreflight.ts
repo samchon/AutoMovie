@@ -203,32 +203,48 @@ export const assessAutoMovieRenderBudget = (props: {
       mask: null,
       target: null,
     };
-  const subject = autoMovieRenderSubjectOfCompiledShot({
-    compiled: props.compiled,
-    textures: props.textures,
-  });
-  const mask = deriveAutoMovieSemanticMask(subject);
-  const inventory = measureAutoMovieRenderInventory({ subject, mask });
-  const target = sealAutoMovieRenderTarget({
-    renderer: props.renderer,
-    settings: props.settings,
-    assets: props.assets,
-  });
-  const report = evaluateAutoMovieRenderBudget({
-    inventory,
-    budget: props.budget,
-    mask,
-    target,
-  });
-  return {
-    shot: props.shot,
-    status: report.status,
-    reason: null,
-    report,
-    inventory,
-    mask,
-    target,
-  };
+  try {
+    const subject = autoMovieRenderSubjectOfCompiledShot({
+      compiled: props.compiled,
+      textures: props.textures,
+    });
+    const mask = deriveAutoMovieSemanticMask(subject);
+    const inventory = measureAutoMovieRenderInventory({ subject, mask });
+    const target = sealAutoMovieRenderTarget({
+      renderer: props.renderer,
+      settings: props.settings,
+      assets: props.assets,
+    });
+    const report = evaluateAutoMovieRenderBudget({
+      inventory,
+      budget: props.budget,
+      mask,
+      target,
+    });
+    return {
+      shot: props.shot,
+      status: report.status,
+      reason: null,
+      report,
+      inventory,
+      mask,
+      target,
+    };
+  } catch (error) {
+    // Every refusal below this line names a contradiction in the artifact -- two
+    // claimants of one semantic id, a node citing a model the shot does not
+    // carry, a setting that cannot be sealed -- and none of them names the shot,
+    // because none of them knows it. A film of a hundred shots is where that
+    // costs an hour, so the shot is added here and the original is preserved as
+    // the cause rather than replaced by a summary of it.
+    // `String(error)` rather than a narrowing on `Error`: everything thrown
+    // below this line comes from the engine and is an `Error`, so the other arm
+    // would be a branch no input can reach and no test could honestly cover.
+    throw new Error(
+      `render budget preflight could not measure shot "${props.shot}": ${String(error)}`,
+      { cause: error },
+    );
+  }
 };
 
 /** One render job's budget evidence over every shot it draws. */
