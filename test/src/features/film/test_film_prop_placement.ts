@@ -692,16 +692,29 @@ export const test_film_prop_placement = (): void => {
         () =>
           tolerated(
             (_props, set) =>
-              (set[SCULPTURE]!.position = { x: 0, y: 0.3, z: 0 }),
+              (set[SCULPTURE]!.position = { x: 0, y: 0.3, z: 0.3 }),
           ),
       ],
       [
         "clearanceOverInvalidBoxDoesNotThrow",
-        () =>
-          violated((props, set) => {
-            props[LAMP]!.placement!.clearance[0]!.min.x = NaN;
-            set[CHARGER]!.position = { x: 1.5, y: 0.9, z: 0 };
-          }, "$input.props[1].placement.clearance[0].x"),
+        () => {
+          const props = propRegistry();
+          const set = propSet();
+          const environments = [propEnvironment()];
+          props[LAMP]!.placement!.clearance[0]!.min.x = NaN;
+          set[CHARGER]!.position = { x: 1.5, y: 0.9, z: 0 };
+          const result = validate(props, set, environments);
+          return (
+            result.success === false &&
+            result.violations.some(
+              (item) =>
+                item.path === "$input.props[1].placement.clearance[0].x",
+            ) &&
+            result.violations.every(
+              (item) => !item.expected.includes("intersects staged prop"),
+            )
+          );
+        },
       ],
       [
         "degenerateFootprintIsNotAlsoMismeasured",

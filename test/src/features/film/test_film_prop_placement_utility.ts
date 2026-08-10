@@ -218,6 +218,10 @@ export const test_film_prop_placement_utility = (): void => {
           propClearanceBounds({
             prop: lamp(),
             piece: { ...UNIT, position: { x: 0, y: 0.9, z: 0 }, scale: 1.2 },
+          }).length === 1 &&
+          propClearanceBounds({
+            prop: lamp(),
+            piece: { ...UNIT, position: { x: 0, y: 0.9, z: 0 }, scale: 1.2 },
           }).every(
             (clearance) =>
               clearance.id === "shade-service" &&
@@ -340,7 +344,7 @@ export const test_film_prop_placement_utility = (): void => {
           propBlockedPassages({
             environment,
             bounds: box(3.9, 0.5, -0.02, 4.1, 1.5, 0.02),
-          }).every((blockage) => blockage.id !== "arch"),
+          }).length === 1,
       ],
       [
         "unmodelledFillIsNeverBlocked",
