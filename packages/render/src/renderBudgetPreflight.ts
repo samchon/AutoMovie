@@ -100,14 +100,17 @@ export const autoMovieRenderTargetSettingsOfShot = (props: {
   /** The delivery's own tone mapping, for a scene that declares none. */
   delivery: IAutoMovieRenderTargetSettings["toneMapping"];
 }): IAutoMovieRenderTargetSettings => {
-  const environment = props.compiled.scene.environment;
-  const shadows = environment?.shadows.enabled ?? false;
+  const environment = props.compiled.scene.environment ?? null;
+  const shadows =
+    environment !== null && environment.shadows.enabled
+      ? environment.shadows
+      : null;
   return {
     width: props.width,
     height: props.height,
     pixelRatio: props.pixelRatio,
-    shadows,
-    shadowType: shadows ? environment!.shadows.type : "none",
+    shadows: shadows !== null,
+    shadowType: shadows === null ? "none" : shadows.type,
     toneMapping: environment?.toneMapping ?? props.delivery,
     exposure: environment?.exposure ?? 1,
   };
@@ -166,7 +169,7 @@ export const autoMovieRenderSubjectOfCompiledShot = (props: {
     const feature = waterOwner.get(domain.id);
     return {
       id: domain.id,
-      owner: space(feature?.environment, feature?.space),
+      owner: space(feature),
       // The bound domain draws its own free surface, which the mask joins by
       // the viewer's name for it. Naming a scene node here as well would bill
       // the same water twice.
@@ -183,7 +186,7 @@ export const autoMovieRenderSubjectOfCompiledShot = (props: {
     const furnishing = softOwner.get(domain.id);
     return {
       domain,
-      owner: space(furnishing?.environment, furnishing?.space),
+      owner: space(furnishing),
       material: furnishing?.material ?? null,
     };
   });
@@ -199,7 +202,7 @@ export const autoMovieRenderSubjectOfCompiledShot = (props: {
     return {
       domain,
       cluster,
-      owner: space(installation?.environment, installation?.space),
+      owner: space(installation),
       branchMaterial: installation?.branchMaterial ?? null,
       leafMaterial: installation?.leafMaterial ?? null,
       branch: null,
@@ -238,13 +241,15 @@ const binding = <Entry extends { id: string }>(
   return index;
 };
 
+/**
+ * The semantic id of the space a binding names, or `null` when nothing bound
+ * the drawable. It is the mask's own spelling, which is what lets a cost in the
+ * report and a colour in the mask resolve to one room.
+ */
 const space = (
-  environment: string | undefined,
-  id: string | undefined,
+  bound: { environment: string; space: string } | undefined,
 ): string | null =>
-  environment === undefined || id === undefined
-    ? null
-    : `space:${environment}/${id}`;
+  bound === undefined ? null : `space:${bound.environment}/${bound.space}`;
 
 /**
  * Select the budget a render job targets, or `null` when the production
@@ -480,12 +485,19 @@ export const autoMovieRenderBudgetRefusal = (
   const over = evidence.shots.filter((shot) => shot.status === "over");
   if (over.length === 0) return null;
   return `Render tier "${evidence.tier}" is over budget in ${over.length} shot(s): ${over
-    .map(
-      (shot) =>
-        `${shot.shot}: ${shot
-          .report!.findings.filter((finding) => finding.status === "over")
-          .map((finding) => finding.recovery)
-          .join("; ")}`,
-    )
+    .map((shot) => {
+      // A verdict carries the findings that produced it. One that does not is
+      // a caller-built record, and the refusal still has to name the shot: a
+      // message that quietly dropped it would leave an over-budget render with
+      // nothing to act on.
+      const recoveries = (shot.report?.findings ?? [])
+        .filter((finding) => finding.status === "over")
+        .map((finding) => finding.recovery);
+      return `${shot.shot}: ${
+        recoveries.length === 0
+          ? "the assessment recorded no over-limit finding to recover from"
+          : recoveries.join("; ")
+      }`;
+    })
     .join(" | ")}`;
 };

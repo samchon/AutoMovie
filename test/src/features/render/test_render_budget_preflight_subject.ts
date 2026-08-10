@@ -6,6 +6,10 @@ import { fluidDomain, waterFeature } from "../internal/fluidFixtures";
 import { throwsError } from "../internal/predicates";
 import { compiledShotFixture } from "../internal/renderBudgetFixtures";
 import {
+  buildingFixture,
+  instanceSetFixture,
+} from "../internal/renderFixtures";
+import {
   plantingCluster,
   plantingInstallation,
   plantingRecipe,
@@ -35,7 +39,8 @@ import {
  * 4. A planting cluster whose recipe the shot does not carry is refused by name
  *    rather than silently dropped from the cost.
  * 5. A shot declaring none of the optional records produces empty lists, never
- *    `undefined`, and keeps the staged scene, models and instance sets.
+ *    `undefined`, and a shot staging a building, an instanced band and a
+ *    resolved texture carries all three through unchanged.
  * 6. The semantic mask derived from the same subject addresses every simulated
  *    drawable under the owner the report attributes its cost to.
  */
@@ -204,10 +209,32 @@ export const test_render_budget_preflight_subject = (): void => {
       sets: 0,
     },
   );
+  const staged = autoMovieRenderSubjectOfCompiledShot({
+    compiled: compiledShotFixture({
+      builtEnvironments: [buildingFixture()],
+      instanceSets: [
+        instanceSetFixture({ id: "windows", count: 4, chunks: 2 }),
+      ],
+    }),
+    textures: [
+      {
+        asset: "textures/stone.png",
+        width: 256,
+        height: 256,
+        mipmapped: false,
+      },
+    ],
+  });
   TestValidator.equals(
-    "a caller-resolved texture reaches the subject the inventory measures",
-    autoMovieRenderSubjectOfCompiledShot({
-      compiled: compiledShotFixture(),
+    "a staged building, its instanced band and a resolved texture all survive",
+    {
+      environments: staged.environments?.map((environment) => environment.id),
+      sets: staged.instanceSets?.map((set) => [set.id, set.count]),
+      textures: staged.textures,
+    },
+    {
+      environments: ["tower"],
+      sets: [["windows", 4]],
       textures: [
         {
           asset: "textures/stone.png",
@@ -216,15 +243,7 @@ export const test_render_budget_preflight_subject = (): void => {
           mipmapped: false,
         },
       ],
-    }).textures,
-    [
-      {
-        asset: "textures/stone.png",
-        width: 256,
-        height: 256,
-        mipmapped: false,
-      },
-    ],
+    },
   );
 
   const mask = deriveAutoMovieSemanticMask(bound);

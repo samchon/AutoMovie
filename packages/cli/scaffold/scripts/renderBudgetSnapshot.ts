@@ -144,9 +144,7 @@ export const assessProductionRenderBudget = (props: {
  * stay readable.
  */
 export const publishRenderBudgetEvidence = (props: {
-  /** Ownership root the evidence must stay inside. */
-  base: string;
-  /** Tier state root that owns the evidence directory. */
+  /** Tier state root that owns the evidence directory and fences the write. */
   stateRoot: string;
   /** Evidence to publish. */
   evidence: IAutoMovieRenderBudgetEvidence;
@@ -167,7 +165,7 @@ export const publishRenderBudgetEvidence = (props: {
   try {
     return {
       path: file,
-      snapshot: createRenderGcFileSnapshot(props.base, file, bytes),
+      snapshot: createRenderGcFileSnapshot(props.stateRoot, file, bytes),
     };
   } catch (error) {
     // The digest names the bytes, so an existing file at this address already

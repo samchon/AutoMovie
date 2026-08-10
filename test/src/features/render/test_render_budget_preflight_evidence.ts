@@ -42,6 +42,8 @@ import { BOX_TRIANGLES } from "../internal/renderFixtures";
  *    `within`, whichever order the shots arrive in.
  * 6. The evidence digest is a property of the verdicts, not of shot order, and
  *    changes when a verdict does.
+ * 7. An over verdict carrying no finding still refuses and still names the shot,
+ *    rather than dropping the only thing an operator could act on.
  */
 export const test_render_budget_preflight_evidence = (): void => {
   const review = renderBudgetFixture({
@@ -264,6 +266,11 @@ export const test_render_budget_preflight_evidence = (): void => {
     budgets: [delivery],
     assessments: [assess({ budget: null, textures: true })],
   });
+  const undeclared = autoMovieRenderBudgetEvidence({
+    tier: "review",
+    budgets: undefined,
+    assessments: [assess({ budget: null, textures: true })],
+  });
   TestValidator.equals(
     "a tier nobody budgeted is reported as such, with the declared tiers named",
     {
@@ -274,6 +281,10 @@ export const test_render_budget_preflight_evidence = (): void => {
         (finding) => finding.metric === "triangles",
       )!.status,
       status: unbudgeted.status,
+      // A production that declared nothing at all is not the same record as one
+      // that budgeted other tiers, and the evidence has to tell them apart.
+      undeclaredTiers: undeclared.declaredTiers,
+      undeclaredBudgeted: undeclared.budgeted,
     },
     {
       budgeted: false,
@@ -281,6 +292,8 @@ export const test_render_budget_preflight_evidence = (): void => {
       tier: "unbudgeted",
       triangles: "unbudgeted",
       status: "within",
+      undeclaredTiers: [],
+      undeclaredBudgeted: false,
     },
   );
 
@@ -301,5 +314,22 @@ export const test_render_budget_preflight_evidence = (): void => {
       excess: refusal?.includes(`${staged} against a limit of ${staged - 1}`),
     },
     { refused: true, shot: true, tier: true, owner: true, excess: true },
+  );
+
+  const findingless = autoMovieRenderBudgetRefusal(
+    autoMovieRenderBudgetEvidence({
+      tier: "review",
+      budgets: [review],
+      assessments: [{ ...shot("silent", "over"), report: null }],
+    }),
+  );
+  TestValidator.equals(
+    "an over verdict carrying no finding still names the shot it refuses for",
+    {
+      refused: findingless !== null,
+      shot: findingless?.includes("silent"),
+      recovery: findingless?.includes("recorded no over-limit finding"),
+    },
+    { refused: true, shot: true, recovery: true },
   );
 };

@@ -304,7 +304,7 @@ const main = async (): Promise<void> => {
     const current = await currentPlan();
     const budget = enforceRenderBudget(current);
     if (action === "plan") {
-      output({ plan: current, budget });
+      output({ ...current, budget });
       return;
     }
     if (action === "all") await captureReviewEvidence();
@@ -499,11 +499,7 @@ const enforceRenderBudget = (plan: IAutoMovieProductionRenderJobPlan) => {
     graphics: plan.runtimeIdentity.capture.graphics,
     audioAssets: new Set(timeline.tracks.audio.map((cue) => cue.asset)),
   });
-  const published = publishRenderBudgetEvidence({
-    base: root,
-    stateRoot,
-    evidence,
-  });
+  const published = publishRenderBudgetEvidence({ stateRoot, evidence });
   const relative = path
     .relative(root, published.path)
     .split(path.sep)
