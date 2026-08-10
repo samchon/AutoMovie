@@ -15,7 +15,10 @@ import {
 } from "@automovie/viewer";
 
 import { createCompiledShotRuntime } from "./shotRuntime";
-import { viewerDocument } from "./viewerDocument";
+import {
+  type IAutoMovieShotObservation,
+  viewerDocument,
+} from "./viewerDocument";
 
 const { canvas, status } = viewerDocument();
 const parameters = new URLSearchParams(window.location.search);
@@ -58,21 +61,27 @@ const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
 });
 mounted.renderer.setClearColor(0x11151b, 1);
 
+/** What the scene submitted for the frame the last seek drew. */
+const observe = (): IAutoMovieShotObservation => ({
+  shot: compiled.shot.id,
+  observed: observeAutoMovieSceneRender(runtime.scene),
+  unresolved,
+});
+
 const seek = (time: number, pass: AutoMovieGuidePass): void => {
   const drawn = runtime.render(mounted.renderer, time, pass);
+  // The live viewer reads the frame through the SAME call the capture hook
+  // answers with, so an operator watching this line and a render job reading
+  // the hook are looking at one measurement of one scene.
+  const { observed } = observe();
   status.textContent =
-    unresolved.length === 0
-      ? drawn
-      : `${drawn}  UNDRAWN ${unresolved.join(",")}`;
+    `${drawn}  D${observed.drawCalls}/T${observed.triangles}/M${observed.materials}` +
+    (unresolved.length === 0 ? "" : `  UNDRAWN ${unresolved.join(",")}`);
 };
 window.__automovieCapture = {
   ready: true,
   seek,
-  observe: () => ({
-    shot: compiled.shot.id,
-    observed: observeAutoMovieSceneRender(runtime.scene),
-    unresolved,
-  }),
+  observe,
   sidecar: () => renderAutoMovieSemanticMaskSidecar(mask),
 };
 seek(0, "beauty");

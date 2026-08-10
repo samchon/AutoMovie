@@ -413,7 +413,7 @@ const CLAIMS: ICapabilityClaim[] = [
   },
   {
     guide: "CAPTURE_FRAME",
-    probe: "It keys every colour to a semantic id rather than to scene order",
+    probe: "four exact colours that survive a rebuild in a different order",
     files: ["render/IAutoMovieSemanticMask.ts"],
   },
   {
