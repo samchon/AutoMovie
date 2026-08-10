@@ -44,6 +44,7 @@ const built = (scene: IAutoMovieScene): THREE.Scene =>
   buildScene(scene, () => ({
     object: new THREE.Group(),
     bones: new Map(),
+    parts: new Map(),
   })).scene;
 
 const lightsOf = (scene: THREE.Scene): THREE.Light[] => {

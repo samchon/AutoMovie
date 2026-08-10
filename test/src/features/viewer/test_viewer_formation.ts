@@ -798,7 +798,11 @@ export const test_viewer_formation = (): void => {
         new THREE.Mesh(untextured, new THREE.MeshStandardMaterial()),
       );
       try {
-        flattenInstancedObject({ object: mismatched, bones: new Map() });
+        flattenInstancedObject({
+          object: mismatched,
+          bones: new Map(),
+          parts: new Map(),
+        });
         return false;
       } catch (error) {
         return (

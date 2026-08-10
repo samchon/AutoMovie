@@ -264,3 +264,12 @@ const aimLight = <Light extends THREE.DirectionalLight | THREE.SpotLight>(
 
 /** Re-export so callers can pose static nodes after building the scene. */
 export { applyPose };
+
+/**
+ * Re-export for the same reason, one rung further in: a scene carrying props is
+ * only half built when its node groups exist, because a prop's declared joints
+ * are objects of the scene rather than of any one model, and the clip that
+ * turns them names them by the id this builds them under.
+ */
+export { buildPropArticulation } from "./propArticulation";
+export type { IAutoMovieBuiltPropArticulation } from "./propArticulation";

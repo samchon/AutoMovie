@@ -38,6 +38,16 @@ export interface IAutoMovieModelObject {
   object: THREE.Group;
   /** Bones by humanoid slot, for posing. Empty for a non-rigged object. */
   bones: ReadonlyMap<AutoMovieHumanoidBone, THREE.Object3D>;
+  /**
+   * Parts by {@link IAutoMovieModelPart.id}, for a caller that has to move one.
+   *
+   * A prop's articulation joint names the part that rides it, and the only way
+   * to make that reference true on screen is to reparent that part under the
+   * joint's own object. Found by id rather than by traversing for a name,
+   * because a part's `name` is optional and a model may carry two parts sharing
+   * one, so a name search would move whichever it reached first.
+   */
+  parts: ReadonlyMap<string, THREE.Object3D>;
   /** Optional expression sinks: morph managers, VRM expression managers, etc. */
   expressionTargets?: readonly IAutoMovieExpressionTarget[];
   /** Optional imported-runtime flush after pose and expression are written. */
@@ -125,6 +135,7 @@ export const buildModel = (
       (m) => [m.id, buildMaterial(m, resolveTexture)] as const,
     ),
   );
+  const parts = new Map<string, THREE.Object3D>();
   for (const part of model.parts) {
     const geo = buildGeometry(part.geometry);
     const mat =
@@ -140,6 +151,7 @@ export const buildModel = (
         ? new THREE.SkinnedMesh(geo, mat)
         : new THREE.Mesh(geo, mat);
     mesh.name = part.name ?? part.id;
+    parts.set(part.id, mesh);
     if (part.transform !== null) applyTransform(mesh, part.transform);
 
     if (mesh instanceof THREE.SkinnedMesh && skin !== null) {
@@ -171,5 +183,5 @@ export const buildModel = (
     }
   }
 
-  return { object: group, bones };
+  return { object: group, bones, parts };
 };
