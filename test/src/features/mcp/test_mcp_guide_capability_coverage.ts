@@ -626,28 +626,36 @@ const EXEMPTIONS: ICapabilityExemption[] = [
 ];
 
 /**
- * Engine folds and where the decision about each was recorded.
+ * Every immediate child of the engine source tree, and where the decision about
+ * it was recorded.
  *
- * A fold is the unit here because a fold is how a capability arrives: this
- * cycle shipped `analysis`, `architecture`, `drawing`, `fluid`, `render`,
- * `service`, and `soft` as new folds, and nothing asked whether any of them was
- * taught. A `guide` names the served document that answers for the fold, and
- * `null` marks an engine internal the authoring surface reaches only through a
- * record that already carries its own claim above.
+ * This entry is the unit because it is how a capability arrives: the cycle that
+ * needed this case shipped `analysis`, `architecture`, `drawing`, `fluid`,
+ * `render`, `service`, and `soft` as new folds, and nothing asked whether any
+ * of them was taught. Top-level modules are classified beside the folds so a
+ * capability cannot escape by not being a directory. A guide names the served
+ * document that answers for the entry, and `null` marks an engine internal the
+ * authoring surface reaches only through a record that already carries its own
+ * claim above.
  */
-const ENGINE_FOLDS: Record<string, string | null> = {
+const ENGINE_ENTRIES: Record<string, string | null> = {
   analysis: "WORLD_BUILDING",
   architecture: "WORLD_BUILDING",
   drawing: "WORLD_BUILDING",
+  "effect.ts": "WORLD_DESIGN",
   face: null,
   film: "SHOT_CONTRACT",
   fluid: "WORLD_BUILDING",
+  "formation.ts": "FORMATION_DESIGN",
+  "formationCadence.ts": "FORMATION_DESIGN",
+  "formationSlot.ts": "FORMATION_DESIGN",
   geometry: "GEOMETRY",
   kinematics: null,
   math: null,
   motion: "MOTION",
   perform: null,
   physics: null,
+  "productionIdentity.ts": "COMPILATION",
   render: "PRODUCTION_DESIGN",
   resolve: null,
   rom: "OBJECT_RIGGING",
@@ -656,8 +664,10 @@ const ENGINE_FOLDS: Record<string, string | null> = {
   soft: "WORLD_BUILDING",
   sound: "SOUND_DESIGN",
   space: "WORLD_DESIGN",
+  "subject.ts": "SOURCE_COMPOSITION",
   text: null,
   validation: "DEBUGGING",
+  "worldKit.ts": "WORLD_DESIGN",
 };
 
 /** Shortest fragment accepted as a distinctive teaching quotation. */
@@ -683,11 +693,15 @@ const recordFiles = (root: string): string[] => {
   return walk(root, "").sort(compareCodeUnits);
 };
 
-/** Immediate subdirectories of one package source tree. */
-const foldNames = (root: string): string[] =>
+/** Immediate children of one package source tree, folds and modules alike. */
+const sourceEntries = (root: string): string[] =>
   fs
     .readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter(
+      (entry) =>
+        entry.isDirectory() ||
+        (entry.name.endsWith(".ts") && entry.name !== "index.ts"),
+    )
     .map((entry) => entry.name)
     .sort(compareCodeUnits);
 
@@ -708,8 +722,11 @@ const foldNames = (root: string): string[] =>
  * nobody writes. Each file is either claimed by a served guide with a
  * distinctive quotation from that guide, or exempted for one of three closed
  * reasons whose totals are pinned here, so an exemption can only grow through a
- * visible edit to this case. Engine folds carry the coarser half of the same
- * obligation: a new fold forces a classification instead of arriving silently.
+ * visible edit to this case. The engine tree carries the coarser half of the
+ * same obligation, so a new fold or top-level module forces a classification
+ * instead of arriving silently. The viewer is deliberately outside both
+ * populations: an authoring agent never writes viewer code, it consumes what a
+ * record already declared.
  *
  * Scenarios:
  *
@@ -726,9 +743,9 @@ const foldNames = (root: string): string[] =>
  *    document, fails naming the guide and the fragment.
  * 4. The exemption totals per closed reason are exactly the pinned numbers, so
  *    silencing a capability instead of teaching it cannot be a one-line edit.
- * 5. Engine folds on disk are exactly the classified ones, and every fold that
- *    claims a guide names a served guide that some interface claim already
- *    proved teaches something.
+ * 5. The engine tree's immediate children on disk are exactly the classified ones,
+ *    and every entry that claims a guide names a served guide some interface
+ *    claim already proved teaches something.
  */
 export const test_mcp_guide_capability_coverage = (): void => {
   const promptRoot = path.join(ROOT, "packages/mcp/prompts");
@@ -807,22 +824,22 @@ export const test_mcp_guide_capability_coverage = (): void => {
     ["host-contract:16", "primitive:14", "undelivered:17"],
   );
 
-  const engineFolds = foldNames(path.join(ROOT, "packages/engine/src"));
+  const engineEntries = sourceEntries(path.join(ROOT, "packages/engine/src"));
   TestValidator.equals(
-    "every engine fold is classified as taught or internal",
-    Object.keys(ENGINE_FOLDS).sort(compareCodeUnits),
-    engineFolds,
+    "every engine fold and module is classified as taught or internal",
+    Object.keys(ENGINE_ENTRIES).sort(compareCodeUnits),
+    engineEntries,
   );
   const claimedGuides = new Set<string>(CLAIMS.map((claim) => claim.guide));
   TestValidator.equals(
-    "every taught engine fold names a guide a claim already proved",
-    Object.entries(ENGINE_FOLDS)
+    "every taught engine entry names a guide a claim already proved",
+    Object.entries(ENGINE_ENTRIES)
       .filter(
         ([, guide]) =>
           guide !== null &&
           (served.has(guide) === false || claimedGuides.has(guide) === false),
       )
-      .map(([fold, guide]) => `${fold}: ${guide}`),
+      .map(([entry, guide]) => `${entry}: ${guide}`),
     [],
   );
 };

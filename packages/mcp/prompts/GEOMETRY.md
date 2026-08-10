@@ -16,7 +16,7 @@ The geometry oracle is intentionally compact. Source code remains the right plac
 
 ## Code-authored meshes
 
-The same package builds geometry, not only measures it. A shot program returns `models`: complete model records whose parts carry meshes your own source constructed. That is the path for a building, a moulding, a balustrade, a machine housing, or any shape no registered archetype makes, and it does not go through a model recipe. A recipe is a bounded parameter map validated against an archetype catalogue; this is a program, and the two are not substitutes.
+The same package builds geometry, not only measures it. A shot program may return `models`: complete model records whose parts carry meshes your own source constructed. That is the path for a building, a moulding, a balustrade, a machine housing, or any shape no registered archetype makes, and it does not go through a model recipe. A recipe is a bounded parameter map validated against an archetype catalogue; this is a program, and the two are not substitutes.
 
 Five constructors cover the constructive vocabulary, and each returns one mesh.
 
