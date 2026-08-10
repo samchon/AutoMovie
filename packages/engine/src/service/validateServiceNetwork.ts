@@ -345,7 +345,10 @@ export const validateServiceNetwork = (props: {
           port.id,
         );
       seenPorts.add(port.id);
-      portPaths.set(port.id, portPath);
+      // First declaration wins, exactly as `portRecords` resolves it, so a
+      // stub is reported at the port a run would actually have joined rather
+      // than at whichever copy of a duplicated id came last.
+      if (!portPaths.has(port.id)) portPaths.set(port.id, portPath);
       const system = systems.get(port.system);
       if (system === undefined)
         out.push(
