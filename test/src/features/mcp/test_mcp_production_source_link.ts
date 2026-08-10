@@ -297,6 +297,7 @@ export const test_mcp_production_source_link = (): void => {
       "builtEnvironmentBuildingOfSpace",
       "builtEnvironmentContainsPoint",
       "builtEnvironmentSpaceConnectors",
+      "builtEnvironmentSpaceFidelity",
       "builtEnvironmentSpaceNodes",
       "builtEnvironmentSpaceSurfaces",
       "defineShot",
