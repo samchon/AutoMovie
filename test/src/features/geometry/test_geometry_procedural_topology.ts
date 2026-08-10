@@ -4,6 +4,7 @@ import {
   buildAutoMovieWall,
   extrudeAutoMovieProfile,
   inspectAutoMovieMeshTopology,
+  mergeAutoMovieMeshParts,
   transformAutoMovieMesh,
 } from "@automovie/engine";
 import { IAutoMovieMesh } from "@automovie/interface";
@@ -255,6 +256,62 @@ export const test_geometry_procedural_topology = (): void => {
           ],
         ]),
       "polyhedron face[0] encloses no area",
+    ],
+    [
+      "reflex face",
+      () =>
+        buildAutoMoviePolyhedron([
+          [
+            { x: 0, y: 0, z: 0 },
+            { x: 3, y: 0, z: 0 },
+            { x: 3, y: 0, z: 1 },
+            { x: 1, y: 0, z: 1 },
+            { x: 1, y: 0, z: 3 },
+            { x: 0, y: 0, z: 3 },
+          ],
+        ]),
+      "polyhedron face[0] must be convex",
+    ],
+    [
+      "ragged positions",
+      () => inspectAutoMovieMeshTopology(meshOf([0, 0, 0, 1], null)),
+      "mesh topology needs positions in whole xyz triples",
+    ],
+    [
+      "ragged indices",
+      () =>
+        inspectAutoMovieMeshTopology(
+          meshOf([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, 2, 0]),
+        ),
+      "mesh topology needs triangle indices in threes",
+    ],
+    [
+      "index past the last vertex",
+      () =>
+        transformAutoMovieMesh(
+          meshOf([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, 5]),
+          {},
+        ),
+      "mesh transform indexes a vertex the mesh does not carry",
+    ],
+    [
+      "fractional index",
+      () =>
+        mergeAutoMovieMeshParts([
+          {
+            id: "ragged",
+            mesh: meshOf([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, 1.5]),
+          },
+        ]),
+      'mesh part "ragged" indexes a vertex the mesh does not carry',
+    ],
+    [
+      "negative index",
+      () =>
+        inspectAutoMovieMeshTopology(
+          meshOf([0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 1, -1]),
+        ),
+      "mesh topology indexes a vertex the mesh does not carry",
     ],
     [
       "non-planar face",

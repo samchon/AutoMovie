@@ -212,9 +212,11 @@ export const sweepAutoMovieProfile = (props: {
  * the seam and its UV frame is the face's own plane measured in metres.
  *
  * Faces are refused, never quietly repaired: fewer than three corners, a
- * non-finite corner, a collinear face carrying no area, and a corner off the
- * face's own plane each raise their own diagnostic. Whether the result is a
- * closed shell is the caller's declaration to make and
+ * non-finite corner, a collinear face carrying no area, a corner off the face's
+ * own plane, and a reflex corner each raise their own diagnostic. Convexity is
+ * demanded because the face is fanned from its first corner, and fanning a
+ * concave outline emits triangles that cover ground the face does not. Whether
+ * the result is a closed shell is the caller's declaration to make and
  * {@link inspectAutoMovieMeshTopology}'s to check.
  */
 export const buildAutoMoviePolyhedron = (
@@ -247,6 +249,21 @@ export const buildAutoMoviePolyhedron = (
       )
     )
       throw new Error(`polyhedron face[${face}] is not planar`);
+    for (let index = 0; index < corners.length; ++index) {
+      const previous = corners[(index + corners.length - 1) % corners.length]!;
+      const current = corners[index]!;
+      const next = corners[(index + 1) % corners.length]!;
+      if (
+        Vector3.dot(
+          Vector3.cross(
+            Vector3.subtract(current, previous),
+            Vector3.subtract(next, current),
+          ),
+          normal,
+        ) < -FACE_EPSILON
+      )
+        throw new Error(`polyhedron face[${face}] must be convex`);
+    }
     const axisU = Vector3.normalize(Vector3.subtract(corners[1]!, origin));
     const axisV = Vector3.cross(normal, axisU);
     const base = positions.length / 3;
@@ -398,6 +415,7 @@ export const transformAutoMovieMesh = (
 ): IAutoMovieMesh => {
   if (mesh.skin !== null)
     throw new Error("procedural mesh transform does not accept skinning");
+  const triangles = triangleIndicesOf(mesh, "mesh transform");
   const translation = transform.translation ?? { x: 0, y: 0, z: 0 };
   finiteVector(translation, "mesh transform translation");
   const rotation = transform.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
@@ -437,9 +455,6 @@ export const transformAutoMovieMesh = (
     normals.push(turned.x, turned.y, turned.z);
   }
   const mirrored = scale.x * scale.y * scale.z < 0;
-  const triangles =
-    mesh.indices ??
-    Array.from({ length: mesh.positions.length / 3 }, (_, index) => index);
   const indices: number[] = [];
   for (let index = 0; index < triangles.length; index += 3)
     indices.push(
@@ -474,11 +489,12 @@ export const mergeAutoMovieMeshParts = (
       throw new Error(`mesh part id "${part.id}" must be unique`);
     seen.add(part.id);
   }
-  const placed = parts.map((part) =>
-    part.transform === undefined
+  const placed = parts.map((part) => {
+    triangleIndicesOf(part.mesh, `mesh part "${part.id}"`);
+    return part.transform === undefined
       ? part.mesh
-      : transformAutoMovieMesh(part.mesh, part.transform),
-  );
+      : transformAutoMovieMesh(part.mesh, part.transform);
+  });
   const groups: IAutoMovieMeshGroup[] = [];
   let start = 0;
   placed.forEach((mesh, index) => {
@@ -505,9 +521,7 @@ export const inspectAutoMovieMeshTopology = (
     ...(mesh.normals ?? []),
     ...(mesh.uvs ?? []),
   ].filter((value) => Number.isFinite(value) === false).length;
-  const indices =
-    mesh.indices ??
-    Array.from({ length: mesh.positions.length / 3 }, (_, index) => index);
+  const indices = triangleIndicesOf(mesh, "mesh topology");
   const key = (at: number): string =>
     [0, 1, 2]
       .map((axis) => Math.round(mesh.positions[at * 3 + axis]! * WELD_SCALE))
@@ -554,6 +568,32 @@ export const inspectAutoMovieMeshTopology = (
     watertight: edges.size > 0 && boundaryEdges === 0 && nonManifoldEdges === 0,
     volume: sixVolume / 6,
   };
+};
+
+/**
+ * The triangle index run a mesh carries, refused rather than read past its end.
+ *
+ * An index array that is not a whole number of triangles, or that names a
+ * vertex the mesh does not carry, would otherwise read `undefined` and emit
+ * `NaN` positions and a `NaN` volume that no downstream check attributes back
+ * to the malformed input.
+ */
+const triangleIndicesOf = (mesh: IAutoMovieMesh, label: string): number[] => {
+  const vertices = mesh.positions.length / 3;
+  if (Number.isSafeInteger(vertices) === false)
+    throw new Error(`${label} needs positions in whole xyz triples`);
+  const indices =
+    mesh.indices ?? Array.from({ length: vertices }, (_, index) => index);
+  if (indices.length % 3 !== 0)
+    throw new Error(`${label} needs triangle indices in threes`);
+  if (
+    indices.some(
+      (index) =>
+        Number.isSafeInteger(index) === false || index < 0 || index >= vertices,
+    )
+  )
+    throw new Error(`${label} indexes a vertex the mesh does not carry`);
+  return indices;
 };
 
 /** Welding grid for topology queries: 1 nm, far below any building tolerance. */
