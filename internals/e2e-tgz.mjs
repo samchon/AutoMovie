@@ -1591,6 +1591,23 @@ if (
     "Review state is missing",
     900_000,
   );
+  // Every design record as the compiler left it, read immediately before the
+  // emitter runs. A record the emitter rewrites is reported by name below, and
+  // the name alone does not say WHAT it disagreed about -- these bytes do, and
+  // they cannot be recovered afterwards because the emit has already replaced
+  // them.
+  const designRoot = join(starterDir, ".automovie", "design");
+  const beforeEmit = new Map();
+  const readDesignTree = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const full = join(directory, entry.name);
+      if (entry.isDirectory()) readDesignTree(full);
+      else if (entry.name.endsWith(".json"))
+        beforeEmit.set(full, readFileSync(full, "utf8"));
+    }
+  };
+  if (existsSync(designRoot)) readDesignTree(designRoot);
+
   // The design records are derived from the typed subjects rather than
   // transcribed beside them, and nothing else checks that the derivation
   // settles. The compile above already migrated the shipped records into the
@@ -1615,6 +1632,20 @@ if (
     // three steps later.
     /^unchanged /u,
   );
+  // Reached only when every record was unchanged; a rewritten one throws above.
+  // Kept anyway, because a record the emitter rewrote to the same bytes would
+  // pass that check and still be a derivation that does not settle.
+  for (const [file, before] of beforeEmit) {
+    const after = readFileSync(file, "utf8");
+    if (after === before) continue;
+    fail(
+      `design record ${relative(starterDir, file)} changed while every emit line said unchanged:
+--- before
+${before}
+--- after
+${after}`,
+    );
+  }
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got
   // wrong. The ground that decides the picture is the one a shot stages: the
