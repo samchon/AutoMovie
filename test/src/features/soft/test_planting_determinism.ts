@@ -52,7 +52,10 @@ const jittered = (seed: number) =>
  *    spreads them.
  * 5. The declared caps are enforced rather than decorative: a branch cap below
  *    what the law grows, and a leaf cap below what the foliage bears, each
- *    throw with the recipe named.
+ *    throw with the recipe named. The leaf cap is reached while blades are
+ *    emitted rather than after the structure is complete, so a density of a
+ *    trillion leaves per metre is refused at the sixteenth blade instead of
+ *    exhausting the machine on the way to a cap that was going to refuse it.
  */
 export const test_planting_determinism = (): void => {
   const once = growPlanting(jittered(20_260_810));
@@ -195,7 +198,31 @@ export const test_planting_determinism = (): void => {
             ['planting "fern" exceeded its declared cap of 2 leaves'],
           ),
       ],
+      [
+        "leafCapIsReachedBeforeTheMachineIs",
+        () =>
+          throwsError(
+            () =>
+              growPlanting(
+                plantingRecipe({
+                  foliage: {
+                    density: 1e12,
+                    minLevel: 0,
+                    size: { x: 0.05, y: 0.1, z: 0.05 },
+                    scaleJitter: 0,
+                    rollJitter: 0,
+                  },
+                  budget: { maxBranches: 64, maxLeaves: 16 },
+                }),
+              ),
+            ['planting "fern" exceeded its declared cap of 16 leaves'],
+          ),
+      ],
     ]),
-    { branches: true, leaves: true },
+    {
+      branches: true,
+      leaves: true,
+      leafCapIsReachedBeforeTheMachineIs: true,
+    },
   );
 };

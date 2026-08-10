@@ -181,10 +181,6 @@ export const growPlanting = (
       jitter(domain.seed, trunkKey, SALT_LENGTH, structure.lengthJitter),
     radiusStart: structure.radius,
   });
-  if (leaves.length > domain.budget.maxLeaves)
-    throw new Error(
-      `planting "${domain.id}" exceeded its declared cap of ${domain.budget.maxLeaves} leaves`,
-    );
 
   return {
     domain: domain.id,
@@ -432,7 +428,15 @@ const crowded = (
   return false;
 };
 
-/** Leaves borne by one derived branch, in stable index order. */
+/**
+ * Leaves borne by one derived branch, in stable index order.
+ *
+ * The declared leaf cap is enforced **while** blades are emitted rather than
+ * once the whole structure is derived. A density is leaves per metre and is
+ * deliberately not capped — a moss is not a wrong plant — so a branch can ask
+ * for more blades than the recipe allows, and a cap only checked afterwards
+ * would be a cap the machine has to exhaust itself reaching.
+ */
 const bearLeaves = (props: {
   domain: IAutoMoviePlantingDomain;
   branch: string;
@@ -448,6 +452,10 @@ const bearLeaves = (props: {
   const count = Math.floor(foliage.density * props.length);
   const align = shortestArcFromUp(props.axis);
   for (let index = 0; index < count; ++index) {
+    if (props.leaves.length >= props.domain.budget.maxLeaves)
+      throw new Error(
+        `planting "${props.domain.id}" exceeded its declared cap of ${props.domain.budget.maxLeaves} leaves`,
+      );
     const along = ((index + 0.5) / count) * props.length;
     const roll = yaw(
       seededValue(props.domain.seed, props.key, SALT_LEAF_ROLL, index),
