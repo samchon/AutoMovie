@@ -5,6 +5,7 @@ import {
   IAutoMovieQuaternion,
   IAutoMovieVector3,
 } from "../geometry";
+import { IAutoMovieRenderBudget } from "../render/IAutoMovieRenderBudget";
 import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
@@ -115,6 +116,20 @@ export interface IAutoMovieProductionDesign {
    * unaffected in every respect, and so is any shot carrying no story pin.
    */
   lighting?: IAutoMovieProductionLighting;
+  /**
+   * Render cost limits this production holds its own artifacts to, by tier.
+   *
+   * The engine ships no preset tiers. A budget is a claim about what this
+   * production is willing to draw, which nobody else can make for it, so a
+   * production that declares none is measured and reported without a verdict
+   * rather than judged against a number it never chose.
+   *
+   * Each entry names its own `tier`, such as `review` or `delivery`, and a
+   * render job checks an artifact against the one it targets. Optional and
+   * purely additive: a production declaring none behaves exactly as it did
+   * before the field existed.
+   */
+  renderBudgets?: IAutoMovieRenderBudget[];
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**

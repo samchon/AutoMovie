@@ -72,6 +72,11 @@ export const buildScene = (
         `scene node "${node.id}" references model "${node.model}", which getModelObject could not resolve`,
       );
     const nodeGroup = new THREE.Group();
+    // Named, so a consumer can find a node's group by its scene id instead of
+    // by position among `root.children`. The two agree today only because this
+    // loop appends in design order, which a host that prepends anything of its
+    // own silently breaks.
+    nodeGroup.name = node.id;
     applyTransform(nodeGroup, node.transform);
     nodeGroup.add(built.object);
     // Static posing (node.pose) is done by the caller via applyPose, since it
