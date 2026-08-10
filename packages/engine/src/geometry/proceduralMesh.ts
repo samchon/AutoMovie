@@ -86,6 +86,42 @@ export interface IAutoMovieMeshTopology {
   volume: number;
 }
 
+/** One closed ring's span inside a triangulation's shared point list. */
+export interface IAutoMovieRegionRing {
+  /** First index the ring owns in {@link IAutoMovieRegionTriangulation.points}. */
+  start: number;
+  /** How many points the ring owns. */
+  count: number;
+}
+
+/** A free-form planar region resolved into counter-clockwise triangles. */
+export interface IAutoMovieRegionTriangulation {
+  /**
+   * Every ring's points in one list, canonically wound: the outer ring
+   * counter-clockwise first, then each hole clockwise in declared order.
+   */
+  points: IAutoMovieProfilePoint[];
+  /** Where each ring sits in {@link points}; `rings[0]` is the outer ring. */
+  rings: IAutoMovieRegionRing[];
+  /** Corner indices into {@link points}, three per counter-clockwise triangle. */
+  triangles: number[];
+  /** Enclosed area in square metres: the outer ring less every hole. */
+  area: number;
+}
+
+/** One station of a loft: where it sits along the path and what it looks like. */
+export interface IAutoMovieLoftSection {
+  /**
+   * Where the section sits along the path, `0` at its first point and `1` at
+   * its last, measured by chord length.
+   */
+  at: number;
+  /** The enclosing ring, in the path frame's right / up axes, in metres. */
+  outer: readonly IAutoMovieProfilePoint[];
+  /** Rings removed from the section; omitted means a solid section. */
+  holes?: ReadonlyArray<readonly IAutoMovieProfilePoint[]>;
+}
+
 /**
  * Extrude a convex XY profile along local Z into a closed triangle mesh.
  *
@@ -182,7 +218,7 @@ export const sweepAutoMovieProfile = (props: {
   );
   const positions: number[] = [];
   props.path.forEach((point, index) => {
-    const tangent = tangentAt(props.path, index);
+    const tangent = tangentAt(props.path, index, "sweep path");
     const guide =
       Math.abs(tangent.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
     const right = Vector3.normalize(Vector3.cross(guide, tangent));
@@ -437,6 +473,284 @@ export const buildAutoMovieWall = (props: {
     indices: target.indices,
     skin: null,
   };
+};
+
+/**
+ * Triangulate a free-form planar region: one arbitrary ring less its holes.
+ *
+ * This is the kernel's escape from convexity. A convex hull is the wrong answer
+ * for an L-shaped section, a channel, a cornice, or a tube, because the hull
+ * covers ground the region does not; {@link extrudeAutoMovieProfile} refuses a
+ * concave contour rather than quietly filling it in, and this is what the
+ * refusal points at. The contour is taken as authored, each hole is bridged
+ * into it, and the result is ear-clipped, so the triangles cover exactly the
+ * enclosed area and nothing else.
+ *
+ * Rings are refused rather than repaired: fewer than three points, a non-finite
+ * coordinate, a point repeated beside itself, a spike that doubles back along
+ * its own edge, a ring enclosing no area, and a ring crossing itself each raise
+ * their own diagnostic. Two rings may not touch or cross either, and a hole
+ * must lie strictly inside the outer ring and outside every other hole. A hole
+ * that does not is not a void this kernel guesses at; it is a region the author
+ * has not described.
+ *
+ * Winding is canonicalized rather than demanded: the outer ring comes back
+ * counter-clockwise and every hole clockwise, whichever way each was authored,
+ * because which ring bounds the region and which is a void is settled by
+ * containment and not by the order the points were typed in. The emitted
+ * triangles are counter-clockwise, so the region faces +Z.
+ */
+export const triangulateAutoMovieRegion = (props: {
+  outer: readonly IAutoMovieProfilePoint[];
+  holes?: ReadonlyArray<readonly IAutoMovieProfilePoint[]>;
+}): IAutoMovieRegionTriangulation =>
+  triangulateRegion(props.outer, props.holes ?? [], "polygon");
+
+/**
+ * Extrude a free-form region, holes and all, into a closed prism along local Z.
+ *
+ * {@link extrudeAutoMovieProfile} hulls its profile, so an L-shaped section, a
+ * channel, a frame section, and a hollow tube are all refused there. This one
+ * takes the region {@link triangulateAutoMovieRegion} accepts, which is what
+ * makes it also the arbitrary-shape opening this kernel otherwise lacks: a wall
+ * whose outer ring is the panel and whose holes are an arch, a round oculus, or
+ * any authored outline is one extrusion, and the opening is a real hole in the
+ * solid rather than a rectangle {@link buildAutoMovieWall} could cut.
+ *
+ * Every triangle owns its corners, so the crease where a cap meets a side stays
+ * a crease instead of being averaged into a rounded seam the way the older
+ * builders leave it. The UV atlas is measured in metres and stated rather than
+ * guessed: a cap carries its own profile coordinates, and a side carries the
+ * distance travelled along its ring against the height along Z.
+ *
+ * The result is a closed 2-manifold whose volume is the region's area times the
+ * depth, spanning `-depth / 2` to `+depth / 2` like the convex extrusion.
+ */
+export const extrudeAutoMovieRegion = (props: {
+  outer: readonly IAutoMovieProfilePoint[];
+  holes?: ReadonlyArray<readonly IAutoMovieProfilePoint[]>;
+  depth: number;
+}): IAutoMovieMesh => {
+  positive(props.depth, "polygon extrusion depth");
+  const plan = triangulateRegion(props.outer, props.holes ?? [], "polygon");
+  const half = props.depth / 2;
+  const target = emptyMeshTarget();
+  for (const [outward, cap] of [
+    [1, half],
+    [-1, -half],
+  ] as ReadonlyArray<readonly [1 | -1, number]>) {
+    const base = target.positions.length / 3;
+    for (const point of plan.points) {
+      target.positions.push(point.x, point.y, cap);
+      target.normals.push(0, 0, outward);
+      target.uvs.push(point.x, point.y * outward);
+    }
+    for (let at = 0; at < plan.triangles.length; at += 3)
+      target.indices.push(
+        base + plan.triangles[at]!,
+        base + plan.triangles[at + (outward === 1 ? 1 : 2)]!,
+        base + plan.triangles[at + (outward === 1 ? 2 : 1)]!,
+      );
+  }
+  for (const span of plan.rings) {
+    let along = 0;
+    for (let step = 0; step < span.count; ++step) {
+      const from = plan.points[span.start + step]!;
+      const to = plan.points[span.start + ((step + 1) % span.count)]!;
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      const normal = {
+        x: (to.y - from.y) / length,
+        y: (from.x - to.x) / length,
+        z: 0,
+      };
+      const base = target.positions.length / 3;
+      for (const [point, z, u] of [
+        [from, half, along],
+        [from, -half, along],
+        [to, -half, along + length],
+        [to, half, along + length],
+      ] as ReadonlyArray<readonly [IAutoMovieProfilePoint, number, number]>) {
+        target.positions.push(point.x, point.y, z);
+        target.normals.push(normal.x, normal.y, normal.z);
+        target.uvs.push(u, z);
+      }
+      target.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      along += length;
+    }
+  }
+  return { ...target, skin: null };
+};
+
+/**
+ * Loft free-form sections along a path, interpolating the section between them.
+ *
+ * {@link sweepAutoMovieProfile} carries one hulled profile down the whole path,
+ * so a tapered pier, a section that changes on the way, and any concave or
+ * hollow section are all outside it. Here each station's section is the linear
+ * blend of the two authored sections bracketing it, measured by chord length
+ * along the path, which is the variable-section spine and the taper in one
+ * operation: two sections that differ only in scale is a taper, two that differ
+ * in shape is a loft, and the same section declared at both ends is a sweep of
+ * a section {@link sweepAutoMovieProfile} would have hulled.
+ *
+ * Correspondence is authored, never inferred. Every section declares the same
+ * rings with the same point counts wound the same way, and point `k` of a ring
+ * blends into point `k` of that ring at the next section. A kernel that
+ * resampled instead would silently decide which corner of a section becomes
+ * which corner of the next, so a mismatch is refused with its own diagnostic.
+ *
+ * Both ends are capped from their own authored section, every triangle owns its
+ * corners so the section's corners stay creases, and the UV atlas is metric:
+ * the distance travelled around the section against the distance travelled
+ * along the path. Whether the swept solid intersects itself is the author's to
+ * decide, exactly as it is for a sweep: a path that turns tighter than the
+ * section is wide folds the surface through itself, and this kernel measures
+ * neither the turn nor the width.
+ */
+export const loftAutoMovieSections = (props: {
+  path: readonly IAutoMovieVector3[];
+  sections: readonly IAutoMovieLoftSection[];
+}): IAutoMovieMesh => {
+  if (props.path.length < 2)
+    throw new Error("loft path needs at least two points");
+  props.path.forEach((point, index) => {
+    finiteVector(point, `loft path[${index}]`);
+    if (
+      index > 0 &&
+      Vector3.length(Vector3.subtract(point, props.path[index - 1]!)) <=
+        PLANAR_EPSILON
+    )
+      throw new Error(`loft path[${index}] repeats the point beside it`);
+  });
+  if (props.sections.length < 2)
+    throw new Error("loft needs at least two sections");
+  props.sections.forEach((section, index) => {
+    if (Number.isFinite(section.at) === false)
+      throw new Error(`loft section[${index}] at must be finite`);
+    if (index > 0 && section.at <= props.sections[index - 1]!.at)
+      throw new Error(
+        `loft section[${index}] at must be greater than section[${index - 1}] at`,
+      );
+  });
+  if (
+    props.sections[0]!.at !== 0 ||
+    props.sections[props.sections.length - 1]!.at !== 1
+  )
+    throw new Error("loft sections must run from at 0 to at 1");
+  const plans = props.sections.map((section, index) =>
+    triangulateRegion(
+      section.outer,
+      section.holes ?? [],
+      `loft section[${index}]`,
+    ),
+  );
+  const first = loftSectionRings(props.sections[0]!);
+  props.sections.forEach((section, index) => {
+    const rings = loftSectionRings(section);
+    if (rings.length !== first.length)
+      throw new Error(
+        `loft section[${index}] must declare the same ${first.length} rings as section[0]`,
+      );
+    rings.forEach((ring, at) => {
+      if (ring.length !== first[at]!.length)
+        throw new Error(
+          `loft section[${index}] ring[${at}] must carry the same ${first[at]!.length} points as section[0]`,
+        );
+      if (Math.sign(signedArea(ring)) !== Math.sign(signedArea(first[at]!)))
+        throw new Error(
+          `loft section[${index}] ring[${at}] must wind the same way as section[0]`,
+        );
+    });
+  });
+
+  const travelled = [0];
+  for (let index = 1; index < props.path.length; ++index)
+    travelled.push(
+      travelled[index - 1]! +
+        Vector3.length(
+          Vector3.subtract(props.path[index]!, props.path[index - 1]!),
+        ),
+    );
+  const total = travelled[travelled.length - 1]!;
+  const stations = props.path.map((point, index) => {
+    const tangent = tangentAt(props.path, index, "loft path");
+    const guide =
+      Math.abs(tangent.y) < 0.9 ? { x: 0, y: 1, z: 0 } : { x: 1, y: 0, z: 0 };
+    const right = Vector3.normalize(Vector3.cross(guide, tangent));
+    const up = Vector3.normalize(Vector3.cross(tangent, right));
+    const profile = loftSectionAt(
+      plans,
+      props.sections,
+      travelled[index]! / total,
+    );
+    return {
+      tangent,
+      profile,
+      points: profile.map((corner) => ({
+        x: point.x + right.x * corner.x + up.x * corner.y,
+        y: point.y + right.y * corner.x + up.y * corner.y,
+        z: point.z + right.z * corner.x + up.z * corner.y,
+      })),
+    };
+  });
+
+  const target = emptyMeshTarget();
+  for (const [outward, station, plan] of [
+    [-1, stations[0]!, plans[0]!],
+    [1, stations[stations.length - 1]!, plans[plans.length - 1]!],
+  ] as ReadonlyArray<
+    readonly [1 | -1, (typeof stations)[number], IAutoMovieRegionTriangulation]
+  >) {
+    const base = target.positions.length / 3;
+    station.points.forEach((point, index) => {
+      target.positions.push(point.x, point.y, point.z);
+      target.normals.push(
+        station.tangent.x * outward,
+        station.tangent.y * outward,
+        station.tangent.z * outward,
+      );
+      target.uvs.push(
+        station.profile[index]!.x,
+        station.profile[index]!.y * outward,
+      );
+    });
+    for (let at = 0; at < plan.triangles.length; at += 3)
+      target.indices.push(
+        base + plan.triangles[at]!,
+        base + plan.triangles[at + (outward === 1 ? 1 : 2)]!,
+        base + plan.triangles[at + (outward === 1 ? 2 : 1)]!,
+      );
+  }
+  for (const span of plans[0]!.rings)
+    for (let leg = 0; leg + 1 < stations.length; ++leg) {
+      const near = stations[leg]!;
+      const far = stations[leg + 1]!;
+      let nearAlong = 0;
+      let farAlong = 0;
+      for (let step = 0; step < span.count; ++step) {
+        const head = span.start + step;
+        const tail = span.start + ((step + 1) % span.count);
+        const nearLength = Math.hypot(
+          near.profile[tail]!.x - near.profile[head]!.x,
+          near.profile[tail]!.y - near.profile[head]!.y,
+        );
+        const farLength = Math.hypot(
+          far.profile[tail]!.x - far.profile[head]!.x,
+          far.profile[tail]!.y - far.profile[head]!.y,
+        );
+        const corners = [
+          [far.points[head]!, farAlong, travelled[leg + 1]!],
+          [near.points[head]!, nearAlong, travelled[leg]!],
+          [near.points[tail]!, nearAlong + nearLength, travelled[leg]!],
+          [far.points[tail]!, farAlong + farLength, travelled[leg + 1]!],
+        ] as ReadonlyArray<readonly [IAutoMovieVector3, number, number]>;
+        pushFlatTriangle(target, [corners[0]!, corners[1]!, corners[2]!]);
+        pushFlatTriangle(target, [corners[0]!, corners[2]!, corners[3]!]);
+        nearAlong += nearLength;
+        farAlong += farLength;
+      }
+    }
+  return { ...target, skin: null };
 };
 
 /**
@@ -740,8 +1054,508 @@ const pushCellFace = (
   target.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
 };
 
+/** The buffers a flat-shaded builder fills before it becomes a mesh. */
+interface IMeshTarget {
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  indices: number[];
+}
+
+const emptyMeshTarget = (): IMeshTarget => ({
+  positions: [],
+  normals: [],
+  uvs: [],
+  indices: [],
+});
+
+/**
+ * Append one triangle that owns its three corners and its own plane normal.
+ *
+ * A lofted quad is only planar when its two sections match, so the two halves
+ * of a changing section's quad genuinely face different ways. Giving each
+ * triangle its own corners is what lets each carry the normal its own plane
+ * has, instead of one averaged direction that neither half points in.
+ */
+const pushFlatTriangle = (
+  target: IMeshTarget,
+  corners: readonly [
+    readonly [IAutoMovieVector3, number, number],
+    readonly [IAutoMovieVector3, number, number],
+    readonly [IAutoMovieVector3, number, number],
+  ],
+): void => {
+  const normal = Vector3.normalize(
+    Vector3.cross(
+      Vector3.subtract(corners[1][0], corners[0][0]),
+      Vector3.subtract(corners[2][0], corners[0][0]),
+    ),
+  );
+  const base = target.positions.length / 3;
+  for (const [point, u, v] of corners) {
+    target.positions.push(point.x, point.y, point.z);
+    target.normals.push(normal.x, normal.y, normal.z);
+    target.uvs.push(u, v);
+  }
+  target.indices.push(base, base + 1, base + 2);
+};
+
+/**
+ * Triangulate one region, naming its rings the way its caller calls them.
+ *
+ * The public entry says `polygon`, a loft says which section it is checking, so
+ * an author reading a refusal learns which of six sections carries the ring
+ * that crosses itself rather than that "the outer ring" does.
+ */
+const triangulateRegion = (
+  outer: readonly IAutoMovieProfilePoint[],
+  holes: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
+  label: string,
+): IAutoMovieRegionTriangulation => {
+  const labels = [
+    `${label} outer ring`,
+    ...holes.map((_hole, index) => `${label} hole[${index}]`),
+  ];
+  const loops = [outer, ...holes].map((ring, index) =>
+    orientedRing(simpleRing(ring, labels[index]!), index === 0),
+  );
+  refuseRingContacts(loops, labels);
+  refuseHolePlacement(loops, labels);
+  const points: IAutoMovieProfilePoint[] = [];
+  const rings: IAutoMovieRegionRing[] = [];
+  for (const loop of loops) {
+    rings.push({ start: points.length, count: loop.length });
+    for (const point of loop) points.push(point);
+  }
+  return {
+    points,
+    rings,
+    triangles: earClip(points, bridgeHoles(points, rings)),
+    area: loops.reduce((total, loop) => total + signedArea(loop), 0),
+  };
+};
+
+/**
+ * Copy one ring, refusing every shape a triangulator cannot answer for.
+ *
+ * A ring that repeats a point beside itself carries a zero-length edge with no
+ * direction, one that doubles back along its own edge encloses a sliver of no
+ * width, and one that crosses itself encloses two regions with opposite signs.
+ * None of the three is repaired here: which of the shapes the author meant is
+ * exactly what the input failed to say.
+ */
+const simpleRing = (
+  ring: readonly IAutoMovieProfilePoint[],
+  label: string,
+): IAutoMovieProfilePoint[] => {
+  if (ring.length < 3) throw new Error(`${label} needs at least three points`);
+  ring.forEach((point, index) => finitePoint(point, `${label}[${index}]`));
+  const points = ring.map((point) => ({ x: point.x, y: point.y }));
+  const size = points.length;
+  points.forEach((point, index) => {
+    const previous = points[(index + size - 1) % size]!;
+    const next = points[(index + 1) % size]!;
+    if (Math.hypot(next.x - point.x, next.y - point.y) <= PLANAR_EPSILON)
+      throw new Error(`${label}[${index}] repeats the point beside it`);
+    if (
+      Math.abs(cross2(previous, point, next)) <= PLANAR_EPSILON &&
+      (point.x - previous.x) * (next.x - point.x) +
+        (point.y - previous.y) * (next.y - point.y) <
+        0
+    )
+      throw new Error(`${label}[${index}] doubles back along its own edge`);
+  });
+  if (Math.abs(signedArea(points)) <= PLANAR_EPSILON)
+    throw new Error(`${label} encloses no area`);
+  for (let left = 0; left < size; ++left)
+    for (let right = left + 1; right < size; ++right)
+      if (
+        neighbouringEdges(size, left, right) === false &&
+        segmentsMeet(
+          points[left]!,
+          points[(left + 1) % size]!,
+          points[right]!,
+          points[(right + 1) % size]!,
+        )
+      )
+        throw new Error(
+          `${label} crosses itself between edge ${left} and edge ${right}`,
+        );
+  return points;
+};
+
+/** Are two edges of the same ring the pair that share a corner? */
+const neighbouringEdges = (
+  size: number,
+  left: number,
+  right: number,
+): boolean => (left + 1) % size === right || (right + 1) % size === left;
+
+/** The ring wound the way asked for; reversing keeps its first point first. */
+const orientedRing = (
+  points: IAutoMovieProfilePoint[],
+  counterClockwise: boolean,
+): IAutoMovieProfilePoint[] =>
+  signedArea(points) > 0 === counterClockwise ? points : points.reverse();
+
+/** Twice the shoelace sum, halved: positive counter-clockwise, in m². */
+const signedArea = (points: readonly IAutoMovieProfilePoint[]): number => {
+  let total = 0;
+  for (let index = 0; index < points.length; ++index) {
+    const from = points[index]!;
+    const to = points[(index + 1) % points.length]!;
+    total += from.x * to.y - to.x * from.y;
+  }
+  return total / 2;
+};
+
+/** Twice the signed area of the triangle `origin -> from -> to`. */
+const cross2 = (
+  origin: IAutoMovieProfilePoint,
+  from: IAutoMovieProfilePoint,
+  to: IAutoMovieProfilePoint,
+): number =>
+  (from.x - origin.x) * (to.y - origin.y) -
+  (from.y - origin.y) * (to.x - origin.x);
+
+/**
+ * Do two segments share any point at all, touching included?
+ *
+ * Touching counts because a region whose rings meet at one point is not two
+ * regions with a shared corner; it is a surface pinched to a line, the same
+ * shape {@link buildAutoMovieWall} refuses when two openings meet at a corner.
+ */
+const segmentsMeet = (
+  fromA: IAutoMovieProfilePoint,
+  toA: IAutoMovieProfilePoint,
+  fromB: IAutoMovieProfilePoint,
+  toB: IAutoMovieProfilePoint,
+): boolean => {
+  if (
+    straddles(cross2(fromB, toB, fromA), cross2(fromB, toB, toA)) &&
+    straddles(cross2(fromA, toA, fromB), cross2(fromA, toA, toB))
+  )
+    return true;
+  const contacts: ReadonlyArray<
+    readonly [
+      IAutoMovieProfilePoint,
+      IAutoMovieProfilePoint,
+      IAutoMovieProfilePoint,
+    ]
+  > = [
+    [fromB, toB, fromA],
+    [fromB, toB, toA],
+    [fromA, toA, fromB],
+    [fromA, toA, toB],
+  ];
+  return contacts.some(([from, to, point]) => {
+    if (Math.abs(cross2(from, to, point)) > PLANAR_EPSILON) return false;
+    const spanX = to.x - from.x;
+    const spanY = to.y - from.y;
+    const along =
+      ((point.x - from.x) * spanX + (point.y - from.y) * spanY) /
+      (spanX * spanX + spanY * spanY);
+    return along >= -PLANAR_EPSILON && along <= 1 + PLANAR_EPSILON;
+  });
+};
+
+/** Are two points on strictly opposite sides of the same line? */
+const straddles = (left: number, right: number): boolean =>
+  Math.abs(left) > PLANAR_EPSILON &&
+  Math.abs(right) > PLANAR_EPSILON &&
+  left * right < 0;
+
+/** Refuse any two distinct rings that touch or cross. */
+const refuseRingContacts = (
+  loops: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
+  labels: readonly string[],
+): void => {
+  for (let left = 0; left + 1 < loops.length; ++left)
+    for (let right = left + 1; right < loops.length; ++right) {
+      const one = loops[left]!;
+      const other = loops[right]!;
+      for (let a = 0; a < one.length; ++a)
+        for (let b = 0; b < other.length; ++b)
+          if (
+            segmentsMeet(
+              one[a]!,
+              one[(a + 1) % one.length]!,
+              other[b]!,
+              other[(b + 1) % other.length]!,
+            )
+          )
+            throw new Error(
+              `${labels[left]} and ${labels[right]} touch or cross at edge ${a} and edge ${b}`,
+            );
+    }
+};
+
+/**
+ * Refuse a hole the outer ring does not contain, or that another hole does.
+ *
+ * One probe point decides it, because {@link refuseRingContacts} already
+ * established that no two rings meet: a ring that neither crosses nor touches
+ * another lies wholly inside it or wholly outside it, so the first point speaks
+ * for all of them.
+ */
+const refuseHolePlacement = (
+  loops: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
+  labels: readonly string[],
+): void => {
+  for (let hole = 1; hole < loops.length; ++hole) {
+    const probe = loops[hole]![0]!;
+    if (pointInRing(probe, loops[0]!) === false)
+      throw new Error(`${labels[hole]} must lie inside ${labels[0]}`);
+    for (let other = 1; other < loops.length; ++other)
+      if (other !== hole && pointInRing(probe, loops[other]!))
+        throw new Error(`${labels[hole]} must lie outside ${labels[other]}`);
+  }
+};
+
+/** Even-odd ray cast along +X; the caller guarantees the point is off-ring. */
+const pointInRing = (
+  point: IAutoMovieProfilePoint,
+  ring: readonly IAutoMovieProfilePoint[],
+): boolean => {
+  let inside = false;
+  for (let index = 0; index < ring.length; ++index) {
+    const from = ring[index]!;
+    const to = ring[(index + 1) % ring.length]!;
+    if (
+      from.y > point.y !== to.y > point.y &&
+      point.x <
+        from.x + ((point.y - from.y) / (to.y - from.y)) * (to.x - from.x)
+    )
+      inside = !inside;
+  }
+  return inside;
+};
+
+/**
+ * Fold every hole into the outer ring along a bridge nothing else crosses.
+ *
+ * The bridge is a segment travelled in both directions, so the region becomes
+ * one ring an ear clipper can consume while the void stays a void: the two
+ * traversals meet nothing between them. The pair is searched in declared order,
+ * which is what keeps the same input producing the same triangles.
+ *
+ * A hole validated as strictly inside the region and meeting no other ring
+ * always has a mutually visible vertex to bridge to, which is why the search is
+ * read as total rather than guarded: the guard would answer a question
+ * {@link refuseHolePlacement} and {@link refuseRingContacts} already settled.
+ */
+const bridgeHoles = (
+  points: readonly IAutoMovieProfilePoint[],
+  rings: readonly IAutoMovieRegionRing[],
+): number[] => {
+  const loops = rings.map((span) =>
+    Array.from({ length: span.count }, (_unused, index) => span.start + index),
+  );
+  const ring = [...loops[0]!];
+  for (let hole = 1; hole < loops.length; ++hole) {
+    const bridge = ring
+      .flatMap((_anchor, at) =>
+        loops[hole]!.map((_corner, from) => ({ at, from })),
+      )
+      .find((candidate) =>
+        bridgeIsClear(points, rings, ring, loops, hole, candidate),
+      )!;
+    const rotated = [
+      ...loops[hole]!.slice(bridge.from),
+      ...loops[hole]!.slice(0, bridge.from),
+    ];
+    const anchor = ring[bridge.at]!;
+    const tail = ring.splice(bridge.at + 1);
+    for (const index of rotated) ring.push(index);
+    ring.push(rotated[0]!, anchor);
+    for (const index of tail) ring.push(index);
+  }
+  return ring;
+};
+
+/** Does one candidate bridge stay inside the region and meet nothing? */
+const bridgeIsClear = (
+  points: readonly IAutoMovieProfilePoint[],
+  rings: readonly IAutoMovieRegionRing[],
+  ring: readonly number[],
+  loops: ReadonlyArray<readonly number[]>,
+  hole: number,
+  candidate: { at: number; from: number },
+): boolean => {
+  const start = points[ring[candidate.at]!]!;
+  const end = points[loops[hole]![candidate.from]!]!;
+  const size = ring.length;
+  for (let edge = 0; edge < size; ++edge)
+    if (
+      edge !== candidate.at &&
+      edge !== (candidate.at + size - 1) % size &&
+      segmentsMeet(
+        start,
+        end,
+        points[ring[edge]!]!,
+        points[ring[(edge + 1) % size]!]!,
+      )
+    )
+      return false;
+  for (let other = hole; other < loops.length; ++other) {
+    const loop = loops[other]!;
+    for (let edge = 0; edge < loop.length; ++edge)
+      if (
+        (other !== hole ||
+          (edge !== candidate.from &&
+            edge !== (candidate.from + loop.length - 1) % loop.length)) &&
+        segmentsMeet(
+          start,
+          end,
+          points[loop[edge]!]!,
+          points[loop[(edge + 1) % loop.length]!]!,
+        )
+      )
+        return false;
+  }
+  const middle = {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  };
+  const ringPoints = (span: IAutoMovieRegionRing): IAutoMovieProfilePoint[] =>
+    points.slice(span.start, span.start + span.count);
+  return (
+    pointInRing(middle, ringPoints(rings[0]!)) &&
+    rings
+      .slice(1)
+      .every((span) => pointInRing(middle, ringPoints(span)) === false)
+  );
+};
+
+/**
+ * Cut ears off one counter-clockwise ring until three corners are left.
+ *
+ * The loop counts down from the ring's own size rather than testing for
+ * failure, because the two-ears theorem gives a validated simple ring an ear at
+ * every step: the polygon reaching here has been refused if it crosses itself,
+ * touches another ring, or carries a hole outside the region, and a guard here
+ * would be a second answer to a question already settled.
+ */
+const earClip = (
+  points: readonly IAutoMovieProfilePoint[],
+  ring: readonly number[],
+): number[] => {
+  const working = [...ring];
+  const triangles: number[] = [];
+  for (let remaining = working.length; remaining > 3; --remaining) {
+    const size = working.length;
+    const at = working.findIndex((_corner, index) =>
+      isEar(points, working, index),
+    );
+    triangles.push(
+      working[(at + size - 1) % size]!,
+      working[at]!,
+      working[(at + 1) % size]!,
+    );
+    working.splice(at, 1);
+  }
+  triangles.push(working[0]!, working[1]!, working[2]!);
+  return triangles;
+};
+
+/**
+ * Is the corner at `at` an ear: convex, with no reflex corner inside it?
+ *
+ * Only reflex corners can block an ear, and only strictly inside ones, which is
+ * what lets a bridged ring work: a bridge repeats one corner of each ring it
+ * joins, and a repeated corner sits on the candidate triangle's boundary rather
+ * than in its interior.
+ */
+const isEar = (
+  points: readonly IAutoMovieProfilePoint[],
+  ring: readonly number[],
+  at: number,
+): boolean => {
+  const size = ring.length;
+  const previousAt = (at + size - 1) % size;
+  const nextAt = (at + 1) % size;
+  const previous = points[ring[previousAt]!]!;
+  const corner = points[ring[at]!]!;
+  const next = points[ring[nextAt]!]!;
+  if (cross2(previous, corner, next) <= PLANAR_EPSILON) return false;
+  return ring.every((vertex, index) => {
+    if (index === previousAt || index === at || index === nextAt) return true;
+    return (
+      isReflex(points, ring, index) === false ||
+      insideTriangle(previous, corner, next, points[vertex]!) === false
+    );
+  });
+};
+
+/** Does the ring turn clockwise at this corner, cutting into the region? */
+const isReflex = (
+  points: readonly IAutoMovieProfilePoint[],
+  ring: readonly number[],
+  at: number,
+): boolean =>
+  cross2(
+    points[ring[(at + ring.length - 1) % ring.length]!]!,
+    points[ring[at]!]!,
+    points[ring[(at + 1) % ring.length]!]!,
+  ) < -PLANAR_EPSILON;
+
+/** Is the point strictly inside the counter-clockwise triangle `a b c`? */
+const insideTriangle = (
+  a: IAutoMovieProfilePoint,
+  b: IAutoMovieProfilePoint,
+  c: IAutoMovieProfilePoint,
+  point: IAutoMovieProfilePoint,
+): boolean =>
+  cross2(a, b, point) > PLANAR_EPSILON &&
+  cross2(b, c, point) > PLANAR_EPSILON &&
+  cross2(c, a, point) > PLANAR_EPSILON;
+
+/** One loft section's rings in canonical declaration order. */
+const loftSectionRings = (
+  section: IAutoMovieLoftSection,
+): ReadonlyArray<readonly IAutoMovieProfilePoint[]> => [
+  section.outer,
+  ...(section.holes ?? []),
+];
+
+/**
+ * The section at one fraction of the path, blended from the two around it.
+ *
+ * The blend is written as `(1 - t) * a + t * b` rather than `a + (b - a) * t`
+ * so a station landing exactly on a declared section reproduces that section's
+ * coordinates bit for bit, which is what lets the end caps be triangulated from
+ * the authored section and still sit on the surface the sides sweep out.
+ */
+const loftSectionAt = (
+  plans: readonly IAutoMovieRegionTriangulation[],
+  declared: readonly IAutoMovieLoftSection[],
+  fraction: number,
+): IAutoMovieProfilePoint[] => {
+  let span = 0;
+  while (span + 2 < declared.length && declared[span + 1]!.at <= fraction)
+    ++span;
+  const from = declared[span]!.at;
+  const progress = (fraction - from) / (declared[span + 1]!.at - from);
+  const before = plans[span]!.points;
+  const after = plans[span + 1]!.points;
+  return before.map((point, index) => ({
+    x: point.x * (1 - progress) + after[index]!.x * progress,
+    y: point.y * (1 - progress) + after[index]!.y * progress,
+  }));
+};
+
 /** Welding grid for topology queries: 1 nm, far below any building tolerance. */
 const WELD_SCALE = 1e9;
+
+/**
+ * Largest cross product or distance a free-form ring may call zero.
+ *
+ * Three orders of magnitude below {@link FACE_EPSILON}, because a cross product
+ * is an area and an arc drawn at millimetre resolution turns through one at
+ * every corner: at 1e-9 a finely tessellated arch would read as a straight line
+ * and lose every ear the triangulator needs.
+ */
+const PLANAR_EPSILON = 1e-12;
 
 /** Largest out-of-plane or degenerate-area slack one authored face may carry. */
 const FACE_EPSILON = 1e-9;
@@ -763,12 +1577,13 @@ const profileHull = (
 const tangentAt = (
   path: readonly IAutoMovieVector3[],
   index: number,
+  label: string,
 ): IAutoMovieVector3 => {
   const from = index === 0 ? path[0]! : path[index - 1]!;
   const to = index + 1 === path.length ? path[index]! : path[index + 1]!;
   const delta = Vector3.subtract(to, from);
   if (Vector3.length(delta) <= Number.EPSILON)
-    throw new Error(`sweep path around point ${index} is degenerate`);
+    throw new Error(`${label} around point ${index} is degenerate`);
   return Vector3.normalize(delta);
 };
 
