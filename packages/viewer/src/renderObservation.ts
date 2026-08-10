@@ -36,8 +36,8 @@ export interface IAutoMovieRenderObservation {
  *
  * This is the live half of the evidence pair. The compiled report states an
  * upper bound before a renderer exists; this states what the scene graph in
- * front of you actually submits, and {@link auditAutoMovieRenderObservation}
- * compares the two rather than trusting either alone.
+ * front of you actually submits, and {@link auditAutoMovieRenderObservation} is
+ * where the two are held against each other instead of trusted separately.
  *
  * The scaffold viewer's shot and film pages call it and publish the count on
  * their capture handle, so a live viewer and the headless capture driving that
