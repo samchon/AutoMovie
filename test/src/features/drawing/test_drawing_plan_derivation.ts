@@ -60,7 +60,9 @@ const byText = (left: string, right: string): number =>
  * 4. `depth` and `overhead` move geometry between `projected`, `hidden`,
  *    `overhead` and dropped, one band at a time.
  * 5. Space and element-kind filters restrict what is drawn, descendants included,
- *    and an element outside every named space is dropped.
+ *    an element outside every named space is dropped, and a filter naming a
+ *    space the design never declared says so rather than returning a blank
+ *    sheet.
  * 6. The same design and view derive a byte-identical drawing twice, and a moved
  *    wall changes the digest.
  * 7. The world transform the drawing derives is the world transform
@@ -474,6 +476,58 @@ export const test_drawing_plan_derivation = (): void => {
       }),
     }).lines.map((line) => line.owner),
     ["footing", "footing", "footing", "footing"],
+  );
+  const filterGap = (spaces: string[], id: string) =>
+    deriveAutoMovieDrawing({ environment, view: drawingView({ id, spaces }) });
+  TestValidator.equals(
+    "a filter naming a space the design never declared says so, and says which",
+    namedFacts([
+      [
+        "a filter of only unknown names draws nothing and reports the names",
+        () => {
+          const sheet = filterGap(["level-2", "basement"], "unknown-only");
+          const gap = sheet.gaps.find(
+            (entry) => entry.subject === "view-space-filter",
+          );
+          return (
+            sheet.lines.length === 0 &&
+            sheet.regions.length === 0 &&
+            gap?.status === "not-run" &&
+            // Named in canonical order, not in whichever order the view listed
+            // them, so one mistake reads the same however it was written down.
+            gap.reason.includes("2 space(s)") &&
+            gap.reason.includes("(basement, level-2)")
+          );
+        },
+      ],
+      [
+        "one bad name beside a good one is still reported, and the good one draws",
+        () => {
+          const sheet = filterGap(["level-2", "hall"], "one-of-each");
+          return (
+            sheet.lines.length !== 0 &&
+            sheet.gaps.some((entry) => entry.subject === "view-space-filter")
+          );
+        },
+      ],
+      [
+        "a filter every name of which the design declares reports nothing",
+        () =>
+          filterGap(["hall"], "known-only").gaps.every(
+            (entry) => entry.subject !== "view-space-filter",
+          ),
+      ],
+      [
+        "an unfiltered view has no filter to be wrong about",
+        () => plan.gaps.every((entry) => entry.subject !== "view-space-filter"),
+      ],
+    ]),
+    {
+      "a filter of only unknown names draws nothing and reports the names": true,
+      "one bad name beside a good one is still reported, and the good one draws": true,
+      "a filter every name of which the design declares reports nothing": true,
+      "an unfiltered view has no filter to be wrong about": true,
+    },
   );
   TestValidator.equals(
     "an element in no named space is dropped by a space-filtered view",

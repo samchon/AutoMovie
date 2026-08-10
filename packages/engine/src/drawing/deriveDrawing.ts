@@ -108,6 +108,24 @@ export const deriveAutoMovieDrawing = (props: {
 
   const drafted: IAutoMovieDrawingLine[] = [];
   const gaps: IAutoMovieDrawingGap[] = [];
+  // A space is a reference into the design's own graph, so a filter naming one
+  // the design does not declare is a dangling reference and is reported like
+  // every other: the sheet that comes back would otherwise be a blank one with
+  // nothing on it to say why. An element kind is deliberately not treated the
+  // same way, because kinds are an open vocabulary with no registry to be
+  // absent from, and a discipline that matches nothing is an honest empty
+  // sheet rather than a mistake.
+  const unknownSpaces = view.spaces
+    .filter((id) => !environment.spaces.some((space) => space.id === id))
+    .sort(compareAutoMovieRenderIds);
+  if (unknownSpaces.length !== 0)
+    gaps.push({
+      subject: "view-space-filter",
+      status: "not-run",
+      reason: `the view restricts itself to ${unknownSpaces.length} space(s) this design does not declare (${unknownSpaces.join(", ")}), so nothing could be selected for them`,
+      remedy:
+        "name a space the design declares, or clear the filter to draw every space",
+    });
   const drawables: IDrawable[] = [];
   let unresolvedModels = 0;
 
