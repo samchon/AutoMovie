@@ -2,7 +2,7 @@ import { forgeProp, placementChildNode, sceneToNodes } from "@automovie/engine";
 import { IAutoMovieNode, IAutoMoviePropSpec } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 import { createDoorPropSpec } from "./test_film_forge_prop";
 
 /** The door spec with `mutate` applied to its articulation node list. */
@@ -111,12 +111,20 @@ export const test_film_forge_prop_articulation_mesh = (): void => {
     "a part claimed by two joints violates at the second claim",
     hasViolation(twice, "type", "$input.articulation.nodes[2].mesh"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the refusal names the joint that claimed it first",
-    twice.success === false &&
-      twice.violations.some((violation) =>
-        violation.expected.includes("$input.articulation.nodes[1]"),
-      ),
+    namedFacts([
+      ["refused", () => twice.success === false],
+      [
+        "namesFirstClaim",
+        () =>
+          twice.success === false &&
+          twice.violations.some((violation) =>
+            violation.expected.includes("$input.articulation.nodes[1]"),
+          ),
+      ],
+    ]),
+    { refused: true, namesFirstClaim: true },
   );
 
   TestValidator.equals(

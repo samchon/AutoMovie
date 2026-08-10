@@ -11,6 +11,7 @@ import {
   IAutoMovieFormationMotion,
   IAutoMovieModel,
   IAutoMovieProductionDesign,
+  IAutoMoviePropSpec,
   IAutoMovieShotDefinition,
   IAutoMovieShotProgram,
   IAutoMovieShotSourceOutput,
@@ -130,6 +131,19 @@ export interface IAutoMovieShotRuntime {
    * gates every other reference the source makes.
    */
   lightMotions?: readonly IAutoMovieClip[];
+  /**
+   * The shot's own object clips and the prop registry they are measured
+   * against, carried onto the compiled shot's `objectMotions`.
+   *
+   * A building's panel and a prop's leaf are the two things a shot can move
+   * that no verb reaches, and both are one node in the staged graph turned over
+   * the shot's clock. The performance boundary admits the nodes this shot may
+   * drive and bounds a driven joint by the travel its prop declares; see
+   * {@link gateAuthoredObjectMotions}.
+   */
+  objectMotions?: readonly IAutoMovieClip[];
+  /** Forged props this shot stages, whose joints those clips may address. */
+  props?: readonly IAutoMoviePropSpec[];
   /** Optional full models when predicates need model-owned rig evidence. */
   models?: readonly IAutoMovieModel[];
   /** Formation-slot collisions found while materializing this shot. */
@@ -345,6 +359,8 @@ export const compileDefinedShot = <Context>(props: {
       formations: props.runtime.formations,
       formationMotions: props.runtime.formationMotions,
       lightMotions: props.runtime.lightMotions,
+      objectMotions: props.runtime.objectMotions,
+      props: props.runtime.props,
       frameFormat: props.runtime.frameFormat,
       hasActorContext: props.runtime.hasActorContext,
       jointAxes: props.runtime.jointAxes,

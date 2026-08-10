@@ -1315,6 +1315,29 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * one compiled before this field existed.
    */
   lightMotions?: IAutoMovieClip[];
+  /**
+   * Optional clips turning this shot's non-performing scene nodes over its own
+   * local clock, carried onto the compiled shot's `objectMotions`.
+   *
+   * The moving half of a built world. A building's opening states where its
+   * panels stand at each named configuration and a prop states the travel of
+   * its own joints, and both were configurations rather than motion: every
+   * entry on a compiled shot's `objectMotions` was baked by the engine from a
+   * `launch` or an `attachTo`, so nothing a source authored could make a door
+   * swing on screen. One channel serves both, because both are one node in the
+   * staged graph turned over one clock: a panel is a staged set piece
+   * (`<environment>/<element>`, the ids `builtOpeningPanelPlacements` answers
+   * with) and a prop's leaf is a lowered articulation joint
+   * (`<placement>/<joint>`).
+   *
+   * The host holds each track to the shot it belongs to: the node must be one
+   * this shot staged or a joint a staged prop declares, it must not be a node a
+   * performance or a baked clip already drives, its keys must land inside the
+   * shot's own clock, and a driven prop joint must stay inside the travel that
+   * prop's profile declares. Omitted, the compiled shot carries exactly the
+   * clips the engine baked, as it always did.
+   */
+  objectMotions?: IAutoMovieClip[];
   /** Optional compact formation-level cues. */
   formationMotions?: IAutoMovieFormationMotion[];
   /** Optional sparse per-member exceptions inside compact formations. */

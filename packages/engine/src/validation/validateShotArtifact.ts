@@ -680,8 +680,13 @@ export type IAutoMovieClipChannelGate = (
  * `IAutoMovieChannel` is the driver graph (a prop profile's `source`/`output`,
  * `IAutoMovieChannelLimit.channel`), where `resolve/drivers` does read pointer
  * keys out of the sampled map. Those stay untouched.
+ *
+ * Exported so a caller with a NARROWER rule can add to it rather than replace
+ * it. Passing a gate of one's own opts out of this one entirely, and a shot
+ * field that only meant to say "and it must be a node this shot staged" would
+ * silently stop refusing pointer tracks and unknown node paths on the way.
  */
-const validateHonorableChannel: IAutoMovieClipChannelGate = (
+export const validateHonorableChannel: IAutoMovieClipChannelGate = (
   channel,
   path,
   violations,

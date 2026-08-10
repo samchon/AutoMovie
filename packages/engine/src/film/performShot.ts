@@ -17,6 +17,7 @@ import {
   IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePerformance,
+  IAutoMoviePropSpec,
   IAutoMovieQuaternion,
   IAutoMovieScript,
   IAutoMovieShot,
@@ -66,6 +67,7 @@ import {
 import { compileLaunch } from "./compileLaunch";
 import { coupleObjects } from "./coupleObjects";
 import { bakedTransformFromClipsAt } from "./followClip";
+import { gateAuthoredObjectMotions } from "./objectMotionGate";
 import { IAutoMovieStagedSet } from "./stageScene";
 import {
   IAutoMovieFramedBox,
@@ -384,6 +386,26 @@ export const performShot = (props: {
    * one assembled before this input existed.
    */
   lightMotions?: readonly IAutoMovieClip[];
+  /**
+   * Clips the source authored over this shot's non-performing scene nodes,
+   * carried onto the assembled shot's `objectMotions` beside the baked ones.
+   *
+   * The half of a moving world no verb reaches: a building's panel swinging on
+   * its own opening, a prop's leaf turning on its own hinge. Both were promised
+   * by contracts and reachable by nothing, because every entry on
+   * `objectMotions` was baked by the engine from a `launch` or an `attachTo`.
+   * {@link gateAuthoredObjectMotions} states what is admitted, and measures a
+   * driven prop joint against the travel that prop's own profile declares.
+   *
+   * Omitted, the assembled shot carries exactly the baked clips it always did.
+   */
+  objectMotions?: readonly IAutoMovieClip[];
+  /**
+   * The shot's prop registry, whose articulation lowers the joint ids an
+   * authored object clip may address and whose profile bounds their travel.
+   * Omit for a shot that stages no forged prop.
+   */
+  props?: readonly IAutoMoviePropSpec[];
   /**
    * Registered source identity for direct code authoring. Omit on the legacy
    * beat ladder to retain its `shot:${beat}` identity.
@@ -1786,6 +1808,24 @@ export const performShot = (props: {
   events.push(...coupled.events);
   out.items.push(...coupled.violations);
   if (out.items.length > 0) return { success: false, violations: out.items };
+
+  // The source's own object clips, gated here rather than earlier because the
+  // two facts they are held against are only settled now: which nodes a
+  // performance drives, and which the engine already baked a clip for.
+  const authoredMotions = props.objectMotions ?? [];
+  out.items.push(
+    ...gateAuthoredObjectMotions({
+      scene: staged.scene,
+      props: props.props,
+      clips: authoredMotions,
+      baked: objectMotions,
+      performed: new Set(Object.keys(motions)),
+      duration: performance.duration,
+      path: "$input.objectMotions",
+    }),
+  );
+  if (out.items.length > 0) return { success: false, violations: out.items };
+  objectMotions.push(...authoredMotions);
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
