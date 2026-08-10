@@ -1331,6 +1331,37 @@ try {
     starterProductionPath,
     `${JSON.stringify(starterProduction, null, 2)}\n`,
   );
+  // The same shrink, in the typed source the record is derived FROM. A design
+  // record edited behind its subject is exactly what the authoring ladder
+  // forbids, and the step below proves it: `npm run design` re-derives every
+  // record and reports this one rewritten, which stales the compile and
+  // refuses every reader of generated state three steps later. Cheap frames
+  // are this harness's business; disagreeing with the source is not.
+  const starterProductionSourcePath = join(starterDir, "src", "production.ts");
+  const starterProductionSource = readFileSync(
+    starterProductionSourcePath,
+    "utf8",
+  );
+  const shippedFrameFormat = [
+    "  frameFormat: {",
+    "    width: 1280,",
+    "    height: 720,",
+    "    fps: 24,",
+  ].join("\n");
+  const shrunkFrameFormat = [
+    "  frameFormat: {",
+    "    width: 160,",
+    "    height: 90,",
+    "    fps: 2,",
+  ].join("\n");
+  if (starterProductionSource.split(shippedFrameFormat).length !== 2)
+    fail(
+      "packaged starter frame-format fixture no longer has exactly one shipped raster in src/production.ts",
+    );
+  writeFileSync(
+    starterProductionSourcePath,
+    starterProductionSource.replace(shippedFrameFormat, shrunkFrameFormat),
+  );
   const starterConfigPath = join(starterDir, "automovie.config.ts");
   const starterConfig = readFileSync(starterConfigPath, "utf8");
   const defaultProxyFrameStep = "      frameStep: 2,";
