@@ -47,14 +47,20 @@ const course =
  *    surface, so nothing is reported, even though the two modules as designed
  *    occupy exactly the same rectangle. This is why neighbours are measured
  *    between the pieces as laid rather than the modules as designed.
- * 3. A course whose middle module is 40 mm narrower opens both its joints to 40 mm
+ * 3. A triangular region cutting a square module across two of its corners keeps
+ *    each of those corners once. A repeated corner would leave a zero-length
+ *    edge, and the joint measurement normalizes every edge, so the pair would
+ *    be compared through a NaN that reads false against every limit and be
+ *    silently exempted. The same two pieces are therefore also asserted to
+ *    report their real zero-metre butt joint against a 20 mm nominal.
+ * 4. A course whose middle module is 40 mm narrower opens both its joints to 40 mm
  *    against a 20 mm nominal, so both pairs are reported; a course laid to the
  *    nominal reports nothing.
- * 4. When the same neighbouring pair also turns its grain, the joint finding and
+ * 5. When the same neighbouring pair also turns its grain, the joint finding and
  *    the grain finding are both raised, in that order.
- * 5. Two zones meeting at a shared edge report the grain turn across the border
+ * 6. Two zones meeting at a shared edge report the grain turn across the border
  *    and stay silent inside each zone.
- * 6. A null grain tolerance disables the grain scan entirely, even where the grain
+ * 7. A null grain tolerance disables the grain scan entirely, even where the grain
  *    turns ninety degrees.
  */
 export const test_architecture_surface_pattern_findings = (): void => {
