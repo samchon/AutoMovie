@@ -51,7 +51,14 @@ export interface IAutoMovieSoftBodyState {
    */
   maxStrain: number;
 
-  /** Particle-collider resolutions applied during the last integrated step. */
+  /**
+   * Particle-collider resolutions applied during the last integrated step.
+   *
+   * `0` at step `0`, where nothing has been integrated yet — which is not the
+   * same claim as a panel resting clear of everything around it. A rest
+   * configuration touching a floor still reports no contact, because no step
+   * has asked it to.
+   */
   contacts: number;
 }
 
