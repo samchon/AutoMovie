@@ -1,4 +1,5 @@
 import {
+  IAutoMovieBuiltConnector,
   IAutoMovieBuiltEnvironment,
   IAutoMovieBuiltSpace,
   IAutoMovieSpace,
@@ -279,6 +280,22 @@ export const validateBuiltEnvironment = (props: {
     buildingElementRoots.add(building.element);
     buildingSpaceRoots.add(building.space);
   });
+  appendOwnership(
+    environment.elements,
+    buildingElementRoots,
+    `${root}.elements`,
+    "building element",
+    "root element",
+    collector,
+  );
+  appendOwnership(
+    environment.spaces,
+    buildingSpaceRoots,
+    `${root}.spaces`,
+    "logical space",
+    "root space",
+    collector,
+  );
 
   const boundaryIds = collectIds(
     environment.boundaries,
@@ -508,10 +525,7 @@ export const builtEnvironmentContainsPoint = (
   spaceId: string,
   point: IAutoMovieVector3,
 ): boolean => {
-  if (!environment.spaces.some((space) => space.id === spaceId))
-    throw new Error(
-      `built environment "${environment.id}" has no logical space "${spaceId}"`,
-    );
+  requireSpace(environment, spaceId);
   const included = descendantSpaces(environment.spaces, spaceId);
   return environment.spaces.some(
     (space) =>
@@ -533,10 +547,7 @@ export const builtEnvironmentAdjacentSpaces = (
   environment: IAutoMovieBuiltEnvironment,
   spaceId: string,
 ): string[] => {
-  if (!environment.spaces.some((space) => space.id === spaceId))
-    throw new Error(
-      `built environment "${environment.id}" has no logical space "${spaceId}"`,
-    );
+  requireSpace(environment, spaceId);
   const adjacent = new Set<string>();
   for (const boundary of environment.boundaries)
     if (boundary.spaces.includes(spaceId))
@@ -548,6 +559,111 @@ export const builtEnvironmentAdjacentSpaces = (
       adjacent.add(connector.from);
   }
   return [...adjacent];
+};
+
+/**
+ * Return every connector landing on a logical space, endpoints and route
+ * intact.
+ *
+ * Adjacency answers which spaces are reachable; this answers with what. The
+ * authored 3D centre route is handed back as written rather than reduced to a
+ * pair of ids, because a stair's rise and a bridge's span are the part a shot
+ * stages and a later pathfinder would have to re-derive.
+ *
+ * Endpoints are matched exactly, not through containment: a connector declares
+ * the two spaces it actually lands in, so asking a building root returns the
+ * connectors declared on the root itself rather than every connector inside it.
+ * That is the same rule {@link builtEnvironmentAdjacentSpaces} follows.
+ */
+export const builtEnvironmentSpaceConnectors = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): IAutoMovieBuiltConnector[] => {
+  requireSpace(environment, spaceId);
+  return environment.connectors.filter(
+    (connector) => connector.from === spaceId || connector.to === spaceId,
+  );
+};
+
+/**
+ * Report the support patches usable in a logical space and its descendants.
+ *
+ * Support and walkability are separate facts: a roof deck may carry a prop
+ * without being somewhere a performer may walk. Both are answered by the stable
+ * surface id the lowered stage space also cites, so a caller never has to match
+ * geometry to learn which patch it is holding.
+ */
+export const builtEnvironmentSpaceSurfaces = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): Array<{ space: string; surface: string; walkable: boolean }> => {
+  requireSpace(environment, spaceId);
+  const included = descendantSpaces(environment.spaces, spaceId);
+  const walkable = new Set(environment.walkable);
+  return environment.surfaces
+    .filter((entry) => included.has(entry.space))
+    .map((entry) => ({
+      space: entry.space,
+      surface: entry.surface.id,
+      walkable: walkable.has(entry.surface.id),
+    }));
+};
+
+/**
+ * Name the staged set nodes standing in a logical space and its descendants.
+ *
+ * This is the join that keeps the visible model and the semantic partition from
+ * drifting apart: the ids returned here are exactly the `node` ids
+ * {@link lowerBuiltEnvironment} emits, so a room can be asked what is visibly
+ * inside it without a second traversal that could answer differently.
+ */
+export const builtEnvironmentSpaceNodes = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): string[] => {
+  requireSpace(environment, spaceId);
+  const included = descendantSpaces(environment.spaces, spaceId);
+  return environment.elements
+    .filter(
+      (element) =>
+        element.model !== null &&
+        element.space !== null &&
+        included.has(element.space),
+    )
+    .map((element) => `${environment.id}/${element.id}`);
+};
+
+/**
+ * Name the building unit that owns a logical space.
+ *
+ * A work holds several independently placed building units, so "which building
+ * is this room in" is a real question rather than a constant. A validated
+ * environment answers it for every space; an unowned space is refused here for
+ * the same reason validation refuses it.
+ */
+export const builtEnvironmentBuildingOfSpace = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): string => {
+  requireSpace(environment, spaceId);
+  const owner = environment.buildings.find((building) =>
+    descendantSpaces(environment.spaces, building.space).has(spaceId),
+  );
+  if (owner === undefined)
+    throw new Error(
+      `built environment "${environment.id}" has no building unit owning logical space "${spaceId}"`,
+    );
+  return owner.id;
+};
+
+const requireSpace = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): void => {
+  if (!environment.spaces.some((space) => space.id === spaceId))
+    throw new Error(
+      `built environment "${environment.id}" has no logical space "${spaceId}"`,
+    );
 };
 
 const collectIds = <T extends { id: string }>(
@@ -598,6 +714,37 @@ const appendHierarchyCycles = <T extends { id: string; parent: string | null }>(
     states.set(record.id, "visited");
   };
   records.forEach(visit);
+};
+
+const appendOwnership = <T extends { id: string; parent: string | null }>(
+  records: readonly T[],
+  roots: ReadonlySet<string>,
+  path: string,
+  label: string,
+  rootLabel: string,
+  collector: ViolationCollector,
+): void => {
+  const byId = new Map(records.map((record) => [record.id, record]));
+  records.forEach((record, index) => {
+    const seen = new Set<string>([record.id]);
+    let current: T = record;
+    while (current.parent !== null) {
+      const parent = byId.get(current.parent);
+      // A dangling or cyclic parent is already reported on its own path, and
+      // walking it further would only repeat that one defect as an ownership
+      // gap the author cannot act on.
+      if (parent === undefined || seen.has(parent.id)) return;
+      seen.add(parent.id);
+      current = parent;
+    }
+    if (!roots.has(current.id))
+      collector.push(
+        "type",
+        `${path}[${index}].parent`,
+        `${label} "${record.id}" belongs to no building unit; its topmost ${label} "${current.id}" must be declared as some building unit's ${rootLabel}`,
+        record.parent,
+      );
+  });
 };
 
 const validateReferences = (

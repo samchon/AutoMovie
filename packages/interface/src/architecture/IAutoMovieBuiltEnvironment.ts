@@ -12,7 +12,11 @@ import { IAutoMovieSurface } from "../scene/IAutoMovieSurface";
  * stair, lift, ramp, or skybridge explicitly connects those spaces. The scope
  * ends at the building: facade ladders, rails, external stairs, balconies,
  * roofs, and helipads belong here, but surrounding land, parks, sky, and
- * natural water remain production-world concerns. An indoor water feature
+ * natural water remain production-world concerns. Sun, sky, season,
+ * orientation, reference ground, and neighbouring occluder masses are therefore
+ * read-only inputs a daylight or shadow study reads from the world;
+ * deliberately no field here can hold them, so they can never leak into a
+ * building's own models, set pieces, or spaces. An indoor water feature
  * composes a separate engine fluid domain with a building space; fluid
  * simulation is not owned by this architecture record. Element kinds are open
  * strings: historical, vernacular, contemporary, and speculative architecture
@@ -30,7 +34,14 @@ export interface IAutoMovieBuiltEnvironment {
   id: string;
   /** All authored dimensions are measured in metres. */
   units: "meter";
-  /** Independently owned building units inside this work. */
+  /**
+   * Independently owned and independently placed building units in this work.
+   *
+   * Ownership is total: every element and every logical space descends from
+   * exactly one unit's roots, so nothing in the work is unattributed. A
+   * skybridge is a work-owned relation between two units rather than a third
+   * unit, so its connector may cross units even though its roots may not.
+   */
   buildings: IAutoMovieBuildingUnit[];
   /** Models owned by the environment and cited by visible elements. */
   models: IAutoMovieModel[];
@@ -55,7 +66,13 @@ export interface IAutoMovieBuiltEnvironment {
   walkable: string[];
 }
 
-/** One building unit and the roots of its visible and logical hierarchies. */
+/**
+ * One building unit and the roots of its visible and logical hierarchies.
+ *
+ * The element root is also the unit's coordinate root, so one unit is moved,
+ * turned, or tilted as a whole by its own root transform without touching the
+ * others.
+ */
 export interface IAutoMovieBuildingUnit {
   /** Stable building identity within the work. */
   id: string;
