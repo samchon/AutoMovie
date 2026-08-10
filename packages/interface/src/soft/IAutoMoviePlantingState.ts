@@ -30,8 +30,7 @@ export interface IAutoMoviePlantingState {
 
   /**
    * Recipe-frame extent of the derived structure, or `null` when nothing
-   * emerged at all — a plant at growth state `0`, or one pruned away
-   * entirely.
+   * emerged at all — a plant at growth state `0`, or one pruned away entirely.
    */
   bounds: IAutoMovieSoftBounds | null;
 }
