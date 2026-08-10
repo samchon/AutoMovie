@@ -418,19 +418,15 @@ export const serviceAnalysisSupport = (props: {
   const located = props.environment.spaces.some(
     (space) => space.cells.length > 0,
   );
-  const faceless = props.network.penetrations
-    .map(
-      (sleeve) =>
-        props.environment.boundaries.find(
-          (boundary) => boundary.id === sleeve.boundary,
-        )?.id,
-    )
-    .find(
-      (id) =>
-        id !== undefined &&
-        props.environment.boundaries.find((boundary) => boundary.id === id)
-          ?.face === undefined,
-    );
+  // A boundary that does not resolve is faceless too, and naming the boundary
+  // the sleeve claimed is more use than naming nothing; the validator reports
+  // the dangling reference itself, on its own path.
+  const faceless = props.network.penetrations.find(
+    (sleeve) =>
+      props.environment.boundaries.find(
+        (boundary) => boundary.id === sleeve.boundary,
+      )?.face === undefined,
+  )?.boundary;
   return [
     {
       check: "port-connectivity",

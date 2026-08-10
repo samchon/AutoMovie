@@ -349,6 +349,26 @@ export const test_service_network_topology = (): void => {
           ),
       ],
       [
+        "unresolvedBoundaryDropsItToo",
+        () =>
+          serviceAnalysisSupport({
+            network: {
+              ...network,
+              penetrations: network.penetrations.map((sleeve) =>
+                sleeve.id === "cold-bath-hall"
+                  ? { ...sleeve, boundary: "nowhere" }
+                  : sleeve,
+              ),
+            },
+            environment,
+          }).some(
+            (entry) =>
+              entry.check === "penetration-on-boundary-face" &&
+              entry.status === "unsupported" &&
+              entry.reason.includes('boundary "nowhere" declares no face'),
+          ),
+      ],
+      [
         "perDiscipline",
         () =>
           support
@@ -371,6 +391,7 @@ export const test_service_network_topology = (): void => {
       crossingUnsupportedWithoutVolumes: true,
       boundaryFace: true,
       facelessBoundaryDropsIt: true,
+      unresolvedBoundaryDropsItToo: true,
       perDiscipline: true,
       noSolver: true,
     },
