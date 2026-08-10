@@ -289,7 +289,7 @@ export const test_service_network_topology = (): void => {
             .filter((entry) => entry.status === "supported")
             .map((entry) => entry.check)
             .join() ===
-          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,boundary-penetration,waterproof-coverage",
+          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,boundary-penetration,penetration-on-boundary-face,waterproof-coverage",
       ],
       [
         "crossingUnsupportedWithoutVolumes",
@@ -315,8 +315,27 @@ export const test_service_network_topology = (): void => {
           support.some(
             (entry) =>
               entry.check === "penetration-on-boundary-face" &&
+              entry.status === "supported",
+          ),
+      ],
+      [
+        "facelessBoundaryDropsIt",
+        () =>
+          serviceAnalysisSupport({
+            network: {
+              ...network,
+              penetrations: network.penetrations.map((sleeve) =>
+                sleeve.id === "cold-bath-hall"
+                  ? { ...sleeve, boundary: "bath-shell" }
+                  : sleeve,
+              ),
+            },
+            environment,
+          }).some(
+            (entry) =>
+              entry.check === "penetration-on-boundary-face" &&
               entry.status === "unsupported" &&
-              entry.reason.includes("no surface geometry"),
+              entry.reason.includes('boundary "bath-shell" declares no face'),
           ),
       ],
       [
@@ -341,6 +360,7 @@ export const test_service_network_topology = (): void => {
       structural: true,
       crossingUnsupportedWithoutVolumes: true,
       boundaryFace: true,
+      facelessBoundaryDropsIt: true,
       perDiscipline: true,
       noSolver: true,
     },

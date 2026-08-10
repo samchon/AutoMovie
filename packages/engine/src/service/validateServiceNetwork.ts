@@ -3,17 +3,21 @@ import {
   AutoMovieServiceMedium,
   AutoMovieServiceUnit,
   IAutoMovieBuiltEnvironment,
+  IAutoMoviePlanarPoint,
   IAutoMovieServiceNetwork,
+  IAutoMovieServicePenetration,
   IAutoMovieServiceSegment,
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
+import { outlineHull, pointInPolygon } from "../architecture/planarGeometry";
 import {
   propBoundsOverlap,
   propSpaceContainsBounds,
 } from "../film/propPlacement";
+import { Quaternion } from "../math/Quaternion";
 import { ViolationCollector } from "../validation/violation";
 import {
   portRecords,
@@ -591,6 +595,7 @@ export const validateServiceNetwork = (props: {
       out,
     );
     positive(sleeve.radius, `${path}.radius`, "penetration radius", out);
+    appendSleeveOnFace(environment, sleeve, path, out);
     if (!citedPenetrations.has(sleeve.id))
       out.warn(
         "coverage",
@@ -682,13 +687,16 @@ export const validateServiceNetwork = (props: {
 /**
  * Report a run that leaves the logical space it was in without a sleeve.
  *
- * The crossing is read off the logical space cells rather than off a wall,
- * because a boundary carries no surface geometry to intersect against. Losing
- * or gaining a space between two consecutive route points is exactly the moment
- * a run left one region for another, and the run is expected to name a sleeve
- * on a boundary of one of them. Where no space in the environment locates a
- * volume at all, nothing can be said and nothing is: a purely semantic
- * partition is a name, not a wall to drill.
+ * The crossing is read off the logical space cells rather than off a wall face.
+ * A boundary may now carry one, but it need not, and a run that leaves a room
+ * has left it whether or not the separation it went through was ever modelled;
+ * reading the rooms therefore finds crossings a face-intersection would miss
+ * entirely. Losing or gaining a space between two consecutive route points is
+ * exactly the moment a run left one region for another, and the run is expected
+ * to name a sleeve on a boundary of one of them. Where the sleeve's boundary
+ * does carry a face, that sleeve is separately held on it. Where no space in
+ * the environment locates a volume at all, nothing can be said and nothing is:
+ * a purely semantic partition is a name, not a wall to drill.
  *
  * Only the first uncovered crossing of a run is reported. A riser that left its
  * chase undeclared crosses every floor it passes, and one located finding is
@@ -743,6 +751,94 @@ const appendCrossings = (
     return;
   }
 };
+
+/**
+ * Hold a sleeve inside the face it claims to pierce.
+ *
+ * Until a boundary carried a face this could not be asked at all, and a sleeve
+ * could only be held against the run that cited it. A face gives the question
+ * an answer: the sleeve's world centre is read in the boundary's own frame,
+ * where it must lie within the separation's thickness and inside its outline,
+ * and a sleeve citing a declared opening must additionally sit inside that
+ * opening's own void rather than merely somewhere on the same wall.
+ *
+ * The sleeve is held by the corners of the square that bounds it rather than by
+ * its true circle, which errs towards refusing a hole tucked into a corner of
+ * an irregular face. That is the same direction every other tolerance here
+ * leans: a refused sleeve is moved, an unrefused one leaks.
+ *
+ * A boundary with no face is not a failure. It is the pre-geometry record, and
+ * `serviceAnalysisSupport` reports it as the reason this check is `unsupported`
+ * rather than passing it silently.
+ */
+const appendSleeveOnFace = (
+  environment: IAutoMovieBuiltEnvironment,
+  sleeve: IAutoMovieServicePenetration,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  const boundary = environment.boundaries.find(
+    (candidate) => candidate.id === sleeve.boundary,
+  );
+  const face = boundary?.face;
+  if (face === undefined) return;
+  if (!Number.isFinite(sleeve.radius) || sleeve.radius <= 0) return;
+  for (const axis of ["x", "y", "z"] as const)
+    if (!Number.isFinite(sleeve.position[axis])) return;
+
+  const offset = {
+    x: sleeve.position.x - face.origin.x,
+    y: sleeve.position.y - face.origin.y,
+    z: sleeve.position.z - face.origin.z,
+  };
+  const local = Quaternion.rotateVector(
+    Quaternion.inverse(face.rotation),
+    offset,
+  );
+  if (Math.abs(local.z) > face.thickness / 2 + SERVICE_EPSILON)
+    out.push(
+      "range",
+      `${path}.position`,
+      `penetration "${sleeve.id}" stands ${Math.abs(local.z)} m off the face of boundary "${sleeve.boundary}", which is only ${face.thickness} m thick`,
+      sleeve.position,
+      Math.abs(local.z) - face.thickness / 2,
+    );
+
+  const corners = sleeveCorners(local, sleeve.radius);
+  if (corners.some((corner) => !pointInPolygon(corner, face.outline)))
+    out.push(
+      "type",
+      `${path}.position`,
+      `penetration "${sleeve.id}" is not wholly inside the face of boundary "${sleeve.boundary}"`,
+      sleeve.position,
+    );
+
+  if (sleeve.opening === null) return;
+  const opening = environment.openings.find(
+    (candidate) => candidate.id === sleeve.opening,
+  );
+  if (opening === undefined || opening.boundary !== sleeve.boundary) return;
+  if (opening.profile === undefined) return;
+  const hull = outlineHull(opening.profile);
+  if (corners.some((corner) => !pointInPolygon(corner, hull)))
+    out.push(
+      "type",
+      `${path}.opening`,
+      `penetration "${sleeve.id}" does not pass through the void of opening "${sleeve.opening}"`,
+      sleeve.position,
+    );
+};
+
+/** The four corners of the square bounding a sleeve in its face's own frame. */
+const sleeveCorners = (
+  local: { x: number; y: number },
+  radius: number,
+): IAutoMoviePlanarPoint[] => [
+  { x: local.x - radius, y: local.y - radius },
+  { x: local.x + radius, y: local.y - radius },
+  { x: local.x + radius, y: local.y + radius },
+  { x: local.x - radius, y: local.y + radius },
+];
 
 const collectIds = <T extends { id: string }>(
   records: readonly T[],

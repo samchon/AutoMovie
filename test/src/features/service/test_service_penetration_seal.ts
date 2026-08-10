@@ -70,6 +70,10 @@ const semantic = (): IAutoMovieBuiltEnvironment => {
  *    carries unsealed.
  * 9. Where no space declares a volume, no crossing can be read and none is
  *    invented.
+ * 10. Now that a boundary can carry a face, a sleeve is held on it: off the
+ *     separation's own thickness, wider than the face it pierces, or outside
+ *     the void it claims to pass through, each refused. A boundary with no face
+ *     and an opening with no profile are skipped rather than guessed at.
  */
 export const test_service_penetration_seal = (): void => {
   const clean = serviceNetwork();
@@ -279,6 +283,74 @@ export const test_service_penetration_seal = (): void => {
       ],
     ]),
     { refused: true, alone: true, untankedBoundaryUnaffected: true },
+  );
+
+  const offPlane = refuse(
+    withSleeve(clean, "cold-bath-hall", (entry) => ({
+      ...entry,
+      position: { x: 4.5, y: 2.5, z: 1 },
+    })),
+  );
+  const oversize = refuse(
+    withSleeve(clean, "cold-bath-hall", (entry) => ({ ...entry, radius: 3 })),
+  );
+  const offVoid = refuse(
+    withSleeve(clean, "waste-bath-hall", (entry) => ({
+      ...entry,
+      position: { x: 4, y: 1.5, z: 1 },
+    })),
+  );
+  const faceless = refuse(
+    withSleeve(clean, "cold-bath-hall", (entry) => ({
+      ...entry,
+      boundary: "bath-shell",
+    })),
+  );
+  const plainHatch = refuse(
+    withSleeve(clean, "air-hall-plant", (entry) => ({
+      ...entry,
+      opening: "plant-hatch",
+    })),
+  );
+  TestValidator.equals(
+    "a sleeve is held inside the face it pierces, and inside the void it cites",
+    namedFacts([
+      [
+        "offPlane",
+        () =>
+          hasViolation(offPlane, "range", "$input.penetrations[1].position") &&
+          offPlane.success === false &&
+          offPlane.violations.some((item) =>
+            nclose(item.overshoot ?? -1, 0.4, 1e-12),
+          ) &&
+          violationCount(offPlane) === 1,
+      ],
+      [
+        "oversize",
+        () =>
+          hasViolation(oversize, "type", "$input.penetrations[1].position") &&
+          violationCount(oversize) === 1,
+      ],
+      [
+        "offVoid",
+        () => hasViolation(offVoid, "type", "$input.penetrations[5].opening"),
+      ],
+      [
+        "offVoidLeftItsRunToo",
+        () =>
+          hasViolation(offVoid, "range", "$input.segments[5].penetrations[0]"),
+      ],
+      ["facelessBoundarySkipped", () => faceless.success === true],
+      ["profilelessOpeningSkipped", () => plainHatch.success === true],
+    ]),
+    {
+      offPlane: true,
+      oversize: true,
+      offVoid: true,
+      offVoidLeftItsRunToo: true,
+      facelessBoundarySkipped: true,
+      profilelessOpeningSkipped: true,
+    },
   );
 
   const nowhere = validateServiceNetwork({

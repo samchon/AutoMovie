@@ -504,12 +504,10 @@ export const test_service_network_defects = (): void => {
     ...clean,
     penetrations: clean.penetrations.map((entry, index) =>
       index === 0
-        ? {
-            ...entry,
-            position: { x: Number.NaN, y: 2.5, z: 1 },
-            radius: 0,
-          }
-        : entry,
+        ? { ...entry, position: { x: Number.NaN, y: 2.5, z: 1 } }
+        : index === 2
+          ? { ...entry, radius: 0 }
+          : entry,
     ),
   });
   const unmeasurable = refuse(
@@ -547,7 +545,7 @@ export const test_service_network_defects = (): void => {
       [
         "sleeveRadius",
         () =>
-          hasViolation(sleeveShape, "range", "$input.penetrations[0].radius"),
+          hasViolation(sleeveShape, "range", "$input.penetrations[2].radius"),
       ],
       [
         "capacityRefused",

@@ -401,8 +401,9 @@ export const serviceNetworkSchematic = (props: {
  * The building is required rather than optional because two of these answers
  * depend on it. A crossing is read off logical space volumes, so a building
  * whose partitions are names with no cells cannot be asked where a run left a
- * room, and saying `supported` there would be the same dressing-up this report
- * exists to prevent.
+ * room; a sleeve is placed on its boundary's own face, so a boundary written
+ * before faces existed cannot be asked where its holes are. Saying `supported`
+ * in either case would be the dressing-up this report exists to prevent.
  *
  * @author Samchon
  */
@@ -417,6 +418,19 @@ export const serviceAnalysisSupport = (props: {
   const located = props.environment.spaces.some(
     (space) => space.cells.length > 0,
   );
+  const faceless = props.network.penetrations
+    .map(
+      (sleeve) =>
+        props.environment.boundaries.find(
+          (boundary) => boundary.id === sleeve.boundary,
+        )?.id,
+    )
+    .find(
+      (id) =>
+        id !== undefined &&
+        props.environment.boundaries.find((boundary) => boundary.id === id)
+          ?.face === undefined,
+    );
   return [
     {
       check: "port-connectivity",
@@ -455,12 +469,18 @@ export const serviceAnalysisSupport = (props: {
           reason:
             "no logical space of this building declares a volume, so there is nothing a run can be seen to leave",
         },
-    {
-      check: "penetration-on-boundary-face",
-      status: "unsupported",
-      reason:
-        "boundaries carry no surface geometry, so a sleeve can only be placed on the run that cites it, not on the face it pierces",
-    },
+    faceless === undefined
+      ? {
+          check: "penetration-on-boundary-face",
+          status: "supported",
+          reason:
+            "every boundary a sleeve pierces carries a face, so each sleeve is held inside that face's outline and thickness",
+        }
+      : {
+          check: "penetration-on-boundary-face",
+          status: "unsupported",
+          reason: `boundary "${faceless}" declares no face, so the sleeves through it can only be placed on the runs that cite them`,
+        },
     {
       check: "waterproof-coverage",
       status: "supported",

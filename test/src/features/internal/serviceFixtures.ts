@@ -73,13 +73,38 @@ export const serviceEnvironment = (): IAutoMovieBuiltEnvironment => ({
     },
   ],
   boundaries: [
-    { id: "bath-hall", kind: "wall", spaces: ["bath", "hall"], elements: [] },
-    { id: "hall-plant", kind: "wall", spaces: ["hall", "plant"], elements: [] },
+    {
+      id: "bath-hall",
+      kind: "wall",
+      spaces: ["bath", "hall"],
+      elements: [],
+      face: partitionFace(4),
+    },
+    {
+      id: "hall-plant",
+      kind: "wall",
+      spaces: ["hall", "plant"],
+      elements: [],
+      face: partitionFace(7),
+    },
     { id: "bath-shell", kind: "wall", spaces: ["bath"], elements: [] },
     { id: "plant-shell", kind: "wall", spaces: ["plant"], elements: [] },
   ],
   openings: [
-    { id: "service-chase", kind: "passage", boundary: "bath-hall", fill: null },
+    {
+      id: "service-chase",
+      kind: "passage",
+      boundary: "bath-hall",
+      fill: null,
+      profile: {
+        outline: [
+          { x: -1.5, y: 0 },
+          { x: -0.5, y: 0 },
+          { x: -0.5, y: 0.6 },
+          { x: -1.5, y: 0.6 },
+        ],
+      },
+    },
     { id: "plant-hatch", kind: "hatch", boundary: "hall-plant", fill: null },
   ],
   connectors: [],
@@ -863,6 +888,32 @@ export const withSystem = (
   systems: network.systems.map((candidate) =>
     candidate.id === id ? edit(candidate) : candidate,
   ),
+});
+
+/**
+ * The face of a cross partition standing at one world `x`.
+ *
+ * The frame is a quarter turn about world `+Y`, so the boundary's own local
+ * `+X` runs along world `-Z`, its local `+Y` is world up, and its local `+Z` is
+ * the outward normal along world `+X`. A world point on the partition therefore
+ * reads as `(-z, y, 0)` in the boundary's own metres, which is the arithmetic
+ * every sleeve placed on it is checked with.
+ */
+const partitionFace = (x: number) => ({
+  origin: { x, y: 0, z: 0 },
+  rotation: {
+    x: 0,
+    y: Math.SQRT1_2,
+    z: 0,
+    w: Math.SQRT1_2,
+  },
+  outline: [
+    { x: -5, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 3 },
+    { x: -5, y: 3 },
+  ],
+  thickness: 0.2,
 });
 
 /** An axis-aligned convex cell, the shape a logical volume is built from. */
