@@ -91,17 +91,28 @@ Keep populations compact. A formation materializes its members from count, layou
 Buildings use the same rule without pretending they are formations. A building class emits `IAutoMovieBuiltEnvironment`; its element hierarchy carries local full TRS and reusable model ids, while its independent logical-space hierarchy carries rooms, floors, voids, boundaries, openings, and stair/lift/bridge connectivity. One such record may hold several independent building units through its `buildings` root table plus the sky-bridges that couple them, so a keep, its yawed annex, and the bridge between them are one `design()` and one `render()` rather than three subjects that have to agree. Write a repeated storey as a loop over its index: the slab, its logical space, its room, its door, and the stair up to it all derive from the same number, and the looped record must be the same artifact as the hand-expanded one. `render(context)` delegates to `lowerBuiltEnvironment(design())`, and the shot consumes that derived contribution:
 
 ```ts
-const architecture = tower.render(context);
+import {
+  AutoMovieSubject,
+  IAutoMovieSubjectContribution,
+  mergeAutoMovieSpaces,
+} from "@automovie/engine";
+import { IAutoMovieShotBuildContext } from "@automovie/interface";
 
-return {
-  models: [...(architecture.models ?? [])],
-  builtEnvironments: [...(architecture.builtEnvironments ?? [])],
-  stage: {
-    // actor/camera/light fields omitted here
-    set: [...(architecture.set ?? [])],
-    space: mergeAutoMovieSpaces("shot-space", architecture.spaces ?? []),
-  },
-  // script, blocking, performance, and eventSamples remain shot-owned
+export const stageTower = (
+  tower: AutoMovieSubject<unknown>,
+  context: IAutoMovieShotBuildContext,
+): IAutoMovieSubjectContribution => {
+  const architecture = tower.render(context);
+  return {
+    models: [...(architecture.models ?? [])],
+    builtEnvironments: [...(architecture.builtEnvironments ?? [])],
+    stage: {
+      // actor/camera/light fields omitted here
+      set: [...(architecture.set ?? [])],
+      space: mergeAutoMovieSpaces("shot-space", architecture.spaces ?? []),
+    },
+    // script, blocking, performance, and eventSamples remain shot-owned
+  } as IAutoMovieSubjectContribution;
 };
 ```
 
