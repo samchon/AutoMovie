@@ -50,7 +50,7 @@ Size is a shipping decision. Both edges must be whole positive pixel counts and 
 
 Decoding intent is part of the asset's identity. Base-color and emissive maps are colours stored in sRGB; metallic-roughness, normal and occlusion maps are measurements and must stay linear. One image bound under both intents is refused: the same pixels cannot be both a colour and a measurement, and the fix is two registered images, not one binding quietly decoded the wrong way.
 
-Register each image with a typed use: `material-texture` naming the compiled model whose materials bind it, or `scene-environment` naming the shot whose scene lights itself from it. An image no model or scene binds any more is a stale use and is refused too, so the distributable never accumulates files nothing samples.
+Register each image with a typed use: `material-texture` naming the compiled model whose materials bind it, `scene-environment` naming the shot whose scene lights itself from it, or `design-reference` naming the observation document that reads it. An image no model, scene, or document binds any more is a stale use and is refused too, so the distributable never accumulates files nothing samples.
 
 ## Acceptance checklist
 
