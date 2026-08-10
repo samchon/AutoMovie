@@ -9,6 +9,7 @@
 export type AutoMovieSandboxEngineExport =
   | "AutoMovieSubject"
   | "AutoMovieSubjectGroup"
+  | "autoMovieAssemblyOpeningReveal"
   | "buildAutoMoviePolyhedron"
   | "buildAutoMovieWall"
   | "builtEnvironmentAdjacentSpaces"
@@ -21,14 +22,18 @@ export type AutoMovieSandboxEngineExport =
   | "extrudeAutoMovieProfile"
   | "inspectAutoMovieMeshTopology"
   | "lowerBuiltEnvironment"
+  | "matchAutoMovieAssemblyJunction"
   | "mergeAutoMovieMeshes"
   | "mergeAutoMovieMeshParts"
   | "mergeAutoMovieSpaces"
   | "mergeAutoMovieSubjectContributions"
+  | "resolveAutoMovieMaterialAssembly"
   | "revolveAutoMovieProfile"
   | "sweepAutoMovieProfile"
   | "tessellateSurface"
   | "transformAutoMovieMesh"
+  | "validateAutoMovieMaterialAssembly"
+  | "validateAutoMovieMaterialSubstance"
   | "worldSurfaceHeight";
 
 /**
@@ -55,6 +60,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
   [
     "AutoMovieSubject",
     "AutoMovieSubjectGroup",
+    "autoMovieAssemblyOpeningReveal",
     "buildAutoMoviePolyhedron",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
@@ -67,13 +73,17 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "extrudeAutoMovieProfile",
     "inspectAutoMovieMeshTopology",
     "lowerBuiltEnvironment",
+    "matchAutoMovieAssemblyJunction",
     "mergeAutoMovieMeshes",
     "mergeAutoMovieMeshParts",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
+    "resolveAutoMovieMaterialAssembly",
     "revolveAutoMovieProfile",
     "sweepAutoMovieProfile",
     "tessellateSurface",
     "transformAutoMovieMesh",
+    "validateAutoMovieMaterialAssembly",
+    "validateAutoMovieMaterialSubstance",
     "worldSurfaceHeight",
   ];

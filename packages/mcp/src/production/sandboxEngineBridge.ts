@@ -1,4 +1,5 @@
 import {
+  autoMovieAssemblyOpeningReveal,
   buildAutoMoviePolyhedron,
   buildAutoMovieWall,
   builtEnvironmentAdjacentSpaces,
@@ -10,14 +11,18 @@ import {
   extrudeAutoMovieProfile,
   inspectAutoMovieMeshTopology,
   lowerBuiltEnvironment,
+  matchAutoMovieAssemblyJunction,
   mergeAutoMovieMeshParts,
   mergeAutoMovieMeshes,
   mergeAutoMovieSpaces,
   mergeAutoMovieSubjectContributions,
+  resolveAutoMovieMaterialAssembly,
   revolveAutoMovieProfile,
   sweepAutoMovieProfile,
   tessellateSurface,
   transformAutoMovieMesh,
+  validateAutoMovieMaterialAssembly,
+  validateAutoMovieMaterialSubstance,
 } from "@automovie/engine";
 
 import { AutoMovieSandboxEngineExport } from "./sandboxEngineSurface";
@@ -48,6 +53,7 @@ export type IAutoMovieSandboxEngineAnswer =
  */
 export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandboxEngineExport[] =
   [
+    "autoMovieAssemblyOpeningReveal",
     "buildAutoMoviePolyhedron",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
@@ -59,14 +65,18 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "extrudeAutoMovieProfile",
     "inspectAutoMovieMeshTopology",
     "lowerBuiltEnvironment",
+    "matchAutoMovieAssemblyJunction",
     "mergeAutoMovieMeshes",
     "mergeAutoMovieMeshParts",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
+    "resolveAutoMovieMaterialAssembly",
     "revolveAutoMovieProfile",
     "sweepAutoMovieProfile",
     "tessellateSurface",
     "transformAutoMovieMesh",
+    "validateAutoMovieMaterialAssembly",
+    "validateAutoMovieMaterialSubstance",
   ];
 
 /**
@@ -83,6 +93,7 @@ const bridged =
 
 const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
   {
+    autoMovieAssemblyOpeningReveal: bridged(autoMovieAssemblyOpeningReveal),
     buildAutoMoviePolyhedron: bridged(buildAutoMoviePolyhedron),
     buildAutoMovieWall: bridged(buildAutoMovieWall),
     builtEnvironmentAdjacentSpaces: bridged(builtEnvironmentAdjacentSpaces),
@@ -94,16 +105,24 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     extrudeAutoMovieProfile: bridged(extrudeAutoMovieProfile),
     inspectAutoMovieMeshTopology: bridged(inspectAutoMovieMeshTopology),
     lowerBuiltEnvironment: bridged(lowerBuiltEnvironment),
+    matchAutoMovieAssemblyJunction: bridged(matchAutoMovieAssemblyJunction),
     mergeAutoMovieMeshes: bridged(mergeAutoMovieMeshes),
     mergeAutoMovieMeshParts: bridged(mergeAutoMovieMeshParts),
     mergeAutoMovieSpaces: bridged(mergeAutoMovieSpaces),
     mergeAutoMovieSubjectContributions: bridged(
       mergeAutoMovieSubjectContributions,
     ),
+    resolveAutoMovieMaterialAssembly: bridged(resolveAutoMovieMaterialAssembly),
     revolveAutoMovieProfile: bridged(revolveAutoMovieProfile),
     sweepAutoMovieProfile: bridged(sweepAutoMovieProfile),
     tessellateSurface: bridged(tessellateSurface),
     transformAutoMovieMesh: bridged(transformAutoMovieMesh),
+    validateAutoMovieMaterialAssembly: bridged(
+      validateAutoMovieMaterialAssembly,
+    ),
+    validateAutoMovieMaterialSubstance: bridged(
+      validateAutoMovieMaterialSubstance,
+    ),
   };
 
 /**
