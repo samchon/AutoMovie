@@ -30,6 +30,11 @@ import {
   modelsFixture,
   sceneFixture,
 } from "../internal/renderFixtures";
+import {
+  plantingCluster,
+  plantingRecipe,
+  softPanel,
+} from "../internal/softFixtures";
 
 /**
  * A multi-room, multi-storey production reports every render cost it commits
@@ -679,6 +684,8 @@ export const test_render_budget_report = (): void => {
       bare: {
         environments: autoMovieRenderSubjectOfShot({ compiled }).environments,
         water: autoMovieRenderSubjectOfShot({ compiled }).waterBodies,
+        panels: autoMovieRenderSubjectOfShot({ compiled }).softBodies,
+        plantings: autoMovieRenderSubjectOfShot({ compiled }).plantings,
         textures: autoMovieRenderSubjectOfShot({ compiled }).textures,
         sets: autoMovieRenderSubjectOfShot({ compiled }).instanceSets?.length,
       },
@@ -730,14 +737,50 @@ export const test_render_budget_report = (): void => {
             },
           ],
         }).textures?.map((texture) => texture.asset),
+        // Cloth and planting reach the subject the same way water does: the
+        // compiled shot does not carry them, so a conversion that dropped them
+        // would produce a report that reads complete over an unfurnished room.
+        panels: autoMovieRenderSubjectOfShot({
+          compiled,
+          softBodies: [
+            {
+              domain: softPanel({ columns: 2, rows: 2 }),
+              owner: null,
+              material: null,
+            },
+          ],
+        }).softBodies?.map((body) => body.domain.id),
+        plantings: autoMovieRenderSubjectOfShot({
+          compiled,
+          plantings: [
+            {
+              domain: plantingRecipe(),
+              cluster: plantingCluster(),
+              owner: null,
+              branchMaterial: null,
+              leafMaterial: null,
+              branch: null,
+              leaf: null,
+            },
+          ],
+        }).plantings?.map((planting) => planting.cluster.id),
       },
     },
     {
-      bare: { environments: [], water: [], textures: [], sets: 1 },
+      bare: {
+        environments: [],
+        water: [],
+        panels: [],
+        plantings: [],
+        textures: [],
+        sets: 1,
+      },
       full: {
         environments: ["tower"],
         water: ["basin"],
         textures: ["textures/stone.png"],
+        panels: ["panel"],
+        plantings: ["atrium-bed"],
       },
     },
   );

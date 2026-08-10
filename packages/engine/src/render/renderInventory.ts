@@ -364,7 +364,7 @@ export const measureAutoMovieRenderInventory = (props: {
         part: "branch",
         instances: budget.worstCaseBranchInstances,
         material: planting.branchMaterial,
-        cost: prototype(
+        cost: statedPrototype(
           planting.branch,
           `planting "${planting.cluster.id}" branch`,
         ),
@@ -373,7 +373,7 @@ export const measureAutoMovieRenderInventory = (props: {
         part: "leaf",
         instances: budget.worstCaseLeafInstances,
         material: planting.leafMaterial,
-        cost: prototype(
+        cost: statedPrototype(
           planting.leaf,
           `planting "${planting.cluster.id}" leaf`,
         ),
@@ -664,7 +664,7 @@ const quads = (count: number): number => (count > 1 ? count - 1 : 0);
  * multiplying one by ten thousand instances would put a fabricated number into
  * the one report that exists to hold real ones.
  */
-const prototype = (
+const statedPrototype = (
   cost: IAutoMovieRenderPrototypeCost | null,
   cited: string,
 ): IAutoMovieRenderPrototypeCost | null => {

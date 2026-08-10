@@ -14,6 +14,12 @@ import {
  * frame that was drawn; these are the exact quantities the compiled artifact
  * commits the renderer to, so the numbers exist before any GPU does.
  *
+ * The three per-kind arrays below are not a complete decomposition of the
+ * totals. A cloth panel, a planting cluster and a water surface are none of a
+ * model, a texture or an instance set, so their cost reaches a reader through
+ * {@link totals}, {@link owners} and {@link gaps} alone; summing the arrays would
+ * come up short by exactly the things a room is furnished with.
+ *
  * @author Samchon
  */
 export interface IAutoMovieRenderInventory {

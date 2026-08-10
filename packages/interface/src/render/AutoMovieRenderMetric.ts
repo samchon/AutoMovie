@@ -12,11 +12,18 @@
  *
  * Units:
  *
- * - `triangles`, `vertices`, `materials`, `textures`, `lights`, `shadowMaps`,
- *   `nodes`, `instanceSets`, `instanceSlots`, `instanceChunks`, `fluidCells`
- *   and `fluidParticles` are exact counts.
+ * - `materials`, `textures`, `lights`, `shadowMaps`, `nodes`, `instanceSets`,
+ *   `instanceChunks` and `fluidCells` are exact counts.
  * - `drawCalls` is an UPPER BOUND on the draw submissions one frame can issue,
  *   never an observed number: culling only ever lowers it.
+ * - `triangles`, `vertices` and `instanceSlots` are exact for anything whose
+ *   shape the design fixes, and UPPER BOUNDS wherever runtime state chooses how
+ *   much of it draws: a slot picks a level of detail by distance, a fern bed
+ *   grows to at most its recipe's worst case, and a water quad is skipped
+ *   unless all four of its cells are wet. Every such choice only lowers the
+ *   number, which is the one direction a budget can be checked in.
+ * - `fluidParticles` is the declared emitter cap, likewise an upper bound: a
+ *   spray never exceeds it and distance thinning cuts it further.
  * - `textureBytes` and `geometryBytes` are estimated device bytes.
  *
  * @author Samchon
