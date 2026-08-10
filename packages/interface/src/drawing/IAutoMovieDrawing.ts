@@ -134,10 +134,17 @@ export interface IAutoMovieDrawingOpeningMark {
    */
   polygon: IAutoMovieDrawingPoint[];
 
-  /** Void width in metres, or `null` when `basis` is `none`. */
+  /**
+   * Width in metres of whatever {@link basis} says was measured, or `null` when
+   * it says `none`.
+   *
+   * A `profile` mark measures the void; a `fill` mark measures the leaf that
+   * stands in one. Reading either as the other is the mistake {@link basis}
+   * exists to prevent, so neither is called the void's size here.
+   */
   width: number | null;
 
-  /** Void height in metres, or `null` when `basis` is `none`. */
+  /** Height in metres of the same thing, or `null` when `basis` is `none`. */
   height: number | null;
 }
 

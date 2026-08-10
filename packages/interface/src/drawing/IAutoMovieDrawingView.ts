@@ -120,8 +120,17 @@ export interface IAutoMovieDrawingView {
 
   /**
    * Logical spaces this view is restricted to, descendants included. Empty
-   * includes every space, and an element outside every listed space is
-   * dropped.
+   * includes every space.
+   *
+   * An element outside every listed space is dropped. A separation is kept when
+   * either of the spaces it divides is listed, because a party wall belongs to
+   * both of the rooms on its sides and neither sheet may lose it to the order
+   * the design happened to name them in.
+   *
+   * A name the design does not declare selects nothing and is reported as a
+   * gap. A filter is a reference into the design's own space graph, so a
+   * dangling one is a mistake rather than a narrow sheet, and a drawing says so
+   * instead of coming back blank.
    */
   spaces: string[];
 
@@ -131,6 +140,10 @@ export interface IAutoMovieDrawingView {
    * This is what makes a discipline view a filter rather than a separate model:
    * a mechanical view lists the kinds its discipline owns and gets the same
    * geometry kernel every other view uses.
+   *
+   * It decides linework and nothing else. A view's opening marks are bounded by
+   * {@link spaces} alone, so a lighting plan of a room still answers for that
+   * room's doors instead of reporting a room with none.
    */
   elementKinds: string[];
 
