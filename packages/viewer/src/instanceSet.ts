@@ -301,7 +301,7 @@ export const regenerateInstanceSlot = (
       `Instance set "${instanceSet.id}" slot ${slot} is outside 0..${instanceSet.count - 1}.`,
     );
   const point = instancePoint(instanceSet, slot);
-  const radians = THREE.MathUtils.degToRad(instanceSet.facingDeg);
+  const radians = instanceHeadingRadians(instanceSet.facingDeg);
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
   const scale = stableInterpolate(
@@ -563,7 +563,7 @@ const instanceMatrix = (
     slot.rotation === undefined
       ? new THREE.Quaternion().setFromAxisAngle(
           new THREE.Vector3(0, 1, 0),
-          THREE.MathUtils.degToRad(slot.facingDeg),
+          instanceHeadingRadians(slot.facingDeg),
         )
       : new THREE.Quaternion(
           slot.rotation.x,
@@ -619,6 +619,19 @@ const boundsRadius = (
       ),
     ),
   );
+
+/**
+ * One instance set's base heading in radians, to the last bit.
+ *
+ * Not `THREE.MathUtils.degToRad`. That multiplies by a rounded `PI / 180`,
+ * while the compiler divides by 180 after multiplying by `Math.PI`, and the two
+ * disagree in the final ulp for a great many headings: a plain three-degree set
+ * already puts a slot's compiled `position.z` and the viewer's regenerated one
+ * on different doubles. The viewer regenerates a slot rather than reading one,
+ * so the arithmetic has to be the compiler's own, not merely equivalent.
+ */
+const instanceHeadingRadians = (facingDeg: number): number =>
+  (facingDeg * Math.PI) / 180;
 
 const vector = (value: { x: number; y: number; z: number }): THREE.Vector3 =>
   new THREE.Vector3(value.x, value.y, value.z);

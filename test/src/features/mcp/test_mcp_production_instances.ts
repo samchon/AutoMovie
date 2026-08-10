@@ -2,6 +2,7 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
+  IAutoMovieShotSourceOutput,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
@@ -11,6 +12,7 @@ import {
   IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledInstanceSet,
   materializeCompiledInstanceSetInventory,
+  materializeCompiledShot,
   materializeInstanceSlot,
   materializeInstanceSlots,
   materializeProductionModels,
@@ -24,6 +26,7 @@ import {
   modelRecipe,
   productionCompileSucceeded,
   productionFixture,
+  shotContract,
   worldDesign,
 } from "./productionFixtures";
 
@@ -72,7 +75,34 @@ const instanceSet = (
   },
 });
 
-/** General instance sets remain compact and regenerate identically everywhere. */
+/**
+ * General instance sets remain compact and regenerate identically everywhere.
+ *
+ * The claim under test is that a set of any size is a placement law plus
+ * bounded chunks rather than an inventory: every member is derived from seed
+ * and slot, the compiled runtime holds no per-member record, and the sandbox a
+ * source module runs in derives the same member the compiler did.
+ *
+ * Scenarios:
+ *
+ * 1. Grid, scatter and along-route sets derive stable seeded variation, repeat
+ *    exactly, and separate on the seed's high word. Negative twins: a negative
+ *    slot, an absent route and a non-finite route accumulation each refuse, and
+ *    an extreme trait range still interpolates to a finite value.
+ * 2. Lattice and explicit sets keep full TRS, a prototype table, stable member ids
+ *    and visibility, while a set declaring none of those keeps exactly the
+ *    compiled and slot keys it always had.
+ * 3. A registered rigid glTF prototype resolves to the sealed external model,
+ *    carrying its byte ledger, against a generated prototype of the same set
+ *    that stays compiler-owned.
+ * 4. Chunking stays bounded and digest-stable, and the compiled inventory resolves
+ *    route geometry only where a layout asks for it.
+ * 5. The scaffold sandbox regenerates the compiler's own slot for every layout,
+ *    proven by an oracle injected into the fixture's shot builder.
+ * 6. An explicit member's id is reserved against scene nodes: a node taking a
+ *    declared id is reported, including a hidden member's, while the same
+ *    prefix with an undeclared id stays an ordinary node.
+ */
 export const test_mcp_production_instances = (): void => {
   const route = {
     id: "market-road",
@@ -684,6 +714,89 @@ export const test_mcp_production_instances = (): void => {
         compiledInstanceSetsFind: true,
         compiledInstanceSetsFind2: true,
         compiledModelsSome: true,
+      },
+    );
+
+    // An explicit block names its members, so its identities leave the
+    // compiler-owned `slot:NNNNNN` namespace and land in one an author also
+    // writes scene nodes into. A node that takes an explicit id would be a
+    // second object claiming a transform the batch already draws, so the
+    // materializer has to report it exactly as it reports an ordinary slot.
+    const {
+      models: _collisionModels,
+      formations: _collisionFormations,
+      ...collisionBase
+    } = compiled;
+    const shotSource: IAutoMovieShotSourceOutput = collisionBase;
+    const explicitWorld = { ...fixtureWorld, instanceSets: [explicit] };
+    const explicitRuntime = materializeCompiledInstanceSetInventory(
+      explicitWorld,
+      recipes,
+    );
+    const runtimeModels = materializeProductionModels(recipes);
+    const materializeWithNode = (
+      id: string,
+    ): ReturnType<typeof materializeCompiledShot> => {
+      const staged = structuredClone(shotSource);
+      staged.scene.nodes.push({ ...staged.scene.nodes[0]!, id });
+      return materializeCompiledShot({
+        contract: shotContract(),
+        formations: new Map(),
+        instanceSetRuntime: explicitRuntime,
+        modelRecipes: recipes,
+        runtimeModels,
+        world: explicitWorld,
+        source: staged,
+      });
+    };
+    const takenIdentity = materializeWithNode(
+      "instance:spiral-balusters:baluster-b",
+    );
+    const freeIdentity = materializeWithNode(
+      "instance:spiral-balusters:baluster-z",
+    );
+    const hiddenIdentity = materializeWithNode(
+      "instance:spiral-balusters:baluster-hidden",
+    );
+    TestValidator.equals(
+      "an explicit instance identity is reserved against scene nodes",
+      namedFacts([
+        [
+          "takenIdentityReported",
+          () =>
+            takenIdentity.collisions.includes(
+              "instance:spiral-balusters:baluster-b",
+            ),
+        ],
+        [
+          // A hidden member still owns its name: the batch skips drawing it,
+          // and an author who reuses the id has still lost the identity the
+          // compiled slot publishes.
+          "hiddenIdentityReported",
+          () =>
+            hiddenIdentity.collisions.includes(
+              "instance:spiral-balusters:baluster-hidden",
+            ),
+        ],
+        [
+          // Negative twin: the same prefix with an id the block never declares
+          // is an ordinary node, and reporting it would refuse valid source.
+          "freeIdentityAllowed",
+          () => freeIdentity.collisions.length === 0,
+        ],
+        [
+          "freeIdentityKept",
+          () =>
+            freeIdentity.value.scene.nodes.some(
+              (node) => node.id === "instance:spiral-balusters:baluster-z",
+            ),
+        ],
+      ]),
+      {
+        takenIdentityReported: true,
+        hiddenIdentityReported: true,
+        freeIdentityAllowed: true,
+        freeIdentityKept: true,
       },
     );
   } catch (error) {

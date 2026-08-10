@@ -102,48 +102,53 @@ const batchBytes = (object: THREE.Object3D): string =>
     ]),
   );
 
-/** One rigid source model exported and re-read as registered glTF bytes. */
+/**
+ * One rigid source model exported and re-read as registered glTF bytes.
+ *
+ * Each entry becomes its own part with its own material, which is what a
+ * registered asset carrying several primitives decodes back into: one rigid
+ * mesh per material rather than one mesh binding a material array.
+ */
 const staticGltfSource = (
   id: string,
-  positions: readonly number[],
-  indices: readonly number[],
+  parts: ReadonlyArray<{
+    positions: readonly number[];
+    indices: readonly number[];
+    color: { r: number; g: number; b: number };
+  }>,
 ): IAutoMovieModel => ({
   id,
   name: null,
   origin: "generated",
   body: null,
   skeleton: null,
-  materials: [
-    {
-      id: "surface",
-      name: null,
-      baseColor: { r: 0.7, g: 0.7, b: 0.7, a: 1, hex: null },
-      metallic: 0,
-      roughness: 0.7,
-      emissive: null,
-      opacity: 1,
-      baseColorTexture: null,
-    },
-  ],
-  parts: [
-    {
-      id: "surface",
-      name: null,
-      material: "surface",
-      transform: null,
-      attachedBone: null,
-      geometry: {
-        type: "mesh",
-        mesh: {
-          positions: [...positions],
-          normals: null,
-          uvs: null,
-          indices: [...indices],
-          skin: null,
-        },
+  materials: parts.map((part, index) => ({
+    id: `surface-${index}`,
+    name: null,
+    baseColor: { ...part.color, a: 1, hex: null },
+    metallic: 0,
+    roughness: 0.7,
+    emissive: null,
+    opacity: 1,
+    baseColorTexture: null,
+  })),
+  parts: parts.map((part, index) => ({
+    id: `surface-${index}`,
+    name: null,
+    material: `surface-${index}`,
+    transform: null,
+    attachedBone: null,
+    geometry: {
+      type: "mesh",
+      mesh: {
+        positions: [...part.positions],
+        normals: null,
+        uvs: null,
+        indices: [...part.indices],
+        skin: null,
       },
     },
-  ],
+  })),
   asset: null,
 });
 
@@ -191,29 +196,34 @@ const importedObject = (mesh: THREE.Object3D): IAutoMovieModelObject => {
  *    accounts every slot as drawn or culled. Negative twins: a missing runtime
  *    model, an out-of-range slot (non-integer, negative and past the end) and a
  *    route layout with no compiled route each refuse.
- * 2. Scatter and along-route regenerate slot for slot against the compiler, across
+ * 2. A rotated set regenerates every slot to the compiler's exact bits at a
+ *    heading where the rounded degree-to-radian conversion would not.
+ * 3. Scatter and along-route regenerate slot for slot against the compiler, across
  *    a route whose walk both stops inside an early segment and runs on into the
  *    last one, and a one-slot set still keeps a usable chunk radius.
- * 3. Ten thousand lattice slots with independent per-axis scale and three-axis
+ * 4. Ten thousand lattice slots with independent per-axis scale and three-axis
  *    rotation match their compiled matrices at the first, middle and last slot,
  *    agree bit for bit with the compiler's own regeneration, stay inside
  *    bounded chunks, expand into no scene node, and rebuild byte-identically
  *    from the same seed and input.
- * 4. One logical set selects several prototypes: stable explicit ids, per-slot
+ * 5. One logical set selects several prototypes: stable explicit ids, per-slot
  *    palette and trait overrides, an invisible slot that is not batched, and a
  *    declared prototype no slot selects, which contributes no batch.
- * 5. Seeded weighted selection reaches both a leading prototype and the final one
+ * 6. Seeded weighted selection reaches both a leading prototype and the final one
  *    from the same table.
- * 6. Chunk culling admits the extent a rotated, non-uniformly scaled instance
+ * 7. Chunk culling admits the extent a rotated, non-uniformly scaled instance
  *    occupies: the same layout culls when its instances are small and stays
  *    drawn when they are large.
- * 7. An explicit block of 42,000 transforms measures its largest scale, which a
+ * 8. An explicit block of 42,000 transforms measures its largest scale, which a
  *    spread of 126,000 arguments could not do.
- * 8. A registered static glTF, exported and decoded from real bytes, renders as
+ * 9. A registered static glTF, exported and decoded from real bytes, renders as
  *    chunked instancing with two LOD tiers that swap on camera distance, and a
  *    host material with no color channel is still batched.
- * 9. Skinned, morphed, multi-material and empty imported prototypes are refused by
- *    name, both directly and through the instancing path a host drives.
+ * 10. A decoded prototype carrying two primitives keeps both materials, both
+ *     geometry groups and both part indices in one batch per chunk, and the
+ *     exact palette still reaches it.
+ * 11. Skinned, morphed, multi-material and empty imported prototypes are refused by
+ *     name, both directly and through the instancing path a host drives.
  */
 export const test_viewer_instance_set = async (): Promise<void> => {
   const recipe: IAutoMovieModelRecipe = {
@@ -351,6 +361,70 @@ export const test_viewer_instance_set = async (): Promise<void> => {
       meshesMeshMesh: true,
       hiddenNone: true,
       firstColorGetHexStringFirstSlot: true,
+    },
+  );
+
+  // A heading is where the two derivations can quietly part: the viewer
+  // regenerates a slot instead of reading one, so it converts degrees to
+  // radians itself, and `deg * (PI / 180)` is not the same double as
+  // `(deg * PI) / 180`. Three degrees is enough to separate them.
+  const headingDesign: IAutoMovieInstanceSetDesign = {
+    ...design,
+    id: "heading-parity",
+    facingDeg: 3,
+  };
+  const headingWorld: IAutoMovieWorldDesign = {
+    ...world,
+    instanceSets: [headingDesign],
+  };
+  const compiledHeading = materializeCompiledInstanceSet(
+    headingDesign,
+    headingWorld,
+    recipes,
+  );
+  const builtHeading = buildInstancedInstanceSet({
+    instanceSet: compiledHeading,
+    models,
+  });
+  TestValidator.equals(
+    "a rotated set regenerates every slot to the compiler's exact bits",
+    namedFacts([
+      [
+        // The witness that this heading discriminates at all: under the
+        // rounded conversion the sine is a different double, so a viewer
+        // using it cannot pass the comparison below by coincidence.
+        "headingConversionsDiffer",
+        () =>
+          Math.sin(THREE.MathUtils.degToRad(headingDesign.facingDeg)) !==
+          Math.sin((headingDesign.facingDeg * Math.PI) / 180),
+      ],
+      [
+        "headingSlots",
+        () =>
+          Array.from({ length: headingDesign.count }, (_, slot) => slot).every(
+            (slot) =>
+              JSON.stringify(regenerateInstanceSlot(compiledHeading, slot)) ===
+              JSON.stringify(
+                materializeInstanceSlot(headingDesign, headingWorld, slot),
+              ),
+          ),
+      ],
+      [
+        "headingMatrices",
+        () =>
+          [0, 1, headingDesign.count - 1].every((slot) =>
+            instanceTransformMatches(
+              builtHeading.object,
+              compiledHeading,
+              slot,
+            ),
+          ),
+      ],
+    ]),
+    {
+      headingConversionsDiffer: true,
+      headingSlots: true,
+      headingMatrices: true,
     },
   );
 
@@ -1159,21 +1233,25 @@ export const test_viewer_instance_set = async (): Promise<void> => {
         await loadStaticGltfPrototype(
           // A quad: four vertices the registered asset owns, and a count the
           // recipe's own box could never produce.
-          staticGltfSource(
-            "registered-panel-near",
-            [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
-            [0, 1, 2, 2, 1, 3],
-          ),
+          staticGltfSource("registered-panel-near", [
+            {
+              positions: [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0],
+              indices: [0, 1, 2, 2, 1, 3],
+              color: { r: 0.7, g: 0.7, b: 0.7 },
+            },
+          ]),
         ),
       ],
       [
         farModelId,
         await loadStaticGltfPrototype(
-          staticGltfSource(
-            "registered-panel-far",
-            [0, 0, 0, 1, 0, 0, 0, 1, 0],
-            [0, 1, 2],
-          ),
+          staticGltfSource("registered-panel-far", [
+            {
+              positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+              indices: [0, 1, 2],
+              color: { r: 0.7, g: 0.7, b: 0.7 },
+            },
+          ]),
         ),
       ],
     ]),
@@ -1266,6 +1344,129 @@ export const test_viewer_instance_set = async (): Promise<void> => {
       panelCloseTier: true,
       panelDistantTier: true,
       panelTierExclusive: true,
+    },
+  );
+
+  const multiPartDesign: IAutoMovieInstanceSetDesign = {
+    ...design,
+    id: "two-material-prototype",
+    count: 2,
+    layout: { kind: "grid", rows: 1, columns: 2, spacing: { x: 3, z: 1 } },
+    variation: { ...design.variation, traits: [] },
+  };
+  const compiledMultiPart = materializeCompiledInstanceSet(
+    multiPartDesign,
+    { ...world, instanceSets: [multiPartDesign] },
+    recipes,
+  );
+  const builtMultiPart = buildInstancedInstanceSet({
+    instanceSet: compiledMultiPart,
+    models,
+    prototypeObjects: new Map([
+      [
+        compiledMultiPart.lod[0]!.model,
+        await loadStaticGltfPrototype(
+          // Two primitives with a material each: what a registered asset that
+          // binds more than one finish decodes back into, and the case a
+          // single-material batch would either scramble or drop.
+          staticGltfSource("registered-two-material", [
+            {
+              positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+              indices: [0, 1, 2],
+              color: { r: 0.9, g: 0.1, b: 0.1 },
+            },
+            {
+              positions: [2, 0, 0, 3, 0, 0, 2, 1, 0],
+              indices: [0, 1, 2],
+              color: { r: 0.1, g: 0.1, b: 0.9 },
+            },
+          ]),
+        ),
+      ],
+    ]),
+  });
+  const multiPartMesh = instanceMeshes(builtMultiPart.object)[0]!;
+  const multiPartMaterials = Array.isArray(multiPartMesh.material)
+    ? multiPartMesh.material
+    : [multiPartMesh.material];
+  const multiPartAttribute = multiPartMesh.geometry.getAttribute(
+    "automoviePart",
+  ) as THREE.BufferAttribute;
+  const multiPartColor = new THREE.Color();
+  multiPartMesh.getColorAt(1, multiPartColor);
+  TestValidator.equals(
+    "a multi-material host prototype instances as one batch per chunk",
+    namedFacts([
+      [
+        "multiPartChunks",
+        () =>
+          instanceMeshes(builtMultiPart.object).length ===
+            compiledMultiPart.chunks.length && multiPartMesh.count === 2,
+      ],
+      [
+        // One draw per chunk still, with the source materials kept as the
+        // batch's own material list rather than collapsed to the first.
+        "multiPartMaterials",
+        () =>
+          JSON.stringify(
+            multiPartMaterials.map((material) => material.name),
+          ) === JSON.stringify(["surface-0", "surface-1"]),
+      ],
+      [
+        "multiPartGroups",
+        () =>
+          JSON.stringify(
+            multiPartMesh.geometry.groups.map((group) => group.materialIndex),
+          ) === JSON.stringify([0, 1]),
+      ],
+      [
+        // Each source mesh keeps its own part index, which is what a shader
+        // needs to tell the two primitives of one prototype apart.
+        "multiPartIndices",
+        () =>
+          multiPartAttribute.count === 6 &&
+          JSON.stringify([...(multiPartAttribute.array as Float32Array)]) ===
+            JSON.stringify([0, 0, 0, 1, 1, 1]),
+      ],
+      [
+        "multiPartNeutral",
+        () =>
+          multiPartMaterials.every(
+            (material) =>
+              "color" in material &&
+              material.color instanceof THREE.Color &&
+              material.color.getHex() === 0xffffff,
+          ),
+      ],
+      [
+        // The exact palette still reaches every part of a multi-material
+        // instance, because the instance color multiplies a neutral diffuse.
+        "multiPartPalette",
+        () =>
+          multiPartMesh.instanceColor?.count === 2 &&
+          multiPartColor.getHexString() ===
+            regenerateInstanceSlot(compiledMultiPart, 1).palette.slice(1),
+      ],
+      [
+        "multiPartMatrices",
+        () =>
+          [0, 1].every((slot) =>
+            instanceTransformMatches(
+              builtMultiPart.object,
+              compiledMultiPart,
+              slot,
+            ),
+          ),
+      ],
+    ]),
+    {
+      multiPartChunks: true,
+      multiPartMaterials: true,
+      multiPartGroups: true,
+      multiPartIndices: true,
+      multiPartNeutral: true,
+      multiPartPalette: true,
+      multiPartMatrices: true,
     },
   );
 
