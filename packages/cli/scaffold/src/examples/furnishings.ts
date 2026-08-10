@@ -337,13 +337,21 @@ export const checkExampleFurnishings = (): void => {
       `the example curtain cannot be solved: ${curtain.violations[0]!.path}`,
     );
 
-  const planting = validatePlantingDomain({ domain: examplePlantingDomain() });
+  const recipe = examplePlantingDomain();
+  const planting = validatePlantingDomain({ domain: recipe });
   if (planting.success === false)
     throw new Error(
       `the example planting recipe cannot be grown: ${planting.violations[0]!.path}`,
     );
 
   const cluster = examplePlantingCluster();
+  // A cluster cites its recipe by id and no validator resolves that citation,
+  // so a renamed recipe leaves a bed quietly growing nothing. Holding the two
+  // together is the author's job, exactly as it is for a lineage's subjects.
+  if (cluster.domain !== recipe.id)
+    throw new Error(
+      `the bed grows recipe "${cluster.domain}", which this example does not declare; it declares "${recipe.id}"`,
+    );
   const arrangement = arrangePlantingCluster(cluster);
   if (arrangement.placements.length !== cluster.count)
     throw new Error(

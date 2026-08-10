@@ -42,6 +42,11 @@ import { ExampleBuilding } from "./buildings";
  * is not meant to be one: a basin, a sprinkler head and a distribution panel
  * are all nodes with the ports they actually have, authored by the production.
  *
+ * The room, the wall and the environment id below are borrowed from
+ * `examples/buildings.ts` so the citations resolve against something real.
+ * Replace them with your own space and boundary; the shape of the graph is what
+ * this file is for.
+ *
  * ## Direction is stated relative to the node
  *
  * `in` means the medium arrives from the network and `out` means the node puts

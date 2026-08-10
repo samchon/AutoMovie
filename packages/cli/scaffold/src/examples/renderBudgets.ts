@@ -7,6 +7,7 @@ import {
   sealAutoMovieRenderTarget,
 } from "@automovie/engine";
 import type {
+  IAutoMovieMaterial,
   IAutoMovieRenderBudget,
   IAutoMovieRenderReport,
   IAutoMovieRenderTarget,
@@ -46,6 +47,17 @@ import type {
  * zero. Run the report and read which metrics refuse to pass: that refusal, not
  * the numbers beside it, is the technique worth copying.
  */
+/**
+ * The one asset both halves of this example name.
+ *
+ * The subject binds it as a material's base colour and the target fingerprints
+ * its bytes, and nothing in the engine holds those two lists against each
+ * other: a report is measured against whatever target it was handed. So the
+ * pairing is the author's to keep, which is why it is one constant here and why
+ * {@link checkExampleRenderBudget} asserts it rather than trusting it.
+ */
+export const EXAMPLE_RENDER_TEXTURE = "public/assets/panel-basecolor.png";
+
 export const exampleRenderSubject = (
   props: {
     /** Asset path the panel's finish binds; deliberately left unmeasured. */
@@ -54,7 +66,7 @@ export const exampleRenderSubject = (
     waterBody?: string;
   } = {},
 ): IAutoMovieRenderSubject => {
-  const texture = props.texture ?? "public/assets/panel-basecolor.png";
+  const texture = props.texture ?? EXAMPLE_RENDER_TEXTURE;
   return {
     scene: {
       id: "example-render-scene",
@@ -203,7 +215,7 @@ export const exampleRenderTarget = (): IAutoMovieRenderTarget =>
     },
     assets: [
       {
-        path: "public/assets/panel-basecolor.png",
+        path: EXAMPLE_RENDER_TEXTURE,
         digest: `sha256:${"0".repeat(64)}`,
       },
     ],
@@ -230,6 +242,26 @@ export const exampleRenderReport = (): IAutoMovieRenderReport => {
 };
 
 /**
+ * Every asset one material binds, across all five of its texture slots.
+ *
+ * Reading only the base colour would be the easy version and the wrong one: a
+ * normal map or an occlusion map is bytes the frame reads just as surely, and a
+ * check that missed them would pass a target fingerprinting half the inputs.
+ * Each slot is either a bare asset id or the full sampling declaration, and
+ * both spell the asset the same way once unwrapped.
+ */
+const materialAssets = (material: IAutoMovieMaterial): string[] =>
+  [
+    material.baseColorTexture,
+    material.metallicRoughnessTexture,
+    material.normalTexture,
+    material.occlusionTexture,
+    material.emissiveTexture,
+  ]
+    .filter((binding) => binding !== null && binding !== undefined)
+    .map((binding) => (typeof binding === "string" ? binding : binding.asset));
+
+/**
  * Check that the report refuses to call an unmeasured cost a pass.
  *
  * Every assertion below is about the shape of the answer rather than about a
@@ -240,8 +272,23 @@ export const exampleRenderReport = (): IAutoMovieRenderReport => {
  * to say `unbudgeted` rather than pass silently; and the whole report has to
  * read `incomplete`, because a design carrying two unanswered costs has not
  * been cleared.
+ *
+ * The last assertion is the one no engine call makes: every asset the subject's
+ * materials bind has to appear in the target the verdict is fingerprinted
+ * against, or the report is evidence about bytes the frame will not read.
  */
 export const checkExampleRenderBudget = (): void => {
+  const subject = exampleRenderSubject();
+  const target = exampleRenderTarget();
+  const sealed = new Set(target.assets.map((asset) => asset.path));
+  for (const model of subject.models)
+    for (const material of model.materials)
+      for (const asset of materialAssets(material))
+        if (!sealed.has(asset))
+          throw new Error(
+            `material "${material.id}" binds "${asset}", which the sealed render target does not fingerprint`,
+          );
+
   const report = exampleRenderReport();
   const finding = (metric: string) => {
     const found = report.findings.find((entry) => entry.metric === metric);
