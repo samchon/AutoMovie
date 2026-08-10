@@ -36,7 +36,15 @@ const slabs = (flipOdd: boolean) =>
           ],
   });
 
-/** The sheet point a piece's own unit UV corner lands on. */
+/**
+ * The sheet point a piece's own unit UV lands on.
+ *
+ * This is the renderer's law, not the engine's: the viewer hands `offset`,
+ * `scale`, and `rotationDeg` to a texture whose matrix scales and then rotates,
+ * so a UV becomes `diag(scale) · R(-rotation) · uv + offset`. Writing it out
+ * here is what keeps these cases an independent check of the arithmetic rather
+ * than a restatement of it.
+ */
 const sample = (
   transform: {
     offset: { x: number; y: number };
@@ -81,19 +89,22 @@ const sample = (
  *    the face's; the straight twin of the same field does not turn at all.
  * 4. A piece flipped on a face sheet keeps the span it was cut from and swaps its
  *    two ends, which is what a mirror is: the same image, run the other way.
- * 5. A mirrored piece reverses its own U axis: the scale goes negative and the
+ * 5. A boundary cut leaves the transform alone: a piece cut in half samples the
+ *    half of the sheet its whole module covered, because its mesh UV is its
+ *    place in that module rather than in the sliver that survived.
+ * 6. A mirrored piece reverses its own U axis: the scale goes negative and the
  *    offset moves to the far edge, so the image runs back the way it came. The
  *    unflipped twin of the same pair does not.
- * 6. The mirror is not a grain turn: a book-matched pair whose grain runs one way
+ * 7. The mirror is not a grain turn: a book-matched pair whose grain runs one way
  *    reports no grain break at a zero-degree tolerance.
- * 7. Grain rotates the sheet under the piece rather than the piece: a square laid
+ * 8. Grain rotates the sheet under the piece rather than the piece: a square laid
  *    square with its grain at 45 degrees samples a rotated image whose centre
  *    is still the piece's centre.
- * 8. A long piece turned off its grain by something other than a right angle needs
+ * 9. A long piece turned off its grain by something other than a right angle needs
  *    a shear the transform has no term for and is reported by id, while a
  *    square piece at the same angle samples exactly.
- * 9. A non-positive texture turn and a non-finite sheet origin are refused.
- * 10. The same run transformed twice produces the same bytes.
+ * 10. A non-positive texture turn and a non-finite sheet origin are refused.
+ * 11. The same run transformed twice produces the same bytes.
  */
 export const test_architecture_surface_pattern_texture = (): void => {
   const field = generateAutoMovieSurfacePattern({ pattern: pattern() });
@@ -268,6 +279,31 @@ export const test_architecture_surface_pattern_texture = (): void => {
       ],
     ]),
     { swapped: true, sameSpan: true },
+  );
+
+  const narrowed = autoMoviePatternTextureTransforms({
+    result: generateAutoMovieSurfacePattern({
+      pattern: pattern({
+        id: "narrow",
+        zones: [zone({ region: rectangle(0, 0, 1.75, 1) })],
+        minimumPiece: 0.4,
+      }),
+    }),
+    tile: { u: 2, v: 1 },
+    sheet: { kind: "face", origin: { u: 0, v: 0 } },
+  });
+  TestValidator.equals(
+    "a cut piece samples the module it was cut from, not the sliver it became",
+    namedFacts([
+      ["kept", () => narrowed.transforms.length === 8],
+      [
+        "unchanged",
+        () =>
+          narrowed.transforms.map((one) => JSON.stringify(one)).join("|") ===
+          perFace.transforms.map((one) => JSON.stringify(one)).join("|"),
+      ],
+    ]),
+    { kept: true, unchanged: true },
   );
 
   const matched = generateAutoMovieSurfacePattern({
