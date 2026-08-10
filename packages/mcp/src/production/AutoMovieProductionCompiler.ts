@@ -2522,10 +2522,14 @@ const sourceRuntimeOf = (props: {
         report(
           `${modelPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the source-owned model before compiling the shot.`,
         );
-    // The origin refusal above already reported a source-authored import, and a
-    // cited appearance is refused by the reference checks rather than by its
-    // origin, so what remains here is only whether the record itself validated.
-    if (validation.success === false) return;
+    // A cited appearance is judged by the reference checks rather than by its
+    // origin, so it is allowed past here; a source-authored import is not, for
+    // the same reason it was refused above.
+    if (
+      validation.success === false ||
+      (modelRef === null && model.origin !== "generated")
+    )
+      return;
     authoredModels.push(model);
     runtimeModels[model.id] = model;
   };
