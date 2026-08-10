@@ -60,6 +60,7 @@ import {
   verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
+import { autoMovieRenderBudgetRefusal } from "@automovie/render";
 import * as HME from "h264-mp4-encoder";
 import { BoxParser, createFile } from "mp4box";
 import { randomUUID } from "node:crypto";
@@ -76,6 +77,7 @@ import {
   inspectPublishedProxyBundle,
 } from "./assertProxyBundle";
 import {
+  PRODUCTION_DELIVERY_TONE_MAPPING,
   captureProductionFrame,
   closeProductionFrameCapture,
   productionFrameCaptureMetrics,
@@ -97,6 +99,10 @@ import {
   listRenderAttempts,
   readRenderAttempt,
 } from "./renderAttemptSnapshot";
+import {
+  assessProductionRenderBudget,
+  publishRenderBudgetEvidence,
+} from "./renderBudgetSnapshot";
 import {
   type ICurrentRenderChunkPublication,
   captureRenderChunkPublicationFromPointer,
@@ -296,8 +302,9 @@ const main = async (): Promise<void> => {
       return;
     }
     const current = await currentPlan();
+    const budget = enforceRenderBudget(current);
     if (action === "plan") {
-      output(current);
+      output({ plan: current, budget });
       return;
     }
     if (action === "all") await captureReviewEvidence();
@@ -322,6 +329,7 @@ const main = async (): Promise<void> => {
           editFingerprint: current.editFingerprint,
           tier: current.tier,
         },
+        budget,
         capture: productionFrameCaptureMetrics(),
         result,
         chunks: await renderStatus(current),
@@ -401,7 +409,125 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
         failed,
       )}`,
     );
+  assertCapturedDeliveryToneMapping(project, frames);
   return frames;
+};
+
+/**
+ * Prove the curve the capture asked the page for is the curve the committed
+ * bundle records.
+ *
+ * The viewer cannot read a render spec, so the capture host hands it the
+ * delivery curve on the page URL while the production oracle seals that same
+ * curve into every bundle manifest. Two spellings of one fact drift silently by
+ * nature, so the render job re-reads a manifest it just produced and refuses
+ * when they disagree: without this, a spec that started delivering ACES would
+ * keep photographing untone-mapped frames and label them ACES.
+ *
+ * A run whose frames produced no verifiable manifest checks nothing and says
+ * so, rather than passing on the absence of evidence.
+ */
+const assertCapturedDeliveryToneMapping = (
+  project: AutoMovieProductionProject,
+  frames: readonly IAutoMovieCaptureFrame[],
+): void => {
+  const bundles = [
+    ...new Set(
+      frames.flatMap((frame) =>
+        frame.receipt === null ? [] : [frame.receipt.bundle],
+      ),
+    ),
+  ].sort(compareCodeUnits);
+  const manifests = bundles.flatMap((bundle) => {
+    const manifest = project.verifiedRenderManifest(
+      path.join(project.renderRoot(), ...bundle.split("/"), "manifest.json"),
+    );
+    return manifest === null ? [] : [{ bundle, manifest }];
+  });
+  if (manifests.length === 0)
+    throw new Error(
+      "Review capture committed no verifiable render bundle, so the delivery tone mapping the capture requested could not be checked against the manifest that records it.",
+    );
+  const drifted = manifests.filter(
+    (entry) =>
+      entry.manifest.renderSpec.toneMapping !==
+      PRODUCTION_DELIVERY_TONE_MAPPING,
+  );
+  if (drifted.length !== 0)
+    throw new Error(
+      `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but ${drifted
+        .map(
+          (entry) =>
+            `"${entry.bundle}" records "${entry.manifest.renderSpec.toneMapping}"`,
+        )
+        .join(
+          ", ",
+        )}. Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
+    );
+};
+
+/**
+ * Measure this tier's artifact against the budget the production declares for
+ * it, publish the evidence, and refuse an over-budget render.
+ *
+ * The check belongs here and nowhere earlier. A budget verdict is a claim about
+ * a specific renderer drawing specific bytes at a specific raster, and only the
+ * render job knows all three: the compiler never sees a GPU, and the plan's own
+ * capture preflight is the first moment WebGL has answered.
+ *
+ * Only `over` refuses. `incomplete` and `not-run` are published exactly as they
+ * are, because an unmeasured cost has not been cleared and dressing it as a
+ * pass is the one failure this evidence exists to prevent.
+ */
+const enforceRenderBudget = (plan: IAutoMovieProductionRenderJobPlan) => {
+  const project = AutoMovieProductionProject.open(root, productionId);
+  const graph = project.graph();
+  if (graph.production === null)
+    throw new Error("Render budget preflight requires a production design.");
+  const timeline = readAutoMovieFilmTimeline(project, plan.compileFingerprint);
+  const evidence = assessProductionRenderBudget({
+    project,
+    production: graph.production,
+    tier: plan.tier.kind,
+    shots: [...new Set(timeline.segments.map((segment) => segment.shot))],
+    frameFormat: plan.frameFormat,
+    // The recorded browser scale, not an assumed one: the viewer pins the
+    // renderer's own pixel ratio to match it, and a fingerprint carrying a
+    // number nobody measured could not detect a host that changed it.
+    pixelRatio: plan.runtimeIdentity.capture.mode.deviceScaleFactor,
+    delivery: PRODUCTION_DELIVERY_TONE_MAPPING,
+    graphics: plan.runtimeIdentity.capture.graphics,
+    audioAssets: new Set(timeline.tracks.audio.map((cue) => cue.asset)),
+  });
+  const published = publishRenderBudgetEvidence({
+    base: root,
+    stateRoot,
+    evidence,
+  });
+  const relative = path
+    .relative(root, published.path)
+    .split(path.sep)
+    .join("/");
+  const refusal = autoMovieRenderBudgetRefusal(evidence);
+  if (refusal !== null)
+    throw new Error(
+      `${refusal} Raise the limit for tier "${evidence.tier}" deliberately or reduce the named owners, then replan. The evidence is at ${relative}.`,
+    );
+  return {
+    tier: evidence.tier,
+    status: evidence.status,
+    budgeted: evidence.budgeted,
+    declaredTiers: evidence.declaredTiers,
+    digest: evidence.digest,
+    evidence: relative,
+    shots: evidence.shots.map((shot) => ({
+      shot: shot.shot,
+      status: shot.status,
+      reason: shot.reason,
+      report: shot.report?.digest ?? null,
+      target: shot.target?.digest ?? null,
+    })),
+  };
 };
 
 const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {

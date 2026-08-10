@@ -92,10 +92,13 @@ export const renderPathStem = (target: string): string => {
  * unchanged. The curve that produced them is a renderer setting the capture
  * host applies, owned by the scene's own `environment`, with
  * {@link IAutoMovieRenderSpec}'s `toneMapping` as the delivery default for a
- * scene that declares none. That default reaches a renderer only when the
- * viewer page carries a `tone` parameter, and nothing in this repository
- * derives that parameter from the spec, so a delivery curve is honored today
- * only by a caller that puts it on the URL itself.
+ * scene that declares none. That default reaches a renderer through the viewer
+ * page's `tone` parameter, which the scaffold's capture host sets from the
+ * delivery curve its render spec seals;
+ * {@link autoMovieRenderTargetSettingsOfShot} records which of the two won for
+ * each shot, so the encoder never has to know. A capture host that puts no
+ * `tone` on the URL states no delivery and leaves the renderer's own curve
+ * exactly as it found it.
  *
  * The output size is pinned to the spec with `-s {width}x{height}` (#1251): a
  * validated `width`/`height` that never reached the encoder made the rendered

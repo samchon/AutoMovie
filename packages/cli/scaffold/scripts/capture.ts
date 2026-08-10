@@ -1,4 +1,7 @@
-import type { AutoMovieProductionFrameCapture } from "@automovie/interface";
+import type {
+  AutoMovieProductionFrameCapture,
+  IAutoMovieRenderSpec,
+} from "@automovie/interface";
 import path from "node:path";
 import type { Page } from "playwright";
 import { createServer } from "vite";
@@ -36,6 +39,23 @@ interface ProductionCaptureCleanup {
 }
 
 class ProductionCaptureCleanupError extends AggregateError {}
+
+/**
+ * Tone-mapping curve this production's render spec delivers under.
+ *
+ * The render spec owns the delivery default and a scene's own `environment`
+ * overrides it, so this is the one value the capture has to hand the page: the
+ * viewer cannot read a render spec, and a page opened without it leaves the
+ * renderer on whatever curve it happened to have. Sending it explicitly is what
+ * makes the headless frame and the live viewer the same photograph.
+ *
+ * It mirrors the curve the production oracle seals into every render bundle
+ * manifest, and `assertProductionDeliveryToneMapping` in `render.ts` re-reads a
+ * committed manifest and refuses the render when the two have drifted, so the
+ * mirror can never quietly outlive its original.
+ */
+export const PRODUCTION_DELIVERY_TONE_MAPPING: IAutoMovieRenderSpec["toneMapping"] =
+  "none";
 
 let sessionPromise: Promise<CaptureSession> | null = null;
 let sessionIdentity: string | null = null;
@@ -208,9 +228,15 @@ const capturePage = (
       diagnostics.push(`pageerror: ${error.message}`),
     );
     const url = new URL(config.viewer.basePath, session.origin);
-    if (input.target.kind === "shot")
+    if (input.target.kind === "shot") {
       url.searchParams.set("shot", input.target.id);
-    else {
+      // The shot page reads this and hands it to the compiled shot runtime,
+      // which passes it to `applyRendererEnvironment` as the delivery curve for
+      // a scene declaring no environment of its own. The turntable page draws
+      // an isolated model for rig review and honors no delivery, so asking it
+      // for one would name a parameter nothing reads.
+      url.searchParams.set("tone", PRODUCTION_DELIVERY_TONE_MAPPING);
+    } else {
       url.searchParams.set("asset", input.target.id);
       url.searchParams.set("elevation", String(input.target.elevationDeg));
       url.searchParams.set("pose", input.target.pose);
@@ -355,6 +381,9 @@ const capturePageKey = (
     subject: capturePageSubject(input),
     productionId: input.productionId,
     compileFingerprint: input.compileFingerprint,
+    // A page drawn under one delivery curve is not a page that can serve
+    // another, so the curve belongs in the identity that decides page reuse.
+    toneMapping: PRODUCTION_DELIVERY_TONE_MAPPING,
     width: input.width,
     height: input.height,
   });
