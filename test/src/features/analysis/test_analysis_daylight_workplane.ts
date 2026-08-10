@@ -50,8 +50,9 @@ import { namedFacts, nclose, throwsError } from "../internal/predicates";
  *    field records one sample per cell.
  * 8. An unimplemented sky model is `unsupported`; a study with no sun and no
  *    fitting is `not-run`.
- * 9. Declared targets judge in the unit they are declared in, and a target in
- *    another unit is dropped with a warning rather than compared across units.
+ * 9. Declared targets judge in the unit they are declared in; a target in another
+ *    unit is dropped with a warning rather than compared across units, and a
+ *    target naming a metric the study never reports is warned about too.
  * 10. Identical requests digest identically and any change to the study digests
  *     differently.
  * 11. Every malformed request is refused at its own message.
@@ -440,8 +441,18 @@ export const test_analysis_daylight_workplane = (): void => {
       },
     ],
   });
+  const hopeful = study({
+    targets: [
+      {
+        key: "workplane.glareIndex",
+        unit: "ratio",
+        value: 19,
+        comparison: "at-most",
+      },
+    ],
+  });
   TestValidator.equals(
-    "targets judge in their own unit and are dropped when they are in another",
+    "targets judge in their own unit, and an inapplicable one is stated rather than dropped",
     {
       met: statusOf(judged, "workplane.total.illuminance"),
       uniformity: statusOf(judged, "workplane.total.uniformity"),
@@ -451,6 +462,19 @@ export const test_analysis_daylight_workplane = (): void => {
         mismatched.outcome.status === "solved"
           ? mismatched.outcome.warnings.map((warning) => warning.code)
           : [],
+      // A study that judges nothing at all still says so: the whole point is
+      // that a report cannot read `meets` over a rule nobody could apply.
+      unknownKey:
+        hopeful.outcome.status === "solved"
+          ? hopeful.outcome.warnings.map((warning) => [
+              warning.code,
+              warning.subject,
+            ])
+          : [],
+      // The negative twin: every target of the judged study names a metric it
+      // reports, so nothing is warned about there.
+      judgedWarnings:
+        judged.outcome.status === "solved" ? judged.outcome.warnings : [],
     },
     {
       met: "meets",
@@ -458,6 +482,8 @@ export const test_analysis_daylight_workplane = (): void => {
       missed: "misses",
       mismatched: "untargeted",
       warning: ["target-unit-mismatch"],
+      unknownKey: [["target-key-unknown", "workplane.glareIndex"]],
+      judgedWarnings: [],
     },
   );
 

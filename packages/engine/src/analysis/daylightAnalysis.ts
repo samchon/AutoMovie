@@ -17,6 +17,7 @@ import {
   assertAutoMovieAnalysisTargets,
   autoMovieAnalysisMetric,
   sealAutoMovieAnalysisRun,
+  warnAutoMovieAnalysisTargetKeys,
 } from "./analysisRun";
 import {
   IAutoMovieAnalysisSolid,
@@ -42,13 +43,23 @@ const EPSILON = 1e-12;
  * sloped roof light, a tilted desk and a wall panel are all one shape. Samples
  * sit at cell centres, which is what keeps a 1x1 grid a measurement of the
  * middle of the plane instead of a measurement of its corner.
+ *
+ * A plane has two faces and only one of them is measured: the one the
+ * right-handed cross product of {@link axisU} and {@link axisV} points toward.
+ * Swapping the two axes, or reversing either, measures the other face, which is
+ * the difference between a desk that reads the sky and a desk that reads the
+ * floor. The order is a declaration rather than a detail, so it is never
+ * inferred from which answer looks brighter.
  */
 export interface IAutoMovieAnalysisWorkplane {
   /** World-space corner the grid grows from, in metres. */
   origin: IAutoMovieVector3;
   /** In-plane direction the first axis runs along; non-zero. */
   axisU: IAutoMovieVector3;
-  /** In-plane direction the second axis runs along; non-zero, not parallel. */
+  /**
+   * In-plane direction the second axis runs along; non-zero, not parallel.
+   * `cross(axisU, axisV)` is the face light is gathered on.
+   */
   axisV: IAutoMovieVector3;
   /** Extent along {@link axisU} in metres; strictly positive. */
   sizeU: number;
@@ -360,6 +371,11 @@ export const analyzeAutoMovieDaylight = (props: {
     ),
   ];
 
+  warnAutoMovieAnalysisTargetKeys({
+    targets: request.targets,
+    keys: metrics.map((entry) => entry.key),
+    warnings,
+  });
   return sealAutoMovieAnalysisRun({
     id: request.id,
     domain,

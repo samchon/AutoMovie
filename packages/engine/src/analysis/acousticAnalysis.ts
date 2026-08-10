@@ -14,6 +14,7 @@ import {
   assertAutoMovieAnalysisTargets,
   autoMovieAnalysisMetric,
   sealAutoMovieAnalysisRun,
+  warnAutoMovieAnalysisTargetKeys,
 } from "./analysisRun";
 
 /**
@@ -106,9 +107,15 @@ export interface IAutoMovieAcousticRequest {
  * The exclusions are stated as loudly as the results. A single broadband
  * absorption coefficient cannot produce a speech transmission index, which
  * needs a modulation transfer function over an impulse response, so that metric
- * is `unsupported` rather than estimated. A perfectly absorbent room has no
- * diffuse field and a perfectly reflective one has no reverberation time; both
- * are reported as gaps rather than as infinity dressed up as a number.
+ * is `unsupported` rather than estimated.
+ *
+ * The reverberation time, the room constant and the receiver level are all
+ * statements about a diffuse field, so all three gap wherever there is none: a
+ * room that absorbs nothing rings forever, and a room that absorbs everything
+ * never rings at all. Neither extreme is reported as a number. The second is
+ * the one worth naming, because Sabine does not diverge there but keeps
+ * returning `0.161 * V / A`, a positive decay time for an anechoic chamber,
+ * which is the arithmetic of the model rather than a property of the room.
  *
  * @author Samchon
  */
@@ -225,11 +232,24 @@ export const analyzeAutoMovieAcoustics = (props: {
     metric({
       key: "room.reverberationTime",
       unit: "s",
+      // Sabine's decay is a statement about a diffuse field, so it is reported
+      // exactly where one exists and nowhere else. A room that absorbs nothing
+      // never stops ringing; a room that absorbs everything never rings at all,
+      // and there the equation still hands back 0.161*V/A, a positive decay
+      // time for an anechoic chamber. That number is an artefact of the model
+      // rather than a property of the room, and reporting it beside a gap that
+      // says the room has no reverberation would make one run answer its own
+      // question twice.
       value:
-        absorption === 0
+        roomConstant === null
           ? null
           : (AUTOMOVIE_SABINE_CONSTANT * request.volume) / absorption,
-      gap: absorption === 0 ? liveRoom : undefined,
+      gap:
+        roomConstant === null
+          ? absorption === 0
+            ? liveRoom
+            : deadRoom
+          : undefined,
     }),
     metric({
       key: "room.constant",
@@ -303,6 +323,11 @@ export const analyzeAutoMovieAcoustics = (props: {
       status: "unsupported",
     }),
   ];
+  warnAutoMovieAnalysisTargetKeys({
+    targets: request.targets,
+    keys: metrics.map((entry) => entry.key),
+    warnings,
+  });
   const samples: IAutoMovieAnalysisSample[] =
     energies === null
       ? []

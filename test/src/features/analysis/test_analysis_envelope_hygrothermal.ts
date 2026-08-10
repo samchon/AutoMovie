@@ -59,9 +59,12 @@ import { namedFacts, nclose, throwsError } from "../internal/predicates";
  *    `unsupported`.
  * 8. A space with no supply flow, no occupants, or a supply flow of zero gaps the
  *    metric that needs it instead of dividing by it.
- * 9. Every malformed envelope and ventilation request is refused at its own
- *    message.
- * 10. The exported dew point refuses air that has no dew point.
+ * 9. A target no run of the study reports is stated on every run of it, while a
+ *    moisture-keyed target is matched by the moisture run rather than counted
+ *    unmatched by the thermal one.
+ * 10. Every malformed envelope and ventilation request is refused at its own
+ *     message.
+ * 11. The exported dew point refuses air that has no dew point.
  */
 export const test_analysis_envelope_hygrothermal = (): void => {
   const context = analysisContext();
@@ -393,6 +396,55 @@ export const test_analysis_envelope_hygrothermal = (): void => {
       ),
     },
     { envelope: "meets", ventilation: "misses" },
+  );
+
+  const warningsOf = (run: IAutoMovieAnalysisRun): [string, string | null][] =>
+    run.outcome.status === "solved"
+      ? run.outcome.warnings.map((warning) => [warning.code, warning.subject])
+      : [];
+  // Heat and moisture are two runs of one study, so a dew-point target must not
+  // read as unmatched merely because the thermal run has no such metric. A key
+  // neither run reports is unmatched on both.
+  const crossDomain = study({
+    targets: [
+      {
+        key: "space.dewPoint",
+        unit: "degC",
+        value: 12,
+        comparison: "at-most",
+      },
+      {
+        key: "envelope.airtightness",
+        unit: "1/h",
+        value: 3,
+        comparison: "at-most",
+      },
+    ],
+  });
+  const ventilationKey = air({
+    targets: [
+      {
+        key: "space.draughtRating",
+        unit: "ratio",
+        value: 0.15,
+        comparison: "at-most",
+      },
+    ],
+  });
+  TestValidator.equals(
+    "a target no run of the study reports is stated on every run of it",
+    {
+      thermal: warningsOf(crossDomain.thermal),
+      moisture: warningsOf(crossDomain.moisture),
+      dewPointJudged: statusOf(crossDomain.moisture, "space.dewPoint"),
+      ventilation: warningsOf(ventilationKey),
+    },
+    {
+      thermal: [["target-key-unknown", "envelope.airtightness"]],
+      moisture: [["target-key-unknown", "envelope.airtightness"]],
+      dewPointJudged: "meets",
+      ventilation: [["target-key-unknown", "space.draughtRating"]],
+    },
   );
 
   TestValidator.equals(

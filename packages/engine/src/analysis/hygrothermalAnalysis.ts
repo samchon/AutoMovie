@@ -15,6 +15,7 @@ import {
   assertAutoMovieAnalysisTargets,
   autoMovieAnalysisMetric,
   sealAutoMovieAnalysisRun,
+  warnAutoMovieAnalysisTargetKeys,
 } from "./analysisRun";
 import {
   autoMovieEnvironmentInstant,
@@ -207,7 +208,12 @@ export const analyzeAutoMovieEnvelope = (props: {
   if (delta <= 0)
     shared.push({
       code: "reverse-heat-flow",
-      detail: `indoor air at ${indoor} degC is not warmer than outdoor air at ${exterior} degC; the interior surface is the warm side, so the surface condensation criterion is reported but is not the governing risk`,
+      // `Tsi = Ti - U*Rsi*(Ti - Te)` and `U*Rsi < 1`, so the interior face sits
+      // between the two air temperatures: it is never colder than the indoor
+      // air once the outdoor air is at or above it. Saying it is the *warm*
+      // side would be a claim the equal-temperature case contradicts, and this
+      // warning exists to keep a reader from misreading the margin.
+      detail: `indoor air at ${indoor} degC is not warmer than outdoor air at ${exterior} degC, so the interior surface is no colder than the indoor air; the surface condensation criterion is reported but is not the governing risk`,
       subject: null,
     });
   const thermalWarnings: IAutoMovieAnalysisWarning[] = [...shared];
@@ -264,7 +270,12 @@ export const analyzeAutoMovieEnvelope = (props: {
       gap:
         heatLoss === 0
           ? {
-              reason: `indoor air and outdoor air are both at ${indoor} degC, so there is no heat flow to apportion between fabric and bridges`,
+              // Stated as the measured fact rather than as its usual cause. The
+              // usual cause is equal air temperatures, but the share is
+              // undefined whenever the loss is zero, and a reason that named
+              // only the temperatures would be a sentence the artifact itself
+              // could contradict.
+              reason: `the envelope carries no heat flow at all with indoor air at ${indoor} degC against outdoor air at ${exterior} degC, so there is nothing to apportion between fabric and bridges`,
               remedy:
                 "analyse an instant whose outdoor air temperature differs from the indoor air temperature",
             }
@@ -383,6 +394,20 @@ export const analyzeAutoMovieEnvelope = (props: {
           position: entry.assembly.position,
           value: entry.margin,
         }));
+
+  // Checked against both runs at once. Heat and moisture are two domains of one
+  // study, so a dew-point target is not "unmatched" merely because the thermal
+  // run has no such metric, and the observation belongs to whichever run a
+  // reader happens to open.
+  const reported = [...thermalMetrics, ...moistureMetrics].map(
+    (entry) => entry.key,
+  );
+  for (const sink of [thermalWarnings, moistureWarnings])
+    warnAutoMovieAnalysisTargetKeys({
+      targets: request.targets,
+      keys: reported,
+      warnings: sink,
+    });
 
   return {
     thermal: sealAutoMovieAnalysisRun({
@@ -551,6 +576,11 @@ export const analyzeAutoMovieSpaceAir = (props: {
       "unsupported",
     ),
   ];
+  warnAutoMovieAnalysisTargetKeys({
+    targets: request.targets,
+    keys: metrics.map((entry) => entry.key),
+    warnings,
+  });
   return sealAutoMovieAnalysisRun({
     id: request.id,
     domain: "air",

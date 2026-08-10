@@ -28,9 +28,11 @@ import { namedFacts, nclose, throwsError } from "../internal/predicates";
  * all.
  *
  * The refusals are the other half. A speech transmission index needs an impulse
- * response nobody here computes, so it is permanently `unsupported`. A room
- * that absorbs everything has no diffuse field and one that absorbs nothing has
- * an unbounded one; both are gaps rather than infinities dressed as numbers.
+ * response nobody here computes, so it is permanently `unsupported`. Every
+ * diffuse-field result gaps wherever there is no diffuse field: a room that
+ * absorbs nothing rings forever, and a room that absorbs everything never rings
+ * at all, where Sabine does not diverge but quietly keeps returning a positive
+ * decay time for an anechoic chamber. Neither extreme is reported as a number.
  *
  * Scenarios:
  *
@@ -41,11 +43,15 @@ import { namedFacts, nclose, throwsError } from "../internal/predicates";
  * 3. A room with no source, and a room with sources but no receiver, gap the level
  *    metrics with their own distinct reasons.
  * 4. A perfectly absorbent room and a perfectly reflective room each gap the
- *    metrics they make undefined, and keep the ones they do not.
+ *    reverberation time, the room constant and the level, keeping the
+ *    absorption area they do have; a room absorbing 0.99 still reports all
+ *    three.
  * 5. A study with no partition, and one whose partitions transmit nothing at all,
  *    gap the composite loss instead of reporting infinity.
  * 6. Declared targets judge the reverberation time in its own unit.
- * 7. Every malformed room is refused at its own message, including a receiver
+ * 7. A target naming a metric the study never reports is warned about, while a
+ *    target on a reported-but-unsupported metric is left to that metric's gap.
+ * 8. Every malformed room is refused at its own message, including a receiver
  *    standing on a source.
  */
 export const test_analysis_room_acoustics = (): void => {
@@ -158,32 +164,55 @@ export const test_analysis_room_acoustics = (): void => {
   const reflective = study({
     surfaces: [{ id: "boundaries", area: 100, absorption: 0 }],
   });
+  const reasonOf = (
+    run: IAutoMovieAnalysisRun,
+    key: string,
+    phrase: string,
+  ): boolean =>
+    metrics(run)
+      .find((metric) => metric.key === key)
+      ?.gap?.reason.includes(phrase) ?? false;
   TestValidator.equals(
-    "a perfectly absorbent and a perfectly reflective room each gap what they make undefined",
+    "a perfectly absorbent and a perfectly reflective room each gap every diffuse-field result",
     {
       anechoic: [
         of(anechoic, "room.absorptionArea"),
-        of(anechoic, "room.reverberationTime"),
+        statusOf(anechoic, "room.reverberationTime"),
+        reasonOf(anechoic, "room.reverberationTime", "absorbs completely"),
         statusOf(anechoic, "room.constant"),
-        metrics(anechoic)
-          .find((metric) => metric.key === "room.constant")
-          ?.gap?.reason.includes("absorbs completely"),
+        reasonOf(anechoic, "room.constant", "absorbs completely"),
         statusOf(anechoic, "room.soundPressureLevel"),
       ],
       reflective: [
         of(reflective, "room.absorptionArea"),
         statusOf(reflective, "room.reverberationTime"),
+        reasonOf(reflective, "room.reverberationTime", "absorbs anything"),
         statusOf(reflective, "room.constant"),
-        metrics(reflective)
-          .find((metric) => metric.key === "room.constant")
-          ?.gap?.reason.includes("absorbs anything"),
+        reasonOf(reflective, "room.constant", "absorbs anything"),
         statusOf(reflective, "room.soundPressureLevel"),
       ],
     },
     {
-      anechoic: [100, 0.161, "not-run", true, "not-run"],
-      reflective: [0, "not-run", "not-run", true, "not-run"],
+      anechoic: [100, "not-run", true, "not-run", true, "not-run"],
+      reflective: [0, "not-run", true, "not-run", true, "not-run"],
     },
+  );
+  // The twin one property away from the anechoic room: absorbing almost
+  // everything still leaves a diffuse field, so the decay time is reported. The
+  // gap above is keyed on a room that has no diffuse field at all, never on
+  // absorption merely being high.
+  const nearlyDead = study({
+    surfaces: [{ id: "boundaries", area: 100, absorption: 0.99 }],
+  });
+  TestValidator.predicate(
+    "a room that absorbs almost everything still has a reverberation time",
+    statusOf(nearlyDead, "room.reverberationTime") === "untargeted" &&
+      nclose(
+        of(nearlyDead, "room.reverberationTime") ?? Number.NaN,
+        (0.161 * 100) / 99,
+        1e-12,
+      ) &&
+      nclose(of(nearlyDead, "room.constant") ?? Number.NaN, 9900, 1e-9),
   );
 
   const mute = study({
@@ -267,6 +296,52 @@ export const test_analysis_room_acoustics = (): void => {
       ),
     },
     { met: "meets", missed: "misses" },
+  );
+
+  const codesOf = (run: IAutoMovieAnalysisRun): [string, string | null][] =>
+    run.outcome.status === "solved"
+      ? run.outcome.warnings.map((warning) => [warning.code, warning.subject])
+      : [];
+  const hopeful = study({
+    targets: [
+      { key: "room.clarity", unit: "dB", value: 0, comparison: "at-least" },
+      {
+        key: "room.reverberationTime",
+        unit: "s",
+        value: 0.5,
+        comparison: "at-most",
+      },
+    ],
+  });
+  // A key the study does report but could not measure is not unknown: that
+  // metric already carries its own reason and reaches the report as a gap, so
+  // warning about it would name the same absence twice.
+  const unmeasured = study({
+    targets: [
+      {
+        key: "room.speechTransmissionIndex",
+        unit: "ratio",
+        value: 0.6,
+        comparison: "at-least",
+      },
+    ],
+  });
+  TestValidator.equals(
+    "a target naming a metric the study never reports is stated, not dropped",
+    {
+      unknown: codesOf(hopeful),
+      // The target that does name a metric still judges it, so the warning is
+      // about the unmatched key alone and not about targets in general.
+      judged: statusOf(hopeful, "room.reverberationTime"),
+      unmeasured: codesOf(unmeasured),
+      unmeasuredStatus: statusOf(unmeasured, "room.speechTransmissionIndex"),
+    },
+    {
+      unknown: [["target-key-unknown", "room.clarity"]],
+      judged: "meets",
+      unmeasured: [],
+      unmeasuredStatus: "unsupported",
+    },
   );
 
   TestValidator.equals(
