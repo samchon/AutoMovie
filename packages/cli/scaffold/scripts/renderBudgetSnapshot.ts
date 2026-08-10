@@ -62,14 +62,11 @@ export const productionRenderTargetAssets = (
 ): IAutoMovieRenderTargetAsset[] =>
   project
     .contentInputs()
-    .filter(
-      (input) =>
-        input.render && input.bytes !== null && !audioAssets.has(input.path),
+    .flatMap((input) =>
+      input.render && input.bytes !== null && !audioAssets.has(input.path)
+        ? [{ path: input.path, digest: digestAutoMovieBytes(input.bytes) }]
+        : [],
     )
-    .map((input) => ({
-      path: input.path,
-      digest: digestAutoMovieBytes(input.bytes!),
-    }))
     .sort((left, right) => compareCodeUnits(left.path, right.path));
 
 /**

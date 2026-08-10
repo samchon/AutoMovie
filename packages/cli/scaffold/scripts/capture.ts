@@ -50,7 +50,7 @@ class ProductionCaptureCleanupError extends AggregateError {}
  * makes the headless frame and the live viewer the same photograph.
  *
  * It mirrors the curve the production oracle seals into every render bundle
- * manifest, and `assertProductionDeliveryToneMapping` in `render.ts` re-reads a
+ * manifest, and `assertCapturedDeliveryToneMapping` in `render.ts` re-reads a
  * committed manifest and refuses the render when the two have drifted, so the
  * mirror can never quietly outlive its original.
  */
