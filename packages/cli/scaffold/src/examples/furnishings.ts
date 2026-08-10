@@ -181,14 +181,20 @@ export const exampleCurtainDomain = (
 };
 
 /**
- * A plant kept inside the volume the room allows it, as a pruned law.
+ * A plant kept inside the volume its own habit is allowed, as a pruned law.
  *
  * Pruning is not clipping in the renderer. A branch whose base already stands
  * outside the envelope is never grown, and one that crosses it is cut exactly
  * at the crossing with only the children that emerged before the cut surviving.
  * So the derived structure is what a quantity take-off and a collision check
- * both read, and "it fits in the planter" is a fact rather than a camera
- * angle.
+ * both read, rather than a shape that only looks trimmed from one camera.
+ *
+ * Read the envelope in the **recipe's own frame**, not in the room. Growth
+ * starts the trunk at the origin, and a cluster placement moves the finished
+ * structure afterwards, so this box states how far the plant may reach from its
+ * own base — a clipped hedge profile, a trained wall, the inside of a planter —
+ * and never where the bed stands. Writing the room's world coordinates here
+ * would prune every member the cluster placed anywhere else down to nothing.
  *
  * Growth is a state and not an animation: `stage` is a scalar and the derived
  * structure is a pure function of the whole record, so the same plant at the
@@ -204,9 +210,9 @@ export const examplePlantingDomain = (
     length?: number;
     /** Trunk radius at its base, in metres. */
     radius?: number;
-    /** Minimum corner of the volume the plant is kept inside. */
+    /** Minimum corner of the pruning envelope, in the recipe's own frame. */
     envelopeMin?: IAutoMovieVector3;
-    /** Maximum corner of that volume. */
+    /** Maximum corner of that envelope, in the same frame. */
     envelopeMax?: IAutoMovieVector3;
     /** How far along its law this plant has grown, in `[0, 1]`. */
     stage?: number;
@@ -262,9 +268,12 @@ export const examplePlantingDomain = (
     rollJitter: 0.6,
   },
   // A promise the recipe makes about itself, checked against the complete tree
-  // its own law describes. A budget the law overruns is refused at authorship
-  // rather than discovered as a frame that will not finish.
-  budget: { maxBranches: 512, maxLeaves: 8_192 },
+  // its own law describes — not against the pruned result, because pruning only
+  // ever shortens. A budget the law overruns is refused at authorship rather
+  // than discovered as a frame that will not finish, so keep the headroom
+  // deliberate: a cap twenty times the worst case is a number, not a promise,
+  // and deepening `levels` past what these allow is meant to be refused.
+  budget: { maxBranches: 64, maxLeaves: 512 },
 });
 
 /**
