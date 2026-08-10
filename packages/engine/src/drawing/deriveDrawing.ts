@@ -391,6 +391,16 @@ export const deriveAutoMovieDrawing = (props: {
     },
   );
 
+  if (annotations.some((annotation) => annotation.status === "resolved"))
+    gaps.push({
+      subject: "note-text-extent",
+      status: "unsupported",
+      reason:
+        "a note resolves to the page point its text is set from, and the width and height of the glyphs that text becomes are not measured, because the derivation carries no font metrics",
+      remedy:
+        "read the note's position as an anchor and measure the set text in whatever renders it; the drawing's extent holds every note's anchor and not necessarily its last letter",
+    });
+
   lines.sort(compareLines);
   regions.sort(
     (left, right) =>
@@ -661,9 +671,14 @@ const compareLines = (
  * around the linework. A dimension string is drawn beside the plan rather than
  * across it and a note is led out past the wall it describes, so a box taken
  * from the geometry alone is a sheet whose own annotation hangs off the edge of
- * it - and the serializer sizes the page from this box, so what falls outside
- * is not merely close to the border, it is outside the viewBox and gone. A
- * stale target is left out because it has no place on the page to be at.
+ * it — and the serializer sizes the page from this box, so what falls outside
+ * is not merely close to the border, it is outside the viewBox and gone.
+ *
+ * A note contributes the point its text is set from and not the run of glyphs
+ * that text becomes, which is the whole of what the derivation can know without
+ * font metrics; the drawing declares that reach as a gap rather than letting
+ * the box imply it measured the lettering. A stale target contributes nothing,
+ * because it has no place on the page to be at.
  */
 const extentOf = (
   lines: readonly IAutoMovieDrawingLine[],

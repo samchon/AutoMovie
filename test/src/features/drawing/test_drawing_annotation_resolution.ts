@@ -51,6 +51,9 @@ import { namedFacts, nclose, vclose } from "../internal/predicates";
  *    reason, from either side.
  * 7. Canonical order is numeric, so a part reordered in the model does not move a
  *    note, and an axis collapsed by its own scale has no direction.
+ * 8. A sheet carrying a resolved note declares that it sized the note's anchor and
+ *    not the lettering; a sheet whose every note is stale declares nothing,
+ *    because it set no text at all.
  */
 export const test_drawing_annotation_resolution = (): void => {
   const environment = drawingEnvironment();
@@ -440,6 +443,18 @@ export const test_drawing_annotation_resolution = (): void => {
         reason: 'built environment "atelier" has no element "no-such-wall"',
       },
     ],
+  );
+
+  // 8. What the sheet sized, and what it could not.
+  TestValidator.equals(
+    "a sheet with a note says it sized the anchor and not the lettering",
+    [
+      before.gaps.find((gap) => gap.subject === "note-text-extent")?.status,
+      // Every note on this one is stale, so no text was set and there is no
+      // unmeasured run of glyphs to declare.
+      broken.gaps.some((gap) => gap.subject === "note-text-extent"),
+    ],
+    ["unsupported", false],
   );
 
   // 7. Canonical order is a property of the geometry, not of the file.

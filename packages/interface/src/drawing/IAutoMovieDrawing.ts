@@ -251,6 +251,10 @@ export interface IAutoMovieDrawing {
    * resolved. The annotation is inside the box on purpose: a dimension string
    * sits beside the plan rather than across it, and a page sized from the
    * geometry alone would put the sheet's own annotation off the paper.
+   *
+   * A note contributes the point its text is set from rather than the glyphs it
+   * sets, which the derivation cannot measure without font metrics and declares
+   * as a gap instead of pretending to.
    */
   extent: IAutoMovieDrawingExtent | null;
 

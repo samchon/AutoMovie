@@ -74,8 +74,8 @@ export const roundAutoMovieDrawingScalar = (value: number): number => {
  * The lowest and highest of a run of numbers, folded rather than spread.
  *
  * `Math.min(...values)` passes one argument per element, and a mesh of
- * forty-odd thousand triangles - an ordinary imported one, and one the built
- * environment validator accepts without complaint - overflows the call stack
+ * forty-odd thousand triangles — an ordinary imported one, and one the built
+ * environment validator accepts without complaint — overflows the call stack
  * before a single line has been classified. A drawing kernel that worked only
  * on models small enough to fit in an argument list is a kernel nobody could
  * put a building through, so every extreme this folder takes is taken here.
