@@ -559,6 +559,16 @@ export const test_film_prop_placement = (): void => {
           ),
       ],
       [
+        "declaredFootprintWidensWhatIsRefused",
+        () =>
+          violated(
+            (_props, set) =>
+              (set[SCONCE]!.position = { x: -4, y: 0.3, z: 3.8 }),
+            "$input.props[6].placement.footprint",
+            'overlaps prop "sconce"',
+          ),
+      ],
+      [
         "occupancyOverlapsUndeclaredProp",
         () =>
           violated(
@@ -635,6 +645,7 @@ export const test_film_prop_placement = (): void => {
       leavesOccupiedSpace: true,
       doorDoesNotFitOpening: true,
       spacelessLeafIsStillMeasured: true,
+      declaredFootprintWidensWhatIsRefused: true,
       occupancyOverlapsUndeclaredProp: true,
       clearanceIntersectsProp: true,
       blocksOpening: true,
@@ -717,6 +728,14 @@ export const test_film_prop_placement = (): void => {
         },
       ],
       [
+        "withoutThatFootprintTheSameGapIsClear",
+        () =>
+          tolerated((props, set) => {
+            props[CABINET]!.placement!.footprint = null;
+            set[SCONCE]!.position = { x: -4, y: 0.3, z: 3.8 };
+          }),
+      ],
+      [
         "degenerateFootprintIsNotAlsoMismeasured",
         () => {
           const props = propRegistry();
@@ -775,6 +794,7 @@ export const test_film_prop_placement = (): void => {
       unmodelledFillNeverBlocks: true,
       placementlessPropIsNeitherJudgedNorCounted: true,
       clearanceOverInvalidBoxDoesNotThrow: true,
+      withoutThatFootprintTheSameGapIsClear: true,
       degenerateFootprintIsNotAlsoMismeasured: true,
       relationsAcrossTwoBuildingsMeasureNothing: true,
       propAffordanceAloneLocatesNothing: true,

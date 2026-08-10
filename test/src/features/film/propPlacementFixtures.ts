@@ -444,7 +444,3 @@ export const propSet = (): IAutoMovieStageSetPiece[] => [
     scale: { x: 1, y: 2, z: 0.5 },
   },
 ];
-
-/** Index of one prop inside {@link propRegistry} and {@link propSet}. */
-export const propIndex = (node: string): number =>
-  propRegistry().findIndex((prop) => prop.node === node);
