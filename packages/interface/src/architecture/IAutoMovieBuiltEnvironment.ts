@@ -419,7 +419,13 @@ export interface IAutoMovieBuiltConnector {
   from: string;
   /** Logical space at the end of the route. */
   to: string;
-  /** Whether traversal is permitted in both directions. */
+  /**
+   * Whether traversal is permitted in both directions.
+   *
+   * It also orders what the run reaches: a one-way run carries somebody only to
+   * the stops ahead of where they boarded, and it may not declare a state
+   * driven against its own direction.
+   */
   bidirectional: boolean;
   /**
    * Further spaces this one run serves between its two endpoints.

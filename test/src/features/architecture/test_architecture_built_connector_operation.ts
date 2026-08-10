@@ -15,12 +15,19 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { nclose, qclose, vclose } from "../internal/predicates";
 
 const NO_ROTATION: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 
 const alphabetical = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
+
+const yaw = (radians: number): IAutoMovieQuaternion => ({
+  x: 0,
+  y: Math.sin(radians / 2),
+  z: 0,
+  w: Math.cos(radians / 2),
+});
 
 const place = (x = 0, y = 0, z = 0): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -112,6 +119,24 @@ const runs = (): IAutoMovieBuiltEnvironment => ({
       model: "box",
       space: null,
     },
+    {
+      id: "gate-drum",
+      kind: "revolving-door",
+      parent: "root",
+      transform: place(2, 0, 2),
+      model: "box",
+      space: "lobby",
+    },
+    {
+      // A wing that turns about the drum's own axis: the same travel record a
+      // sliding car uses, on its other arm.
+      id: "gate-wing",
+      kind: "revolving-door-wing",
+      parent: "gate-drum",
+      transform: place(),
+      model: "box",
+      space: "lobby",
+    },
   ],
   spaces: [
     { id: "whole", kind: "building", parent: null, cells: [] },
@@ -138,6 +163,12 @@ const runs = (): IAutoMovieBuiltEnvironment => ({
       cells: [
         box("level-2-cell", { x: -8, y: 6, z: -8 }, { x: 8, y: 9, z: 8 }),
       ],
+    },
+    {
+      id: "lobby",
+      kind: "room",
+      parent: "level-0",
+      cells: [box("lobby-cell", { x: 0, y: 0, z: 0 }, { x: 4, y: 3, z: 4 })],
     },
     // A plant deck nobody bounded: it is a place the escalator stops at, and
     // deliberately not a volume anything can be found inside.
@@ -286,6 +317,50 @@ const runs = (): IAutoMovieBuiltEnvironment => ({
       elements: [],
     },
     {
+      // A revolving door: the run turns rather than travels, on the same one
+      // degree of freedom a car slides on.
+      id: "gate",
+      kind: "passage",
+      from: "level-0",
+      to: "lobby",
+      bidirectional: true,
+      route: [
+        { x: 2, y: 0, z: -1 },
+        { x: 2, y: 0, z: 2 },
+      ],
+      width: 1.2,
+      clearHeight: 2.1,
+      elements: ["gate-drum"],
+      operation: {
+        carriages: [
+          {
+            id: "wing",
+            element: "gate-wing",
+            motion: {
+              kind: "revolute",
+              axis: { x: 0, y: 1, z: 0 },
+              pivot: { x: 0, y: 0, z: 0 },
+              min: 0,
+              max: Math.PI,
+            },
+          },
+        ],
+        states: [
+          {
+            id: "shut",
+            drive: "still",
+            carriages: [{ carriage: "wing", value: 0, serves: "lobby" }],
+          },
+          {
+            id: "half-turned",
+            drive: "forward",
+            carriages: [{ carriage: "wing", value: Math.PI / 2, serves: null }],
+          },
+        ],
+        state: "shut",
+      },
+    },
+    {
       // The static twin: a stair is the whole of itself at all times.
       id: "stair",
       kind: "stair",
@@ -341,13 +416,15 @@ const carAt = (
  * Scenarios:
  *
  * 1. A work holding a lift with a car, a counterweight and a mid landing, a
- *    powered escalator, a one-way chute, and a static stair validates whole.
+ *    powered escalator, a one-way chute, a revolving gate, and a static stair
+ *    validates whole.
  * 2. A landing is placed on the run's own route by arc length, on both an even
  *    two-point route and an uneven three-point one; a run with no landing
  *    answers with none.
  * 3. Carriage placement answers where each car stands at the record's own state
  *    and at any other named one, and hands back the space that state serves —
- *    `null` for the counterweight, which stands at no floor in any state.
+ *    `null` for the counterweight, which stands at no floor in any state. A
+ *    revolving gate's wing turns on the same record without travelling at all.
  * 4. Lowering stages the car at the current state: standing the record at the top
  *    floor moves the staged node, and stripping the operation puts it back at
  *    its rest pose, so a static connector lowers as it always did.
@@ -453,12 +530,34 @@ export const test_architecture_built_connector_operation = (): void => {
     })(),
   );
 
+  TestValidator.predicate(
+    "a carriage may turn as well as slide, which is what a revolving gate is",
+    (() => {
+      const shut = builtConnectorCarriagePlacements(source, "gate")[0]!;
+      const turned = builtConnectorCarriagePlacements(
+        source,
+        "gate",
+        "half-turned",
+      )[0]!;
+      return (
+        shut.serves === "lobby" &&
+        turned.serves === null &&
+        // The wing pivots about its own origin, so it turns without travelling
+        // — which is exactly why a placement has to answer with a rotation and
+        // not only a position.
+        vclose(shut.position, turned.position) &&
+        qclose(shut.rotation, NO_ROTATION) &&
+        qclose(turned.rotation, yaw(Math.PI / 2))
+      );
+    })(),
+  );
+
   TestValidator.equals(
     "a two-way run reaches every stop it declares",
     // The lift reaches the floor between its ends, and the one-way escalator
     // reaches the plant deck ahead of it.
     builtEnvironmentAdjacentSpaces(source, "level-0").sort(alphabetical),
-    ["level-1", "level-2", "plant"],
+    ["level-1", "level-2", "lobby", "plant"],
   );
   TestValidator.equals(
     "a landing reaches the stops on both sides of a two-way run",

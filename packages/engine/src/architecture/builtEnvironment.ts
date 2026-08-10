@@ -966,6 +966,11 @@ export const builtBoundaryWallCut = (
  * is the placement {@link lowerBuiltEnvironment} stages. Naming another one
  * answers for that state without editing the record, so a shot can ask where
  * the leaf would be when open without a second building.
+ *
+ * A state is a configuration rather than a moment. A door that swings on screen
+ * is a shot `objectMotions` clip over the
+ * {@link IAutoMovieOpeningPanelPlacement.node} ids this answers with, so the
+ * architecture record never grows a second clock beside the shot's own.
  */
 export const builtOpeningPanelPlacements = (
   environment: IAutoMovieBuiltEnvironment,
@@ -2247,16 +2252,28 @@ const validateCarriageService = (
     const operation = connector.operation;
     if (operation === undefined) return;
     operation.states.forEach((state, stateIndex) => {
-      if (state.carriages.every((entry) => entry.serves === null)) return;
+      const claims: Array<{ space: string; carriage: string; at: number }> = [];
+      state.carriages.forEach((entry, valueIndex) => {
+        if (
+          entry.serves === null ||
+          !spaceSubtreeIsBounded(environment, entry.serves)
+        )
+          return;
+        claims.push({
+          space: entry.serves,
+          carriage: entry.carriage,
+          at: valueIndex,
+        });
+      });
+      // Placing every element of the work is the expensive half, so a state
+      // that claims no bounded space never pays for it.
+      if (claims.length === 0) return;
       const deltas = new Map(staged);
       applyCarriageState(operation.carriages, state, deltas);
       const matrices = worldMatricesOf(environment, deltas);
-      state.carriages.forEach((entry, valueIndex) => {
-        const serves = entry.serves;
-        if (serves === null || !spaceSubtreeIsBounded(environment, serves))
-          return;
+      for (const claim of claims) {
         const carriage = operation.carriages.find(
-          (candidate) => candidate.id === entry.carriage,
+          (candidate) => candidate.id === claim.carriage,
         )!;
         const world = matrices.get(carriage.element)!;
         const point: IAutoMovieVector3 = {
@@ -2264,14 +2281,17 @@ const validateCarriageService = (
           y: world[13]!,
           z: world[14]!,
         };
-        if (builtEnvironmentContainsPoint(environment, serves, point) === false)
+        if (
+          builtEnvironmentContainsPoint(environment, claim.space, point) ===
+          false
+        )
           collector.push(
             "range",
-            `${root}.connectors[${index}].operation.states[${stateIndex}].carriages[${valueIndex}].serves`,
-            `operating state "${state.id}" stands carriage "${carriage.id}" at (${point.x}, ${point.y}, ${point.z}), which is outside the space "${serves}" it serves`,
-            serves,
+            `${root}.connectors[${index}].operation.states[${stateIndex}].carriages[${claim.at}].serves`,
+            `operating state "${state.id}" stands carriage "${carriage.id}" at (${point.x}, ${point.y}, ${point.z}), which is outside the space "${claim.space}" it serves`,
+            claim.space,
           );
-      });
+      }
     });
   });
 };
