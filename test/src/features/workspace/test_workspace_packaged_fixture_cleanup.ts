@@ -72,7 +72,18 @@ const packagedFixtureCleanupContract = (
         }:${compact(node, source)}`,
       );
     }
-    if (ts.isTryStatement(node) && node.finallyBlock !== undefined)
+    // A fixture lifecycle, not every `try` that happens to have a `finally`.
+    // What this guard claims is that each cleanup runs primary-first, and the
+    // one thing that makes a block a cleanup is that it hands its teardown to
+    // the preserving helper. A `try` whose `finally` only reports -- a
+    // diagnostic printed whichever check fired -- restores nothing, has no
+    // failure to put first, and collecting it would shift every entry after it
+    // and force this pin to be re-derived for a block it is not about.
+    if (
+      ts.isTryStatement(node) &&
+      node.finallyBlock !== undefined &&
+      node.finallyBlock.getText(source).includes("preservePackagedE2eCleanup")
+    )
       lifecycles.push({
         catchActions:
           node.catchClause?.block.statements.map((statement) =>
