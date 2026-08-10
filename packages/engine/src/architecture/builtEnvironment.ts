@@ -377,6 +377,7 @@ export const validateBuiltEnvironment = (props: {
 
   collectIds(environment.openings, `${root}.openings`, "opening", collector);
   const openingHulls = new Map<number, IAutoMoviePlanarPoint[]>();
+  const drivenElements = new Map<string, string>();
   environment.openings.forEach((opening, index) => {
     const path = `${root}.openings[${index}]`;
     nonEmpty(opening.kind, `${path}.kind`, "opening kind", collector);
@@ -426,6 +427,7 @@ export const validateBuiltEnvironment = (props: {
       path,
       elements: elementIds,
       environment,
+      driven: drivenElements,
       collector,
     });
   });
@@ -1657,6 +1659,8 @@ const validateOpeningOperation = (props: {
   path: string;
   elements: ReadonlySet<string>;
   environment: IAutoMovieBuiltEnvironment;
+  /** Which panel already drives an element, across the whole work. */
+  driven: Map<string, string>;
   collector: ViolationCollector;
 }): void => {
   const { opening, path, collector } = props;
@@ -1699,6 +1703,23 @@ const validateOpeningOperation = (props: {
         `${panelPath}.element`,
         `panel element "${panel.element}" must be the filling element "${opening.fill}" of opening "${opening.id}" or descend from it`,
         panel.element,
+      );
+    // One element carries one displacement, so a second panel claiming it
+    // would not add a degree of freedom: it would silently lose whichever
+    // travel was written first, and the record would say a thing the render
+    // never does.
+    const already = props.driven.get(panel.element);
+    if (already !== undefined)
+      collector.push(
+        "type",
+        `${panelPath}.element`,
+        `panel element "${panel.element}" is already driven by ${already}`,
+        panel.element,
+      );
+    else
+      props.driven.set(
+        panel.element,
+        `panel "${panel.id}" of opening "${opening.id}"`,
       );
     positive(panel.width, `${panelPath}.width`, "panel width", collector);
     positive(panel.height, `${panelPath}.height`, "panel height", collector);

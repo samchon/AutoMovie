@@ -830,6 +830,25 @@ export const test_architecture_built_opening = (): void => {
       "$input.openings[2].operation.panels[0].element",
     ],
     [
+      // One element carries one displacement, so a second claim on it would
+      // lose a travel rather than add one.
+      "two panels of one opening driving one element",
+      (value) =>
+        (value.openings[0]!.operation!.panels[1]!.element = "door-leaf"),
+      "$input.openings[0].operation.panels[1].element",
+    ],
+    [
+      // The claim is legal for this opening on its own — the element is its
+      // declared fill — so only the collision with the door's inner leaf can
+      // be what refuses it.
+      "two openings driving one element",
+      (value) => {
+        value.openings[2]!.fill = "door-fold";
+        value.openings[2]!.operation!.panels[0]!.element = "door-fold";
+      },
+      "$input.openings[2].operation.panels[0].element",
+    ],
+    [
       "a panel outside the element it fills",
       (value) => (value.openings[2]!.operation!.panels[0]!.element = "wall"),
       "$input.openings[2].operation.panels[0].element",
