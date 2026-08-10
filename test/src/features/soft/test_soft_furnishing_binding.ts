@@ -75,8 +75,10 @@ const check = (props: {
  * 5. The lowering's capability matrix: an invalid domain is `not-run` with no
  *    geometry, an undeclared named state is `not-run`, a request for
  *    cloth-on-cloth contact is `unsupported` and returns the rest configuration
- *    rather than a solve, `mode: "rest"` is reported as `rest`, and only an
- *    ordinary simulated furnishing is reported as `solved`.
+ *    rather than a solve, `mode: "rest"` is reported as `rest`, only an
+ *    ordinary `simulated` furnishing is reported as `solved`, and a mode this
+ *    tier does not evaluate is `not-run` rather than falling through to a solve
+ *    it never performed.
  */
 export const test_soft_furnishing_binding = (): void => {
   TestValidator.equals(
@@ -327,6 +329,20 @@ export const test_soft_furnishing_binding = (): void => {
           solved.state?.state === "open" &&
           solved.analysis.unsupported.length === 0,
       ],
+      [
+        "unknownMode",
+        () => {
+          const odd = frame(
+            softFurnishing({ mode: "baked" as unknown as "rest" }),
+            panel(),
+          );
+          return (
+            odd.analysis.status === "not-run" &&
+            odd.state === null &&
+            odd.surface === null
+          );
+        },
+      ],
       ["kind", () => solved.analysis.kind === "soft-body"],
       ["furnishing", () => solved.furnishing === "window-curtain"],
       ["surfaceStep", () => solved.surface?.step === 32],
@@ -337,6 +353,7 @@ export const test_soft_furnishing_binding = (): void => {
       unsupported: true,
       rest: true,
       solved: true,
+      unknownMode: true,
       kind: true,
       furnishing: true,
       surfaceStep: true,

@@ -100,8 +100,11 @@ const check = (props: {
  * 5. Containment: members landing outside the room are refused, while a purely
  *    semantic space with no convex cells is not geometrically checked at all.
  * 6. A recipe's or a cluster's own refusal is re-pathed onto the binding, and the
- *    lowering reports `not-run` with no geometry for either, `derived`
- *    otherwise — one structure grown and every member instancing it.
+ *    lowering reports `not-run` with no geometry for either — and for a cluster
+ *    paired with a recipe it does not cite, since the two records arrive
+ *    separately and arranging one recipe by another's seed would answer for
+ *    nothing anybody authored. `derived` is reported otherwise: one structure
+ *    grown and every member instancing it.
  */
 export const test_planting_installation_binding = (): void => {
   TestValidator.equals(
@@ -593,6 +596,22 @@ export const test_planting_installation_binding = (): void => {
         },
       ],
       [
+        "notRunMismatch",
+        () => {
+          const frame = lowerPlantingInstallation({
+            installation: plantingInstallation(),
+            cluster: plantingCluster({ domain: "ivy" }),
+            domain: plantingRecipe(),
+          });
+          return (
+            frame.analysis.status === "not-run" &&
+            frame.plant === null &&
+            frame.arrangement === null &&
+            (frame.analysis.reason ?? "").includes('grows recipe "ivy"')
+          );
+        },
+      ],
+      [
         "derived",
         () =>
           derived.analysis.status === "derived" &&
@@ -608,6 +627,7 @@ export const test_planting_installation_binding = (): void => {
       clusterRepathed: true,
       notRunRecipe: true,
       notRunCluster: true,
+      notRunMismatch: true,
       derived: true,
       installation: true,
     },

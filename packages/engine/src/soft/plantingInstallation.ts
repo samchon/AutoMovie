@@ -318,8 +318,9 @@ export interface IAutoMoviePlantingFrame {
  * account of what was derived.
  *
  * One structure is grown and every member instances it, which is what makes a
- * bed of forty ferns forty transforms rather than forty trees. A recipe or a
- * cluster that does not validate produces `not-run` with a reason and no
+ * bed of forty ferns forty transforms rather than forty trees. A recipe that
+ * does not validate, a cluster that does not validate, and a cluster paired
+ * with a recipe it does not cite each produce `not-run` with a reason and no
  * geometry at all: a plant nobody could derive must never arrive looking like a
  * plant somebody did.
  *
@@ -357,6 +358,19 @@ export const lowerPlantingInstallation = (props: {
       analysis: analysis(
         "not-run",
         `planting cluster "${cluster.id}" did not validate, so nothing was arranged`,
+      ),
+      plant: null,
+      arrangement: null,
+    };
+  // The two records arrive separately, so the pairing is checked rather than
+  // trusted: arranging one recipe by another's seed would produce a bed that
+  // looks derived and answers for nothing that was authored.
+  if (cluster.domain !== domain.id)
+    return {
+      installation: installation.id,
+      analysis: analysis(
+        "not-run",
+        `planting cluster "${cluster.id}" grows recipe "${cluster.domain}", not the supplied "${domain.id}"`,
       ),
       plant: null,
       arrangement: null,

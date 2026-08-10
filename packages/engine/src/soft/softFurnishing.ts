@@ -225,7 +225,8 @@ export interface IAutoMovieSoftFurnishingFrame {
  * | the furnishing asks to hold a state the domain does not declare | `not-run`     | none                                |
  * | the domain asks for self-collision                              | `unsupported` | the rest configuration              |
  * | `mode` is `rest`                                                | `rest`        | the rest configuration              |
- * | otherwise                                                       | `solved`      | the fixed-step solve at that second |
+ * | `mode` is `simulated`                                           | `solved`      | the fixed-step solve at that second |
+ * | `mode` is anything else                                         | `not-run`     | none                                |
  *
  * A panel that could not be simulated is never handed back as though it had
  * been. Returning the rest configuration under an `unsupported` status is the
@@ -294,6 +295,18 @@ export const lowerSoftFurnishing = (props: {
     return frame(
       analysis("rest", null),
       simulateSoftBody(domain, 0, furnishing.state),
+    );
+  // Every remaining mode is checked by name rather than assumed. Falling
+  // through to a solve would let a mode nobody recognises claim to have been
+  // simulated, which is the same silent success this whole record exists to
+  // refuse — and the one an `else` is cheapest to write.
+  if (furnishing.mode !== "simulated")
+    return frame(
+      analysis(
+        "not-run",
+        `soft furnishing "${furnishing.id}" asks for mode "${String(furnishing.mode)}", which is not a mode this tier evaluates`,
+      ),
+      null,
     );
   return frame(
     analysis("solved", null),
