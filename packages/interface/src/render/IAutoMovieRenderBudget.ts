@@ -11,10 +11,11 @@ import { AutoMovieRenderMetric } from "./AutoMovieRenderMetric";
  * inferred from an inventory; a production that declares no budget is reported
  * as unbudgeted rather than silently given one.
  *
- * Declaring a budget is not a check running. No compile scope reads
- * `renderBudgets`, so nothing refuses an artifact for exceeding one; a
- * production's own code picks the tier a render targets and evaluates it with
- * `evaluateAutoMovieRenderBudget` against the engine's inventory.
+ * The check runs where the frame is made, not where the design is compiled. No
+ * compile scope reads `renderBudgets`; the render job does, selecting the tier
+ * it targets, measuring each shot against it, and failing rather than shipping
+ * an `over` tier. A compile therefore never reports a budget breach, and a
+ * design that compiles clean has not been cleared to render.
  *
  * Limits are inclusive: a measurement exactly equal to its limit is inside the
  * budget. An omitted metric is unbudgeted, which the report states explicitly
