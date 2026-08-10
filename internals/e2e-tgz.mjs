@@ -1614,37 +1614,41 @@ if (
   // trees the compiler reads, so the first run here must report every record
   // unchanged: the subjects derive exactly what the compiler just consumed
   // rather than something new each time.
-  runExpectedOutput(
-    "packaged starter design records derive from their subjects",
-    "npm run design",
-    starterDir,
-    [
-      "unchanged models/soloist.json",
-      "unchanged models/chorus-hero.json",
-      "unchanged formations/chorus.json",
-      "unchanged world.json",
-    ],
-    300_000,
-    // Every line, not the four named above. A record the emitter
-    // rewrites is a design mutation, and a design mutation between the
-    // compile and the reader below is exactly what leaves the packaged
-    // state stale -- reported here, by name, instead of as a stale state
-    // three steps later.
-    /^unchanged /u,
-  );
-  // Reached only when every record was unchanged; a rewritten one throws above.
-  // Kept anyway, because a record the emitter rewrote to the same bytes would
-  // pass that check and still be a derivation that does not settle.
-  for (const [file, before] of beforeEmit) {
-    const after = readFileSync(file, "utf8");
-    if (after === before) continue;
-    fail(
-      `design record ${relative(starterDir, file)} changed while every emit line said unchanged:
---- before
-${before}
---- after
-${after}`,
+  try {
+    runExpectedOutput(
+      "packaged starter design records derive from their subjects",
+      "npm run design",
+      starterDir,
+      [
+        "unchanged models/soloist.json",
+        "unchanged models/chorus-hero.json",
+        "unchanged formations/chorus.json",
+        "unchanged world.json",
+      ],
+      300_000,
+      // Every line, not the four named above. A record the emitter
+      // rewrites is a design mutation, and a design mutation between the
+      // compile and the reader below is exactly what leaves the packaged
+      // state stale -- reported here, by name, instead of as a stale state
+      // three steps later.
+      /^unchanged /u,
     );
+  } finally {
+    // In `finally`, because the line check above throws on the record it names
+    // and the bytes are what a reader actually needs: reported whichever check
+    // fired, and reported when neither did, since a record rewritten to
+    // identical bytes would pass both and still not settle.
+    for (const [file, before] of beforeEmit) {
+      const after = existsSync(file) ? readFileSync(file, "utf8") : "(removed)";
+      if (after === before) continue;
+      console.error(
+        `design record ${relative(starterDir, file)} moved across the emit:
+--- as the compiler left it
+${before}
+--- as the emitter wrote it
+${after}`,
+      );
+    }
   }
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got
