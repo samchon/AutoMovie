@@ -90,6 +90,14 @@ State these to whoever is authoring rather than letting them discover it.
   read off the staged ground rather than authored beside it. Two boxes stand in
   for the geometry, deliberately. A production that wants artillery, colours or
   a drum copies the shape and not the gate.
+
+  **No shipped shot stages it, and that is a coupling rather than an oversight.**
+  `test_mcp_production_compiler` builds its architecture fixture by rewriting
+  `src/shots/opening.ts` at string anchors, and one of them inserts a `set:` key
+  into the staged object. A `set:` the scaffold already carries becomes a
+  duplicate key, and whichever the literal writes last silently removes the
+  other. Staging the gate therefore takes a fixture change first: make that
+  insertion merge with the shot's own set rather than adding a second key.
 - **`src/examples/` is outside the ladder and outside the production.** Nothing
   imports it and no claim cites it, so an example owes no specification and
   cannot be caught drifting from one. Each file teaches one authoring technique

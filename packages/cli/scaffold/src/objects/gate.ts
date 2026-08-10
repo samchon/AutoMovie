@@ -37,6 +37,21 @@ const at = (position: IAutoMovieVector3): IAutoMovieTransform => ({
  * The geometry is two boxes and is meant to be replaced. Every measurement
  * below answers to `docs/objects/gate.md`; the boxes answer to nothing, which
  * is the difference between an object and a piece of scenery somebody typed.
+ *
+ * No shot in this starter stages it yet, which is the one thing to fix first
+ * when you copy the shape. Staging it is one line in a shot's builder, and it
+ * has to be both halves at once, because the compiler joins them on this node
+ * id: a registry entry with no placement is a prop nothing stands anywhere, and
+ * a placement with no registry entry is a box the engine never forges.
+ *
+ * ```ts
+ * const fixture = gate.render(context);
+ * return {
+ *   props: [...(fixture.props ?? [])],
+ *   stage: { ..., set: [...(fixture.set ?? [])] },
+ *   ...
+ * };
+ * ```
  */
 export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   public readonly id = "plaza-gate";
