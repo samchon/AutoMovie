@@ -141,8 +141,10 @@ const tolerated = (mutate: (spec: IAutoMoviePropSpec) => void): boolean => {
  *    are each refused.
  * 7. The LOD closure is refused when a level repeats, when a level disagrees with
  *    the appearance's profile, when a level's digest is malformed, when a level
- *    binds bytes the ledger does not cover, when there is no hero at all, and
- *    when the hero binds bytes other than the ones the prop draws.
+ *    reads a path the ledger seals under a different digest (and a malformed
+ *    digest is not also reported as that disagreement), when a level binds
+ *    bytes the ledger does not cover, when there is no hero at all, and when
+ *    the hero binds bytes other than the ones the prop draws.
  * 8. An imported appearance changes none of the other prop contracts: a skeleton
  *    still makes it an actor, a model id still has to equal the node, and
  *    `validateModel` still judges the deterministic proxy it left behind.
@@ -438,6 +440,30 @@ export const test_film_prop_imported_appearance = (): void => {
           ),
       ],
       [
+        "levelDisagreesWithTheLedgerDigest",
+        () =>
+          refuses(
+            (spec) => (spec.model.imported!.lod[0]!.digest = digest("c")),
+            "$input.model.imported.lod[0].digest",
+            "while the sealed ledger carries",
+          ),
+      ],
+      [
+        "aMalformedDigestIsNotAlsoALedgerDisagreement",
+        () => {
+          const spec = createImportedPropSpec();
+          spec.model.imported!.lod[0]!.digest = "sha256:";
+          const result = forgeProp(spec);
+          return (
+            result.success === false &&
+            result.violations.every(
+              (item) =>
+                !item.expected.includes("while the sealed ledger carries"),
+            )
+          );
+        },
+      ],
+      [
         "levelOutsideTheLedger",
         () =>
           refuses(
@@ -517,6 +543,8 @@ export const test_film_prop_imported_appearance = (): void => {
       duplicatedLevel: true,
       levelProfileDisagreement: true,
       malformedLevelDigest: true,
+      levelDisagreesWithTheLedgerDigest: true,
+      aMalformedDigestIsNotAlsoALedgerDisagreement: true,
       levelOutsideTheLedger: true,
       noHeroAtAll: true,
       aNonHeroLevelIsStillNotAHero: true,

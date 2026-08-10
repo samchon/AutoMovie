@@ -182,7 +182,7 @@ const gateImportedAppearance = (
     return;
   }
 
-  const ledger = new Set<string>();
+  const ledger = new Map<string, string>();
   imported.assets.forEach((entry, index) => {
     const ap = `${path}.imported.assets[${index}]`;
     if (entry.path.trim().length === 0)
@@ -199,7 +199,9 @@ const gateImportedAppearance = (
         `sealed asset path "${entry.path}" is declared twice; one path carries one digest`,
         entry.path,
       );
-    ledger.add(entry.path);
+    // The first entry wins, so a path sealed twice is reported once above
+    // rather than turning every later reader of it into a second complaint.
+    if (!ledger.has(entry.path)) ledger.set(entry.path, entry.digest);
     if (!SEALED_DIGEST.test(entry.digest))
       out.push(
         "type",
@@ -249,19 +251,30 @@ const gateImportedAppearance = (
         `a rigid prop's LOD "${entry.level}" maps no humanoid bones, but ${entry.humanoidBones.length} were sealed`,
         entry.humanoidBones.length,
       );
-    if (!SEALED_DIGEST.test(entry.digest))
+    const wellFormed = SEALED_DIGEST.test(entry.digest);
+    if (!wellFormed)
       out.push(
         "type",
         `${lp}.digest`,
         `a sealed digest must be "sha256:" followed by 64 lowercase hexadecimal digits, but was "${entry.digest}"`,
         entry.digest,
       );
-    if (!ledger.has(entry.asset))
+    const sealed = ledger.get(entry.asset);
+    if (sealed === undefined)
       out.push(
         "type",
         `${lp}.asset`,
         `LOD "${entry.level}" binds "${entry.asset}", which the sealed byte ledger does not cover`,
         entry.asset,
+      );
+    // A malformed digest is already reported, and comparing it against the
+    // ledger would answer for that same fault a second time under another name.
+    else if (wellFormed && sealed !== entry.digest)
+      out.push(
+        "type",
+        `${lp}.digest`,
+        `LOD "${entry.level}" reads "${entry.asset}" at ${entry.digest} while the sealed ledger carries ${sealed} for that path; one path is one set of bytes`,
+        entry.digest,
       );
   });
 
