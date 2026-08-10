@@ -33,6 +33,8 @@ A group is an extended source and the derived plan measures it as one. An event 
 
 Use spread or multiple emitters for large sources only when the shot scale needs it. Keep near-field details localized and distant mass coherent. Doppler, occlusion, reverberation, and delay must be deliberate and bounded; absence is preferable to an unverified simulation claim.
 
+When a shot is inside a built space, the room's acoustic condition is measurable rather than guessed. An `acoustic` analysis run over the room's absorbing surfaces, its partitions, and its steady noise sources reports reverberation time from the Sabine relation, absorption area, room constant, sound pressure level at the declared receivers, composite partition transmission loss, and a speech transmission index. Feed it the substances the design already carries: absorption is a property of the material record, not a number retyped beside the mix. It sizes a room tone, tells you whether dialogue will survive the space, and gives an acceptance criterion a number to compare against. It does not render reverberation, and a measured reverberation time is not permission to claim a simulated one. Read `WORLD_BUILDING` for how a run is declared and how `unsupported` and `not-run` must be reported.
+
 ## Dialogue and speech
 
 Write speakable lines and choose a voice identity appropriate to the declared production. Pin adapter, model, voice, version, and source artifacts in cache and receipt identity. A model alias that tracks remote `main` is not a reproducible revision.

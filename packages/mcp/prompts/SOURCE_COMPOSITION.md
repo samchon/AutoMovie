@@ -191,3 +191,5 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 ## Read the shipped examples
 
 The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
+
+`src/examples/` is the same lesson for the built environment: a building assembled by loops over its storeys, a physically-based finish and the four ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how a starter's furniture ends up in somebody's film.
