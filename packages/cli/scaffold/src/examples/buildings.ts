@@ -157,6 +157,19 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
   /** Which tower storey the sky-bridge leaves from. */
   public readonly bridgeStorey = 2;
 
+  /**
+   * The door repeated on every storey, stated once.
+   *
+   * The hinge position and the leaf size decide four separate things: where the
+   * hinge element stands, where the leaf hangs off it, where the void is cut in
+   * the partition's face, and how wide the doorway connector is. Writing them
+   * once is what keeps the engine's fit check from turning into a puzzle the
+   * first time one of them is nudged.
+   */
+  public readonly doorHinge = 0.75;
+  public readonly doorWidth = 0.9;
+  public readonly doorHeight = 2.1;
+
   /** The storey a floor index belongs to, as a classification not a level. */
   public storeyKind(index: number): string {
     if (index === 1) return "mezzanine";
@@ -284,7 +297,7 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           kind: "door",
           parent: "tower-root",
           transform: place(
-            { x: 0, y: this.storeyElevation(index), z: 0.75 },
+            { x: 0, y: this.storeyElevation(index), z: this.doorHinge },
             yaw(-Math.PI / 2),
           ),
           model: null,
@@ -294,11 +307,11 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           id: `tower-door-leaf-${index}`,
           kind: "door-leaf",
           parent: `tower-door-hinge-${index}`,
-          transform: place({ x: 0.45, y: 1.05, z: 0 }, NO_ROTATION, {
-            x: 0.9,
-            y: 2.1,
-            z: 0.1,
-          }),
+          transform: place(
+            { x: this.doorWidth / 2, y: this.doorHeight / 2, z: 0 },
+            NO_ROTATION,
+            { x: this.doorWidth, y: this.doorHeight, z: 0.1 },
+          ),
           model: "building-box",
           space: `tower-room-${index}`,
         },
@@ -425,10 +438,13 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
       // with one bulged edge.
       profile: {
         outline: [
-          { x: this.towerHalf.z + 0.75, y: 0 },
-          { x: this.towerHalf.z + 1.65, y: 0 },
-          { x: this.towerHalf.z + 1.65, y: 2.1 },
-          { x: this.towerHalf.z + 0.75, y: 2.1 },
+          { x: this.towerHalf.z + this.doorHinge, y: 0 },
+          { x: this.towerHalf.z + this.doorHinge + this.doorWidth, y: 0 },
+          {
+            x: this.towerHalf.z + this.doorHinge + this.doorWidth,
+            y: this.doorHeight,
+          },
+          { x: this.towerHalf.z + this.doorHinge, y: this.doorHeight },
         ],
       },
       operation: {
@@ -436,8 +452,8 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           {
             id: "leaf",
             element: `tower-door-hinge-${index}`,
-            width: 0.9,
-            height: 2.1,
+            width: this.doorWidth,
+            height: this.doorHeight,
             motion: {
               kind: "revolute",
               axis: { x: 0, y: 1, z: 0 },
@@ -490,12 +506,23 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
         from: `tower-storey-${index}`,
         to: `tower-room-${index}`,
         bidirectional: true,
+        // The passage runs through the middle of the very void the door fills,
+        // at the size of that void: the connector and the opening are two
+        // statements about one hole, so they read from one set of numbers.
         route: [
-          { x: -0.6, y: this.storeyElevation(index), z: 1.2 },
-          { x: 0.6, y: this.storeyElevation(index), z: 1.2 },
+          {
+            x: -0.6,
+            y: this.storeyElevation(index),
+            z: this.doorHinge + this.doorWidth / 2,
+          },
+          {
+            x: 0.6,
+            y: this.storeyElevation(index),
+            z: this.doorHinge + this.doorWidth / 2,
+          },
         ],
-        width: 0.9,
-        clearHeight: 2.1,
+        width: this.doorWidth,
+        clearHeight: this.doorHeight,
         elements: [`tower-door-leaf-${index}`],
       })),
       {
