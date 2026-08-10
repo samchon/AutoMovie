@@ -114,6 +114,28 @@ export const test_viewer_semantic_mask = (): void => {
       unaddressed: 4,
     },
   );
+  TestValidator.equals(
+    "a segmentation pass suspends everything that would overwrite an identity",
+    namedFacts([
+      ["fog", () => built.scene.fog === null],
+      ["image lighting", () => built.scene.environment === null],
+      [
+        "background",
+        () => (built.scene.background as THREE.Color).getHex() === 0,
+      ],
+      ["grid hidden", () => !built.grid.visible],
+      ["sprite hidden", () => !built.sprite.visible],
+      ["points hidden", () => !built.points.visible],
+    ]),
+    {
+      fog: true,
+      "image lighting": true,
+      background: true,
+      "grid hidden": true,
+      "sprite hidden": true,
+      "points hidden": true,
+    },
+  );
 
   // A crowd that marched in the beauty pass has to march in the mask: the
   // replacement material carries the mesh's baked cycle, and a mesh with no
@@ -188,12 +210,20 @@ export const test_viewer_semantic_mask = (): void => {
         "background",
         () => (built.scene.background as THREE.Color).getHex() === 0x123456,
       ],
+      ["fog", () => built.scene.fog !== null],
+      ["image lighting", () => built.scene.environment !== null],
+      ["grid visible again", () => built.grid.visible],
+      ["already-hidden line untouched", () => !built.darkLine.visible],
     ]),
     {
       materials: true,
       "instance colours": true,
       "created attribute removed": true,
       background: true,
+      fog: true,
+      "image lighting": true,
+      "grid visible again": true,
+      "already-hidden line untouched": true,
     },
   );
 
@@ -358,11 +388,17 @@ const build = (
   batch: THREE.InstancedMesh;
   bare: THREE.InstancedMesh;
   unslotted: THREE.InstancedMesh;
+  grid: THREE.Object3D;
+  darkLine: THREE.Object3D;
+  sprite: THREE.Object3D;
+  points: THREE.Object3D;
   orphan: THREE.Mesh;
   palette: Float32Array;
 } => {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x123456);
+  scene.fog = new THREE.FogExp2(0x223344, 0.02);
+  scene.environment = new THREE.Texture();
   const meshes = new Map<string, THREE.Mesh>();
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   for (const node of design.nodes) {
@@ -452,6 +488,19 @@ const build = (
   hidden.visible = false;
   scene.add(hidden);
 
+  // Non-mesh renderables draw their live beauty material straight into a
+  // structural pass unless it hides them; one is already hidden, and must stay
+  // hidden after restore.
+  const grid = new THREE.LineSegments(new THREE.BufferGeometry());
+  const darkLine = new THREE.LineSegments(new THREE.BufferGeometry());
+  darkLine.visible = false;
+  const sprite = new THREE.Sprite();
+  const points = new THREE.Points(new THREE.BufferGeometry());
+  scene.add(grid);
+  scene.add(darkLine);
+  scene.add(sprite);
+  scene.add(points);
+
   const sun = new THREE.DirectionalLight();
   sun.castShadow = true;
   scene.add(sun);
@@ -472,6 +521,10 @@ const build = (
     batch,
     bare,
     unslotted,
+    grid,
+    darkLine,
+    sprite,
+    points,
     orphan,
     palette: (batch.instanceColor!.array as Float32Array).slice(),
   };

@@ -95,6 +95,30 @@ export const applyAutoMovieSemanticMask = (props: {
     if (entry !== undefined) roots.set(object, entry);
   });
 
+  // A segmentation pass states an identity, and three things in a scene will
+  // quietly overwrite one. Fog mixes every `MeshBasicMaterial` toward the fog
+  // colour with distance, so the same wall far away would read as a different
+  // wall near. Image lighting draws its own background over the reserved black.
+  // A grid, a helper line, a sprite or a point cloud draws its live beauty
+  // material straight into the mask. All three are suspended for the duration
+  // and put back exactly as they were, so calling this directly is as correct
+  // as calling it from inside a pass boundary that already suspends them.
+  const fog = scene.fog;
+  scene.fog = null;
+  const environment = scene.environment;
+  scene.environment = null;
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((object) => {
+    if (!object.visible) return;
+    if (
+      (object as THREE.Line).isLine === true ||
+      (object as THREE.Points).isPoints === true ||
+      (object as THREE.Sprite).isSprite === true
+    ) {
+      object.visible = false;
+      hidden.push(object);
+    }
+  });
   const background = scene.background;
   scene.background = new THREE.Color(0x000000);
   const swaps: Array<{
@@ -183,7 +207,10 @@ export const applyAutoMovieSemanticMask = (props: {
           entry.mesh.instanceColor!.needsUpdate = true;
         }
       for (const material of created) material.dispose();
+      for (const object of hidden) object.visible = true;
       scene.background = background;
+      scene.environment = environment;
+      scene.fog = fog;
     },
   };
 };
