@@ -137,6 +137,7 @@ export const deriveProductionSoundPlan = (props: {
     ),
     cues: props.timeline.tracks.audio.map((cue) => ({
       id: cue.id,
+      asset: cue.asset,
       startFrame: cue.startFrame,
       durationFrames: cue.durationFrames,
       sourceOffsetFrame: cue.sourceOffsetFrame,
@@ -160,13 +161,25 @@ export const deriveProductionSoundPlan = (props: {
 export const renderProductionSound = (props: {
   plan: IAutoMovieProductionSoundPlan;
   dialogue?: ReadonlyMap<string, Float32Array>;
+  /**
+   * Decoded mono samples for the assets the plan's cues name, at the plan's own
+   * sample rate, keyed by asset id.
+   *
+   * Supplied rather than read, for the reason dialogue already is: decoding a
+   * container is I/O and a codec, and neither belongs inside a mix that has to
+   * produce the same bytes on every machine. A cue whose asset is absent falls
+   * back to the bus stand-in, so a film mixes at every stage of its authoring
+   * and a missing asset is silence-shaped rather than a crash.
+   */
+  assets?: ReadonlyMap<string, Float32Array>;
 }): IAutoMovieRenderedProductionSound => {
   const sampleFrames = Math.round(
     (props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate,
   );
   const pcm = new Float32Array(sampleFrames * 2);
   for (const event of props.plan.events) mixEvent(pcm, props.plan, event);
-  for (const cue of props.plan.cues) mixCue(pcm, props.plan, cue);
+  for (const cue of props.plan.cues)
+    mixCue(pcm, props.plan, cue, props.assets?.get(cue.asset));
   for (const line of props.plan.dialogue) {
     const source = props.dialogue?.get(line.id);
     if (source === undefined) continue;
@@ -530,6 +543,7 @@ const mixCue = (
   pcm: Float32Array,
   plan: IAutoMovieProductionSoundPlan,
   cue: IAutoMovieProductionSoundPlan["cues"][number],
+  source: Float32Array | undefined,
 ): void => {
   if (cue.gain === 0) return;
   const start = frameToSample(plan, cue.startFrame);
@@ -541,22 +555,43 @@ const mixCue = (
     index < length && start + index < pcm.length / 2;
     ++index
   ) {
-    const source = frameToSample(plan, cue.sourceOffsetFrame) + index;
-    const t = source / plan.sampleRate;
+    const sourceSample = frameToSample(plan, cue.sourceOffsetFrame) + index;
+    const t = sourceSample / plan.sampleRate;
     const fade =
       Math.min(1, fadeIn === 0 ? 1 : index / fadeIn) *
       Math.min(1, fadeOut === 0 ? 1 : (length - index) / fadeOut);
-    const noise = seededNoise(cue.seed, source);
+    const noise = seededNoise(cue.seed, sourceSample);
+    // The asset the cue names, when the caller decoded it. Read at its own
+    // rate from the offset the edit begins at, and stretched only by the ratio
+    // the author asked for: a cue whose source span equals its film span plays
+    // at native pitch, and one that differs asked for that difference. Past the
+    // end of the buffer it is silent rather than looped, because a cue longer
+    // than its asset is a fact about the edit and not a licence to repeat it.
+    const played =
+      source === undefined
+        ? null
+        : (() => {
+            const rate =
+              cue.durationFrames === 0
+                ? 1
+                : cue.sourceDurationFrames / cue.durationFrames;
+            const at = Math.round(
+              frameToSample(plan, cue.sourceOffsetFrame) + index * rate,
+            );
+            return at >= 0 && at < source.length ? source[at]! : 0;
+          })();
     const signal =
-      cue.bus === "music"
-        ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +
-          Math.sin(2 * Math.PI * 165 * t) * 0.12 +
-          Math.sin(2 * Math.PI * 220 * t) * 0.08
-        : cue.bus === "ambience"
-          ? noise * 0.09 + Math.sin(2 * Math.PI * 48 * t) * 0.04
-          : cue.bus === "effects"
-            ? noise * 0.16
-            : Math.sin(2 * Math.PI * 175 * t) * 0.08;
+      played !== null
+        ? played
+        : cue.bus === "music"
+          ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +
+            Math.sin(2 * Math.PI * 165 * t) * 0.12 +
+            Math.sin(2 * Math.PI * 220 * t) * 0.08
+          : cue.bus === "ambience"
+            ? noise * 0.09 + Math.sin(2 * Math.PI * 48 * t) * 0.04
+            : cue.bus === "effects"
+              ? noise * 0.16
+              : Math.sin(2 * Math.PI * 175 * t) * 0.08;
     const value = signal * cue.gain * fade;
     pcm[(start + index) * 2] += value;
     pcm[(start + index) * 2 + 1] += value;

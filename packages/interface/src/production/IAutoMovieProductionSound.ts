@@ -86,6 +86,17 @@ export interface IAutoMovieProductionSoundEvent {
 export interface IAutoMovieProductionSoundCue {
   /** Exact authored cue id. */
   id: string;
+  /**
+   * The asset this cue plays.
+   *
+   * Carried because a cue is a statement about a particular sound, and a plan
+   * that dropped the name could only ever be rendered as a stand-in for one:
+   * the renderer took the id to seed its noise and then had nothing left to
+   * play. A caller decodes the asset and hands the samples in, exactly as it
+   * already does for synthesized dialogue, so decoding stays outside the
+   * deterministic mix and the mix stays a pure function of what it is given.
+   */
+  asset: string;
   /** Film-global inclusive start frame. */
   startFrame: number;
   /** Exact cue duration in film frames. */

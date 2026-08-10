@@ -12,6 +12,13 @@ Sound establishes causality, scale, space, rhythm, attention, and continuity. Bu
 
 Give each layer a narrative job. If two sounds compete for the same job, simplify or establish hierarchy.
 
+## What an authored cue plays
+
+An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source frame the edit begins at, the span of source it uses, a gain, fades and a bus. The mix plays that asset — read at its own rate from the stated offset, stretched only by the ratio between the source span and the film span, and silent past the asset's end rather than looped. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
+
+A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in — a bed for music, filtered noise for ambience and effects. That is scaffolding for a film mid-authoring and not the sound design: a review that judges a cue before its asset is decoded is judging the stand-in.
+
+
 ## Event-derived cues
 
 Bind cues to semantic event ids and exact source times. Impact, muzzle, footfall, door contact, formation order, and transition sounds should inherit measured event time and world-space source. Preserve authored source offsets when an edit uses a later part of a cue or carries it across a cut.
