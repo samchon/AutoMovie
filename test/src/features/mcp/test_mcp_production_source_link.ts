@@ -50,9 +50,9 @@ const paths = (result: ReturnType<typeof link>): string[] =>
  *    so an author is told what they did rather than that a file is missing.
  * 7. An unreadable import is refused and carries the reader's own message, so the
  *    escape and symlink refusals the reader owns are not restated here.
- * 8. The engine surface the sandbox reimplements is exactly the surface a source
- *    module may import; a name on one side and not the other would be either an
- *    unreachable stand-in or an import that fails at execution.
+ * 8. What the sandbox publishes is exactly the surface a source module may import;
+ *    a name on one side and not the other would be either an unreachable
+ *    implementation or an import that fails at execution.
  * 9. The entry's own resolved specifiers are stated on the result, since the
  *    sandbox needs them before any module runs and searching the module list
  *    for an entry that is always there would need a branch nothing can reach.
@@ -283,13 +283,14 @@ export const test_mcp_production_source_link = (): void => {
   );
 
   TestValidator.equals(
-    "the importable engine surface is exactly the sandbox stand-in",
+    "the importable engine surface is exactly what the sandbox publishes",
     [...AUTOMOVIE_SANDBOX_ENGINE_EXPORTS].sort((left, right) =>
       left < right ? -1 : 1,
     ),
     [
       "AutoMovieSubject",
       "AutoMovieSubjectGroup",
+      "buildAutoMoviePolyhedron",
       "buildAutoMovieWall",
       "builtEnvironmentAdjacentSpaces",
       "builtEnvironmentBuildingOfSpace",
@@ -299,12 +300,16 @@ export const test_mcp_production_source_link = (): void => {
       "builtEnvironmentSpaceSurfaces",
       "defineShot",
       "extrudeAutoMovieProfile",
+      "inspectAutoMovieMeshTopology",
       "lowerBuiltEnvironment",
       "mergeAutoMovieMeshes",
+      "mergeAutoMovieMeshParts",
       "mergeAutoMovieSpaces",
       "mergeAutoMovieSubjectContributions",
       "revolveAutoMovieProfile",
       "sweepAutoMovieProfile",
+      "tessellateSurface",
+      "transformAutoMovieMesh",
       "worldSurfaceHeight",
     ],
   );
