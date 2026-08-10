@@ -38,6 +38,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
     shot,
     await createCompiledShotRuntime(
       (await response.json()) as IAutoMovieCompiledShotSource,
+      deliveryTone,
     ),
   );
 }

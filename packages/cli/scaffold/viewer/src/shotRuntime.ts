@@ -34,6 +34,14 @@ export interface IAutoMovieCompiledShotRuntime {
 
 export const createCompiledShotRuntime = async (
   compiled: IAutoMovieCompiledShotSource,
+  /**
+   * Tone mapping the delivery asks for, when the page was opened for one.
+   *
+   * The render spec owns this and the scene's own environment owns the rest, so
+   * a page opened without a delivery leaves the renderer exactly as the scene
+   * describes it rather than guessing a curve nobody asked for.
+   */
+  delivery?: "none" | "acesFilmic",
 ): Promise<IAutoMovieCompiledShotRuntime> => {
   const models = new Map(compiled.models.map((model) => [model.id, model]));
   const textures = createShotTextureCache();
@@ -279,6 +287,7 @@ export const createCompiledShotRuntime = async (
       renderer,
       compiled.scene.environment,
       pass,
+      delivery,
     );
     const handle = applyRenderMode(scene.scene, pass);
     try {
