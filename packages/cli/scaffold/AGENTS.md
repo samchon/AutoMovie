@@ -3,6 +3,14 @@
 Write creative and implementation work in `docs`, `src`, `test`, and declared
 assets. Do not translate normal code into giant MCP JSON calls.
 
+`src/examples` is reading material, not a library. Each file demonstrates one
+authoring technique against placeholder geometry, nothing in the production
+imports it, and no evidence claim covers it. Copy the technique into your own
+`src/units`, `src/objects`, `src/world`, or `src/formations`, then delete what
+you have read. Never import from it, and never grow it into a catalogue of
+finished parts: the models, finishes, and fittings a film needs are this
+production's own to author.
+
 Read `AUTOMOVIE_OVERALL`, then the exact guide required by a production tool.
 Use MCP for actual PNG evidence and evidence-bound review. For offline geometry,
 load current compiler-owned state through `loadAutoMovieProjectState`, require

@@ -58,6 +58,23 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
   }
 };
 
+/**
+ * True when a source names a relative specifier inside an `examples` directory.
+ *
+ * The scaffold's examples are reading material: each one demonstrates an
+ * authoring technique against placeholder geometry, and the generated project
+ * is told to copy the technique out rather than call it. An import is how that
+ * turns into a content library nobody agreed to publish, so the import is the
+ * fact worth detecting rather than any particular example's name.
+ *
+ * The specifier is matched from its relative prefix through the directory
+ * segment, which is what separates a real reach into the folder (`./examples/`
+ * from a sibling, `../../src/examples/` from the viewer) from a package name or
+ * a prose mention that happens to contain the word.
+ */
+const importsScaffoldExample = (source: string): boolean =>
+  /["']\.{1,2}\/(?:[^"']*\/)?examples\/[^"']+["']/.test(source);
+
 /** The thrown value of `fn`, or `null` when it returned. */
 const captureFailure = (fn: () => unknown): unknown => {
   try {
@@ -2255,6 +2272,69 @@ export const test_cli_scaffold = async (): Promise<void> => {
       filesScripts3Scoped: true,
       filesREADME: true,
       filesREADME2: true,
+    },
+  );
+  const swept = Object.entries(files).filter(
+    ([name]) =>
+      name.endsWith(".ts") && name.startsWith("src/examples/") === false,
+  );
+  TestValidator.equals(
+    "the shipped examples stay reading material instead of becoming a library",
+    namedFacts([
+      // The contract the generated project reads. Without it the directory is
+      // just unexplained source, and unexplained source gets called.
+      [
+        "agentsStatesTheExampleBoundary",
+        () =>
+          files["AGENTS.md"]!.includes(
+            "`src/examples` is reading material, not a library",
+          ),
+      ],
+      // Both spellings a reach into the folder can take: a sibling under `src`,
+      // and the viewer climbing back out of its own tree.
+      [
+        "theDetectorFiresOnASiblingReach",
+        () =>
+          importsScaffoldExample(
+            'import { latticeRepeat } from "../examples/instanceSets";',
+          ),
+      ],
+      [
+        "theDetectorFiresOnADeeperReach",
+        () =>
+          importsScaffoldExample(
+            'import { ExampleBuilding } from "../../src/examples/buildings";',
+          ),
+      ],
+      // And the counter-example, without which the sweep below would be a fact
+      // about a regular expression that matches everything it is shown.
+      [
+        "theDetectorIgnoresOrdinaryImports",
+        () =>
+          importsScaffoldExample(
+            'import { lowerBuiltEnvironment } from "@automovie/engine";\nimport { plaza } from "../world/plaza";',
+          ) === false,
+      ],
+      // A sweep over nothing passes for free, so the population is checked
+      // before the property is.
+      [
+        "theSweepReadsTheProjectsOwnSources",
+        () =>
+          swept.length > 0 && swept.some(([name]) => name === "src/film.ts"),
+      ],
+      [
+        "noProjectSourceImportsAnExample",
+        () =>
+          swept.every(([, source]) => importsScaffoldExample(source) === false),
+      ],
+    ]),
+    {
+      agentsStatesTheExampleBoundary: true,
+      theDetectorFiresOnASiblingReach: true,
+      theDetectorFiresOnADeeperReach: true,
+      theDetectorIgnoresOrdinaryImports: true,
+      theSweepReadsTheProjectsOwnSources: true,
+      noProjectSourceImportsAnExample: true,
     },
   );
   TestValidator.equals(

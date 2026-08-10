@@ -1,4 +1,7 @@
-import type { IAutoMovieInstanceSetDesign } from "@automovie/interface";
+import type {
+  IAutoMovieInstanceSetDesign,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 /**
  * Non-formation onlookers with reproducible scale, palette, and pace traits.
@@ -49,42 +52,58 @@ export const treeScatter = (
  * This is the layout to reach for whenever a placement is a regular repetition
  * — panels on a ceiling, modules on a wall, bays down a length — because it
  * states the rule instead of the result. The set holds three counts and one
- * spacing no matter how many members it produces, so changing `rows`,
- * `columns`, or spacing stays ordinary TypeScript and the compiler still keeps
- * the result as bounded instance chunks rather than expanding ten thousand
- * repeats into scene nodes.
+ * spacing no matter how many members it produces, so changing a count or the
+ * spacing stays ordinary TypeScript and the compiler still keeps the result as
+ * bounded instance chunks rather than expanding ten thousand repeats into scene
+ * nodes.
  *
- * The prototype is the caller's own model recipe and the constants below are
- * illustrative values to edit, not a shape this template supplies.
+ * The name is the technique and not a part, because what the members turn out
+ * to be is the caller's decision: the prototype is the caller's own model
+ * recipe, and the parameters below are the degrees of freedom this placement
+ * has. The seed and palette are illustrative values to edit, not a finish this
+ * template supplies.
  */
-export const cofferedCeiling = (
+export const latticeRepeat = (
   modelRecipe: string,
-  rows = 8,
-  columns = 12,
-): IAutoMovieInstanceSetDesign => ({
-  id: "coffered-ceiling",
-  modelRecipe,
-  count: rows * columns,
-  layout: {
-    kind: "lattice",
-    rows,
-    columns,
-    layers: 1,
-    spacing: { x: 1.2, y: 1, z: 1.2 },
-  },
-  anchor: { x: 0, y: 4.8, z: 0 },
-  facingDeg: 0,
-  seed: 1_451,
-  variation: {
-    scale: { min: 1, max: 1 },
-    scale3: {
-      min: { x: 1, y: 0.12, z: 1 },
-      max: { x: 1, y: 0.12, z: 1 },
+  props: {
+    /** Members along the lattice's local Z. */
+    rows?: number;
+    /** Members along the lattice's local X. */
+    columns?: number;
+    /** Stacked repetitions of the whole grid, along local Y. */
+    layers?: number;
+    /** Center-to-center spacing on each local axis, in meters. */
+    spacing?: IAutoMovieVector3;
+    /** Height of the lattice anchor above the set origin, in meters. */
+    elevation?: number;
+    /** Per-axis scale every member is stamped at. */
+    memberScale?: IAutoMovieVector3;
+  } = {},
+): IAutoMovieInstanceSetDesign => {
+  const rows = props.rows ?? 8;
+  const columns = props.columns ?? 12;
+  const layers = props.layers ?? 1;
+  const spacing = props.spacing ?? { x: 1.2, y: 1, z: 1.2 };
+  const elevation = props.elevation ?? 4.8;
+  const memberScale = props.memberScale ?? { x: 1, y: 0.12, z: 1 };
+  return {
+    id: "lattice-repeat",
+    modelRecipe,
+    count: rows * columns * layers,
+    layout: { kind: "lattice", rows, columns, layers, spacing },
+    anchor: { x: 0, y: elevation, z: 0 },
+    facingDeg: 0,
+    seed: 1_451,
+    variation: {
+      scale: { min: 1, max: 1 },
+      // One scale stated as both bounds is a fixed stamp rather than a range;
+      // the two objects are separate so editing a bound cannot move the other.
+      scale3: { min: { ...memberScale }, max: { ...memberScale } },
+      palette: ["#d8cdbb"],
+      traits: [],
     },
-    palette: ["#d8cdbb"],
-    traits: [],
-  },
-});
+  };
+};
 
 /**
  * Windows on a raked facade, placed on the leaning plane they belong to.
@@ -173,43 +192,67 @@ export const slopedFacadeWindows = (
  * translation, unit quaternion, and per-axis scale per slot, keep a stable id
  * on each, and the whole block still compiles to bounded instance chunks.
  *
- * The constants below are illustrative values to edit; the prototype is the
- * caller's own model recipe.
+ * The law below is a helix because a helix is the shortest law to read, not
+ * because a helix is what this template supplies. Its parameters are that one
+ * law's degrees of freedom: replace the body with your own law and everything
+ * around it — the slot loop, the stable ids, the exact per-slot transform — is
+ * unchanged, which is the part worth copying.
  */
-export const spiralBalusters = (
+export const explicitPlacementLaw = (
   modelRecipe: string,
-  count = 48,
-): IAutoMovieInstanceSetDesign => ({
-  id: "spiral-balusters",
-  modelRecipe,
-  count,
-  layout: {
-    kind: "explicit",
-    transforms: Array.from({ length: count }, (_, slot) => {
-      const turn = (slot / Math.max(1, count - 1)) * Math.PI * 4;
-      return {
-        id: `baluster-${String(slot).padStart(3, "0")}`,
-        translation: {
-          x: Math.cos(turn) * 2,
-          y: slot * 0.16,
-          z: Math.sin(turn) * 2,
-        },
-        rotation: {
-          x: 0,
-          y: Math.sin(turn / 2),
-          z: 0,
-          w: Math.cos(turn / 2),
-        },
-        scale: { x: 0.12, y: 1.1, z: 0.12 },
-      };
-    }),
-  },
-  anchor: { x: 0, y: 0, z: 0 },
-  facingDeg: 0,
-  seed: 1_457,
-  variation: {
-    scale: { min: 1, max: 1 },
-    palette: ["#363330"],
-    traits: [],
-  },
-});
+  props: {
+    /** Slots the law is evaluated at. */
+    count?: number;
+    /** Full turns the law completes across those slots. */
+    turns?: number;
+    /** Distance of a slot from the axis it turns about, in meters. */
+    radius?: number;
+    /** Rise from one slot to the next, in meters. */
+    rise?: number;
+    /** Per-axis scale every member is stamped at. */
+    memberScale?: IAutoMovieVector3;
+  } = {},
+): IAutoMovieInstanceSetDesign => {
+  const count = props.count ?? 48;
+  const turns = props.turns ?? 2;
+  const radius = props.radius ?? 2;
+  const rise = props.rise ?? 0.16;
+  const memberScale = props.memberScale ?? { x: 0.12, y: 1.1, z: 0.12 };
+  return {
+    id: "explicit-placement-law",
+    modelRecipe,
+    count,
+    layout: {
+      kind: "explicit",
+      transforms: Array.from({ length: count }, (_, slot) => {
+        // The parameter runs 0 to 1 across the slots, so the last one lands
+        // exactly on the final turn. The guard is what keeps a single-slot
+        // block dividing by one instead of by zero.
+        const turn = (slot / Math.max(1, count - 1)) * Math.PI * 2 * turns;
+        return {
+          id: `slot-${String(slot).padStart(3, "0")}`,
+          translation: {
+            x: Math.cos(turn) * radius,
+            y: slot * rise,
+            z: Math.sin(turn) * radius,
+          },
+          rotation: {
+            x: 0,
+            y: Math.sin(turn / 2),
+            z: 0,
+            w: Math.cos(turn / 2),
+          },
+          scale: { ...memberScale },
+        };
+      }),
+    },
+    anchor: { x: 0, y: 0, z: 0 },
+    facingDeg: 0,
+    seed: 1_457,
+    variation: {
+      scale: { min: 1, max: 1 },
+      palette: ["#363330"],
+      traits: [],
+    },
+  };
+};
