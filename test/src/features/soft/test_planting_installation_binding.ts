@@ -107,12 +107,19 @@ const check = (props: {
  *    and a recipe that has not emerged has no canopy to check. Members landing
  *    outside the room are refused, while a purely semantic space with no convex
  *    cells is not geometrically checked at all.
- * 6. A recipe's or a cluster's own refusal is re-pathed onto the binding, and the
- *    lowering reports `not-run` with no geometry for either — and for a cluster
- *    paired with a recipe it does not cite, since the two records arrive
- *    separately and arranging one recipe by another's seed would answer for
- *    nothing anybody authored. `derived` is reported otherwise: one structure
- *    grown and every member instancing it.
+ * 6. A recipe's or a cluster's own refusal is re-pathed onto the binding —
+ *    including a foliage rule that outgrows its own leaf cap, which the binding
+ *    used to discover by growing the canopy and throwing out of a validator —
+ *    and the lowering reports `not-run` with no geometry for either, for a
+ *    cluster paired with a recipe it does not cite, and for an installation
+ *    paired with a cluster it does not place, since the three records arrive
+ *    separately and deriving one by another's identity would answer for nothing
+ *    anybody authored. `derived` is reported otherwise: one structure grown and
+ *    every member instancing it.
+ * 7. Two installations cannot place one cluster. A cluster is a world-space
+ *    arrangement, so a second binding does not put a second bed anywhere; it
+ *    draws the same members at the same coordinates and charges a render budget
+ *    for both.
  */
 export const test_planting_installation_binding = (): void => {
   TestValidator.equals(
@@ -591,6 +598,20 @@ export const test_planting_installation_binding = (): void => {
   const brokenRecipe = plantingRecipe({
     structure: { ...plantingRecipe().structure, length: 0 },
   });
+  // A recipe whose density bears more blades than its own cap allows is the one
+  // shape that used to reach `growPlanting` from inside this pass and throw:
+  // the binding derives the canopy of every recipe that validated, so a cap the
+  // recipe validator did not check was a crash waiting on an authored number.
+  const overleafed = plantingRecipe({
+    foliage: {
+      density: 4,
+      minLevel: 1,
+      size: { x: 0.05, y: 0.1, z: 0.05 },
+      scaleJitter: 0,
+      rollJitter: 0,
+    },
+    budget: { maxBranches: 64, maxLeaves: 2 },
+  });
   const brokenCluster = plantingCluster({ count: 0 });
   const derived = lowerPlantingInstallation({
     installation: plantingInstallation(),
@@ -617,6 +638,24 @@ export const test_planting_installation_binding = (): void => {
             "type",
             "clusters[0].count",
           ),
+      ],
+      [
+        "overleafedIsReportedNotThrown",
+        () =>
+          hasViolation(
+            check({ domains: [overleafed] }),
+            "range",
+            "domains[0].budget.maxLeaves",
+          ),
+      ],
+      [
+        "overleafedLowersToNotRun",
+        () =>
+          lowerPlantingInstallation({
+            installation: plantingInstallation(),
+            cluster: plantingCluster(),
+            domain: overleafed,
+          }).analysis.status === "not-run",
       ],
       [
         "notRunRecipe",
@@ -662,6 +701,22 @@ export const test_planting_installation_binding = (): void => {
         },
       ],
       [
+        "notRunUnplaced",
+        () => {
+          const frame = lowerPlantingInstallation({
+            installation: plantingInstallation({ cluster: "roof-bed" }),
+            cluster: plantingCluster(),
+            domain: plantingRecipe(),
+          });
+          return (
+            frame.analysis.status === "not-run" &&
+            frame.plant === null &&
+            frame.arrangement === null &&
+            (frame.analysis.reason ?? "").includes('places cluster "roof-bed"')
+          );
+        },
+      ],
+      [
         "derived",
         () =>
           derived.analysis.status === "derived" &&
@@ -675,11 +730,49 @@ export const test_planting_installation_binding = (): void => {
     {
       recipeRepathed: true,
       clusterRepathed: true,
+      overleafedIsReportedNotThrown: true,
+      overleafedLowersToNotRun: true,
       notRunRecipe: true,
       notRunCluster: true,
       notRunMismatch: true,
+      notRunUnplaced: true,
       derived: true,
       installation: true,
     },
+  );
+
+  TestValidator.equals(
+    "one cluster is placed by one installation",
+    namedFacts([
+      [
+        "second",
+        () =>
+          hasViolation(
+            check({
+              installations: [
+                plantingInstallation(),
+                plantingInstallation({ id: "roof-planting" }),
+              ],
+            }),
+            "type",
+            "installations[1].cluster",
+          ),
+      ],
+      [
+        "distinctClustersPass",
+        () =>
+          check({
+            installations: [
+              plantingInstallation(),
+              plantingInstallation({
+                id: "roof-planting",
+                cluster: "roof-bed",
+              }),
+            ],
+            clusters: [plantingCluster(), plantingCluster({ id: "roof-bed" })],
+          }).success === true,
+      ],
+    ]),
+    { second: true, distinctClustersPass: true },
   );
 };

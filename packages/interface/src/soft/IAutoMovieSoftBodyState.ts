@@ -115,8 +115,24 @@ export interface IAutoMovieSoftBodyBudget {
   /** Identity of the measured domain. */
   domain: string;
 
-  /** Lattice particles, `columns * rows`. */
+  /**
+   * Lattice particles, `columns * rows`.
+   *
+   * The derived surface carries one vertex per particle, so this is also the
+   * drawn vertex count a render budget attributes device memory to.
+   */
   particles: number;
+
+  /**
+   * Triangles the derived surface draws: two per lattice quad.
+   *
+   * It happens to equal {@link shear}, because a quad carries two diagonals and
+   * two triangles alike. They are separate statements about separate costs —
+   * one is what the solver projects, the other is what the GPU rasterizes — and
+   * a consumer reading the constraint count as a triangle count would be right
+   * by coincidence and wrong the moment either side changes.
+   */
+  triangles: number;
 
   /** Row and column distance constraints. */
   structural: number;
@@ -178,7 +194,8 @@ export type AutoMovieSoftAnalysisKind = "soft-body" | "planting";
  * - `solved`: the fixed-step solve ran and the state is its result.
  * - `rest`: the authored rest configuration was requested and returned as such.
  * - `derived`: a deterministic derivation ran; nothing was integrated over time.
- * - `not-run`: the record did not validate, so nothing was computed at all.
+ * - `not-run`: nothing was computed at all, because the record did not validate
+ *   or the request fell outside what the record declared.
  * - `unsupported`: a declared capability this tier does not provide was asked
  *   for, so no solved state is claimed.
  */

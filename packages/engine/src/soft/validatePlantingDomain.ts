@@ -289,17 +289,35 @@ export const validatePlantingDomain = (props: {
   if (
     Number.isSafeInteger(structure.levels) &&
     structure.levels >= 1 &&
-    structure.levels <= PLANTING_MAX_LEVELS &&
-    Number.isSafeInteger(domain.budget.maxBranches)
+    structure.levels <= PLANTING_MAX_LEVELS
   ) {
     const budget = plantingBudget({ domain });
-    if (budget.worstCaseBranches > domain.budget.maxBranches)
+    if (
+      Number.isSafeInteger(domain.budget.maxBranches) &&
+      budget.worstCaseBranches > domain.budget.maxBranches
+    )
       out.push(
         "range",
         `${root}.budget.maxBranches`,
         `the declared branching law grows ${budget.worstCaseBranches} segments unpruned, which its own cap of ${domain.budget.maxBranches} refuses`,
         domain.budget.maxBranches,
         budget.worstCaseBranches - domain.budget.maxBranches,
+      );
+    // The leaf cap is refused here for the same reason the branch cap is: it is
+    // enforced by throwing while blades are emitted, and a derivation that
+    // throws inside a binding's own validation is a crash where a violation was
+    // asked for. A recipe with no foliage rule bears nothing, so there is no
+    // emission to bound and the cap is only its own range check's business.
+    if (
+      domain.foliage !== null &&
+      budget.worstCaseLeaves > domain.budget.maxLeaves
+    )
+      out.push(
+        "range",
+        `${root}.budget.maxLeaves`,
+        `the declared foliage rule bears ${budget.worstCaseLeaves} blades on an unpruned structure, which its own cap of ${domain.budget.maxLeaves} refuses`,
+        domain.budget.maxLeaves,
+        budget.worstCaseLeaves - domain.budget.maxLeaves,
       );
   }
 

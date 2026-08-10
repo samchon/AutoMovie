@@ -9,8 +9,19 @@ export interface IAutoMovieSoftBodyObject {
   /** Add this mesh to the current scene. */
   object: THREE.Mesh;
 
-  /** Re-upload the panel of a newly solved step. */
-  update: (surface: IAutoMovieSoftBodySurface) => void;
+  /**
+   * Re-upload the panel at a newly analysed shot second.
+   *
+   * The status is required here for the same reason it is required to build the
+   * object: it can change between seconds. A furnishing whose declared step
+   * budget stops inside the cut is `solved` early and `not-run` later, and an
+   * update that carried only geometry would leave the earlier claim standing
+   * over the later panel.
+   */
+  update: (props: {
+    surface: IAutoMovieSoftBodySurface;
+    status: AutoMovieSoftAnalysisStatus;
+  }) => void;
 
   /** Release the geometry, and the material when this object created it. */
   dispose: () => void;
@@ -33,11 +44,12 @@ export interface IAutoMovieSoftBodyObject {
  * culls and what the solve says are the same statement.
  *
  * The analysis status rides along in `userData.status`, and it is a required
- * argument. A panel whose solve was refused as `unsupported`, or never run,
- * must be identifiable in the scene graph and in a captured frame's sidecar; a
- * still curtain that nobody can tell apart from a solved one is exactly the
- * silent pass this domain refuses, and a default value here would be the
- * cheapest way to reintroduce it.
+ * argument of both the construction and every
+ * {@link IAutoMovieSoftBodyObject.update}. A panel whose solve was refused as
+ * `unsupported`, or never run, must be identifiable in the scene graph and in a
+ * captured frame's sidecar; a still curtain that nobody can tell apart from a
+ * solved one is exactly the silent pass this domain refuses, and a default
+ * value here would be the cheapest way to reintroduce it.
  *
  * @author Samchon
  */
@@ -66,7 +78,11 @@ export const buildSoftBodyObject = (props: {
     });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = `soft:${props.surface.domain}`;
-  const upload = (surface: IAutoMovieSoftBodySurface): void => {
+  const upload = (frame: {
+    surface: IAutoMovieSoftBodySurface;
+    status: AutoMovieSoftAnalysisStatus;
+  }): void => {
+    const surface = frame.surface;
     geometry.setAttribute(
       "position",
       new THREE.Float32BufferAttribute(surface.mesh.positions, 3),
@@ -99,9 +115,9 @@ export const buildSoftBodyObject = (props: {
     }
     mesh.userData.domain = surface.domain;
     mesh.userData.step = surface.step;
+    mesh.userData.status = frame.status;
   };
-  upload(props.surface);
-  mesh.userData.status = props.status;
+  upload({ surface: props.surface, status: props.status });
   return {
     object: mesh,
     update: upload,

@@ -1,7 +1,11 @@
-import { simulateSoftBody, softBodyStateDigest } from "@automovie/engine";
+import {
+  simulateSoftBody,
+  softBodyRestConfiguration,
+  softBodyStateDigest,
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 import { exactValues, softPanel } from "../internal/softFixtures";
 
 /** A panel in free space with no body force and every anchor left where it is. */
@@ -113,5 +117,72 @@ export const test_soft_body_rest_exactness = (): void => {
       ["strained", () => falling.maxStrain > 0],
     ]),
     { moved: true, strained: true },
+  );
+
+  const gathered = softPanel({
+    columns: 4,
+    rows: 3,
+    overrides: {
+      id: "gathered",
+      anchors: [{ id: "left", particle: 0, position: { x: 2, y: 1, z: 0 } }],
+      states: [
+        {
+          id: "drawn",
+          anchors: [{ anchor: "left", position: { x: -3, y: 1, z: 0.5 } }],
+        },
+      ],
+    },
+  });
+  TestValidator.equals(
+    "the published rest configuration is what the solve starts from",
+    namedFacts([
+      [
+        "default",
+        () =>
+          exactValues(
+            softBodyRestConfiguration(domain),
+            simulateSoftBody(domain, 0).positions,
+          ),
+      ],
+      [
+        "anchored",
+        () =>
+          exactValues(
+            softBodyRestConfiguration(gathered),
+            simulateSoftBody(gathered, 0).positions,
+          ),
+      ],
+      [
+        "named",
+        () =>
+          exactValues(
+            softBodyRestConfiguration(gathered, "drawn"),
+            simulateSoftBody(gathered, 0, "drawn").positions,
+          ),
+      ],
+      [
+        "notTheAuthoredMesh",
+        () =>
+          exactValues(softBodyRestConfiguration(gathered), gathered.rest) ===
+            false &&
+          softBodyRestConfiguration(gathered)[0] === 2 &&
+          softBodyRestConfiguration(gathered, "drawn")[0] === -3,
+      ],
+      [
+        "undeclaredStateThrows",
+        () =>
+          throwsError(
+            () => softBodyRestConfiguration(gathered, "shut"),
+            'does not declare a named state "shut"',
+          ),
+      ],
+    ]),
+    {
+      default: true,
+      anchored: true,
+      named: true,
+      notTheAuthoredMesh: true,
+      undeclaredStateThrows: true,
+    },
   );
 };

@@ -163,7 +163,9 @@ export const simulateSoftBody = (
     domain.solver.stiffness.bend,
   ];
 
-  const position = Float64Array.from(domain.rest);
+  // Anchors are resolved once: a named state is a boundary condition held for
+  // the whole solve, not a keyframe that moves while it is being integrated.
+  const position = restConfiguration(domain, state);
   const velocity = new Float64Array(count * 3);
   const predicted = new Float64Array(count * 3);
   const correction = new Float64Array(count * 3);
@@ -173,29 +175,7 @@ export const simulateSoftBody = (
 
   for (let particle = 0; particle < count; ++particle)
     inverseMass[particle] = 1 / domain.mass[particle];
-
-  // Anchors are resolved once: a named state is a boundary condition held for
-  // the whole solve, not a keyframe that moves while it is being integrated.
-  const anchorTarget = new Map<number, IAutoMovieVector3>();
-  const poses = resolveState(domain, state);
-  for (const anchor of domain.anchors) {
-    const moved = poses.get(anchor.id);
-    anchorTarget.set(
-      anchor.particle,
-      moved ??
-        anchor.position ?? {
-          x: domain.rest[anchor.particle * 3],
-          y: domain.rest[anchor.particle * 3 + 1],
-          z: domain.rest[anchor.particle * 3 + 2],
-        },
-    );
-    inverseMass[anchor.particle] = 0;
-  }
-  for (const [particle, target] of anchorTarget) {
-    position[particle * 3] = target.x;
-    position[particle * 3 + 1] = target.y;
-    position[particle * 3 + 2] = target.z;
-  }
+  for (const anchor of domain.anchors) inverseMass[anchor.particle] = 0;
 
   for (let row = 0; row < rows; ++row)
     for (let column = 0; column < columns; ++column) {
@@ -326,11 +306,60 @@ export const simulateSoftBody = (
 };
 
 /**
- * Sample a soft-body domain at a shot second, snapping down to its fixed step.
+ * The configuration a panel is in before a single step is integrated: the
+ * authored rest mesh with every anchor's own target written in, and one named
+ * state's poses written over that.
+ *
+ * The rest mesh alone is not where the panel hangs. An anchor may hold its
+ * particle somewhere else entirely, a named state moves it again, and both are
+ * boundary conditions no sweep ever relaxes. Anything that must know where the
+ * cloth actually starts — a containment check against the room a furnishing
+ * binds it to, a bounding volume drawn before the first frame — reads this
+ * rather than {@link IAutoMovieSoftBodyDomain.rest}, or it answers for a shape
+ * the panel is never in.
+ *
+ * An anchor whose particle index falls outside the lattice writes nothing, the
+ * same way the solver drops it: an out-of-range anchor is refused on its own
+ * path by {@link validateSoftBodyDomain}, and inventing a particle for it here
+ * would lengthen the very array whose length is the record's contract.
+ *
+ * Throws when `state` names a state the domain does not declare, exactly as
+ * {@link simulateSoftBody} does.
+ *
+ * @author Samchon
+ */
+export const softBodyRestConfiguration = (
+  domain: IAutoMovieSoftBodyDomain,
+  state: string | null = null,
+): number[] => Array.from(restConfiguration(domain, state));
+
+/**
+ * The absolute step one shot second snaps down to, or `null` when that second
+ * is not a real number.
  *
  * The snap is what makes playback frame-rate independent: captures at 24 and 30
  * fps read the same integrated state whenever they land inside the same step,
- * instead of each integrating a different number of times.
+ * instead of each integrating a different number of times. A second before the
+ * clock starts snaps to `0`, since a panel has no history earlier than its own
+ * rest configuration.
+ *
+ * Stated apart from {@link sampleSoftBody} so a caller that must report rather
+ * than throw — a lowering answering for a whole shot — can ask which step a
+ * second wants before asking whether the declared budget reaches it.
+ *
+ * @author Samchon
+ */
+export const softBodyStepAt = (
+  domain: IAutoMovieSoftBodyDomain,
+  time: number,
+): number | null => {
+  if (!Number.isFinite(time)) return null;
+  const clamped = time > 0 ? time : 0;
+  return Math.floor(clamped / domain.solver.fixedStepSeconds + 1e-9);
+};
+
+/**
+ * Sample a soft-body domain at a shot second, snapping down to its fixed step.
  *
  * @author Samchon
  */
@@ -339,16 +368,12 @@ export const sampleSoftBody = (
   time: number,
   state: string | null = null,
 ): IAutoMovieSoftBodyState => {
-  if (!Number.isFinite(time))
+  const step = softBodyStepAt(domain, time);
+  if (step === null)
     throw new Error(
       `soft body "${domain.id}" cannot be sampled at a non-finite time`,
     );
-  const clamped = time > 0 ? time : 0;
-  return simulateSoftBody(
-    domain,
-    Math.floor(clamped / domain.solver.fixedStepSeconds + 1e-9),
-    state,
-  );
+  return simulateSoftBody(domain, step, state);
 };
 
 /**
@@ -390,12 +415,14 @@ export const softBodyBudget = (
   const particles = columns * rows;
   const span = (length: number, reach: number): number =>
     length > reach ? length - reach : 0;
+  const quads = span(columns, 1) * span(rows, 1);
   const structural = span(columns, 1) * rows + columns * span(rows, 1);
-  const shear = 2 * span(columns, 1) * span(rows, 1);
+  const shear = 2 * quads;
   const bend = span(columns, 2) * rows + columns * span(rows, 2);
   return {
     domain: domain.id,
     particles,
+    triangles: 2 * quads,
     structural,
     shear,
     bend,
@@ -473,6 +500,34 @@ export const shortestRestLength = (
       }
     }
   return shortest;
+};
+
+/**
+ * {@link softBodyRestConfiguration} as the solver's own working buffer.
+ *
+ * The exported form hands back a plain array, which is what a validator and a
+ * consumer want; the solve integrates in place and would otherwise copy the
+ * whole panel twice per seek for nothing.
+ */
+const restConfiguration = (
+  domain: IAutoMovieSoftBodyDomain,
+  state: string | null,
+): Float64Array => {
+  const position = Float64Array.from(domain.rest);
+  const poses = resolveState(domain, state);
+  for (const anchor of domain.anchors) {
+    const moved = poses.get(anchor.id);
+    const target = moved ??
+      anchor.position ?? {
+        x: domain.rest[anchor.particle * 3],
+        y: domain.rest[anchor.particle * 3 + 1],
+        z: domain.rest[anchor.particle * 3 + 2],
+      };
+    position[anchor.particle * 3] = target.x;
+    position[anchor.particle * 3 + 1] = target.y;
+    position[anchor.particle * 3 + 2] = target.z;
+  }
+  return position;
 };
 
 /** The anchor poses one named state applies, or an empty map for the default. */

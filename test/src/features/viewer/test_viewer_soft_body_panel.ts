@@ -153,15 +153,16 @@ export const test_viewer_soft_body_panel = (): void => {
   );
 
   const before = geometry.getAttribute("position").getY(15);
-  object.update(drape(128));
+  object.update({ surface: drape(128), status: "solved" });
   TestValidator.equals(
     "update re-uploads a newly solved step",
     namedFacts([
       ["moved", () => geometry.getAttribute("position").getY(15) !== before],
       ["step", () => object.object.userData.step === 128],
       ["count", () => geometry.getAttribute("position").count === 16],
+      ["status", () => object.object.userData.status === "solved"],
     ]),
-    { moved: true, step: true, count: true },
+    { moved: true, step: true, count: true, status: true },
   );
 
   const cord = softPanel({ columns: 1, rows: 4, overrides: { id: "cord" } });
@@ -239,7 +240,7 @@ export const test_viewer_soft_body_panel = (): void => {
   borrowed.dispose();
 
   const unsupported = lowerSoftFurnishing({
-    furnishing: softFurnishing(),
+    furnishing: softFurnishing({ domain: "self" }),
     domain: softPanel({
       columns: 3,
       rows: 3,
@@ -270,6 +271,26 @@ export const test_viewer_soft_body_panel = (): void => {
       notRun: true,
       restGeometry: true,
     },
+  );
+
+  flagged.update({ surface, status: "solved" });
+  TestValidator.equals(
+    "an update carries the status of the analysis that produced it",
+    namedFacts([
+      ["followed", () => flagged.object.userData.status === "solved"],
+      ["step", () => flagged.object.userData.step === surface.step],
+      [
+        "back",
+        () => {
+          flagged.update({
+            surface: unsupported.surface ?? surface,
+            status: "unsupported",
+          });
+          return flagged.object.userData.status === "unsupported";
+        },
+      ],
+    ]),
+    { followed: true, step: true, back: true },
   );
   flagged.dispose();
 };

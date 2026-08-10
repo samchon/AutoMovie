@@ -27,6 +27,27 @@ export interface IAutoMoviePlantingInstallation {
   support: IAutoMoviePlantingSupport;
 
   /**
+   * Id of the material every branch instance is drawn with, or `null` for the
+   * renderer's default.
+   *
+   * Stated on the binding rather than on the recipe, exactly as a soft
+   * furnishing states its own (see {@link IAutoMovieSoftFurnishing.material}):
+   * the recipe is the parametric law, and the same law is a copper beech in one
+   * production and a bare wire armature in another. It is also what lets a
+   * render budget attribute texture bytes to the planting at all, instead of
+   * reporting the whole fold as unmeasured.
+   */
+  branchMaterial: string | null;
+
+  /**
+   * Id of the material every leaf instance is drawn with, or `null` for the
+   * renderer's default. Separate from {@link branchMaterial} because the two
+   * batches are separate draws with separate textures, and one id for both
+   * would make a budget count one of them twice or not at all.
+   */
+  leafMaterial: string | null;
+
+  /**
    * How the planting is watered, or `null` for a planting nobody has bound a
    * supply to yet.
    *

@@ -1,4 +1,5 @@
 import {
+  growPlanting,
   validatePlantingCluster,
   validatePlantingDomain,
 } from "@automovie/engine";
@@ -9,7 +10,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, namedFacts } from "../internal/predicates";
+import { hasViolation, namedFacts, throwsError } from "../internal/predicates";
 import { plantingCluster, plantingRecipe } from "../internal/softFixtures";
 
 /** True when one property away from sound produces exactly the named refusal. */
@@ -70,10 +71,15 @@ const structure = (
  * 5. Pruning and foliage: an inverted box, a non-positive sphere radius, a
  *    non-positive density, a negative minimum level, a non-positive leaf size
  *    and jitters outside their ranges.
- * 6. Budget: caps outside their ranges, and a branching law whose complete tree
- *    exceeds the cap the recipe declared for itself — with the guard measured
+ * 6. Budget: caps outside their ranges, a branching law whose complete tree
+ *    exceeds the cap the recipe declared for itself, and a foliage rule that
+ *    bears more blades than its own leaf cap allows — with the guard measured
  *    only when the level count is itself in range, so a nonsensical depth is
- *    refused before anything tries to walk it.
+ *    refused before anything tries to walk it. The leaf cap is what
+ *    `growPlanting` enforces by throwing, so a recipe that survived this pass
+ *    and then threw inside a binding's own validation would be a crash where a
+ *    violation was asked for; a recipe with no foliage rule bears nothing and
+ *    is left to the cap's own range check.
  * 7. The cluster: a blank id, an uncited recipe, a member count outside its range,
  *    a non-finite anchor, a negative extent, a fractional seed, a negative
  *    spacing, an attempt count outside its range, a non-positive minimum scale,
@@ -515,6 +521,60 @@ export const test_planting_validation = (): void => {
           ),
       ],
       [
+        "outleafed",
+        () =>
+          refuses(
+            {
+              foliage: {
+                density: 4,
+                minLevel: 1,
+                size: { x: 0.05, y: 0.1, z: 0.05 },
+                scaleJitter: 0,
+                rollJitter: 0,
+              },
+              budget: { maxBranches: 64, maxLeaves: 2 },
+            },
+            "range",
+            "budget.maxLeaves",
+          ),
+      ],
+      [
+        "outleafedIsWhatTheDerivationWouldThrow",
+        () =>
+          throwsError(
+            () =>
+              growPlanting(
+                plantingRecipe({
+                  foliage: {
+                    density: 4,
+                    minLevel: 1,
+                    size: { x: 0.05, y: 0.1, z: 0.05 },
+                    scaleJitter: 0,
+                    rollJitter: 0,
+                  },
+                  budget: { maxBranches: 64, maxLeaves: 2 },
+                }),
+              ),
+            "exceeded its declared cap of 2 leaves",
+          ),
+      ],
+      [
+        "leafedInsideItsCapIsAccepted",
+        () =>
+          validatePlantingDomain({
+            domain: plantingRecipe({
+              foliage: {
+                density: 4,
+                minLevel: 1,
+                size: { x: 0.05, y: 0.1, z: 0.05 },
+                scaleJitter: 0,
+                rollJitter: 0,
+              },
+              budget: { maxBranches: 64, maxLeaves: 8 },
+            }),
+          }).success === true,
+      ],
+      [
         "notWalkedWhenDepthIsAbsurd",
         () =>
           validatePlantingDomain({
@@ -527,12 +587,30 @@ export const test_planting_validation = (): void => {
             }),
           }).success === false,
       ],
+      [
+        "fractionalBranchCapIsNotAlsoOutgrown",
+        () => {
+          const validation = validatePlantingDomain({
+            domain: plantingRecipe({
+              budget: { maxBranches: 3.5, maxLeaves: 8 },
+            }),
+          });
+          return (
+            validation.success === false &&
+            validation.violations.every((item) => item.kind !== "range")
+          );
+        },
+      ],
     ]),
     {
       branchCap: true,
       leafCap: true,
       outgrown: true,
+      outleafed: true,
+      outleafedIsWhatTheDerivationWouldThrow: true,
+      leafedInsideItsCapIsAccepted: true,
       notWalkedWhenDepthIsAbsurd: true,
+      fractionalBranchCapIsNotAlsoOutgrown: true,
     },
   );
 

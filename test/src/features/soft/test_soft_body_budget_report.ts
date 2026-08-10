@@ -1,5 +1,7 @@
 import {
+  simulateSoftBody,
   softBodyBudget,
+  softBodySurfaceGeometry,
   softBodyTravelNumber,
   validateSoftBodyDomain,
 } from "@automovie/engine";
@@ -20,16 +22,20 @@ import { softPanel } from "../internal/softFixtures";
  *   structural = (C − 1)·R + C·(R − 1)
  *   shear      = 2·(C − 1)·(R − 1)
  *   bend       = (C − 2)·R + C·(R − 2)
+ *   triangles  = 2·(C − 1)·(R − 1)
  *   travel     = dt · referenceSpeed / shortestRestLength
  * ```
  *
  * For the 5×4 panel below: `4·4 + 5·3 = 31` structural, `2·4·3 = 24` shear,
- * `3·4 + 5·2 = 22` bend, and `travel = (1/64)·4/0.25 = 0.25`.
+ * `3·4 + 5·2 = 22` bend, `2·4·3 = 24` triangles, and `travel = (1/64)·4/0.25 =
+ * 0.25`.
  *
  * Scenarios:
  *
  * 1. Every count, the state size and the worst-case gather total match the hand
- *    computation for a 5×4 panel.
+ *    computation for a 5×4 panel, and the declared triangle count is what the
+ *    derived surface actually draws rather than a number that merely coincides
+ *    with the shear constraints.
  * 2. The travel number is the documented ratio, and the validator accepts a panel
  *    that honours it.
  * 3. A lattice thinner than the second-neighbour reach carries no bend constraint
@@ -54,6 +60,7 @@ export const test_soft_body_budget_report = (): void => {
     {
       domain: budget.domain,
       particles: budget.particles,
+      triangles: budget.triangles,
       structural: budget.structural,
       shear: budget.shear,
       bend: budget.bend,
@@ -65,6 +72,7 @@ export const test_soft_body_budget_report = (): void => {
     {
       domain: "drape",
       particles: 20,
+      triangles: 24,
       structural: 31,
       shear: 24,
       bend: 22,
@@ -73,6 +81,41 @@ export const test_soft_body_budget_report = (): void => {
       maxSteps: 1_000,
       worstCaseGathers: 2 * (31 + 24 + 22) * 2 * 1_000,
     },
+  );
+
+  const drawn = softBodySurfaceGeometry({
+    domain,
+    state: simulateSoftBody(domain, 0),
+  });
+  TestValidator.equals(
+    "the declared triangle count is what the surface actually draws",
+    namedFacts([
+      [
+        "drawn",
+        () => (drawn.mesh.indices ?? []).length / 3 === budget.triangles,
+      ],
+      ["vertices", () => drawn.mesh.positions.length / 3 === budget.particles],
+      [
+        "cordDrawsNothing",
+        () => {
+          const cord = softPanel({
+            columns: 1,
+            rows: 4,
+            overrides: { id: "cord" },
+          });
+          return (
+            softBodyBudget(cord).triangles === 0 &&
+            (
+              softBodySurfaceGeometry({
+                domain: cord,
+                state: simulateSoftBody(cord, 0),
+              }).mesh.indices ?? []
+            ).length === 0
+          );
+        },
+      ],
+    ]),
+    { drawn: true, vertices: true, cordDrawsNothing: true },
   );
 
   TestValidator.equals(

@@ -1,4 +1,8 @@
-import { arrangePlantingCluster, plantingBudget } from "@automovie/engine";
+import {
+  arrangePlantingCluster,
+  growPlanting,
+  plantingBudget,
+} from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, qunit } from "../internal/predicates";
@@ -57,7 +61,10 @@ const closestPair = (
  *    of distance tests nobody could wait for.
  * 7. The cost of the whole bed is derived from the recipe and the cluster alone,
  *    with no branch grown: the complete `k`-ary tree times the member count, so
- *    a production can be refused before anything is derived.
+ *    a production can be refused before anything is derived. Foliage is counted
+ *    the same way and not read off the declared cap — a bare winter branch
+ *    costs no leaves at all, and a leafed recipe costs exactly the eight blades
+ *    the derivation goes on to emit.
  */
 export const test_planting_cluster_arrangement = (): void => {
   const cluster = plantingCluster();
@@ -318,16 +325,59 @@ export const test_planting_cluster_arrangement = (): void => {
   );
 
   TestValidator.equals(
-    "the cluster's cost is derived from the two records alone",
+    "a bare recipe's cost counts no leaf, however large its cap",
     plantingBudget({ domain: plantingRecipe(), cluster }),
     {
       domain: "fern",
       worstCaseBranches: 7,
+      worstCaseLeaves: 0,
       maxBranches: 64,
       maxLeaves: 512,
       members: 6,
       worstCaseBranchInstances: 42,
-      worstCaseLeafInstances: 3_072,
+      worstCaseLeafInstances: 0,
+    },
+  );
+
+  const leafed = plantingRecipe({
+    foliage: {
+      density: 4,
+      minLevel: 1,
+      size: { x: 0.05, y: 0.1, z: 0.05 },
+      scaleJitter: 0,
+      rollJitter: 0,
+    },
+  });
+  TestValidator.equals(
+    "a leafed recipe costs the blades its density rule actually bears",
+    namedFacts([
+      [
+        "worstCase",
+        () => plantingBudget({ domain: leafed }).worstCaseLeaves === 8,
+      ],
+      ["grown", () => growPlanting(leafed).leaves.length === 8],
+      [
+        "instances",
+        () =>
+          plantingBudget({ domain: leafed, cluster }).worstCaseLeafInstances ===
+          48,
+      ],
+      [
+        "jitterWidensTheBound",
+        () =>
+          plantingBudget({
+            domain: plantingRecipe({
+              structure: { ...leafed.structure, lengthJitter: 0.5 },
+              foliage: leafed.foliage,
+            }),
+          }).worstCaseLeaves > 8,
+      ],
+    ]),
+    {
+      worstCase: true,
+      grown: true,
+      instances: true,
+      jitterWidensTheBound: true,
     },
   );
 };

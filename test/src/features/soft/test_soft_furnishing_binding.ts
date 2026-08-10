@@ -72,13 +72,27 @@ const check = (props: {
  *    rest array is the wrong length is refused for that and **not**
  *    additionally accused of hanging outside the room: an unmeasurable panel is
  *    reported once, at the field that made it unmeasurable.
- * 5. The lowering's capability matrix: an invalid domain is `not-run` with no
- *    geometry, an undeclared named state is `not-run`, a request for
- *    cloth-on-cloth contact is `unsupported` and returns the rest configuration
- *    rather than a solve, `mode: "rest"` is reported as `rest`, only an
- *    ordinary `simulated` furnishing is reported as `solved`, and a mode this
- *    tier does not evaluate is `not-run` rather than falling through to a solve
- *    it never performed.
+ * 5. Containment reads the configuration the panel is actually **held** in, not
+ *    the authored rest mesh: an anchor holding its ring beyond the wall is
+ *    refused even though every rest particle is inside, the named state the
+ *    furnishing holds is refused for the same reason, and the identical state
+ *    left unheld is not — a boundary condition nobody applied is not a panel
+ *    hanging anywhere.
+ * 6. Two furnishings cannot draw one panel. A domain is a world-space object, so a
+ *    second binding does not hang a second curtain; it draws the same cloth
+ *    twice and charges a render budget for both.
+ * 7. The lowering's capability matrix: a furnishing paired with a domain it does
+ *    not draw is `not-run`, an invalid domain is `not-run` with no geometry, an
+ *    undeclared named state is `not-run`, a request for cloth-on-cloth contact
+ *    is `unsupported` and returns the rest configuration rather than a solve,
+ *    `mode: "rest"` is reported as `rest`, only an ordinary `simulated`
+ *    furnishing is reported as `solved`, and a mode this tier does not evaluate
+ *    is `not-run` rather than falling through to a solve it never performed.
+ * 8. The lowering never throws. A shot second that is not a real number, and one
+ *    landing past the step budget the domain declared for itself, are each
+ *    reported as `not-run` with no geometry — this is the call a compiler makes
+ *    once per furnishing per second, and a curtain whose budget stops inside
+ *    the cut must not take the render down with it.
  */
 export const test_soft_furnishing_binding = (): void => {
   TestValidator.equals(
@@ -282,6 +296,101 @@ export const test_soft_furnishing_binding = (): void => {
     { refused: true, semantic: true, unmeasurable: true, notAlsoGuessed: true },
   );
 
+  const beyond = { x: 40, y: 0, z: 0 };
+  const swung = panel({
+    states: [{ id: "swung", anchors: [{ anchor: "hook", position: beyond }] }],
+  });
+  TestValidator.equals(
+    "the panel is checked where it is held, not where it was drawn",
+    namedFacts([
+      [
+        "anchorBeyondTheWall",
+        () =>
+          hasViolation(
+            check({
+              domains: [
+                panel({
+                  anchors: [{ id: "hook", particle: 0, position: beyond }],
+                  states: [],
+                }),
+              ],
+            }),
+            "type",
+            "furnishings[0].domain",
+          ),
+      ],
+      [
+        "heldStateBeyondTheWall",
+        () =>
+          hasViolation(
+            check({
+              furnishings: [softFurnishing({ state: "swung" })],
+              domains: [swung],
+            }),
+            "type",
+            "furnishings[0].domain",
+          ),
+      ],
+      [
+        "unheldStateIsNotApplied",
+        () => check({ domains: [swung] }).success === true,
+      ],
+      [
+        "undeclaredStateIsNotApplied",
+        () => {
+          const validation = check({
+            furnishings: [softFurnishing({ state: "shut" })],
+            domains: [swung],
+          });
+          return (
+            validation.success === false &&
+            validation.violations.every(
+              (item) => item.path.includes("furnishings[0].domain") === false,
+            )
+          );
+        },
+      ],
+    ]),
+    {
+      anchorBeyondTheWall: true,
+      heldStateBeyondTheWall: true,
+      unheldStateIsNotApplied: true,
+      undeclaredStateIsNotApplied: true,
+    },
+  );
+
+  TestValidator.equals(
+    "one panel is drawn by one furnishing",
+    namedFacts([
+      [
+        "second",
+        () =>
+          hasViolation(
+            check({
+              furnishings: [
+                softFurnishing(),
+                softFurnishing({ id: "second-curtain" }),
+              ],
+            }),
+            "type",
+            "furnishings[1].domain",
+          ),
+      ],
+      [
+        "distinctDomainsPass",
+        () =>
+          check({
+            furnishings: [
+              softFurnishing(),
+              softFurnishing({ id: "second-curtain", domain: "twin" }),
+            ],
+            domains: [panel(), panel({ id: "twin" })],
+          }).success === true,
+      ],
+    ]),
+    { second: true, distinctDomainsPass: true },
+  );
+
   const frame = (
     furnishing: IAutoMovieSoftFurnishing,
     domain: IAutoMovieSoftBodyDomain,
@@ -343,6 +452,18 @@ export const test_soft_furnishing_binding = (): void => {
           );
         },
       ],
+      [
+        "mismatchedDomain",
+        () => {
+          const odd = frame(softFurnishing({ domain: "other" }), panel());
+          return (
+            odd.analysis.status === "not-run" &&
+            odd.state === null &&
+            odd.surface === null &&
+            (odd.analysis.reason ?? "").includes('soft body "other"')
+          );
+        },
+      ],
       ["kind", () => solved.analysis.kind === "soft-body"],
       ["furnishing", () => solved.furnishing === "window-curtain"],
       ["surfaceStep", () => solved.surface?.step === 32],
@@ -354,9 +475,66 @@ export const test_soft_furnishing_binding = (): void => {
       rest: true,
       solved: true,
       unknownMode: true,
+      mismatchedDomain: true,
       kind: true,
       furnishing: true,
       surfaceStep: true,
+    },
+  );
+
+  // The default panel steps at 1/64 s and declares 1000 of them, so its clock
+  // reaches 15.625 s and no further.
+  const late = lowerSoftFurnishing({
+    furnishing: softFurnishing(),
+    domain: panel(),
+    time: 16,
+  });
+  TestValidator.equals(
+    "a second the declared budget cannot reach is reported, not thrown",
+    namedFacts([
+      [
+        "past",
+        () =>
+          late.analysis.status === "not-run" &&
+          late.state === null &&
+          late.surface === null &&
+          (late.analysis.reason ?? "").includes("step 1024"),
+      ],
+      [
+        "lastReachable",
+        () =>
+          lowerSoftFurnishing({
+            furnishing: softFurnishing(),
+            domain: panel(),
+            time: 15.625,
+          }).state?.step === 1_000,
+      ],
+      [
+        "notReal",
+        () => {
+          const odd = lowerSoftFurnishing({
+            furnishing: softFurnishing(),
+            domain: panel(),
+            time: Number.NaN,
+          });
+          return odd.analysis.status === "not-run" && odd.state === null;
+        },
+      ],
+      [
+        "beforeTheClock",
+        () =>
+          lowerSoftFurnishing({
+            furnishing: softFurnishing(),
+            domain: panel(),
+            time: -4,
+          }).state?.step === 0,
+      ],
+    ]),
+    {
+      past: true,
+      lastReachable: true,
+      notReal: true,
+      beforeTheClock: true,
     },
   );
 };

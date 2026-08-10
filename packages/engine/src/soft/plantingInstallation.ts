@@ -116,6 +116,7 @@ export const validatePlantingInstallations = (props: {
   });
 
   const seenInstallations = new Set<string>();
+  const placedClusters = new Map<string, string>();
   installations.forEach((installation, index) => {
     const path = `${root}.installations[${index}]`;
     if (installation.id.trim().length === 0)
@@ -243,6 +244,19 @@ export const validatePlantingInstallations = (props: {
         submerged,
       );
 
+    // A cluster is a world-space arrangement, so a second installation placing
+    // it does not put a second bed anywhere: it draws the same members twice,
+    // at the same coordinates, and charges a render budget for both.
+    const placedBy = placedClusters.get(installation.cluster);
+    if (placedBy !== undefined)
+      out.push(
+        "type",
+        `${path}.cluster`,
+        `planting cluster "${installation.cluster}" is already placed by installation "${placedBy}"`,
+        installation.cluster,
+      );
+    else placedClusters.set(installation.cluster, installation.id);
+
     const cluster = byCluster.get(installation.cluster);
     if (cluster === undefined) {
       out.push(
@@ -338,10 +352,11 @@ export interface IAutoMoviePlantingFrame {
  *
  * One structure is grown and every member instances it, which is what makes a
  * bed of forty ferns forty transforms rather than forty trees. A recipe that
- * does not validate, a cluster that does not validate, and a cluster paired
- * with a recipe it does not cite each produce `not-run` with a reason and no
- * geometry at all: a plant nobody could derive must never arrive looking like a
- * plant somebody did.
+ * does not validate, a cluster that does not validate, a cluster paired with a
+ * recipe it does not cite, and an installation paired with a cluster it does
+ * not place each produce `not-run` with a reason and no geometry at all: a
+ * plant nobody could derive must never arrive looking like a plant somebody
+ * did.
  *
  * @author Samchon
  */
@@ -381,15 +396,26 @@ export const lowerPlantingInstallation = (props: {
       plant: null,
       arrangement: null,
     };
-  // The two records arrive separately, so the pairing is checked rather than
-  // trusted: arranging one recipe by another's seed would produce a bed that
-  // looks derived and answers for nothing that was authored.
+  // The three records arrive separately, so every pairing is checked rather
+  // than trusted: arranging one recipe by another's seed, or reporting one
+  // bed's members under another installation's identity, would produce a frame
+  // that looks derived and answers for nothing that was authored.
   if (cluster.domain !== domain.id)
     return {
       installation: installation.id,
       analysis: analysis(
         "not-run",
         `planting cluster "${cluster.id}" grows recipe "${cluster.domain}", not the supplied "${domain.id}"`,
+      ),
+      plant: null,
+      arrangement: null,
+    };
+  if (installation.cluster !== cluster.id)
+    return {
+      installation: installation.id,
+      analysis: analysis(
+        "not-run",
+        `planting installation "${installation.id}" places cluster "${installation.cluster}", not the supplied "${cluster.id}"`,
       ),
       plant: null,
       arrangement: null,

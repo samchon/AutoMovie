@@ -256,6 +256,8 @@ export const plantingInstallation = (
   cluster: "atrium-bed",
   kind: "planter",
   support: { kind: "surface", surface: "room-floor" },
+  branchMaterial: null,
+  leafMaterial: null,
   irrigation: {
     port: "stand-pipe",
     demandLitresPerDay: 12,
