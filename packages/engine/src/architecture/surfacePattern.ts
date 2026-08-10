@@ -405,9 +405,10 @@ export const generateAutoMovieSurfacePattern = (props: {
           origin,
           period: { u: zone.period.u, v: zone.period.v },
         })) {
-          validateCandidate(zone, candidate, origin, seen);
-          const corners = moduleCorners(candidate);
-          const outline = clipConvex(corners, region);
+          const outline = clipConvex(
+            validateCandidate(zone, candidate, origin, seen),
+            region,
+          );
           const clipped = polygonArea(outline);
           if (clipped <= AREA_EPSILON) continue;
           const removed = exclusions.reduce(
@@ -614,12 +615,19 @@ const validatePattern = (
   return exclusions;
 };
 
+/**
+ * Judge one generated module and hand back the corners the judgment used.
+ *
+ * The reach check has to build the module's corners anyway, and the clipper
+ * needs exactly those corners next, so they are returned rather than built a
+ * second time in the innermost loop of the whole run.
+ */
 const validateCandidate = (
   zone: IAutoMovieSurfacePatternZone,
   candidate: IAutoMoviePatternCandidate,
   origin: IAutoMoviePatternPoint,
   seen: Set<string>,
-): void => {
+): IAutoMoviePatternPoint[] => {
   nonBlank(candidate.id, `pattern zone "${zone.id}" module id`);
   if (seen.has(candidate.id))
     throw new Error(
@@ -635,7 +643,8 @@ const validateCandidate = (
     !Number.isFinite(candidate.grainDeg)
   )
     throw new Error(`${label} rotation and grain must be finite`);
-  for (const corner of moduleCorners(candidate))
+  const corners = moduleCorners(candidate);
+  for (const corner of corners)
     if (
       Math.abs(corner.u - origin.u) > zone.reach.u ||
       Math.abs(corner.v - origin.v) > zone.reach.v
@@ -643,6 +652,7 @@ const validateCandidate = (
       throw new Error(
         `${label} reaches beyond the declared reach of its cell origin`,
       );
+  return corners;
 };
 
 /**

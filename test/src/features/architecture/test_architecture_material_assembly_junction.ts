@@ -56,14 +56,18 @@ const wet = (
  *    negative twin of scenarios 1 and 2.
  * 4. A one-layer build-up that wraps lines from the first face only, so no depth
  *    is counted twice.
- * 5. A non-positive opening dimension is refused, and so is a lining that would
+ * 5. A hand-built build-up whose only wrapping layer sits behind one that stops
+ *    at the jamb lines nothing, because the lining is the run reachable from a
+ *    face and not the flag. Validation refuses that build-up; this pins that it
+ *    could not narrow an opening even if it reached the reveal unvalidated.
+ * 6. A non-positive opening dimension is refused, and so is a lining that would
  *    consume the opening.
- * 6. A junction of two offset build-ups reports every shared role with its two
+ * 7. A junction of two offset build-ups reports every shared role with its two
  *    spans, aligning only the one whose spans actually meet, and reports the
  *    role each side carries alone.
- * 7. A role spent over several layers is spanned and summed as one role rather
+ * 8. A role spent over several layers is spanned and summed as one role rather
  *    than reduced to its first layer.
- * 8. A tolerance that is not a finite non-negative number is refused.
+ * 9. A tolerance that is not a finite non-negative number is refused.
  */
 export const test_architecture_material_assembly_junction = (): void => {
   const resolved = resolve(wet());
@@ -159,6 +163,35 @@ export const test_architecture_material_assembly_junction = (): void => {
       last: true,
       bare: true,
     },
+  );
+
+  const buriedWrap = autoMovieAssemblyOpeningReveal({
+    resolved: {
+      id: "hand-built",
+      axis: "z",
+      total: 0.17,
+      start: 0,
+      end: 0.17,
+      extent: { min: 0, max: 0.17 },
+      layers: [
+        { ...resolve(wet()).layers[1]!, id: "outer", wrapsOpening: false },
+        { ...resolve(wet()).layers[1]!, id: "middle", wrapsOpening: true },
+        { ...resolve(wet()).layers[0]!, id: "inner", wrapsOpening: false },
+      ],
+    },
+    width: 1.2,
+    height: 2.1,
+  });
+  TestValidator.equals(
+    "a wrap no face can reach lines nothing, so it narrows nothing",
+    namedFacts([
+      ["width", () => nclose(buriedWrap.width, 1.2, 1e-12)],
+      ["height", () => nclose(buriedWrap.height, 2.1, 1e-12)],
+      ["inset", () => buriedWrap.inset === 0],
+      ["layers", () => buriedWrap.layers.length === 0],
+      ["bare", () => nclose(buriedWrap.bare, 0.17, 1e-12)],
+    ]),
+    { width: true, height: true, inset: true, layers: true, bare: true },
   );
 
   TestValidator.equals(

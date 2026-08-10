@@ -449,6 +449,11 @@ export const resolveAutoMovieMaterialAssembly = (props: {
  * A lining that would consume the opening is refused rather than reported as a
  * negative dimension: a door 0.6 m wide lined by 0.4 m on each side is not a
  * narrow door, it is a wall.
+ *
+ * Only wrapping layers reachable from a face line the jamb. A layer that claims
+ * to wrap from behind one that stops there cannot turn the corner, which is why
+ * validation refuses it; measuring the runs rather than the flags means it also
+ * cannot narrow an opening here if one ever reaches this function unvalidated.
  */
 export const autoMovieAssemblyOpeningReveal = (props: {
   resolved: IAutoMovieResolvedAssembly;
@@ -465,14 +470,17 @@ export const autoMovieAssemblyOpeningReveal = (props: {
     trailingRun(layers, (layer) => layer.wrapsOpening),
     layers.length - lead,
   );
-  const lining = layers.filter((layer) => layer.wrapsOpening);
-  const inset = lining.reduce((sum, layer) => sum + layer.thickness, 0);
+  const lining = [
+    ...layers.slice(0, lead),
+    ...layers.slice(layers.length - tail),
+  ];
   const first = layers
     .slice(0, lead)
     .reduce((sum, layer) => sum + layer.thickness, 0);
   const last = layers
     .slice(layers.length - tail)
     .reduce((sum, layer) => sum + layer.thickness, 0);
+  const inset = first + last;
   const width = props.width - 2 * inset;
   const height = props.height - 2 * inset;
   if (width <= 0 || height <= 0)
