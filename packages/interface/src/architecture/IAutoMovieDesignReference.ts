@@ -51,7 +51,13 @@ export interface IAutoMovieGeneratedAcquisition {
    * generation and is never repaired by inventing a replay handle.
    */
   reproducible: boolean;
-  /** Provider-reported seed, or null when the provider exposes none. */
+  /**
+   * Provider-reported seed, or null when the provider exposes none.
+   *
+   * A recorded seed is a whole number small enough to survive being written
+   * down: a fractional, non-finite, or beyond-2^53 value is not the number the
+   * provider used, so replaying it would reproduce nothing.
+   */
   seed: number | null;
 }
 
@@ -166,9 +172,9 @@ export interface IAutoMovieObservedCandidate {
   primitives: string[];
   /** Inclusive `[0, 1]` confidence in this reading. */
   confidence: number;
-  /** Competing candidate ids reading the same marks differently. */
+  /** Competing candidate ids reading the same marks differently; distinct. */
   alternatives: string[];
-  /** Issue ids that block promotion while open. */
+  /** Issue ids that block promotion while open; distinct. */
   issues: string[];
 }
 
@@ -184,7 +190,7 @@ export interface IAutoMovieDesignIssue {
     | "illegible"
     | "conflicting-dimension"
     | "other";
-  /** Primitive or candidate ids this issue is about; at least one. */
+  /** Primitive or candidate ids this issue is about; at least one, distinct. */
   subjects: string[];
   /** What a human still has to decide. */
   detail: string;
@@ -204,7 +210,14 @@ export type IAutoMovieDesignAnalysisOutcome =
   | {
       /** The reading ran and produced candidates. */
       status: "observed";
-      /** Candidate ids this analysis produced; at least one. */
+      /**
+       * Candidate ids this analysis produced; at least one, each named once.
+       *
+       * An analysis reads one frame, so every candidate here is built from
+       * marks on that same frame. Correlating two sheets is the authored
+       * building's job through {@link IAutoMovieDesignEvidence}, which may cite
+       * candidates from any frame of any document.
+       */
       candidates: string[];
     }
   | {

@@ -88,6 +88,12 @@ export const isAutoMovieDesignReferenceMedia = (
  * also refuses a settled scale that names no recorded candidate: an unknown
  * scale is a fact about the drawing, and inventing one is how a plan image
  * turns into metres nobody measured.
+ *
+ * The same principle binds an analysis to the one frame it says it read: a
+ * candidate built from marks on another sheet was not produced by this reading,
+ * and filing it here would let a section's geometry inherit a plan's scale.
+ * Correlating two sheets is the authored building's job, through evidence that
+ * may cite any candidate of any document.
  */
 export const validateDesignReference = (props: {
   reference: IAutoMovieDesignReference;
@@ -139,6 +145,9 @@ export const validateDesignReference = (props: {
 
   const framesById = new Map(
     reference.frames.map((frame) => [frame.id, frame]),
+  );
+  const frameOfPrimitive = new Map(
+    reference.primitives.map((primitive) => [primitive.id, primitive.frame]),
   );
   const primitiveIds = collectIds(
     reference.primitives,
@@ -229,6 +238,9 @@ export const validateDesignReference = (props: {
     "observed candidate",
     out,
   );
+  const candidatesById = new Map(
+    reference.candidates.map((candidate) => [candidate.id, candidate]),
+  );
 
   reference.candidates.forEach((candidate, index) => {
     const path = `${root}.candidates[${index}]`;
@@ -254,6 +266,7 @@ export const validateDesignReference = (props: {
       1,
       "candidate confidence",
     );
+    const alternativesSeen = new Set<string>();
     candidate.alternatives.forEach((alternative, alternativeIndex) => {
       const alternativePath = `${path}.alternatives[${alternativeIndex}]`;
       if (!candidateIds.has(alternative))
@@ -270,6 +283,17 @@ export const validateDesignReference = (props: {
           `candidate "${candidate.id}" cannot be its own alternative`,
           alternative,
         );
+      // A rival listed twice turns one disagreement into two. The list is also
+      // read back verbatim when a promotion explains what it withheld, so the
+      // repeat resurfaces as a refusal naming the same candidate twice.
+      if (alternativesSeen.has(alternative))
+        out.push(
+          "type",
+          alternativePath,
+          `alternative candidate "${alternative}" is duplicated`,
+          alternative,
+        );
+      alternativesSeen.add(alternative);
     });
     validateReferences(
       candidate.issues,
@@ -299,14 +323,24 @@ export const validateDesignReference = (props: {
         "a design issue must name at least one primitive or candidate",
         issue.subjects,
       );
+    const subjectsSeen = new Set<string>();
     issue.subjects.forEach((subject, subjectIndex) => {
+      const subjectPath = `${path}.subjects[${subjectIndex}]`;
       if (!primitiveIds.has(subject) && !candidateIds.has(subject))
         out.push(
           "type",
-          `${path}.subjects[${subjectIndex}]`,
+          subjectPath,
           `design issue subject "${subject}" resolves to no primitive or candidate`,
           subject,
         );
+      if (subjectsSeen.has(subject))
+        out.push(
+          "type",
+          subjectPath,
+          `design issue subject "${subject}" is duplicated`,
+          subject,
+        );
+      subjectsSeen.add(subject);
     });
   });
 
@@ -340,8 +374,39 @@ export const validateDesignReference = (props: {
             `analysis candidate "${candidate}" does not resolve`,
             candidate,
           );
+        // An analysis reads ONE frame, so a candidate it claims to have
+        // produced cannot be built from marks on another sheet. Without this,
+        // `frame` is decorative for an `observed` analysis, and a reading taken
+        // off a section can be filed under the plan whose scale it never had.
+        const read = candidatesById.get(candidate);
+        if (read !== undefined && frameIds.has(analysis.frame)) {
+          const foreign = [
+            ...new Set(
+              read.primitives
+                .map((id) => frameOfPrimitive.get(id))
+                .filter(
+                  (frame): frame is string =>
+                    frame !== undefined && frame !== analysis.frame,
+                ),
+            ),
+          ];
+          if (foreign.length > 0)
+            out.push(
+              "type",
+              candidatePath,
+              `analysis "${analysis.id}" read frame "${analysis.frame}", but candidate "${candidate}" is built from marks on ${foreign.join(", ")}; cite readings across sheets from the building source instead`,
+              candidate,
+            );
+        }
         const prior = claimed.get(candidate);
-        if (prior !== undefined)
+        if (prior === analysis.id)
+          out.push(
+            "type",
+            candidatePath,
+            `analysis "${analysis.id}" names candidate "${candidate}" more than once`,
+            candidate,
+          );
+        else if (prior !== undefined)
           out.push(
             "type",
             candidatePath,
@@ -372,11 +437,16 @@ export const validateDesignReference = (props: {
 /**
  * Validate the generation identity recorded for bytes nothing served.
  *
- * The two rules that matter are both about honesty rather than shape. A record
- * that claims to be reproducible must carry the seed that reproduces it, or the
+ * The rules that matter are all about honesty rather than shape. A record that
+ * claims to be reproducible must carry the seed that reproduces it, or the
  * claim is unbacked; a record that admits it is not reproducible but still
  * carries a seed is warned about, because a seed that does not replay the bytes
  * is decoration a later reader will mistake for a replay handle.
+ *
+ * A recorded seed must also be a number a provider could have handed back. A
+ * fractional, infinite, `NaN`, or beyond-2^53 value is not null and so passes
+ * both rules above while naming no draw at all, which is the invented replay
+ * handle they exist to prevent. It is therefore refused before either speaks.
  */
 export const validateGeneratedAcquisition = (props: {
   acquisition: IAutoMovieGeneratedAcquisition;
@@ -428,14 +498,21 @@ export const validateGeneratedAcquisition = (props: {
       `generated output digest ${acquisition.outputDigest} does not match the current bytes ${props.digest}`,
       acquisition.outputDigest,
     );
-  if (acquisition.reproducible && acquisition.seed === null)
+  if (acquisition.seed !== null && !Number.isSafeInteger(acquisition.seed))
+    out.push(
+      "range",
+      `${root}.seed`,
+      `a recorded seed must be a whole number a provider could have used, but was ${acquisition.seed}`,
+      acquisition.seed,
+    );
+  else if (acquisition.reproducible && acquisition.seed === null)
     out.push(
       "type",
       `${root}.seed`,
       "a reproducible generation must record the seed that reproduces it",
       acquisition.seed,
     );
-  if (!acquisition.reproducible && acquisition.seed !== null)
+  else if (!acquisition.reproducible && acquisition.seed !== null)
     out.warn(
       "type",
       `${root}.seed`,
