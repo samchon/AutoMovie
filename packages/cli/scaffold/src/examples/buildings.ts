@@ -720,6 +720,10 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           ],
           state: "level-0",
         },
+        // The two driven frames, not the boxes hung off them. A carriage must
+        // drive an element this list names or one below it, so naming the
+        // shells instead would leave the frames outside the run they belong to
+        // and be refused; naming the frames covers both by descent.
         elements: ["tower-lift-car", "tower-lift-counterweight"],
       },
       {
