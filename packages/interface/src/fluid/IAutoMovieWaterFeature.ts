@@ -46,7 +46,13 @@ export interface IAutoMovieWaterFeature {
    */
   boundaries: string[];
 
-  /** Id of the material the surface is drawn with, or `null` for the default. */
+  /**
+   * Id of the material the surface is drawn with, or `null` for the default.
+   *
+   * `null` is how "the renderer's own water" is spelled, so the id itself must
+   * name something: a blank string is a citation of a material nobody can find,
+   * and it is refused rather than read as the default.
+   */
   material: string | null;
 }
 

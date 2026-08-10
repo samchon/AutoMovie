@@ -167,8 +167,11 @@ const ledge = (upper: number, lower: number) =>
  *    channel declared it.
  * 4. The depth, normal and mask passes each replace every water material and put
  *    every original back on restore; the beauty pass leaves all four alone.
- * 5. Those same passes hide the fountain's live mist and restore it, and the
- *    engine's own particle cap is what the viewer uploaded.
+ * 5. Those same passes hide the two live mists — the fountain's jet and the
+ *    curtain at the foot of the ledge — and restore them, and what the viewer
+ *    uploaded is exactly the engine's own sample: a steady set of `rate ×
+ *    lifetime` particles, taken from the emitter's numbers rather than from
+ *    whatever the sampler happened to emit.
  */
 export const test_viewer_water_feature_passes = (): void => {
   const environment = waterCourt();
@@ -344,14 +347,17 @@ export const test_viewer_water_feature_passes = (): void => {
   for (const water of waters) scene.add(water.object);
   for (const spray of sprays) scene.add(spray.object);
   const originals = waters.map((water) => water.object.material);
-  const fountainSpray = sprays[2];
+  // The two emitters that actually carry particles: the fountain's jet and the
+  // curtain at the foot of the ledge. The still pond and the channel declare no
+  // emitter, so hiding them would prove nothing.
+  const misted = [sprays[2], sprays[3]];
 
   const structural = (["depth", "normal", "mask"] as const).map((mode) => {
     const handle = applyRenderMode(scene, mode);
     const overridden = waters.every(
       (water, index) => water.object.material !== originals[index],
     );
-    const mistHidden = fountainSpray.object.visible === false;
+    const mistHidden = misted.every((spray) => spray.object.visible === false);
     handle.restore();
     return {
       overridden,
@@ -359,7 +365,7 @@ export const test_viewer_water_feature_passes = (): void => {
       restored: waters.every(
         (water, index) => water.object.material === originals[index],
       ),
-      mistShown: fountainSpray.object.visible === true,
+      mistShown: misted.every((spray) => spray.object.visible === true),
     };
   });
   const beauty = applyRenderMode(scene, "beauty");
@@ -378,12 +384,18 @@ export const test_viewer_water_feature_passes = (): void => {
       ["beautyUntouched", () => untouched],
       [
         "mistUploaded",
-        () => fountainSpray.count() === frames[2].spray.particles.length,
+        () =>
+          misted.every(
+            (spray, at) =>
+              spray.count() === frames[at + 2].spray.particles.length,
+          ),
       ],
-      ["mistLive", () => fountainSpray.count() > 0],
       [
-        "mistCapped",
-        () => fountainSpray.count() <= domains[2].sprays[0].maxParticles,
+        // A jet of 8 particles a second, each living one second, is a steady
+        // live set of exactly 8 — an oracle from the emitter's own numbers, so
+        // an emitter that quietly stopped or doubled would be caught here.
+        "mistSteady",
+        () => misted.every((spray) => spray.count() === 8),
       ],
     ]),
     {
@@ -393,8 +405,7 @@ export const test_viewer_water_feature_passes = (): void => {
       mistShown: true,
       beautyUntouched: true,
       mistUploaded: true,
-      mistLive: true,
-      mistCapped: true,
+      mistSteady: true,
     },
   );
 
