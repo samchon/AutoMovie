@@ -2541,7 +2541,7 @@ ${original}`;
           ],
         }],
       },
-      { id: "upper", kind: "mezzanine", parent: null, cells: [] },
+      { id: "upper", kind: "mezzanine", parent: "lower", cells: [] },
     ],
     boundaries: [],
     openings: [],

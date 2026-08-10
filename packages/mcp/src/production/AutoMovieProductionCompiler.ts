@@ -79,6 +79,10 @@ import {
   IAutoMovieProductionContentInput,
 } from "./AutoMovieProductionProject";
 import {
+  assetAcquisitionIncomplete,
+  assetProcessingOmitted,
+} from "./assetAcquisition";
+import {
   AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL,
   IAutoMovieFingerprintField,
   canonicalAutoMovieJsonBytes,
@@ -1339,6 +1343,53 @@ const SANDBOX_BOOTSTRAP = `
     }
     return [...adjacent];
   };
+  const builtEnvironmentRequireSpace = (environment, spaceId) => {
+    if (!environment.spaces.some((space) => space.id === spaceId))
+      throw new Error(
+        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
+      );
+  };
+  const builtEnvironmentSpaceConnectors = (environment, spaceId) => {
+    builtEnvironmentRequireSpace(environment, spaceId);
+    return environment.connectors.filter(
+      (connector) => connector.from === spaceId || connector.to === spaceId,
+    );
+  };
+  const builtEnvironmentSpaceSurfaces = (environment, spaceId) => {
+    builtEnvironmentRequireSpace(environment, spaceId);
+    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
+    const walkable = new Set(environment.walkable);
+    return environment.surfaces
+      .filter((entry) => included.has(entry.space))
+      .map((entry) => ({
+        space: entry.space,
+        surface: entry.surface.id,
+        walkable: walkable.has(entry.surface.id),
+      }));
+  };
+  const builtEnvironmentSpaceNodes = (environment, spaceId) => {
+    builtEnvironmentRequireSpace(environment, spaceId);
+    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
+    return environment.elements
+      .filter(
+        (element) =>
+          element.model !== null &&
+          element.space !== null &&
+          included.has(element.space),
+      )
+      .map((element) => environment.id + "/" + element.id);
+  };
+  const builtEnvironmentBuildingOfSpace = (environment, spaceId) => {
+    builtEnvironmentRequireSpace(environment, spaceId);
+    const owner = environment.buildings.find((building) =>
+      builtEnvironmentDescendants(environment.spaces, building.space).has(spaceId),
+    );
+    if (owner === undefined)
+      throw new Error(
+        'Built environment "' + environment.id + '" has no building unit owning logical space "' + spaceId + '".',
+      );
+    return owner.id;
+  };
   const proceduralCross = (left, right) => ({
     x: left.y * right.z - left.z * right.y,
     y: left.z * right.x - left.x * right.z,
@@ -1889,6 +1940,16 @@ const SANDBOX_BOOTSTRAP = `
       ),
       builtEnvironmentAdjacentSpaces: Object.freeze(
         builtEnvironmentAdjacentSpaces,
+      ),
+      builtEnvironmentSpaceConnectors: Object.freeze(
+        builtEnvironmentSpaceConnectors,
+      ),
+      builtEnvironmentSpaceSurfaces: Object.freeze(
+        builtEnvironmentSpaceSurfaces,
+      ),
+      builtEnvironmentSpaceNodes: Object.freeze(builtEnvironmentSpaceNodes),
+      builtEnvironmentBuildingOfSpace: Object.freeze(
+        builtEnvironmentBuildingOfSpace,
       ),
       extrudeAutoMovieProfile: Object.freeze(extrudeAutoMovieProfile),
       revolveAutoMovieProfile: Object.freeze(revolveAutoMovieProfile),
@@ -5789,8 +5850,7 @@ const compilerAssetInventory = (
       );
     if (
       isSha256Digest(asset.digest) === false ||
-      isSha256Digest(asset.original.digest) === false ||
-      isHttpUrl(asset.original.url) === false ||
+      assetAcquisitionIncomplete(asset) ||
       asset.license.identifier.trim().length === 0 ||
       isHttpUrl(asset.license.url) === false ||
       asset.uses.length === 0 ||
@@ -5802,7 +5862,7 @@ const compilerAssetInventory = (
         asset.path,
         `Asset "${asset.path}" lacks a full source URL, original/current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
       );
-    if (asset.processing.length === 0 && asset.digest !== asset.original.digest)
+    if (assetProcessingOmitted(asset))
       diagnostic(
         "asset-processing-missing",
         asset.path,
@@ -6345,6 +6405,21 @@ const assetConsumerExists = (
     }
     case "rendition-reference":
       return graph.shots.has(consumer.id);
+    // Like an audio cue, the reverse binding is owned by the consumer's own
+    // gate: `designReferenceDiagnostics` refuses a document whose asset carries
+    // no matching use, and refuses a use naming no declared document.
+    case "design-reference":
+      return true;
+    // Same delegation, for the same reason: a texture use is keyed by the
+    // compiled model id rather than a recipe id, and a scene environment is not
+    // in the design graph at all, so this graph cannot answer either question.
+    // `validateTextureAssets` sees the compiled models and scenes and reports
+    // both directions -- an image bound by no authorized use, and a use no
+    // compiled consumer binds any more -- so answering `false` here would
+    // double-report the same fault at a less specific path.
+    case "material-texture":
+    case "scene-environment":
+      return true;
   }
 };
 
