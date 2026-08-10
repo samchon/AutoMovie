@@ -233,7 +233,7 @@ export const test_architecture_material_assembly_junction = (): void => {
                 width: 0.06,
                 height: 2.1,
               }),
-            ["wet-wall", "consumes the 0.06 x 2.1 m opening"],
+            ["wet-wall", "leaves no usable opening in 0.06 x 2.1 m"],
           ),
       ],
       [
@@ -246,7 +246,7 @@ export const test_architecture_material_assembly_junction = (): void => {
                 width: 1.2,
                 height: 0.06,
               }),
-            ["wet-wall", "consumes the 1.2 x 0.06 m opening"],
+            ["wet-wall", "leaves no usable opening in 1.2 x 0.06 m"],
           ),
       ],
     ]),

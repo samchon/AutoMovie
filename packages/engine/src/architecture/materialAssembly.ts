@@ -448,7 +448,10 @@ export const resolveAutoMovieMaterialAssembly = (props: {
  *
  * A lining that would consume the opening is refused rather than reported as a
  * negative dimension: a door 0.6 m wide lined by 0.4 m on each side is not a
- * narrow door, it is a wall.
+ * narrow door, it is a wall. The refusal is written as "not above zero" rather
+ * than "at or below zero", so a build-up carrying a non-finite thickness is
+ * refused here too instead of returning a `NaN` width that every later
+ * comparison would read as acceptable.
  *
  * Only wrapping layers reachable from a face line the jamb. A layer that claims
  * to wrap from behind one that stops there cannot turn the corner, which is why
@@ -483,9 +486,9 @@ export const autoMovieAssemblyOpeningReveal = (props: {
   const inset = first + last;
   const width = props.width - 2 * inset;
   const height = props.height - 2 * inset;
-  if (width <= 0 || height <= 0)
+  if (!(width > 0) || !(height > 0))
     throw new Error(
-      `material assembly "${props.resolved.id}" lines ${inset} m on each side, which consumes the ${props.width} x ${props.height} m opening`,
+      `material assembly "${props.resolved.id}" lines ${inset} m on each side, which leaves no usable opening in ${props.width} x ${props.height} m`,
     );
   return {
     width,
