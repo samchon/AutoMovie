@@ -403,8 +403,9 @@ const refusalPaths = (
  * 10. A state naming no value for a panel leaves that panel at rest, so a query
  *     over a record validation refuses still answers instead of failing on a
  *     value it was never given.
- * 11. Fifty malformed openings are each refused at their own path, and the
- *     untouched fixture produces no violation path at all.
+ * 11. Fifty-one malformed openings are each refused at their own path, including a
+ *     state the scene could not stage even though the record's current one can,
+ *     and the untouched fixture produces no violation path at all.
  */
 export const test_architecture_built_opening = (): void => {
   const source = partition();
@@ -996,6 +997,19 @@ export const test_architecture_built_opening = (): void => {
       "a leaf resting outside its own void",
       (value) => (value.elements[5]!.transform.translation.x = 7.5),
       "$input.openings[1].operation.panels[0]",
+    ],
+    [
+      // Shut, the leaf is a clean scaled frame; a quarter turn later the same
+      // hierarchy carries shear the staged node could not hold. Checking only
+      // the state the record stands in would let this pass shut and lie open.
+      "a state the scene could not stage even though the current one can",
+      (value) => {
+        value.elements[2]!.transform.scale = { x: 2, y: 1, z: 1 };
+        // A quarter turn about the scaled frame's own up axis stays orthogonal
+        // by luck of the right angle; any other angle is where the shear shows.
+        value.openings[0]!.operation!.states[1]!.panels[0]!.value = 1;
+      },
+      "$input.openings[0].operation.states[1]",
     ],
   ];
   malformed.forEach(([name, mutate, path]) =>

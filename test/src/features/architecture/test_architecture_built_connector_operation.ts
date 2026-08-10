@@ -354,7 +354,7 @@ const runs = (): IAutoMovieBuiltEnvironment => ({
           {
             id: "half-turned",
             drive: "forward",
-            carriages: [{ carriage: "wing", value: Math.PI / 2, serves: null }],
+            carriages: [{ carriage: "wing", value: Math.PI / 3, serves: null }],
           },
         ],
         state: "shut",
@@ -436,9 +436,10 @@ const carAt = (
  *    element is gone.
  * 7. A state that names no value for a carriage leaves it at rest and serving
  *    nothing, and a current state that does not resolve serves nothing either.
- * 8. Thirty malformed runs are each refused at their own path, including a car
+ * 8. Thirty-one malformed runs are each refused at their own path, including a car
  *    that does not stand in the floor it claims, a reverse drive on a one-way
- *    run, and an element two members try to drive at once.
+ *    run, an element two members try to drive at once, and a state the scene
+ *    could not stage even though the record's current one can.
  */
 export const test_architecture_built_connector_operation = (): void => {
   const source = runs();
@@ -547,7 +548,7 @@ export const test_architecture_built_connector_operation = (): void => {
         // not only a position.
         vclose(shut.position, turned.position) &&
         qclose(shut.rotation, NO_ROTATION) &&
-        qclose(turned.rotation, yaw(Math.PI / 2))
+        qclose(turned.rotation, yaw(Math.PI / 3))
       );
     })(),
   );
@@ -799,6 +800,17 @@ export const test_architecture_built_connector_operation = (): void => {
         (value.connectors[0]!.operation!.states[0]!.carriages[0]!.serves =
           "level-2"),
       "$input.connectors[0].operation.states[0].carriages[0].serves",
+    ],
+    [
+      // At rest the wing is a clean scaled frame; half a turn later the same
+      // hierarchy carries shear no staged node could hold, and a state that
+      // cannot be staged is a state the viewer could never reproduce.
+      "a state the scene could not stage even though the current one can",
+      (value) =>
+        (value.elements.find(
+          (element) => element.id === "gate-drum",
+        )!.transform.scale = { x: 2, y: 1, z: 1 }),
+      "$input.connectors[3].operation.states[1]",
     ],
     [
       "an element a door leaf and a lift car both try to drive",
