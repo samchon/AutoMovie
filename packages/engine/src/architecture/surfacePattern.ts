@@ -149,11 +149,11 @@ export interface IAutoMovieSurfacePattern {
   zones: IAutoMovieSurfacePatternZone[];
   /** Areas no module may cover, such as an opening or a drain. */
   exclusions: IAutoMoviePatternExclusion[];
-  /** Nominal gap between neighbouring modules in metres, at least zero. */
+  /** Nominal gap between neighbouring laid pieces in metres, at least zero. */
   joint: number;
   /** Metre slack a measured gap may differ from the nominal joint by. */
   jointTolerance: number;
-  /** Greatest metre gap at which two modules still count as neighbours. */
+  /** Greatest metre gap at which two laid pieces still count as neighbours. */
   adjacency: number;
   /** Smallest acceptable surviving fraction of a module, within `(0, 1]`. */
   minimumPiece: number;
@@ -202,7 +202,12 @@ export interface IAutoMoviePatternPlacement {
   cut: "none" | "boundary" | "exclusion" | "both";
   /** Seeded variant index within `[0, variants)`. */
   variant: number;
-  /** The module clipped to its zone region, counter-clockwise. */
+  /**
+   * The module clipped to its zone region, counter-clockwise.
+   *
+   * This, and not the module rectangle, is what a joint is measured between,
+   * because a joint is read on the surface rather than on the drawing.
+   */
   outline: IAutoMoviePatternPoint[];
   /**
    * Square metres an exclusion took out of the area {@link outline} draws.

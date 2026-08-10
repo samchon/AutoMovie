@@ -107,6 +107,10 @@ export interface IAutoMovieMaterialLayer {
    *
    * A wrapping layer narrows the finished opening on every side and lines the
    * jamb to its own depth. A layer that stops at the jamb does neither.
+   *
+   * Wrapping is a run that starts at a face: a layer cannot turn the corner
+   * into the reveal from behind one that already ended at the jamb, so setting
+   * this on a buried layer is a defect rather than a deeper lining.
    */
   wrapsOpening: boolean;
 }

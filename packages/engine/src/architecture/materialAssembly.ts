@@ -70,11 +70,11 @@ export interface IAutoMovieResolvedAssembly {
 
 /** What a build-up does to an opening cut through its host. */
 export interface IAutoMovieAssemblyReveal {
-  /** Finished clear width in metres once every wrapping layer lines the jamb. */
+  /** Finished clear width in metres once the lining runs reach the jamb. */
   width: number;
   /** Finished clear height in metres. */
   height: number;
-  /** Wrapping thickness lining each side of the opening, in metres. */
+  /** Lining thickness taken off each side of the opening, in metres. */
   inset: number;
   /** Lining depth measured inward from the first face, in metres. */
   first: number;
