@@ -76,11 +76,17 @@ const lattice = (
  * 3. A duplicated surface id is a `type` violation on the duplicate.
  * 4. An unknown surface kind (runtime junk past the closed union) is rejected.
  * 5. A footprint of fewer than three points encloses no area.
- * 6. Collinear footprint points enclose no area (the hull collapses). 6b. A
- *    concave footprint (an L-shape, whose inner corner sits inside its convex
- *    hull) is rejected: the ground query would fill the notch. 6c. A convex
- *    footprint with a collinear point ON an edge is allowed (the vertex stays
- *    on the hull boundary; only strictly-interior vertices fail).
+ * 6. Collinear footprint points enclose no area. 6b. A concave footprint (an
+ *    L-shape) is accepted, which is the exact inverse of what this case pinned
+ *    before #1868: the ground query classifies against the ring rather than its
+ *    hull, so the notch is the author's and no longer a shape the validator has
+ *    to forbid on the query's behalf. 6c. A footprint with a collinear point on
+ *    an edge is still allowed. 6d. A self-crossing (bowtie) footprint is
+ *    refused: it has no inside for a foot to be on. 6e. Holes: a well-formed
+ *    void through a plate passes; a hole of fewer than three points, a
+ *    collinear hole, a hole reaching outside its plate, a hole flush against
+ *    the outer ring, and two holes sharing plan area are each refused at the
+ *    hole's own path, so an author is told which ring is wrong.
  * 7. A non-finite footprint plan coordinate is a `range` violation (`y` is
  *    documented-ignored and deliberately not checked).
  * 8. A non-finite height anchor is a `range` violation.
@@ -159,14 +165,35 @@ export const test_validation_space = (): void => {
       ".polygon",
     ),
   );
+  TestValidator.equals(
+    "concave footprint accepted",
+    validateSpace({
+      space: withSurface({
+        // An L-shape. The (2,2) inner corner sits inside the convex hull, which
+        // is why this was refused while the query read the hull; the query
+        // reads the ring now, so the notch is a shape and not a defect.
+        polygon: [v(0, 0), v(4, 0), v(4, 2), v(2, 2), v(2, 4), v(0, 4)],
+      }),
+    }).success,
+    true,
+  );
+  TestValidator.equals(
+    "footprint with a collinear edge point passes",
+    validateSpace({
+      space: withSurface({
+        // A square with an extra midpoint on the bottom edge: the vertex adds
+        // nothing and takes nothing away, so it must be accepted.
+        polygon: [v(0, 0), v(2, 0), v(4, 0), v(4, 4), v(0, 4)],
+      }),
+    }).success,
+    true,
+  );
   TestValidator.predicate(
-    "concave footprint rejected",
+    "self-crossing footprint rejected",
     hasViolation(
       validateSpace({
         space: withSurface({
-          // An L-shape: the (2,2) inner corner sits inside the convex hull, so
-          // surfaceContains would fill the notch: the query must reject it.
-          polygon: [v(0, 0), v(4, 0), v(4, 2), v(2, 2), v(2, 4), v(0, 4)],
+          polygon: [v(0, 0), v(4, 4), v(4, 0), v(0, 4)],
         }),
       }),
       "type",
@@ -174,15 +201,127 @@ export const test_validation_space = (): void => {
     ),
   );
   TestValidator.equals(
-    "convex footprint with a collinear edge point passes",
+    "a plate with an atrium void passes",
     validateSpace({
       space: withSurface({
-        // A square with an extra midpoint on the bottom edge: still convex,
-        // the midpoint stays on the hull boundary, so it must be accepted.
-        polygon: [v(0, 0), v(2, 0), v(4, 0), v(4, 4), v(0, 4)],
+        polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+        holes: [[v(2, 2), v(6, 2), v(6, 6), v(2, 6)]],
       }),
     }).success,
     true,
+  );
+  TestValidator.predicate(
+    "a hole needs three points",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(2, 2), v(6, 2)]],
+        }),
+      }),
+      "type",
+      ".holes[0]",
+    ),
+  );
+  TestValidator.predicate(
+    "a collinear hole encloses nothing",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(2, 2), v(3, 3), v(4, 4)]],
+        }),
+      }),
+      "type",
+      ".holes[0]",
+    ),
+  );
+  TestValidator.predicate(
+    "a hole may not reach outside its own plate",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(6, 6), v(12, 6), v(12, 10), v(6, 10)]],
+        }),
+      }),
+      "type",
+      ".holes[0]",
+    ),
+  );
+  TestValidator.predicate(
+    "a hole flush against the outer ring is a notch, not a void",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(0, 2), v(4, 2), v(4, 6), v(0, 6)]],
+        }),
+      }),
+      "type",
+      ".holes[0]",
+    ),
+  );
+  TestValidator.predicate(
+    "two holes may not share plan area",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [
+            [v(1, 1), v(4, 1), v(4, 4), v(1, 4)],
+            [v(3, 3), v(6, 3), v(6, 6), v(3, 6)],
+          ],
+        }),
+      }),
+      "type",
+      ".holes[1]",
+    ),
+  );
+  TestValidator.predicate(
+    "a non-finite hole coordinate is located at the hole's own point",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(2, 2), v(Number.POSITIVE_INFINITY, 2), v(6, 6)]],
+        }),
+      }),
+      "range",
+      ".holes[0][1].x",
+    ),
+  );
+  TestValidator.predicate(
+    "a self-crossing hole is refused like any other ring",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [[v(2, 2), v(6, 6), v(6, 2), v(2, 6)]],
+        }),
+      }),
+      "type",
+      ".holes[0]",
+    ),
+  );
+  TestValidator.equals(
+    "an outer ring that reaches in to touch a hole is refused too",
+    validateSpace({
+      space: withSurface({
+        // A plate with a tongue whose tip lands exactly on the void's own rim.
+        polygon: [
+          v(0, 0),
+          v(8, 0),
+          v(8, 8),
+          v(0, 8),
+          v(0, 4.5),
+          v(2, 4),
+          v(0, 3.5),
+        ],
+        holes: [[v(2, 2), v(6, 2), v(6, 6), v(2, 6)]],
+      }),
+    }).success,
+    false,
   );
   TestValidator.predicate(
     "non-finite footprint coordinate",

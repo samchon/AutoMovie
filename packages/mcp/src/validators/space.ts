@@ -13,12 +13,14 @@ import {
  *
  * Both space entry points share it: the `stage` tool's `staging.space` and a
  * committed scene's `scene.space`. A space is the only staging payload with a
- * nested array of objects each holding a further array of vectors, so a
- * malformed one would otherwise reach `surface.polygon.forEach` or
+ * nested array of objects each holding a further array of vectors — and, since
+ * a footprint may be holed, a further array of those — so a malformed one would
+ * otherwise reach `surface.polygon.forEach`, `surface.holes.map` or
  * `surface.height.samples.forEach` as a throw instead of a field-located
  * violation.
  *
- * Types only, emptiness, uniqueness, convexity, which ground statement a
+ * Types only. Emptiness, uniqueness, whether a ring encloses area or crosses
+ * itself, whether a hole lies inside its own plate, which ground statement a
  * surface is allowed, ramp axes, height-rule ranges, and walkable resolution
  * stay with the engine's `validateSpace`, so every space rule has exactly one
  * owner and staging cannot disagree with a committed scene. Returns whether the
@@ -88,6 +90,26 @@ const validateSurfaceShape = (
         "footprint point",
         violations,
       );
+    });
+  // The one place the payload nests three deep: holes are rings of points, and
+  // the engine maps over both levels, so a hole list that is not a list of
+  // lists reaches `.map` as a throw instead of a located violation.
+  if (
+    surface.holes !== undefined &&
+    validateArrayArtifact(
+      surface.holes,
+      `${path}.holes`,
+      "footprint holes",
+      violations,
+    )
+  )
+    surface.holes.forEach((hole, index) => {
+      const hp = `${path}.holes[${index}]`;
+      if (!validateArrayArtifact(hole, hp, "footprint hole", violations))
+        return;
+      hole.forEach((point, at) => {
+        validateObjectArtifact(point, `${hp}[${at}]`, "hole point", violations);
+      });
     });
   // A surface states its ground exactly one way, and WHICH way is the engine's
   // rule to enforce: absence is a located `validateSpace` violation rather than

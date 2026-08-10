@@ -169,15 +169,14 @@ const validateSurfaceFootprint = (
         surface.holes![i],
       );
     for (let other = 0; other < i; ++other) {
-      const before = holes[other];
-      if (before !== null && before !== undefined)
-        if (polygonsOverlap(hole.plan, before.plan))
-          collector.push(
-            "type",
-            hp,
-            `footprint hole must stay clear of hole [${other}], but the two share plan area`,
-            surface.holes![i],
-          );
+      const before = holes[other]!;
+      if (before !== null && polygonsOverlap(hole.plan, before.plan))
+        collector.push(
+          "type",
+          hp,
+          `footprint hole must stay clear of hole [${other}], but the two share plan area`,
+          surface.holes![i],
+        );
     }
   });
 };

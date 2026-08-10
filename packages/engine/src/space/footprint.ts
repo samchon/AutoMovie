@@ -228,13 +228,13 @@ export const footprintInteriorPoint = (
  *
  * This is the predicate `validateSpace` enforced while footprints had to be
  * convex, kept because it is still the question that decides whether a region
- * needs decomposing at all.
+ * needs decomposing at all. A hull too small to enclose area holds no vertex on
+ * its boundary, so a degenerate ring answers `false` without a case of its own.
  */
 const isConvexRing = (
   ring: IAutoMovieFootprintRing,
   hull: readonly IAutoMovieVector3[],
 ): boolean => {
-  if (hull.length < 3) return false;
   const onHull = footprintRing(hull);
   return ring.points.every(
     (point) => footprintRingPlacement(onHull, point.x, point.z) === "boundary",
@@ -262,9 +262,7 @@ interface ISlabCrossing {
  * band and open the next.
  */
 const slabPieces = (footprint: IAutoMovieFootprint): IAutoMovieVector3[][] => {
-  const rings = [footprint.outer, ...footprint.holes].filter(
-    (ring) => ring.points.length >= 3,
-  );
+  const rings = [footprint.outer, ...footprint.holes];
   const cuts = [
     ...new Set(rings.flatMap((ring) => ring.points.map((point) => point.x))),
   ].sort((left, right) => left - right);

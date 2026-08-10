@@ -99,7 +99,10 @@ interface ISceneCase {
  *    scale component, a rotation component that is not finite, and a rotation
  *    that is not a unit quaternion.
  * 6. Space: a declared space whose surface geometry is invalid reports its
- *    violation re-rooted under the scene's own `space` path.
+ *    violation re-rooted under the scene's own `space` path, and a footprint's
+ *    holes are shaped at all three of their levels — the hole list, one hole,
+ *    and one point of it — because the engine maps over every one of them and a
+ *    malformed payload would otherwise arrive there as a `TypeError`.
  * 7. Fog: a declared atmosphere that is not an object, whose density is negative
  *    or not a number, or whose color leaves `[0, 1]`. Absent fog is the case
  *    every other scene here already exercises, and it is accepted.
@@ -300,6 +303,75 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
         },
       }),
       fragments: ["$input.space"],
+    },
+    {
+      title: "a footprint hole list that is not a list reports its own path",
+      value: scene({
+        space: {
+          id: "set",
+          walkable: [],
+          surfaces: [
+            {
+              id: "floor",
+              kind: "floor",
+              polygon: [
+                { x: 0, y: 0, z: 0 },
+                { x: 4, y: 0, z: 0 },
+                { x: 4, y: 0, z: 4 },
+              ],
+              anchor: { x: 0, y: 0, z: 0 },
+              holes: 7,
+            },
+          ],
+        },
+      }),
+      fragments: ["$input.space.surfaces[0].holes"],
+    },
+    {
+      title: "a hole that is not a ring reports the hole's own path",
+      value: scene({
+        space: {
+          id: "set",
+          walkable: [],
+          surfaces: [
+            {
+              id: "floor",
+              kind: "floor",
+              polygon: [
+                { x: 0, y: 0, z: 0 },
+                { x: 4, y: 0, z: 0 },
+                { x: 4, y: 0, z: 4 },
+              ],
+              anchor: { x: 0, y: 0, z: 0 },
+              holes: ["not a ring"],
+            },
+          ],
+        },
+      }),
+      fragments: ["$input.space.surfaces[0].holes[0]"],
+    },
+    {
+      title: "a hole point that is not a point reports the point's own path",
+      value: scene({
+        space: {
+          id: "set",
+          walkable: [],
+          surfaces: [
+            {
+              id: "floor",
+              kind: "floor",
+              polygon: [
+                { x: 0, y: 0, z: 0 },
+                { x: 4, y: 0, z: 0 },
+                { x: 4, y: 0, z: 4 },
+              ],
+              anchor: { x: 0, y: 0, z: 0 },
+              holes: [[7]],
+            },
+          ],
+        },
+      }),
+      fragments: ["$input.space.surfaces[0].holes[0][0]"],
     },
     // 7. fog
     {
