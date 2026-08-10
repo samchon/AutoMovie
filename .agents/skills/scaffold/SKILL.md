@@ -49,8 +49,9 @@ shot, and cites its scene.
 `packages/engine/src/subject.ts` carries the layer: a subject contributes an
 `IAutoMovieSubjectContribution`, and `mergeAutoMovieSubjectContributions` folds
 a group's leaves into one contribution. The scaffold is written that way --
-`Sentinel` and `ArmyMember` extend `AutoMovieSubject`, `Army` and `SignalField`
-extend `AutoMovieSubjectGroup`, and `WorldPiece` is the abstract world leaf.
+`Soloist`, `ChorusMember` and `ChorusTier` extend `AutoMovieSubject`, `Chorus`
+and `Plaza` extend `AutoMovieSubjectGroup`, and `WorldPiece` is the abstract
+world leaf that `PlazaGround`, `PlazaCenterMark` and `PlazaHaze` specialize.
 
 The evidence graph selects `["type", "property", "function"]` over those files,
 which is one obligation per grain: the class answers for the subject, a field

@@ -44,6 +44,9 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 - `packages/archetypes` (`@automovie/archetypes`): the shipped model-archetype catalogue -- parameter schemas, bounds, geometry builders and the declarative gait tables -- behind one registry the compiler is handed rather than one it enumerates. A figure or a prop the engine happens to ship lives here and not in `engine`, so what a production performs stays the production's decision.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
+- `packages/render` (`@automovie/render`): the deterministic frame schedule and encode plan a render spec turns into, plus headless capture, guide passes, caption planning and sidecars, and chunked sequence rendering.
+- `packages/cli` (`@automovie/cli`): the `automovie` binary that scaffolds and inspects a production repository. `packages/cli/scaffold/` is the template it stamps out and a working production in its own right (see the scaffold skill).
+- `packages/create-automovie`: the one-command project creator, a thin front door onto the same scaffolder.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
 - `packages/mcp` (`@automovie/mcp`): the five-tool coding-agent evidence boundary over the deterministic production engine.
   `AutoMovieApplication` serves guides, frame capture, optional repaint, and evidence-first review through `typia.llm.controller` + `@typia/mcp`; design/source authoring, compilation, inspection, migration, and rendering remain non-MCP package or CLI work, and the repository hosts no internal LLM.
