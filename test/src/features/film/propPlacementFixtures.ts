@@ -18,6 +18,11 @@ import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
  * in [-4.7, -1.3]`. Every prop below is placed clear of both, which is what
  * makes each blockage case in the suite a change of one number rather than a
  * rearrangement.
+ *
+ * The three props that name a support bear on it exactly: the table and the
+ * cabinet stand on the floor patch at `y = 0`, and the lamp stands on the
+ * table's own top face at `y = 0.6`. So a support case is one staged height
+ * away from resting, in either direction.
  */
 export const propEnvironment = (id = "house"): IAutoMovieBuiltEnvironment => ({
   version: 1,
@@ -200,7 +205,13 @@ export const table = (): IAutoMoviePropSpec => ({
       {
         id: "top",
         kind: "stack-top",
-        frame: IDENTITY_TRANSFORM,
+        // The table's own upper face: half of the 0.6 m proxy box, so a prop
+        // resting here bears on the geometry the table actually shows.
+        frame: {
+          translation: { x: 0, y: 0.3, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
         extent: [
           { x: -0.5, y: 0, z: -0.5 },
           { x: 0.5, y: 0, z: -0.5 },
@@ -428,7 +439,14 @@ export const propRegistry = (): IAutoMoviePropSpec[] => [
 /** The staged placement of every prop in {@link propRegistry}, same order. */
 export const propSet = (): IAutoMovieStageSetPiece[] => [
   { node: "table", model: "table", position: { x: 0, y: 0.3, z: 0 } },
-  { node: "lamp", model: "lamp", position: { x: 0, y: 0.9, z: 0 }, scale: 1.2 },
+  {
+    node: "lamp",
+    model: "lamp",
+    // Half of the 1.2-scaled 0.6 m box above the table's top face at y = 0.6:
+    // the lamp stands on the affordance it cites rather than near it.
+    position: { x: 0, y: 0.96, z: 0 },
+    scale: 1.2,
+  },
   { node: "sconce", model: "sconce", position: { x: -4.5, y: 1.5, z: 0 } },
   { node: "charger", model: "charger", position: { x: 0.5, y: 0.7, z: 0 } },
   { node: "pendant", model: "pendant", position: { x: 0, y: 3, z: 3 } },

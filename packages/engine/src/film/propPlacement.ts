@@ -20,7 +20,8 @@ import {
 import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
-import { surfaceHeightAt } from "../space/surfaces";
+import { convexHull2D, pointInHull } from "../math/hull";
+import { IAutoMovieHeightSurface, surfaceHeightAt } from "../space/surfaces";
 import { ViolationCollector } from "../validation/violation";
 import { forgeProp } from "./forgeProp";
 
@@ -155,6 +156,132 @@ export const propBlockedPassages = (props: {
     )
       blocked.push({ kind: "connector", id: connector.id });
   return blocked;
+};
+
+/**
+ * The world face a prop rests on, as one record both kinds of support answer.
+ *
+ * A building support patch and another prop's `stack-top` state their face in
+ * different terms and are read here in one: a convex footprint on the ground
+ * plan, and a rule saying how high the face stands over that footprint. The
+ * patch already carries both. The affordance carries an extent in its host's
+ * model frame, which becomes a face by travelling through the host's full
+ * staged TRS, the same transform {@link propOccupancyBounds} measures the
+ * resting prop through, so a scaled or turned host's top and the geometry that
+ * shows it stay one surface rather than drifting apart.
+ */
+export interface IAutoMoviePropSupportFace {
+  /** Convex hull of the face's footprint, in world XZ, counter-clockwise. */
+  polygon: IAutoMovieVector3[];
+
+  /** How high the face stands, in the spelling {@link surfaceHeightAt} reads. */
+  height: IAutoMovieHeightSurface;
+}
+
+/**
+ * The face one `on-support` relation resolves to, or `null` when the record
+ * states none.
+ *
+ * Nothing is guessed. A citation that does not resolve, a contact of a kind
+ * that carries no face at all (`handle`, `socket`, `hook`), a `stack-top`
+ * missing its extent, a patch whose polygon encloses no area, and a top staged
+ * edge-on to the ground each answer `null`, because a face nobody can measure
+ * is not a face a prop can be proven off. The vertical top is the interesting
+ * one of those: its height over the ground plan is not a function, so there is
+ * no rule to read it by, and inventing one would refuse or excuse a prop for a
+ * number the author never wrote.
+ *
+ * Lookups take the first record of a given id, exactly as
+ * {@link propAnchorFrame} does and for the same reason: contradicting ids are
+ * {@link validatePropPlacements}'s own refusal, by name.
+ */
+export const propSupportFace = (props: {
+  /** The `on-support` relation's target: a patch, or another prop's contact. */
+  target:
+    | IAutoMoviePropRelationTarget.ISurface
+    | IAutoMoviePropRelationTarget.IPropAffordance;
+
+  /** Every built environment a patch citation may resolve against. */
+  environments: readonly IAutoMovieBuiltEnvironment[];
+
+  /** The prop registry a `prop-affordance` citation resolves against. */
+  props?: readonly IAutoMoviePropSpec[];
+
+  /** The staged set that gives a cited host prop its world transform. */
+  set?: readonly IAutoMovieStageSetPiece[];
+}): IAutoMoviePropSupportFace | null => {
+  const target = props.target;
+  if (target.kind === "surface") {
+    const environment = props.environments.find(
+      (candidate) => candidate.id === target.environment,
+    );
+    const entry = environment?.surfaces.find(
+      (candidate) => candidate.surface.id === target.surface,
+    );
+    if (entry === undefined) return null;
+    const polygon = convexHull2D(entry.surface.polygon);
+    if (polygon.length < 3) return null;
+    return { polygon, height: entry.surface };
+  }
+  const spec = (props.props ?? []).find((prop) => prop.node === target.prop);
+  const piece = (props.set ?? []).find((item) => item.node === target.prop);
+  const affordance = spec?.model.affordances?.find(
+    (candidate) => candidate.id === target.affordance,
+  );
+  if (spec === undefined || piece === undefined || affordance === undefined)
+    return null;
+  if (affordance.kind !== "stack-top" || affordance.extent === null)
+    return null;
+  const matrix = Matrix4.multiply(
+    stagedMatrix(piece),
+    Matrix4.compose(
+      affordance.frame.translation,
+      affordance.frame.rotation,
+      affordance.frame.scale,
+    ),
+  );
+  const height = facePlane(matrix);
+  if (height === null) return null;
+  return {
+    polygon: convexHull2D(
+      affordance.extent.map((corner) =>
+        transformPoint({ x: corner.x, y: 0, z: corner.z }, matrix),
+      ),
+    ),
+    height,
+  };
+};
+
+/**
+ * How far a staged prop's underside stands above the face it rests on: negative
+ * where it sinks into the support, zero where it touches it, positive where it
+ * floats. `null` when no probe of the prop's footprint lies over the face at
+ * all, which is the answer for a prop that does not stand over its support
+ * rather than one standing at the wrong height on it.
+ *
+ * The footprint is probed at its four corners and its centre, and the deepest
+ * of the probes that land on the face answers. That is what lets a box resting
+ * along one edge of a ramp still be resting on it while a box whose near corner
+ * has gone through the ramp is not, and it is the same footprint sampling
+ * {@link supportContactsFor} decides a scene's supports by. Relief between the
+ * probes is not read: a support that rises and falls inside the footprint is
+ * answered where the probes stand.
+ */
+export const propSupportGap = (props: {
+  /** The face the prop claims to rest on. */
+  face: IAutoMoviePropSupportFace;
+
+  /** The prop's world occupancy, from {@link propOccupancyBounds}. */
+  bounds: IAutoMoviePropBox;
+}): number | null => {
+  let gap: number | null = null;
+  for (const probe of footprintProbes(props.bounds)) {
+    if (!pointInHull(probe, props.face.polygon)) continue;
+    const rise =
+      props.bounds.min.y - surfaceHeightAt(props.face.height, probe.x, probe.z);
+    gap = gap === null ? rise : Math.min(gap, rise);
+  }
+  return gap;
 };
 
 /**
@@ -298,8 +425,8 @@ const requiredAffordance = (
 
 /**
  * Validate a source-owned prop registry, its unique staged join, its typed
- * building relations, its support graph, and every transformed volume it
- * claims.
+ * building relations, its support graph, the bearing of every prop on the face
+ * it says holds it up, and every transformed volume it claims.
  *
  * Registry construction is deliberately a separate first pass. A lamp may cite
  * a table declared later without changing the result, while duplicate prop,
@@ -752,6 +879,8 @@ const validateGeometry = (
       );
     }
 
+  validateSupports(staged, occupancy, environments, out);
+
   for (const entry of staged) {
     const placement = entry.value.placement;
     if (placement === undefined) continue;
@@ -763,6 +892,73 @@ const validateGeometry = (
     if (environment === null) continue;
     validateOccupancy(entry, environment, occupancy.get(entry.index)!, out);
   }
+};
+
+/**
+ * Judge every `on-support` relation whose face the record can state.
+ *
+ * A prop that says it rests on something is making the one placement claim
+ * geometry can settle outright, and until this ran a source could stage a chair
+ * a metre above the floor it cites and be told nothing. Support is judged apart
+ * from the containment pass because it needs no logical space: a lamp that only
+ * says which table top it stands on has named a face, and that face is
+ * measurable whether or not the lamp also says which room it is in. Each
+ * relation is judged on its own, so a plank across two tables answers for both
+ * of them.
+ *
+ * A relation whose host is not itself soundly staged, and one citing a face the
+ * record cannot state, are passed over rather than guessed at. So is a prop
+ * citing itself, which {@link validatePropTarget} already refuses by name:
+ * measuring a prop against its own top would answer for that fault twice.
+ */
+const validateSupports = (
+  staged: readonly IResolvedProp[],
+  occupancy: ReadonlyMap<number, IAutoMoviePropBox>,
+  environments: Environments,
+  out: ViolationCollector,
+): void => {
+  const hosts = new Map(staged.map((entry) => [entry.value.node, entry]));
+  for (const entry of staged)
+    (entry.value.placement?.relations ?? []).forEach((relation, index) => {
+      const target = relation.target;
+      if (relation.kind !== "on-support") return;
+      if (target.kind !== "surface" && target.kind !== "prop-affordance")
+        return;
+      if (target.kind === "prop-affordance" && target.prop === entry.value.node)
+        return;
+      const host =
+        target.kind === "prop-affordance" ? hosts.get(target.prop) : undefined;
+      const environment =
+        target.kind === "surface"
+          ? uniqueEnvironment(target.environment, environments)
+          : null;
+      const face = propSupportFace({
+        target,
+        environments: environment === null ? [] : [environment],
+        props: host === undefined ? [] : [host.value],
+        set: host === undefined ? [] : [host.piece!.value],
+      });
+      if (face === null) return;
+      const gap = propSupportGap({ face, bounds: occupancy.get(entry.index)! });
+      const path =
+        `$input.props[${entry.index}].placement.relations[${index}].target.` +
+        (target.kind === "surface" ? "surface" : "affordance");
+      const label =
+        target.kind === "surface"
+          ? `support surface "${target.surface}"`
+          : `prop "${target.prop}" affordance "${target.affordance}"`;
+      if (gap === null)
+        out.push(
+          "range",
+          path,
+          `staged occupancy does not stand over ${label}`,
+          target.kind === "surface" ? target.surface : target.affordance,
+        );
+      else if (gap < -PLACEMENT_EPSILON)
+        out.push("range", path, `staged occupancy sinks into ${label}`, gap);
+      else if (gap > PLACEMENT_EPSILON)
+        out.push("range", path, `staged occupancy floats above ${label}`, gap);
+    });
 };
 
 /** Containment, opening fit, and passage intrusion for one located prop. */
@@ -1145,6 +1341,55 @@ const transformedBox = (
   matrix: number[],
 ): IAutoMoviePropBox =>
   boundsOf(boxCorners(box).map((point) => transformPoint(point, matrix)));
+
+/**
+ * The plane a transform carries its local XZ plane onto, spelled as the height
+ * rule {@link surfaceHeightAt} reads, or `null` when that image stands edge-on
+ * to the ground.
+ *
+ * The face is spanned by the images of local `+X` and `+Z`, so its normal is
+ * their cross product and it passes through the transform's own origin. A
+ * normal with no vertical component of its own is the vertical face, and a
+ * transform that collapses the face to a line or a point answers with the zero
+ * normal, which the same comparison catches: in both, the height over `(x, z)`
+ * is not a function, so there is no rule to read it by. The test is taken
+ * against the normal's own length rather than against a length in metres, so a
+ * face states its tilt the same way at whatever size it was staged.
+ */
+const facePlane = (matrix: number[]): IAutoMovieHeightSurface | null => {
+  const ax = { x: matrix[0]!, y: matrix[1]!, z: matrix[2]! };
+  const az = { x: matrix[8]!, y: matrix[9]!, z: matrix[10]! };
+  const normal = {
+    x: ax.y * az.z - ax.z * az.y,
+    y: ax.z * az.x - ax.x * az.z,
+    z: ax.x * az.y - ax.y * az.x,
+  };
+  const length = Math.hypot(normal.x, normal.y, normal.z);
+  if (Math.abs(normal.y) <= PLACEMENT_EPSILON * length) return null;
+  const slopeX = -normal.x / normal.y;
+  const slopeZ = -normal.z / normal.y;
+  return {
+    height: {
+      kind: "plane",
+      originHeight: matrix[13]! - slopeX * matrix[12]! - slopeZ * matrix[14]!,
+      slopeX,
+      slopeZ,
+    },
+  };
+};
+
+/** The five ground-plan points a footprint is judged to bear on. */
+const footprintProbes = (bounds: IAutoMoviePropBox): IAutoMovieVector3[] => [
+  { x: bounds.min.x, y: 0, z: bounds.min.z },
+  { x: bounds.max.x, y: 0, z: bounds.min.z },
+  { x: bounds.max.x, y: 0, z: bounds.max.z },
+  { x: bounds.min.x, y: 0, z: bounds.max.z },
+  {
+    x: (bounds.min.x + bounds.max.x) / 2,
+    y: 0,
+    z: (bounds.min.z + bounds.max.z) / 2,
+  },
+];
 
 const boxCorners = (box: IAutoMoviePropBox): IAutoMovieVector3[] =>
   [box.min.x, box.max.x].flatMap((x) =>
