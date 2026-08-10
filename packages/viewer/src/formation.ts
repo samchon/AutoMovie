@@ -709,13 +709,13 @@ const ROOT_ORIGIN: IAutoMovieVector3 = Object.freeze({ x: 0, y: 0, z: 0 });
  * heading with `THREE.MathUtils.degToRad`, which rounds `PI / 180` before
  * multiplying, while the engine multiplies by `Math.PI` and then divides by
  * 180. Those are different doubles for 93 of the 361 whole-degree headings, and
- * at a plain three degrees 886 of a 2,049-strong line's members landed on
- * positions the engine's own placement law does not name. One unit in the last
- * place is not a pixel, and an instance matrix rounds it away on the way to
- * float32; what it does reach is the accounting kept in doubles beside it,
- * where a chunk's world centre decides an LOD tier and a frustum test, and a
- * chunk far from its anchor turns that ulp into several ulps of camera
- * distance.
+ * at a plain three degrees, once a cue rewrote their places, 886 of a
+ * 2,049-strong line's members landed on positions the engine's own placement
+ * law does not name. One unit in the last place is not a pixel, and an instance
+ * matrix rounds it away on the way to float32; what it does reach is the
+ * accounting kept in doubles beside it, where a chunk's world centre decides an
+ * LOD tier and a frustum test on every frame — cue or no cue — and a chunk far
+ * from its anchor turns that ulp into several ulps of camera distance.
  *
  * Only the point transform was ever affected. A heading turned into a
  * quaternion still goes through `setFromAxisAngle`, which performs the same
