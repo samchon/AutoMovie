@@ -232,6 +232,15 @@ export const test_drawing_opening_schedule = (): void => {
     [varied.total, varied.rows.reduce((sum, row) => sum + row.count, 0)],
     [8, 8],
   );
+  const reversed = moreOpeningTypes(environment);
+  TestValidator.equals(
+    "the order the design authored its openings in does not reach the schedule",
+    deriveAutoMovieDrawingSchedule({
+      environment: { ...reversed, openings: [...reversed.openings].reverse() },
+      subject: "opening",
+    }).digest,
+    varied.digest,
+  );
   TestValidator.equals(
     "the same design schedules the same bytes twice",
     deriveAutoMovieDrawingSchedule({
@@ -468,6 +477,14 @@ export const test_drawing_opening_schedule = (): void => {
         () => triangulateAutoMoviePolygon(square).length === 2,
       ],
       [
+        "fewer than three corners is refused, not returned as an empty face",
+        () =>
+          throwsError(
+            () => triangulateAutoMoviePolygon(square.slice(0, 2)),
+            "a polygon needs at least 3 corners to triangulate, but had 2",
+          ),
+      ],
+      [
         "a concave outline is ear-clipped into four triangles inside itself",
         () => {
           const ell = [
@@ -507,6 +524,7 @@ export const test_drawing_opening_schedule = (): void => {
       "a face point walks the frame's own outward normal by the depth asked for": true,
       "a triangle is already a triangulation": true,
       "a square is two triangles": true,
+      "fewer than three corners is refused, not returned as an empty face": true,
       "a concave outline is ear-clipped into four triangles inside itself": true,
     },
   );

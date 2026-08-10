@@ -174,12 +174,11 @@ const openingOccurrences = (
         : environment.elements.find(
             (candidate) => candidate.id === opening.fill,
           );
-    const boundary = environment.boundaries.find(
-      (candidate) => candidate.id === opening.boundary,
-    )!;
     // The opening's own void wins over anything standing in it: only the void
-    // is the hole, and a leaf's extent is the leaf's.
-    if (opening.profile !== undefined && boundary.face !== undefined) {
+    // is the hole, and a leaf's extent is the leaf's. Validation already
+    // refuses a void whose host boundary declares no face, so a stated profile
+    // never needs its host re-checked here.
+    if (opening.profile !== undefined) {
       const extent = autoMovieOpeningExtent(opening.profile);
       return {
         id: opening.id,

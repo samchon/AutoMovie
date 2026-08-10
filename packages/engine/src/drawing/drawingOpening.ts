@@ -232,6 +232,14 @@ export const autoMovieBoundaryShellTriangles = (
 export const triangulateAutoMoviePolygon = (
   polygon: readonly IAutoMoviePlanarPoint[],
 ): Array<[number, number, number]> => {
+  // Refused rather than returned empty: fewer than three corners is not a
+  // polygon with no triangles in it, it is a caller that meant something else,
+  // and quietly handing back a triangle of undefined corners would put a face
+  // of nothing into a drawing.
+  if (polygon.length < 3)
+    throw new Error(
+      `a polygon needs at least 3 corners to triangulate, but had ${polygon.length}`,
+    );
   const ring = polygon.map((_, index) => index);
   const triangles: Array<[number, number, number]> = [];
   while (ring.length > 3) {

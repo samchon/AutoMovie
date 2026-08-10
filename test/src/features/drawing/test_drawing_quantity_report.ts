@@ -302,6 +302,33 @@ export const test_drawing_quantity_report = (): void => {
           ),
       ],
       [
+        "a column open at one end reports no volume rather than a confident zero",
+        () =>
+          autoMovieDrawingCellVolume([
+            { normal: { x: 1, y: 0, z: 0 }, offset: 1 },
+            { normal: { x: -1, y: 0, z: 0 }, offset: 0 },
+            { normal: { x: 0, y: 0, z: 1 }, offset: 1 },
+            { normal: { x: 0, y: 0, z: -1 }, offset: 0 },
+            // Bounded on four sides and open upward: four corners exist, so a
+            // vertex count alone would let it through.
+            { normal: { x: 0, y: -1, z: 0 }, offset: 0 },
+          ]) === null,
+      ],
+      [
+        "a wedge capped twice and open below reports no volume either",
+        () =>
+          autoMovieDrawingCellVolume([
+            { normal: { x: 1, y: 0, z: 0 }, offset: 1 },
+            { normal: { x: -1, y: 0, z: 0 }, offset: 1 },
+            { normal: { x: 0, y: 0, z: 1 }, offset: 1 },
+            { normal: { x: 0, y: 0, z: -1 }, offset: 0 },
+            // Two capping planes meeting in a ridge give six non-coplanar
+            // corners, and the solid still runs off downward.
+            { normal: { x: -1, y: 1, z: 0 }, offset: 5 },
+            { normal: { x: 1, y: 1, z: 0 }, offset: 5 },
+          ]) === null,
+      ],
+      [
         "four parallel planes bound no solid and report none",
         () =>
           autoMovieDrawingCellVolume([
@@ -326,6 +353,8 @@ export const test_drawing_quantity_report = (): void => {
       "a repeated face is redundant, not a second face": true,
       "a plane touching only one edge bounds no face and adds no cone": true,
       "a corner cut off a unit cube removes exactly a sixth of it": true,
+      "a column open at one end reports no volume rather than a confident zero": true,
+      "a wedge capped twice and open below reports no volume either": true,
       "four parallel planes bound no solid and report none": true,
       "a polygon of fewer than three points encloses nothing": true,
     },
@@ -383,8 +412,10 @@ export const test_drawing_quantity_report = (): void => {
             view: drawingView({ id: "unbounded" }),
           });
           return (
+            // The same word the quantity report uses: the section exists and
+            // the closed cell it needs does not.
             drawing.gaps.find((gap) => gap.subject === "unbounded-space-cell")
-              ?.status === "unsupported" &&
+              ?.status === "not-run" &&
             drawing.regions.every((region) => region.cell !== "open-cell")
           );
         },

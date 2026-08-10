@@ -404,6 +404,54 @@ export const test_drawing_svg_sidecar = (): void => {
     },
   );
 
+  TestValidator.equals(
+    "a stale record that carries no reason writes an empty one, not the word null",
+    namedFacts([
+      [
+        "a hand-built stale dimension and note serialize without a reason",
+        () => {
+          const emitted = autoMovieDrawingToSvg({
+            drawing: {
+              ...drawing,
+              dimensions: [
+                {
+                  id: "reasonless",
+                  measure: "page",
+                  status: "stale",
+                  from: null,
+                  to: null,
+                  value: null,
+                  reason: null,
+                },
+              ],
+              annotations: [
+                {
+                  id: "reasonless-note",
+                  text: "no reason given",
+                  status: "stale",
+                  at: null,
+                  reason: null,
+                },
+              ],
+            },
+            view,
+          });
+          return (
+            emitted.includes(
+              '<g class="automovie-dimension" data-id="reasonless" data-status="stale" data-reason="" />',
+            ) &&
+            emitted.includes(
+              '<g class="automovie-annotation" data-id="reasonless-note" data-status="stale" data-reason="" />',
+            )
+          );
+        },
+      ],
+    ]),
+    {
+      "a hand-built stale dimension and note serialize without a reason": true,
+    },
+  );
+
   // 8. Determinism.
   TestValidator.equals(
     "the same drawing serializes to the same bytes twice",

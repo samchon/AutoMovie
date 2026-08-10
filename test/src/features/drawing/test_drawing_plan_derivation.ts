@@ -845,6 +845,23 @@ export const test_drawing_plan_derivation = (): void => {
           ]).length === 3,
       ],
       [
+        "a sliver whose two corners weld onto one point drafts no edge between them",
+        () =>
+          autoMovieDrawingSilhouetteEdges(plan.frame, [
+            {
+              // Two corners a ten-millionth of a metre apart round onto the
+              // same output point. The triangle is not degenerate — its normal
+              // is small but real — yet its ring collapses to a single welded
+              // pair, so the two faces of that pair agree and nothing is
+              // drafted. A sliver thinner than the output grid draws nothing,
+              // which is the only honest thing it can draw.
+              a: { x: 0, y: 0, z: 0 },
+              b: { x: 1e-7, y: 0, z: 0 },
+              c: { x: 0, y: 0, z: 1 },
+            },
+          ]).length === 0,
+      ],
+      [
         "a collapsed triangle contributes no silhouette at all",
         () =>
           autoMovieDrawingSilhouetteEdges(plan.frame, [
@@ -882,6 +899,7 @@ export const test_drawing_plan_derivation = (): void => {
       "a triangle wholly on one side of the cut plane is not cut at all": true,
       "a malformed mesh is refused rather than drawn as its even prefix": true,
       "a lone triangle is its own silhouette on every edge": true,
+      "a sliver whose two corners weld onto one point drafts no edge between them": true,
       "a collapsed triangle contributes no silhouette at all": true,
       "negative zero rounds to zero so one coordinate has one spelling": true,
     },

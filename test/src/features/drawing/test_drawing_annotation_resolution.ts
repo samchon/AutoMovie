@@ -459,7 +459,51 @@ export const test_drawing_annotation_resolution = (): void => {
     resolve({ kind: "vertex", index: 0 }, reversed).count,
     16,
   );
+  TestValidator.equals(
+    "an edge whose two ends weld onto one corner is not an edge",
+    // The sliver's first two corners round onto the same point, so the ring
+    // has three corners and only two edges between them: a zero-length edge is
+    // not a feature a note could be pinned to.
+    [
+      resolve(
+        { element: "floor-slab", kind: "vertex" },
+        sliverSlab(environment),
+      ).count,
+      resolve({ element: "floor-slab", kind: "edge" }, sliverSlab(environment))
+        .count,
+    ],
+    [2, 1],
+  );
 };
+
+/** The same design with the slab replaced by one welded-corner sliver triangle. */
+const sliverSlab = (
+  environment: IAutoMovieBuiltEnvironment,
+): IAutoMovieBuiltEnvironment => ({
+  ...environment,
+  models: environment.models.map((model) =>
+    model.id === "slab"
+      ? {
+          ...model,
+          parts: [
+            {
+              ...model.parts[0]!,
+              geometry: {
+                type: "mesh" as const,
+                mesh: {
+                  positions: [0, 0, 0, 1e-7, 0, 0, 0, 0, 1],
+                  normals: null,
+                  uvs: null,
+                  indices: [0, 1, 2],
+                  skin: null,
+                },
+              },
+            },
+          ],
+        }
+      : model,
+  ),
+});
 
 /** The same design with the wall moved half a metre along the plan. */
 const movedWall = (

@@ -139,10 +139,10 @@ export const measureAutoMovieQuantities = (props: {
 
   let unprovenOpenings = 0;
   for (const opening of environment.openings) {
-    const boundary = environment.boundaries.find(
-      (candidate) => candidate.id === opening.boundary,
-    )!;
-    if (opening.profile === undefined || boundary.face === undefined) {
+    // Validation already refuses a void whose host boundary declares no face,
+    // so a stated profile is always placeable and an absent one is the only
+    // case left to report.
+    if (opening.profile === undefined) {
       ++unprovenOpenings;
       continue;
     }

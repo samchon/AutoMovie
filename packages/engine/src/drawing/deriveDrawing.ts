@@ -220,8 +220,13 @@ export const deriveAutoMovieDrawing = (props: {
     }
   if (unbounded !== 0)
     gaps.push({
+      // `not-run` rather than `unsupported`, and the same word the quantity
+      // report uses for the same subject: sectioning a cell is a derivation
+      // that exists and works, and what is missing is a cell closed enough to
+      // run it on. Two artifacts naming one subject must not disagree about
+      // whose fault it is.
       subject: "unbounded-space-cell",
-      status: "unsupported",
+      status: "not-run",
       reason: `${unbounded} logical cell(s) are not bounded by their own half-spaces, so their cross-section has no finite outline`,
       remedy:
         "close each cell with enough half-spaces to bound it, or split the region into bounded cells",
@@ -486,7 +491,10 @@ const openingMark = (
     kind: opening.kind,
     fill: opening.fill,
   };
-  if (opening.profile !== undefined && boundary.face !== undefined) {
+  // Validation already refuses a void whose host boundary declares no face, so
+  // a stated profile always has a face to be placed on; re-testing it here
+  // would be a branch no validated design can take.
+  if (opening.profile !== undefined) {
     const extent = autoMovieOpeningExtent(opening.profile);
     return {
       ...identity,

@@ -530,6 +530,15 @@ export const autoMovieDrawingCellVolume = (
   );
   const center = Vector3.scale(interior, 1 / vertices.length);
   let volume = 0;
+  // The vector area of a closed surface is zero: every face's outward normal is
+  // cancelled by the rest of the boundary. An unbounded cell has faces where it
+  // was cut and none where it runs off, so its vector area cannot cancel — and
+  // that is the only cheap way to catch the unbounded cells a vertex count
+  // cannot. A column bounded on four sides and open at the top has four corners
+  // and would otherwise report a confident zero; a wedge with two capping
+  // planes has six and would report a confident wrong number.
+  let closure = Vector3.create();
+  let facing = 0;
   for (const plane of scaled) {
     const onFace = vertices.filter(
       (vertex) =>
@@ -555,7 +564,10 @@ export const autoMovieDrawingCellVolume = (
     const area = Math.abs(doubled) / 2;
     const height = Math.abs(Vector3.dot(plane.normal, center) - plane.offset);
     volume += (area * height) / 3;
+    closure = Vector3.add(closure, Vector3.scale(plane.normal, area));
+    facing += area;
   }
+  if (Vector3.length(closure) > facing * 1e-6) return null;
   return volume;
 };
 
