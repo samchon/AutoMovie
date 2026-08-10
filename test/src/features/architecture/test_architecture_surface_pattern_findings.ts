@@ -12,6 +12,7 @@ const course =
   (
     size: number,
     grainDeg: number,
+    mirror: false,
     height: number,
   ): AutoMovieSurfacePatternGenerator =>
   ({ column, row, origin, period }) =>
@@ -83,6 +84,7 @@ export const test_architecture_surface_pattern_findings = (): void => {
                     size: { u: 0.6, v: 0.6 },
                     rotationDeg: 0,
                     grainDeg: 0,
+                    mirror: false,
                   },
                 ],
         }),
@@ -154,6 +156,7 @@ export const test_architecture_surface_pattern_findings = (): void => {
               size: { u: 1, v: 0.5 },
               rotationDeg: 0,
               grainDeg: 0,
+              mirror: false,
             },
           ],
   });
@@ -228,6 +231,7 @@ export const test_architecture_surface_pattern_findings = (): void => {
                       size: { u: 1, v: 1 },
                       rotationDeg: 0,
                       grainDeg: 0,
+                      mirror: false,
                     },
                   ],
           }),
@@ -316,6 +320,7 @@ export const test_architecture_surface_pattern_findings = (): void => {
                       rotationDeg: 0,
                       grainDeg:
                         grainToleranceDeg !== null && column === 1 ? 90 : 0,
+                      mirror: false,
                     },
                   ],
           }),

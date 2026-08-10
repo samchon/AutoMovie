@@ -190,6 +190,7 @@ export const test_architecture_surface_pattern_instancing = (): void => {
                 size: { u: 0.6, v: 0.3 },
                 rotationDeg: 90,
                 grainDeg: 0,
+                mirror: false,
               },
             ],
           }),

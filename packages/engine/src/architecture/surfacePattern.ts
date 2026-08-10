@@ -25,6 +25,9 @@ const LENGTH_EPSILON = 1e-9;
 /** Smallest surviving-fraction shortfall counted as a real sliver. */
 const COVERAGE_EPSILON = 1e-12;
 
+/** Greatest relative skew a UV transform is still counted as free of. */
+const SHEAR_EPSILON = 1e-9;
+
 /** One point on the host face, in face-local metres. */
 export interface IAutoMoviePatternPoint {
   /** Distance along the face's local U axis, in metres. */
@@ -58,6 +61,21 @@ export interface IAutoMoviePatternCandidate {
   rotationDeg: number;
   /** Material grain direction in degrees; read modulo 180. */
   grainDeg: number;
+  /**
+   * Whether the piece is laid face-flipped, its own U axis reversed.
+   *
+   * This is what book-matching is: two slabs cut from one block and opened like
+   * a page, so the second shows the first's image reversed. A rectangle is
+   * unchanged by that flip, so the piece keeps the same footprint and the same
+   * instance slot; what reverses is the material across it, which is why the
+   * flip only becomes visible through
+   * {@link autoMoviePatternTextureTransforms}.
+   *
+   * It is not the grain turned. {@link grainDeg} states the direction the grain
+   * runs on the surface either way, so a mirrored pair whose grain runs one way
+   * is continuous grain and is not reported as a break.
+   */
+  mirror: boolean;
 }
 
 /**
@@ -194,6 +212,8 @@ export interface IAutoMoviePatternPlacement {
   rotationDeg: number;
   /** Grain direction in degrees, read modulo 180. */
   grainDeg: number;
+  /** Whether the piece is laid face-flipped, its own U axis reversed. */
+  mirror: boolean;
   /** Surviving area in square metres. */
   area: number;
   /** Surviving fraction of the module's own area, within `(0, 1]`. */
@@ -317,12 +337,96 @@ export interface IAutoMoviePatternFaceFrame {
   v: IAutoMovieVector3;
 }
 
+/**
+ * One flat panel of a host that folds or curves, and the strip of the face it
+ * carries.
+ *
+ * A pattern is laid on one plane because a joint, a cut piece, and a take-off
+ * are all measured on the surface rather than in the air above it. A wall that
+ * turns a corner and a facade that curves are still one surface, and unrolling
+ * them is what keeps them one: the face-local plane is the developed surface,
+ * distance along U is distance along the building past the corner, and each
+ * zone then says which flat panel of the real host its own strip went back
+ * onto.
+ *
+ * {@link anchor} is the developed point {@link frame}'s origin sits at, so a zone
+ * starting three metres along the developed face returns to the return wall's
+ * own origin rather than three metres past it. Without it a fold would turn the
+ * panel and still leave the pieces where the flat face had put them.
+ *
+ * A module is a rigid piece, so it belongs to exactly one panel. A piece
+ * crossing a fold is authored as two zones meeting at that fold, which is what
+ * the two pieces really are: the border cut already butts them on the surface,
+ * and the neighbour scan already measures across it.
+ */
+export interface IAutoMoviePatternFacet {
+  /** Zone whose pieces sit on this panel. */
+  zone: string;
+  /** Face-local metre point this panel's frame origin sits at. */
+  anchor: IAutoMoviePatternPoint;
+  /** World placement of that point. */
+  frame: IAutoMoviePatternFaceFrame;
+}
+
 /** Explicit instance slots and the occurrences that cannot become one. */
 export interface IAutoMoviePatternInstancing {
   /** One exact full-TRS slot per whole occurrence, in placement order. */
   transforms: IAutoMovieExplicitInstanceTransform[];
   /** Occurrence ids that were cut and therefore need their own geometry. */
   cut: string[];
+}
+
+/**
+ * Where one material's texture sheet is pinned on the face.
+ *
+ * The two answers are the two things a repeated finish can mean. A tile carries
+ * its own image, so every piece shows the same one and the sheet travels with
+ * the piece. A slab, a board, and a panel are cut out of one sheet, so where a
+ * piece sits decides what it shows, and the sheet stays where the face put it.
+ */
+export type AutoMoviePatternTextureSheet =
+  | {
+      /** Every piece shows the same image, centred on the piece itself. */
+      kind: "module";
+    }
+  | {
+      /** One sheet runs across the whole face and pieces are cut out of it. */
+      kind: "face";
+      /** Face-local metre point the sheet's own origin sits at. */
+      origin: IAutoMoviePatternPoint;
+    };
+
+/**
+ * One occurrence's sampling of its material, in the PBR record's own UV
+ * transform.
+ */
+export interface IAutoMoviePatternTextureTransform {
+  /** The occurrence this samples for. */
+  id: string;
+  /** Normalized UV offset. */
+  offset: {
+    /** Offset along the texture's own U axis. */
+    x: number;
+    /** Offset along the texture's own V axis. */
+    y: number;
+  };
+  /** Normalized UV scale; a negative `x` is the mirrored piece. */
+  scale: {
+    /** Scale along the texture's own U axis. */
+    x: number;
+    /** Scale along the texture's own V axis. */
+    y: number;
+  };
+  /** UV rotation in degrees, within `(-180, 180]`. */
+  rotationDeg: number;
+}
+
+/** UV transforms and the occurrences that transform cannot express. */
+export interface IAutoMoviePatternTexturing {
+  /** One transform per expressible occurrence, in placement order. */
+  transforms: IAutoMoviePatternTextureTransform[];
+  /** Occurrence ids whose sampling needs a shear the transform has no term for. */
+  sheared: string[];
 }
 
 /**
@@ -436,6 +540,7 @@ export const generateAutoMovieSurfacePattern = (props: {
             size: { u: candidate.size.u, v: candidate.size.v },
             rotationDeg: candidate.rotationDeg,
             grainDeg: candidate.grainDeg,
+            mirror: candidate.mirror,
             area,
             coverage: area / moduleArea,
             cut:
@@ -484,22 +589,24 @@ export const generateAutoMovieSurfacePattern = (props: {
  *
  * The prototype's local `+X` maps to the module's U extent, local `+Y` to its V
  * extent, and local `+Z` to the face normal, which is `u × v`.
+ *
+ * A host that folds at a corner or curves is one developed face standing on
+ * several flat panels, so a zone may name its own {@link IAutoMoviePatternFacet}
+ * and every zone that does not stays on {@link frame}.
  */
 export const autoMoviePatternInstanceTransforms = (props: {
   result: IAutoMovieSurfacePatternResult;
   frame: IAutoMoviePatternFaceFrame;
+  /** Panels the folded or curved zones return onto; the rest use `frame`. */
+  facets?: readonly IAutoMoviePatternFacet[];
   /** Module thickness along the face normal in metres, strictly above zero. */
   thickness: number;
   /** Prototype ids indexed by variant; omitted leaves the set default. */
   prototypes?: readonly string[];
 }): IAutoMoviePatternInstancing => {
   positive(props.thickness, "pattern module thickness");
-  const u = unitAxis(props.frame.u, "pattern face frame u");
-  const v = unitAxis(props.frame.v, "pattern face frame v");
-  finiteVector(props.frame.origin, "pattern face frame origin");
-  if (Math.abs(Vector3.dot(u, v)) > 1e-6)
-    throw new Error("pattern face frame axes must be perpendicular");
-  const normal = Vector3.cross(u, v);
+  const flat = resolveFacet({ u: 0, v: 0 }, props.frame, "pattern face frame");
+  const panels = resolveFacets(props.result, props.facets ?? []);
   const transforms: IAutoMovieExplicitInstanceTransform[] = [];
   const cut: string[] = [];
   for (const placement of props.result.placements) {
@@ -507,16 +614,18 @@ export const autoMoviePatternInstanceTransforms = (props: {
       cut.push(placement.id);
       continue;
     }
+    const panel = panels.get(placement.zone) ?? flat;
+    const { u, v, normal } = panel;
     const angle = placement.rotationDeg * Quaternion.DEG2RAD;
     const cosine = Math.cos(angle);
     const sine = Math.sin(angle);
     const axisU = Vector3.add(Vector3.scale(u, cosine), Vector3.scale(v, sine));
     const axisV = Vector3.cross(normal, axisU);
     const translation = Vector3.add(
-      props.frame.origin,
+      panel.origin,
       Vector3.add(
-        Vector3.scale(u, placement.center.u),
-        Vector3.scale(v, placement.center.v),
+        Vector3.scale(u, placement.center.u - panel.anchor.u),
+        Vector3.scale(v, placement.center.v - panel.anchor.v),
       ),
     );
     const rotation = Quaternion.normalize(
@@ -560,6 +669,175 @@ export const autoMoviePatternInstanceTransforms = (props: {
     transforms.push(slot);
   }
   return { transforms, cut };
+};
+
+/**
+ * Say how each laid piece samples its material, in the UV transform the PBR
+ * record already carries.
+ *
+ * A pattern is not a texture repeat, but what a laid piece finally shows is
+ * still a texture, and the way to show it is the one the material record
+ * already has: an `offset`, a `scale`, and a `rotationDeg` on its texture
+ * reference. Nothing new is invented here and no second texturing path is
+ * opened; what this adds is the arithmetic that turns a piece's own place,
+ * size, rotation, grain, and flip into that transform, so a book-matched pair
+ * is a real mirrored image rather than two slabs a viewer cannot tell apart.
+ *
+ * The piece's own mesh UV is taken to span `[0, 1]` across its footprint, which
+ * is what a unit-square prototype and a cut piece built from the occurrence
+ * outline both give. The sheet is turned by the piece's own
+ * {@link IAutoMoviePatternPlacement.grainDeg}, so a board whose grain runs along
+ * it samples straight while a slab set across the grain samples across it.
+ *
+ * One call states one material's sheet. A run whose zones carry different
+ * materials calls it once per material and keeps the occurrences belonging to
+ * that material's zones, exactly as the prototype table is stated per call.
+ *
+ * The renderer's texture matrix scales and then rotates, so a piece samples
+ * exactly when its own two axes stay perpendicular under the map, which they do
+ * when the piece is square or when it is laid square to its grain. A long piece
+ * turned off its grain by anything else needs a shear the transform has no term
+ * for, and is reported by id rather than handed back as a transform that
+ * quietly skews the image.
+ */
+export const autoMoviePatternTextureTransforms = (props: {
+  result: IAutoMovieSurfacePatternResult;
+  /** Metres one turn of the texture covers along its own two axes. */
+  tile: {
+    /** Metres one turn covers along the sheet's own U axis. */
+    u: number;
+    /** Metres one turn covers along the sheet's own V axis. */
+    v: number;
+  };
+  /** Where the sheet is pinned. */
+  sheet: AutoMoviePatternTextureSheet;
+}): IAutoMoviePatternTexturing => {
+  positive(props.tile.u, "pattern texture tile u");
+  positive(props.tile.v, "pattern texture tile v");
+  const sheet = props.sheet;
+  if (sheet.kind === "face")
+    finitePoint(sheet.origin, "pattern texture sheet origin");
+  const transforms: IAutoMoviePatternTextureTransform[] = [];
+  const sheared: string[] = [];
+  for (const placement of props.result.placements) {
+    const grain = placement.grainDeg * Quaternion.DEG2RAD;
+    const turn = placement.rotationDeg * Quaternion.DEG2RAD - grain;
+    const cosine = Math.cos(turn);
+    const sine = Math.sin(turn);
+    const width = placement.mirror ? -placement.size.u : placement.size.u;
+    const height = placement.size.v;
+    // The two rows of `diag(1/tile) · R(turn) · diag(width, height)`: the map
+    // from the piece's own unit UV onto the sheet's.
+    const first = {
+      x: (cosine * width) / props.tile.u,
+      y: (-sine * height) / props.tile.u,
+    };
+    const second = {
+      x: (sine * width) / props.tile.v,
+      y: (cosine * height) / props.tile.v,
+    };
+    const across = Math.hypot(first.x, first.y);
+    const down = Math.hypot(second.x, second.y);
+    if (
+      Math.abs(first.x * second.x + first.y * second.y) >
+      SHEAR_EPSILON * across * down
+    ) {
+      sheared.push(placement.id);
+      continue;
+    }
+    // Scaling and then rotating carries the second row to `ry · (sin, cos)` and
+    // the first to `rx · (cos, -sin)`, so the angle is read off the second row
+    // and the first row's signed length along it is the scale that may mirror.
+    const angle = Math.atan2(second.x, second.y);
+    const base =
+      sheet.kind === "module"
+        ? { x: 0.5, y: 0.5 }
+        : sheetPoint(placement.center, sheet.origin, grain, props.tile);
+    transforms.push({
+      id: placement.id,
+      offset: {
+        x: base.x - (first.x + first.y) / 2,
+        y: base.y - (second.x + second.y) / 2,
+      },
+      scale: {
+        x: first.x * Math.cos(angle) - first.y * Math.sin(angle),
+        y: down,
+      },
+      rotationDeg: -angle / Quaternion.DEG2RAD,
+    });
+  }
+  return { transforms, sheared };
+};
+
+/** Where a face point falls on a sheet turned by the grain, in turns. */
+const sheetPoint = (
+  point: IAutoMoviePatternPoint,
+  origin: IAutoMoviePatternPoint,
+  grain: number,
+  tile: { u: number; v: number },
+): { x: number; y: number } => {
+  const cosine = Math.cos(grain);
+  const sine = Math.sin(grain);
+  const across = point.u - origin.u;
+  const down = point.v - origin.v;
+  return {
+    x: (cosine * across + sine * down) / tile.u,
+    y: (-sine * across + cosine * down) / tile.v,
+  };
+};
+
+/** The panel each zone returns onto, refusing a facet nothing was laid in. */
+const resolveFacets = (
+  result: IAutoMovieSurfacePatternResult,
+  facets: readonly IAutoMoviePatternFacet[],
+): Map<string, IAutoMovieResolvedFacet> => {
+  const zones = new Set(result.quantities.zones.map((one) => one.zone));
+  const panels = new Map<string, IAutoMovieResolvedFacet>();
+  for (const facet of facets) {
+    if (!zones.has(facet.zone))
+      throw new Error(
+        `pattern facet names zone "${facet.zone}", which pattern "${result.id}" did not lay`,
+      );
+    if (panels.has(facet.zone))
+      throw new Error(`pattern facet zone "${facet.zone}" must be unique`);
+    panels.set(
+      facet.zone,
+      resolveFacet(
+        facet.anchor,
+        facet.frame,
+        `pattern facet "${facet.zone}" frame`,
+      ),
+    );
+  }
+  return panels;
+};
+
+/** One panel's orthonormal world basis and the developed point it stands at. */
+interface IAutoMovieResolvedFacet {
+  /** Face-local metre point {@link origin} sits at. */
+  anchor: IAutoMoviePatternPoint;
+  /** World point the panel is measured from. */
+  origin: IAutoMovieVector3;
+  /** Unit world direction of the panel's U axis. */
+  u: IAutoMovieVector3;
+  /** Unit world direction of the panel's V axis. */
+  v: IAutoMovieVector3;
+  /** Unit world face normal, `u × v`. */
+  normal: IAutoMovieVector3;
+}
+
+const resolveFacet = (
+  anchor: IAutoMoviePatternPoint,
+  frame: IAutoMoviePatternFaceFrame,
+  label: string,
+): IAutoMovieResolvedFacet => {
+  const u = unitAxis(frame.u, `${label} u`);
+  const v = unitAxis(frame.v, `${label} v`);
+  finiteVector(frame.origin, `${label} origin`);
+  finitePoint(anchor, `${label} anchor`);
+  if (Math.abs(Vector3.dot(u, v)) > 1e-6)
+    throw new Error(`${label} axes must be perpendicular`);
+  return { anchor, origin: frame.origin, u, v, normal: Vector3.cross(u, v) };
 };
 
 const validatePattern = (

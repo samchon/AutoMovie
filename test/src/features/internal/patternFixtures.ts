@@ -34,6 +34,7 @@ export const stackBond =
       size: { u: size, v: size },
       rotationDeg: 0,
       grainDeg,
+      mirror: false,
     },
   ];
 
