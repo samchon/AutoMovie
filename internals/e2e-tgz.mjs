@@ -284,6 +284,7 @@ const runExpectedOutput = (
   cwd,
   expected,
   timeout = 300_000,
+  forbidden = null,
 ) => {
   console.log(`> ${label}`);
   const result = spawnSync(command, {
@@ -296,6 +297,13 @@ const runExpectedOutput = (
   });
   if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (forbidden !== null)
+    for (const line of output.split(/\r?\n/u))
+      if (line.trim().length !== 0 && forbidden.test(line) === false)
+        throw new Error(
+          `${label}: every line had to match ${forbidden}, and this one did not: ${JSON.stringify(line)}.
+${output}`,
+        );
   for (const phrase of expected)
     if (output.includes(phrase) === false)
       throw new Error(
@@ -1593,6 +1601,13 @@ if (
       "unchanged formations/chorus.json",
       "unchanged world.json",
     ],
+    300_000,
+    // Every line, not the four named above. A record the emitter
+    // rewrites is a design mutation, and a design mutation between the
+    // compile and the reader below is exactly what leaves the packaged
+    // state stale -- reported here, by name, instead of as a stale state
+    // three steps later.
+    /^unchanged /u,
   );
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got

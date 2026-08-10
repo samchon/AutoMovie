@@ -420,7 +420,7 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
               tokens: 14962,
             },
             tryDigest:
-              "2735e8266ab0033d19aaf3827e25b18bc4e62a7c96ee786db25a1227a5eaa17e",
+              "2ab34a3549afb40d26c462e3b72adc136e0b27d13974749d8f09ebd3715520f2",
             tryStatements: 296,
           },
           {
