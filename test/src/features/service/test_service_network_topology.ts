@@ -2,6 +2,7 @@ import {
   serviceAnalysisSupport,
   serviceNetworkSchematic,
   serviceSystemReach,
+  validateBuiltEnvironment,
   validateServiceNetwork,
   validateWetZones,
 } from "@automovie/engine";
@@ -39,8 +40,10 @@ import {
  *
  * Scenarios:
  *
- * 1. The multi-discipline fixture validates clean on both the graph and its wet
- *    zones, with no warnings riding along.
+ * 1. The building itself validates as a building, and the multi-discipline network
+ *    over it validates clean on both the graph and its wet zones, with no
+ *    warnings riding along. A network held against a building that would not
+ *    stand up proves nothing.
  * 2. Every system's reach is exactly the nodes carrying its ports, in declaration
  *    order, for all three flow directions.
  * 3. An undirected system reaches through a run in the direction opposite to the
@@ -61,6 +64,13 @@ export const test_service_network_topology = (): void => {
   const environment = serviceEnvironment();
   const network = serviceNetwork();
 
+  TestValidator.predicate(
+    "the building the network is checked against is itself a valid building",
+    validationHasNoWarnings(
+      "service environment",
+      validateBuiltEnvironment({ environment }),
+    ),
+  );
   TestValidator.predicate(
     "a seven-system network validates clean",
     validationHasNoWarnings(
