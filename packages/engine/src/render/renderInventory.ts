@@ -17,6 +17,7 @@ import { fluidDomainBudget } from "../fluid/shallowWater";
 import { tessellateSurface } from "../geometry/surfaceMesh";
 import { tessellate } from "../geometry/tessellate";
 import { plantingBudget } from "../soft/planting";
+import { softBodyBudget } from "../soft/softBody";
 import { compareAutoMovieRenderIds } from "./renderDigest";
 import {
   IAutoMovieRenderPrototypeCost,
@@ -314,13 +315,15 @@ export const measureAutoMovieRenderInventory = (props: {
   for (const panel of subject.softBodies ?? []) {
     const owner = `soft-body:${panel.domain.id}`;
     const source = `softBodies["${panel.domain.id}"]`;
-    const { columns, rows } = panel.domain.lattice;
-    // One vertex per particle and two triangles per lattice quad, which is
-    // exactly what the engine's own panel geometry emits at every step. A
-    // lattice one particle wide holds no quad: it is a cord, it draws nothing,
-    // and the viewer hides it rather than submitting a degenerate mesh.
-    const panelVertices = columns * rows;
-    const panelTriangles = 2 * quads(columns) * quads(rows);
+    // One vertex per particle and two triangles per lattice quad, read from the
+    // domain's own budget rather than recomputed: a second copy of that
+    // arithmetic here would keep answering with the old shape the day the panel
+    // geometry changes. A lattice one particle wide holds no quad, so it is a
+    // cord, it draws nothing, and the viewer hides it rather than submitting a
+    // degenerate mesh.
+    const cost = softBodyBudget(panel.domain);
+    const panelVertices = cost.particles;
+    const panelTriangles = cost.triangles;
     const panelDraws = panelTriangles === 0 ? 0 : 1;
     const panelBytes =
       panelVertices *
