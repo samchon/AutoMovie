@@ -2,6 +2,8 @@
 
 `automovie` moves and forms characters and objects through LLM function calling / structured output, then validates and renders them deterministically: a fixed asset performed by an LLM and rendered by a deterministic engine, as the cheap, controllable, reproducible alternative to diffusion video.
 
+What it delivers is a prototype: a blocking pass whose staging, motion, and timing are correct and reproducible, not a finished photoreal shot. Its ceiling is what an authoring agent can actually drive, and the exclusions that follow are decided rather than pending. The project skill owns them.
+
 ## Attitude
 
 Follow the literal request; it is the contract, not a hint at what the user "really" wants.
@@ -21,7 +23,7 @@ Durable project conventions and workflows live under `.agents/skills/`. Read the
 
 ### Project Outline
 
-What `automovie` is, the long-haul mission, the workspace layout, and the canonical commands, `.agents/skills/project/SKILL.md`.
+What `automovie` is, what it deliberately does not do, the long-haul mission, the workspace layout, and the canonical commands, `.agents/skills/project/SKILL.md`. Read before judging whether a proposed capability is in scope.
 
 ### Development
 
@@ -29,7 +31,7 @@ Work rules, testing, the per-change 100% coverage obligation, validation, conseq
 
 ### Scaffold Authoring
 
-How a production is authored inside `packages/cli/scaffold`: the docs ladder from logline to scene, the spec library, subjects as classes under `src`, and the evidence graph in `lint.config.ts` that makes each stage answer for the one above it, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
+How a production is authored inside `packages/cli/scaffold`: the docs ladder from logline to scene, the spec library, subjects as classes under `src`, why an example there teaches a technique instead of shipping content, and the evidence graph in `lint.config.ts` that makes each stage answer for the one above it, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
 
 ### Documentation
 
@@ -57,7 +59,7 @@ Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`
 
 ### 3D Modeling
 
-Working rules for parametric head/face modeling: verification discipline, anthropometric fitting, derived-data cascades, texture/morph craft, `.agents/skills/3d-modeling/SKILL.md`. Read before any 3D model, likeness, or pipeline work.
+What automovie models and what it refuses to model, plus the verification discipline every geometry, parameter, and derived-data change is held to, `.agents/skills/3d-modeling/SKILL.md`. Read before any model, geometry, rig, morph, or asset-pipeline work, and before proposing anything that would raise a figure's fidelity.
 
 ### Viewer Verification
 
@@ -65,7 +67,7 @@ Driving the viewer/playground through Playwright MCP to inspect renders, poses, 
 
 ### MCP Server Design
 
-Designing `packages/mcp`: server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.agents/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
+Designing `packages/mcp`: what the tool surface may and may not do for its client, server/tool arrangement as an ongoing experiment, and the hard JSDoc-length constraints MCP clients impose (the 512-character server-instruction lead, the 1023-character tool-description cap), `.agents/skills/mcp/SKILL.md`. Read before adding or reshaping an MCP tool.
 
 ### Pull Request Submission
 

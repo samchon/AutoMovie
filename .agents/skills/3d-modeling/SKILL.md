@@ -1,55 +1,55 @@
 ---
 name: 3d-modeling
-description: Defines the first-principles doctrine for building the parametric human face/head: pure-form beauty, measured proportion, verify-before-claim. Use before any face/head model, parameter, or likeness work.
+description: Defines what automovie models and what it refuses to model, and the verification discipline every geometry, parameter, and derived-data change is held to. Use before any model, geometry, rig, morph, or asset-pipeline work, and before proposing anything that would raise a figure's fidelity.
 ---
 
-# 3D Face & Head Modeling
+# 3D Modeling
 
-We build a parametric human head: named anatomical parameters → validated document → deterministic geometry. The bar is that **pure form alone is beautiful**: skin-colored clay, no texture, no shader tricks, like a marble bust. These are the principles that make that achievable. They are not optional.
+## What is modelled here
 
-## Form is the product
+A figure is a crude proxy carrying rich meaning: a stickman whose joints obey real range-of-motion limits, whose feet plant on the actual ground function, and whose gait comes from a declared table. A character that looks like someone is not the product, and that ceiling is a decision rather than a milestone. The project skill's [Out of Scope](../project/SKILL.md#out-of-scope) section states it and the condition that reopens it.
 
-- Beauty lives in **proportion, curvature, and the transition between planes**, not in texture or shading. A skin-colored clay render of a correct face is beautiful (ancient sculpture has no color and loses nothing). If the flat-clay render is not beautiful, the **form** is wrong; fix the form.
-- Never use texture, ambient occlusion, lighting, or material tricks to rescue a bad shape. They hide the defect from you and it returns. Audit form with **flat shading and normal maps**, where only geometry speaks.
-- Lighting for judgment must REVEAL form (a directional key that casts the planes), not a soft even wash that flattens it. A wash can make a monster look passable and a good form look dull: both lies.
+`packages/face` is the dormant remnant of the shelved parametric head effort, kept for compatibility. Do not extend it or build on it.
 
-## Measure before you conclude (선측정 후평가)
+What this skill governs is everything the product does model: procedural geometry, spaces and boundaries, rigs and skeletons, morph and expression channels, gait and motion tables, ingested assets, and every value derived from them.
 
-- Order is fixed: **measure → evaluate → decide**. Never assert a cause, a verdict, or a fix before you have measured the geometry and looked at a render. Reasoning from one number or an assumption produces confident wrong fixes (e.g. blaming "low-poly clay" for what is actually a mis-seated eyeball).
-- Measure numerically (landmark distances, Farkas indices, profile depth) AND look (multi-angle renders). When attributing a change, render an **A/B** (with vs without). Do not guess which edit helped.
+## Measure before you conclude
+
+The order is fixed: measure, evaluate, decide. Never assert a cause, a verdict, or a fix before measuring the geometry and looking at a render. Reasoning from one number or from an assumption produces confident wrong fixes, twice paid for here: a framing solver mistook a rig's joint-Y range for its declared key and cropped every actor's head, and a hand-copied normalization diverged in the last bit and split a quaternion on a quarter of its samples.
+
+Measure numerically (landmark distances, bounds, angles, byte digests) and look at the result. When attributing a change to a cause, render an A/B with and without it rather than guessing which edit helped.
+
+Lighting used for judgment must reveal form, so use a directional key that casts the planes rather than a soft even wash. A wash makes a broken shape look passable and a good one look dull, and both readings are lies. Flat shading and normal display isolate geometry from material, which is what you want when the question is whether the shape is right.
 
 ## Verify, then report: never the reverse
 
-- The loop: **change → render → review it yourself → critique honestly → change again → repeat**, unbounded, until it is genuinely good or you hit a real, named ceiling. Only then report, **image first**, stating plainly what is still wrong.
-- Stating "it's beautiful / fixed now" before showing a verified render is the cried-wolf failure: it destroys trust and is forbidden. Let the verified image carry the claim; describe the remaining flaws yourself.
-- "Less bad than before" is not "good." Keep going.
+The loop is change, render, review it yourself, critique honestly, change again, repeated until the result is correct or you reach a real, named ceiling. Only then report, evidence first, stating plainly what is still wrong.
+
+Claiming something is fixed before showing the verified render is the cried-wolf failure and it is forbidden. Let the verified image carry the claim and describe the remaining flaws yourself. "Less bad than before" is not "correct". The viewer-verification skill defines how to drive the render for this.
 
 ## Don't patch a broken foundation
 
-- If the base mesh is fundamentally wrong (a monster), **rebuild it from scratch**. Patching correctives onto a broken base yields a patched monster, and each corrective fights the last. A correct, well-proportioned base is cheaper than an endless stack of fixes.
-- A corrective is only legitimate when the base is sound and the change is small, measured, and render-verified.
+If a base representation is fundamentally wrong, rebuild it rather than stacking correctives on it. Each corrective fights the last, and the result is a patched version of the original error. A corrective is legitimate only when the base is sound and the change is small, measured, and verified against a render.
 
-## Beauty is measured proportion
+The same rule governs a second implementation of one quantity. A hand copy is a second answer that eventually disagrees with the first, so call the one function instead: the code that draws is the code that measures.
 
-- Attractiveness is driven by **averageness, symmetry, and youthful sexual dimorphism**, NOT the golden ratio (φ / Marquardt mask is folklore, not empirically supported; do not wire it in).
-- The **neutral (all parameters zero) is the balanced average, the most beautiful baseline.** Parameters deviate from it toward individuality. A specific character is offsets from the ideal average, never beauty built up from an ugly base.
-- Calibrate to real human variation (Farkas anthropometry, cephalic index, vertical thirds with the lower third largest, the fifths, fissure ≈ intercanthal): a parameter's ±1 should be ≈ ±1 SD of the population, ±2 the believable edge. Record the study behind a range in `.wiki/04-domain-research/`, and read that directory first if a previous session already wrote one.
-- Feminine cues raise attractiveness and are deliberate axes: softer jaw and gonial angle, smaller nose, fuller lips, a smooth (not bossed) brow ridge, larger eyes relative to the face, a higher arched brow, a smaller chin. Study how MakeHuman (CC0) decomposes these.
-- Reference real exemplars and name archetypes (e.g. cute / beauty / plain) as concrete targets to carve toward, rather than tuning in the abstract.
+## Derived data embeds its basis
 
-## The whole head, every angle
+A residual, a fitted preset, or a baked artifact is defined against a base (`subject - base`), so regenerate every derivative whenever the base changes or the correction double-applies. State the basis in the artifact rather than leaving it implicit, which is what makes a stale derivative detectable instead of merely wrong.
 
-- A head is not a frontal mask. Cephalic proportions (breadth/length), occiput projection, the side-profile S-curve, and the ear sitting on the brow→nose-base line behind the head's midline all matter. **Always verify front, ¾, and side**: a face that reads frontally can be a flat slab in profile.
-- Features must sit correctly in 3D: the eyeball recesses so only the cornea peeks through the lid aperture (never a sphere bulging proud of the lids); lids, lips, and alae carry real depth. A mis-seated feature reads as a monster regardless of proportion.
+## Parameters and rigs
 
-## The parameter system
+- Anatomy-nested or domain-nested types, one channel per nameable trait, with sign semantics and defaults in field JSDoc. Neutral is zero, and a configuration is an offset from neutral.
+- Paired features carry left and right with an explicit rule, so asymmetry is authored data rather than something baked into the base.
+- Ranges are enforced by `engine` validators, never by `typia` tags in `interface`; the development skill's rough-types rule owns that boundary.
+- Record the study behind a numeric range in `.wiki/04-domain-research/`, and read that directory before deriving one again.
 
-- Anatomy-nested types, one morph per nameable trait, documented with sign semantics and typia range/default tags so the structured-output schema binds the model. Neutral = 0 = the average.
-- Paired features (eyes, brows, cheeks) carry left/right with an explicit rule, so asymmetry is data, not baked in.
-- Derived data embeds its basis: any identity residual or fitted preset is `subject − base`, so **regenerate every derivative whenever the base changes**, or the fix double-applies.
+## Every angle, every scale
+
+A model is not its most flattering view. Verify front, three-quarter and side, and verify at the distance the shot actually uses: a proxy that reads at fifty metres can be nonsense in a close framing, and a shape tuned in close-up can vanish in a crowd. Silhouette is what survives distance, so judge it there.
 
 ## Pipeline discipline
 
-- Verification (measure → render → review) is mandatory before any claim of quality.
-- **One PR per arc, many commits; never merge until the mission is genuinely complete and verified.** A green build is not done; a good-looking front is not done.
-- Keep 100% test coverage. Keep scratch in gitignored dirs (`.models/*/work`, `.shots/`); promote only stabilized logic into packages. The render harness drives the deployed editor headless (playwright), multi-angle, with form-revealing lighting and normal-map modes.
+- Verification (measure, render, review) precedes any claim of quality.
+- Keep every source file a change touches at 100% coverage; the development skill states the obligation and its per-change scope.
+- Keep scratch in gitignored directories and promote only stabilized logic into packages. The render harness drives the deployed viewer headless, multi-angle, with form-revealing lighting.
