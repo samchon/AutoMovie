@@ -131,6 +131,16 @@ export interface IAutoMoviePropPlacement {
  * - `"suspended"`: it hangs from a building element or from another prop's `hook`
  *   affordance (`element` or `prop-affordance` target).
  *
+ * Three of the six are measured, not merely resolved. `"on-support"` is
+ * measured as contact: a support patch and a `stack-top` both state a face, so
+ * a prop claiming to rest on one is refused when it floats above it, sinks into
+ * it, or does not stand over it at all. `"in-space"` and `"fill-opening"` are
+ * measured as containment, inside the occupied space's own cells and inside the
+ * reveal of the element filling the passage. The remaining three cite records
+ * that state no contact geometry of their own, a boundary, a building element,
+ * a socket or a hook, so they are checked as citations and left unmeasured
+ * rather than judged against a frame that never said where the contact is.
+ *
  * @author Samchon
  */
 export interface IAutoMoviePropRelation {

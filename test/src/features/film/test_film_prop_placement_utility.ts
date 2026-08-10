@@ -1,10 +1,14 @@
 import {
+  IAutoMoviePropSupportFace,
   propAnchorFrame,
   propBlockedPassages,
   propBoundsOverlap,
   propClearanceBounds,
   propOccupancyBounds,
   propSpaceContainsBounds,
+  propSupportFace,
+  propSupportGap,
+  surfaceHeightAt,
   validatePropPlacements,
 } from "@automovie/engine";
 import {
@@ -14,8 +18,13 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { createModel } from "../internal/fixtures";
-import { namedFacts, throwsError, vclose } from "../internal/predicates";
+import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 import {
   inSpace,
   lamp,
@@ -49,6 +58,51 @@ const UNIT: IAutoMovieStageSetPiece = {
   model: "probe",
   position: { x: 0, y: 0, z: 0 },
 };
+
+/** A square support face on a plane that falls by `slopeZ` metres per metre. */
+const patch = (props: {
+  half: number;
+  originHeight: number;
+  slopeZ?: number;
+}): IAutoMoviePropSupportFace => ({
+  polygon: [
+    { x: -props.half, y: 0, z: -props.half },
+    { x: props.half, y: 0, z: -props.half },
+    { x: props.half, y: 0, z: props.half },
+    { x: -props.half, y: 0, z: props.half },
+  ],
+  height: {
+    height: {
+      kind: "plane",
+      originHeight: props.originHeight,
+      slopeX: 0,
+      slopeZ: props.slopeZ ?? 0,
+    },
+  },
+});
+
+/** The table's own top face, read off the registry the room is staged with. */
+const tableTop = (
+  piece: IAutoMovieStageSetPiece = propSet()[0]!,
+): IAutoMoviePropSupportFace | null =>
+  propSupportFace({
+    target: { kind: "prop-affordance", prop: "table", affordance: "top" },
+    environments: [],
+    props: propRegistry(),
+    set: [piece],
+  });
+
+/** A measured bearing that landed on the face and reads as `expected`. */
+const bearing = (gap: number | null, expected: number): boolean =>
+  gap !== null && nclose(gap, expected);
+
+/** A quaternion turning `deg` about `+X`, the axis that tips a top over. */
+const tipped = (deg: number): IAutoMovieStageSetPiece["rotation"] => ({
+  x: Math.sin((deg * Math.PI) / 360),
+  y: 0,
+  z: 0,
+  w: Math.cos((deg * Math.PI) / 360),
+});
 
 /**
  * A ring of chairs authored the way a production would: one loop, one anchor, a
@@ -122,7 +176,15 @@ const chairRing = (props: {
  *    silent for an open cut, an unmodelled fill, and a degenerate route.
  * 6. Every relation target that carries a frame answers with it and every one that
  *    cannot answers `null`, including each way a citation can dangle.
- * 7. Twelve chairs authored as one seeded loop validate, reproduce byte for byte
+ * 7. A support states one face however it was written: a patch answers from its
+ *    own polygon and height rule, a host's top from the extent it carries
+ *    through the host's staged scale and tilt, and a citation that dangles, a
+ *    contact with no face, an empty polygon, and a top staged edge-on state
+ *    none. The bearing on that face is zero where the prop rests, signed where
+ *    it floats or sinks, taken at the highest probe over a ramp, `null` where
+ *    the prop does not stand over it, and found by the centre probe alone when
+ *    the face is smaller than the footprint.
+ * 8. Twelve chairs authored as one seeded loop validate, reproduce byte for byte
  *    across runs, and move as a body when the seed changes.
  */
 export const test_film_prop_placement_utility = (): void => {
@@ -488,7 +550,7 @@ export const test_film_prop_placement_utility = (): void => {
               props: propRegistry(),
               set: propSet(),
             })!.translation,
-            { x: 0, y: 0.3, z: 0 },
+            { x: 0, y: 0.6, z: 0 },
           ),
       ],
       [
@@ -664,6 +726,264 @@ export const test_film_prop_placement_utility = (): void => {
       unregisteredPropsAnswerNull: true,
       cyclicElementChainAnswersNull: true,
       emptyPolygonSurfaceAnswersNull: true,
+    },
+  );
+
+  TestValidator.equals(
+    "a support states one face, and a footprint bears on it or does not",
+    namedFacts([
+      [
+        "aPatchIsItsOwnPolygonAndHeight",
+        () => {
+          const face = propSupportFace({
+            target: { kind: "surface", environment: "house", surface: "floor" },
+            environments: [environment],
+          });
+          return (
+            face !== null &&
+            face.polygon.length === 4 &&
+            surfaceHeightAt(face.height, 3, -2) === 0
+          );
+        },
+      ],
+      [
+        "aRuledPatchAnswersFromItsRule",
+        () => {
+          const face = propSupportFace({
+            target: {
+              kind: "surface",
+              environment: "house",
+              surface: "annex-floor",
+            },
+            environments: [environment],
+          });
+          return face !== null && surfaceHeightAt(face.height, 7, 1) === 0.5;
+        },
+      ],
+      [
+        "aHostTopStandsAtTheHostsOwnTop",
+        () => {
+          const face = tableTop();
+          return (
+            face !== null &&
+            surfaceHeightAt(face.height, 0, 0) === 0.6 &&
+            propSupportGap({
+              face,
+              bounds: box(-0.1, 0.6, -0.1, 0.1, 1, 0.1),
+            }) === 0
+          );
+        },
+      ],
+      [
+        "aHostTopTravelsWithTheHostsScale",
+        () => {
+          const face = tableTop({ ...propSet()[0]!, scale: 2 });
+          return (
+            face !== null &&
+            nclose(surfaceHeightAt(face.height, 0, 0), 0.9) &&
+            bearing(
+              propSupportGap({
+                face,
+                bounds: box(0.8, 0.9, -0.1, 0.95, 1.2, 0.1),
+              }),
+              0,
+            ) &&
+            propSupportGap({
+              face,
+              bounds: box(1.4, 0.9, -0.1, 1.6, 1.2, 0.1),
+            }) === null
+          );
+        },
+      ],
+      [
+        "aTiltedTopIsReadAsThePlaneItIs",
+        () => {
+          const face = tableTop({ ...propSet()[0]!, rotation: tipped(45) });
+          const drop = 0.3 * Math.SQRT1_2;
+          return (
+            face !== null &&
+            nclose(surfaceHeightAt(face.height, 0, drop), 0.3 + drop) &&
+            nclose(
+              surfaceHeightAt(face.height, 0, 0) -
+                surfaceHeightAt(face.height, 0, 1),
+              1,
+            ) &&
+            nclose(
+              surfaceHeightAt(face.height, 1, 0),
+              surfaceHeightAt(face.height, -1, 0),
+            )
+          );
+        },
+      ],
+      [
+        "anEdgeOnTopStatesNoFace",
+        () => tableTop({ ...propSet()[0]!, rotation: tipped(90) }) === null,
+      ],
+      [
+        "aStackTopWithoutAnExtentStatesNoFace",
+        () =>
+          propSupportFace({
+            target: {
+              kind: "prop-affordance",
+              prop: "shelf",
+              affordance: "top",
+            },
+            environments: [],
+            props: [
+              {
+                node: "shelf",
+                model: {
+                  ...createModel(null),
+                  id: "shelf",
+                  affordances: [
+                    {
+                      id: "top",
+                      kind: "stack-top",
+                      frame: IDENTITY_TRANSFORM,
+                      extent: null,
+                    },
+                  ],
+                },
+                articulation: null,
+              },
+            ],
+            set: [{ node: "shelf", model: "shelf", position: UNIT.position }],
+          }) === null,
+      ],
+      [
+        "anEmptyPatchPolygonStatesNoFace",
+        () =>
+          propSupportFace({
+            target: { kind: "surface", environment: "house", surface: "floor" },
+            environments: [
+              {
+                ...environment,
+                surfaces: environment.surfaces.map((entry) =>
+                  entry.surface.id === "floor"
+                    ? { ...entry, surface: { ...entry.surface, polygon: [] } }
+                    : entry,
+                ),
+              },
+            ],
+          }) === null,
+      ],
+      [
+        "everyDanglingSupportCitationStatesNoFace",
+        () =>
+          (
+            [
+              { kind: "surface", environment: "elsewhere", surface: "floor" },
+              { kind: "surface", environment: "house", surface: "missing" },
+              { kind: "prop-affordance", prop: "missing", affordance: "top" },
+              {
+                kind: "prop-affordance",
+                prop: "table",
+                affordance: "missing",
+              },
+              { kind: "prop-affordance", prop: "table", affordance: "plug" },
+            ] as const
+          ).every(
+            (target) =>
+              propSupportFace({
+                target,
+                environments: [environment],
+                props: propRegistry(),
+                set: propSet(),
+              }) === null,
+          ),
+      ],
+      [
+        "anUnstagedOrUnregisteredHostStatesNoFace",
+        () =>
+          propSupportFace({
+            target: {
+              kind: "prop-affordance",
+              prop: "table",
+              affordance: "top",
+            },
+            environments: [],
+            props: propRegistry(),
+          }) === null &&
+          propSupportFace({
+            target: {
+              kind: "prop-affordance",
+              prop: "table",
+              affordance: "top",
+            },
+            environments: [],
+            set: propSet(),
+          }) === null,
+      ],
+      [
+        "restingIsExactlyZero",
+        () =>
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0 }),
+            bounds: box(-1, 0, -1, 1, 2, 1),
+          }) === 0,
+      ],
+      [
+        "floatingIsPositive",
+        () =>
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0 }),
+            bounds: box(-1, 0.25, -1, 1, 2, 1),
+          }) === 0.25,
+      ],
+      [
+        "sinkingIsNegative",
+        () =>
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0 }),
+            bounds: box(-1, -0.25, -1, 1, 2, 1),
+          }) === -0.25,
+      ],
+      [
+        "standingOffTheFaceIsNull",
+        () =>
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0 }),
+            bounds: box(5, 0, -1, 6, 2, 1),
+          }) === null,
+      ],
+      [
+        "aRampBearsAtItsHighestProbe",
+        () =>
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0, slopeZ: 1 }),
+            bounds: box(-1, 1, -1, 1, 2, 1),
+          }) === 0 &&
+          propSupportGap({
+            face: patch({ half: 2, originHeight: 0, slopeZ: 1 }),
+            bounds: box(-1, 0.5, -1, 1, 2, 1),
+          }) === -0.5,
+      ],
+      [
+        "aFaceSmallerThanTheFootprintIsFoundByItsCentre",
+        () =>
+          propSupportGap({
+            face: patch({ half: 0.1, originHeight: 0 }),
+            bounds: box(-1, 0, -1, 1, 2, 1),
+          }) === 0,
+      ],
+    ]),
+    {
+      aPatchIsItsOwnPolygonAndHeight: true,
+      aRuledPatchAnswersFromItsRule: true,
+      aHostTopStandsAtTheHostsOwnTop: true,
+      aHostTopTravelsWithTheHostsScale: true,
+      aTiltedTopIsReadAsThePlaneItIs: true,
+      anEdgeOnTopStatesNoFace: true,
+      aStackTopWithoutAnExtentStatesNoFace: true,
+      anEmptyPatchPolygonStatesNoFace: true,
+      everyDanglingSupportCitationStatesNoFace: true,
+      anUnstagedOrUnregisteredHostStatesNoFace: true,
+      restingIsExactlyZero: true,
+      floatingIsPositive: true,
+      sinkingIsNegative: true,
+      standingOffTheFaceIsNull: true,
+      aRampBearsAtItsHighestProbe: true,
+      aFaceSmallerThanTheFootprintIsFoundByItsCentre: true,
     },
   );
 

@@ -102,6 +102,14 @@ const tolerated = (
  *    case where they must not fire: exact contact, a declared contact pair, a
  *    cell-less space, an unfilled opening, and a prop that declares no
  *    placement at all.
+ * 7. A prop that names a support is judged against it on both faces a support can
+ *    be: a building patch and another prop's top each refuse a prop floating
+ *    above them, sunk into them, and standing off them, and each accept the
+ *    prop that rests exactly on them, including on a patch whose height comes
+ *    from a rule rather than an anchor. Two supports are judged one by one. A
+ *    face the record cannot state, a host that is not soundly staged, and a
+ *    prop citing its own top are left unmeasured instead of answering for a
+ *    fault already named.
  */
 export const test_film_prop_placement = (): void => {
   TestValidator.equals("the furnished room resolves", validate().success, true);
@@ -229,6 +237,23 @@ export const test_film_prop_placement = (): void => {
               }),
             "$input.props[7].placement.relations[1].target.kind",
             'does not accept a "prop-affordance" target',
+          ),
+      ],
+      [
+        "unacceptedSupportTargetKind",
+        () =>
+          violated(
+            (props) =>
+              (props[CABINET]!.placement!.relations[2] = {
+                kind: "on-support",
+                target: {
+                  kind: "boundary",
+                  environment: "house",
+                  boundary: "room-wall",
+                },
+              }),
+            "$input.props[6].placement.relations[2].target.kind",
+            'does not accept a "boundary" target',
           ),
       ],
       [
@@ -605,6 +630,81 @@ export const test_film_prop_placement = (): void => {
             'blocks connector "stair"',
           ),
       ],
+      // 7. bearing on the support a prop names.
+      [
+        "floatsAboveItsPatch",
+        () =>
+          violated(
+            (_props, set) => (set[CABINET]!.position.y = 0.5),
+            "$input.props[6].placement.relations[2].target.surface",
+            'floats above support surface "floor"',
+          ),
+      ],
+      [
+        "sinksIntoItsPatch",
+        () =>
+          violated(
+            (_props, set) => (set[CABINET]!.position.y = 0.1),
+            "$input.props[6].placement.relations[2].target.surface",
+            'sinks into support surface "floor"',
+          ),
+      ],
+      [
+        "standsOffItsPatch",
+        () =>
+          violated(
+            (props) => {
+              const target = props[CABINET]!.placement!.relations[2]!.target;
+              if (target.kind === "surface") target.surface = "annex-floor";
+            },
+            "$input.props[6].placement.relations[2].target.surface",
+            'does not stand over support surface "annex-floor"',
+          ),
+      ],
+      [
+        "aSecondSupportIsJudgedOnItsOwn",
+        () =>
+          violated(
+            (props) =>
+              props[CABINET]!.placement!.relations.push({
+                kind: "on-support",
+                target: {
+                  kind: "surface",
+                  environment: "house",
+                  surface: "annex-floor",
+                },
+              }),
+            "$input.props[6].placement.relations[3].target.surface",
+            'does not stand over support surface "annex-floor"',
+          ),
+      ],
+      [
+        "floatsAboveItsHostTop",
+        () =>
+          violated(
+            (_props, set) => (set[LAMP]!.position.y = 1.2),
+            "$input.props[1].placement.relations[1].target.affordance",
+            'floats above prop "table" affordance "top"',
+          ),
+      ],
+      [
+        "sinksIntoItsHostTop",
+        () =>
+          violated(
+            (_props, set) => (set[LAMP]!.position.y = 0.8),
+            "$input.props[1].placement.relations[1].target.affordance",
+            'sinks into prop "table" affordance "top"',
+          ),
+      ],
+      [
+        "standsOffItsHostTop",
+        () =>
+          violated(
+            (_props, set) => (set[LAMP]!.position = { x: 0, y: 0.96, z: 3 }),
+            "$input.props[1].placement.relations[1].target.affordance",
+            'does not stand over prop "table" affordance "top"',
+          ),
+      ],
     ]),
     {
       duplicateProp: true,
@@ -617,6 +717,7 @@ export const test_film_prop_placement = (): void => {
       stagedModelMismatch: true,
       unacceptedTargetKind: true,
       unacceptedPropAffordanceTarget: true,
+      unacceptedSupportTargetKind: true,
       missingEnvironment: true,
       missingSpace: true,
       missingElement: true,
@@ -650,6 +751,13 @@ export const test_film_prop_placement = (): void => {
       clearanceIntersectsProp: true,
       blocksOpening: true,
       blocksConnector: true,
+      floatsAboveItsPatch: true,
+      sinksIntoItsPatch: true,
+      standsOffItsPatch: true,
+      aSecondSupportIsJudgedOnItsOwn: true,
+      floatsAboveItsHostTop: true,
+      sinksIntoItsHostTop: true,
+      standsOffItsHostTop: true,
     },
   );
 
@@ -785,6 +893,81 @@ export const test_film_prop_placement = (): void => {
             );
           }),
       ],
+      [
+        "aRuledPatchIsRestedOnAtItsOwnHeight",
+        () =>
+          tolerated((props, set) => {
+            props[CABINET]!.placement!.relations[0] = inSpace("annex");
+            const target = props[CABINET]!.placement!.relations[2]!.target;
+            if (target.kind === "surface") target.surface = "annex-floor";
+            set[CABINET]!.position = { x: 7.5, y: 0.8, z: 0 };
+          }),
+      ],
+      [
+        "aTopStagedEdgeOnIsNotJudged",
+        () =>
+          tolerated((_props, set) => {
+            set[TABLE]!.rotation = {
+              x: Math.SQRT1_2,
+              y: 0,
+              z: 0,
+              w: Math.SQRT1_2,
+            };
+            set[TABLE]!.position = { x: 0, y: 0.1, z: 0 };
+          }),
+      ],
+      [
+        "anAmbiguousHostBearsNothing",
+        () => {
+          const props = propRegistry();
+          const set = propSet();
+          const environments = [propEnvironment()];
+          props.push(props[TABLE]!);
+          set[LAMP]!.position.y = 1.2;
+          const result = validate(props, set, environments);
+          return (
+            result.success === false &&
+            result.violations.some(
+              (item) =>
+                item.path ===
+                  "$input.props[1].placement.relations[1].target.prop" &&
+                item.expected.includes("ambiguous"),
+            ) &&
+            result.violations.every(
+              (item) => !item.expected.includes("floats above"),
+            )
+          );
+        },
+      ],
+      [
+        "selfSupportIsNamedRatherThanMeasured",
+        () => {
+          const props = propRegistry();
+          const set = propSet();
+          const environments = [propEnvironment()];
+          props[TABLE]!.placement!.relations[1] = {
+            kind: "on-support",
+            target: {
+              kind: "prop-affordance",
+              prop: "table",
+              affordance: "top",
+            },
+          };
+          const result = validate(props, set, environments);
+          return (
+            result.success === false &&
+            result.violations.some(
+              (item) =>
+                item.path ===
+                  "$input.props[0].placement.relations[1].target.prop" &&
+                item.expected.includes("cannot rest on"),
+            ) &&
+            result.violations.every(
+              (item) => !item.expected.includes("sinks into"),
+            )
+          );
+        },
+      ],
     ]),
     {
       exactContactIsNotOccupancy: true,
@@ -800,6 +983,10 @@ export const test_film_prop_placement = (): void => {
       propAffordanceAloneLocatesNothing: true,
       supportingPropWithoutPlacementMakesNoClaim: true,
       cyclicElementParentDoesNotHang: true,
+      aRuledPatchIsRestedOnAtItsOwnHeight: true,
+      aTopStagedEdgeOnIsNotJudged: true,
+      anAmbiguousHostBearsNothing: true,
+      selfSupportIsNamedRatherThanMeasured: true,
     },
   );
 };
