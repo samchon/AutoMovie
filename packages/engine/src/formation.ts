@@ -388,7 +388,7 @@ export const composeFormationHeroTransform = (
  * how far a member may stand off its slot, and the deviation is drawn from the
  * formation seed and the slot index, the same machinery `scatter` placement and
  * `motionPhase` already use. Nothing is stored per member: the same design
- * regenerates the same army on every machine and every run.
+ * regenerates the same crowd on every machine and every run.
  *
  * A layout without `dressing`, or with both tolerances at zero, returns the
  * exact point, so an existing production compiles unchanged.

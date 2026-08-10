@@ -476,7 +476,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -509,7 +509,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -540,7 +540,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -566,7 +566,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */

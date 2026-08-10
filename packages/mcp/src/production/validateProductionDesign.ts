@@ -977,7 +977,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous army instanced.`,
+        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous crowd instanced.`,
       );
     for (const hero of formation.heroOverrides) {
       if (

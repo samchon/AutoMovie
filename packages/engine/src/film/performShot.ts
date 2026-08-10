@@ -577,7 +577,7 @@ export const performShot = (props: {
         // A formation id must name a unit this shot actually compiled. Left
         // ungated it would resolve to nothing, the group would fall back to
         // whatever nodes it also listed, and the shot would come back
-        // successful having framed a captain instead of his army.
+        // successful having framed one figure instead of the crowd around it.
         target.formations.forEach((formation, j) => {
           validateNonEmptyId(
             formation,
@@ -667,14 +667,14 @@ export const performShot = (props: {
      * one body for one point — where to look, where to reach, what to throw at
      * — and a crowd has no such point. Refusing it here is the difference
      * between a correction round the author can act on and a shot that succeeds
-     * having aimed an actor at the middle of an army.
+     * having aimed an actor at the middle of a crowd.
      */
     formationsFramed = false,
   ): IAutoMovieVector3 | null => {
     // Refused BEFORE the id check, so the correction round is told the one
     // thing it can act on. Checking membership first would answer "that
     // formation is not compiled" to an author whose real mistake was asking an
-    // actor to look at an army, and a compiled formation would have made that
+    // actor to look at a crowd, and a compiled formation would have made that
     // sentence disappear without making the target legal.
     if (formationsFramed === false && isRecord(target)) {
       const named = Array.isArray(target.formations) ? target.formations : [];

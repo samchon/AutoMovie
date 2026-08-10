@@ -3056,7 +3056,7 @@ const FORMATION_GROUND_SUPPORT_DIRECTIONS = 16;
  * Members already found for one compiled formation.
  *
  * The set is a pure function of the formation, and the compiler hands the same
- * compiled formation to every shot that stages it, so an army in fifty shots
+ * compiled formation to every shot that stages it, so a crowd in fifty shots
  * would otherwise regenerate every one of its members fifty times over. Keyed
  * by the formation itself, so nothing outlives the compile that made it.
  */
