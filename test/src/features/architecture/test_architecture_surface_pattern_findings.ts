@@ -197,6 +197,95 @@ export const test_architecture_surface_pattern_findings = (): void => {
     },
   );
 
+  const onCorner = (joint: number, jointTolerance: number, adjacency: number) =>
+    generateAutoMovieSurfacePattern({
+      pattern: pattern({
+        id: "corner",
+        zones: [
+          zone({
+            id: "tri",
+            region: [
+              { u: 0, v: 0 },
+              { u: 2, v: 0 },
+              { u: 0, v: 2 },
+            ],
+            origin: { u: 0.5, v: 0.5 },
+            period: { u: 1, v: 1 },
+            reach: { u: 1, v: 1 },
+            generate: ({ column, row, origin }) =>
+              row !== 0 || column < -1 || column > 0
+                ? []
+                : [
+                    {
+                      id: `m${column}`,
+                      center: { u: origin.u + 0.5, v: origin.v + 0.5 },
+                      size: { u: 1, v: 1 },
+                      rotationDeg: 0,
+                      grainDeg: 0,
+                    },
+                  ],
+          }),
+        ],
+        joint,
+        jointTolerance,
+        adjacency,
+        minimumPiece: 0.5,
+      }),
+    });
+  const cornered = onCorner(0, 0, 0);
+  TestValidator.equals(
+    "a corner landing exactly on a clip edge is kept once, not twice",
+    namedFacts([
+      ["placements", () => cornered.placements.length === 2],
+      ["triangle", () => cornered.placements[1]!.outline.length === 3],
+      [
+        "distinct",
+        () =>
+          cornered.placements.every((one) =>
+            one.outline.every(
+              (point, index) =>
+                point.u !== one.outline[(index + 1) % one.outline.length]!.u ||
+                point.v !== one.outline[(index + 1) % one.outline.length]!.v,
+            ),
+          ),
+      ],
+      [
+        "areas",
+        () => cornered.placements.every((one) => nclose(one.area, 0.5, 1e-12)),
+      ],
+      [
+        "coverage",
+        () =>
+          cornered.placements.every((one) => nclose(one.coverage, 0.5, 1e-12)),
+      ],
+      ["findings", () => cornered.findings.length === 0],
+    ]),
+    {
+      placements: true,
+      triangle: true,
+      distinct: true,
+      areas: true,
+      coverage: true,
+      findings: true,
+    },
+  );
+  const cornerJoint = onCorner(0.02, 0.001, 0.05);
+  TestValidator.equals(
+    "the two pieces are still measured against each other, not skipped as NaN",
+    cornerJoint.findings.map(
+      (one) => `${one.kind}:${one.occurrences.join("+")}`,
+    ),
+    ["joint-deviation:tri/m-1+tri/m0"],
+  );
+  TestValidator.equals(
+    "and the measurement is the real zero-metre butt joint",
+    namedFacts([
+      ["measured", () => cornerJoint.findings[0]!.measured === 0],
+      ["limit", () => nclose(cornerJoint.findings[0]!.limit, 0.02, 1e-12)],
+    ]),
+    { measured: true, limit: true },
+  );
+
   const run = (narrow: boolean, grainToleranceDeg: number | null) =>
     generateAutoMovieSurfacePattern({
       pattern: pattern({
