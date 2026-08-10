@@ -189,7 +189,9 @@ export interface IAutoMovieServicePort {
 
   /**
    * Design flow, load or bandwidth through this port in {@link unit}; a finite
-   * number `>= 0`. A junction that merely passes the medium on declares `0`.
+   * number `>= 0`. A fitting that merely passes the medium on — a tee, a valve,
+   * a damper, a switch — declares `0`, because the demand beyond it is already
+   * stated where it is actually drawn.
    *
    * It is the port's own terminal that states it: a basin states what it draws
    * on its `in` supply port and what it discharges on its `out` waste port, so

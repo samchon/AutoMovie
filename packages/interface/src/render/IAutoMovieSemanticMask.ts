@@ -16,7 +16,9 @@ export type AutoMovieSemanticKind =
   | "node"
   | "instance-set"
   | "instance-slot"
-  | "water-body";
+  | "water-body"
+  | "soft-body"
+  | "planting";
 
 /**
  * A segmentation palette keyed by stable semantic identity, plus the sidecar

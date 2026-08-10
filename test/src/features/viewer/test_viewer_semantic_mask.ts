@@ -1,6 +1,9 @@
 import {
   AUTOMOVIE_SEMANTIC_MASK_SPACE_NODE,
   IAutoMovieRenderSubject,
+  autoMovieFluidSurfaceNodeName,
+  autoMoviePlantingNodeName,
+  autoMovieSoftBodyNodeName,
   deriveAutoMovieSemanticMask,
   evaluateAutoMovieRenderBudget,
   measureAutoMovieRenderInventory,
@@ -12,11 +15,15 @@ import {
   SPACE_GROUP_NAME,
   applyAutoMovieSemanticMask,
   auditAutoMovieRenderObservation,
+  buildFluidSurfaceObject,
+  buildPlantingObject,
+  buildSoftBodyObject,
   observeAutoMovieSceneRender,
 } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { flatBasin } from "../internal/fluidFixtures";
 import { namedFacts, throwsError } from "../internal/predicates";
 import {
   buildingFixture,
@@ -24,6 +31,11 @@ import {
   modelsFixture,
   sceneFixture,
 } from "../internal/renderFixtures";
+import {
+  plantingCluster,
+  plantingRecipe,
+  softPanel,
+} from "../internal/softFixtures";
 
 /**
  * The viewer paints the stable palette, and what it draws stays inside the
@@ -54,6 +66,9 @@ import {
  *    is reported as a breach.
  * 7. Metrics the report never measured are returned as unchecked, never as
  *    agreement.
+ * 8. The engine and the viewer agree on the name of every simulated drawable, so a
+ *    curtain, a fern bed and a pond paint their own identity instead of the
+ *    reserved background.
  */
 export const test_viewer_semantic_mask = (): void => {
   const subject = (design: IAutoMovieScene): IAutoMovieRenderSubject => ({
@@ -364,6 +379,148 @@ export const test_viewer_semantic_mask = (): void => {
     }).unchecked,
     ["triangles"],
   );
+
+  // Cloth, planting and water are held by no scene node, so the mask joins them
+  // by the names their own builders assign. The engine states those names
+  // without importing the viewer, exactly as it states the ground group's, so
+  // the agreement is checked here rather than asserted in a comment nobody runs.
+  const panel = buildSoftBodyObject({
+    surface: {
+      domain: "panel",
+      step: 0,
+      mesh: {
+        positions: [0, 0, 0, 1, 0, 0, 0, 1, 0],
+        normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+        uvs: [0, 0, 1, 0, 0, 1],
+        indices: [0, 1, 2],
+        skin: null,
+      },
+      bounds: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 1, z: 0 } },
+    },
+    status: "derived",
+  });
+  const bed = buildPlantingObject({
+    plant: {
+      domain: "fern",
+      stage: 1,
+      branches: [],
+      leaves: [],
+      bounds: null,
+    },
+    arrangement: {
+      cluster: "atrium-bed",
+      domain: "fern",
+      placements: [],
+      rejected: 0,
+      bounds: null,
+    },
+  });
+  const pond = buildFluidSurfaceObject({
+    surface: {
+      domain: "basin",
+      step: 0,
+      mesh: {
+        positions: [0, 0, 0, 1, 0, 0, 0, 0, 1],
+        normals: [0, 1, 0, 0, 1, 0, 0, 1, 0],
+        uvs: [0, 0, 1, 0, 0, 1],
+        indices: [0, 1, 2],
+        skin: null,
+      },
+      bounds: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 0, z: 1 } },
+      flow: [0, 0, 0, 0, 0, 0],
+    },
+  });
+  TestValidator.equals(
+    "the engine and the viewer agree on every simulated drawable's name",
+    [
+      autoMovieSoftBodyNodeName("panel"),
+      autoMoviePlantingNodeName("atrium-bed"),
+      autoMovieFluidSurfaceNodeName("basin"),
+    ],
+    [panel.object.name, bed.object.name, pond.object.name],
+  );
+
+  const simulatedDesign: IAutoMovieScene = {
+    id: "simulated",
+    name: null,
+    nodes: [],
+    cameras: [],
+    lights: [],
+  };
+  const simulatedSubject: IAutoMovieRenderSubject = {
+    scene: simulatedDesign,
+    models: modelsFixture(),
+    softBodies: [
+      {
+        domain: softPanel({ columns: 2, rows: 2 }),
+        owner: null,
+        material: null,
+      },
+    ],
+    plantings: [
+      {
+        domain: plantingRecipe(),
+        cluster: plantingCluster(),
+        owner: null,
+        branchMaterial: null,
+        leafMaterial: null,
+        branch: { vertices: 40, triangles: 24 },
+        leaf: { vertices: 4, triangles: 2 },
+      },
+    ],
+    waterBodies: [
+      {
+        id: "atrium-pool",
+        owner: null,
+        nodes: [],
+        domain: flatBasin({ columns: 2, rows: 2, depth: 1 }),
+        cells: null,
+        particles: null,
+        material: null,
+      },
+    ],
+  };
+  const simulatedMask = deriveAutoMovieSemanticMask(simulatedSubject);
+  const simulatedScene = new THREE.Scene();
+  simulatedScene.add(panel.object, bed.object, pond.object);
+  const stray = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshStandardMaterial(),
+  );
+  simulatedScene.add(stray);
+  const simulatedHandle = applyAutoMovieSemanticMask({
+    scene: simulatedScene,
+    design: simulatedDesign,
+    mask: simulatedMask,
+  });
+  const simulatedColor = (id: string): string =>
+    simulatedMask.entries.find((item) => item.id === id)!.color;
+  TestValidator.equals(
+    "a curtain, a bed and a pond paint their own identity instead of background",
+    {
+      panel: hex(panel.object),
+      // The branch batch is a child of the cluster group, so it resolves
+      // through the ancestor the mask names rather than needing a name of its
+      // own: a bed is one thing a consumer asks about, not two.
+      bed: hex(bed.branches),
+      pond: hex(pond.object),
+      stray: hex(stray),
+      painted: simulatedHandle.painted,
+      unaddressed: simulatedHandle.unaddressed,
+    },
+    {
+      panel: simulatedColor("soft-body:panel"),
+      bed: simulatedColor("planting:atrium-bed"),
+      pond: simulatedColor("water-body:atrium-pool"),
+      stray: simulatedMask.background,
+      painted: 3,
+      unaddressed: 1,
+    },
+  );
+  simulatedHandle.restore();
+  panel.dispose();
+  bed.dispose();
+  pond.dispose();
 };
 
 /** A minimal baked cycle: enough for material injection, no renderer needed. */
