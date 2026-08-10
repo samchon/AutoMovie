@@ -144,7 +144,9 @@ const spaceOf = (
  * 7. The drafter cannot section a shell and says so: a cut sheet of the shelled
  *    hall draws no region for it and carries an `unsupported` gap naming the
  *    subject, while the same sheet of a celled hall draws the region and raises
- *    no such gap.
+ *    no such gap. A sheet that does draw a faceted space owns up to that under
+ *    the same subject the take-off uses, so the two artifacts cannot disagree
+ *    about whether a dome was drawn or approximated.
  * 8. Either spelling answers one set of questions: `builtSpaceStatesVolume` and
  *    `builtSpaceIsConvex` read a shell, one cell, several cells and nothing at
  *    all without any caller counting cells for itself.
@@ -527,12 +529,38 @@ export const test_architecture_built_space_shell = (): void => {
             (gap) => gap.subject === "shelled-space-section",
           ) === false,
       ],
+      [
+        "aDrawnFacetedRegionOwnsUpToItToo",
+        () =>
+          deriveAutoMovieDrawing({
+            environment: work({
+              shell: undefined,
+              cells: spaceOf(celled, "hall").cells,
+              fidelity: "faceted",
+            }),
+            view: plan,
+          }).gaps.some(
+            (gap) =>
+              gap.subject === "curved-space-boundary" &&
+              gap.status === "unsupported" &&
+              gap.reason.includes("hall"),
+          ),
+      ],
+      [
+        "andAnExactOneDoesNot",
+        () =>
+          deriveAutoMovieDrawing({ environment: celled, view: plan }).gaps.some(
+            (gap) => gap.subject === "curved-space-boundary",
+          ) === false,
+      ],
     ]),
     {
       theShelledHallDrawsNoRegion: true,
       andTheSheetNamesTheSubject: true,
       aCelledHallDrawsItsRegion: true,
       andRaisesNoSuchGap: true,
+      aDrawnFacetedRegionOwnsUpToItToo: true,
+      andAnExactOneDoesNot: true,
     },
   );
 

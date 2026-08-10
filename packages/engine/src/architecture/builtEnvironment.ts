@@ -727,6 +727,16 @@ export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
  * stated exactly by any spelling here. That limit is reported rather than
  * smoothed over: a caller that wants an exact dome learns it is holding flats.
  *
+ * It folds because {@link builtEnvironmentContainsPoint} folds: the caller who
+ * asked whether a prop stands in a storey, or whether a fluid lattice stays in
+ * a basin, got an answer over that whole subtree and this is how exact that
+ * answer was. **Nothing inside the engine asks it yet.** The take-off and the
+ * drafter read the declaration directly instead, because a gap has to name the
+ * spaces that carry it rather than a verdict over a subtree, so the folded form
+ * is here for the authoring surface — where the same question is asked before a
+ * placement rather than after a measurement — and it needs an entry on the
+ * sandbox's engine export list before a source module can reach it.
+ *
  * @author Samchon
  */
 export const builtEnvironmentSpaceFidelity = (

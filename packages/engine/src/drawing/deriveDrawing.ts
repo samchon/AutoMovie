@@ -229,11 +229,13 @@ export const deriveAutoMovieDrawing = (props: {
     });
 
   const regions: IAutoMovieDrawingRegion[] = [];
+  const faceted: string[] = [];
   let unbounded = 0;
   let shelled = 0;
   if (cut)
     for (const space of environment.spaces) {
       if (spaces !== null && !spaces.has(space.id)) continue;
+      if (space.fidelity === "faceted") faceted.push(space.id);
       if (space.shell !== undefined) {
         ++shelled;
         continue;
@@ -258,6 +260,17 @@ export const deriveAutoMovieDrawing = (props: {
         });
       }
     }
+  if (faceted.length !== 0)
+    gaps.push({
+      // The same subject and the same word the quantity report uses, because a
+      // sheet and a take-off that disagree about whether a dome was drawn or
+      // approximated is worse than either of them saying nothing.
+      subject: "curved-space-boundary",
+      status: "unsupported",
+      reason: `${faceted.length} sectioned space(s) (${[...faceted].sort(compareAutoMovieRenderIds).join(", ")}) declare their stated volume faceted, so the outline drawn for them is the flats they were written as and not the curved region those flats stand for`,
+      remedy:
+        "read the faceted outline as chords of the region it stands for; a true section needs a curved boundary primitive this record does not carry",
+    });
   if (shelled !== 0)
     gaps.push({
       // `unsupported` rather than `not-run`, and the distinction is the point:
