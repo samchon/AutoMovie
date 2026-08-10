@@ -12,6 +12,7 @@ import type {
   IAutoMovieClearanceBox,
   IAutoMovieModel,
   IAutoMovieNode,
+  IAutoMoviePropBox,
   IAutoMoviePropRelation,
   IAutoMoviePropSpec,
   IAutoMovieShotBuildContext,
@@ -348,6 +349,17 @@ export abstract class ExamplePlacedProp extends ExamplePiece<IAutoMoviePropSpec>
     return [];
   }
 
+  /**
+   * The volume this prop takes up, or `null` to derive it from the geometry.
+   *
+   * Declaring one is how a prop states a truth its proxy box does not show: a
+   * handle that projects, a skirt that flares, a seat that needs the room it
+   * slides back into. What is declared is what other props must stay out of.
+   */
+  protected footprint(): IAutoMoviePropBox | null {
+    return null;
+  }
+
   /** Declared moving parts; rigid by default. */
   protected articulation(): IAutoMoviePropSpec["articulation"] {
     return null;
@@ -365,7 +377,7 @@ export abstract class ExamplePlacedProp extends ExamplePiece<IAutoMoviePropSpec>
       articulation: this.articulation(),
       placement: {
         relations: [this.room.occupies(), ...this.relations()],
-        footprint: null,
+        footprint: this.footprint(),
         clearance: this.clearance(),
       },
     };
@@ -639,6 +651,8 @@ export class ExampleAgainstBoundary extends ExamplePlacedProp {
     public readonly travel: number,
     /** Where the prop stands, in world metres. */
     public readonly at: IAutoMovieVector3,
+    /** How far handles and trim project past the proxy box, in metres. */
+    public readonly projection = 0.05,
   ) {
     super(room, id, size);
   }
@@ -689,6 +703,21 @@ export class ExampleAgainstBoundary extends ExamplePlacedProp {
         root: "body",
         instanceName: null,
         boneMap: { slide: "slider" },
+      },
+    };
+  }
+
+  protected footprint(): IAutoMoviePropBox {
+    return {
+      min: {
+        x: -this.size.x / 2 - this.projection,
+        y: -this.size.y / 2,
+        z: -this.size.z / 2 - this.projection,
+      },
+      max: {
+        x: this.size.x / 2 + this.projection,
+        y: this.size.y / 2,
+        z: this.size.z / 2 + this.projection,
       },
     };
   }
