@@ -131,6 +131,17 @@ const floorSurface = (props: {
  * whichever state the record stands in, so "the door is open" cannot become a
  * fact the render contradicts.
  *
+ * The lift is the same technique applied to a run rather than to a hole, and it
+ * is why a shaft passing four floors is one relation and not four. The stops
+ * between its two ends are `landings`, so an adjacency query answers with every
+ * floor the car reaches instead of only the two the record happens to name; the
+ * car and its counterweight are `carriages` travelling on one degree of freedom
+ * each, and a named state places both at once and says which space the car is
+ * standing at. That last field is what turns "the car is at level three" into a
+ * fact the engine settles — it places the car and refuses a state whose car
+ * lands outside the space it claims — while the counterweight, travelling the
+ * other way, serves nothing and says so.
+ *
  * The geometry is deliberately crude: one unit box scaled per member. What this
  * file demonstrates is the authoring technique — how a subject class composes
  * elements, spaces, boundaries, openings, connectors and surfaces and returns a
@@ -158,6 +169,20 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
   public readonly bridgeStorey = 2;
 
   /**
+   * The lift shaft, stated once for the same reason the door is.
+   *
+   * The plan position decides three separate things: where the route runs,
+   * where the car stands on it, and where the counterweight rides beside it. A
+   * car authored at a coordinate the route does not pass through is a car the
+   * shaft only appears to contain, so the number is written here and read three
+   * times rather than typed three times. The cabin's own size is separate on
+   * purpose: it belongs to the visible shell, never to the frame that travels.
+   */
+  public readonly liftAxis = { x: 4, z: 0 };
+  public readonly liftCar = { width: 1.4, depth: 1.6, height: 2.3 };
+  public readonly counterweightOffset = 0.9;
+
+  /**
    * The door repeated on every storey, stated once.
    *
    * The hinge position and the leaf size decide four separate things: where the
@@ -180,6 +205,19 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
   /** Where a tower storey's slab sits, in metres above the tower's own root. */
   public storeyElevation(index: number): number {
     return index * this.storeyHeight;
+  }
+
+  /**
+   * How high a carriage's own origin rests above the storey it stands at.
+   *
+   * Half a storey, deliberately. The engine settles a `serves` claim against
+   * the driven element's world origin, so a car resting exactly on the slab
+   * line it shares with the floor below would be a coin toss between two
+   * storeys; the middle of the volume is the only place the claim is
+   * decidable.
+   */
+  public carriageRise(): number {
+    return this.storeyHeight / 2;
   }
 
   public design(): IAutoMovieBuiltEnvironment {
@@ -367,6 +405,67 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
         space: "tower-roof",
       },
       {
+        // The frame the shaft drives, and deliberately unscaled. A travel value
+        // is a displacement in the driven element's OWN local frame, so a
+        // carriage bolted straight onto a box stretched to cabin height would
+        // rise that height for every metre it was asked for. It is the same
+        // reason the door's panel drives the hinge rather than the leaf: the
+        // moving frame carries no size, and the size hangs off it.
+        id: "tower-lift-car",
+        kind: "lift-car",
+        parent: "tower-root",
+        transform: place({
+          x: this.liftAxis.x,
+          y: this.carriageRise(),
+          z: this.liftAxis.z,
+        }),
+        model: null,
+        // The car belongs to the shaft rather than to any one storey, which is
+        // exactly why it names no logical space: which room it is in is a
+        // question its operating state answers, not its declaration.
+        space: null,
+      },
+      {
+        // The visible cabin, at its own size, hung off that frame.
+        id: "tower-lift-car-shell",
+        kind: "lift-car-shell",
+        parent: "tower-lift-car",
+        transform: place({ x: 0, y: 0, z: 0 }, NO_ROTATION, {
+          x: this.liftCar.width,
+          y: this.liftCar.height,
+          z: this.liftCar.depth,
+        }),
+        model: "building-box",
+        space: null,
+      },
+      {
+        // Rest is the top of its travel, because a counterweight starts where
+        // the car does not. Stating the rest pose at the far end is what lets
+        // every state below be a plain negative displacement.
+        id: "tower-lift-counterweight",
+        kind: "counterweight",
+        parent: "tower-root",
+        transform: place({
+          x: this.liftAxis.x + this.counterweightOffset,
+          y: this.carriageRise() + towerTop,
+          z: this.liftAxis.z,
+        }),
+        model: null,
+        space: null,
+      },
+      {
+        id: "tower-lift-counterweight-block",
+        kind: "counterweight-block",
+        parent: "tower-lift-counterweight",
+        transform: place({ x: 0, y: 0, z: 0 }, NO_ROTATION, {
+          x: 0.3,
+          y: 1.2,
+          z: 0.6,
+        }),
+        model: "building-box",
+        space: null,
+      },
+      {
         // A second unit with its own coordinate root: moved and turned as a
         // whole, without a single child transform being rewritten.
         id: "annex-root",
@@ -531,13 +630,97 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
         from: "tower-storey-0",
         to: `tower-storey-${this.storeys - 1}`,
         bidirectional: true,
+        // The floors between the two ends. Omitting them would leave the shaft
+        // the two-ended relation a corridor is, and every storey it actually
+        // stops at would be a floor only its geometry knew about. Each stop is
+        // an arc-length fraction of the route, derived from the storey it
+        // serves so the list still lands on the slabs when `storeyHeight`
+        // changes.
+        landings: towers.slice(1, -1).map((index) => ({
+          space: `tower-storey-${index}`,
+          at: this.storeyElevation(index) / towerTop,
+        })),
         route: [
-          { x: 4, y: 0, z: 0 },
-          { x: 4, y: towerTop, z: 0 },
+          { x: this.liftAxis.x, y: 0, z: this.liftAxis.z },
+          { x: this.liftAxis.x, y: towerTop, z: this.liftAxis.z },
         ],
         width: 1.6,
         clearHeight: 2.4,
-        elements: [],
+        // What a stair answers by standing still, a lift cannot. Two bodies,
+        // one degree of freedom each, and named states that place both at once
+        // — the same shape the door's operation has, plus the two things only a
+        // run needs: where the travel leaves somebody, and which way it is
+        // driven.
+        operation: {
+          carriages: [
+            {
+              id: "car",
+              element: "tower-lift-car",
+              motion: {
+                kind: "prismatic",
+                axis: { x: 0, y: 1, z: 0 },
+                min: 0,
+                max: towerTop,
+              },
+            },
+            {
+              id: "counterweight",
+              element: "tower-lift-counterweight",
+              // Mirror travel: rest is the top, so its whole range is negative
+              // and it is at the bottom exactly when the car is at the top.
+              motion: {
+                kind: "prismatic",
+                axis: { x: 0, y: 1, z: 0 },
+                min: -towerTop,
+                max: 0,
+              },
+            },
+          ],
+          states: [
+            ...towers.map((index) => ({
+              id: `level-${index}`,
+              carriages: [
+                {
+                  carriage: "car",
+                  value: this.storeyElevation(index),
+                  // The claim the engine settles against geometry: it applies
+                  // the state, places the car, and refuses a level whose car
+                  // does not stand inside the storey it names.
+                  serves: `tower-storey-${index}`,
+                },
+                {
+                  carriage: "counterweight",
+                  value: -this.storeyElevation(index),
+                  // A counterweight carries nobody anywhere. Naming a storey
+                  // here would be a stop no passenger can use, so it names
+                  // none and the record says as much.
+                  serves: null,
+                },
+              ],
+              // A car standing at a floor is not being driven at all, which is
+              // what a stopped lift and a switched-off escalator have in
+              // common.
+              drive: "still" as const,
+            })),
+            {
+              id: "ascending",
+              carriages: [
+                { carriage: "car", value: towerTop / 2, serves: null },
+                {
+                  carriage: "counterweight",
+                  value: -towerTop / 2,
+                  serves: null,
+                },
+              ],
+              // Mid-shaft the car serves nothing, and `forward` runs from the
+              // connector's own `from` toward its `to`. A one-way run may not
+              // declare a state driven against its own direction.
+              drive: "forward" as const,
+            },
+          ],
+          state: "level-0",
+        },
+        elements: ["tower-lift-car", "tower-lift-counterweight"],
       },
       {
         id: "tower-roof-ladder",
