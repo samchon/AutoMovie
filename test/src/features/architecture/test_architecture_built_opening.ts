@@ -382,8 +382,9 @@ const refusalPaths = (
  *    whole.
  * 2. The mesh kernel and the architecture graph meet on one id: the boundary's
  *    wall cut names each void by its architectural opening id, and the wall
- *    built from it is a real hole rather than metadata (the cut wall has fewer
- *    triangles than the uncut one and stays a closed shell).
+ *    built from it is a real hole rather than metadata. The cut wall is
+ *    partitioned around its voids, so it carries more triangles than the uncut
+ *    one and less material, and every number in it is finite.
  * 3. A round void is handed to the rectangular kernel as the rectangle that
  *    exactly bounds it, which for a 0.4 m circle is 0.8 m square.
  * 4. Panel placement answers where a leaf stands at the record's own state and at
@@ -399,7 +400,11 @@ const refusalPaths = (
  *    enumerate is refused by name instead of entered.
  * 9. Every query refuses an unknown opening, an unknown state, and an opening that
  *    carries no operation answers emptily rather than throwing.
- * 10. Thirty-three malformed openings are each refused at their own path.
+ * 10. A state naming no value for a panel leaves that panel at rest, so a query
+ *     over a record validation refuses still answers instead of failing on a
+ *     value it was never given.
+ * 11. Fifty malformed openings are each refused at their own path, and the
+ *     untouched fixture produces no violation path at all.
  */
 export const test_architecture_built_opening = (): void => {
   const source = partition();
