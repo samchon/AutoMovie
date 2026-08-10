@@ -21,15 +21,15 @@ Read only the route that matches the next owned decision. Contract guides define
 
 ### Contracts and deterministic boundaries
 
-- `PRODUCTION_DESIGN`: production clock, deliverables, art direction, and visual-delivery declaration.
-- `MODEL_RECIPE`: bounded primitive and external model recipes.
-- `WORLD_DESIGN`: terrain, routes, landmarks, and bounded effects.
+- `PRODUCTION_DESIGN`: production clock, deliverables, art direction, visual-delivery declaration, render budgets, and site context.
+- `MODEL_RECIPE`: bounded primitive and external model recipes, and physically-based surface materials.
+- `WORLD_DESIGN`: terrain, routes, landmarks, bounded effects, and instance sets.
 - `FORMATION_DESIGN`: repeated-unit layouts, heroes, and formation motion.
 - `SHOT_CONTRACT`: source binding, events, camera intent, review times, and rendition policy.
 - `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
 - `SOURCE_OWNERSHIP`: coding-agent, compiler, renderer, and review ownership.
 - `COMPILATION`: design/source/review/final scopes and atomic publication.
-- `GEOMETRY`: direct engine geometry and project-state queries outside the compile sandbox.
+- `GEOMETRY`: direct engine geometry and project-state queries outside the compile sandbox, and the mesh constructors source-owned models are built from.
 
 ### MCP gate contracts
 
@@ -47,7 +47,7 @@ Read only the route that matches the next owned decision. Contract guides define
 - `CINEMATOGRAPHY`: shot-size meaning, 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
 - `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
 - `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting.
-- `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, and environmental storytelling.
+- `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, environmental storytelling, and the built environment: building graphs, finishes and patterns, service networks, environmental analysis, drawings and quantities, phasing, cloth/planting/water, and prop placement.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
