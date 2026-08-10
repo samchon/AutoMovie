@@ -802,10 +802,22 @@ const sourceFiles = (root: string): string[] =>
           : [],
     );
 
-/** One tree's whole source text, for asking whether a name occurs in it. */
+/**
+ * One tree's whole source text with its comments removed.
+ *
+ * A capability is reachable because something calls it, not because a comment
+ * wishes it did. Stripping the prose first is what stops "we could derive the
+ * drawing here" from reading as a call site and turning this gate into a grep
+ * over intentions.
+ */
 const sourceText = (root: string): string =>
   sourceFiles(root)
-    .map((file) => fs.readFileSync(file, "utf8"))
+    .map((file) =>
+      fs
+        .readFileSync(file, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, " ")
+        .replace(/\/\/[^\n]*/g, " "),
+    )
     .join("\n");
 
 /**

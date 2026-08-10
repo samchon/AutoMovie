@@ -72,36 +72,57 @@ const compareCodeUnits = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
 /**
- * Collect one fold from every compiled shot, keeping the first record per id.
+ * Collect one fold from every compiled shot, one record per id.
  *
  * Two shots staging one building carry one record each, and they are the same
  * record: the compiler copies the source's own declaration into every artifact
- * that stages it. Deriving twice would put the same sheet on the page twice and
- * make the take-off double the concrete.
+ * that stages it. So the id is the identity, and deriving both copies would put
+ * one sheet on the page twice and make the take-off double the concrete.
+ *
+ * Two _different_ records wearing one id is a different fact, and this refuses
+ * rather than picking. The compiler publishes building ids across shots but
+ * does not compare the records behind them, so a divergence reaches here
+ * intact; a document silently derived from whichever shot happened to be read
+ * first is exactly the kind of evidence nobody can act on.
  */
 const staged = <T extends { id: string }>(
   select: (shot: IAutoMovieCompiledShotSource) => readonly T[] | undefined,
+  what: string,
 ): T[] => {
-  const found = new Map<string, T>();
-  for (const shot of state.generated.shots.values())
-    for (const record of select(shot) ?? [])
-      if (found.has(record.id) === false) found.set(record.id, record);
-  return [...found.values()].sort((left, right) =>
-    compareCodeUnits(left.id, right.id),
-  );
+  const found = new Map<string, { record: T; from: string; json: string }>();
+  for (const [shot, compiled] of state.generated.shots)
+    for (const record of select(compiled) ?? []) {
+      const json = JSON.stringify(record);
+      const seen = found.get(record.id);
+      if (seen === undefined) {
+        found.set(record.id, { record, from: shot, json });
+        continue;
+      }
+      if (seen.json !== json)
+        throw new Error(
+          `shots "${seen.from}" and "${shot}" stage two different ${what} records under the id "${record.id}". One id is one record; rename one of them, or share the subject that emits it.`,
+        );
+    }
+  return [...found.values()]
+    .map((entry) => entry.record)
+    .sort((left, right) => compareCodeUnits(left.id, right.id));
 };
 
 const environments: IAutoMovieBuiltEnvironment[] = staged(
   (shot) => shot.builtEnvironments,
+  "built environment",
 );
 const serviceNetworks: IAutoMovieServiceNetwork[] = staged(
   (shot) => shot.serviceNetworks,
+  "service network",
 );
 const fluidDomains: IAutoMovieFluidDomain[] = staged(
   (shot) => shot.fluidDomains,
+  "fluid domain",
 );
 const waterFeatures: IAutoMovieWaterFeature[] = staged(
   (shot) => shot.waterFeatures,
+  "water feature",
 );
 
 /**

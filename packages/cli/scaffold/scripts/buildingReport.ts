@@ -18,6 +18,7 @@ import {
 } from "@automovie/engine";
 import type {
   AutoMovieAnalysisDomain,
+  AutoMovieDrawingProjection,
   IAutoMovieAnalysisReport,
   IAutoMovieAnalysisRun,
   IAutoMovieBuildingUnit,
@@ -30,6 +31,7 @@ import type {
   IAutoMovieFluidDomain,
   IAutoMovieQuantityReport,
   IAutoMovieServiceNetwork,
+  IAutoMovieVector3,
   IAutoMovieWaterFeature,
 } from "@automovie/interface";
 
@@ -232,92 +234,104 @@ export interface IAutoMovieBuildingReport {
 export const autoMovieBuildingSheetViews = (
   unit: IAutoMovieBuildingUnit,
 ): IAutoMovieDrawingView[] => {
-  const common = {
+  /**
+   * One sheet of this unit, with every array and every vector its own.
+   *
+   * A view owns its filter, its dimensions, its notes and its pen, so six
+   * sheets sharing one array is a way for an edit to one page to change
+   * another. Building each fresh costs nothing and removes the question.
+   */
+  const view = (props: {
+    id: string;
+    projection: AutoMovieDrawingProjection;
+    discipline: string;
+    origin: IAutoMovieVector3;
+    direction: IAutoMovieVector3;
+    up: IAutoMovieVector3;
+    overhead: number | null;
+  }): IAutoMovieDrawingView => ({
+    ...props,
     scale: AUTOMOVIE_BUILDING_SHEET_SCALE,
     depth: null,
     // Naming the unit's own root space draws every storey, room and void
-    // beneath it, so one work of two units is two sheets rather than one page
-    // with both buildings on it.
+    // beneath it, so a work of two units is two sheets rather than one page
+    // carrying both buildings.
     spaces: [unit.space],
     // Empty draws every kind. A discipline sheet narrows this to the kinds it
-    // owns; the two below deliberately do not, because the thing they would
-    // have to filter for is not in this record at all.
-    elementKinds: [] as string[],
+    // owns; the two below deliberately do not, because what they would have to
+    // filter for is not in this record at all.
+    elementKinds: [],
     dimensions: [],
     annotations: [],
-  };
+    style: autoMovieBuildingPen(),
+  });
   // A plan conventionally puts world north up the page. The hint is
   // re-orthogonalized against the view direction, so the nearest cardinal axis
   // is enough and an exact in-plane vector is never needed.
-  const northward = { x: 0, y: 0, z: -1 };
-  const upward = { x: 0, y: 1, z: 0 };
+  const north = (): IAutoMovieVector3 => ({ x: 0, y: 0, z: -1 });
+  const sky = (): IAutoMovieVector3 => ({ x: 0, y: 1, z: 0 });
+  const planCut = (): IAutoMovieVector3 => ({
+    x: 0,
+    y: AUTOMOVIE_BUILDING_PLAN_CUT,
+    z: 0,
+  });
+  const down = (): IAutoMovieVector3 => ({ x: 0, y: -1, z: 0 });
+  const centre = (): IAutoMovieVector3 => ({ x: 0, y: 0, z: 0 });
   return [
-    {
-      ...common,
+    view({
       id: `${unit.id}-plan`,
       projection: "plan",
       discipline: "architectural",
-      origin: { x: 0, y: AUTOMOVIE_BUILDING_PLAN_CUT, z: 0 },
-      direction: { x: 0, y: -1, z: 0 },
-      up: { ...northward },
+      origin: planCut(),
+      direction: down(),
+      up: north(),
       overhead: AUTOMOVIE_BUILDING_PLAN_OVERHEAD,
-      style: autoMovieBuildingPen(),
-    },
-    {
-      ...common,
+    }),
+    view({
       id: `${unit.id}-ceiling`,
       projection: "reflected-ceiling-plan",
       discipline: "architectural",
       origin: { x: 0, y: AUTOMOVIE_BUILDING_CEILING_CUT, z: 0 },
-      direction: { x: 0, y: 1, z: 0 },
-      up: { ...northward },
+      direction: sky(),
+      up: north(),
       overhead: AUTOMOVIE_BUILDING_PLAN_OVERHEAD,
-      style: autoMovieBuildingPen(),
-    },
-    {
-      ...common,
+    }),
+    view({
       id: `${unit.id}-section`,
       projection: "section",
       discipline: "architectural",
-      origin: { x: 0, y: 0, z: 0 },
+      origin: centre(),
       direction: { x: 1, y: 0, z: 0 },
-      up: { ...upward },
+      up: sky(),
       overhead: null,
-      style: autoMovieBuildingPen(),
-    },
-    {
-      ...common,
+    }),
+    view({
       id: `${unit.id}-elevation`,
       projection: "elevation",
       discipline: "architectural",
-      origin: { x: 0, y: 0, z: 0 },
+      origin: centre(),
       direction: { x: 0, y: 0, z: 1 },
-      up: { ...upward },
+      up: sky(),
       overhead: null,
-      style: autoMovieBuildingPen(),
-    },
-    {
-      ...common,
+    }),
+    view({
       id: `${unit.id}-services`,
       projection: "plan",
       discipline: "services",
-      origin: { x: 0, y: AUTOMOVIE_BUILDING_PLAN_CUT, z: 0 },
-      direction: { x: 0, y: -1, z: 0 },
-      up: { ...northward },
+      origin: planCut(),
+      direction: down(),
+      up: north(),
       overhead: AUTOMOVIE_BUILDING_PLAN_OVERHEAD,
-      style: autoMovieBuildingPen(),
-    },
-    {
-      ...common,
+    }),
+    view({
       id: `${unit.id}-finishes`,
       projection: "plan",
       discipline: "finish",
-      origin: { x: 0, y: AUTOMOVIE_BUILDING_PLAN_CUT, z: 0 },
-      direction: { x: 0, y: -1, z: 0 },
-      up: { ...northward },
+      origin: planCut(),
+      direction: down(),
+      up: north(),
       overhead: AUTOMOVIE_BUILDING_PLAN_OVERHEAD,
-      style: autoMovieBuildingPen(),
-    },
+    }),
   ];
 };
 
