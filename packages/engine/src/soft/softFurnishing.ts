@@ -8,7 +8,10 @@ import {
   IAutoMovieValidation,
 } from "@automovie/interface";
 
-import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
+import {
+  builtEnvironmentContainsPoint,
+  builtSpaceStatesVolume,
+} from "../architecture/builtEnvironment";
 import { ViolationCollector } from "../validation/violation";
 import {
   simulateSoftBody,
@@ -44,8 +47,8 @@ const FURNISHING_MODES = new Set(["rest", "simulated"]);
  * configuration it is actually held in hangs inside the room instead of through
  * the wall behind it.
  *
- * A room declared as a purely semantic container (a logical space with no
- * convex cells) is not geometrically checked: there is no volume to check
+ * A room declared as a purely semantic container (a logical space that states
+ * no volume at all) is not geometrically checked: there is no volume to check
  * against, and inventing one would be the design deciding a fact the author did
  * not state.
  *
@@ -190,7 +193,7 @@ export const validateSoftFurnishings = (props: {
         `soft body domain "${domain.id}" does not declare a named state "${furnishing.state}"`,
         furnishing.state,
       );
-    if (space === undefined || space.cells.length === 0) return;
+    if (space === undefined || builtSpaceStatesVolume(space) === false) return;
     const particles = domain.lattice.columns * domain.lattice.rows;
     if (domain.rest.length !== particles * 3) return;
     // The configuration is checked, not the rest array. An anchor holds its

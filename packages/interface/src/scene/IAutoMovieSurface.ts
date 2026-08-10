@@ -7,12 +7,13 @@ import { AutoMovieSurfaceKind } from "./AutoMovieSurfaceKind";
  * queries where it previously assumed a single scalar plane.
  *
  * The parameterization is deliberately minimal ("proxy means the thing", D011):
- * a **convex XZ footprint** plus one statement of how high the ground is over
- * it. The visual set piece behind a surface needs no new geometry type: a set
- * proxy is an ordinary static {@link IAutoMovieModel} (skeleton `null`) placed
- * as a scene node: a room is a box, a table is a box, per the stickman
- * doctrine. The surface is the _meaning_ (where feet and props may rest); the
- * model is the crude diffusion hint.
+ * an **XZ footprint** — one outer ring, optionally holed — plus one statement
+ * of how high the ground is over it. The visual set piece behind a surface
+ * needs no new geometry type: a set proxy is an ordinary static
+ * {@link IAutoMovieModel} (skeleton `null`) placed as a scene node: a room is a
+ * box, a table is a box, per the stickman doctrine. The surface is the
+ * _meaning_ (where feet and props may rest); the model is the crude diffusion
+ * hint.
  *
  * **A surface states its ground exactly one way.** Either the general
  * {@link height} rule, which is the same rule a production world's terrain
@@ -21,6 +22,15 @@ import { AutoMovieSurfaceKind } from "./AutoMovieSurfaceKind";
  * existed says. Stating both, or neither, is refused by `validateSpace`: a
  * patch with two heights is a patch whose feet and whose renderer can disagree,
  * which is the whole failure this record exists to prevent.
+ *
+ * **The ground over a footprint is single-valued, and that is a stated limit
+ * rather than an omission.** An overhanging balcony soffit, a vertical face,
+ * and a ramp that spirals over its own lower flight all have two heights at one
+ * plan position, and no {@link height} rule can say two. They are not
+ * approximated into one patch here: the ground query answers the topmost patch
+ * over a plan point, so a lower patch directly beneath another is ground
+ * nothing can be placed on. Author the flights as separate spaces, and read
+ * multi-valued ground as unsupported rather than as relief that came out flat.
  *
  * @author Samchon
  */
@@ -32,11 +42,41 @@ export interface IAutoMovieSurface {
   kind: AutoMovieSurfaceKind;
 
   /**
-   * Convex footprint on the ground plan, at least three non-collinear points.
-   * Only `x` and `z` are used: the vertical extent comes from the height
-   * statement, so `y` here is ignored (write `0`).
+   * Outer footprint ring on the ground plan, at least three non-collinear
+   * points. Only `x` and `z` are used: the vertical extent comes from the
+   * height statement, so `y` here is ignored (write `0`).
+   *
+   * The ring is a simple polygon and **may be concave**: an L-shaped floor
+   * plate keeps its notch, because the ground query classifies against the ring
+   * itself rather than against its convex hull. What it may not do is cross
+   * itself, because a self-crossing ring has no inside for a foot to be on, and
+   * `validateSpace` refuses one.
+   *
+   * A curved edge has no spelling here. Author it as chords and read it as
+   * exactly those chords: the footprint is never resampled, so what the ground
+   * query answers is what was written rather than a curve somebody assumed.
    */
   polygon: IAutoMovieVector3[];
+
+  /**
+   * Voids cut in the footprint: the atrium opening through a floor plate, a
+   * stairwell, a light well.
+   *
+   * This is what lets a slab with an atrium void be **one** support patch. Cut
+   * as a ring of separate patches instead, the void's edge becomes a seam
+   * between records that can be edited apart, and a foot planted on the seam
+   * asks two patches which ground it is on.
+   *
+   * Each hole is its own simple ring of at least three points, lying strictly
+   * inside {@link polygon} and disjoint from every other hole; `validateSpace`
+   * refuses anything else. A plan point strictly inside a hole is **off** the
+   * surface, exactly as a point outside the outer ring is, while a point on a
+   * hole's own rim is still on the slab: the rings bound a closed region.
+   *
+   * The rings say where the surface is, never how high it is. What stands under
+   * a hole is whatever other patch is authored there, or nothing.
+   */
+  holes?: IAutoMovieVector3[][];
 
   /**
    * The general ground rule: a `constant` level, a `plane` slope, or a

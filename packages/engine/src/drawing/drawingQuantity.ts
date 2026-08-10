@@ -9,12 +9,16 @@ import {
   IAutoMovieQuantityReport,
 } from "@automovie/interface";
 
-import { validateBuiltEnvironment } from "../architecture/builtEnvironment";
+import {
+  builtSpaceShellVolume,
+  validateBuiltEnvironment,
+} from "../architecture/builtEnvironment";
 import { Vector3 } from "../math/Vector3";
 import {
   autoMovieRenderDigest,
   compareAutoMovieRenderIds,
 } from "../render/renderDigest";
+import { footprintArea, surfaceFootprint } from "../space/footprint";
 import { autoMovieOpeningArea } from "./drawingOpening";
 import {
   autoMovieDrawingCellVolume,
@@ -63,7 +67,7 @@ const UNITS: { [subject in AutoMovieQuantitySubject]: AutoMovieQuantityUnit } =
  * a sum over cells rather than the volume of their union.
  */
 export const AUTOMOVIE_QUANTITY_CELL_UNION_APPROXIMATION =
-  "a logical volume is the union of its convex cells, and this is the sum of the cells: overlapping cells are counted once each, and a curved or holed boundary is only faceted by the cells that approximate it";
+  "a logical volume stated as convex cells is the union of them, and this is the sum of the cells: overlapping cells are counted once each. A volume stated as a closed boundary shell is measured exactly, and a space that declares itself faceted is reported as a gap of its own";
 
 /**
  * Measure everything the design can answer for, and name everything it cannot.
@@ -115,11 +119,23 @@ export const measureAutoMovieQuantities = (props: {
     owners.set(owner, (owners.get(owner) ?? 0) + value);
   };
 
+  // Holes are subtracted, because an atrium void is exactly the floor nobody
+  // pours: taking the outer ring alone would order concrete for the hole.
   for (const entry of environment.surfaces)
-    add("space-floor-area", entry.space, footprintArea(entry.surface.polygon));
+    add(
+      "space-floor-area",
+      entry.space,
+      footprintArea(surfaceFootprint(entry.surface)),
+    );
 
   let unmeasuredCells = 0;
-  for (const space of environment.spaces)
+  const faceted: string[] = [];
+  for (const space of environment.spaces) {
+    if (space.fidelity === "faceted") faceted.push(space.id);
+    if (space.shell !== undefined) {
+      add("space-volume", space.id, builtSpaceShellVolume(space.shell));
+      continue;
+    }
     for (const cell of space.cells) {
       const volume = autoMovieDrawingCellVolume(cell.planes);
       if (volume === null) {
@@ -128,6 +144,15 @@ export const measureAutoMovieQuantities = (props: {
       }
       add("space-volume", space.id, volume);
     }
+  }
+  if (faceted.length !== 0)
+    gaps.push({
+      subject: "curved-space-boundary",
+      status: "unsupported",
+      reason: `${faceted.length} logical space(s) (${[...faceted].sort(compareAutoMovieRenderIds).join(", ")}) declare their stated volume faceted, so their measured volume and floor area are the flats they were written as and not the curved region those flats stand for`,
+      remedy:
+        "read the faceted total as a lower bound on a vaulted or domed region; an exact figure needs a curved boundary primitive this record does not carry",
+    });
   if (unmeasuredCells !== 0)
     gaps.push({
       subject: "unbounded-space-cell",
@@ -275,19 +300,6 @@ const finish = (
       omitted.reduce((sum, entry) => sum + entry.value, 0),
     ),
   };
-};
-
-/** Shoelace area of a footprint on the ground plan; `y` is deliberately ignored. */
-const footprintArea = (
-  polygon: readonly { x: number; z: number }[],
-): number => {
-  let sum = 0;
-  for (let index = 0; index < polygon.length; ++index) {
-    const current = polygon[index]!;
-    const next = polygon[(index + 1) % polygon.length]!;
-    sum += current.x * next.z - next.x * current.z;
-  }
-  return Math.abs(sum) / 2;
 };
 
 const canonical = (report: Omit<IAutoMovieQuantityReport, "digest">): string =>

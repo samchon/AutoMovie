@@ -4,10 +4,11 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import {
+  builtSpaceContainsPoint,
+  builtSpaceStatesVolume,
+} from "../architecture/builtEnvironment";
 import { compareAutoMovieRenderIds } from "./renderDigest";
-
-/** Half-space containment slack, matching the built-environment point query. */
-const CONTAINMENT_EPSILON = 1e-9;
 
 /** The exterior, as a node of the portal graph rather than the absence of one. */
 const EXTERIOR = " exterior";
@@ -18,9 +19,10 @@ const EXTERIOR = " exterior";
  * Cell-and-portal culling, run conservatively. Two spaces are joined when
  * anything the design declares lets sight pass between them: an opening cut
  * through a shared boundary, a connector such as a stair, lift, ramp or
- * skybridge, or, for a space whose envelope carries an opening, the exterior
- * itself. A space is hidden only when no such chain reaches it from the space
- * the camera occupies.
+ * skybridge at every space it stops at rather than only at its two ends, or,
+ * for a space whose envelope carries an opening, the exterior itself. A space
+ * is hidden only when no such chain reaches it from the space the camera
+ * occupies.
  *
  * The exterior is a graph node, which is what makes the answer right in the
  * case that motivates the whole hint: from a sealed interior room, the other
@@ -71,21 +73,11 @@ export const autoMovieRoomVisibility = (props: {
   const leaves = environment.spaces.filter((space) => !parents.has(space.id));
 
   const cellless = leaves
-    .filter((space) => space.cells.length === 0)
+    .filter((space) => builtSpaceStatesVolume(space) === false)
     .map((space) => space.id)
     .sort(compareAutoMovieRenderIds);
   const containing = leaves
-    .filter((space) =>
-      space.cells.some((cell) =>
-        cell.planes.every(
-          (plane) =>
-            plane.normal.x * camera.x +
-              plane.normal.y * camera.y +
-              plane.normal.z * camera.z <=
-            plane.offset + CONTAINMENT_EPSILON,
-        ),
-      ),
-    )
+    .filter((space) => builtSpaceContainsPoint(space, camera))
     .map((space) => space.id)
     .sort(compareAutoMovieRenderIds);
   if (containing.length === 0)
@@ -179,11 +171,21 @@ const reach = (
       for (const from of boundary.spaces)
         for (const to of boundary.spaces) if (from !== to) join(from, to);
   }
-  // A connector is a route between two spaces, so it is a portal in both
-  // directions for sight even when traversal is declared one-way.
+  // A connector is a route between every space it stops at, so it is a portal
+  // in both directions for sight even when traversal is declared one-way, and
+  // between every pair of its stops rather than only its two ends. A lift
+  // passing five floors is one shaft, not five relations, and the storeys it
+  // serves in between reach the graph through its landings alone: joining ends
+  // only would hide exactly the floors the run exists to serve, while the
+  // adjacency query beside this one already answers with them.
   for (const connector of environment.connectors) {
-    join(connector.from, connector.to);
-    join(connector.to, connector.from);
+    const stops = [
+      connector.from,
+      ...(connector.landings ?? []).map((landing) => landing.space),
+      connector.to,
+    ];
+    for (const from of stops)
+      for (const to of stops) if (from !== to) join(from, to);
   }
 
   const reachable = new Set<string>();

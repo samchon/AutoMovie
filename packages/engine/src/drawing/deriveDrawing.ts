@@ -230,9 +230,14 @@ export const deriveAutoMovieDrawing = (props: {
 
   const regions: IAutoMovieDrawingRegion[] = [];
   let unbounded = 0;
+  let shelled = 0;
   if (cut)
     for (const space of environment.spaces) {
       if (spaces !== null && !spaces.has(space.id)) continue;
+      if (space.shell !== undefined) {
+        ++shelled;
+        continue;
+      }
       for (const cell of space.cells) {
         const section = autoMovieDrawingCellSection(frame, cell.planes);
         if (section.bounded === false) {
@@ -253,6 +258,19 @@ export const deriveAutoMovieDrawing = (props: {
         });
       }
     }
+  if (shelled !== 0)
+    gaps.push({
+      // `unsupported` rather than `not-run`, and the distinction is the point:
+      // the shell is exactly the region and nothing is missing from it. What is
+      // missing is the derivation, because cutting a closed triangle boundary
+      // means assembling the crossed edges into ordered loops and this drafter
+      // only sections half-space cells.
+      subject: "shelled-space-section",
+      status: "unsupported",
+      reason: `${shelled} logical space(s) state their volume as a closed boundary shell, which this drafter cannot section: only half-space cells are cut, so those spaces contribute no region to the sheet`,
+      remedy:
+        "state the space as convex cells to have it sectioned, or read its extent from the shell itself until plane-versus-shell sectioning exists",
+    });
   if (unbounded !== 0)
     gaps.push({
       // `not-run` rather than `unsupported`, and the same word the quantity

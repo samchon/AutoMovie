@@ -12,6 +12,7 @@ import {
   IAutoMovieServiceSystem,
 } from "@automovie/interface";
 
+import { builtSpaceStatesVolume } from "../architecture/builtEnvironment";
 import { propBoundsOverlap } from "../film/propPlacement";
 
 /** One clashing pair of runs, in the order the network declares them. */
@@ -448,9 +449,7 @@ export const serviceAnalysisSupport = (props: {
   for (const system of props.network.systems)
     if (!disciplines.includes(system.discipline))
       disciplines.push(system.discipline);
-  const located = props.environment.spaces.some(
-    (space) => space.cells.length > 0,
-  );
+  const located = props.environment.spaces.some(builtSpaceStatesVolume);
   // A boundary that does not resolve is faceless too, and naming the boundary
   // the sleeve claimed is more use than naming nothing; the validator reports
   // the dangling reference itself, on its own path.

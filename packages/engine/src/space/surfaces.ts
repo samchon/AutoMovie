@@ -5,7 +5,11 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { convexHull2D, pointInHull } from "../math/hull";
+import {
+  IAutoMovieFootprint,
+  footprintContains,
+  surfaceFootprint,
+} from "./footprint";
 
 /** Below this XZ span a ramp axis is degenerate and the patch reads as flat. */
 const MIN_RAMP_AXIS = 1e-9;
@@ -20,8 +24,14 @@ export interface IAutoMoviePreparedSurface {
   /** The source surface whose height/identity remains authoritative. */
   readonly surface: IAutoMovieSurface;
 
-  /** Convex hull of {@link IAutoMovieSurface.polygon}, in XZ plan. */
-  readonly hull: readonly IAutoMovieVector3[];
+  /**
+   * The exact plan region of {@link IAutoMovieSurface.polygon} and its holes.
+   *
+   * This used to be the footprint's convex hull, which is why an L-shaped plate
+   * had to be refused: a hull fills the notch, and a hull of a holed slab fills
+   * the atrium. The region carried here is the rings themselves.
+   */
+  readonly footprint: IAutoMovieFootprint;
 }
 
 /**
@@ -46,7 +56,7 @@ export const prepareSurface = (
   surface: IAutoMovieSurface,
 ): IAutoMoviePreparedSurface => ({
   surface,
-  hull: convexHull2D(surface.polygon),
+  footprint: surfaceFootprint(surface),
 });
 
 /**
@@ -200,10 +210,15 @@ const mix = (from: number, to: number, progress: number): number =>
   from + (to - from) * progress;
 
 /**
- * Is `(x, z)` on the surface's footprint? The polygon is canonicalized through
- * the shared convex hull, so a mis-ordered or accidentally non-convex point
- * list still classifies correctly (the same guarantee `validateBalanceSupport`
- * gained in #601).
+ * Is `(x, z)` on the surface's footprint?
+ *
+ * Classified against the authored rings, not against their convex hull. That
+ * distinction is the whole of #1868: a hull is always a superset, so an
+ * L-shaped plate answered "yes" inside its own notch and a slab with an atrium
+ * void answered "yes" over the void — silently, in the one query feet, props,
+ * crowds and the camera base all read. `validateSpace` refused those footprints
+ * precisely because this query could not tell the truth about them; it can now,
+ * so they are authored instead of forbidden.
  */
 export const surfaceContains = (
   surface: IAutoMovieSurface,
@@ -220,7 +235,7 @@ export const preparedSurfaceContains = (
   prepared: IAutoMoviePreparedSurface,
   x: number,
   z: number,
-): boolean => pointInHull({ x, y: 0, z }, prepared.hull);
+): boolean => footprintContains(prepared.footprint, x, z);
 
 /**
  * The **topmost** surface under `(x, z)` (walkable or not), or `null` when the

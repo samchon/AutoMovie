@@ -16,11 +16,20 @@ import {
 import {
   builtConnectorSection,
   builtEnvironmentContainsPoint,
+  builtSpaceStatesVolume,
 } from "../architecture/builtEnvironment";
 import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
-import { convexHull2D, pointInHull } from "../math/hull";
+import { convexHull2D } from "../math/hull";
+import {
+  IAutoMovieFootprint,
+  footprintContains,
+  footprintConvexPieces,
+  footprintInteriorPoint,
+  footprintRing,
+  surfaceFootprint,
+} from "../space/footprint";
 import { IAutoMovieHeightSurface, surfaceHeightAt } from "../space/surfaces";
 import { ViolationCollector } from "../validation/violation";
 import { forgeProp } from "./forgeProp";
@@ -46,11 +55,20 @@ export interface IAutoMoviePropClearanceBounds extends IAutoMoviePropBox {
  * The world-axis-aligned volume one staged prop occupies.
  *
  * A declared `footprint` wins because it is the prop's own statement of what it
- * takes up; otherwise the bound is derived from the visible parts, which is the
- * only honest answer a prop that says nothing can be given. Either way all
+ * takes up; otherwise the bound is derived from the prop's own parts, which is
+ * the only honest answer a prop that says nothing can be given. Either way all
  * eight corners travel through the piece's full TRS (translation, unit
  * quaternion, per-axis scale) before the world bound is taken, so a rotated
  * prop widens rather than being silently re-fitted to its local box.
+ *
+ * Those parts are the prop's geometry, not necessarily what a viewer draws. A
+ * prop citing an external appearance (`IAutoMoviePropSpec.modelRef`) keeps its
+ * parts as the deterministic proxy the compiler registered, and that proxy is
+ * what is measured here, because it is the only volume anybody stated: the
+ * imported bytes are a file the engine never opens. So an author whose proxy is
+ * cruder than the mesh it stands for declares a `footprint` for exactly the
+ * reason a generated prop does, to state a use volume the geometry does not
+ * show.
  *
  * A prop whose parts carry no vertices at all collapses to the staged origin
  * rather than to an empty bound, so a caller never has to special-case it.
@@ -104,7 +122,7 @@ export const propBoundsOverlap = (
 /**
  * Whether a world volume lies inside a logical space or any space below it.
  *
- * A space whose subtree declares no convex cell locates nothing, so it excludes
+ * A space whose subtree states no volume at all locates nothing, so it excludes
  * nothing and the answer is `true`: a purely semantic container ("the west
  * wing") is a name, not a boundary, and refusing props inside it would invent a
  * geometric claim the author never made. Throws when the space is not declared,
@@ -120,7 +138,7 @@ export const propSpaceContainsBounds = (props: {
   );
   const included = descendantSpaces(props.environment, props.space);
   const locates = props.environment.spaces.some(
-    (space) => included.has(space.id) && space.cells.length > 0,
+    (space) => included.has(space.id) && builtSpaceStatesVolume(space),
   );
   if (!locates) return true;
   return inside.every((value) => value);
@@ -171,8 +189,16 @@ export const propBlockedPassages = (props: {
  * shows it stay one surface rather than drifting apart.
  */
 export interface IAutoMoviePropSupportFace {
-  /** Convex hull of the face's footprint, in world XZ, counter-clockwise. */
-  polygon: IAutoMovieVector3[];
+  /**
+   * The face's plan region in world XZ, holes and all.
+   *
+   * This carried the footprint's convex hull until #1868, which is why a crate
+   * could be reported resting on the middle of an atrium: the hull floors the
+   * void, and the gap query then measures the prop against ground that is not
+   * there. A prop affordance's own top is a quad and is still one convex ring;
+   * a support patch is whatever region its rings describe.
+   */
+  polygon: IAutoMovieFootprint;
 
   /** How high the face stands, in the spelling {@link surfaceHeightAt} reads. */
   height: IAutoMovieHeightSurface;
@@ -219,8 +245,8 @@ export const propSupportFace = (props: {
       (candidate) => candidate.surface.id === target.surface,
     );
     if (entry === undefined) return null;
-    const polygon = convexHull2D(entry.surface.polygon);
-    if (polygon.length < 3) return null;
+    const polygon = surfaceFootprint(entry.surface);
+    if (footprintConvexPieces(polygon).length === 0) return null;
     return { polygon, height: entry.surface };
   }
   const spec = (props.props ?? []).find((prop) => prop.node === target.prop);
@@ -243,11 +269,16 @@ export const propSupportFace = (props: {
   const height = facePlane(matrix);
   if (height === null) return null;
   return {
-    polygon: convexHull2D(
-      affordance.extent.map((corner) =>
-        transformPoint({ x: corner.x, y: 0, z: corner.z }, matrix),
+    polygon: {
+      outer: footprintRing(
+        convexHull2D(
+          affordance.extent.map((corner) =>
+            transformPoint({ x: corner.x, y: 0, z: corner.z }, matrix),
+          ),
+        ),
       ),
-    ),
+      holes: [],
+    },
     height,
   };
 };
@@ -284,9 +315,12 @@ export const propSupportGap = (props: {
   const bounds = props.bounds;
   const probes = [
     ...footprintProbes(bounds).filter((probe) =>
-      pointInHull(probe, props.face.polygon),
+      footprintContains(props.face.polygon, probe.x, probe.z),
     ),
-    ...props.face.polygon.filter((corner) => underFootprint(corner, bounds)),
+    ...[
+      ...props.face.polygon.outer.points,
+      ...props.face.polygon.holes.flatMap((hole) => hole.points),
+    ].filter((corner) => underFootprint(corner, bounds)),
   ];
   let gap: number | null = null;
   for (const probe of probes) {
@@ -371,15 +405,15 @@ export const propAnchorFrame = (props: {
       const entry = environment.surfaces.find(
         (candidate) => candidate.surface.id === target.surface,
       );
-      if (entry === undefined || entry.surface.polygon.length === 0)
-        return null;
-      const centroid = entry.surface.polygon.reduce(
-        (sum, point) => ({ x: sum.x + point.x, z: sum.z + point.z }),
-        { x: 0, z: 0 },
-      );
-      const count = entry.surface.polygon.length;
-      const x = centroid.x / count;
-      const z = centroid.z / count;
+      if (entry === undefined) return null;
+      // The anchor has to be ON the patch, and a vertex mean is not: the mean
+      // of an L-shaped plate's corners falls in its notch, and the mean of a
+      // holed slab's falls down the atrium. The widest convex piece of the
+      // region always has its own mean inside itself, and for the ordinary
+      // convex patch that piece is the patch.
+      const anchor = footprintInteriorPoint(surfaceFootprint(entry.surface));
+      if (anchor === null) return null;
+      const { x, z } = anchor;
       return {
         translation: { x, y: surfaceHeightAt(entry.surface, x, z), z },
         rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -453,6 +487,14 @@ const requiredAffordance = (
  * cell-less logical space, an opening whose fill has no model, and a prop whose
  * staged join is missing or ambiguous are reported as what they are rather than
  * silently failing a spatial test they cannot be measured against.
+ *
+ * Where a prop's appearance came from changes nothing here. A prop drawing an
+ * external asset (`IAutoMoviePropSpec.modelRef`) forges like any other, so it
+ * is contained, borne, cleared, and judged against passages through exactly
+ * these rules, read off the deterministic proxy `propOccupancyBounds` measures
+ * and the affordances its own spec declares. That is the point of admitting the
+ * reference at all: an imported chair that lost its seat face and its keep-out
+ * volume would be a picture, and a picture cannot be sat on.
  */
 export const validatePropPlacements = (props: {
   props: readonly IAutoMoviePropSpec[];

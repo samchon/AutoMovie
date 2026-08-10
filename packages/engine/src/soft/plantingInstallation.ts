@@ -12,7 +12,10 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
+import {
+  builtEnvironmentContainsPoint,
+  builtSpaceStatesVolume,
+} from "../architecture/builtEnvironment";
 import { ViolationCollector } from "../validation/violation";
 import { arrangePlantingCluster, growPlanting } from "./planting";
 import {
@@ -44,8 +47,8 @@ const IRRIGATION_MEDIA = new Set(["potable", "reclaimed", "rainwater", "pond"]);
  * stands in a fluid domain and that a dry one does not pretend to, and that
  * every generated member lands inside the room instead of through its wall.
  *
- * A room declared as a purely semantic container (a logical space with no
- * convex cells) is not geometrically checked: there is no volume to check
+ * A room declared as a purely semantic container (a logical space that states
+ * no volume at all) is not geometrically checked: there is no volume to check
  * against, and inventing one would be the design deciding a fact the author did
  * not state.
  *
@@ -282,7 +285,7 @@ export const validatePlantingInstallations = (props: {
         : null;
     for (const placement of arrangement.placements) {
       const outside =
-        space !== undefined && space.cells.length > 0
+        space !== undefined && builtSpaceStatesVolume(space)
           ? [
               placement.translation,
               ...(canopy === null ? [] : corners(canopy, placement)),

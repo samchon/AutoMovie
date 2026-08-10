@@ -6,19 +6,28 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { convexHull2D, nearestHullEdge } from "../math/hull";
+import {
+  polygonInside,
+  polygonIsSimple,
+  polygonsOverlap,
+} from "../architecture/planarGeometry";
+import {
+  IAutoMovieFootprintRing,
+  footprintRing,
+  footprintRingPlacement,
+} from "../space/footprint";
 import { ViolationCollector } from "./violation";
 
 const SURFACE_KINDS = ["floor", "platform", "ramp"] as const;
 const MIN_RAMP_AXIS = 1e-9;
 
 /**
- * A footprint vertex farther than this from its own convex hull's boundary sits
- * strictly inside the hull: a concave notch or a redundant interior point.
- * Meters, so a nanometre tolerance is exact for authored coordinates while a
- * real notch (centimetres and up) is caught.
+ * Below twice this plan area, in square metres, a ring encloses nothing: its
+ * points are collinear, or they double back over one another. A square
+ * nanometre is exact for authored coordinates while any real patch clears it by
+ * orders of magnitude.
  */
-const CONVEX_TOLERANCE = 1e-9;
+const MIN_RING_DOUBLE_AREA = 1e-9;
 
 /**
  * Tier-1 structural check for an {@link IAutoMovieSpace}, the constraints the
@@ -26,17 +35,23 @@ const CONVEX_TOLERANCE = 1e-9;
  * {@link supportContactsFor}) always compute over well-formed patches.
  *
  * Checks: non-empty space/surface ids, unique surface ids, a known surface
- * kind, a footprint of at least three non-collinear points with finite plan
- * coordinates (polygon `y` is documented-ignored and not checked) that form a
- * **convex** polygon (the ground query classifies against the footprint's
- * convex hull, so a concave footprint would have its notch silently filled; a
- * vertex strictly inside the hull is rejected while a collinear point on an
- * edge is allowed), exactly one statement of the surface's ground and its own
- * rules (finite height anchors and a non-degenerate ramp axis for the
- * two-anchor spelling; finite parameters and an exactly-sized lattice for a
- * declared height rule), and walkable ids that resolve uniquely to declared
- * surfaces. Everything is `error` severity: a malformed space is broken input,
- * not an artistic choice.
+ * kind, an outer footprint ring of at least three points with finite plan
+ * coordinates (polygon `y` is documented-ignored and not checked) that encloses
+ * area and does not cross itself, holes that each do the same and lie strictly
+ * inside the outer ring and apart from one another, exactly one statement of
+ * the surface's ground and its own rules (finite height anchors and a
+ * non-degenerate ramp axis for the two-anchor spelling; finite parameters and
+ * an exactly-sized lattice for a declared height rule), and walkable ids that
+ * resolve uniquely to declared surfaces. Everything is `error` severity: a
+ * malformed space is broken input, not an artistic choice.
+ *
+ * **Concave and holed footprints are accepted, and the order that happened in
+ * matters.** This validator used to demand a convex footprint, and it was right
+ * to: the ground query classified against the convex hull, so a notch was
+ * filled and an atrium void was floored, quietly, in the query feet and props
+ * read. `surfaceContains` classifies against the authored rings now (#1868), so
+ * what is refused here is what that query still cannot answer — a ring with no
+ * inside, or holes that do not describe a region — rather than a shape it can.
  *
  * @author Samchon
  */
@@ -107,54 +122,140 @@ const validateSurface = (
       surface.kind,
     );
 
-  if (surface.polygon.length < 3)
-    collector.push(
-      "type",
-      `${path}.polygon`,
-      `a surface footprint needs at least 3 points, but had ${surface.polygon.length}`,
-      surface.polygon.length,
-    );
+  validateSurfaceFootprint(surface, path, collector);
+  validateSurfaceGround(surface, path, collector);
+};
+
+/**
+ * The rings that say where a patch is, held to what the ground query needs.
+ *
+ * A ring must enclose area and must not cross itself, because a query asking
+ * which side of it a foot is on has no answer otherwise. A hole must lie
+ * strictly inside the outer ring — a void reaching past the slab is a slab
+ * whose edge was authored twice — and must stay clear of every other hole,
+ * because two voids that touch are one void written as two and the material
+ * between them has nothing left to be.
+ */
+const validateSurfaceFootprint = (
+  surface: IAutoMovieSurface,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  const outer = validateRing(
+    surface.polygon,
+    `${path}.polygon`,
+    "surface footprint",
+    collector,
+  );
+  const holes = (surface.holes ?? []).map((hole, i) =>
+    validateRing(hole, `${path}.holes[${i}]`, "footprint hole", collector),
+  );
+  if (outer === null) return;
+  holes.forEach((hole, i) => {
+    if (hole === null) return;
+    const hp = `${path}.holes[${i}]`;
+    if (!polygonInside(hole.plan, outer.plan))
+      collector.push(
+        "type",
+        hp,
+        "footprint hole must lie inside the surface footprint, but it reaches outside it",
+        surface.holes![i],
+      );
+    else if (ringsTouch(hole, outer))
+      collector.push(
+        "type",
+        hp,
+        "footprint hole must lie strictly inside the surface footprint, but it touches the outer ring; author the notch in the outer ring instead",
+        surface.holes![i],
+      );
+    for (let other = 0; other < i; ++other) {
+      const before = holes[other];
+      if (before !== null && before !== undefined)
+        if (polygonsOverlap(hole.plan, before.plan))
+          collector.push(
+            "type",
+            hp,
+            `footprint hole must stay clear of hole [${other}], but the two share plan area`,
+            surface.holes![i],
+          );
+    }
+  });
+};
+
+/**
+ * Do two nested rings meet anywhere at all?
+ *
+ * Asked from both sides on purpose. A hole flush along the outer ring puts its
+ * own vertices on that ring, while an outer ring whose reflex corner reaches in
+ * to touch a hole edge puts an outer vertex on the hole — one test would miss
+ * whichever case it is not written from. Containment has already been settled
+ * by the caller, so a shared point is the only contact left to find.
+ */
+const ringsTouch = (
+  hole: IAutoMovieFootprintRing,
+  outer: IAutoMovieFootprintRing,
+): boolean =>
+  hole.points.some(
+    (point) => footprintRingPlacement(outer, point.x, point.z) === "boundary",
+  ) ||
+  outer.points.some(
+    (point) => footprintRingPlacement(hole, point.x, point.z) === "boundary",
+  );
+
+/**
+ * One closed footprint ring, or `null` when it is too broken to compare with
+ * another. Every defect is reported at the ring's own path, so an author is
+ * told which of several rings is wrong rather than that "the footprint" is.
+ */
+const validateRing = (
+  points: readonly IAutoMovieVector3[],
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): IAutoMovieFootprintRing | null => {
   let planFinite = true;
-  surface.polygon.forEach((point, i) => {
+  points.forEach((point, i) => {
     for (const axis of ["x", "z"] as const)
       if (!Number.isFinite(point[axis])) {
         planFinite = false;
         collector.push(
           "range",
-          `${path}.polygon[${i}].${axis}`,
-          `polygon ${axis} must be finite, but was ${point[axis]}`,
+          `${path}[${i}].${axis}`,
+          `${label} ${axis} must be finite, but was ${point[axis]}`,
           point[axis],
         );
       }
   });
-  if (planFinite && surface.polygon.length >= 3) {
-    const hull = convexHull2D(surface.polygon);
-    if (hull.length < 3)
-      collector.push(
-        "type",
-        `${path}.polygon`,
-        "surface footprint points are collinear: they enclose no area",
-        surface.polygon,
-      );
-    // The footprint is contractually convex; the ground query (surfaceContains)
-    // classifies against its convex hull, so a concave footprint would have its
-    // notch silently filled. A vertex strictly inside the hull (a reflex/notch
-    // corner, or a redundant interior point) sits off the hull boundary. A
-    // collinear point on an edge stays on the boundary and is allowed.
-    else if (
-      surface.polygon.some(
-        (point) => nearestHullEdge(point, hull).distance > CONVEX_TOLERANCE,
-      )
-    )
-      collector.push(
-        "type",
-        `${path}.polygon`,
-        "surface footprint is concave: a vertex sits inside its convex hull, which the ground query would fill; footprints must be convex",
-        surface.polygon,
-      );
+  if (points.length < 3) {
+    collector.push(
+      "type",
+      path,
+      `a ${label} needs at least 3 points, but had ${points.length}`,
+      points.length,
+    );
+    return null;
   }
-
-  validateSurfaceGround(surface, path, collector);
+  if (!planFinite) return null;
+  const ring = footprintRing(points);
+  if (Math.abs(ring.doubleArea) <= MIN_RING_DOUBLE_AREA) {
+    collector.push(
+      "type",
+      path,
+      `${label} points enclose no area: they are collinear or double back over one another`,
+      points,
+    );
+    return null;
+  }
+  if (!polygonIsSimple(ring.plan)) {
+    collector.push(
+      "type",
+      path,
+      `${label} crosses itself, so it has no inside for the ground query to answer with`,
+      points,
+    );
+    return null;
+  }
+  return ring;
 };
 
 /**

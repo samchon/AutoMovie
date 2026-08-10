@@ -13,6 +13,7 @@ import {
   IAutoMoviePlanarPoint,
   IAutoMovieQuaternion,
   IAutoMovieSpace,
+  IAutoMovieSpaceShell,
   IAutoMovieTravelMotion,
   IAutoMovieValidation,
   IAutoMovieVector3,
@@ -150,6 +151,31 @@ export const validateBuiltEnvironment = (props: {
         `logical-space parent "${space.parent}" does not resolve`,
         space.parent,
       );
+    if (space.cells.length !== 0 && space.shell !== undefined)
+      collector.push(
+        "type",
+        `${path}.shell`,
+        "a logical space states its volume once: carry either convex cells or a boundary shell, not both",
+        space.shell,
+      );
+    if (space.fidelity !== undefined) {
+      if (space.fidelity !== "exact" && space.fidelity !== "faceted")
+        collector.push(
+          "type",
+          `${path}.fidelity`,
+          `logical-space fidelity must be "exact" or "faceted", but was ${String(space.fidelity)}`,
+          space.fidelity,
+        );
+      else if (space.cells.length === 0 && space.shell === undefined)
+        collector.push(
+          "type",
+          `${path}.fidelity`,
+          "a logical space that states no volume has nothing for a fidelity to describe",
+          space.fidelity,
+        );
+    }
+    if (space.shell !== undefined)
+      validateSpaceShell(space.shell, `${path}.shell`, collector);
     const cellIds = new Set<string>();
     space.cells.forEach((cell, cellIndex) => {
       const cellPath = `${path}.cells[${cellIndex}]`;
@@ -626,17 +652,203 @@ export const builtEnvironmentContainsPoint = (
   requireSpace(environment, spaceId);
   const included = descendantSpaces(environment.spaces, spaceId);
   return environment.spaces.some(
-    (space) =>
-      included.has(space.id) &&
-      space.cells.some((cell) =>
-        cell.planes.every(
-          (plane) =>
-            plane.normal.x * point.x +
-              plane.normal.y * point.y +
-              plane.normal.z * point.z <=
-            plane.offset + CONTAINMENT_EPSILON,
-        ),
-      ),
+    (space) => included.has(space.id) && builtSpaceContainsPoint(space, point),
+  );
+};
+
+/**
+ * Does one logical space's own stated volume contain a point?
+ *
+ * The single place either spelling is read, so nothing has to know which one a
+ * space used: a celled space is the union of its half-space cells, a shelled
+ * space is the inside of its own closed boundary, and a space that states
+ * neither locates nothing and contains nothing. Every containment consumer —
+ * the descendant-folding query above, room visibility's per-leaf placement,
+ * prop occupancy, a fluid basin's stray-cell walk — goes through here, because
+ * a second reading of the same field is how a room and its own camera ended up
+ * with two answers about where the camera stood.
+ *
+ * @author Samchon
+ */
+export const builtSpaceContainsPoint = (
+  space: IAutoMovieBuiltSpace,
+  point: IAutoMovieVector3,
+): boolean => {
+  if (space.shell !== undefined)
+    return spaceShellContainsPoint(space.shell, point);
+  return space.cells.some((cell) =>
+    cell.planes.every(
+      (plane) =>
+        plane.normal.x * point.x +
+          plane.normal.y * point.y +
+          plane.normal.z * point.z <=
+        plane.offset + CONTAINMENT_EPSILON,
+    ),
+  );
+};
+
+/**
+ * Does a logical space bound a volume at all, in either spelling?
+ *
+ * A space that states none is a name — "the west wing" — and every consumer
+ * treats that differently from an empty one: props are not refused inside it, a
+ * sight line through it cannot be ruled out, a fluid lattice has nothing to be
+ * outside of. Asking through this rather than through `cells.length` is what
+ * keeps a shelled space from reading as unlocated.
+ *
+ * @author Samchon
+ */
+export const builtSpaceStatesVolume = (space: IAutoMovieBuiltSpace): boolean =>
+  space.cells.length !== 0 || space.shell !== undefined;
+
+/**
+ * Is the space's stated volume a single convex region?
+ *
+ * A caller deciding one rectangle against a convex region only has to test its
+ * corners; against anything else the middle can fall through a notch, a void,
+ * or the gap between two cells. This answers which of the two it is holding, so
+ * the cheap test is taken exactly when it is exact.
+ *
+ * @author Samchon
+ */
+export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
+  space.shell === undefined && space.cells.length === 1;
+
+/**
+ * What a logical space's own volume claims to be, folded over its descendants.
+ *
+ * `"unstated"` is a subtree that bounds nothing at all, `"faceted"` is a
+ * subtree where at least one stated volume declares itself an approximation of
+ * a curved region, and `"exact"` is everything else. Folding matters because a
+ * storey holding one vaulted hall is a storey whose measured volume is a facet
+ * count: the approximation does not stop at the space that declared it.
+ *
+ * This engine has no curved boundary primitive, so a curved region cannot be
+ * stated exactly by any spelling here. That limit is reported rather than
+ * smoothed over: a caller that wants an exact dome learns it is holding flats.
+ *
+ * @author Samchon
+ */
+export const builtEnvironmentSpaceFidelity = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): "exact" | "faceted" | "unstated" => {
+  requireSpace(environment, spaceId);
+  const included = descendantSpaces(environment.spaces, spaceId);
+  const stated = environment.spaces.filter(
+    (space) => included.has(space.id) && builtSpaceStatesVolume(space),
+  );
+  if (stated.length === 0) return "unstated";
+  return stated.some((space) => space.fidelity === "faceted")
+    ? "faceted"
+    : "exact";
+};
+
+/**
+ * Volume, in cubic metres, enclosed by a closed outward-wound shell.
+ *
+ * The divergence theorem over triangles: a sixth of the summed scalar triple
+ * products. Voids subtract themselves, because their facets are wound the other
+ * way and contribute the negative of what they enclose, which is the whole
+ * reason an atrium is inner facets rather than a second record. Exact for the
+ * flats as written; what the flats stand for is
+ * {@link builtEnvironmentSpaceFidelity}'s answer, not this one's.
+ *
+ * @author Samchon
+ */
+export const builtSpaceShellVolume = (shell: IAutoMovieSpaceShell): number => {
+  let sum = 0;
+  for (let face = 0; face + 2 < shell.triangles.length; face += 3) {
+    const a = shell.vertices[shell.triangles[face]!];
+    const b = shell.vertices[shell.triangles[face + 1]!];
+    const c = shell.vertices[shell.triangles[face + 2]!];
+    if (a === undefined || b === undefined || c === undefined) continue;
+    sum +=
+      a.x * (b.y * c.z - b.z * c.y) +
+      a.y * (b.z * c.x - b.x * c.z) +
+      a.z * (b.x * c.y - b.y * c.x);
+  }
+  return sum / 6;
+};
+
+/**
+ * Is a point inside a closed shell?
+ *
+ * The winding number, summed as signed solid angles (Van Oosterom–Strackee), so
+ * the answer never depends on a ray direction somebody had to pick and a void's
+ * inward facets cancel the outer boundary's contribution exactly. A point
+ * strictly inside subtends a full turn, a point outside subtends nothing, and a
+ * point in a void subtends nothing because that is what a void is.
+ *
+ * The shell's own surface is inside it, tested first and by distance, because
+ * solid angle degenerates exactly where a crate's corner sits: on a face it is
+ * half a turn, but on an edge or at a vertex it is whatever the dihedral
+ * happens to be, so a box standing in the corner of a room would have been
+ * reported outside the room it is in.
+ */
+const spaceShellContainsPoint = (
+  shell: IAutoMovieSpaceShell,
+  point: IAutoMovieVector3,
+): boolean => {
+  let winding = 0;
+  for (let face = 0; face + 2 < shell.triangles.length; face += 3) {
+    const a = shell.vertices[shell.triangles[face]!];
+    const b = shell.vertices[shell.triangles[face + 1]!];
+    const c = shell.vertices[shell.triangles[face + 2]!];
+    if (a === undefined || b === undefined || c === undefined) continue;
+    if (pointOnTriangle(point, a, b, c)) return true;
+    winding += signedSolidAngle(point, a, b, c);
+  }
+  return Math.abs(winding) >= 2 * Math.PI;
+};
+
+/** Signed solid angle triangle `abc` subtends at `point`, in steradians. */
+const signedSolidAngle = (
+  point: IAutoMovieVector3,
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
+  c: IAutoMovieVector3,
+): number => {
+  const u = Vector3.subtract(a, point);
+  const v = Vector3.subtract(b, point);
+  const w = Vector3.subtract(c, point);
+  const lu = Vector3.length(u);
+  const lv = Vector3.length(v);
+  const lw = Vector3.length(w);
+  const numerator = Vector3.dot(u, Vector3.cross(v, w));
+  const denominator =
+    lu * lv * lw +
+    Vector3.dot(u, v) * lw +
+    Vector3.dot(u, w) * lv +
+    Vector3.dot(v, w) * lu;
+  return 2 * Math.atan2(numerator, denominator);
+};
+
+/** Whether a point sits on triangle `abc`, its edges and corners included. */
+const pointOnTriangle = (
+  point: IAutoMovieVector3,
+  a: IAutoMovieVector3,
+  b: IAutoMovieVector3,
+  c: IAutoMovieVector3,
+): boolean => {
+  const ab = Vector3.subtract(b, a);
+  const ac = Vector3.subtract(c, a);
+  const ap = Vector3.subtract(point, a);
+  const normal = Vector3.cross(ab, ac);
+  const area = Vector3.length(normal);
+  if (area <= PLANE_NORMAL_EPSILON) return false;
+  if (Math.abs(Vector3.dot(ap, normal)) > CONTAINMENT_EPSILON * area)
+    return false;
+  const bp = Vector3.subtract(point, b);
+  const bc = Vector3.subtract(c, b);
+  const slack = CONTAINMENT_EPSILON * area;
+  return (
+    Vector3.dot(Vector3.cross(ab, ap), normal) >= -slack &&
+    Vector3.dot(Vector3.cross(bc, bp), normal) >= -slack &&
+    Vector3.dot(
+      Vector3.cross(Vector3.subtract(a, c), Vector3.subtract(point, c)),
+      normal,
+    ) >= -slack
   );
 };
 
@@ -2391,8 +2603,116 @@ const spaceSubtreeIsBounded = (
 ): boolean => {
   const included = descendantSpaces(environment.spaces, spaceId);
   return environment.spaces.some(
-    (space) => included.has(space.id) && space.cells.length !== 0,
+    (space) => included.has(space.id) && builtSpaceStatesVolume(space),
   );
+};
+
+/**
+ * A closed boundary, held to exactly what makes its inside a fact.
+ *
+ * Three things are checked and nothing is repaired. Every index must name a
+ * vertex the shell carries, and every face must have area, because a face
+ * nobody can look up or that is a line contributes a solid angle of nothing to
+ * a query that would then answer confidently. The surface must be **closed**:
+ * each directed edge appears exactly once and its own reverse exactly once, so
+ * a missing facet is a hole through which inside leaks into outside, and a
+ * duplicated one is a facet counted twice. And the enclosed volume must be
+ * positive, which is how "wound counter-clockwise seen from outside" is
+ * actually checked: a shell turned inside out passes every local test and
+ * answers the exact opposite of the truth for every point in the building.
+ */
+const validateSpaceShell = (
+  shell: IAutoMovieSpaceShell,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  shell.vertices.forEach((vertex, index) => {
+    finiteVector(
+      vertex,
+      `${path}.vertices[${index}]`,
+      "shell vertex",
+      collector,
+    );
+  });
+  if (shell.vertices.length < 4)
+    collector.push(
+      "range",
+      `${path}.vertices`,
+      `a closed shell needs at least 4 vertices, but had ${shell.vertices.length}`,
+      shell.vertices.length,
+    );
+  if (shell.triangles.length < 12 || shell.triangles.length % 3 !== 0) {
+    collector.push(
+      "range",
+      `${path}.triangles`,
+      `a closed shell needs at least 4 triangles as whole index triples, but had ${shell.triangles.length} indices`,
+      shell.triangles.length,
+    );
+    return;
+  }
+  const bad = shell.triangles.findIndex(
+    (index) =>
+      Number.isSafeInteger(index) === false ||
+      index < 0 ||
+      index >= shell.vertices.length,
+  );
+  if (bad !== -1) {
+    collector.push(
+      "range",
+      `${path}.triangles[${bad}]`,
+      `shell triangle index must name one of the ${shell.vertices.length} vertices, but was ${shell.triangles[bad]}`,
+      shell.triangles[bad],
+    );
+    return;
+  }
+  const edges = new Map<string, number>();
+  for (let face = 0; face < shell.triangles.length; face += 3) {
+    const corners = [
+      shell.triangles[face]!,
+      shell.triangles[face + 1]!,
+      shell.triangles[face + 2]!,
+    ];
+    const a = shell.vertices[corners[0]!]!;
+    const b = shell.vertices[corners[1]!]!;
+    const c = shell.vertices[corners[2]!]!;
+    if (
+      Vector3.length(
+        Vector3.cross(Vector3.subtract(b, a), Vector3.subtract(c, a)),
+      ) <= PLANE_NORMAL_EPSILON
+    ) {
+      collector.push(
+        "range",
+        `${path}.triangles[${face}]`,
+        `shell triangle ${face / 3} encloses no area, so it bounds nothing`,
+        corners,
+      );
+      return;
+    }
+    for (let corner = 0; corner < 3; ++corner) {
+      const key = `${corners[corner]}>${corners[(corner + 1) % 3]}`;
+      edges.set(key, (edges.get(key) ?? 0) + 1);
+    }
+  }
+  const open = [...edges.entries()].find(
+    ([key, count]) =>
+      count !== 1 || edges.get(key.split(">").reverse().join(">")) !== 1,
+  );
+  if (open !== undefined) {
+    collector.push(
+      "type",
+      `${path}.triangles`,
+      `shell is not closed: directed edge ${open[0]} is not matched by exactly one facet and one opposite facet`,
+      open[0],
+    );
+    return;
+  }
+  if (builtSpaceShellVolume(shell) <= 0)
+    collector.push(
+      "range",
+      `${path}.triangles`,
+      "shell encloses no positive volume: wind its facets counter-clockwise seen from outside the solid",
+      builtSpaceShellVolume(shell),
+    );
 };
 
 /** The spaces one run serves, in the order its own route reaches them. */

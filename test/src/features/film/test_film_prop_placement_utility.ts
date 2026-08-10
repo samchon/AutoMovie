@@ -1,5 +1,6 @@
 import {
   IAutoMoviePropSupportFace,
+  footprintRing,
   propAnchorFrame,
   propBlockedPassages,
   propBoundsOverlap,
@@ -68,12 +69,15 @@ const patch = (props: {
 }): IAutoMoviePropSupportFace => {
   const centre = props.atX ?? 0;
   return {
-    polygon: [
-      { x: centre - props.half, y: 0, z: -props.half },
-      { x: centre + props.half, y: 0, z: -props.half },
-      { x: centre + props.half, y: 0, z: props.half },
-      { x: centre - props.half, y: 0, z: props.half },
-    ],
+    polygon: {
+      outer: footprintRing([
+        { x: centre - props.half, y: 0, z: -props.half },
+        { x: centre + props.half, y: 0, z: -props.half },
+        { x: centre + props.half, y: 0, z: props.half },
+        { x: centre - props.half, y: 0, z: props.half },
+      ]),
+      holes: [],
+    },
     height: {
       height: {
         kind: "plane",
@@ -746,7 +750,8 @@ export const test_film_prop_placement_utility = (): void => {
           });
           return (
             face !== null &&
-            face.polygon.length === 4 &&
+            face.polygon.outer.points.length === 4 &&
+            face.polygon.holes.length === 0 &&
             surfaceHeightAt(face.height, 3, -2) === 0
           );
         },

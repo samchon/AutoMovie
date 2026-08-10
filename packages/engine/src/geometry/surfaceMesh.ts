@@ -1,6 +1,6 @@
 import { IAutoMovieSurface, IAutoMovieVector3 } from "@automovie/interface";
 
-import { convexHull2D } from "../math/hull";
+import { footprintConvexPieces, surfaceFootprint } from "../space/footprint";
 import { surfaceHeightAt } from "../space/surfaces";
 import { ITessellation } from "./tessellate";
 
@@ -9,8 +9,15 @@ const CLIP_EPSILON = 1e-10;
 /**
  * Tessellate exactly the support surface that engine height queries read.
  *
- * Level and planar patches use one convex fan. Heightfields split the footprint
- * at every lattice coordinate, clip each cell against the convex footprint, and
+ * The footprint is taken as the convex pieces whose union is the region itself,
+ * so an L-shaped plate keeps its notch and a slab with an atrium void is drawn
+ * with the void open. Drawing the hull instead would put floor under a camera
+ * looking down the atrium while `surfaceContains` said there was none, which is
+ * the same disagreement between the drawn ground and the queried ground that
+ * this function was written to end.
+ *
+ * Level and planar patches fan each piece. Heightfields split the footprint at
+ * every lattice coordinate, clip each lattice cell against each piece, and
  * evaluate every resulting vertex through {@link surfaceHeightAt}. The viewer
  * therefore draws internal relief from the same bilinear rule that feet and
  * placement queries obey.
@@ -18,32 +25,35 @@ const CLIP_EPSILON = 1e-10;
 export const tessellateSurface = (
   surface: IAutoMovieSurface,
 ): ITessellation | null => {
-  const hull = convexHull2D(surface.polygon);
-  if (hull.length < 3) return null;
+  const footprint = surfaceFootprint(surface);
+  const pieces = footprintConvexPieces(footprint);
+  if (pieces.length === 0) return null;
   if (surface.height?.kind !== "heightfield")
-    return tessellatePolygons(surface, [hull]);
+    return tessellatePolygons(surface, pieces);
 
-  const minX = Math.min(...hull.map((point) => point.x));
-  const maxX = Math.max(...hull.map((point) => point.x));
-  const minZ = Math.min(...hull.map((point) => point.z));
-  const maxZ = Math.max(...hull.map((point) => point.z));
+  const plan = footprint.outer.points;
+  const minX = Math.min(...plan.map((point) => point.x));
+  const maxX = Math.max(...plan.map((point) => point.x));
+  const minZ = Math.min(...plan.map((point) => point.z));
+  const maxZ = Math.max(...plan.map((point) => point.z));
   const rule = surface.height;
   const xs = latticeCuts(minX, maxX, rule.originX, rule.spacingX, rule.columns);
   const zs = latticeCuts(minZ, maxZ, rule.originZ, rule.spacingZ, rule.rows);
   const cells: IAutoMovieVector3[][] = [];
-  for (let x = 0; x + 1 < xs.length; ++x)
-    for (let z = 0; z + 1 < zs.length; ++z) {
-      const clipped = clipConvexPolygon(
-        [
-          { x: xs[x]!, y: 0, z: zs[z]! },
-          { x: xs[x + 1]!, y: 0, z: zs[z]! },
-          { x: xs[x + 1]!, y: 0, z: zs[z + 1]! },
-          { x: xs[x]!, y: 0, z: zs[z + 1]! },
-        ],
-        hull,
-      );
-      if (clipped.length >= 3) cells.push(clipped);
-    }
+  for (const piece of pieces)
+    for (let x = 0; x + 1 < xs.length; ++x)
+      for (let z = 0; z + 1 < zs.length; ++z) {
+        const clipped = clipConvexPolygon(
+          [
+            { x: xs[x]!, y: 0, z: zs[z]! },
+            { x: xs[x + 1]!, y: 0, z: zs[z]! },
+            { x: xs[x + 1]!, y: 0, z: zs[z + 1]! },
+            { x: xs[x]!, y: 0, z: zs[z + 1]! },
+          ],
+          piece,
+        );
+        if (clipped.length >= 3) cells.push(clipped);
+      }
   return tessellatePolygons(surface, cells);
 };
 

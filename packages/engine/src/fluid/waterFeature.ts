@@ -8,7 +8,11 @@ import {
   IAutoMovieWaterFeature,
 } from "@automovie/interface";
 
-import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
+import {
+  builtEnvironmentContainsPoint,
+  builtSpaceIsConvex,
+  builtSpaceStatesVolume,
+} from "../architecture/builtEnvironment";
 import { ViolationCollector } from "../validation/violation";
 import { sampleFluidSpray } from "./fluidSpray";
 import { fluidSurfaceGeometry } from "./fluidSurface";
@@ -38,8 +42,8 @@ const FEATURE_MODES = new Set(["static", "flowing", "simulated"]);
  * and is itself valid, and that the lattice actually sits inside the basin
  * instead of overhanging a room the author never meant to flood.
  *
- * A basin declared as a purely semantic container (a logical space with no
- * convex cells) is not geometrically checked: there is no volume to check
+ * A basin declared as a purely semantic container (a logical space that states
+ * no volume at all) is not geometrically checked: there is no volume to check
  * against, and inventing one would be the design deciding a fact the author did
  * not state. Neither is a domain that already failed its own validation: an
  * unusable grid has no lattice to place, and reporting where its cells fell
@@ -191,7 +195,7 @@ export const validateWaterFeatures = (props: {
     }
     if (
       space === undefined ||
-      space.cells.length === 0 ||
+      builtSpaceStatesVolume(space) === false ||
       soundness.get(feature.domain) !== true
     )
       return;
@@ -200,10 +204,11 @@ export const validateWaterFeatures = (props: {
       space: feature.space,
       domain,
       // One convex cell is decided exactly by the lattice's own corners; a
-      // basin written as several is not convex, and there the corners only say
-      // the ends of the lattice are somewhere in the room while its middle may
-      // stand over the notch between two of them.
-      exhaustive: space.cells.length > 1,
+      // basin written as several cells, or as a boundary shell, is not convex,
+      // and there the corners only say the ends of the lattice are somewhere in
+      // the room while its middle may stand over the notch between two of them,
+      // or over an atrium void cut clean through the basin.
+      exhaustive: builtSpaceIsConvex(space) === false,
     });
     if (stray !== null)
       out.push(
