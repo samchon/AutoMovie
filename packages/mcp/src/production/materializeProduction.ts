@@ -1,4 +1,5 @@
 import {
+  IAutoMovieFormationGrounding,
   Quaternion,
   formationSlot,
   mixSeed,
@@ -19,7 +20,6 @@ import {
   IAutoMovieInstanceSetDesign,
   IAutoMovieInstanceSlot,
   IAutoMovieModel,
-  IAutoMovieModelPart,
   IAutoMovieModelRecipe,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
@@ -32,6 +32,10 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+} from "./productionArchetypes";
 
 /** Slots per independently regenerated and culled runtime chunk. */
 export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
@@ -77,19 +81,33 @@ export const materializeProductionModels = (
     string,
     IAutoMovieExternalModelRuntimeBinding
   > = new Map(),
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): ReadonlyMap<string, IAutoMovieModel> =>
   new Map(
     [...recipes]
       .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(
         ([id, recipe]) =>
-          [id, materializeModel(recipe, externalModels.get(id))] as const,
+          [
+            id,
+            materializeModel(recipe, externalModels.get(id), archetypes),
+          ] as const,
       ),
   );
 
+/**
+ * One formation design together with the terrain its members stand on.
+ *
+ * The grounding is optional, so an ordinary design is already one of these and
+ * places every member at its anchor's height, which is what a formation with no
+ * declared terrain under it has always done.
+ */
+export type IAutoMovieGroundedFormationDesign = IAutoMovieFormationDesign &
+  IAutoMovieFormationGrounding;
+
 /** Materialize one compact formation into ordered world-space slots. */
 export const materializeFormationSlots = (
-  formation: IAutoMovieFormationDesign,
+  formation: IAutoMovieGroundedFormationDesign,
 ): IAutoMovieFormationSlot[] =>
   Array.from({ length: formation.count }, (_, slot) =>
     materializeFormationSlot(formation, slot),
@@ -97,18 +115,24 @@ export const materializeFormationSlots = (
 
 /** Regenerate one exact formation slot in constant memory. */
 export const materializeFormationSlot = (
-  formation: IAutoMovieFormationDesign,
+  formation: IAutoMovieGroundedFormationDesign,
   slot: number,
 ): IAutoMovieFormationSlot => formationSlot(formation, slot);
 
 /** Compiler-owned formation inventory passed to deterministic shot source. */
 export const materializeFormationInventory = (
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
+  surfaces: IAutoMovieWorldDesign["surfaces"] = [],
 ): Readonly<Record<string, readonly IAutoMovieFormationSlot[]>> =>
   Object.fromEntries(
     [...formations]
       .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([id, formation]) => [id, materializeFormationSlots(formation)]),
+      .map(([id, formation]) => [
+        id,
+        materializeFormationSlots(
+          groundFormation(formation, surfaces).formation,
+        ),
+      ]),
   );
 
 /** Compile every formation into bounded chunks rather than anonymous nodes. */
@@ -119,13 +143,21 @@ export const materializeCompiledFormationInventory = (
     string,
     IAutoMovieExternalModelRuntimeBinding
   > = new Map(),
+  surfaces: IAutoMovieWorldDesign["surfaces"] = [],
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): Readonly<Record<string, IAutoMovieCompiledFormation>> =>
   Object.fromEntries(
     [...formations]
       .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([id, formation]) => [
         id,
-        materializeCompiledFormation(formation, recipes, externalModels),
+        materializeCompiledFormation(
+          formation,
+          recipes,
+          externalModels,
+          surfaces,
+          archetypes,
+        ),
       ]),
   );
 
@@ -137,7 +169,10 @@ export const materializeCompiledFormation = (
     string,
     IAutoMovieExternalModelRuntimeBinding
   > = new Map(),
+  surfaces: IAutoMovieWorldDesign["surfaces"] = [],
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): IAutoMovieCompiledFormation => {
+  const grounded = groundFormation(formation, surfaces);
   const heroes = new Set(formation.heroOverrides.map((hero) => hero.slot));
   const chunks = Array.from(
     {
@@ -149,14 +184,16 @@ export const materializeCompiledFormation = (
         AUTOMOVIE_FORMATION_CHUNK_SIZE,
         formation.count - start,
       );
-      const summary = summarizeFormationRange(formation, start, count);
+      const summary = summarizeFormationRange(grounded.formation, start, count);
       let anonymousCount = count;
       for (const slot of heroes)
         if (slot >= start && slot < start + count) --anonymousCount;
       return { index, start, count, anonymousCount, ...summary };
     },
   );
-  const summary = summarizeFormationRange(formation, 0, formation.count);
+  const summary =
+    grounded.footprint ??
+    summarizeFormationRange(grounded.formation, 0, formation.count);
   const recipe = recipes.get(formation.modelRecipe);
   const anonymousLod = recipe?.lod.filter((item) => item.tier !== "hero") ?? [];
   const lod = (
@@ -182,6 +219,7 @@ export const materializeCompiledFormation = (
     modelRecipe: formation.modelRecipe,
     layout: structuredClone(formation.layout),
     anchor: structuredClone(formation.anchor),
+    ground: structuredClone(grounded.ground),
     facingDeg: formation.facingDeg,
     seed: formation.seed,
     ...summary,
@@ -192,10 +230,12 @@ export const materializeCompiledFormation = (
           recipeProjectionRadius(
             recipes.get(item.recipe),
             externalModels.get(item.recipe),
+            archetypes,
           ) ??
           recipeProjectionRadius(
             recipe,
             externalModels.get(formation.modelRecipe),
+            archetypes,
           ) ??
           0.5,
       ),
@@ -204,7 +244,7 @@ export const materializeCompiledFormation = (
     heroes: [...formation.heroOverrides]
       .sort((left, right) => left.slot - right.slot)
       .map((hero) => {
-        const slot = materializeFormationSlot(formation, hero.slot);
+        const slot = materializeFormationSlot(grounded.formation, hero.slot);
         return {
           slot: hero.slot,
           actor: hero.actor,
@@ -212,9 +252,11 @@ export const materializeCompiledFormation = (
         };
       }),
     lod,
+    // Phase only. A cycle length compiled here would be a number nothing in the
+    // unit produced: cadence is the ground a unit's cues cover, and a seeded
+    // period made a halted crowd march in place and a marching one skate.
     phase: {
       seed: mixSeed(formation.seed, 0x70686173),
-      periodSeconds: 0.8 + seededValue(formation.seed, 0x70657269) * 0.8,
     },
   };
   return {
@@ -315,6 +357,7 @@ export const materializeCompiledInstanceSetInventory = (
     string,
     IAutoMovieExternalModelRuntimeBinding
   > = new Map(),
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): Readonly<Record<string, IAutoMovieCompiledInstanceSet>> =>
   Object.fromEntries(
     [...(world.instanceSets ?? [])]
@@ -326,6 +369,7 @@ export const materializeCompiledInstanceSetInventory = (
           world,
           recipes,
           externalModels,
+          archetypes,
         ),
       ]),
   );
@@ -339,6 +383,7 @@ export const materializeCompiledInstanceSet = (
     string,
     IAutoMovieExternalModelRuntimeBinding
   > = new Map(),
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): IAutoMovieCompiledInstanceSet => {
   const chunks = Array.from(
     {
@@ -406,10 +451,12 @@ export const materializeCompiledInstanceSet = (
           recipeProjectionRadius(
             recipes.get(item.recipe),
             externalModels.get(item.recipe),
+            archetypes,
           ) ??
           recipeProjectionRadius(
             recipe,
             externalModels.get(instanceSet.modelRecipe),
+            archetypes,
           ) ??
           0.5,
       ),
@@ -439,6 +486,8 @@ export const materializeCompiledShot = (props: {
   world?: IAutoMovieWorldDesign;
   fps?: number;
   source: IAutoMovieShotSourceOutput;
+  /** Archetype catalogue used when a formation is compiled here. */
+  archetypes?: AutoMovieModelArchetypeRegistry;
 }): {
   value: IAutoMovieCompiledShotSource;
   collisions: string[];
@@ -459,7 +508,15 @@ export const materializeCompiledShot = (props: {
     if (formation === undefined) continue;
     const compiled =
       props.formationRuntime?.[participant.id] ??
-      materializeCompiledFormation(formation, props.modelRecipes);
+      materializeCompiledFormation(
+        formation,
+        props.modelRecipes,
+        undefined,
+        // The terrain a member stands on, so a unit compiled here rather than
+        // taken from the shared inventory is the same unit either way.
+        props.world?.surfaces,
+        props.archetypes,
+      );
     const runtimeModel = props.runtimeModels.get(formation.modelRecipe);
     if (runtimeModel === undefined) continue;
     formations.push(compiled);
@@ -533,6 +590,7 @@ export const materializeCompiledShot = (props: {
     value: {
       ...source,
       formationMotions: source.formationMotions ?? [],
+      formationSlotMotions: source.formationSlotMotions ?? [],
       effects,
       models,
       formations,
@@ -600,8 +658,57 @@ const slotTransform = (slot: IAutoMovieFormationSlot): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
-const summarizeFormationRange = (
+/**
+ * Bind one formation to the terrain its members stand on.
+ *
+ * The snapshot is the surfaces whose extent reaches the formation's own
+ * footprint, in declared order. Reaching is decided on the ground plan alone: a
+ * surface whose XZ extent misses the footprint box cannot be under any member
+ * of it, so dropping it is sound, and keeping the rest whole is what lets the
+ * viewer answer heights from the compiled record without the world beside it.
+ *
+ * The footprint that decides this is measured with no terrain, which is exactly
+ * right: relief moves members up and down, never sideways, so the ground plan
+ * is the same before and after. That flat pass is also the finished summary
+ * whenever nothing relieves it, so a production on level ground pays for no
+ * extra work at all.
+ */
+const groundFormation = (
   formation: IAutoMovieFormationDesign,
+  surfaces: IAutoMovieWorldDesign["surfaces"],
+): {
+  formation: IAutoMovieGroundedFormationDesign;
+  ground: IAutoMovieWorldDesign["surfaces"];
+  /** The finished summary, or null when terrain still has to relieve it. */
+  footprint: ReturnType<typeof summarizeFormationRange> | null;
+} => {
+  const flat: IAutoMovieGroundedFormationDesign = { ...formation, ground: [] };
+  const footprint = summarizeFormationRange(flat, 0, formation.count);
+  const ground = surfaces.filter((surface) =>
+    reachesFootprint(surface.polygon, footprint.bounds),
+  );
+  return ground.length === 0
+    ? { formation: flat, ground: [], footprint }
+    : { formation: { ...formation, ground }, ground, footprint: null };
+};
+
+/** Does a surface footprint's XZ extent reach a formation's XZ extent? */
+const reachesFootprint = (
+  polygon: IAutoMovieWorldDesign["surfaces"][number]["polygon"],
+  bounds: IAutoMovieCompiledFormation["bounds"],
+): boolean => {
+  const xs = polygon.map((point) => point.x);
+  const zs = polygon.map((point) => point.z);
+  return (
+    Math.min(...xs) <= bounds.max.x &&
+    Math.max(...xs) >= bounds.min.x &&
+    Math.min(...zs) <= bounds.max.z &&
+    Math.max(...zs) >= bounds.min.z
+  );
+};
+
+const summarizeFormationRange = (
+  formation: IAutoMovieGroundedFormationDesign,
   start: number,
   count: number,
 ): {
@@ -781,6 +888,7 @@ const lodRecipeDigest = (
 const recipeProjectionRadius = (
   recipe: IAutoMovieModelRecipe | undefined,
   external: IAutoMovieExternalModelRuntimeBinding | undefined,
+  archetypes: AutoMovieModelArchetypeRegistry,
 ): number | null => {
   if (external !== undefined)
     return external.measurement.recipe === "box-v1"
@@ -797,47 +905,21 @@ const recipeProjectionRadius = (
           external.measurement.parameters.height,
         ) / 2;
   if (recipe === undefined) return null;
-  const number = (key: string): number => {
-    const value = recipe.parameters[key];
-    return typeof value === "number" && Number.isFinite(value) ? value : 0;
-  };
-  switch (recipe.archetype) {
-    case "stickman":
-      return number("height") / 2;
-    case "horse":
-      return Math.hypot(number("length"), number("height")) / 2;
-    case "artillery":
-      return (
-        Math.hypot(
-          number("barrelLength"),
-          number("wheelRadius") * 2,
-          number("gauge"),
-        ) / 2
-      );
-    case "flag":
-      return (
-        Math.hypot(number("width"), number("height"), number("poleHeight")) / 2
-      );
-    case "weapon":
-      return number("length") / 2;
-    case "primitive-prop": {
-      const shape = recipe.parameters.shape;
-      if (shape === "sphere") return number("radius");
-      if (shape === "capsule") return number("radius") + number("height") / 2;
-      if (shape === "cylinder" || shape === "cone")
-        return Math.hypot(number("radius"), number("height") / 2);
-      if (shape === "plane")
-        return Math.hypot(number("width"), number("depth")) / 2;
-      return Math.hypot(number("width"), number("height"), number("depth")) / 2;
-    }
-  }
+  // An unregistered archetype has no measurement of its own, and selection runs
+  // before the design gate can refuse it. Answering "unknown" lets the caller
+  // fall back to its declared default instead of inventing a bound here.
+  const archetype = archetypes.get(recipe.archetype);
+  return archetype === undefined
+    ? null
+    : archetype.projectionRadius(recipe.parameters);
 };
 
 const materializeModel = (
   recipe: IAutoMovieModelRecipe,
   external: IAutoMovieExternalModelRuntimeBinding | undefined,
+  archetypes: AutoMovieModelArchetypeRegistry,
 ): IAutoMovieModel => {
-  const generated = materializeGeneratedModel(recipe);
+  const generated = materializeGeneratedModel(recipe, archetypes);
   if (external === undefined) return generated;
   const shape =
     external.collision.recipe === "capsule-v1"
@@ -879,9 +961,21 @@ const materializeModel = (
 
 const materializeGeneratedModel = (
   recipe: IAutoMovieModelRecipe,
+  archetypes: AutoMovieModelArchetypeRegistry,
 ): IAutoMovieModel => {
+  const archetype = archetypes.get(recipe.archetype);
+  if (archetype === undefined)
+    throw new Error(
+      `Model recipe "${recipe.id}" names archetype "${recipe.archetype}", which is not registered with this compiler. Register a builder for it, or name a registered archetype in the tracked model recipe record; the design gate refuses an unregistered archetype before compilation reaches geometry.`,
+    );
   const material = materialOf(recipe);
-  const base = {
+  const geometry = archetype.build({
+    recipe: recipe.id,
+    parameters: recipe.parameters,
+    material: material.id,
+    skeleton: productionRuntimeSkeletonId(recipe.id),
+  });
+  return {
     id: productionRuntimeModelId(recipe.id),
     name: `${recipe.archetype} recipe ${recipe.id}`,
     origin: "generated" as const,
@@ -890,282 +984,8 @@ const materializeGeneratedModel = (
     materials: [material],
     asset: null,
     profiles: structuredClone(recipe.profiles ?? []),
-  };
-  if (recipe.archetype === "stickman") {
-    const height = numberParameter(recipe, "height");
-    const headRadius = numberParameter(recipe, "headRadius");
-    const limbRadius = numberParameter(recipe, "limbRadius");
-    const skeleton = stickmanSkeleton(recipe.id, height);
-    const part = (
-      id: string,
-      bone: IAutoMovieModelPart["attachedBone"],
-      shape: Extract<
-        IAutoMovieModelPart["geometry"],
-        { type: "primitive" }
-      >["shape"],
-      transform: IAutoMovieTransform | null,
-    ): IAutoMovieModelPart => ({
-      id,
-      name: id,
-      geometry: { type: "primitive", shape },
-      material: material.id,
-      attachedBone: bone,
-      transform,
-    });
-    const torsoHeight = Math.max(headRadius * 2, height * 0.3);
-    const upperLimb = Math.max(limbRadius * 2, height * 0.15);
-    const lowerLimb = Math.max(limbRadius * 2, height * 0.14);
-    return {
-      ...base,
-      skeleton,
-      parts: [
-        part(
-          "pelvis",
-          "hips",
-          {
-            type: "box",
-            width: height * 0.19,
-            height: height * 0.12,
-            depth: height * 0.11,
-          },
-          transform(0, 0, 0),
-        ),
-        part(
-          "torso",
-          "spine",
-          {
-            type: "box",
-            width: height * 0.25,
-            height: torsoHeight,
-            depth: height * 0.12,
-          },
-          transform(0, torsoHeight * 0.22, 0),
-        ),
-        part("head", "head", { type: "sphere", radius: headRadius }, null),
-        ...(["left", "right"] as const).flatMap((side) => {
-          const sign = side === "left" ? 1 : -1;
-          return [
-            part(
-              `${side}-upper-arm`,
-              `${side}UpperArm`,
-              {
-                type: "capsule",
-                radius: limbRadius,
-                height: upperLimb,
-              },
-              horizontal(sign * upperLimb * 0.55),
-            ),
-            part(
-              `${side}-lower-arm`,
-              `${side}LowerArm`,
-              {
-                type: "capsule",
-                radius: limbRadius * 0.85,
-                height: lowerLimb,
-              },
-              horizontal(sign * lowerLimb * 0.55),
-            ),
-            part(
-              `${side}-hand`,
-              `${side}Hand`,
-              { type: "sphere", radius: limbRadius * 1.05 },
-              null,
-            ),
-            part(
-              `${side}-thigh`,
-              `${side}UpperLeg`,
-              {
-                type: "capsule",
-                radius: limbRadius * 1.15,
-                height: height * 0.19,
-              },
-              transform(0, -height * 0.105, 0),
-            ),
-            part(
-              `${side}-shin`,
-              `${side}LowerLeg`,
-              {
-                type: "capsule",
-                radius: limbRadius,
-                height: height * 0.19,
-              },
-              transform(0, -height * 0.105, 0),
-            ),
-          ];
-        }),
-      ],
-    };
-  }
-  const staticPart = (
-    id: string,
-    shape: Extract<
-      IAutoMovieModelPart["geometry"],
-      { type: "primitive" }
-    >["shape"],
-    local: IAutoMovieTransform | null = null,
-  ): IAutoMovieModelPart => ({
-    id,
-    name: id,
-    geometry: { type: "primitive", shape },
-    material: material.id,
-    attachedBone: null,
-    transform: local,
-  });
-  if (recipe.archetype === "horse") {
-    const length = numberParameter(recipe, "length");
-    const height = numberParameter(recipe, "height");
-    const leg = numberParameter(recipe, "legLength");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "body",
-          {
-            type: "capsule",
-            radius: height * 0.22,
-            height: length * 0.62,
-          },
-          rotateZ(90, 0, height - leg, 0),
-        ),
-        staticPart(
-          "head",
-          {
-            type: "box",
-            width: height * 0.22,
-            height: height * 0.32,
-            depth: height * 0.28,
-          },
-          transform(0, height * 0.9, length * 0.35),
-        ),
-        ...[-1, 1].flatMap((xSign) =>
-          [-1, 1].map((zSign) =>
-            staticPart(
-              `leg-${xSign}-${zSign}`,
-              {
-                type: "capsule",
-                radius: height * 0.055,
-                height: leg,
-              },
-              transform(
-                xSign * height * 0.14,
-                leg * 0.5,
-                zSign * length * 0.24,
-              ),
-            ),
-          ),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "artillery") {
-    const barrel = numberParameter(recipe, "barrelLength");
-    const wheel = numberParameter(recipe, "wheelRadius");
-    const gauge = numberParameter(recipe, "gauge");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "barrel",
-          { type: "cylinder", radius: gauge * 0.12, height: barrel },
-          rotateX(90, 0, wheel * 1.2, 0),
-        ),
-        staticPart(
-          "left-wheel",
-          { type: "cylinder", radius: wheel, height: gauge * 0.12 },
-          rotateZ(90, -gauge * 0.5, wheel, 0),
-        ),
-        staticPart(
-          "right-wheel",
-          { type: "cylinder", radius: wheel, height: gauge * 0.12 },
-          rotateZ(90, gauge * 0.5, wheel, 0),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "flag") {
-    const width = numberParameter(recipe, "width");
-    const height = numberParameter(recipe, "height");
-    const pole = numberParameter(recipe, "poleHeight");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart(
-          "pole",
-          {
-            type: "cylinder",
-            radius: Math.max(0.01, width * 0.015),
-            height: pole,
-          },
-          transform(0, pole * 0.5, 0),
-        ),
-        staticPart(
-          "cloth",
-          { type: "plane", width, depth: height },
-          rotateX(90, width * 0.5, pole - height * 0.5, 0),
-        ),
-      ],
-    };
-  }
-  if (recipe.archetype === "weapon") {
-    const length = numberParameter(recipe, "length");
-    const thickness = numberParameter(recipe, "thickness");
-    return {
-      ...base,
-      skeleton: null,
-      parts: [
-        staticPart("weapon", {
-          type: "box",
-          width: thickness,
-          height: length,
-          depth: thickness,
-        }),
-      ],
-    };
-  }
-  const shape = stringParameter(recipe, "shape");
-  return {
-    ...base,
-    skeleton: null,
-    parts: [staticPart("primitive", primitivePropShape(recipe, shape))],
-  };
-};
-
-const stickmanSkeleton = (
-  recipe: string,
-  height: number,
-): NonNullable<IAutoMovieModel["skeleton"]> => {
-  const bone = (
-    name: NonNullable<IAutoMovieModel["skeleton"]>["bones"][number]["bone"],
-    parent: NonNullable<IAutoMovieModel["skeleton"]>["bones"][number]["parent"],
-    x: number,
-    y: number,
-    z: number,
-  ): NonNullable<IAutoMovieModel["skeleton"]>["bones"][number] => ({
-    bone: name,
-    parent,
-    rest: transform(x, y, z),
-    constraint: null,
-  });
-  return {
-    id: productionRuntimeSkeletonId(recipe),
-    bones: [
-      bone("hips", null, 0, height * 0.5, 0),
-      bone("spine", "hips", 0, height * 0.18, 0),
-      bone("head", "spine", 0, height * 0.24, 0),
-      bone("leftUpperArm", "spine", height * 0.125, height * 0.15, 0),
-      bone("leftLowerArm", "leftUpperArm", height * 0.17, 0, 0),
-      bone("leftHand", "leftLowerArm", height * 0.16, 0, 0),
-      bone("rightUpperArm", "spine", -height * 0.125, height * 0.15, 0),
-      bone("rightLowerArm", "rightUpperArm", -height * 0.17, 0, 0),
-      bone("rightHand", "rightLowerArm", -height * 0.16, 0, 0),
-      bone("leftUpperLeg", "hips", height * 0.07, -height * 0.04, 0),
-      bone("leftLowerLeg", "leftUpperLeg", 0, -height * 0.22, 0),
-      bone("rightUpperLeg", "hips", -height * 0.07, -height * 0.04, 0),
-      bone("rightLowerLeg", "rightUpperLeg", 0, -height * 0.22, 0),
-    ],
+    skeleton: geometry.skeleton,
+    parts: geometry.parts,
   };
 };
 
@@ -1186,84 +1006,10 @@ const materialOf = (
       a: 1,
       hex,
     },
-    metallic: recipe.archetype === "weapon" ? 0.7 : 0,
-    roughness: recipe.archetype === "weapon" ? 0.35 : 0.7,
+    metallic: 0,
+    roughness: 0.7,
     emissive: null,
     opacity: 1,
     baseColorTexture: null,
   };
 };
-
-const primitivePropShape = (
-  recipe: IAutoMovieModelRecipe,
-  shape: string,
-): Extract<IAutoMovieModelPart["geometry"], { type: "primitive" }>["shape"] => {
-  if (shape === "box")
-    return {
-      type: "box",
-      width: numberParameter(recipe, "width"),
-      height: numberParameter(recipe, "height"),
-      depth: numberParameter(recipe, "depth"),
-    };
-  if (shape === "sphere")
-    return { type: "sphere", radius: numberParameter(recipe, "radius") };
-  if (shape === "capsule")
-    return {
-      type: "capsule",
-      radius: numberParameter(recipe, "radius"),
-      height: numberParameter(recipe, "height"),
-    };
-  if (shape === "cylinder")
-    return {
-      type: "cylinder",
-      radius: numberParameter(recipe, "radius"),
-      height: numberParameter(recipe, "height"),
-    };
-  if (shape === "cone")
-    return {
-      type: "cone",
-      radius: numberParameter(recipe, "radius"),
-      height: numberParameter(recipe, "height"),
-    };
-  return {
-    type: "plane",
-    width: numberParameter(recipe, "width"),
-    depth: numberParameter(recipe, "depth"),
-  };
-};
-
-const numberParameter = (recipe: IAutoMovieModelRecipe, key: string): number =>
-  recipe.parameters[key] as number;
-
-const stringParameter = (recipe: IAutoMovieModelRecipe, key: string): string =>
-  recipe.parameters[key] as string;
-
-const transform = (
-  x: number,
-  y: number,
-  z: number,
-  rotation = { x: 0, y: 0, z: 0, w: 1 },
-): IAutoMovieTransform => ({
-  translation: { x, y, z },
-  rotation,
-  scale: { x: 1, y: 1, z: 1 },
-});
-
-const horizontal = (x: number): IAutoMovieTransform =>
-  rotateZ(x < 0 ? 90 : -90, x, 0, 0);
-
-const rotateX = (
-  degrees: number,
-  x: number,
-  y: number,
-  z: number,
-): IAutoMovieTransform =>
-  transform(x, y, z, Quaternion.fromAxisAngle({ x: 1, y: 0, z: 0 }, degrees));
-
-const rotateZ = (
-  degrees: number,
-  x: number,
-  y: number,
-  z: number,
-): IAutoMovieTransform =>
-  transform(x, y, z, Quaternion.fromAxisAngle({ x: 0, y: 0, z: 1 }, degrees));

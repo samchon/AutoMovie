@@ -386,11 +386,11 @@ export const test_mcp_production_shot_continuity_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantive: {
               digest:
-                "67ce90e5cdeedc2e0777478477c656c4bac82885b4c93b8dc56d3b2580770e13",
+                "4386d2b855fbbdfcafd66d9619929e9e41c6af178836730db89a8b0e0216fe90",
               tokens: 1798,
             },
             tryDigest:
-              "d89e7529c5f1ba8cfa4f8b0e54c1092d0dd6ba877711665ffcac01e089f8d277",
+              "756b9ee0b1381370a6b94c5a179b47aa8f0b9e25a5f3409ae0cf9e5970d58d48",
             tryStatements: 60,
           },
         ],

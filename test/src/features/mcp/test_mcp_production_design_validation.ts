@@ -52,7 +52,7 @@ import {
 export const test_mcp_production_design_validation = (): void => {
   const valid: IAutoMovieProductionDesignGraph = {
     production: productionDesign(),
-    models: new Map([["sentinel", modelRecipe()]]),
+    models: new Map([["soloist", modelRecipe()]]),
     world: worldDesign(),
     formations: new Map([["line", formationDesign()]]),
     shots: new Map([["opening", shotContract()]]),
@@ -702,7 +702,7 @@ export const test_mcp_production_design_validation = (): void => {
       target: { kind: "shot", id: "opening" },
       criterion: {
         kind: "frame",
-        frame: "signal-apex",
+        frame: "cue-apex",
         pass: "depth",
         expectation: "The requested pass must exist.",
       },
@@ -947,7 +947,7 @@ export const test_mcp_production_design_validation = (): void => {
     id: "missing-pass",
     criterion: {
       kind: "frame" as const,
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "depth" as const,
       expectation: "The requested pass must exist.",
     },
@@ -1126,24 +1126,25 @@ export const test_mcp_production_design_validation = (): void => {
       },
     ],
   };
-  const attachedHorse: IAutoMovieModelRecipe = {
+  const attachedProp: IAutoMovieModelRecipe = {
     ...modelRecipe(),
-    id: "attached-horse",
-    role: "mount",
-    archetype: "horse",
+    id: "attached-prop",
+    role: "prop",
+    archetype: "primitive-prop",
     parameters: {
-      length: 2.2,
+      shape: "box",
+      width: 2.2,
       height: 1.7,
-      legLength: 0.9,
+      depth: 0.9,
     },
     lod: [
       {
         tier: "hero",
         maxDistance: null,
-        recipe: "attached-horse",
+        recipe: "attached-prop",
       },
     ],
-    attachments: [{ id: "saddle", bone: "hips" }],
+    attachments: [{ id: "socket", bone: "hips" }],
   };
   const unsupportedStickmanAttachment: IAutoMovieModelRecipe = {
     ...modelRecipe(),
@@ -1156,6 +1157,22 @@ export const test_mcp_production_design_validation = (): void => {
       },
     ],
     attachments: [{ id: "boot", bone: "rightFoot" }],
+  };
+  // The positive control the two refusals above are only refusals against: an
+  // archetype that declares bones, carrying a socket on one of them. Without a
+  // socket the gate accepts, a pass that refused EVERY attachment would read
+  // exactly as green as one that refused the right ones.
+  const supportedAttachment: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "supported-attachment",
+    lod: [
+      {
+        tier: "hero",
+        maxDistance: null,
+        recipe: "supported-attachment",
+      },
+    ],
+    attachments: [{ id: "held", bone: "rightHand" }],
   };
   const multiplePaletteMaterials: IAutoMovieModelRecipe = {
     ...modelRecipe(),
@@ -1176,8 +1193,9 @@ export const test_mcp_production_design_validation = (): void => {
       [invalidPrimitive.id, invalidPrimitive],
       [unknownPrimitive.id, unknownPrimitive],
       [missingPrimitive.id, missingPrimitive],
-      [attachedHorse.id, attachedHorse],
+      [attachedProp.id, attachedProp],
       [unsupportedStickmanAttachment.id, unsupportedStickmanAttachment],
+      [supportedAttachment.id, supportedAttachment],
       [multiplePaletteMaterials.id, multiplePaletteMaterials],
     ]),
     formations: new Map(),
@@ -1220,6 +1238,13 @@ export const test_mcp_production_design_validation = (): void => {
           ),
       ],
       [
+        "aSocketOnADeclaredBoneIsAccepted",
+        () =>
+          modelContractDiagnostics.every(
+            (diagnostic) => diagnostic.target !== "model:supported-attachment",
+          ),
+      ],
+      [
         "modelContractDiagnosticsSomeDiagnostic2",
         () =>
           modelContractDiagnostics.some(
@@ -1231,6 +1256,7 @@ export const test_mcp_production_design_validation = (): void => {
     ]),
     {
       modelContractDiagnosticsSomeDiagnostic: true,
+      aSocketOnADeclaredBoneIsAccepted: true,
       modelContractDiagnosticsSomeDiagnostic2: true,
     },
   );
@@ -1241,7 +1267,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "opening",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The film contains the current signal apex frame.",
     },
@@ -1260,7 +1286,7 @@ export const test_mcp_production_design_validation = (): void => {
     target: { kind: "film", id: "fixture-film" },
     criterion: {
       kind: "event",
-      event: "signal-raised",
+      event: "cue-raised",
       expectation: "",
     },
   };
@@ -1270,7 +1296,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "absent",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The named shot must own this frame.",
     },
@@ -1281,7 +1307,7 @@ export const test_mcp_production_design_validation = (): void => {
     criterion: {
       kind: "frame",
       shot: "another-shot",
-      frame: "signal-apex",
+      frame: "cue-apex",
       pass: "beauty",
       expectation: "The target shot must own this frame.",
     },

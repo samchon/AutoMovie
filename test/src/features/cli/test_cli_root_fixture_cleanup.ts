@@ -1,5 +1,4 @@
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
@@ -10,8 +9,20 @@ import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
-const digest = (node: ts.Node, source: ts.SourceFile): string =>
-  createHash("sha256").update(node.getText(source)).digest("hex");
+/** Every call in one owner that makes a directory somebody has to remove. */
+const temporaryRoots = (owner: ts.Node, source: ts.SourceFile): string[] => {
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      compact(node.expression, source) === "fs.mkdtempSync"
+    )
+      found.push("fs.mkdtempSync");
+    node.forEachChild(visit);
+  };
+  owner.forEachChild(visit);
+  return found;
+};
 
 const aggregateContainsExactly = (
   error: unknown,
@@ -57,7 +68,12 @@ const rootOwnerContract = (props: {
         : [],
     );
     return {
-      bodyStatements: body.statements.length,
+      // Every root this owner makes, against every lifecycle that removes one.
+      // A second root added without a lifecycle around it lengthens one list
+      // and not the other. What the guarded body contains is deliberately not
+      // pinned: a digest of it moves whenever any case inside the owner is
+      // edited, which says nothing about whether the root is removed.
+      acquisitions: temporaryRoots(body, source),
       lifecycles: lifecycles.map(({ index, lifecycle }) => ({
         catchBodies: lifecycle.catchClause!.block.statements.map((statement) =>
           compact(statement, source),
@@ -69,11 +85,9 @@ const rootOwnerContract = (props: {
         finallyBodies: lifecycle.finallyBlock!.statements.map((statement) =>
           compact(statement, source),
         ),
-        index,
         prefixes: [...body.statements]
           .slice(Math.max(0, index - 2), index)
           .map((statement) => compact(statement, source)),
-        tryDigest: digest(lifecycle.tryBlock, source),
       })),
     };
   });
@@ -216,7 +230,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
     [
       [
         {
-          bodyStatements: 3,
+          acquisitions: ["fs.mkdtempSync"],
           lifecycles: [
             {
               catchBodies: ["migrateFailure={error};", "throwerror;"],
@@ -224,20 +238,17 @@ export const test_cli_root_fixture_cleanup = (): void => {
               finallyBodies: [
                 'preserveCliRootFixtureCleanup(migrateFailure,()=>fs.rmSync(root,{force:true,recursive:true}),"migratefixtureroot",);',
               ],
-              index: 2,
               prefixes: [
                 'constroot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-cli-migrate-"));',
                 "letmigrateFailure:{error:unknown}|undefined;",
               ],
-              tryDigest:
-                "531b24cbaef1e2b05180fa85a28a59fc0756aa2cacad32fa79d9cbf1257c0c2e",
             },
           ],
         },
       ],
       [
         {
-          bodyStatements: 3,
+          acquisitions: ["fs.mkdtempSync"],
           lifecycles: [
             {
               catchBodies: ["ownershipFailure={error};", "throwerror;"],
@@ -245,20 +256,17 @@ export const test_cli_root_fixture_cleanup = (): void => {
               finallyBodies: [
                 'preserveCliRootFixtureCleanup(ownershipFailure,()=>fs.rmSync(base,{force:true,recursive:true}),"ownership-guardfixtureroot",);',
               ],
-              index: 2,
               prefixes: [
                 'constbase=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-guard-"));',
                 "letownershipFailure:{error:unknown}|undefined;",
               ],
-              tryDigest:
-                "ccdeb71d9ed12516160fa60e108cc8f531ff64f4afdf9b74cc0613e9724be479",
             },
           ],
         },
       ],
       [
         {
-          bodyStatements: 71,
+          acquisitions: ["fs.mkdtempSync"],
           lifecycles: [
             {
               catchBodies: ["scaffoldFailure={error};", "throwerror;"],
@@ -266,13 +274,10 @@ export const test_cli_root_fixture_cleanup = (): void => {
               finallyBodies: [
                 'preserveCliRootFixtureCleanup(scaffoldFailure,()=>fs.rmSync(base,{recursive:true,force:true}),"scaffoldfixtureroot",);',
               ],
-              index: 70,
               prefixes: [
                 'constbase=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-scaffold-"));',
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
-              tryDigest:
-                "3e3b4c3788de5b86fd353a83095a1a3b413d6c46ef16bc8fb71f7d94bba17691",
             },
           ],
         },

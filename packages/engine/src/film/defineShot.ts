@@ -2,11 +2,13 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieBeatEndFootPlant,
   IAutoMovieBeatEndState,
+  IAutoMovieClip,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFormation,
   IAutoMovieConstraintViolation,
   IAutoMovieDefinedShot,
   IAutoMovieFormationDesign,
+  IAutoMovieFormationMotion,
   IAutoMovieModel,
   IAutoMovieProductionDesign,
   IAutoMovieShotDefinition,
@@ -111,6 +113,23 @@ export interface IAutoMovieShotRuntime {
   formationDesigns?: ReadonlyMap<string, IAutoMovieFormationDesign>;
   /** Compiler-owned compact formation runtimes present in this shot. */
   formations?: readonly IAutoMovieCompiledFormation[];
+  /**
+   * The shot's compact formation cues.
+   *
+   * A camera framing a unit and the realization grading that frame both measure
+   * the unit where the cue playing at that instant has put it, so the cues have
+   * to reach the performance boundary rather than being attached to the source
+   * artifact after it is built.
+   */
+  formationMotions?: readonly IAutoMovieFormationMotion[];
+  /**
+   * The shot's own light clips, carried onto the compiled shot.
+   *
+   * The source states them beside its verbs and the host hands them here; the
+   * performance boundary gates them against the staged lights, exactly as it
+   * gates every other reference the source makes.
+   */
+  lightMotions?: readonly IAutoMovieClip[];
   /** Optional full models when predicates need model-owned rig evidence. */
   models?: readonly IAutoMovieModel[];
   /** Formation-slot collisions found while materializing this shot. */
@@ -323,6 +342,10 @@ export const compileDefinedShot = <Context>(props: {
       synthesize: props.runtime.synthesize,
       skeleton: props.runtime.skeleton,
       models: props.runtime.models,
+      formations: props.runtime.formations,
+      formationMotions: props.runtime.formationMotions,
+      lightMotions: props.runtime.lightMotions,
+      frameFormat: props.runtime.frameFormat,
       hasActorContext: props.runtime.hasActorContext,
       jointAxes: props.runtime.jointAxes,
       restFrames: props.runtime.restFrames,
@@ -365,6 +388,9 @@ export const compileDefinedShot = <Context>(props: {
         ...source,
         models: [...(props.runtime.models ?? [])],
         formations: [...(props.runtime.formations ?? [])],
+        // The cues the camera solve read, so the readability grade measures the
+        // unit where the camera framed it rather than where it started.
+        formationMotions: [...(props.runtime.formationMotions ?? [])],
       },
       skeleton: props.runtime.skeleton,
       collisions: props.runtime.collisions ?? [],

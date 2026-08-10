@@ -416,7 +416,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     application.getGuideDocument({ name: "CAPTURE_FRAME" });
     const reviewGated = await rejected(async () =>
       application.prepareReview({
-        target: { kind: "asset", id: "sentinel" },
+        target: { kind: "asset", id: "soloist" },
       }),
     );
     TestValidator.equals(
@@ -474,12 +474,12 @@ export const test_mcp_production_application = async (): Promise<void> => {
       },
     );
     const reviewTargets: IAutoMovieReviewTarget[] = [
-      { kind: "asset", id: "sentinel" },
+      { kind: "asset", id: "soloist" },
       { kind: "design", design: { kind: "production" } },
       { kind: "source", path: "src/shots/opening.ts" },
       { kind: "shot", id: "opening" },
       { kind: "rendition", id: "opening" },
-      { kind: "sequence", id: "SEQ-SIGNAL" },
+      { kind: "sequence", id: "SEQ-CUE" },
       { kind: "film", id: "fixture-film" },
     ];
     for (const target of reviewTargets) {
@@ -766,7 +766,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const assetTurntable = await application.captureFrame({
       target: {
         kind: "asset",
-        id: "sentinel",
+        id: "soloist",
         angleDeg: 90,
         elevationDeg: 0,
         pose: "rest",
@@ -792,7 +792,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       firstBeauty.receipt?.productionId === "fixture-film" &&
       assetTurntable.receipt?.productionId === "fixture-film" &&
       assetTurntable.receipt?.target.kind === "asset" &&
-      assetTurntable.receipt.target.id === "sentinel" &&
+      assetTurntable.receipt.target.id === "soloist" &&
       assetTurntable.receipt.target.angleDeg === 90 &&
       assetTurntable.receipt.outputDigest === assetTurntable.frame?.digest &&
       secondBeauty.receipt?.productionId === "second-film" &&
@@ -845,7 +845,6 @@ export const test_mcp_production_application = async (): Promise<void> => {
         "OBJECT_RIGGING",
         "WORLD_BUILDING",
         "MOTION",
-        "BATTLE_SIM",
         "SOUND_DESIGN",
         "ASSET_SOURCING",
         "DIFFUSION_ENHANCE",

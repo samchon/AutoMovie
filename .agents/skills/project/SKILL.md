@@ -19,6 +19,7 @@ This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.w
 - `packages/engine` (`@automovie/engine`): the deterministic engine. Math, kinematics (FK), ROM and other constraint validators, motion sampling, tessellation, the film pipeline (stage/block/perform/cut). Pure TypeScript, no `three.js`.
 - `packages/face` (`@automovie/face`): dormant parametric face/head/hair geometry retained for compatibility.
   `forge` remains the engine/MCP stand-in authoring stage and is intentionally free as a future package name.
+- `packages/archetypes` (`@automovie/archetypes`): the shipped model-archetype catalogue -- parameter schemas, bounds, geometry builders and the declarative gait tables -- behind one registry the compiler is handed rather than one it enumerates. A figure or a prop the engine happens to ship lives here and not in `engine`, so what a production performs stays the production's decision.
 - `packages/ingest` (`@automovie/ingest`): glTF/model ingestion via `@gltf-transform/core`.
 - `packages/viewer` (`@automovie/viewer`): the render/playback surface over `three.js` (the only package that imports `three`). A viewer, not an editor.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).

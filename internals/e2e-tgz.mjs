@@ -38,6 +38,7 @@ const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 const PACKAGES = [
   "interface",
   "engine",
+  "archetypes",
   "render",
   "viewer",
   "ingest",
@@ -283,6 +284,7 @@ const runExpectedOutput = (
   cwd,
   expected,
   timeout = 300_000,
+  forbidden = null,
 ) => {
   console.log(`> ${label}`);
   const result = spawnSync(command, {
@@ -295,6 +297,13 @@ const runExpectedOutput = (
   });
   if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (forbidden !== null)
+    for (const line of output.split(/\r?\n/u))
+      if (line.trim().length !== 0 && forbidden.test(line) === false)
+        throw new Error(
+          `${label}: every line had to match ${forbidden}, and this one did not: ${JSON.stringify(line)}.
+${output}`,
+        );
   for (const phrase of expected)
     if (output.includes(phrase) === false)
       throw new Error(
@@ -721,7 +730,7 @@ const graph = project.graph();
 const formationSummary = services.oracle.query({
   request: {
     query: "formation",
-    formation: "army",
+    formation: "chorus",
     shot: "opening",
     time: 2,
   },
@@ -746,13 +755,19 @@ assert(
 const effectSummary = services.oracle.query({
   request: {
     query: "effect",
-    zone: "signal-smoke",
+    zone: "plaza-haze",
     shot: "opening",
     time: 2,
-    subjects: ["sentinel"],
+    subjects: ["soloist"],
   },
 });
 const effectAcceptance = graph.acceptance.get("opening-effect-mask");
+// Read from the shot rather than written down. A review frame is named by
+// the production, and a literal here strands the whole packaged run on the
+// day a name changes -- which is exactly what it did.
+const openingReviewFrame = graph.shots
+  .get("opening")
+  ?.reviewFrames.find((frame) => frame.pass === "mask")?.id;
 assert(
   "starter-effect-beauty-mask-frame",
   effectSummary.result?.kind === "measurement" &&
@@ -770,7 +785,7 @@ assert(
     ) &&
     effectAcceptance?.required === true &&
     effectAcceptance.criterion.kind === "frame" &&
-    effectAcceptance.criterion.frame === "signal-apex" &&
+    effectAcceptance.criterion.frame === openingReviewFrame &&
     effectAcceptance.criterion.pass === "mask",
   JSON.stringify(effectSummary),
 );
@@ -1581,11 +1596,18 @@ if (
     "npm run design",
     starterDir,
     [
-      "unchanged models/sentinel.json",
-      "unchanged models/army-hero.json",
-      "unchanged formations/army.json",
+      "unchanged models/soloist.json",
+      "unchanged models/chorus-hero.json",
+      "unchanged formations/chorus.json",
       "unchanged world.json",
     ],
+    300_000,
+    // Every line, not the four named above. A record the emitter
+    // rewrites is a design mutation, and a design mutation between the
+    // compile and the reader below is exactly what leaves the packaged
+    // state stale -- reported here, by name, instead of as a stale state
+    // three steps later.
+    /^unchanged /u,
   );
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got
@@ -1616,50 +1638,83 @@ if (
 import {
   formationSlotPosition,
   isWalkable,
+  placeFormationSlot,
   sampleFormationMotion,
-  transformFormationPoint,
+  sampleFormationSlotMotion,
 } from "@automovie/engine";
 
-const state = requireCurrentAutoMovieProjectState(
-  loadAutoMovieProjectState({ root: process.cwd() }),
-);
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+// Named before it is refused. "stale" alone sends a reader back through every
+// step that ran since the compile; the two fingerprints and the stored
+// diagnostics say which input moved and why the compile was not accepted.
+if (loaded.freshness?.status !== "current")
+  console.error(
+    "freshness",
+    JSON.stringify(
+      {
+        revision: loaded.revision,
+        freshness: loaded.freshness,
+      },
+      null,
+      2,
+    ),
+  );
+const state = requireCurrentAutoMovieProjectState(loaded);
 let checked = 0;
 for (const [id, shot] of state.generated.shots) {
   const space = shot.scene.space;
   if (space === undefined || space === null) continue;
   const cues = shot.formationMotions ?? [];
+  const slotCues = shot.formationSlotMotions ?? [];
   for (const formation of shot.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
-    const resting = own.length === 0 || Math.min(...times) > 0;
+    const ownSlots = slotCues.filter((cue) => cue.formation === formation.id);
+    const times = [
+      ...new Set(
+        [...own, ...ownSlots].flatMap((cue) => [cue.start, cue.end]),
+      ),
+    ];
     // Members, the same thing the compiler judges. The box around a formation
     // has corners no member stands on, so reading those would report a place
     // the unit is not. Every slot is asked here because a shipped starter is
     // small enough to ask all of them.
-    const corners = Array.from({ length: formation.count }, (_, slot) =>
-      formationSlotPosition(formation, slot),
-    );
+    const members = Array.from({ length: formation.count }, (_, slot) => ({
+      slot,
+      point: formationSlotPosition(formation, slot),
+    }));
+    const resting = times.length === 0 || Math.min(...times) > 0;
     for (const time of [...(resting ? [null] : []), ...times]) {
-      // One sampled state per time, not one per corner: the four corners of a
-      // unit are read at the same instant, and asking the engine four times for
-      // that one instant would be four chances to read it differently.
+      // One sampled unit state per time, not one per member: every member of a
+      // unit is read at the same instant, and asking the engine once per member
+      // for that one instant would be as many chances to read it differently.
       const motion =
         time === null ? null : sampleFormationMotion(own, formation.id, time);
-      for (const corner of corners.map((point) =>
-        motion === null
-          ? point
-          : transformFormationPoint(
-              point,
-              formation.anchor,
-              motion,
-              formation.facingDeg,
-            ),
-      ))
-        if (isWalkable(space, corner.x, corner.z) === false)
+      for (const member of members) {
+        // A member the shot removed stands nowhere, so no surface has to carry
+        // it, and a member with a cue of its own is read where that cue puts it.
+        const placed =
+          motion === null
+            ? { present: true, position: member.point }
+            : placeFormationSlot({
+                position: member.point,
+                facingDeg: formation.facingDeg,
+                anchor: formation.anchor,
+                baseFacingDeg: formation.facingDeg,
+                unit: motion,
+                member: sampleFormationSlotMotion(
+                  ownSlots,
+                  formation.id,
+                  member.slot,
+                  time,
+                ),
+              });
+        if (placed.present === false) continue;
+        if (isWalkable(space, placed.position.x, placed.position.z) === false)
           throw new Error(
-            \`shot "\${id}" puts a member of formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
+            \`shot "\${id}" puts a member of formation "\${formation.id}" at (\${placed.position.x}, \${placed.position.z})\` +
               \` \${time === null ? "where it stands" : \`at \${time}s\`}, which the ground it staged does not carry.\`,
           );
+      }
       checked++;
     }
   }

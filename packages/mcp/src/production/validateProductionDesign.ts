@@ -1,4 +1,7 @@
-import { validateProfileCapabilities } from "@automovie/engine";
+import {
+  autoMovieStoryTime,
+  validateProfileCapabilities,
+} from "@automovie/engine";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieDiagnostic,
@@ -16,6 +19,11 @@ import {
   compareCodeUnits,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+  IAutoMovieModelArchetype,
+} from "./productionArchetypes";
 
 /** In-memory design graph used for cross-reference validation. */
 export interface IAutoMovieProductionDesignGraph {
@@ -32,34 +40,6 @@ export interface IAutoMovieProductionDesignGraph {
   /** Acceptance scenarios keyed by id. */
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
 }
-
-const SUPPORTED_MODEL_CAPABILITIES: Record<
-  IAutoMovieModelRecipe["archetype"],
-  ReadonlySet<string>
-> = {
-  stickman: new Set(["signal"]),
-  horse: new Set(),
-  artillery: new Set(),
-  flag: new Set(),
-  weapon: new Set(),
-  "primitive-prop": new Set(),
-};
-
-const SUPPORTED_STICKMAN_ATTACHMENT_BONES = new Set([
-  "hips",
-  "spine",
-  "head",
-  "leftUpperArm",
-  "leftLowerArm",
-  "leftHand",
-  "rightUpperArm",
-  "rightLowerArm",
-  "rightHand",
-  "leftUpperLeg",
-  "leftLowerLeg",
-  "rightUpperLeg",
-  "rightLowerLeg",
-]);
 
 /** Maximum exact production raster accepted by design and frame review. */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
@@ -92,6 +72,7 @@ export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
   productionId: string = graph.production?.id ?? "unbound-production",
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const productionRoot = `.automovie/design/${encodeAutoMoviePathSegment(
@@ -122,6 +103,14 @@ export const validateAutoMovieProductionGraph = (
         target,
         file,
         'visualDelivery must be either "deterministic" or "repainted". Choose the final visual delivery layer in the tracked production design record.',
+      );
+    if (graph.production.storyClock !== undefined)
+      text(
+        diagnostics,
+        graph.production.storyClock.epoch,
+        target,
+        file,
+        "storyClock.epoch",
       );
     integer(
       diagnostics,
@@ -260,8 +249,22 @@ export const validateAutoMovieProductionGraph = (
       );
     if (model.asset !== undefined)
       text(diagnostics, model.asset, target, file, "asset");
+    text(diagnostics, model.archetype, target, file, "archetype");
+    // The recipe names a builder rather than a member of a closed union, so an
+    // unregistered name is a design fact this gate has to report. Everything
+    // downstream of it — parameters, capabilities, attachments — is defined by
+    // the archetype, so none of it can be judged without one.
+    const archetype = archetypes.get(model.archetype);
+    if (archetype === undefined)
+      invalid(
+        diagnostics,
+        "model-archetype-unregistered",
+        target,
+        file,
+        `Model archetype "${model.archetype}" is not registered with this compiler. Name a registered archetype (${registeredArchetypeNames(archetypes)}) in the tracked model recipe record, or register a builder for "${model.archetype}" before compiling.`,
+      );
     validateModelProfiles(diagnostics, model.profiles ?? [], target, file);
-    validateModelParameters(diagnostics, model, target, file);
+    validateModelParameters(diagnostics, model, archetype, target, file);
     const paletteSize = Object.keys(model.palette).length;
     if (paletteSize === 0)
       invalid(
@@ -354,9 +357,11 @@ export const validateAutoMovieProductionGraph = (
       file,
       "capabilities",
     );
-    const supportedCapabilities = SUPPORTED_MODEL_CAPABILITIES[model.archetype];
     for (const capability of model.capabilities)
-      if (supportedCapabilities.has(capability) === false)
+      if (
+        archetype !== undefined &&
+        archetype.capabilities.includes(capability) === false
+      )
         invalid(
           diagnostics,
           "design-capability-unsupported",
@@ -376,24 +381,29 @@ export const validateAutoMovieProductionGraph = (
       );
       text(diagnostics, attachment.bone, target, file, "attachments.bone");
       if (
-        model.archetype === "stickman" &&
-        SUPPORTED_STICKMAN_ATTACHMENT_BONES.has(attachment.bone) === false
+        archetype !== undefined &&
+        archetype.bones.length !== 0 &&
+        archetype.bones.includes(attachment.bone) === false
       )
         invalid(
           diagnostics,
           "design-attachment-unsupported",
           target,
           file,
-          `Stickman attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned foundation skeleton does not materialize. Use one of ${[...SUPPORTED_STICKMAN_ATTACHMENT_BONES].join(", ")} or remove the attachment.`,
+          `Attachment "${attachment.id}" names bone "${attachment.bone}", which the compiler-owned skeleton of archetype "${model.archetype}" does not materialize. Use one of ${archetype.bones.join(", ")} or remove the attachment.`,
         );
     }
-    if (model.archetype !== "stickman" && model.attachments.length !== 0)
+    if (
+      archetype !== undefined &&
+      archetype.bones.length === 0 &&
+      model.attachments.length !== 0
+    )
       invalid(
         diagnostics,
         "design-attachment-unsupported",
         target,
         file,
-        `Archetype "${model.archetype}" has no compiler-owned humanoid skeleton for bone attachments. Remove attachments or use a stickman recipe.`,
+        `Archetype "${model.archetype}" builds no compiler-owned skeleton for bone attachments. Remove attachments or name an archetype whose builder owns one.`,
       );
   }
 
@@ -461,7 +471,7 @@ export const validateAutoMovieProductionGraph = (
           file,
           "surface.height.value",
         );
-      else {
+      else if (surface.height.kind === "plane") {
         finite(
           diagnostics,
           surface.height.originHeight,
@@ -483,6 +493,63 @@ export const validateAutoMovieProductionGraph = (
           file,
           "surface.height.slopeZ",
         );
+      } else {
+        const lattice = surface.height;
+        finite(
+          diagnostics,
+          lattice.originX,
+          "world",
+          file,
+          "surface.height.originX",
+        );
+        finite(
+          diagnostics,
+          lattice.originZ,
+          "world",
+          file,
+          "surface.height.originZ",
+        );
+        positive(
+          diagnostics,
+          lattice.spacingX,
+          "world",
+          file,
+          "surface.height.spacingX",
+        );
+        positive(
+          diagnostics,
+          lattice.spacingZ,
+          "world",
+          file,
+          "surface.height.spacingZ",
+        );
+        // A lattice needs two lines on each axis before anything between them
+        // can be interpolated, and its samples have to be exactly the lattice:
+        // a short array would read relief that was never authored, and a long
+        // one hides a row the author meant to be read.
+        if (
+          Number.isSafeInteger(lattice.columns) === false ||
+          Number.isSafeInteger(lattice.rows) === false ||
+          lattice.columns < 2 ||
+          lattice.rows < 2
+        )
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            "world",
+            file,
+            `Surface "${surface.id}" heightfield has ${lattice.columns} columns and ${lattice.rows} rows. Use at least two of each in the tracked world design record.`,
+          );
+        else if (lattice.samples.length !== lattice.columns * lattice.rows)
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            "world",
+            file,
+            `Surface "${surface.id}" heightfield carries ${lattice.samples.length} samples for a ${lattice.columns} by ${lattice.rows} lattice. Store exactly ${lattice.columns * lattice.rows} row-major heights in the tracked world design record.`,
+          );
+        for (const sample of lattice.samples)
+          finite(diagnostics, sample, "world", file, "surface.height.samples");
       }
     }
     const routeIds = new Set<string>();
@@ -910,7 +977,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous army instanced.`,
+        `Formation "${id}" promotes ${formation.heroOverrides.length} heroes, above the explicit-node limit ${AUTOMOVIE_MAX_FORMATION_HEROES}. Keep the anonymous crowd instanced.`,
       );
     for (const hero of formation.heroOverrides) {
       if (
@@ -1026,6 +1093,34 @@ export const validateAutoMovieProductionGraph = (
         file,
         `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in the tracked shot contract record.`,
       );
+    if (shot.storyTime !== undefined) {
+      if (
+        graph.production !== null &&
+        graph.production.storyClock === undefined
+      )
+        invalid(
+          diagnostics,
+          "design-story-clock-absent",
+          target,
+          file,
+          `Shot "${id}" is pinned to a story clock the production does not keep. Add storyClock to the tracked production design record, or remove ${id}.storyTime.`,
+        );
+      finite(
+        diagnostics,
+        shot.storyTime.originSeconds,
+        target,
+        file,
+        "storyTime.originSeconds",
+      );
+      if (shot.storyTime.rate !== undefined)
+        positive(
+          diagnostics,
+          shot.storyTime.rate,
+          target,
+          file,
+          "storyTime.rate",
+        );
+    }
     const participantIds = new Set<string>();
     for (const participant of shot.participants) {
       text(diagnostics, participant.id, target, file, "participants.id");
@@ -1222,13 +1317,22 @@ export const validateAutoMovieProductionGraph = (
         `Acceptance file identity is "${id}" but value id is "${acceptance.id}". Rewrite it as a tracked acceptance record using one matching id.`,
       );
     const criterion = acceptance.criterion;
-    if (criterion.kind === "frame" || criterion.kind === "event")
+    if (criterion.kind !== "metric")
       text(
         diagnostics,
         criterion.expectation,
         target,
         file,
         "criterion.expectation",
+      );
+    if (criterion.kind === "story-sync")
+      validateStorySyncCriterion(
+        diagnostics,
+        graph,
+        acceptance,
+        criterion,
+        target,
+        file,
       );
     if (acceptance.target.kind === "shot") {
       const shot = graph.shots.get(acceptance.target.id);
@@ -1451,83 +1555,181 @@ const validateAcceptanceCriterionAgainstShot = (
     );
 };
 
-const MODEL_PARAMETERS: Record<
-  IAutoMovieModelRecipe["archetype"],
-  Record<
-    string,
-    readonly [type: "number" | "string" | "boolean", min?: number, max?: number]
-  >
-> = {
-  stickman: {
-    height: ["number", 0.5, 3],
-    headRadius: ["number", 0.05, 0.5],
-    limbRadius: ["number", 0.01, 0.25],
-  },
-  horse: {
-    length: ["number", 0.5, 4],
-    height: ["number", 0.5, 3],
-    legLength: ["number", 0.2, 2],
-  },
-  artillery: {
-    barrelLength: ["number", 0.2, 8],
-    wheelRadius: ["number", 0.1, 3],
-    gauge: ["number", 0.2, 5],
-  },
-  flag: {
-    width: ["number", 0.1, 10],
-    height: ["number", 0.1, 10],
-    poleHeight: ["number", 0.2, 20],
-  },
-  weapon: {
-    length: ["number", 0.05, 8],
-    thickness: ["number", 0.001, 1],
-  },
-  "primitive-prop": {
-    shape: ["string"],
-    width: ["number", 0.001, 100],
-    height: ["number", 0.001, 100],
-    depth: ["number", 0.001, 100],
-    radius: ["number", 0.001, 50],
-  },
-};
-
-const REQUIRED_MODEL_PARAMETERS: Record<
-  Exclude<IAutoMovieModelRecipe["archetype"], "primitive-prop">,
-  readonly string[]
-> = {
-  stickman: ["height", "headRadius", "limbRadius"],
-  horse: ["length", "height", "legLength"],
-  artillery: ["barrelLength", "wheelRadius", "gauge"],
-  flag: ["width", "height", "poleHeight"],
-  weapon: ["length", "thickness"],
-};
-
-const PRIMITIVE_PROP_DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
-  box: ["width", "height", "depth"],
-  sphere: ["radius"],
-  capsule: ["radius", "height"],
-  cylinder: ["radius", "height"],
-  cone: ["radius", "height"],
-  plane: ["width", "depth"],
-};
-
-const validateModelParameters = (
+/**
+ * Validate one cross-shot simultaneity claim before anything is compiled.
+ *
+ * Two checks live here that compilation cannot make cheaper. The first is
+ * addressability: every named shot must exist, own the named event, and carry a
+ * story-clock pin, because an unpinned shot has no story time and the claim
+ * would be unmeasurable rather than false. The second is satisfiability: the
+ * declared event windows already bound where each realized time can land, so
+ * mapping those windows through their pins says whether any realization could
+ * ever satisfy the tolerance. A claim no source could discharge is refused now
+ * instead of after a compile that was never going to work.
+ */
+const validateStorySyncCriterion = (
   diagnostics: IAutoMovieDiagnostic[],
-  model: IAutoMovieModelRecipe,
+  graph: IAutoMovieProductionDesignGraph,
+  acceptance: IAutoMovieAcceptanceScenario,
+  criterion: Extract<
+    IAutoMovieAcceptanceScenario["criterion"],
+    { kind: "story-sync" }
+  >,
   target: string,
   file: string,
 ): void => {
-  const schema = MODEL_PARAMETERS[model.archetype];
-  const required =
-    model.archetype === "primitive-prop"
-      ? [
-          "shape",
-          ...(typeof model.parameters.shape === "string"
-            ? (PRIMITIVE_PROP_DIMENSIONS[model.parameters.shape] ?? [])
-            : []),
-        ]
-      : REQUIRED_MODEL_PARAMETERS[model.archetype];
-  for (const key of required)
+  const id = acceptance.id;
+  if (acceptance.target.kind !== "film")
+    invalid(
+      diagnostics,
+      "design-target-invalid",
+      target,
+      file,
+      `Acceptance "${id}" compares events across shots, so no single shot owns it. Change ${id}.target to the film, or state a shot-local event criterion instead.`,
+    );
+  if (graph.production !== null && graph.production.storyClock === undefined)
+    invalid(
+      diagnostics,
+      "design-story-clock-absent",
+      target,
+      file,
+      `Acceptance "${id}" measures story time the production does not keep. Add storyClock to the tracked production design record, or remove ${id}.`,
+    );
+  const toleranceUsable =
+    Number.isFinite(criterion.toleranceSeconds) &&
+    criterion.toleranceSeconds >= 0;
+  if (toleranceUsable === false)
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `criterion.toleranceSeconds must be a finite value of zero or above. Fix ${id}.criterion in the tracked acceptance record.`,
+    );
+  if (criterion.events.length < 2) {
+    invalid(
+      diagnostics,
+      "design-collection-cardinality-invalid",
+      target,
+      file,
+      `Acceptance "${id}" must name at least two events; nothing is simultaneous on its own. Fix ${id}.criterion.events in the tracked acceptance record.`,
+    );
+    return;
+  }
+  const seen = new Set<string>();
+  const windows: Array<{ from: number; to: number }> = [];
+  for (const entry of criterion.events) {
+    const key = `${entry.shot}\u0000${entry.event}`;
+    if (seen.has(key))
+      invalid(
+        diagnostics,
+        "design-duplicate-id",
+        target,
+        file,
+        `Event "${entry.event}" of shot "${entry.shot}" appears twice in ${id}.criterion.events. An event is always simultaneous with itself; name each addressed event once.`,
+      );
+    seen.add(key);
+    const shot = graph.shots.get(entry.shot);
+    if (shot === undefined) {
+      missing(
+        diagnostics,
+        target,
+        file,
+        `shot "${entry.shot}"`,
+        `Create or correct the shot contract record for "${entry.shot}" or change ${id}.criterion.events`,
+      );
+      continue;
+    }
+    const event = shot.events.find((candidate) => candidate.id === entry.event);
+    if (event === undefined) {
+      missing(
+        diagnostics,
+        target,
+        file,
+        `event "${entry.event}" in shot "${entry.shot}"`,
+        `add that event to ${entry.shot}.events or change ${id}.criterion.events`,
+      );
+      continue;
+    }
+    const pin = shot.storyTime;
+    if (pin === undefined) {
+      invalid(
+        diagnostics,
+        "design-story-pin-missing",
+        target,
+        file,
+        `Shot "${entry.shot}" carries no story-clock pin, so event "${entry.event}" has no story time to compare. Add storyTime to the tracked shot contract record for "${entry.shot}", or drop it from ${id}.criterion.events.`,
+      );
+      continue;
+    }
+    // An unusable pin is already diagnosed on its own shot. Mapping a window
+    // through it would produce a second, derived complaint about a number the
+    // author has yet to fix, so the reachability question waits for a pin that
+    // can answer it.
+    if (
+      Number.isFinite(pin.originSeconds) === false ||
+      (pin.rate !== undefined &&
+        (Number.isFinite(pin.rate) === false || pin.rate <= 0))
+    )
+      continue;
+    windows.push({
+      from: autoMovieStoryTime(pin, event.window.from),
+      to: autoMovieStoryTime(pin, event.window.to),
+    });
+  }
+  if (
+    toleranceUsable === false ||
+    windows.length !== criterion.events.length ||
+    windows.some(
+      (window) =>
+        Number.isFinite(window.from) === false ||
+        Number.isFinite(window.to) === false ||
+        window.from > window.to,
+    )
+  )
+    return;
+  // Every realized time is confined to its own mapped window, so the closest
+  // the events can possibly be placed is the latest window opening minus the
+  // earliest window closing. Nothing below zero: overlapping windows can always
+  // coincide exactly.
+  const latestOpening = Math.max(...windows.map((window) => window.from));
+  const earliestClosing = Math.min(...windows.map((window) => window.to));
+  const closest = Math.max(0, latestOpening - earliestClosing);
+  if (closest > criterion.toleranceSeconds)
+    invalid(
+      diagnostics,
+      "design-story-sync-unsatisfiable",
+      target,
+      file,
+      `Acceptance "${id}" claims simultaneity within ${criterion.toleranceSeconds}s, but the declared event windows cannot come closer than ${closest}s on the story clock, so no source could ever satisfy it. Widen the windows, repin a shot, or raise ${id}.criterion.toleranceSeconds.`,
+    );
+};
+
+/** Registered archetype names, for a diagnostic that has to name the choices. */
+const registeredArchetypeNames = (
+  archetypes: AutoMovieModelArchetypeRegistry,
+): string =>
+  [...archetypes.keys()].sort(compareCodeUnits).join(", ") || "none registered";
+
+/**
+ * Judge one parameter map against the archetype that owns it.
+ *
+ * The schema, the bounds, and which keys a discriminating value makes
+ * meaningful all belong to the archetype. This gate only turns those facts into
+ * diagnostics, which is why an unregistered archetype leaves early: without a
+ * builder there is no contract to measure the map against, and the recipe has
+ * already been refused for naming one.
+ */
+const validateModelParameters = (
+  diagnostics: IAutoMovieDiagnostic[],
+  model: IAutoMovieModelRecipe,
+  archetype: IAutoMovieModelArchetype | undefined,
+  target: string,
+  file: string,
+): void => {
+  if (archetype === undefined) return;
+  const plan = archetype.plan(model.parameters);
+  for (const key of plan.required)
     if (key in model.parameters === false)
       invalid(
         diagnostics,
@@ -1536,32 +1738,14 @@ const validateModelParameters = (
         file,
         `Required parameter "${key}" is missing for ${model.archetype}. Add it in the tracked model recipe record.`,
       );
-  const primitiveShape =
-    model.archetype === "primitive-prop" &&
-    typeof model.parameters.shape === "string"
-      ? model.parameters.shape
-      : null;
-  if (
-    primitiveShape !== null &&
-    primitiveShape in PRIMITIVE_PROP_DIMENSIONS === false
-  )
-    invalid(
-      diagnostics,
-      "model-parameter-invalid",
-      target,
-      file,
-      `Primitive-prop shape "${primitiveShape}" is unsupported. Use box, sphere, capsule, cylinder, cone, or plane in the tracked model recipe record.`,
-    );
-  const primitiveKeys =
-    primitiveShape === null ||
-    PRIMITIVE_PROP_DIMENSIONS[primitiveShape] === undefined
-      ? null
-      : new Set(["shape", ...PRIMITIVE_PROP_DIMENSIONS[primitiveShape]]);
+  for (const refusal of plan.refusals)
+    invalid(diagnostics, refusal.code, target, file, refusal.message);
+  const accepted = plan.accepted === null ? null : new Set(plan.accepted);
   for (const [key, value] of Object.entries(model.parameters)) {
-    const rule = schema[key];
+    const rule = archetype.parameters[key];
     if (
       rule === undefined ||
-      (primitiveKeys !== null && !primitiveKeys.has(key))
+      (accepted !== null && accepted.has(key) === false)
     ) {
       invalid(
         diagnostics,
@@ -1572,21 +1756,21 @@ const validateModelParameters = (
       );
       continue;
     }
-    if (typeof value !== rule[0]) {
+    if (typeof value !== rule.kind) {
       invalid(
         diagnostics,
         "model-parameter-invalid",
         target,
         file,
-        `Parameter "${key}" must be ${rule[0]}. Fix it in the tracked model recipe record.`,
+        `Parameter "${key}" must be ${rule.kind}. Fix it in the tracked model recipe record.`,
       );
       continue;
     }
     if (
-      rule[0] === "number" &&
+      rule.kind === "number" &&
       (Number.isFinite(value as number) === false ||
-        (rule[1] !== undefined && (value as number) < rule[1]) ||
-        (rule[2] !== undefined && (value as number) > rule[2]))
+        (rule.minimum !== undefined && (value as number) < rule.minimum) ||
+        (rule.maximum !== undefined && (value as number) > rule.maximum))
     )
       invalid(
         diagnostics,
@@ -1613,9 +1797,7 @@ const validateModelProfiles = (
           ? "design-range-invalid"
           : violation.expected.includes("unique")
             ? "design-capability-duplicate"
-            : violation.expected.includes("non-blank")
-              ? "design-text-empty"
-              : "design-capability-invalid",
+            : "design-text-empty",
         target,
         file,
         `${violation.path}: ${violation.expected}. Correct the typed profile data before writing the model recipe record.`,
@@ -1656,228 +1838,43 @@ const validateModelProfiles = (
         );
         continue;
       }
-      if (trait.kind === "destructible") {
-        positive(
-          diagnostics,
-          trait.durability,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.durability`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.mass,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.mass`,
-        );
-        bounded(
-          diagnostics,
-          trait.impactBody.restitution,
-          0,
-          1,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.restitution`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.hardness,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.hardness`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.penetrability,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.penetrability`,
-        );
-        continue;
-      }
-      if (trait.weapons.length === 0)
-        invalid(
-          diagnostics,
-          "design-capability-invalid",
-          target,
-          file,
-          `Profile "${profile.id}" shooter must declare at least one typed weapon.`,
-        );
-      const weaponIds = new Set<string>();
-      for (const weapon of trait.weapons) {
-        unique(
-          diagnostics,
-          weaponIds,
-          weapon.id,
-          target,
-          file,
-          `profiles.${profile.id}.shooter.weapons`,
-        );
-        if (weapon.kind === "melee") {
-          positive(
-            diagnostics,
-            weapon.reach,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.reach`,
-          );
-          positive(
-            diagnostics,
-            weapon.recoverySeconds,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.recoverySeconds`,
-          );
-          positive(
-            diagnostics,
-            weapon.impact,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.impact`,
-          );
-          continue;
-        }
-        positive(
-          diagnostics,
-          weapon.reloadSeconds,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.reloadSeconds`,
-        );
-        positive(
-          diagnostics,
-          weapon.effectiveRange,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.effectiveRange`,
-        );
-        positive(
-          diagnostics,
-          weapon.muzzleVelocity,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.muzzleVelocity`,
-        );
-        if (weapon.kind === "firearm") {
-          bounded(
-            diagnostics,
-            weapon.misfireProbability,
-            0,
-            1,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.misfireProbability`,
-          );
-          if (weapon.accuracy.length === 0)
-            invalid(
-              diagnostics,
-              "design-capability-invalid",
-              target,
-              file,
-              `Firearm "${weapon.id}" requires at least one distance/accuracy point.`,
-            );
-          let priorDistance = -1;
-          for (const point of weapon.accuracy) {
-            if (
-              Number.isFinite(point.distance) === false ||
-              point.distance < 0 ||
-              point.distance <= priorDistance
-            )
-              invalid(
-                diagnostics,
-                "design-capability-invalid",
-                target,
-                file,
-                `Firearm "${weapon.id}" accuracy distances must be finite, non-negative, and strictly increasing.`,
-              );
-            bounded(
-              diagnostics,
-              point.probability,
-              0,
-              1,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.accuracy.probability`,
-            );
-            priorDistance = point.distance;
-          }
-          continue;
-        }
-        if (weapon.ammunition.length === 0)
-          invalid(
-            diagnostics,
-            "design-capability-invalid",
-            target,
-            file,
-            `Cannon "${weapon.id}" requires at least one typed ammunition payload.`,
-          );
-        const ammunitionKinds = new Set<string>();
-        for (const ammunition of weapon.ammunition) {
-          if (ammunitionKinds.has(ammunition.kind))
-            invalid(
-              diagnostics,
-              "design-capability-duplicate",
-              target,
-              file,
-              `Cannon "${weapon.id}" repeats ${ammunition.kind}. Keep one explicit payload of each kind.`,
-            );
-          ammunitionKinds.add(ammunition.kind);
-          if (ammunition.kind === "round-shot") {
-            positive(
-              diagnostics,
-              ammunition.mass,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.mass`,
-            );
-            integer(
-              diagnostics,
-              ammunition.maxRicochets,
-              0,
-              64,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.maxRicochets`,
-            );
-            bounded(
-              diagnostics,
-              ammunition.ricochetRetention,
-              0,
-              1,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.ricochetRetention`,
-            );
-          } else {
-            integer(
-              diagnostics,
-              ammunition.pellets,
-              1,
-              100_000,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.pellets`,
-            );
-            bounded(
-              diagnostics,
-              ammunition.spreadDegrees,
-              Number.EPSILON,
-              180,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.spreadDegrees`,
-            );
-            positive(
-              diagnostics,
-              ammunition.pelletMass,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.pelletMass`,
-            );
-          }
-        }
-      }
+      positive(
+        diagnostics,
+        trait.durability,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.durability`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.mass,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.mass`,
+      );
+      bounded(
+        diagnostics,
+        trait.impactBody.restitution,
+        0,
+        1,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.restitution`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.hardness,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.hardness`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.penetrability,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.penetrability`,
+      );
     }
   }
 };
@@ -2132,14 +2129,37 @@ const validateInstanceSets = (
 /**
  * A dressing tolerance is a distance, so it obeys the same bounds spacing does,
  * except that zero is meaningful: it is how a layout asks for exact geometry.
+ *
+ * And it is bounded by the interval it perturbs. A tolerance says how far a
+ * member may stand off its own place, so two neighbours may each come that far
+ * toward each other: at half the interval between them they can stand in
+ * exactly one place, and above it they can change places. That is not a loosely
+ * dressed line, it is a line that has stopped being one, and saying so needs no
+ * knowledge of how large a member is.
+ *
+ * Which interval depends on the layout, because each states its own. A lattice
+ * states two spacings and each tolerance answers to the one it moves along, the
+ * other only carrying a member further away. An arc states none, so the
+ * interval is the chord between neighbouring slots that its radius, covered
+ * angle and count fix together, and the tolerance measured against it is the
+ * smaller of the two: a chord runs in a direction the layout chose and no
+ * tolerance is certain to close it by more than its narrower side. An arc of
+ * one member has no neighbour and so no interval to keep.
+ *
+ * This refuses a tolerance that has stopped being one, and nothing finer. Where
+ * members really end up standing once a tolerance is applied is a question
+ * about placement, and the compiler answers it against the real dressed
+ * positions.
  */
 const validateFormationDressing = (
   diagnostics: IAutoMovieDiagnostic[],
-  layout: IAutoMovieFormationDesign["layout"],
+  formation: IAutoMovieFormationDesign,
   target: string,
   file: string,
 ): void => {
-  const dressing = "dressing" in layout ? layout.dressing : undefined;
+  const layout = formation.layout;
+  if (layout.kind === "scatter") return;
+  const dressing = layout.dressing;
   if (dressing === undefined) return;
   bounded(
     diagnostics,
@@ -2159,6 +2179,71 @@ const validateFormationDressing = (
     file,
     "layout.dressing.depth",
   );
+  if (layout.kind === "arc") {
+    // An arc of one member has no neighbour, so there is no interval to keep
+    // and no divisor to take. Every comparison against an unreachable chord is
+    // false, which is how that case declines without a rule of its own.
+    const chord =
+      formation.count < 2
+        ? Number.POSITIVE_INFINITY
+        : 2 *
+          layout.radius *
+          Math.sin(
+            (layout.arcDegrees * Math.PI) / 180 / (2 * (formation.count - 1)),
+          );
+    if (2 * Math.min(dressing.lateral, dressing.depth) >= chord)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Dressing can move two neighbouring members of this arc onto one another, because twice its narrower tolerance reaches the whole chord between adjacent slots whichever way that chord runs. Reduce layout.dressing, or widen layout.radius or layout.arcDegrees, in the tracked formation design record.`,
+      );
+    return;
+  }
+  dressedInterval(
+    diagnostics,
+    dressing.lateral,
+    layout.spacing.lateral,
+    "lateral",
+    target,
+    file,
+  );
+  dressedInterval(
+    diagnostics,
+    dressing.depth,
+    layout.spacing.depth,
+    "depth",
+    target,
+    file,
+  );
+};
+
+/**
+ * Refuse one tolerance that reaches the whole interval it is drawn across.
+ *
+ * Stated as the comparison that has to hold rather than as a guard around it,
+ * so a tolerance or a spacing that is not a real measurement declines on its
+ * own: no comparison against one is ever true. Those are already refused as
+ * ranges, and saying a second time that a number nobody can read closes an
+ * interval nobody can read would be noise rather than a correction.
+ */
+const dressedInterval = (
+  diagnostics: IAutoMovieDiagnostic[],
+  tolerance: number,
+  spacing: number,
+  axis: string,
+  target: string,
+  file: string,
+): void => {
+  if (2 * tolerance >= spacing)
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `Dressing tolerance ${tolerance} m reaches half the ${spacing} m ${axis} interval it perturbs, so two neighbouring members can stand in one place. Keep twice layout.dressing.${axis} below layout.spacing.${axis} in the tracked formation design record.`,
+    );
 };
 
 const validateFormationLayout = (
@@ -2168,7 +2253,7 @@ const validateFormationLayout = (
   file: string,
 ): void => {
   const layout = formation.layout;
-  validateFormationDressing(diagnostics, layout, target, file);
+  validateFormationDressing(diagnostics, formation, target, file);
   if (layout.kind === "line" || layout.kind === "column") {
     bounded(
       diagnostics,

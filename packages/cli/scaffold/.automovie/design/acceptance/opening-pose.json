@@ -2,15 +2,15 @@
   "id": "opening-pose",
   "evidence": [
     {
-      "reason": "The pose frame is the owning visual proof for the raised-arm continuity claim.",
+      "reason": "The pose frame is the owning visual proof for the raised-hand continuity claim.",
       "scene": "SCN-001",
-      "claim": "signal-arm-readable"
+      "claim": "cue-arm-readable"
     }
   ],
   "target": { "kind": "shot", "id": "opening" },
   "criterion": {
     "kind": "frame",
-    "frame": "signal-apex",
+    "frame": "cue-apex",
     "pass": "pose",
     "expectation": "The hips-to-head and raised-arm bone chains are visible in the pose pass."
   },

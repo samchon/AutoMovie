@@ -894,7 +894,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       id: "spoken-caption",
       text: "Signal.",
       language: "en",
-      speaker: "sentinel",
+      speaker: "soloist",
       start: { frame: 0 },
       end: { frame: 1 },
     });
@@ -1078,7 +1078,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       criterion: {
         kind: "event",
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation:
           "The actual compiled signal sample remains inside the finished edit.",
       },
@@ -1721,7 +1721,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
             trimReview.diagnostics.every(
               (diagnostic) =>
                 (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
+                  diagnostic.target.includes("cue-apex") === false) &&
                 (diagnostic.code !== "review-outcome-missing" ||
                   diagnostic.message.includes("film-opening-event") === false),
             ),

@@ -67,9 +67,9 @@ That is the reason the typed sources under `src` own the subjects and the design
 A citation names one unit and why this file answers for it. Markdown cites in an HTML comment so rendered prose stays clean; TypeScript cites in JSDoc.
 
 ```md
-<!-- @evidence docs/austerlitz/03-beats/BEAT-SUN-1.md Dramatizes the fog burning back as one staged scene. -->
+<!-- @evidence docs/<film>/03-beats/BEAT-014.md Dramatizes the beat as one staged scene. -->
 
-# SCN-014 — The sun on the Pratzen
+# SCN-014
 ```
 
 The reason is the load-bearing half. `@evidence <target>` with no reason satisfies the compiler and teaches nothing; the sentence is where you say what this file does about that unit, in terms a reader of the target would recognize.

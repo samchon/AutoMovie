@@ -14,5 +14,6 @@ export * from "./captureSize";
 export * from "./renderMode";
 export * from "./snapshot";
 export * from "./formation";
+export * from "./formationCycle";
 export * from "./instanceSet";
 export * from "./effect";

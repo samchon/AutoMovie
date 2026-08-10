@@ -1,5 +1,4 @@
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
@@ -10,9 +9,6 @@ import { preserveProductionMaterializationFixtureCleanup } from "./test_mcp_prod
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
-const digestText = (text: string): string =>
-  createHash("sha256").update(text).digest("hex");
-
 const aggregateContainsExactly = (
   error: unknown,
   expected: readonly unknown[],
@@ -21,14 +17,19 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
-const countTryStatements = (node: ts.Node): number => {
-  let count = 0;
-  const visit = (cursor: ts.Node): void => {
-    if (ts.isTryStatement(cursor)) ++count;
-    ts.forEachChild(cursor, visit);
+/** Every call in one owner that takes out a fixture somebody has to give back. */
+const acquisitionSites = (owner: ts.Node, source: ts.SourceFile): string[] => {
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = compact(node.expression, source);
+      if (callee === "productionFixture" || callee === "fs.mkdtempSync")
+        found.push(callee);
+    }
+    node.forEachChild(visit);
   };
-  ts.forEachChild(node, visit);
-  return count;
+  owner.forEachChild(visit);
+  return found;
 };
 
 const productionMaterializationFixtureContract = (text: string): unknown => {
@@ -60,18 +61,11 @@ const productionMaterializationFixtureContract = (text: string): unknown => {
   );
   const lifecycles: Array<{
     acquisition: string;
-    bodyStatements: number;
     catchBodies: string[];
     catchVariables: string[];
     failureHolder: string;
     finallyBodies: string[];
-    index: number;
-    nestedTryStatements: number;
     ownerParameters: string[];
-    prefixDigest: string;
-    prefixStatements: number;
-    tryDigest: string;
-    tryStatements: number;
   }> = [];
   for (const owner of owners) {
     const body = owner.arrow.body;
@@ -85,10 +79,8 @@ const productionMaterializationFixtureContract = (text: string): unknown => {
           .includes("preserveProductionMaterializationFixtureCleanup") !== true
       )
         continue;
-      const prefix = [...body.statements].slice(0, index - 2);
       lifecycles.push({
         acquisition: compact(body.statements[index - 1]!, source),
-        bodyStatements: body.statements.length,
         catchBodies: lifecycle.catchClause.block.statements.map((statement) =>
           compact(statement, source),
         ),
@@ -100,17 +92,9 @@ const productionMaterializationFixtureContract = (text: string): unknown => {
         finallyBodies: lifecycle.finallyBlock.statements.map((statement) =>
           compact(statement, source),
         ),
-        index,
-        nestedTryStatements: countTryStatements(lifecycle.tryBlock),
         ownerParameters: owner.arrow.parameters.map((parameter) =>
           compact(parameter, source),
         ),
-        prefixDigest: digestText(
-          prefix.map((statement) => statement.getText(source)).join("\n"),
-        ),
-        prefixStatements: prefix.length,
-        tryDigest: digestText(lifecycle.tryBlock.getText(source)),
-        tryStatements: lifecycle.tryBlock.statements.length,
       });
     }
   }
@@ -118,7 +102,17 @@ const productionMaterializationFixtureContract = (text: string): unknown => {
     (entry) => entry.name === "preserveProductionMaterializationFixtureCleanup",
   );
   return {
-    owner: { count: owners.length, lifecycles },
+    owner: {
+      // Every fixture the owner takes out, against every lifecycle that gives
+      // one back. A second acquisition added without a lifecycle around it
+      // lengthens one list and not the other, which is the failure this guard
+      // exists for and the one a body digest could never name.
+      acquisitions: owners.flatMap((owner) =>
+        acquisitionSites(owner.arrow, source),
+      ),
+      count: owners.length,
+      lifecycles,
+    },
     parseDiagnostics: (
       source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
     ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
@@ -361,11 +355,11 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
     ),
     {
       owner: {
+        acquisitions: ["productionFixture"],
         count: 1,
         lifecycles: [
           {
             acquisition: "constfixture=productionFixture();",
-            bodyStatements: 18,
             catchBodies: [
               "productionMaterializationFailure={error};",
               "throwerror;",
@@ -376,15 +370,7 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
             finallyBodies: [
               "preserveProductionMaterializationFixtureCleanup(productionMaterializationFailure,()=>fixture.dispose(),);",
             ],
-            index: 17,
-            nestedTryStatements: 1,
             ownerParameters: [],
-            prefixDigest:
-              "76b01d8b5d7b3d3bfd4c7dbc6792ae2d022a7aa4f410e49def1e488e28d7a03d",
-            prefixStatements: 15,
-            tryDigest:
-              "502bdc3d120676c74322c3235500321da5384f4d2de5320ac0b108bb9e85d1ad",
-            tryStatements: 57,
           },
         ],
       },

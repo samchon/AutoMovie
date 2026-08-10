@@ -52,13 +52,13 @@ const same = (
  * A formed layout can be dressed to a tolerance, and that tolerance reproduces.
  *
  * Placing every member on exact geometry makes a unit read as one figure
- * repeated on a grid. Real formed troops hold a line to a tolerance, and the
- * width of that tolerance is what a battle film is often about, so it has to be
- * a declared property rather than an assumption.
+ * repeated on a grid. A real formed group holds a line to a tolerance, and the
+ * width of that tolerance is often what the shot is about, so it has to be a
+ * declared property rather than an assumption.
  *
  * Determinism is the whole point of deriving it from the seed and the slot
  * index instead of from randomness: nothing is stored per member, and the same
- * design must produce the same army on every machine and every run.
+ * design must produce the same layout on every machine and every run.
  *
  * The oracle is the layout arithmetic, not the engine's output: exact slots sit
  * on multiples of `spacing`, so a deviation is detectable as a departure from
@@ -72,7 +72,7 @@ const same = (
  *    axis without asking for deviation changes nothing.
  * 3. A non-zero tolerance moves members off the lattice, and every deviation stays
  *    inside the declared bound on both axes.
- * 4. The same seed reproduces the same army exactly; a different seed produces a
+ * 4. The same seed reproduces the same layout exactly; a different seed produces a
  *    different one. Reproducibility is the property, not merely variation.
  * 5. A tolerance on one axis alone leaves the other axis exact, so the two bounds
  *    are independent rather than one shared jitter.
@@ -135,7 +135,7 @@ export const test_world_formation_dressing = (): void => {
   );
 
   TestValidator.equals(
-    "the same seed reproduces the same army and a different seed does not",
+    "the same seed reproduces the same layout and a different seed does not",
     namedFacts([
       [
         "sameSeedReproduces",

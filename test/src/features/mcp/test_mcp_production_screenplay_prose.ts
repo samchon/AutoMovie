@@ -144,7 +144,7 @@ export const test_mcp_production_screenplay_prose = (): void => {
         write(
           treatmentFile,
           originalTreatment,
-          originalTreatment.replace("ordered army", "scattered mob"),
+          originalTreatment.replace("in its rows", "in a scattered mob"),
         ),
       ).has("screenplay-beat-unwritten"),
       headingAbsent: after(() =>
@@ -180,7 +180,7 @@ export const test_mcp_production_screenplay_prose = (): void => {
       treatmentDocumentAbsent: (() => {
         const codes = after(() =>
           editIndex((value) => {
-            value.treatment.sequences[0]!.path = "docs/nowhere/SEQ-SIGNAL.md";
+            value.treatment.sequences[0]!.path = "docs/nowhere/SEQ-CUE.md";
           }),
         );
         return (
@@ -219,16 +219,17 @@ export const test_mcp_production_screenplay_prose = (): void => {
     // The negative twins. Presentation whitespace is not a change to the
     // authored sentence, and an illustration of the heading format is not a
     // declaration of the scene.
-    // The scaffold already wraps this beat across two lines, so reflowing it
-    // onto one is the same sentence presented differently, in the direction
-    // opposite to how the fixture ships it.
+    // The scaffold ships this beat on one line, so hard-wrapping it is the
+    // same sentence presented differently. Prose comparison normalizes the
+    // whitespace between words, or a treatment would owe its beats a line
+    // width as well as their words.
     const wrapped = after(() =>
       write(
         treatmentFile,
         originalTreatment,
         originalTreatment.replace(
-          "signal while an ordered army remains visibly under the\nsame command.",
-          "signal while an ordered army remains visibly under the same command.",
+          "A soloist raises a hand while the chorus behind stays visibly in its rows.",
+          "A soloist raises a hand while the chorus behind stays visibly\nin its rows.",
         ),
       ),
     );

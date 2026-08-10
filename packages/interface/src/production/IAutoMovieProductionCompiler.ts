@@ -3,10 +3,11 @@ import {
   IAutoMovieShotProgram,
 } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
+import { IAutoMovieClip } from "../core";
 import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
-import { IAutoMovieScene } from "../scene";
+import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -577,6 +578,16 @@ export interface IAutoMovieShotBuildContext {
   contract: IAutoMovieShotContract;
   /** Current model recipes keyed by id. */
   models: Readonly<Record<string, IAutoMovieModelRecipe>>;
+  /**
+   * The production's story-clock light sources, when it declares any.
+   *
+   * The source reads what the production is lit by at this shot's story moment
+   * — its contract carries the pin — and states its own local light on top
+   * through {@link IAutoMovieProductionShotProgram.lightMotions}. Absent when
+   * the production declares no lighting, which is exactly the context a source
+   * saw before the field existed.
+   */
+  lighting?: IAutoMovieProductionLighting;
   /** Current world design. */
   world: IAutoMovieWorldDesign;
   /** Current formations keyed by id. */
@@ -673,6 +684,19 @@ export interface IAutoMovieCompiledFormation {
   layout: IAutoMovieFormationDesign["layout"];
   /** World-space origin. */
   anchor: IAutoMovieVector3;
+  /**
+   * World terrain under this formation, snapshotted at compile time.
+   *
+   * A member's height is the ground under that member, so the ground has to
+   * travel with the formation: the viewer and the source oracle regenerate slot
+   * heights from this snapshot without consulting mutable world design, exactly
+   * as a compiled instance set carries the route it follows. Only the surfaces
+   * whose extent reaches the formation's own footprint are kept, and their
+   * declared order is preserved because the first surface containing a point is
+   * the one a member stands on. Empty when the world declared no terrain under
+   * the unit, which places every member at the anchor's height.
+   */
+  ground: IAutoMovieWorldDesign["surfaces"];
   /** World-space base heading in degrees. */
   facingDeg: number;
   /** Full safe-integer design seed. */
@@ -689,12 +713,18 @@ export interface IAutoMovieCompiledFormation {
   heroes: IAutoMovieCompiledFormationHero[];
   /** Ordered automatic LOD representations. */
   lod: IAutoMovieCompiledFormationLod[];
-  /** Deterministic per-slot phase generator contract. */
+  /**
+   * Deterministic per-slot phase generator contract.
+   *
+   * Phase is where in its cycle one member stands, never how fast that cycle
+   * runs: cadence follows the ground a member's own unit covers under its cues,
+   * so a compiled cycle length would be a second answer to a question the cue
+   * already answers, and a seeded one would be unrelated to what the unit
+   * does.
+   */
   phase: {
     /** Domain-separated safe-integer seed. */
     seed: number;
-    /** Positive cycle length used by bounded formation animation. */
-    periodSeconds: number;
   };
   /** Digest of every field above except this digest. */
   digest: AutoMovieContentDigest;
@@ -803,6 +833,21 @@ export interface IAutoMovieFormationMotion {
   formation: string;
   /** Review-facing action expressed by this exact cue. */
   action: AutoMovieFormationCapability;
+  /**
+   * Which of the unit figure's declared gaits its members perform here.
+   *
+   * A cue says where a unit goes; this says what its members are doing while
+   * they go there, and it is the whole of how one group holds, then moves, then
+   * holds again inside a single shot. The name is the figure's own
+   * (`IAutoMovieGait.name`), so the vocabulary belongs to whoever authored the
+   * recipe rather than to a fixed list: a cycle a crowd can perform is a cycle
+   * a cue can call for.
+   *
+   * Omitted, the cue's `action` label is tried as a gait name, and the figure's
+   * first declared gait performs when nothing carries that name. A named gait
+   * no figure of the unit declares is refused rather than silently replaced.
+   */
+  gait?: string;
   /** Inclusive shot-local cue start. */
   start: number;
   /** Exclusive shot-local cue end. */
@@ -813,6 +858,75 @@ export interface IAutoMovieFormationMotion {
   to: IAutoMovieFormationMotionState;
   /** Deterministic interpolation curve. */
   easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "step";
+}
+
+/**
+ * One member-local deviation from the unit that member stands in.
+ *
+ * A group cue moves every member alike. This is what one named member does
+ * differently: whether it is there at all, how far it has come off the place
+ * its layout put it, and how far it has turned out of the heading its unit
+ * holds. The offset and the heading are stated in the unit's own frame, so a
+ * member that steps left keeps stepping left after its unit turns.
+ */
+export interface IAutoMovieFormationSlotState {
+  /**
+   * Whether this member is drawn, measured and counted at all.
+   *
+   * False is the whole of removal: the member stops being rendered, stops being
+   * measured against the ground its shot staged, and stops being counted among
+   * the drawn. Its unit's designed count, bounds and centroid are unchanged,
+   * because those describe the unit that was designed rather than the members
+   * standing at one instant.
+   */
+  present: boolean;
+  /** Displacement from the member's designed place, in unit-local meters. */
+  offset: IAutoMovieVector3;
+  /** Heading added to the member's placed heading, in degrees. */
+  facingOffsetDeg: number;
+}
+
+/**
+ * One source-authored exception naming members inside one compiled formation.
+ *
+ * The unit-level channel is the whole of what a group does together, so nothing
+ * can happen to one member of a crowd through it: a cue that moves a unit moves
+ * every member of it. This is the sparse channel beside it. It names slots, not
+ * members-in-general, and it costs the number of exceptions rather than the
+ * size of the crowd, so three members of a hundred thousand cost three.
+ *
+ * Sampled exactly as {@link IAutoMovieFormationMotion} is: a member holds the
+ * identity state before its first cue, interpolates inside a cue, and retains a
+ * cue's `to` state after it ends. So a member removed at four seconds by a cue
+ * whose `to` is absent stays absent for the rest of the shot without the author
+ * restating it, and a member that falls stays down.
+ *
+ * A named slot stays an instanced member. Promotion to a named actor is the
+ * other, dearer thing: it exists, it is capped, and this is deliberately not
+ * it.
+ */
+export interface IAutoMovieFormationSlotMotion {
+  /** Stable cue id, unique inside one shot. */
+  id: string;
+  /** Participating compiled formation id. */
+  formation: string;
+  /**
+   * Zero-based slots this exception names, unique and below the unit's count.
+   *
+   * Several slots share one cue when the same thing happens to each of them at
+   * the same time; a member that needs its own timing gets its own cue.
+   */
+  slots: number[];
+  /** Inclusive shot-local cue start. */
+  start: number;
+  /** Exclusive shot-local cue end. */
+  end: number;
+  /** Member state at cue start. */
+  from: IAutoMovieFormationSlotState;
+  /** Member state at cue end. */
+  to: IAutoMovieFormationSlotState;
+  /** Deterministic interpolation curve. */
+  easing: IAutoMovieFormationMotion["easing"];
 }
 
 /** One source-authored shot-local effect activation. */
@@ -884,6 +998,12 @@ export interface IAutoMovieShotSourceOutput {
    * list when omitted; source never emits arbitrary per-member curves.
    */
   formationMotions?: IAutoMovieFormationMotion[];
+  /**
+   * Optional sparse per-member exceptions inside compact formations. The
+   * compiler materializes an empty list when omitted; the cost is the number of
+   * exceptions, never the number of members.
+   */
+  formationSlotMotions?: IAutoMovieFormationSlotMotion[];
   /** Optional bounded shot-local deterministic effect cues. */
   effectCues?: IAutoMovieShotEffectCue[];
   /** Engine-compiled shot choreography. */
@@ -900,6 +1020,8 @@ export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput
   instanceSets: IAutoMovieCompiledInstanceSet[];
   /** Validated compact formation-level cues, empty when source omitted them. */
   formationMotions: IAutoMovieFormationMotion[];
+  /** Validated sparse per-member exceptions, empty when source omitted them. */
+  formationSlotMotions: IAutoMovieFormationSlotMotion[];
   /** Compiler-owned deterministic effect runtimes. */
   effects: IAutoMovieCompiledEffect[];
 }
@@ -977,6 +1099,44 @@ export interface IAutoMovieCompiledContractRealization {
   }>;
 }
 
+/** One realized shot event placed on the production story clock. */
+export interface IAutoMovieStorySyncPoint {
+  /** Owning shot id. */
+  shot: string;
+  /** Exact event id. */
+  event: string;
+  /**
+   * Compiler-realized shot-local time in seconds, or null when the owning shot
+   * has no current realization for the event.
+   */
+  localSeconds: number | null;
+  /**
+   * Story-clock time in seconds, or null when the local time is unavailable or
+   * the owning shot carries no story-clock pin.
+   */
+  storySeconds: number | null;
+}
+
+/** Measured verdict of one cross-shot story-clock simultaneity claim. */
+export interface IAutoMovieStorySyncOutcome {
+  /** Every addressed event and where it landed on the story clock. */
+  points: IAutoMovieStorySyncPoint[];
+  /**
+   * Widest gap between two addressed story times in seconds, or null when any
+   * operand failed to resolve.
+   */
+  spreadSeconds: number | null;
+  /** Required tolerance in story seconds. */
+  toleranceSeconds: number;
+  /** Whether every point resolved and the widest gap is within tolerance. */
+  passed: boolean;
+  /**
+   * Deterministic one-line account of the measurement, naming the two events
+   * that produced the widest gap or the first operand that failed to resolve.
+   */
+  summary: string;
+}
+
 /** Coding-agent-owned module export compiled in a deterministic sandbox. */
 export interface IAutoMovieShotSource {
   /** Exact registered shot id selected by the design source pointer. */
@@ -1009,8 +1169,22 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * `performShot`; they are not precompiled shot output.
    */
   clips?: IAutoMovieMotion[];
+  /**
+   * Optional clips moving this shot's staged lights over its own local clock.
+   *
+   * The shot-local half of production lighting: a lamp switched on inside this
+   * beat, a candle blown out. Each track addresses one staged light by pointer
+   * channel (`/lights/<id>/<property>`), the same grammar
+   * {@link IAutoMovieProductionLighting.motions} uses on the story clock, and
+   * the host carries them onto the compiled shot's `lightMotions`. Omitted, the
+   * shot's lighting is constant and its compiled artifact is byte-identical to
+   * one compiled before this field existed.
+   */
+  lightMotions?: IAutoMovieClip[];
   /** Optional compact formation-level cues. */
   formationMotions?: IAutoMovieFormationMotion[];
+  /** Optional sparse per-member exceptions inside compact formations. */
+  formationSlotMotions?: IAutoMovieFormationSlotMotion[];
   /** Optional bounded shot-local deterministic effect cues. */
   effectCues?: IAutoMovieShotEffectCue[];
 }

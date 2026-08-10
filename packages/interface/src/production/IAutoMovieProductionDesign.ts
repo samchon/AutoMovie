@@ -1,6 +1,7 @@
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieProfile } from "../core";
-import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieHeightRule, IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
@@ -25,6 +26,45 @@ export interface IAutoMovieProductionDeliverable {
   required: boolean;
 }
 
+/**
+ * The timeline a production asserts its events happened on.
+ *
+ * The edit is presentation, not chronology: a cut list can only place shots one
+ * after another, so two groups acting at the same moment are merely adjacent in
+ * it and nothing can check the claim. The story clock is the second timeline,
+ * independent of the cut, on which each pinned shot occupies a real interval.
+ * Two shots may overlap on it, and a shot may carry an earlier story time than
+ * the one it is cut after.
+ *
+ * Declaring the clock is what makes shot pins and cross-shot criteria legal. A
+ * production that asserts nothing about story time omits it and is unaffected.
+ */
+export interface IAutoMovieStoryClock {
+  /** Story-clock unit. */
+  units: "second";
+  /** Non-blank statement of what story time zero denotes. */
+  epoch: string;
+}
+
+/** Where one shot sits on the production story clock. */
+export interface IAutoMovieShotStoryTime {
+  /**
+   * Finite story-clock time in seconds at shot-local time zero.
+   *
+   * Two shots sharing an origin open on the same story moment however far apart
+   * the cut places them, and a shot cut later may carry the smaller origin.
+   */
+  originSeconds: number;
+  /**
+   * Story seconds elapsed per shot-local second; finite and strictly above
+   * zero. Omitted means one, so shot time and story time run together.
+   *
+   * A shot that stretches or compresses time still maps onto the clock: the
+   * story time of shot-local `t` is `originSeconds + t * rate`.
+   */
+  rate?: number;
+}
+
 /** Global frame and art-direction invariants for one production. */
 export interface IAutoMovieProductionDesign {
   /** Non-blank stable production id; film-level acceptance targets use it. */
@@ -47,6 +87,30 @@ export interface IAutoMovieProductionDesign {
    * shot.
    */
   visualDelivery: "deterministic" | "repainted";
+  /**
+   * Story clock every pinned shot and cross-shot criterion is measured on.
+   *
+   * Omitted means the production asserts nothing about story time; shots may
+   * then carry no pin and no cross-shot criterion is admissible.
+   */
+  storyClock?: IAutoMovieStoryClock;
+  /**
+   * The production's own light sources and their motion on the story clock.
+   *
+   * Where {@link storyClock} says when a shot happens, this says what the light
+   * is doing then. A shot's `lightMotions` is the right unit for a light that
+   * belongs to the moment and the wrong unit for one that belongs to the
+   * production: stated per shot, every shot restages the same source and
+   * nothing relates the light in the first shot to the light in the last. A
+   * production that runs across a stretch of story could not say that its light
+   * travelled over that stretch, whatever the subject.
+   *
+   * Declared once here, each shot reads the state at its own story moment
+   * ({@link IAutoMovieShotStoryTime}); a shot still states its own local light
+   * on top. Optional and purely additive: a production declaring none is
+   * unaffected in every respect, and so is any shot carrying no story pin.
+   */
+  lighting?: IAutoMovieProductionLighting;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**
@@ -105,14 +169,15 @@ export interface IAutoMovieModelRecipe {
   id: string;
   /** Production role. */
   role: "performer" | "mount" | "prop" | "set";
-  /** Supported primitive archetype. */
-  archetype:
-    | "stickman"
-    | "horse"
-    | "artillery"
-    | "flag"
-    | "weapon"
-    | "primitive-prop";
+  /**
+   * Non-blank id of the registered archetype that builds this recipe.
+   *
+   * The compiler resolves this identifier against the archetype catalogue the
+   * production registers and refuses a recipe naming nothing registered. It is
+   * opaque here on purpose: which archetypes exist is a decision of that
+   * catalogue, not of this contract.
+   */
+  archetype: string;
   /**
    * Registered external appearance asset, or omitted for compiler-generated
    * primitive geometry. The active production asset ledger must carry one
@@ -120,9 +185,12 @@ export interface IAutoMovieModelRecipe {
    */
   asset?: string;
   /**
-   * Exact archetype-specific parameter map. Read `MODEL_RECIPE`: required keys,
-   * value kinds and ranges vary by archetype, and unsupported keys are
-   * refused.
+   * Exact archetype-specific parameter map.
+   *
+   * The registered archetype owns this contract: which keys are required, which
+   * are accepted at all, and the value kind and range of each. Read
+   * `MODEL_RECIPE`, then the definition itself; an unsupported key is refused
+   * rather than stored.
    */
   parameters: Record<string, number | string | boolean>;
   /**
@@ -137,15 +205,19 @@ export interface IAutoMovieModelRecipe {
    */
   lod: IAutoMovieModelLodRecipe[];
   /**
-   * Supported semantic abilities visible to source and review. Currently only
-   * `stickman` may declare `signal`; source still authors the actual signaling
-   * motion, and every other archetype must use an empty list.
+   * Semantic abilities visible to source and review, unique within the recipe.
+   *
+   * The registered archetype decides which labels are meaningful and the
+   * compiler refuses any other; declaring one it does implement still leaves
+   * source to author the motion that earns it.
    */
   capabilities: string[];
   /**
-   * Unique semantic bone sockets. Only `stickman` may declare a bone that
-   * actually exists on its compiler-owned foundation skeleton; the materializer
-   * does not create attached scene nodes automatically.
+   * Unique semantic bone sockets.
+   *
+   * A bone is accepted only when the registered archetype's builder actually
+   * materializes it, so an archetype without a compiler-owned skeleton accepts
+   * none. The materializer does not create attached scene nodes automatically.
    */
   attachments: Array<{
     /** Non-blank attachment id, unique within the recipe. */
@@ -155,7 +227,8 @@ export interface IAutoMovieModelRecipe {
   }>;
   /**
    * Declarative capability profiles copied onto the compiler-owned runtime
-   * model. Omitted means that engine verbs such as shooting are unavailable.
+   * model. Omitted means that trait-gated engine verbs such as mounting are
+   * unavailable.
    */
   profiles?: IAutoMovieProfile[];
 }
@@ -235,25 +308,6 @@ export interface IAutoMovieWorldLandmark {
   /** Non-blank narrative or tactical meaning. */
   meaning: string;
 }
-
-/** A height rule used by a world surface. */
-export type IAutoMovieHeightRule =
-  | {
-      /** Flat surface. */
-      kind: "constant";
-      /** Surface height in meters. */
-      value: number;
-    }
-  | {
-      /** Planar slope. */
-      kind: "plane";
-      /** Plane height at the world origin. */
-      originHeight: number;
-      /** Height gained per positive X meter. */
-      slopeX: number;
-      /** Height gained per positive Z meter. */
-      slopeZ: number;
-    };
 
 /** A bounded horizontal polygon with a deterministic height function. */
 export interface IAutoMovieWorldSurface {
@@ -393,7 +447,6 @@ export type AutoMovieFormationCapability =
   | "advance"
   | "wheel"
   | "charge"
-  | "fire-volley"
   | "break"
   | "retreat";
 
@@ -423,7 +476,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -456,7 +509,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -487,7 +540,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -513,7 +566,7 @@ export type IAutoMovieFormationLayout =
        *
        * The deviation is derived from the formation seed and the slot index, so
        * it costs no storage, regenerates identically everywhere, and the same
-       * design always compiles to the same army.
+       * design always compiles to the same crowd.
        */
       dressing?: {
         /** Maximum left-to-right deviation in meters, zero or above. */
@@ -671,7 +724,7 @@ export interface IAutoMovieShotEventContract {
   /** Stable event id. */
   id: string;
   /** Event family. */
-  kind: "contact" | "arrival" | "volley" | "break" | "reveal" | "transition";
+  kind: "contact" | "arrival" | "break" | "reveal" | "transition";
   /** Inclusive finite event window inside the owning shot's duration. */
   window: {
     /** Earliest valid time. */
@@ -702,6 +755,7 @@ export interface IAutoMovieShotReviewFrame {
  * chose to keep one otherwise questionable edit.
  */
 export type AutoMovieGrammarStyleIntent =
+  | "axis-cross"
   | "jump-cut"
   | "eyeline-break"
   | "tight-reestablish"
@@ -734,6 +788,16 @@ export interface IAutoMovieShotContract {
    * frame clock.
    */
   durationSeconds: number;
+  /**
+   * Where this shot's local time zero lands on the production story clock.
+   *
+   * Omitted means the shot asserts nothing about story time, which is the
+   * default. A pin is legal only once the production declares `storyClock`, and
+   * a cross-shot criterion may only compare events in pinned shots. Pinning is
+   * independent of the edit: the pin says when the shot happened, never where
+   * it is cut.
+   */
+  storyTime?: IAutoMovieShotStoryTime;
   /**
    * Unique deliberate film-grammar exceptions. Each value suppresses only its
    * corresponding heuristic diagnostic; unrelated facts remain visible.
@@ -807,6 +871,38 @@ export type IAutoMovieAcceptanceCriterion =
       operator: "<=" | ">=" | "==";
       /** Finite threshold value, in seconds for `runtime-seconds`. */
       value: number;
+    }
+  | {
+      /**
+       * Cross-shot simultaneity criterion measured on the production story
+       * clock.
+       *
+       * Adjacency in the cut proves nothing about chronology, so this is the
+       * only way a production can state that separate shots show one moment.
+       * Each named event is realized by its own shot, mapped through that
+       * shot's pin, and the widest resulting gap is compared against the
+       * tolerance. The claim is refusable: an unpinned shot, an absent
+       * realization, declared windows that cannot possibly land inside the
+       * tolerance, or realized times that in fact land outside it all fail it.
+       */
+      kind: "story-sync";
+      /**
+       * Two or more realized events, each named with the shot that owns it.
+       * Every shot must be pinned; each shot-and-event pair appears once.
+       */
+      events: Array<{
+        /** Owning shot id. */
+        shot: string;
+        /** Event id declared by that shot. */
+        event: string;
+      }>;
+      /**
+       * Finite non-negative tolerance in story seconds. The claim holds when
+       * the earliest and latest realized story times differ by no more.
+       */
+      toleranceSeconds: number;
+      /** Non-blank observable expectation for the asserted shared moment. */
+      expectation: string;
     };
 
 /** A required or optional acceptance scenario for a shot or film. */

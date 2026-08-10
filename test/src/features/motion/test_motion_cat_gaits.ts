@@ -1,6 +1,5 @@
+import { CAT_GAITS, CAT_PROFILE } from "@automovie/archetypes";
 import {
-  CAT_GAITS,
-  CAT_PROFILE,
   bindProfileGaits,
   gaitMotion,
   validateMotion,

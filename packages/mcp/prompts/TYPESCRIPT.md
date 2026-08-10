@@ -15,6 +15,10 @@ export const registeredShotId = (source: IAutoMovieShotSource): string =>
   source.id;
 ```
 
+The sandbox gives each script one second of wall clock: every transpiled module it evaluates, the probe that reads your registration, and the `build` call itself each run under that timeout, and exceeding it is `source-execution-timeout` with nothing published. Loops are permitted, so this is the budget that bounds them; keep the work in one call proportionate to what that call actually produces.
+
+A scaffold section still marked with the `AUTOMOVIE_IMPLEMENT_ME` placeholder is refused with `source-template-sentinel` on whichever module carries it. The marker says that section has no implementation, so compile and review cannot count it as work. Implement the section and delete the exact token; renaming it or wrapping it in a longer identifier only hides the fact from the compiler, not from review.
+
 Prefer small deterministic functions named for domain decisions: frame conversion, camera placement, event construction, motion selection, formation state, or EDL interval. Validate meaning through engine contracts rather than duplicating math and accepting divergent behavior.
 
 These rules govern any module you write. How a production's source is arranged once its shots repeat is a separate decision with its own guide: read `SOURCE_COMPOSITION`.

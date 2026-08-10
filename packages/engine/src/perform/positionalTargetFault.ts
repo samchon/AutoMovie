@@ -14,7 +14,7 @@ const targetKindName = (target: unknown): string =>
  * @author Samchon
  */
 export const POSITIONAL_TARGET_SHAPE =
-  "a node/bone/point/group, whose ids name placed actors, set pieces, or cameras";
+  "a node/bone/point/group, whose ids name placed actors, set pieces, or cameras, and whose group may also name the formations a camera frames";
 
 /**
  * Why a positional target did not resolve to a world point, phrased as the
@@ -39,12 +39,17 @@ export const positionalTargetFault = (target: unknown): string => {
     if (target.kind === "bone")
       return `bone "${String(target.bone)}" on "${String(target.node)}" does not resolve from a rigged staged actor`;
     if (target.kind === "group") {
-      const members = Array.isArray(target.nodes) ? target.nodes : [];
+      const members = [
+        ...(Array.isArray(target.nodes) ? target.nodes : []).map(
+          (node) => `"${String(node)}"`,
+        ),
+        ...(Array.isArray(target.formations) ? target.formations : []).map(
+          (formation) => `formation "${String(formation)}"`,
+        ),
+      ];
       return members.length === 0
         ? "its group names no members"
-        : `none of its group members are placed in the staged scene: ${members
-            .map((node) => `"${String(node)}"`)
-            .join(", ")}`;
+        : `none of its group members are placed in the staged scene: ${members.join(", ")}`;
     }
     if (target.kind === "point") {
       if (!isRecord(target.point))

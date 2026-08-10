@@ -467,11 +467,11 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             kind: "migration-isolation",
             substantive: {
               digest:
-                "c29f39ab485e27188073de48cae5d218e615e27102785f8d1a84ab3f92c0df25",
+                "21d45a33b6a624e88e57139eec62761cda9ad53c1a527414f61b792ce5c2eac8",
               tokens: 1859,
             },
             tryDigest:
-              "0507549e3b856d46d7480db6158c83a38c0c2d886ef75a276ae7ddea2c4d882b",
+              "8b377364a91be7bd656f577d544ae72daf27886cdf9bd5d808bd90cac9720ede",
             tryStatements: 59,
           },
           {

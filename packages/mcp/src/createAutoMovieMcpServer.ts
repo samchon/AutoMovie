@@ -8,6 +8,7 @@ import path from "node:path";
 import typia from "typia";
 
 import { AutoMovieApplication } from "./AutoMovieApplication";
+import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 
 /** Installed MCP package version. */
 const MCP_PACKAGE_VERSION = (
@@ -29,6 +30,8 @@ export const createAutoMovieMcpServer = (props?: {
   projectRoot?: string;
   /** Host-selected default production. */
   productionId?: string;
+  /** Archetype catalogue the served productions register. */
+  archetypes?: AutoMovieModelArchetypeRegistry;
 }): McpServer =>
   createMcpServer(
     typia.llm.controller<AutoMovieApplication, { equals: true }>(

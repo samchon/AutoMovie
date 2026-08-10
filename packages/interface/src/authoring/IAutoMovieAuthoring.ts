@@ -14,6 +14,7 @@ import {
 import { IAutoMovieTimingAnchor } from "../harness/IAutoMovieTimingAnchor";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { IAutoMovieShotContract } from "../production/IAutoMovieProductionDesign";
+import { IAutoMovieFog } from "../scene/IAutoMovieFog";
 import { IAutoMovieSpace } from "../scene/IAutoMovieSpace";
 
 /**
@@ -34,6 +35,12 @@ export interface IAutoMovieStage {
   set?: IAutoMovieStageSetPiece[];
   /** Walkable surfaces whose geometry drives grounding and locomotion checks. */
   space?: IAutoMovieSpace;
+  /**
+   * The set's atmosphere, lowered verbatim onto the composed scene's `fog`.
+   * Omitted stages a scene with no atmosphere, which renders exactly as every
+   * staged scene did before the field existed.
+   */
+  fog?: IAutoMovieFog;
   /** Cameras available to the shot and its alternate coverage takes. */
   cameras: IAutoMovieStageCamera[];
   /** Physical light declarations lowered into the deterministic scene. */

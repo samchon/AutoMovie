@@ -1,5 +1,4 @@
 import { TestValidator } from "@nestia/e2e";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
@@ -10,8 +9,20 @@ import { preserveProjectStateFixtureCleanup } from "./test_cli_project_state";
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
-const digestText = (text: string): string =>
-  createHash("sha256").update(text).digest("hex");
+/** Every call in one owner that takes out a fixture somebody has to give back. */
+const acquisitionSites = (owner: ts.Node, source: ts.SourceFile): string[] => {
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = compact(node.expression, source);
+      if (callee === "productionFixture" || callee === "fs.mkdtempSync")
+        found.push(callee);
+    }
+    node.forEachChild(visit);
+  };
+  owner.forEachChild(visit);
+  return found;
+};
 
 const aggregateContainsExactly = (
   error: unknown,
@@ -20,16 +31,6 @@ const aggregateContainsExactly = (
   error instanceof AggregateError &&
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
-
-const countTryStatements = (node: ts.Node): number => {
-  let count = 0;
-  const visit = (cursor: ts.Node): void => {
-    if (ts.isTryStatement(cursor)) ++count;
-    ts.forEachChild(cursor, visit);
-  };
-  ts.forEachChild(node, visit);
-  return count;
-};
 
 const projectStateFixtureContract = (text: string): unknown => {
   const source = ts.createSourceFile(
@@ -60,16 +61,11 @@ const projectStateFixtureContract = (text: string): unknown => {
   );
   const lifecycles: Array<{
     acquisition: string;
-    bodyStatements: number;
     catchBodies: string[];
     catchVariables: string[];
     failureHolder: string;
     finallyBodies: string[];
-    index: number;
-    nestedTryStatements: number;
     ownerParameters: string[];
-    tryDigest: string;
-    tryStatements: number;
   }> = [];
   for (const owner of owners) {
     const body = owner.arrow.body;
@@ -85,7 +81,6 @@ const projectStateFixtureContract = (text: string): unknown => {
         continue;
       lifecycles.push({
         acquisition: compact(body.statements[0]!, source),
-        bodyStatements: body.statements.length,
         catchBodies: lifecycle.catchClause.block.statements.map((statement) =>
           compact(statement, source),
         ),
@@ -97,13 +92,9 @@ const projectStateFixtureContract = (text: string): unknown => {
         finallyBodies: lifecycle.finallyBlock.statements.map((statement) =>
           compact(statement, source),
         ),
-        index,
-        nestedTryStatements: countTryStatements(lifecycle.tryBlock),
         ownerParameters: owner.arrow.parameters.map((parameter) =>
           compact(parameter, source),
         ),
-        tryDigest: digestText(lifecycle.tryBlock.getText(source)),
-        tryStatements: lifecycle.tryBlock.statements.length,
       });
     }
   }
@@ -111,7 +102,17 @@ const projectStateFixtureContract = (text: string): unknown => {
     (entry) => entry.name === "preserveProjectStateFixtureCleanup",
   );
   return {
-    owner: { count: owners.length, lifecycles },
+    owner: {
+      // Every fixture the owner takes out, against every lifecycle that gives
+      // one back. What the guarded body contains is deliberately not pinned: a
+      // digest of it moves whenever any case inside the owner is edited, which
+      // says nothing about whether the fixture is disposed.
+      acquisitions: owners.flatMap((owner) =>
+        acquisitionSites(owner.arrow, source),
+      ),
+      count: owners.length,
+      lifecycles,
+    },
     parseDiagnostics: (
       source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
     ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
@@ -263,11 +264,11 @@ export const test_cli_project_state_fixture_cleanup = (): void => {
     ),
     {
       owner: {
+        acquisitions: ["productionFixture"],
         count: 1,
         lifecycles: [
           {
             acquisition: "constfixture=productionFixture();",
-            bodyStatements: 3,
             catchBodies: ["projectStateFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -275,12 +276,7 @@ export const test_cli_project_state_fixture_cleanup = (): void => {
             finallyBodies: [
               "preserveProjectStateFixtureCleanup(projectStateFailure,()=>fixture.dispose(),);",
             ],
-            index: 2,
-            nestedTryStatements: 3,
             ownerParameters: [],
-            tryDigest:
-              "e112d9ec7fc09dd6f7bf5ca08ccc43a8014d79f372cc00e7b6b8b963a5b509e1",
-            tryStatements: 85,
           },
         ],
       },

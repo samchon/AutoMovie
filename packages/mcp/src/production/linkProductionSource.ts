@@ -54,6 +54,30 @@ export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set([
   "worldSurfaceHeight",
 ]);
 
+/**
+ * The archetype surface a deterministic source module may import at runtime.
+ *
+ * These are frozen constant tables rather than behaviour, so the sandbox's
+ * stand-in is the data itself, serialised into the bootstrap: a table cannot
+ * read a clock or a file, and two spellings of the same numbers cannot
+ * disagree. They are listed separately from the engine surface because a
+ * package boundary is what a source module writes, and a gate that folded both
+ * into one set would accept an engine name imported from the archetypes
+ * package.
+ */
+export const AUTOMOVIE_SANDBOX_ARCHETYPE_EXPORTS: ReadonlySet<string> = new Set(
+  ["CAT_GAITS", "HORSE_GAITS", "HUMANOID_GAITS"],
+);
+
+/** Which names one permitted runtime package may contribute to a source. */
+export const AUTOMOVIE_SANDBOX_MODULE_EXPORTS: ReadonlyMap<
+  string,
+  ReadonlySet<string>
+> = new Map([
+  ["@automovie/engine", AUTOMOVIE_SANDBOX_ENGINE_EXPORTS],
+  ["@automovie/archetypes", AUTOMOVIE_SANDBOX_ARCHETYPE_EXPORTS],
+]);
+
 /** Whether a specifier addresses a module inside the project's own source. */
 export const isProjectSourceSpecifier = (specifier: string): boolean =>
   specifier.startsWith("./") || specifier.startsWith("../");

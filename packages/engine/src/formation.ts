@@ -5,13 +5,17 @@ import {
   IAutoMovieFormationMotion,
   IAutoMovieFormationMotionState,
   IAutoMovieFormationSlot,
+  IAutoMovieGait,
+  IAutoMovieModel,
   IAutoMovieTransform,
   IAutoMovieVector3,
+  IAutoMovieWorldSurface,
 } from "@automovie/interface";
 
 import { Quaternion } from "./math/Quaternion";
 import { Vector3 } from "./math/Vector3";
 import { seededValue } from "./math/random";
+import { worldGroundHeight } from "./worldKit";
 
 /** Inputs to the deterministic automatic formation LOD selector. */
 export interface IAutoMovieFormationLodInput {
@@ -43,7 +47,7 @@ export interface IAutoMovieFormationLodSelection {
  * the compiled formation. No filesystem or project state is consulted.
  */
 export const formationSlot = (
-  formation: IAutoMovieFormationDesign,
+  formation: IAutoMovieFormationDesign & IAutoMovieFormationGrounding,
   slot: number,
 ): IAutoMovieFormationSlot => {
   const actor =
@@ -61,11 +65,35 @@ export const formationSlot = (
   };
 };
 
+/**
+ * The terrain a formation's members are placed on.
+ *
+ * Carried on the record rather than passed beside it, because a member's height
+ * is part of where that member stands: a consumer that could ask for a position
+ * without the ground would be a consumer that places a crowd flat, which is the
+ * defect this exists to remove. The compiled formation snapshots exactly these
+ * surfaces, so the compiler, the gate, the viewer and an offline measurement
+ * script all place from one record and cannot answer differently.
+ */
+export interface IAutoMovieFormationGrounding {
+  /**
+   * World terrain under this formation, or absent when it stands on none.
+   *
+   * A snapshot of the production world's surfaces, kept beside the formation
+   * the way a compiled instance set keeps the route it follows. Absent or empty
+   * means no terrain was declared under the unit, and every member then stands
+   * at the anchor's own height, which is what a formation did before ground was
+   * sampled at all.
+   */
+  readonly ground?: readonly IAutoMovieWorldSurface[];
+}
+
 /** What a formation needs to say where one of its slots stands. */
 export type IAutoMovieFormationPlacement = Pick<
   IAutoMovieFormationDesign,
   "id" | "count" | "layout" | "anchor" | "facingDeg" | "seed"
->;
+> &
+  IAutoMovieFormationGrounding;
 
 /**
  * Where one slot of a formation stands at rest, in world space.
@@ -78,6 +106,9 @@ export type IAutoMovieFormationPlacement = Pick<
  *
  * A second implementation of this arithmetic is how a gate and a renderer come
  * to disagree about where a unit is standing, so there is one.
+ *
+ * Height comes from {@link formationGroundRelief}: the ground under the member,
+ * not the ground under the group. A crowd on a rise stands on the rise.
  */
 export const formationSlotPosition = (
   formation: IAutoMovieFormationPlacement,
@@ -95,12 +126,72 @@ export const formationSlotPosition = (
   const radians = (formation.facingDeg * Math.PI) / 180;
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
+  const x = formation.anchor.x + point.x * cosine + point.z * sine;
+  const z = formation.anchor.z - point.x * sine + point.z * cosine;
   return {
-    x: formation.anchor.x + point.x * cosine + point.z * sine,
-    y: formation.anchor.y,
-    z: formation.anchor.z - point.x * sine + point.z * cosine,
+    x,
+    y: formation.anchor.y + formationGroundRelief(formation, { x, z }),
+    z,
   };
 };
+
+/**
+ * How far the terrain under one point rises above the terrain under the anchor.
+ *
+ * Relief rather than absolute ground, so `anchor.y` keeps meaning what it
+ * always meant: the height the unit was staged at. A unit standing on its
+ * ground has an anchor on that ground, and every member then lands on the
+ * ground under itself; a unit deliberately staged a metre above its terrain
+ * keeps that metre all the way up the hill instead of being snapped down at
+ * placement time. It also makes level terrain exactly the old answer, so a
+ * production on a flat floor compiles to the frames it compiled to before.
+ *
+ * Zero when the formation declares no terrain, when the point is over none, and
+ * when the anchor itself is over none: relief is measured from the anchor's own
+ * ground, and without that datum there is no rise to state. Those are the three
+ * ways a unit keeps the single height it used to have, and each is a fact about
+ * what was authored rather than a fallback that guesses.
+ */
+export const formationGroundRelief = (
+  formation: IAutoMovieFormationGrounding & {
+    anchor: IAutoMovieVector3;
+  },
+  point: { x: number; z: number },
+): number => {
+  const surfaces = formation.ground;
+  if (surfaces === undefined || surfaces.length === 0) return 0;
+  const here = worldGroundHeight(surfaces, point);
+  if (here === null) return 0;
+  const datum = formationGroundDatum(formation, surfaces);
+  return datum === null ? 0 : here - datum;
+};
+
+/**
+ * The anchor's own ground height, found once per formation record.
+ *
+ * Every member measures its relief against this one number, and a formation of
+ * a hundred thousand members would otherwise ask the same question of the same
+ * polygons a hundred thousand times. Keyed by the record itself, exactly as the
+ * compiler keys the members it judges a unit by, so nothing outlives the
+ * placement that asked.
+ */
+const formationGroundDatum = (
+  formation: IAutoMovieFormationGrounding & { anchor: IAutoMovieVector3 },
+  surfaces: readonly IAutoMovieWorldSurface[],
+): number | null => {
+  const remembered = formationGroundDatumCache.get(formation);
+  if (remembered !== undefined) return remembered.height;
+  const height = worldGroundHeight(surfaces, formation.anchor);
+  formationGroundDatumCache.set(formation, { height });
+  return height;
+};
+
+// Boxed, so a formation whose anchor is over nothing is remembered as such
+// rather than looked up again on every one of its members.
+const formationGroundDatumCache = new WeakMap<
+  object,
+  { height: number | null }
+>();
 
 /**
  * Select automatic formation LOD from distance and projected contribution.
@@ -297,7 +388,7 @@ export const composeFormationHeroTransform = (
  * how far a member may stand off its slot, and the deviation is drawn from the
  * formation seed and the slot index, the same machinery `scatter` placement and
  * `motionPhase` already use. Nothing is stored per member: the same design
- * regenerates the same army on every machine and every run.
+ * regenerates the same crowd on every machine and every run.
  *
  * A layout without `dressing`, or with both tolerances at zero, returns the
  * exact point, so an existing production compiles unchanged.
@@ -364,10 +455,19 @@ const localFormationPoint = (
   };
 };
 
-const lerp = (from: number, to: number, progress: number): number =>
+/** Interpolate one scalar the one way every automovie cue interpolates. */
+export const lerp = (from: number, to: number, progress: number): number =>
   from * (1 - progress) + to * progress;
 
-const easingProgress = (
+/**
+ * Shape one cue's linear progress by its declared curve.
+ *
+ * Exported because the per-member channel beside the unit-level one authors the
+ * same `easing` names and must bend them identically. Two spellings of one
+ * curve is how a member and the unit it stands in come to disagree about where
+ * they are halfway through the same second.
+ */
+export const easingProgress = (
   easing: IAutoMovieFormationMotion["easing"],
   progress: number,
 ): number => {
@@ -388,4 +488,26 @@ const easingProgress = (
       // progress below one.
       return 0;
   }
+};
+
+/**
+ * The gaits one runtime model can perform, in the order its recipe declares
+ * them.
+ *
+ * The first profile that declares any owns the repertoire, which keeps the
+ * choice in the recipe, where an author already orders them, instead of in
+ * whichever consumer asked first. It lives here rather than beside the bake
+ * because two consumers need the same answer for opposite reasons: the viewer
+ * bakes a table per declared gait, and the compiler refuses a cue calling for a
+ * gait that is not among them. Two spellings of "what can this figure do" is
+ * how a production compiles clean and then fails to draw.
+ */
+export const autoMovieModelGaits = (
+  model: Pick<IAutoMovieModel, "profiles">,
+): readonly IAutoMovieGait[] => {
+  for (const profile of model.profiles ?? []) {
+    const gaits = profile.gaits ?? [];
+    if (gaits.length !== 0) return gaits;
+  }
+  return [];
 };

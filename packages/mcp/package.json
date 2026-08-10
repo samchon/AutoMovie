@@ -48,6 +48,7 @@
     }
   },
   "dependencies": {
+    "@automovie/archetypes": "workspace:^",
     "@automovie/engine": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",

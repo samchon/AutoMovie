@@ -9,9 +9,9 @@
   "target": { "kind": "shot", "id": "answer" },
   "criterion": {
     "kind": "frame",
-    "frame": "signal-answer",
+    "frame": "cue-answer",
     "pass": "beauty",
-    "expectation": "The answering signal remains readable in the second shot rather than being inferred from the opening shot."
+    "expectation": "The answering cue remains readable in the second shot rather than being inferred from the opening shot."
   },
   "required": true
 }

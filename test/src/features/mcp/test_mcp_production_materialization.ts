@@ -1,6 +1,8 @@
+import { HUMANOID_GAITS } from "@automovie/archetypes";
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationMotion,
+  IAutoMovieGait,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieShotSourceOutput,
@@ -67,12 +69,7 @@ const recipe = (
 ): IAutoMovieModelRecipe => ({
   ...modelRecipe(),
   id,
-  role:
-    archetype === "horse"
-      ? "mount"
-      : archetype === "stickman"
-        ? "performer"
-        : "prop",
+  role: archetype === "stickman" ? "performer" : "prop",
   archetype,
   parameters,
   palette: { body: "#445566" },
@@ -87,7 +84,7 @@ const recipe = (
  * Scenarios:
  *
  * 1. Every supported archetype and primitive-prop shape becomes deterministic
- *    model geometry, including a rigged stickman and static battle props.
+ *    model geometry, including a rigged stickman and static primitive props.
  * 2. Line, column, wedge, one-member arc, and seeded scatter layouts produce
  *    stable slots, hero identities, anchors, and facing.
  * 3. Shot materialization adds missing slots, repositions an existing hero,
@@ -103,25 +100,6 @@ export const test_mcp_production_materialization = (): void => {
       height: 1.8,
       headRadius: 0.16,
       limbRadius: 0.055,
-    }),
-    recipe("horse", "horse", {
-      length: 2.2,
-      height: 1.7,
-      legLength: 0.9,
-    }),
-    recipe("artillery", "artillery", {
-      barrelLength: 2.4,
-      wheelRadius: 0.55,
-      gauge: 1.3,
-    }),
-    recipe("flag", "flag", {
-      width: 0.1,
-      height: 0.8,
-      poleHeight: 2.2,
-    }),
-    recipe("weapon", "weapon", {
-      length: 1.4,
-      thickness: 0.04,
     }),
     recipe("box", "primitive-prop", {
       shape: "box",
@@ -172,17 +150,6 @@ export const test_mcp_production_materialization = (): void => {
           productionRuntimeSkeletonId("stick"),
       ],
       ["modelsGetStick3", () => models.get("stick")?.parts.length === 13],
-      ["modelsGetHorse", () => models.get("horse")?.parts.length === 6],
-      ["modelsGetArtillery", () => models.get("artillery")?.parts.length === 3],
-      ["modelsGetFlag", () => models.get("flag")?.parts.length === 2],
-      [
-        "modelsGetWeapon",
-        () => models.get("weapon")?.materials[0]?.metallic === 0.7,
-      ],
-      [
-        "modelsGetWeapon2",
-        () => models.get("weapon")?.materials[0]?.roughness === 0.35,
-      ],
       [
         "modelsGetBox",
         () => models.get("box")?.parts[0]?.geometry.type === "primitive",
@@ -225,11 +192,6 @@ export const test_mcp_production_materialization = (): void => {
       modelsGetStick: true,
       modelsGetStick2: true,
       modelsGetStick3: true,
-      modelsGetHorse: true,
-      modelsGetArtillery: true,
-      modelsGetFlag: true,
-      modelsGetWeapon: true,
-      modelsGetWeapon2: true,
       modelsGetBox: true,
       modelsGetSphere: true,
       modelsGetCapsule: true,
@@ -239,6 +201,69 @@ export const test_mcp_production_materialization = (): void => {
       boxSphereCapsule: true,
     },
   );
+  // The one material every generated part references. Its colour is the
+  // recipe's own palette entry decoded channel by channel, and its surface
+  // scalars are the compiler's: an author states a colour and never a
+  // roughness, so a renderer that read these from somewhere else would be
+  // shading a different material from the one the compiler emitted.
+  const material = models.get("stick")!.materials[0]!;
+  TestValidator.equals(
+    "a materialized model carries one compiler-owned material with its stated colour",
+    namedFacts([
+      ["one", () => models.get("stick")!.materials.length === 1],
+      ["namedForThePaletteEntry", () => material.id === "body"],
+      ["name", () => material.name === "body"],
+      ["hex", () => material.baseColor.hex === "#445566"],
+      [
+        "channels",
+        () =>
+          material.baseColor.r === 0x44 / 255 &&
+          material.baseColor.g === 0x55 / 255 &&
+          material.baseColor.b === 0x66 / 255 &&
+          material.baseColor.a === 1,
+      ],
+      // The three channels are three different numbers, so a decoder reading
+      // the wrong pair of digits answers a different colour.
+      [
+        "threeChannels",
+        () =>
+          new Set([
+            material.baseColor.r,
+            material.baseColor.g,
+            material.baseColor.b,
+          ]).size === 3,
+      ],
+      ["metallic", () => material.metallic === 0],
+      ["roughness", () => material.roughness === 0.7],
+      ["opacity", () => material.opacity === 1],
+      ["emissive", () => material.emissive === null],
+      ["untextured", () => material.baseColorTexture === null],
+      // Every part references it, so the scalars above describe the whole
+      // figure rather than one primitive of it.
+      [
+        "everyPart",
+        () =>
+          models
+            .get("stick")!
+            .parts.every((part) => part.material === material.id),
+      ],
+    ]),
+    {
+      one: true,
+      namedForThePaletteEntry: true,
+      name: true,
+      hex: true,
+      channels: true,
+      threeChannels: true,
+      metallic: true,
+      roughness: true,
+      opacity: true,
+      emissive: true,
+      untextured: true,
+      everyPart: true,
+    },
+  );
+
   const recipeMap = new Map(recipes.map((item) => [item.id, item]));
   const projectionRadii = recipes.map(
     (item, index) =>
@@ -424,7 +449,7 @@ export const test_mcp_production_materialization = (): void => {
     const contract = {
       ...shotContract(),
       participants: [
-        { kind: "actor" as const, id: "sentinel" },
+        { kind: "actor" as const, id: "soloist" },
         { kind: "formation" as const, id: formation.id },
       ],
     };
@@ -594,6 +619,79 @@ export const test_mcp_production_materialization = (): void => {
         ],
       ]),
       { validCueDiagnosticsLength: true, atMostUnique: true },
+    );
+
+    // A cue naming an action its figures cannot perform, refused where the
+    // author wrote it. The viewer refuses the same cue when it bakes the unit's
+    // cycle, which is far from the source that stated it and after a whole
+    // compile has reported success; the two read the same repertoire through
+    // one engine answer, so what compiles here is what draws there.
+    const tiers = materialized.value.formations[0]!.lod.map(
+      (tier) => tier.model,
+    );
+    const performers = (gaits: IAutoMovieGait[]) =>
+      materialized.value.models.map((model) =>
+        tiers.includes(model.id)
+          ? {
+              ...model,
+              profiles: [
+                {
+                  id: "member",
+                  name: "member",
+                  controls: [],
+                  drivers: [],
+                  limits: [],
+                  gaits,
+                },
+              ],
+            }
+          : model,
+      );
+    const gaitDiagnostics = (
+      gait: string | undefined,
+      gaits: IAutoMovieGait[],
+    ) =>
+      validateAutoMovieFormationMotions(contract, {
+        ...materialized.value,
+        models: performers(gaits),
+        formationMotions: [
+          { ...validCue, ...(gait === undefined ? {} : { gait }) },
+        ],
+      }).filter((diagnostic) => diagnostic.message.includes("gaits"));
+    const declared = [HUMANOID_GAITS.walk, HUMANOID_GAITS.run];
+    const refused = gaitDiagnostics("gallop", declared);
+    TestValidator.equals(
+      "a cue may only call for an action the unit's own figures declare",
+      namedFacts([
+        ["oneRefusal", () => refused.length === 1],
+        [
+          "namesWhatItAsked",
+          () => refused[0]!.message.includes('rather than "gallop"'),
+        ],
+        ["namesWhatItCould", () => refused[0]!.message.includes("(run, walk)")],
+        [
+          "aDeclaredOneIsLeftAlone",
+          () => gaitDiagnostics("walk", declared).length === 0,
+        ],
+        [
+          "namingNoneIsLeftAlone",
+          () => gaitDiagnostics(undefined, declared).length === 0,
+        ],
+        // A unit of props declares no repertoire, so it has none to disagree
+        // with: refusing here would refuse every crowd that is not a figure.
+        [
+          "aCrowdOfPropsIsLeftAlone",
+          () => gaitDiagnostics("gallop", []).length === 0,
+        ],
+      ]),
+      {
+        oneRefusal: true,
+        namesWhatItAsked: true,
+        namesWhatItCould: true,
+        aDeclaredOneIsLeftAlone: true,
+        namingNoneIsLeftAlone: true,
+        aCrowdOfPropsIsLeftAlone: true,
+      },
     );
     const collisionSource = structuredClone(source);
     collisionSource.scene.nodes.push({
@@ -882,15 +980,15 @@ export const test_mcp_production_materialization = (): void => {
     });
     const openingSourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const anchor =
-      "  const performer = sentinel.render(context, { from: openingAbduction });";
+      "  const performer = soloist.render(context, { from: openingAbduction });";
     const openingSource = rewriteSource(
-      // The unit is 1024 files across, far wider than the field the starter's
-      // world derives for its own army. A shot must stage ground that carries
+      // The unit is 1024 files across, far wider than the ground the starter's
+      // world derives for its own group. A shot must stage ground that carries
       // what it stages, so this fixture stages its own; the compiler's own
       // gate is what proves the number is large enough.
       rewriteSource(
         fs.readFileSync(openingSourcePath, "utf8"),
-        "      space: signalField.space(),",
+        "      space: plaza.space(),",
         `      space: {
         id: "high-count-space",
         surfaces: [
@@ -920,12 +1018,15 @@ ${anchor}`,
     // rather than a string this fixture could rename in the shot. Renaming the
     // subject is what keeps the participant, the design record and the cue
     // speaking about one formation.
-    const armySourcePath = path.join(fixture.root, "src/formations/army.ts");
+    const chorusSourcePath = path.join(
+      fixture.root,
+      "src/formations/chorus.ts",
+    );
     fs.writeFileSync(
-      armySourcePath,
+      chorusSourcePath,
       rewriteSource(
-        fs.readFileSync(armySourcePath, "utf8"),
-        '  public readonly id = "army";',
+        fs.readFileSync(chorusSourcePath, "utf8"),
+        '  public readonly id = "chorus";',
         `  public readonly id = "${highCount.id}";`,
       ),
     );

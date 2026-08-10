@@ -4,6 +4,7 @@ import {
   IAutoMovieDiagnostic,
   IAutoMovieProductionMediaProbe,
   IAutoMovieReviewTarget,
+  IAutoMovieStorySyncOutcome,
 } from "./IAutoMovieProductionCompiler";
 import {
   AutoMovieContentDigest,
@@ -130,7 +131,19 @@ export type IAutoMovieAcceptanceOutcomeReference =
       expected: number;
       /** Whether the current measurement passes. */
       passed: boolean;
-    };
+    }
+  | ({
+      /**
+       * Compiler-derived cross-shot comparison on the production story clock.
+       *
+       * The measurement reuses the same realized event times the per-shot event
+       * outcomes cite, so a simultaneity claim and the events it names are
+       * checked against one fact rather than two.
+       */
+      kind: "story-sync";
+      /** Exact acceptance scenario id. */
+      scenario: string;
+    } & IAutoMovieStorySyncOutcome);
 
 /** Evidence whose exact value is rechecked against current project bytes. */
 export type IAutoMovieReviewEvidence =

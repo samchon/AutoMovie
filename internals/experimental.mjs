@@ -50,15 +50,16 @@ Options:
 /**
  * The workspace packages a sandbox installs, dependencies before consumers.
  *
- * This is the scaffold's six (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed under
- * `@automovie/*` dependencies, which adds `ingest` and `render` through `mcp`.
- * The closure matters because `pnpm pack` rewrites a `workspace:^` range to a
- * plain semver one: any member left unpacked would be resolved from the public
- * registry at a version this monorepo has never published.
+ * This is the scaffold's own set (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed
+ * under `@automovie/*` dependencies, which adds `ingest` and `render` through
+ * `mcp`. The closure matters because `pnpm pack` rewrites a `workspace:^` range
+ * to a plain semver one: any member left unpacked would be resolved from the
+ * public registry at a version this monorepo has never published.
  */
 const PACKAGES = Object.freeze([
   "interface",
   "engine",
+  "archetypes",
   "render",
   "ingest",
   "viewer",

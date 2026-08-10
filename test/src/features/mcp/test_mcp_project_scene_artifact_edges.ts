@@ -100,6 +100,9 @@ interface ISceneCase {
  *    that is not a unit quaternion.
  * 6. Space: a declared space whose surface geometry is invalid reports its
  *    violation re-rooted under the scene's own `space` path.
+ * 7. Fog: a declared atmosphere that is not an object, whose density is negative
+ *    or not a number, or whose color leaves `[0, 1]`. Absent fog is the case
+ *    every other scene here already exercises, and it is accepted.
  */
 export const test_mcp_project_scene_artifact_edges = (): void => {
   const cases: ISceneCase[] = [
@@ -297,6 +300,36 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
         },
       }),
       fragments: ["$input.space"],
+    },
+    // 7. fog
+    {
+      title: "a fog that is not an object reports its own violation",
+      value: scene({ fog: 7 }),
+      fragments: ["$input.fog"],
+    },
+    {
+      title: "a negative fog density is refused",
+      value: scene({
+        fog: { density: -1, color: { r: 1, g: 1, b: 1, a: null, hex: null } },
+      }),
+      fragments: ["$input.fog.density"],
+    },
+    {
+      title: "a non-finite fog density is refused",
+      value: scene({
+        fog: {
+          density: "thick",
+          color: { r: 1, g: 1, b: 1, a: null, hex: null },
+        },
+      }),
+      fragments: ["$input.fog.density"],
+    },
+    {
+      title: "a fog colour outside its unit range is refused",
+      value: scene({
+        fog: { density: 0.01, color: { r: 2, g: 0, b: 0, a: null, hex: null } },
+      }),
+      fragments: ["$input.fog.color.r"],
     },
   ];
 

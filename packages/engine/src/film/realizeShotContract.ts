@@ -26,9 +26,15 @@ import {
   computeRestHeight,
 } from "./cameraMove";
 import {
-  intersectsPerspectiveFrustumSegment,
+  intersectsPerspectiveFrustumBox,
   resolveCameraAt,
 } from "./cameraProjection";
+import {
+  IAutoMovieSubjectBox,
+  formationMemberExtent,
+  formationSubjectBox,
+  pointSubjectBox,
+} from "./subjectExtent";
 
 /** Derive and validate contract outcomes from actual compiled artifacts. */
 export const realizeShotContract = (props: {
@@ -350,22 +356,28 @@ const resolveSpatial = (
 };
 
 /**
- * The vertical extent the camera solve assumed for a required subject, so the
- * readability test and the framing that produced the shot share one subject.
+ * The vertical extent the camera solve assumed for a required NODE subject, so
+ * the readability test and the framing that produced the shot share one
+ * subject.
  *
- * `performShot` builds each `IAutoMovieFramedSubject` this way: a rigged node
- * is measured from its rest pose, and anything else — a formation, a prop with
- * no skeleton, a rig too small to measure — takes `DEFAULT_SUBJECT_HEIGHT`.
- * Reading it back the same way is what makes the check honest. Measuring here
- * while the solve assumed a default would frame one subject and grade another.
+ * `performShot` builds each `IAutoMovieFramedSubject` this way: a node is
+ * measured from the geometry its model draws, its rig's joint span stands in
+ * when no model was supplied, and a rig too small to measure takes
+ * `DEFAULT_SUBJECT_HEIGHT`. Reading it back the same way is what makes the
+ * check honest. Measuring here while the solve assumed a default would frame
+ * one subject and grade another.
+ *
+ * A formation does not come through here. Its extent is its own transformed
+ * bounds ({@link formationSubjectBox}), which is a box rather than a height, and
+ * reducing it to one would put the crowd back at its centroid.
  */
 const framedSubjectHeight = (
   props: Parameters<typeof realizeShotContract>[0],
   subject: string,
 ): number => {
-  const node = props.formations.has(subject)
-    ? undefined
-    : props.compiled.scene.nodes.find((candidate) => candidate.id === subject);
+  const node = props.compiled.scene.nodes.find(
+    (candidate) => candidate.id === subject,
+  );
   const model =
     node === undefined
       ? undefined
@@ -381,6 +393,42 @@ const framedSubjectHeight = (
         : computeRestHeight(rig)
       : extent.max - extent.min;
   return measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT;
+};
+
+/**
+ * The world box a required subject occupies at `time`, given the point it
+ * already resolved to.
+ *
+ * The two kinds of subject are measured the way the camera solve measured them.
+ * A node keeps the segment it has always been graded on: its resolved root and
+ * its measured height, a box with no horizontal span, which the box test below
+ * decides exactly as the segment test did. A formation is its whole transformed
+ * footprint, widened by a member's radius and raised by a member's height, so a
+ * unit reads when the frame holds any part of it — its flank, its front rank,
+ * or one wing of a line the frame cannot possibly contain whole.
+ */
+const framedSubjectBox = (
+  props: Parameters<typeof realizeShotContract>[0],
+  subject: string,
+  point: IAutoMovieVector3,
+  time: number,
+): IAutoMovieSubjectBox => {
+  const formation = props.formations.has(subject)
+    ? (props.compiled.formations ?? []).find(
+        (candidate) => candidate.id === subject,
+      )
+    : undefined;
+  return formation === undefined
+    ? pointSubjectBox(point, {
+        min: 0,
+        max: framedSubjectHeight(props, subject),
+      })
+    : formationSubjectBox({
+        formation,
+        motions: props.compiled.formationMotions ?? [],
+        member: formationMemberExtent(formation, props.compiled.models),
+        seconds: time,
+      });
 };
 
 const cameraOutcome = (
@@ -415,12 +463,12 @@ const cameraOutcome = (
         ? resolveSpatial(props, { kind: "formation", id: subject }, time)
         : resolveSpatial(props, { kind: "node", id: subject }, time);
       ++resolvedSubjects;
-      const height = framedSubjectHeight(props, subject);
+      const box = framedSubjectBox(props, subject, point, time);
       if (
-        intersectsPerspectiveFrustumSegment({
+        intersectsPerspectiveFrustumBox({
           camera: resolvedCamera,
-          from: point,
-          to: { x: point.x, y: point.y + height, z: point.z },
+          min: box.min,
+          max: box.max,
           near: camera.near,
           far: camera.far,
           halfY,

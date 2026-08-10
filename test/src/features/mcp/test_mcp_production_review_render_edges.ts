@@ -449,7 +449,7 @@ export const test_mcp_production_review_render_edges =
       fs.writeFileSync(path.join(malformedDirectory, "manifest.json"), "{bad");
       const malformedShotPrepared = review.prepare({ target });
       const malformedAssetPrepared = review.prepare({
-        target: { kind: "asset", id: "sentinel" },
+        target: { kind: "asset", id: "soloist" },
       });
       const malformedManifestPath =
         "renders/fixture-film/review-malformed/manifest.json";
@@ -516,7 +516,7 @@ export const test_mcp_production_review_render_edges =
       const mismatchedAssetBytes = png();
       const mismatchedAssetTarget = {
         kind: "asset" as const,
-        id: "sentinel",
+        id: "soloist",
         angleDeg: 0,
         elevationDeg: 15,
         pose: "rest" as const,
@@ -636,7 +636,7 @@ export const test_mcp_production_review_render_edges =
         )
         .replaceAll(path.sep, "/");
       const mismatchedAssetPrepared = review.prepare({
-        target: { kind: "asset", id: "sentinel" },
+        target: { kind: "asset", id: "soloist" },
       });
       const mismatchedAssetDiagnostics = mismatchedAssetPrepared.diagnostics
         .filter(
@@ -689,12 +689,12 @@ export const test_mcp_production_review_render_edges =
                 }) satisfies IAutoMovieDiagnostic,
             ),
           missingViews: [
-            "asset:sentinel:rig-rom-extremes",
-            "asset:sentinel:top-outline",
-            "asset:sentinel:turntable-back",
-            "asset:sentinel:turntable-front",
-            "asset:sentinel:turntable-left",
-            "asset:sentinel:turntable-right",
+            "asset:soloist:rig-rom-extremes",
+            "asset:soloist:top-outline",
+            "asset:soloist:turntable-back",
+            "asset:soloist:turntable-front",
+            "asset:soloist:turntable-left",
+            "asset:soloist:turntable-right",
           ],
           staleBundleAdmitted: false,
           staleBundleReportedAsRenderSpecMismatch: false,

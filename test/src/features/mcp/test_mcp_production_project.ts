@@ -763,7 +763,7 @@ export const test_mcp_production_project = (): void => {
         ],
         [
           "projectDesign2",
-          () => project.design({ kind: "model", id: "sentinel" }) !== null,
+          () => project.design({ kind: "model", id: "soloist" }) !== null,
         ],
         ["projectDesign3", () => project.design({ kind: "world" }) !== null],
         [
@@ -1114,7 +1114,7 @@ export const test_mcp_production_project = (): void => {
     });
     const caseCollision = project.setModelRecipe({
       ...modelRecipe(),
-      id: "SENTINEL",
+      id: "SOLOIST",
     });
     const nonCanonicalSources = [
       "/src/shots/opening.ts",
@@ -1273,7 +1273,7 @@ export const test_mcp_production_project = (): void => {
       criterion: {
         kind: "frame" as const,
         shot: "opening",
-        frame: "signal-apex",
+        frame: "cue-apex",
         pass: "beauty" as const,
         expectation: "The film retains the opening signal frame.",
       },
@@ -1285,7 +1285,7 @@ export const test_mcp_production_project = (): void => {
       criterion: {
         kind: "event" as const,
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation: "The opening signal event remains in the film.",
       },
       required: true,
@@ -1360,7 +1360,7 @@ export const test_mcp_production_project = (): void => {
     const landmarkShot = shotContract();
     landmarkShot.opening[0]!.predicates.push({
       kind: "position",
-      subject: { kind: "landmark", id: "signal-ground" },
+      subject: { kind: "landmark", id: "plaza-center" },
       axis: "x",
       operator: "==",
       value: 0,
@@ -1387,7 +1387,7 @@ export const test_mcp_production_project = (): void => {
       {
         kind: "distance",
         from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
-        to: { kind: "landmark", id: "signal-ground" },
+        to: { kind: "landmark", id: "plaza-center" },
         operator: "==",
         value: 0,
         tolerance: 0,
@@ -1400,7 +1400,7 @@ export const test_mcp_production_project = (): void => {
     landmarkShot.opening[0]!.predicates = [
       {
         kind: "distance",
-        from: { kind: "landmark", id: "signal-ground" },
+        from: { kind: "landmark", id: "plaza-center" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
         operator: "==",
         value: 0,
@@ -1453,30 +1453,30 @@ export const test_mcp_production_project = (): void => {
     project.setFormationDesign(formationDesign());
     const dependentModel = {
       ...modelRecipe(),
-      id: "sentinel-variant",
+      id: "soloist-variant",
       lod: [
-        { tier: "hero" as const, maxDistance: 10, recipe: "sentinel" },
+        { tier: "hero" as const, maxDistance: 10, recipe: "soloist" },
         {
           tier: "far" as const,
           maxDistance: null,
-          recipe: "sentinel-variant",
+          recipe: "soloist-variant",
         },
       ],
     };
     const dependentModelMutation = project.setModelRecipe(dependentModel);
     const transitiveDependentModel = {
       ...modelRecipe(),
-      id: "sentinel-variant-far",
+      id: "soloist-variant-far",
       lod: [
         {
           tier: "hero" as const,
           maxDistance: 10,
-          recipe: "sentinel-variant",
+          recipe: "soloist-variant",
         },
         {
           tier: "far" as const,
           maxDistance: null,
-          recipe: "sentinel-variant-far",
+          recipe: "soloist-variant-far",
         },
       ],
     };
@@ -1539,7 +1539,7 @@ export const test_mcp_production_project = (): void => {
         dependencyCycleFixture.root,
       ).eraseDesignArtifact({
         kind: "model",
-        id: "sentinel",
+        id: "soloist",
       });
       cyclicDependencyTraversal = true;
     } catch (error) {
@@ -1553,7 +1553,7 @@ export const test_mcp_production_project = (): void => {
     }
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
-      id: "sentinel",
+      id: "soloist",
     });
     TestValidator.equals(
       "model consequences and erasure include dependent LOD models and formations",
@@ -1574,7 +1574,7 @@ export const test_mcp_production_project = (): void => {
               (target) =>
                 target.kind === "design" &&
                 target.design.kind === "model" &&
-                target.design.id === "sentinel-variant",
+                target.design.id === "soloist-variant",
             ),
         ],
         [
@@ -1584,7 +1584,7 @@ export const test_mcp_production_project = (): void => {
               (target) =>
                 target.kind === "design" &&
                 target.design.kind === "model" &&
-                target.design.id === "sentinel-variant-far",
+                target.design.id === "soloist-variant-far",
             ),
         ],
         [
@@ -1592,7 +1592,7 @@ export const test_mcp_production_project = (): void => {
           () =>
             refusedModelErase.diagnostics.some(
               (item) =>
-                item.message.includes("model:sentinel-variant") ||
+                item.message.includes("model:soloist-variant") ||
                 item.message.includes("formation:line"),
             ),
         ],
@@ -1668,8 +1668,7 @@ export const test_mcp_production_project = (): void => {
           "secondShotMutationConsequences3",
           () =>
             secondShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1691,8 +1690,7 @@ export const test_mcp_production_project = (): void => {
           "acceptanceMutationConsequences3",
           () =>
             acceptanceMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
       ]),
@@ -1805,8 +1803,7 @@ export const test_mcp_production_project = (): void => {
           "repaintedShotMutationConsequences2",
           () =>
             repaintedShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1821,8 +1818,7 @@ export const test_mcp_production_project = (): void => {
           "movedSequenceShotMutationConsequences",
           () =>
             movedSequenceShotMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1874,8 +1870,7 @@ export const test_mcp_production_project = (): void => {
           "movedAcceptanceMutationConsequences5",
           () =>
             movedAcceptanceMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -1910,8 +1905,7 @@ export const test_mcp_production_project = (): void => {
           "worldMutationConsequences2",
           () =>
             worldMutation.consequences.staleReviews.some(
-              (target) =>
-                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+              (target) => target.kind === "sequence" && target.id === "SEQ-CUE",
             ),
         ],
         [
@@ -2236,8 +2230,8 @@ export const test_mcp_production_project = (): void => {
         ".automovie/design/shared/models",
       );
       fs.copyFileSync(
-        path.join(modelRoot, "sentinel.json"),
-        path.join(outsideState, "sentinel.json"),
+        path.join(modelRoot, "soloist.json"),
+        path.join(outsideState, "soloist.json"),
       );
       fs.rmSync(modelRoot, { force: true, recursive: true });
       fs.symlinkSync(outsideState, modelRoot, "junction");

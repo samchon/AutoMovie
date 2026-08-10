@@ -49,7 +49,7 @@ export interface IAutoMovieScenePayload {
   /** Interior or exterior. */
   interiorExterior: "INT" | "EXT";
 
-  /** Location name ("castle courtyard"). */
+  /** Location name ("hotel lobby"). */
   location: string;
 
   /** Time of day ("dawn", "night"). */

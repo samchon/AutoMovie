@@ -1,5 +1,5 @@
+import { CAT_PROFILE } from "@automovie/archetypes";
 import {
-  CAT_PROFILE,
   Quaternion,
   bindProfileGaits,
   sequenceMotion,

@@ -64,6 +64,7 @@ export const createCompiledShotRuntime = async (
       formation,
       models,
       motions: compiled.formationMotions,
+      slotMotions: compiled.formationSlotMotions,
       heroObjects: nodeObjects,
       heroVisualObjects: nodeVisualObjects,
     }),
@@ -194,7 +195,10 @@ export const createCompiledShotRuntime = async (
     formationObjects.forEach(({ stats }, index) => {
       const runtime = compiled.formations[index]!;
       if (
-        stats.visible.near + stats.visible.far + stats.culled !==
+        stats.visible.near +
+          stats.visible.far +
+          stats.culled +
+          stats.removed !==
           runtime.anonymousCount ||
         stats.heroes !== runtime.heroes.length
       )
@@ -233,7 +237,7 @@ export const createCompiledShotRuntime = async (
     const formationStatus = formationObjects
       .map(
         ({ stats }) =>
-          `H${stats.heroes}/N${stats.visible.near}/F${stats.visible.far}/C${stats.culled}`,
+          `H${stats.heroes}/N${stats.visible.near}/F${stats.visible.far}/C${stats.culled}/X${stats.removed}`,
       )
       .join(" ");
     const effectStatus = effectObjects

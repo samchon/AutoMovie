@@ -365,7 +365,7 @@ export const test_mcp_production_effect_fixture_cleanup = (): void => {
             nestedTryStatements: 0,
             ownerParameters: [],
             tryDigest:
-              "6d5a764afa5d4fdd41a5848786d1391fd3e696bc9fc0c606c5528302fbe567a5",
+              "e04e2d37cf5207eda1c7bb844c4f1bc5d631373dab121525cc36e4590d547576",
             tryStatements: 52,
           },
         ],

@@ -10,10 +10,9 @@ unrelated geometry and continuity findings remain visible.
 ## Typed object capabilities and instances
 
 `IAutoMovieProfile.gaits` remains the typed locomotion capability.
-`IAutoMovieProfile.traits` carries closed `shooter`, `mountable`, and
-`destructible` data. Firearm, cannon, melee, ammunition, and impact-body facts
-are typed; names and legacy free-form capability labels do not authorize a
-capability-gated engine verb.
+`IAutoMovieProfile.traits` carries closed `mountable` and `destructible` data.
+Seat, payload, durability, and impact-body facts are typed; names and legacy
+free-form capability labels do not authorize a capability-gated engine verb.
 
 `IAutoMovieWorldDesign.instanceSets` owns compact non-formation crowds,
 vegetation, props, and debris. Grid, disk-scatter, and route layouts retain

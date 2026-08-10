@@ -165,7 +165,7 @@ const timeline = (): IAutoMovieFilmTimeline => ({
         id: "earlier",
         text: "First.",
         language: "en",
-        speaker: "sentinel",
+        speaker: "soloist",
         startFrame: 0,
         endFrame: 2,
       },
@@ -1397,7 +1397,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       id: "unsafe\nid -->",
       text: "A & <B> --> C\n\nD",
       language: "en",
-      speaker: "sentinel>\nvoice",
+      speaker: "soloist>\nvoice",
       startFrame: 0,
       endFrame: 2,
     },
@@ -1430,7 +1430,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "captionsIncludesLang",
-        () => captions.includes("<lang en><v sentinel>First.</v></lang>"),
+        () => captions.includes("<lang en><v soloist>First.</v></lang>"),
       ],
       [
         "captionsIncludesN",
@@ -1467,7 +1467,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         "escapedCaptionsIncludesLang",
         () =>
           escapedCaptions.includes(
-            "<lang en><v sentinel&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
+            "<lang en><v soloist&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
           ),
       ],
       ["escapedProbeKindWebvtt", () => escapedProbe.kind === "webvtt"],

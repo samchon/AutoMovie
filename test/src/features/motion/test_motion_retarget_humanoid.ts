@@ -1,6 +1,6 @@
+import { HUMANOID_PROFILE } from "@automovie/archetypes";
 import {
   HUMANOID_JOINT_AXES,
-  HUMANOID_PROFILE,
   HUMANOID_REST_FRAME,
   bindProfileGaits,
   gestureMotion,

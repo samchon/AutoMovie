@@ -29,10 +29,17 @@ const SPACE_COLOR = 0.62;
  * Each surface becomes its convex footprint hull, fan-triangulated, with every
  * vertex lifted to {@link surfaceHeightAt}, so a floor or platform is a flat
  * slab at its anchor height and a ramp is the plane its `anchor → rampTo` axis
- * describes, without a second interpretation of the surface math. The hull is
- * counter-clockwise in the XZ plan, whose fan normal points **down**, so the
- * fan is wound in reverse: front faces look up, which is what an override
- * material (all single-sided) needs in order to draw at all.
+ * describes, without a second interpretation of the surface math.
+ *
+ * A surface stating a `heightfield` height rule is drawn at its hull corners
+ * only, so its relief is carried by the feet and the ground queries but not yet
+ * by the mesh: the patch reads as the planar quad through those corners. The
+ * missing piece is tessellation over the lattice, not a second height rule, and
+ * every vertex it will add comes from this same function.
+ *
+ * The hull is counter-clockwise in the XZ plan, whose fan normal points
+ * **down**, so the fan is wound in reverse: front faces look up, which is what
+ * an override material (all single-sided) needs in order to draw at all.
  *
  * A degenerate footprint (fewer than three non-collinear points, rejected by
  * `validateSpace`, but a hand-built space may still carry one) encloses no area

@@ -17,6 +17,7 @@ import { AutoMovieProductionContext } from "./production/AutoMovieProductionCont
 import { AutoMovieProductionGuideService } from "./production/AutoMovieProductionGuideService";
 import { AutoMovieProductionRepaintService } from "./production/AutoMovieProductionRepaintService";
 import { canonicalizeAutoMovieJson } from "./production/contentIdentity";
+import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 import { readAutoMovieProductionRegistry } from "./production/productionRegistry";
 
 /**
@@ -42,11 +43,19 @@ export class AutoMovieApplication {
     projectRoot?: string;
     /** Host-selected default production for review and asset tools. */
     productionId?: string;
+    /**
+     * Archetype catalogue the served productions register.
+     *
+     * Omitted leaves the primitive catalogue this package ships with, which is
+     * what a project that authors only shipped archetypes wants.
+     */
+    archetypes?: AutoMovieModelArchetypeRegistry;
   }) {
     this.context = new AutoMovieProductionContext(
       props?.capture,
       props?.projectRoot,
       props?.productionId,
+      props?.archetypes,
     );
     this.repaintService = new AutoMovieProductionRepaintService(props?.repaint);
   }

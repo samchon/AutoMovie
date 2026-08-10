@@ -63,7 +63,7 @@ export const compileAttach = (props: {
    * The parent's world root over shot-local time, when the parent itself rides
    * a coupling this shot (#1140): each sample composes onto THIS frame instead
    * of the static `parentTransform`, so the child follows the parent's ridden
-   * path: a lance in a mounted knight's hand rides the horse. Omit for a parent
+   * path: a pole in a mounted rider's hand rides the mount. Omit for a parent
    * standing on its staged placement.
    */
   parentTransformAt?: (t: number) => IAutoMovieTransform;

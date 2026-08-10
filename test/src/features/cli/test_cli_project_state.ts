@@ -93,18 +93,18 @@ export const test_cli_project_state = (): void => {
     const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const formation = {
       ...formationDesign(),
-      id: "army",
+      id: "chorus",
       anchor: { x: 3, y: 0, z: -4 },
     };
     const formationPath = path.join(
       fixture.root,
-      ".automovie/design/formations/army.json",
+      ".automovie/design/formations/chorus.json",
     );
     const formationContract = {
       ...shotContract(),
       participants: [
         ...shotContract().participants,
-        { kind: "formation" as const, id: "army" },
+        { kind: "formation" as const, id: "chorus" },
       ],
     };
     fs.mkdirSync(path.dirname(formationPath), { recursive: true });
@@ -152,7 +152,7 @@ export const test_cli_project_state = (): void => {
     const loaded = loadAutoMovieProjectState({ root: fixture.root });
     const current = requireCurrentAutoMovieProjectState(loaded);
     const shot = current.generated.shots.get("opening")!;
-    const loadedFormation = current.generated.design.formations.get("army")!;
+    const loadedFormation = current.generated.design.formations.get("chorus")!;
     const runtime = shot.formations.find(
       (candidate) => candidate.id === loadedFormation.id,
     )!;
@@ -169,11 +169,11 @@ export const test_cli_project_state = (): void => {
       runtime.facingDeg,
     );
     const landmark = current.generated.design.world.landmarks.find(
-      (candidate) => candidate.id === "signal-ground",
+      (candidate) => candidate.id === "plaza-center",
     )!.position;
     const meters = Vector3.length(Vector3.subtract(moved, landmark));
     const actor = shot.scene.nodes.find(
-      (candidate) => candidate.id === "sentinel",
+      (candidate) => candidate.id === "soloist",
     )!;
     const model = shot.models.find(
       (candidate) => candidate.id === actor.model,

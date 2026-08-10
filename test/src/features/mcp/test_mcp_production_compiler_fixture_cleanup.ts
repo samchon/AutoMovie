@@ -13,23 +13,6 @@ const compact = (node: ts.Node, source: ts.SourceFile): string =>
 const digestText = (text: string): string =>
   createHash("sha256").update(text).digest("hex");
 
-const leafTokenDigest = (
-  nodes: readonly ts.Node[],
-  source: ts.SourceFile,
-): string => {
-  const tokens: Array<[ts.SyntaxKind, string]> = [];
-  const visit = (node: ts.Node): void => {
-    const children = node.getChildren(source);
-    if (children.length !== 0) children.forEach(visit);
-    else {
-      const text = node.getText(source);
-      if (text.length !== 0) tokens.push([node.kind, text]);
-    }
-  };
-  nodes.forEach(visit);
-  return digestText(JSON.stringify(tokens));
-};
-
 const aggregateContainsExactly = (
   error: unknown,
   expected: readonly unknown[],
@@ -38,6 +21,15 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
+/**
+ * What one lifecycle promises, and nothing about what it happens to contain.
+ *
+ * The guarded body is deliberately absent. A digest of it would move whenever
+ * any case inside the owner is edited, which says nothing about whether a
+ * fixture is torn down and everything about whether the file was touched -- and
+ * a pin that fails for reasons unrelated to its claim is one a reader learns to
+ * re-derive without looking.
+ */
 const lifecycleContract = (
   lifecycle: ts.TryStatement,
   source: ts.SourceFile,
@@ -45,8 +37,6 @@ const lifecycleContract = (
   catchBodies: string[];
   catchVariables: string[];
   finallyBodies: string[];
-  tryDigest: string;
-  tryStatements: number;
 } => ({
   catchBodies: (lifecycle.catchClause?.block.statements ?? []).map(
     (statement) => compact(statement, source),
@@ -58,9 +48,49 @@ const lifecycleContract = (
   finallyBodies: (lifecycle.finallyBlock?.statements ?? []).map((statement) =>
     compact(statement, source),
   ),
-  tryDigest: digestText(lifecycle.tryBlock.getText(source)),
-  tryStatements: lifecycle.tryBlock.statements.length,
 });
+
+/** Every call in the owner that takes out a fixture somebody has to give back. */
+const acquisitionSites = (owner: ts.Node, source: ts.SourceFile): string[] => {
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = compact(node.expression, source);
+      if (callee === "productionFixture" || callee === "fs.mkdtempSync")
+        found.push(callee);
+    }
+    node.forEachChild(visit);
+  };
+  owner.forEachChild(visit);
+  return found;
+};
+
+/**
+ * Every fixture lifecycle in one statement list, found by what makes one.
+ *
+ * A lifecycle is a `try` whose `finally` hands teardown to the preserving
+ * helper; the two statements before it are the failure holder it writes into
+ * and the acquisition it guards. Finding them this way rather than by statement
+ * index is what keeps this guard measuring. An index moves whenever a case is
+ * added above it, and an index that no longer lands on a `try` made the whole
+ * list empty -- which compared equal to an empty expectation and pinned
+ * nothing. A moved lifecycle is still found here, and a deleted one shortens a
+ * list that is pinned non-empty.
+ */
+const lifecycleSites = (
+  statements: readonly ts.Statement[],
+  source: ts.SourceFile,
+): { index: number; statement: ts.TryStatement }[] =>
+  statements.flatMap((statement, index) =>
+    ts.isTryStatement(statement) &&
+    (statement.finallyBlock?.statements ?? []).some((inner) =>
+      compact(inner, source).startsWith(
+        "preserveProductionCompilerFixtureCleanup(",
+      ),
+    )
+      ? [{ index, statement }]
+      : [],
+  );
 
 const productionCompilerFixtureContract = (text: string): unknown => {
   const source = ts.createSourceFile(
@@ -92,70 +122,45 @@ const productionCompilerFixtureContract = (text: string): unknown => {
   const lifecycles = owners.flatMap((owner) => {
     const body = owner.arrow.body;
     if (ts.isBlock(body) === false) return [];
-    const outer = body.statements[2];
-    if (outer === undefined || ts.isTryStatement(outer) === false) return [];
-    const statements = outer.tryBlock.statements;
-    const unmanifested = statements[104];
-    const noDesign = statements[621];
-    if (
-      unmanifested === undefined ||
-      ts.isTryStatement(unmanifested) === false ||
-      noDesign === undefined ||
-      ts.isTryStatement(noDesign) === false
-    )
-      return [];
-    const substantive = statements.filter(
-      (_, index) => ![102, 104, 619, 621].includes(index),
-    );
+    const outerSites = lifecycleSites(body.statements, source);
+    if (outerSites.length !== 1) return [];
+    const outer = outerSites[0]!;
+    const statements = outer.statement.tryBlock.statements;
+    const nested = lifecycleSites(statements, source);
     return [
       {
-        acquisition: compact(body.statements[1]!, source),
-        bodyStatements: body.statements.length,
-        failureHolder: compact(body.statements[0]!, source),
-        index: 2,
+        acquisition: compact(body.statements[outer.index - 1]!, source),
+        failureHolder: compact(body.statements[outer.index - 2]!, source),
         kind: "main",
         ownerParameters: owner.arrow.parameters.map((parameter) =>
           compact(parameter, source),
         ),
-        substantiveStatements: substantive.length,
-        substantiveTokenDigest: leafTokenDigest(substantive, source),
-        ...lifecycleContract(outer, source),
+        ...lifecycleContract(outer.statement, source),
       },
-      {
-        acquisition: compact(statements[103]!, source),
-        bodyStatements: statements.length,
-        failureHolder: compact(statements[102]!, source),
-        index: 104,
-        kind: "unmanifested",
+      ...nested.map((site) => ({
+        acquisition: compact(statements[site.index - 1]!, source),
+        failureHolder: compact(statements[site.index - 2]!, source),
+        kind: "nested",
         ownerParameters: [],
-        substantiveStatements: unmanifested.tryBlock.statements.length,
-        substantiveTokenDigest: leafTokenDigest(
-          unmanifested.tryBlock.statements,
-          source,
-        ),
-        ...lifecycleContract(unmanifested, source),
-      },
-      {
-        acquisition: compact(statements[620]!, source),
-        bodyStatements: statements.length,
-        failureHolder: compact(statements[619]!, source),
-        index: 621,
-        kind: "no-design",
-        ownerParameters: [],
-        substantiveStatements: noDesign.tryBlock.statements.length,
-        substantiveTokenDigest: leafTokenDigest(
-          noDesign.tryBlock.statements,
-          source,
-        ),
-        ...lifecycleContract(noDesign, source),
-      },
+        ...lifecycleContract(site.statement, source),
+      })),
     ];
   });
   const policies = arrows.filter(
     (entry) => entry.name === "preserveProductionCompilerFixtureCleanup",
   );
   return {
-    owner: { count: owners.length, lifecycles },
+    owner: {
+      // Every fixture the owner takes out, against every lifecycle that gives
+      // one back. A fourth acquisition added without a lifecycle around it
+      // lengthens one list and not the other, which is the failure this guard
+      // exists for and the one a body digest could never name.
+      acquisitions: owners.flatMap((owner) =>
+        acquisitionSites(owner.arrow, source),
+      ),
+      count: owners.length,
+      lifecycles,
+    },
     parseDiagnostics: (
       source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
     ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
@@ -417,8 +422,51 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
     ),
     {
       owner: {
+        acquisitions: [
+          "productionFixture",
+          "productionFixture",
+          "fs.mkdtempSync",
+        ],
         count: 1,
-        lifecycles: [],
+        lifecycles: [
+          {
+            acquisition: "constfixture=productionFixture();",
+            catchBodies: ["productionCompilerFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            failureHolder:
+              "letproductionCompilerFailure:IProductionCompilerFixtureFailure|undefined;",
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(productionCompilerFailure,()=>fixture.dispose(),);",
+            ],
+            kind: "main",
+            ownerParameters: [],
+          },
+          {
+            acquisition: "constunmanifestedFixture=productionFixture();",
+            catchBodies: ["unmanifestedFixtureFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            failureHolder:
+              "letunmanifestedFixtureFailure:|IProductionCompilerFixtureFailure|undefined;",
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(unmanifestedFixtureFailure,()=>unmanifestedFixture.dispose(),);",
+            ],
+            kind: "nested",
+            ownerParameters: [],
+          },
+          {
+            acquisition:
+              'constnoDesignRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-production-empty-"),);',
+            catchBodies: ["noDesignFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            failureHolder:
+              "letnoDesignFailure:IProductionCompilerFixtureFailure|undefined;",
+            finallyBodies: [
+              "preserveProductionCompilerFixtureCleanup(noDesignFailure,()=>fs.rmSync(noDesignRoot,{force:true,recursive:true}),);",
+            ],
+            kind: "nested",
+            ownerParameters: [],
+          },
+        ],
       },
       parseDiagnostics: [],
       policy: {

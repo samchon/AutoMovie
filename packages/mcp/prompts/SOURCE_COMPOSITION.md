@@ -2,7 +2,7 @@
 
 A film is a program that emits shots. This handbook is about the shape that program takes once a production has more shots than you would willingly type, which is the point where authoring each one by hand stops being craft and becomes transcription.
 
-`TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers, a battle line.
+`TYPESCRIPT` governs how any one module must behave: pure builds, typed payloads, explicit units, no I/O in the compile sandbox. Those rules hold everywhere here. This document is about arrangement across modules, and it applies to any production with repeated subjects: a crowd, a parade, a fleet, a corps of dancers.
 
 ## Know when to compose
 
@@ -10,9 +10,15 @@ Hand-author while a production has a handful of shots. The starter's two shots a
 
 Compose at the moment you copy a shot module and change its names. That copy is the signal, not the fortieth one. The cost of hand-authoring is linear in runtime and invisible until the runtime is large, so the decision has to be made from the repetition you can see rather than from the pain you have felt.
 
+## Each module has one second
+
+The sandbox runs every transpiled module, the registration probe, and the `build` call under a one-second timeout, and a script that exceeds it is refused with `source-execution-timeout` having published nothing. The budget is per invocation rather than per production, so a hundred shot modules each get a second of their own — and the single film module that assembles every placement in the edit gets one second for the whole thing.
+
+That is an arrangement constraint, not a micro-optimization. Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which run outside the sandbox and under no such clock.
+
 ## Every subject is a class
 
-A soldier, a horse, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
+A figure, an animal, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
 
 A class owns four things, and the reason it is a class rather than a factory returning a record is that these four belong together:
 
@@ -31,8 +37,8 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
-export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
-  public readonly id = "sentinel";
+export class Figure extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  public readonly id = "figure";
 
   /** A fact other subjects measure themselves against. */
   public readonly height = 1.8;
@@ -76,7 +82,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
 
 ## A group of subjects is a subject
 
-A squadron holds soldiers, a regiment holds squadrons, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a line battle authorable: a regiment advancing is one call, not two thousand.
+A cluster holds figures, a group holds clusters, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a mass scene authorable: a group advancing is one call, not two thousand.
 
 Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
@@ -109,6 +115,8 @@ State the seed in the design record rather than in source, so the variation is a
 A factory takes the parameters that actually differ and returns the shot definition. What repeats lives in the factory; what varies lives in the table that calls it.
 
 Name factories for what the shot *is*, not for what it looks like: a factory named for an action reads at the call site, and one named for a camera move hides the beat behind the lens. Keep them honest about what they cannot know. A factory that supplies a default predicate, a default event time, or a default acceptance criterion produces shots that satisfy their contract and prove nothing, which is worse than a shot that fails to compile.
+
+Keep the module quotable while you are at it. `prepareReview` returns source selectors for only the first 512 non-blank lines of a module and warns `review-selector-truncated` past that, so everything below the cut exists but cannot be cited as review evidence. A factory module that grows beyond it has a tail no review can reach; split it along its own seams before that happens.
 
 ## Derive the tracked design record from the same table
 
@@ -152,6 +160,5 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 
 ## Read the shipped examples
 
-The starter's own vocabulary is the worked example of the subject layer. `src/units/sentinel.ts` is a leaf subject whose measured facts are fields and whose one capability is a method; `src/units/armyHero.ts` derives its scale from the sentinel rather than restating it; `src/formations/army.ts` is a group that states arrangement and answers questions about its own extent; `src/world/signalField.ts` is a group of places whose record is the merge of what its pieces put down.
+The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
 
-`src/examples/lineBattle.ts` is the worked example of a different boundary, the one between engine-owned facts and agent-owned drill code. Typed capability facts and seeded engine outcomes feed the drill, while large non-formation populations use compact instance sets instead of scene nodes. Read both before designing your own layer.

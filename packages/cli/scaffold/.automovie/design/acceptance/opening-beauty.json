@@ -2,16 +2,16 @@
   "id": "opening-beauty",
   "evidence": [
     {
-      "reason": "Beauty evidence verifies that the signal scene remains visually readable.",
+      "reason": "Beauty evidence verifies that the cue scene remains visually readable.",
       "scene": "SCN-001"
     }
   ],
   "target": { "kind": "shot", "id": "opening" },
   "criterion": {
     "kind": "frame",
-    "frame": "signal-apex",
+    "frame": "cue-apex",
     "pass": "beauty",
-    "expectation": "The full sentinel, raised signal arm, promoted formation heroes, and bounded signal smoke remain readable against the background."
+    "expectation": "The full soloist, the raised hand, the promoted formation heroes, and the bounded plaza haze remain readable against the background."
   },
   "required": true
 }

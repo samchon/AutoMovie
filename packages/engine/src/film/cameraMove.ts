@@ -128,6 +128,21 @@ export interface IAutoMovieFramedSubject {
   /** Subject height in meters (drives framing distance and aim height). */
   height: number;
 
+  /**
+   * Half the subject's widest horizontal span about {@link base}, in meters.
+   *
+   * A single figure has no horizontal extent worth solving from: it is taller
+   * than it is wide at every shot size, so its framing is the vertical fit and
+   * always has been. A mass is the opposite — two thousand figures on a field
+   * are a hundred meters across and one and a half tall — and framing that from
+   * height alone puts the camera where one person would fill the frame and the
+   * unit runs off both edges.
+   *
+   * Absent or zero states that no horizontal extent was measured, which leaves
+   * the vertical fit in sole charge exactly as before.
+   */
+  radius?: number;
+
   /** Animated base over shot-local seconds, or null when static. */
   at: ((seconds: number) => IAutoMovieVector3) | null;
 }
@@ -141,12 +156,14 @@ export interface IAutoMovieCameraFrameEntry {
 /**
  * Compile a shot's `frame` actions into the live camera's motion clip, the
  * deterministic shot grammar: **framing** picks the distance (the fraction of
- * the subject's height the frame shows, fitted to the camera's vertical FOV by
- * `d = (visible/2) / tan(fovY/2)`) and the aim height; **move** picks the path:
- * `static` locks the framed position, `push-in` dollies from 1.25× to 0.8× of
- * the framed distance, `orbit` sweeps 45° around the subject, `follow`
- * re-frames against the subject's animated base, and `whip` pans in place from
- * the staged orientation onto the subject.
+ * the subject's extent the frame shows, fitted to the camera's field of view by
+ * `d = (visible/2) / tan(half-angle)`, vertically against the subject's height
+ * and horizontally against its width, whichever demands the greater distance)
+ * and the aim height; **move** picks the path: `static` locks the framed
+ * position, `push-in` dollies from 1.25× to 0.8× of the framed distance,
+ * `orbit` sweeps 45° around the subject, `follow` re-frames against the
+ * subject's animated base, and `whip` pans in place from the staged orientation
+ * onto the subject.
  *
  * The camera approaches along its **staged bearing** (the direction from the
  * subject's aim point to where staging placed the camera), so the side the
@@ -156,15 +173,35 @@ export interface IAutoMovieCameraFrameEntry {
  *
  * Entries must be sorted by `start` and non-overlapping (the shot compiler
  * gates that); returns null when there is nothing to compile.
+ *
+ * @param props.aspect Frame width over height, for the horizontal half of the
+ *   fit. A camera states only its VERTICAL field of view, so the raster is the
+ *   only thing that knows how wide the frame is, and a subject with a measured
+ *   `radius` cannot be fitted across the frame without it. Omitted, the solve
+ *   assumes a square frame: the widest subject any raster of that height could
+ *   fail to hold, so an unknown aspect pulls back far enough rather than
+ *   cropping a mass it could not measure. A subject with no `radius` is
+ *   unaffected either way.
  */
 export const compileCameraMove = (props: {
   clipId: string;
   camera: IAutoMovieCamera;
   entries: IAutoMovieCameraFrameEntry[];
   shotDuration: number;
+  aspect?: number;
 }): IAutoMovieClip | null => {
   const { clipId, camera, entries, shotDuration } = props;
   if (entries.length === 0) return null;
+  const halfY = Math.tan(((camera.fovY / 2) * Math.PI) / 180);
+  // A non-finite or non-positive aspect describes no raster; the square
+  // assumption above is what an absent one already means, so they agree.
+  const aspect =
+    props.aspect !== undefined &&
+    Number.isFinite(props.aspect) &&
+    props.aspect > 0
+      ? props.aspect
+      : 1;
+  const halfX = halfY * aspect;
 
   const keys: {
     t: number;
@@ -209,9 +246,19 @@ export const compileCameraMove = (props: {
     });
     const aim0 = aimOf(subject.base);
 
-    const visible = subject.height * FRAMING_HEIGHT_FRACTION[framing];
-    const distance =
-      visible / 2 / Math.tan(((camera.fovY / 2) * Math.PI) / 180);
+    // Fit both ways and take the demanding one. The framing grammar states how
+    // much of the frame the subject fills; for a figure that is a question
+    // about height, and for a mass it is a question about width, so the frame
+    // has to hold `fraction` times each of them and the camera stands at
+    // whichever distance is the further back. `radius` is absent or zero for
+    // every subject that is one body, which leaves the vertical fit alone and
+    // the solved distance byte-identical to what it has always been.
+    const fraction = FRAMING_HEIGHT_FRACTION[framing];
+    const width = (subject.radius ?? 0) * 2;
+    const distance = Math.max(
+      (subject.height * fraction) / 2 / halfY,
+      (width * fraction) / 2 / halfX,
+    );
 
     // The staged bearing: subject → staged camera. A camera staged exactly on
     // the aim point has no bearing; fall back to +Z so the solve stays total.
@@ -383,6 +430,8 @@ export const compileCameraCoverage = (props: {
   clipId: string;
   entries: IAutoMovieCameraCoverageEntry[];
   shotDuration: number;
+  /** Frame width over height, as {@link compileCameraMove} reads it. */
+  aspect?: number;
 }): IAutoMovieShotCoverage => ({
   camera: props.camera.id,
   cameraMotion: compileCameraMove({
@@ -390,6 +439,7 @@ export const compileCameraCoverage = (props: {
     camera: props.camera,
     entries: props.entries,
     shotDuration: props.shotDuration,
+    aspect: props.aspect,
   }),
   cameraIntent: props.entries.map((entry) => entry.intent),
 });

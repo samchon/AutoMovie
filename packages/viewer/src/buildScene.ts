@@ -1,5 +1,6 @@
 import {
   IAutoMovieCamera,
+  IAutoMovieFog,
   IAutoMovieLight,
   IAutoMovieScene,
 } from "@automovie/interface";
@@ -88,8 +89,48 @@ export const buildScene = (
   const space = scene.space ?? null;
   if (space !== null) root.add(buildSpaceObject(space));
 
+  // The atmosphere is a scene property, not an object: it takes no top-level
+  // child, so the mask palette's child indices are untouched by declaring it.
+  applySceneFog(root, scene.fog);
+
   const cameras = scene.cameras.map(buildCamera);
   return { scene: root, cameras, lights };
+};
+
+/**
+ * Put the scene's declared atmosphere on a `three.js` scene, or clear it when
+ * nothing is declared.
+ *
+ * `FogExp2` is the exact law {@link IAutoMovieFog} documents and
+ * {@link sceneFogTransmittance} reproduces on the CPU: the shader's `1 -
+ * exp(-(density * depth)^2)` mix toward `color`. Nothing is converted on the
+ * way in. `density` is handed over verbatim, and the color is written with
+ * `setRGB` on the working (linear) color space, the same call
+ * {@link applyLightState} makes for a light, because `IAutoMovieColor` is linear
+ * by contract and a second convention here would make the fog and the key light
+ * disagree about what `0.5` means.
+ *
+ * Exported, and separate from {@link buildScene}, for the reason `buildLight`
+ * is: a host that assembles its own scene graph (the playground's film page,
+ * which is what the offline renderer captures) must apply the FILM's atmosphere
+ * through this one call rather than decorating its page with fog of its own. A
+ * page that fogs itself proves nothing about the production.
+ *
+ * Absent or `null` clears `scene.fog`, which is `three.js`'s own "no fog":
+ * every material compiles without `USE_FOG` and the frame is byte-identical to
+ * one rendered before the field existed.
+ */
+export const applySceneFog = (
+  scene: THREE.Scene,
+  fog: IAutoMovieFog | null | undefined,
+): void => {
+  if (fog === null || fog === undefined) {
+    scene.fog = null;
+    return;
+  }
+  const built = new THREE.FogExp2(0x000000, fog.density);
+  built.color.setRGB(fog.color.r, fog.color.g, fog.color.b);
+  scene.fog = built;
 };
 
 const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
@@ -100,12 +141,18 @@ const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
 
 /**
  * Build the `three.js` light one staged light plays on, aimed the way the
- * artifact says. The kind decides the class; every value is written by
- * {@link applyLightState}, the same call a shot's `lightMotions` uses each
- * frame, so placing a light and animating it cannot map `range` or `coneAngle`
- * two different ways; the two aimed kinds then get their target
- * ({@link aimLight}), which is the half of a light's placement `three.js` does
- * not read off a quaternion.
+ * artifact says. The kind decides the class; every value INCLUDING the
+ * placement is written by {@link applyLightState}, the same call a shot's
+ * `lightMotions` uses each frame, so placing a light and animating it cannot
+ * map `range`, `coneAngle` or the transform two different ways; the two aimed
+ * kinds then get their target ({@link aimLight}), which is the half of a light's
+ * placement `three.js` does not read off a quaternion.
+ *
+ * The placement is deliberately NOT applied a second time here. It used to be,
+ * back when `applyLightState` wrote everything except the transform; now that
+ * one writer owns the whole light, repeating the call would be a second
+ * statement of the same fact, and the kind of duplicate that survives right up
+ * until the two copies disagree.
  *
  * Exported because a host that assembles its own scene graph (the playground's
  * film page) must light it from `scene.lights` rather than from a hardcoded
@@ -116,7 +163,6 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
   if (light.type === "point") {
     const built = new THREE.PointLight();
     applyLightState(built, light);
-    applyTransform(built, light.transform);
     return built;
   }
   const built =
@@ -124,7 +170,6 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
       ? new THREE.DirectionalLight()
       : new THREE.SpotLight();
   applyLightState(built, light);
-  applyTransform(built, light.transform);
   return aimLight(built);
 };
 

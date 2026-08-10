@@ -41,8 +41,7 @@ And a shot cites a scene, which is the join that stops a production from
 accumulating footage nothing asked for.
 
 There is no population for actions. An action belongs to the subject that
-performs it -- `Army.advance` is a method on the class its specification
-describes. A choreography that spans subjects and belongs to none of them is a
+performs it, as a method on the class its specification describes. A choreography that spans subjects and belongs to none of them is a
 shot, and cites its scene.
 
 ## Subjects are classes
@@ -86,11 +85,11 @@ State these to whoever is authoring rather than letting them discover it.
 - **`docs/objects/` and `src/objects/` ship empty.** The prop slot has never had
   an inhabitant, because the shipped screenplay calls for no prop. A production
   that wants artillery, colours or a drum is the first to exercise that path.
-- **`docs/research/` is outside the ladder**, as are `docs/art-direction.md` and
-  `docs/historical-notes.md`. They cite nothing and nothing cites them, so
-  sourced research is currently unowned by the obligation graph. A production
-  whose value rests on sources should expect to keep that ledger by hand, and
-  should not assume the compiler is watching it.
+- **`docs/research/` is outside the ladder**, as is `docs/art-direction.md`.
+  They cite nothing and nothing cites them, so sourced research is currently
+  unowned by the obligation graph. A production whose value rests on sources
+  should expect to keep that ledger by hand, and should not assume the compiler
+  is watching it.
 - **`evidence/todo` is an error.** A `@todo` left in place fails the build with
   its own text. That is deliberate for a shipped production and hostile to a
   half-finished one, so a work-in-progress branch either pays its markers or

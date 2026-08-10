@@ -12,20 +12,23 @@ half-plane inside a shot breaks an otherwise hidden crossing.
 
 `IAutoMovieShotContract.styleIntent` records deliberate grammar exceptions.
 Each marker suppresses exactly one matching diagnostic; for example,
-`jump-cut` removes only `grammar-jump-cut`. Use
-`grammarDiagnosticsToReviewNotes` to file results through the existing visual
-review backlog. The edit-list layer supplies shot order; human or VLM aesthetic
-judgment remains outside this mechanical analyzer.
+`jump-cut` removes only `grammar-jump-cut`, and `axis-cross` only
+`grammar-axis-crossed`. Use `grammarDiagnosticsToReviewNotes` to file results
+through the existing visual review backlog. The edit-list layer supplies shot
+order; human or VLM aesthetic judgment remains outside this mechanical
+analyzer.
 
-## Capability-gated combat and world kit
+`readFilmGrammar` is the same pass with its suppression decision visible:
+besides the surviving findings it returns the declarations that excepted
+nothing, so a marker for a break the edit never makes can be reported rather
+than read as a registered intent. `analyzeFilmGrammar` is its findings half.
+The production compiler calls it over the assembled film timeline, so the edit
+is actually read rather than merely readable.
 
-`resolveFirearmVolley` requires an exact model profile, `shooter` trait, and
-typed firearm before it returns one deterministic event per shooter. Reload,
-misfire, accuracy interpolation, effective range, and seeded hit sampling stay
-separate so agent-owned behavior code can react to returned data.
+## Seeded primitives and world kit
 
 `seededValue` and `mixSeed` are the shared domain-separated PRNG primitives for
-effects, combat, formations, and general instances. The world kit constructs
+effects, formations, and general instances. The world kit constructs
 terrain/ramp surfaces, visible wall/building box proxies, and grid/scatter/
 route instance designs. `assertWorldPlacements` throws on overlapping or
 floating blocks, blocked routes, and unreachable landmarks.
@@ -65,10 +68,48 @@ by id and never by index.
 `LIGHT_CHANNEL_PROPERTIES` is the single table both halves read.
 `validateShotArtifact` admits a pointer only when the table has an entry whose
 `carries` accepts the staged light's kind, and holds every keyframe to that
-entry's `bounds` (the same range the scene gate enforces on the staged value);
-the applier writes through the same entry. Adding a property to
-`AutoMovieLightProperty` without giving it that pair does not compile, so the
-admitted set and the applied set cannot drift.
+entry's `bounds` (the same range the scene gate enforces on the staged value)
+and to its `valueFault`, the rule a whole keyframe value carries when the
+components are not the whole story; the applier writes through the same entry.
+Adding a property to `AutoMovieLightProperty` without giving it that pair does
+not compile, so the admitted set and the applied set cannot drift.
+
+A light's PLACEMENT is in that table too: `position` (`vec3`) and `rotation`
+(`quaternion`) key a light's direction and location like any other value. glTF
+gets a moving light by hanging it on a node and animating the node, but
+automovie stages lights outside `nodes`, so without these a light's direction
+would be fixed for the whole film. The kind split follows the physics: a
+directional light is infinitely distant and carries no `position`, a point light
+radiates every way and carries no `rotation`, a spot carries both. `scale` is
+deliberately not an axis — a punctual light has no extent for it to mean
+anything about. `rotation` is a `quaternion` rather than a `vec4` so the sampler
+slerps it, and its keyframes are held to unit length, the same rule the scene
+gate holds a staged transform to.
+
+## Light over a production
+
+`shot.lightMotions` runs on a shot's clock, which is seconds long. A production
+whose length is part of its subject states its sources once, on the STORY clock,
+through `IAutoMovieProductionLighting`, and every shot inherits their state at
+its own story moment:
+
+```ts
+inheritProductionLighting({ lighting, lights: scene.lights, pin, seconds });
+```
+
+`pin` is the shot's existing `IAutoMovieShotStoryTime`, so no second clock is
+introduced: `autoMovieStoryTime` maps the shot-local second onto the story
+second, and `resolveProductionLighting` answers with the same
+`resolveShotLighting` pass the per-shot axis uses. Two shots pinned an hour apart
+in the story inherit an hour apart however the edit cuts them, and a shot with a
+`rate` carries the source at its own pace.
+
+It is purely additive. No production lighting, or a shot with no story pin,
+returns the staged lights element by element unchanged. Otherwise the merge is by
+id: a staged light the production names is replaced in place, one it does not
+name comes back by identity, and a source no scene staged is appended after them.
+Hand the result to the applier that plays `shot.lightMotions` and the shot's own
+statement lands on top of the inherited one.
 
 The transform clips are unchanged: `cameraMotion`, `objectMotions`, and a
 coverage take still refuse every pointer channel, because `applyObjectMotion`
@@ -127,6 +168,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `text/`       | 결정적 문자열 비교(`compareCodeUnits`)                                                                                                              |
 | `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation`                                                                                                 |
 | `sound/` | 완성 필름 타임라인의 결정론적 사운드 계획·렌더링, 음소-비짐 변환, 파형·스펙트로그램 증거 |
+| `scene/` | 씬을 감싸는 대기: 안개 법칙과 그 밀도 해석 |
 
 ## 검증 티어 (현재 구현)
 

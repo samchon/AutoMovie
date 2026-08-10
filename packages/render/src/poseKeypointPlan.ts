@@ -1,15 +1,21 @@
 import {
+  foldRoot,
   playbackCursor,
+  projectToNdc,
+  resolveCameraAt,
   resolvePoseKeypoints,
   sampleMotion,
+  sceneFogTransmittance,
   sequenceTimeline,
 } from "@automovie/engine";
 import {
+  IAutoMovieCamera,
   IAutoMovieMotion,
   IAutoMovieScene,
   IAutoMovieSequence,
   IAutoMovieShot,
   IAutoMovieSkeleton,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 
 import {
@@ -27,6 +33,13 @@ import {
  * scene, or camera cannot be resolved, and an actor whose motion, skeleton, or
  * node cannot, simply contribute no keypoints rather than throwing: the sidecar
  * still covers every output frame.
+ *
+ * When the scene declares an atmosphere, each actor also carries the fog
+ * transmittance at its own depth
+ * ({@link IAutoMoviePoseKeypointActor.atmosphere}), derived through the engine's
+ * {@link sceneFogTransmittance}: the identical law the viewer hands the GPU, so
+ * the sidecar and the captured frame state the same film. A scene without fog
+ * omits the field and the sidecar is unchanged.
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *
@@ -104,6 +117,7 @@ const actorsAt = (
   const camera = scene.cameras.find((c) => c.id === shot.camera);
   if (camera === undefined) return [];
   const nodeById = new Map(scene.nodes.map((n) => [n.id, n]));
+  const fog = scene.fog ?? null;
 
   const actors: IAutoMoviePoseKeypointActor[] = [];
   for (const performance of shot.performances) {
@@ -128,10 +142,61 @@ const actorsAt = (
         time,
         aspect: lookups.aspect,
       }),
+      // The atmosphere in front of this actor, from the SAME declaration and
+      // the SAME law the viewer hands its shader. Spread conditionally rather
+      // than written as `undefined`, so a scene declaring no fog produces a
+      // sidecar without the key at all: byte-identical to one written before
+      // the field existed, which is the whole promise of an absent default.
+      //
+      // The actor's world root is the depth sample: its staged placement with
+      // the sampled pose root folded in ({@link foldRoot}), which is the same
+      // one-point subject `reviewVisualRead` frames against. The staged
+      // placement ALONE would be wrong wherever a clip carries the travel, the
+      // ordinary case: an actor walking away from the lens would keep the
+      // atmosphere it had at frame zero. A per-joint transmittance would
+      // multiply the sidecar's size for a difference smaller than a body's own
+      // depth.
+      ...(fog === null
+        ? {}
+        : {
+            atmosphere: sceneFogTransmittance(
+              fog,
+              cameraDepth(
+                camera,
+                shot.cameraMotion,
+                time,
+                foldRoot(node.transform, pose.root).translation,
+              ),
+            ),
+          }),
     });
   }
   return actors;
 };
+
+/**
+ * The camera-space depth of `point` at `time`: the distance along the camera's
+ * forward axis, which is the length the atmosphere is integrated over (and what
+ * the fog shader interpolates as `vFogDepth`).
+ *
+ * `projectToNdc` computes that depth as `-localZ` BEFORE its perspective
+ * divide, so the frustum shape plays no part in it: `halfY` and `aspect` only
+ * scale `ndcX`/`ndcY`, which this caller discards. Passing ones therefore says
+ * "no frustum needed" instead of restating the projection's own aspect default,
+ * which would be a second place for that default to drift from the first.
+ */
+const cameraDepth = (
+  camera: IAutoMovieCamera,
+  cameraMotion: IAutoMovieShot["cameraMotion"],
+  time: number,
+  point: IAutoMovieVector3,
+): number =>
+  projectToNdc(
+    resolveCameraAt(camera.transform, cameraMotion, camera.id, time),
+    point,
+    1,
+    1,
+  ).depth;
 
 /** `shot:duel` → `duel`; an unprefixed id is already the beat id. */
 const beatOf = (shotId: string): string =>

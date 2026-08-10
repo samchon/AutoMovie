@@ -15,6 +15,7 @@ import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleSer
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import { compareCodeUnits } from "./contentIdentity";
+import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 
 const PROJECT_MARKERS = [
@@ -55,10 +56,19 @@ export const openAutoMovieProduction = (props: {
   productionId?: string;
   /** Optional host-owned actual frame capture. */
   capture?: AutoMovieProductionFrameCapture;
+  /**
+   * Archetype catalogue this production registers.
+   *
+   * Omitted leaves the primitive catalogue the server ships with. A production
+   * that supplies its own builders registers them here, and every recipe naming
+   * something outside the registry is refused with a design diagnostic.
+   */
+  archetypes?: AutoMovieModelArchetypeRegistry;
 }): IAutoMovieProductionServices => {
   const project = AutoMovieProductionProject.open(
     findAutoMovieProjectRoot(props.projectRoot),
     props.productionId,
+    props.archetypes,
   );
   const statusCompiler = new AutoMovieProductionCompiler(project);
   const review = new AutoMovieProductionReviewService(project, () =>
@@ -87,6 +97,8 @@ export const compileAutoMovieProduction = (props: {
   productionId?: string;
   /** Highest atomic compiler gate. */
   scope: IAutoMovieCompileProjectInput["scope"];
+  /** Archetype catalogue this production registers. */
+  archetypes?: AutoMovieModelArchetypeRegistry;
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 

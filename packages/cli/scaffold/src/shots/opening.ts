@@ -1,36 +1,37 @@
 import { defineShot } from "@automovie/engine";
 import type {
+  IAutoMovieAcceptanceScenario,
   IAutoMovieDefinedShotContract,
   IAutoMovieProductionShotProgram,
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
-import { army } from "../formations/army";
-import { sentinel } from "../units/sentinel";
-import { signalField } from "../world/signalField";
+import { chorus } from "../formations/chorus";
+import { soloist } from "../units/soloist";
+import { plaza } from "../world/plaza";
 
 const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
-  beat: "signal",
+  beat: "cue",
   evidence: [
     {
-      reason: "This shot realizes the screenplay's visible signal action.",
+      reason: "This shot realizes the screenplay's visible cue action.",
       scene: "SCN-001",
-      claim: "signal-arm-readable",
+      claim: "cue-arm-readable",
     },
   ],
   durationSeconds: 6,
   participants: [
-    { kind: "actor", id: "sentinel" },
-    { kind: "formation", id: "army" },
+    { kind: "actor", id: "soloist" },
+    { kind: "formation", id: "chorus" },
   ],
   opening: [
     {
       id: "arm-lowered",
-      description: "The sentinel begins in a readable neutral stance.",
+      description: "The soloist begins in a readable neutral stance.",
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: "==",
@@ -42,12 +43,12 @@ const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
   ],
   closing: [
     {
-      id: "signal-held",
-      description: "The raised arm holds the signal at the final frame.",
+      id: "cue-held",
+      description: "The raised hand holds the cue at the final frame.",
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: ">=",
@@ -60,19 +61,19 @@ const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
   camera: {
     intent:
       "A full-body three-quarter view proves silhouette and pose-pass wiring.",
-    requiredSubjects: ["sentinel"],
+    requiredSubjects: ["soloist"],
     maxOcclusionRatio: 0.05,
   },
   events: [
     {
-      id: "signal-raised",
+      id: "cue-raised",
       kind: "reveal",
       window: { from: 1.5, to: 3 },
-      subjects: ["sentinel"],
+      subjects: ["soloist"],
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: ">=",
@@ -84,7 +85,7 @@ const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
   ],
   reviewFrames: [
     {
-      id: "signal-apex",
+      id: "cue-apex",
       time: 2,
       passes: ["beauty", "mask", "pose"],
     },
@@ -100,16 +101,15 @@ const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
     },
   ],
   durationSeconds: 6,
-  participants: [{ kind: "actor", id: "sentinel" }],
+  participants: [{ kind: "actor", id: "soloist" }],
   opening: [
     {
-      id: "signal-seen",
-      description:
-        "The answering shot begins from the established raised signal.",
+      id: "cue-seen",
+      description: "The answering shot begins from the established raised cue.",
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: ">=",
@@ -122,11 +122,11 @@ const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
   closing: [
     {
       id: "answer-held",
-      description: "The signal remains legible through the second shot.",
+      description: "The cue remains legible through the second shot.",
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: ">=",
@@ -139,19 +139,19 @@ const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
   camera: {
     intent:
       "A second full-body view proves that film rendering and review cannot stop after the opening shot.",
-    requiredSubjects: ["sentinel"],
+    requiredSubjects: ["soloist"],
     maxOcclusionRatio: 0.05,
   },
   events: [
     {
-      id: "signal-answered",
+      id: "cue-answered",
       kind: "reveal",
       window: { from: 3, to: 5 },
-      subjects: ["sentinel"],
+      subjects: ["soloist"],
       predicates: [
         {
           kind: "joint-angle",
-          actor: "sentinel",
+          actor: "soloist",
           bone: "leftUpperArm",
           axis: "abduction",
           operator: ">=",
@@ -163,49 +163,49 @@ const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
   ],
   reviewFrames: [
     {
-      id: "signal-answer",
+      id: "cue-answer",
       time: 4,
       passes: ["beauty", "mask", "pose"],
     },
   ],
 };
 
-const buildSignal = (
+const buildCue = (
   context: IAutoMovieShotBuildContext,
   openingAbduction: number,
 ): IAutoMovieProductionShotProgram => {
-  // The sentinel owns its own rig lookup, its raise-and-hold, and what it
+  // The soloist owns its own rig lookup, its raise-and-hold, and what it
   // stages. This shot states the beat and the frame; it does not rebuild the
   // figure.
-  const performer = sentinel.render(context, { from: openingAbduction });
+  const performer = soloist.render(context, { from: openingAbduction });
   const sceneId = `${context.contract.id}-scene`;
   return {
     actors: [...(performer.actors ?? [])],
     script: {
-      logline: "A lone sentinel raises a signal and the field answers.",
-      theme: "one readable gesture changes the field",
+      logline: "A soloist raises a hand and the plaza answers.",
+      theme: "one readable gesture changes the plaza",
       cast: [
         {
-          node: "sentinel",
-          character: "the sentinel",
-          modelRef: sentinel.modelRef(context),
+          node: "soloist",
+          character: "the soloist",
+          modelRef: soloist.modelRef(context),
         },
       ],
       beats: [
         {
           id: context.contract.beat,
           name: context.contract.beat,
-          summary: "the sentinel holds the authored signal",
+          summary: "the soloist holds the authored cue",
           durationHint: context.contract.durationSeconds,
         },
       ],
     },
     stage: {
-      scene: { id: sceneId, name: "starter signal ground" },
-      plan: "The sentinel stands centered while a fixed camera reads the arm.",
+      scene: { id: sceneId, name: "starter plaza ground" },
+      plan: "The soloist stands centered while a fixed camera reads the hand.",
       actors: [
         {
-          node: "sentinel",
+          node: "soloist",
           position: { x: 0, y: 0, z: 0 },
           facingDeg: 0,
         },
@@ -214,7 +214,7 @@ const buildSignal = (
         {
           node: "camera",
           position: { x: 0, y: 1.35, z: 4.8 },
-          lookAt: { kind: "node", node: "sentinel" },
+          lookAt: { kind: "node", node: "soloist" },
           fovDeg: 38,
         },
       ],
@@ -228,29 +228,29 @@ const buildSignal = (
         },
       ],
       // The world owns its ground, and the ground derives its extent from the
-      // unit standing on it. A polygon spelled out here would be a second
-      // field, and it is the one the viewer draws.
-      space: signalField.space(),
+      // group standing on it. A polygon spelled out here would be a second
+      // plaza, and it is the one the viewer draws.
+      space: plaza.space(),
     },
     blocking: {
       beat: context.contract.beat,
-      analysis: "The signal arm and whole silhouette must remain readable.",
+      analysis: "The cueing arm and whole silhouette must remain readable.",
       rationale: "One fixed full-body view proves the authored pose.",
-      actors: [{ node: "sentinel", beats: "raises and holds the signal arm" }],
+      actors: [{ node: "soloist", beats: "raises and holds the cueing arm" }],
       camera: {
         framing: "full",
         move: "static",
-        on: { kind: "node", node: "sentinel" },
+        on: { kind: "node", node: "soloist" },
       },
       duration: context.contract.durationSeconds,
     },
     performance: {
       beat: context.contract.beat,
-      plan: "Execute the source-computed signal clip under engine ROM gates.",
+      plan: "Execute the source-computed cue clip under engine ROM gates.",
       draft: [
         {
           verb: "enact",
-          actor: "sentinel",
+          actor: "soloist",
           start: 0,
           duration: context.contract.durationSeconds,
           clip: performer.clips![0]!.id,
@@ -262,11 +262,11 @@ const buildSignal = (
           duration: "auto",
           framing: "full",
           move: "static",
-          on: { kind: "node", node: "sentinel" },
+          on: { kind: "node", node: "soloist" },
         },
       ],
       revise: {
-        review: "The signal is readable and remains held at the final frame.",
+        review: "The cue is readable and remains held at the final frame.",
         final: null,
       },
       duration: context.contract.durationSeconds,
@@ -278,31 +278,31 @@ const buildSignal = (
     clips: [...(performer.clips ?? [])],
     formationMotions: context.contract.participants.some(
       (participant) =>
-        participant.kind === "formation" && participant.id === army.id,
+        participant.kind === "formation" && participant.id === chorus.id,
     )
-      ? // The unit owns its own advance. Spelling the cue out here loosened
-        // the intervals by five percent and turned the ranks four degrees,
-        // which `docs/characters/army.md` permits only as an authored dramatic
-        // event, and `Army.break` is what authors one.
+      ? // The group owns its own advance. Spelling the cue out here loosened
+        // the intervals by five percent and turned the rows four degrees,
+        // which `docs/characters/chorus.md` permits only as an authored
+        // dramatic event, and `Chorus.break` is what authors one.
         [
-          army.advance({
-            id: `${context.contract.id}-army-advance`,
+          chorus.advance({
+            id: `${context.contract.id}-chorus-advance`,
             start: 0,
             end: context.contract.durationSeconds,
           }),
         ]
       : [],
     effectCues:
-      context.world.effectZones.some((zone) => zone.id === "signal-smoke") &&
-      context.contract.events.some((event) => event.id === "signal-raised")
+      context.world.effectZones.some((zone) => zone.id === "plaza-haze") &&
+      context.contract.events.some((event) => event.id === "cue-raised")
         ? [
             {
-              id: `${context.contract.id}-signal-smoke`,
-              zone: "signal-smoke",
+              id: `${context.contract.id}-plaza-haze`,
+              zone: "plaza-haze",
               start: 1,
               end: 4,
               intensity: { from: 0.35, to: 0.8 },
-              event: "signal-raised",
+              event: "cue-raised",
             },
           ]
         : [],
@@ -312,24 +312,148 @@ const buildSignal = (
 /**
  * Opening source proves a neutral-to-raised transition.
  *
- * @evidence docs/{{name}}/04-scenes/SCN-001.md Realizes the raised arm this
- *   scene stages, with the ranks held ordered behind it.
+ * @evidence docs/{{name}}/04-scenes/SCN-001.md Realizes the raised hand this
+ *   scene stages, with the rows held in order behind it.
  */
 export const opening = defineShot("opening", {
   scene: "opening-scene",
   contract: OPENING_CONTRACT,
-  build: (context: IAutoMovieShotBuildContext) => buildSignal(context, 0),
+  build: (context: IAutoMovieShotBuildContext) => buildCue(context, 0),
 });
 
 /**
  * Answer source begins from the raised state established by the first shot.
  *
  * @evidence docs/{{name}}/04-scenes/SCN-002.md Realizes the answering motion
- *   this scene stages, keeping the army the visible consequence.
+ *   this scene stages, keeping the chorus the visible consequence.
  */
 export const answer = defineShot("answer", {
   scene: "answer-scene",
   contract: ANSWER_CONTRACT,
   build: (context: IAutoMovieShotBuildContext) =>
-    buildSignal(context, sentinel.signalAbduction),
+    buildCue(context, soloist.cueAbduction),
 });
+
+/**
+ * What the opening shot's frames have to show before it is accepted.
+ *
+ * A scenario lives beside the contract it measures because it cannot be written
+ * without it: the frame it inspects is one of the contract's own review frames,
+ * and naming that id from anywhere else would be a second chance to name a
+ * frame the shot never renders. The shot and the frame are therefore read from
+ * the registration above; only the pass and the observable expectation are
+ * authored, because which pass proves a claim, and what "proved" looks like in
+ * it, is a judgement no contract field contains.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-001.md Verifies the raised hand this
+ *   scene stages, against the frames the shot actually rendered.
+ */
+export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
+  {
+    id: `${opening.id}-beauty`,
+    evidence: [
+      {
+        reason:
+          "Beauty evidence verifies that the cue scene remains visually readable.",
+        scene: "SCN-001",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "beauty",
+      expectation:
+        "The full soloist, the raised hand, the promoted formation heroes, and the bounded plaza haze remain readable against the background.",
+    },
+    required: true,
+  },
+  {
+    id: `${opening.id}-effect-mask`,
+    evidence: [
+      {
+        reason: "The effect mask verifies the cue scene's bounded visual cue.",
+        scene: "SCN-001",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "mask",
+      expectation:
+        "The active plaza haze has visible bounded structural coverage without obscuring the soloist or the promoted formation heroes.",
+    },
+    required: true,
+  },
+  {
+    id: `${opening.id}-pose`,
+    evidence: [
+      {
+        reason:
+          "The pose frame is the owning visual proof for the raised-hand continuity claim.",
+        scene: "SCN-001",
+        claim: "cue-arm-readable",
+      },
+    ],
+    target: { kind: "shot", id: opening.id },
+    criterion: {
+      kind: "frame",
+      frame: OPENING_CONTRACT.reviewFrames[0]!.id,
+      pass: "pose",
+      expectation:
+        "The hips-to-head and raised-arm bone chains are visible in the pose pass.",
+    },
+    required: true,
+  },
+];
+
+/**
+ * What the answering shot's frames have to show before it is accepted.
+ *
+ * The second shot proves itself. A scenario that pointed back at the opening
+ * shot's frames would accept an answer nobody rendered, which is why these name
+ * this shot's own review frame and say what it alone has to carry.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-002.md Verifies the answering motion
+ *   this scene stages, against the frames the shot actually rendered.
+ */
+export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [
+  {
+    id: `${answer.id}-beauty`,
+    evidence: [
+      {
+        reason:
+          "Beauty evidence verifies that the answering scene reads as a consequence.",
+        scene: "SCN-002",
+      },
+    ],
+    target: { kind: "shot", id: answer.id },
+    criterion: {
+      kind: "frame",
+      frame: ANSWER_CONTRACT.reviewFrames[0]!.id,
+      pass: "beauty",
+      expectation:
+        "The answering cue remains readable in the second shot rather than being inferred from the opening shot.",
+    },
+    required: true,
+  },
+  {
+    id: `${answer.id}-pose`,
+    evidence: [
+      {
+        reason: "The pose frame verifies the authored answering gesture.",
+        scene: "SCN-002",
+      },
+    ],
+    target: { kind: "shot", id: answer.id },
+    criterion: {
+      kind: "frame",
+      frame: ANSWER_CONTRACT.reviewFrames[0]!.id,
+      pass: "pose",
+      expectation:
+        "The second shot carries its own current hips-to-head and raised-arm pose evidence.",
+    },
+    required: true,
+  },
+];

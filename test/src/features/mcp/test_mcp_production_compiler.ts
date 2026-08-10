@@ -556,7 +556,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       uses: [
         {
           production: "fixture-library",
-          consumer: { kind: "model-recipe" as const, id: "sentinel" },
+          consumer: { kind: "model-recipe" as const, id: "soloist" },
           reason: "The fixture casts this external model.",
         },
       ],
@@ -1389,7 +1389,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const recipeFile = path.join(
       fixture.root,
-      ".automovie/design/shared/models/sentinel.json",
+      ".automovie/design/shared/models/soloist.json",
     );
     const recipeBytes = fs.readFileSync(recipeFile);
     const recipeWithoutMaterial = JSON.parse(recipeBytes.toString("utf8"));
@@ -2369,7 +2369,7 @@ ${mutate(
 } from "@automovie/engine";
 import type { IAutoMovieShotBuildContext } from "@automovie/interface";
 
-import { sentinel } from "./sentinel";
+import { soloist } from "./soloist";
 
 class Staged extends AutoMovieSubject<null> {
   public readonly id = "staged";
@@ -2381,7 +2381,7 @@ class Staged extends AutoMovieSubject<null> {
   public render(
     context: IAutoMovieShotBuildContext,
   ): IAutoMovieSubjectContribution {
-    return sentinel.render(context, { from: 0 });
+    return soloist.render(context, { from: 0 });
   }
 }
 
@@ -2405,7 +2405,7 @@ export const ensemble = new Ensemble();
       mutate(
         `import { ensemble } from "../units/ensemble";
 ${original}`,
-        "const performer = sentinel.render(context, { from: openingAbduction });",
+        "const performer = soloist.render(context, { from: openingAbduction });",
         "const performer = ensemble.render(context);",
       ),
     );
@@ -2430,8 +2430,8 @@ ${original}`,
       mutate(
         `import { worldSurfaceHeight } from "@automovie/engine";
 ${original}`,
-        "  const performer = sentinel.render(context, { from: openingAbduction });",
-        `  if (signalField.ground.heightAt({ x: 0, z: 0 }) !== 0)
+        "  const performer = soloist.render(context, { from: openingAbduction });",
+        `  if (plaza.ground.heightAt({ x: 0, z: 0 }) !== 0)
     throw new Error("level ground must answer zero through the engine");
   if (
     worldSurfaceHeight(
@@ -2450,7 +2450,7 @@ ${original}`,
     ) !== 6
   )
     throw new Error("a plane must answer origin plus both slopes");
-  const performer = sentinel.render(context, { from: openingAbduction });`,
+  const performer = soloist.render(context, { from: openingAbduction });`,
       ),
     );
     TestValidator.equals(
@@ -2546,7 +2546,7 @@ ${original}`,
         item.phase === "source" &&
         item.target === "shot:opening" &&
         item.message.includes(
-          'motion skeleton "missing-skeleton" does not match target skeleton "automovie:skeleton:sentinel"',
+          'motion skeleton "missing-skeleton" does not match target skeleton "automovie:skeleton:soloist"',
         ),
     );
     if (missingSkeletonIsRejected === false)
@@ -3174,7 +3174,7 @@ ${original}`,
           () =>
             project.setModelRecipe({
               ...modelRecipe(),
-              id: "formation-sentinel",
+              id: "formation-soloist",
               role: "prop",
               archetype: "primitive-prop",
               parameters: { shape: "sphere", radius: 0.25 },
@@ -3187,7 +3187,7 @@ ${original}`,
           () =>
             project.setFormationDesign({
               ...formationDesign(),
-              modelRecipe: "formation-sentinel",
+              modelRecipe: "formation-soloist",
             }).accepted,
         ],
         [
@@ -3196,7 +3196,7 @@ ${original}`,
             setProductionFixtureShotContract(project, {
               ...shotContract(),
               participants: [
-                { kind: "actor", id: "sentinel" },
+                { kind: "actor", id: "soloist" },
                 { kind: "formation", id: "line" },
               ],
             }).accepted,
@@ -3290,7 +3290,7 @@ ${original}`,
         [
           "  output.stage.set = [{",
           '    node: "formation:line:slot:000001",',
-          '    model: "sentinel",',
+          '    model: "soloist",',
           "    position: { x: 0, y: 0, z: 0 },",
           "  }];",
         ].join("\n"),
@@ -3315,7 +3315,7 @@ ${original}`,
     );
     project.setFormationDesign({
       ...formationDesign(),
-      modelRecipe: "formation-sentinel",
+      modelRecipe: "formation-soloist",
     });
     setProductionFixtureShotContract(project, shotContract());
     project.eraseDesignArtifact(
@@ -3323,7 +3323,7 @@ ${original}`,
       "restore the one-shot compiler fixture after formation witness coverage",
     );
     project.eraseDesignArtifact(
-      { kind: "model", id: "formation-sentinel" },
+      { kind: "model", id: "formation-soloist" },
       "remove the formation-only recipe after witness coverage",
     );
 
@@ -3351,7 +3351,7 @@ ${original}`,
         {
           target: {
             kind: "design",
-            design: { kind: "model", id: "sentinel" },
+            design: { kind: "model", id: "soloist" },
           },
           state: "incomplete",
           ...fingerprints,

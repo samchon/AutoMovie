@@ -88,7 +88,7 @@ export const motionToClip = (props: {
    * Node-id prefix applied to every lowered node AND every clip channel ref
    * (root and bones alike). Defaults to `""`: the bare single-actor naming. A
    * multi-actor graph (see `sceneToNodes`) passes the placement prefix (e.g.
-   * `"knightA/"`) so each actor's channels drive its own subtree.
+   * `"figureA/"`) so each actor's channels drive its own subtree.
    */
   nodePrefix?: string;
 }): IAutoMovieMotionClipBridge => {

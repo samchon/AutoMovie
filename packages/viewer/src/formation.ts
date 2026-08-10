@@ -1,7 +1,11 @@
 import {
   composeFormationHeroTransform,
+  formationCadenceSegments,
+  formationSlotPosition,
   intersectsPerspectiveFrustumSphere,
+  rotateFormationLocalOffset,
   sampleFormationMotion,
+  sampleFormationSlotMotion,
   seededValue,
   selectFormationLod,
 } from "@automovie/engine";
@@ -10,6 +14,7 @@ import {
   IAutoMovieCompiledFormationLod,
   IAutoMovieFormationMotion,
   IAutoMovieFormationSlot,
+  IAutoMovieFormationSlotMotion,
   IAutoMovieModel,
   IAutoMovieTransform,
 } from "@automovie/interface";
@@ -17,8 +22,19 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import { buildModel } from "./buildModel";
+import {
+  IAutoMovieFormationCycle,
+  applyFormationCycleCadence,
+  applyFormationCycleMaterial,
+  bakeFormationCycle,
+  instancedModelParts,
+} from "./formationCycle";
 
-export { sampleFormationMotion, selectFormationLod } from "@automovie/engine";
+export {
+  sampleFormationMotion,
+  sampleFormationSlotMotion,
+  selectFormationLod,
+} from "@automovie/engine";
 export type {
   IAutoMovieFormationLodInput,
   IAutoMovieFormationLodSelection,
@@ -32,12 +48,21 @@ export interface IAutoMovieFormationViewerStats {
    * `near` and `far` count anonymous instance slots. `hero` counts promoted
    * hero objects still inside the frustum instead, because an anonymous slot
    * can never select that tier: the compiler drops the hero tier from the
-   * anonymous LOD list. Anonymous accounting is therefore `near + far +
-   * culled`, and the hero count belongs beside it rather than inside it.
+   * anonymous LOD list. Anonymous accounting is therefore the sum of `near`,
+   * `far`, `culled` and `removed`, and the hero count belongs beside it rather
+   * than inside it.
    */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
   /** Anonymous slots rejected by camera-frustum chunk culling. */
   culled: number;
+  /**
+   * Anonymous slots a per-member cue has taken out of the shot at this time.
+   *
+   * Counted apart from `culled`, because the two are different claims: a culled
+   * member is off camera and would be drawn if the camera turned, while a
+   * removed one is not in the shot at all.
+   */
+  removed: number;
   /** Named heroes kept outside instance batches. */
   heroes: number;
 }
@@ -64,19 +89,57 @@ interface IChunkObject {
   slots: IAutoMovieFormationSlot[];
   tiers: Map<IAutoMovieCompiledFormationLod["tier"], THREE.InstancedMesh>;
   selected: IAutoMovieCompiledFormationLod["tier"] | null;
+  /** Members of this chunk a cue has taken out at the current time. */
+  removed: number;
+}
+
+/**
+ * One member a per-member cue names, found once at build rather than per frame.
+ *
+ * The channel is sparse and its whole promise is that a crowd does not pay for
+ * it, so the members it singles out are located once and the per-frame work is
+ * proportional to how many there are. A slot named but not found here — a
+ * promoted hero, or an index outside the unit — simply has no instance to
+ * write, which is what the compiler gate already refuses at compile time.
+ */
+interface ISlotException {
+  /** Zero-based slot inside the whole formation. */
+  slot: number;
+  /** The chunk whose instance buffers hold this member. */
+  chunk: IChunkObject;
+  /** This member's index inside that chunk's anonymous slots. */
+  index: number;
+  /** This member's designed placement, kept so it can be re-derived cheaply. */
+  designed: IAutoMovieFormationSlot;
 }
 
 /**
  * Build one compact formation as chunked instance batches.
  *
  * Heroes are deliberately absent: the compiler promoted them to explicit scene
- * nodes. Each LOD recipe is flattened into one static mesh, keeping exactly one
- * 64-byte instance matrix per anonymous slot and tier.
+ * nodes. Each LOD recipe is flattened into one mesh, keeping exactly one
+ * 64-byte instance matrix and one 4-byte phase scalar per anonymous slot and
+ * tier.
+ *
+ * Flat does not mean frozen. When the tier's runtime model declares gaits, each
+ * is baked once into a part-matrix table and every member of every chunk reads
+ * the playing table at its own seeded phase, so a crowd walks instead of
+ * sliding across the ground in one shared attitude. What it performs, and how
+ * fast, comes from the unit's own cues: a unit that covers ground steps as many
+ * times as that ground requires, one that holds does not step at all, and one
+ * that changes action changes table. Nothing about that is per member: the
+ * instance buffers are the same size they were, and a frame advances the whole
+ * unit by writing two floats.
  */
 export const buildInstancedFormation = (input: {
   formation: IAutoMovieCompiledFormation;
   models: ReadonlyMap<string, IAutoMovieModel>;
   motions?: readonly IAutoMovieFormationMotion[];
+  /**
+   * Sparse per-member cues, so one member of a crowd can do what its neighbours
+   * do not: leave, stop, step out, or stop being drawn at all.
+   */
+  slotMotions?: readonly IAutoMovieFormationSlotMotion[];
   /** Explicit scene wrappers keyed by promoted hero actor id. */
   heroObjects?: ReadonlyMap<string, THREE.Object3D>;
   /** Pose-root objects whose actual world positions drive hero culling. */
@@ -98,10 +161,40 @@ export const buildInstancedFormation = (input: {
         flattenInstancedModel(
           model,
           `Formation "${input.formation.id}" LOD "${lod.tier}"`,
+          {},
         ),
       ] as const;
     }),
   );
+  // One injection per tier, not per chunk: the tier owns the baked table and
+  // the uniform cells, and every chunk drawing that tier shares both. A
+  // material object can repeat inside one tier when several parts share a
+  // palette entry, so the set is what keeps the injection from stacking.
+  const cycles = [...representations.values()].flatMap((representation) => {
+    const cycle = representation.cycle;
+    if (cycle === null) return [];
+    for (const material of new Set(representation.materials))
+      applyFormationCycleMaterial(material, cycle);
+    return [cycle];
+  });
+  // A cue that calls for a gait none of the unit's figures declares is an
+  // author's mistake, not a taste to be quietly overruled: the crowd would
+  // perform something else for the whole cue and every frame would look
+  // deliberate. A unit whose figures declare nothing at all is a crowd of props
+  // and has no repertoire to disagree with.
+  const repertoire = new Set(
+    cycles.flatMap((cycle) => [...cycle.takes.keys()]),
+  );
+  if (repertoire.size !== 0)
+    for (const cue of input.motions ?? [])
+      if (
+        cue.formation === input.formation.id &&
+        cue.gait !== undefined &&
+        repertoire.has(cue.gait) === false
+      )
+        throw new Error(
+          `Formation "${input.formation.id}" cue "${cue.id}" calls for gait "${cue.gait}", which no runtime model of this unit declares.`,
+        );
   const selectionRadius = input.formation.projectionRadius;
   const chunks: IChunkObject[] = input.formation.chunks.map((chunk) => {
     const slots: IAutoMovieFormationSlot[] = [];
@@ -128,6 +221,8 @@ export const buildInstancedFormation = (input: {
         slots.length,
       );
       mesh.name = `${input.formation.id}:${chunk.index}:${lod.tier}`;
+      if (representation.cycle !== null)
+        mesh.userData.automovieFormationCycle = representation.cycle;
       slots.forEach((slot, index) => {
         mesh.setMatrixAt(index, slotMatrix(slot, input.formation.anchor));
       });
@@ -158,8 +253,28 @@ export const buildInstancedFormation = (input: {
       slots,
       tiers,
       selected: null,
+      removed: 0,
     };
   });
+  // Every member a cue singles out, located once. Nothing is stored for the
+  // members no cue names, which is what keeps a crowd of a hundred thousand
+  // paying for the three exceptions it has and not for its own size.
+  const exceptions: ISlotException[] = [];
+  for (const slot of new Set(
+    (input.slotMotions ?? []).flatMap((cue) =>
+      cue.formation === input.formation.id ? cue.slots : [],
+    ),
+  )) {
+    const chunk = chunks.find(
+      (candidate) =>
+        slot >= candidate.runtime.start &&
+        slot < candidate.runtime.start + candidate.runtime.count,
+    );
+    const index =
+      chunk?.slots.findIndex((member) => member.slot === slot) ?? -1;
+    if (chunk === undefined || index < 0) continue;
+    exceptions.push({ slot, chunk, index, designed: chunk.slots[index]! });
+  }
   let spacing = { lateral: 1, depth: 1 };
   const initialHeroSources = new Map(
     [...(input.heroObjects ?? [])].map(
@@ -169,6 +284,7 @@ export const buildInstancedFormation = (input: {
   const stats: IAutoMovieFormationViewerStats = {
     visible: { hero: 0, near: 0, far: 0 },
     culled: 0,
+    removed: 0,
     heroes: input.formation.heroes.length,
   };
   return {
@@ -177,11 +293,23 @@ export const buildInstancedFormation = (input: {
     update(camera, viewportHeight, time, heroSources): void {
       stats.visible = { hero: 0, near: 0, far: 0 };
       stats.culled = 0;
+      stats.removed = 0;
       const sampled = sampleFormationMotion(
         input.motions ?? [],
         input.formation.id,
         time ?? 0,
       );
+      // What the unit has done up to this instant, cut into the intervals its
+      // cadence is made of. Every member lands somewhere else in the resulting
+      // cycle, because the phase it adds is its own; every tier folds the same
+      // intervals against its own figure's strides, because a near stickman and
+      // a far one cover ground with the same feet.
+      const cadence = formationCadenceSegments(
+        input.motions ?? [],
+        input.formation.id,
+        time ?? 0,
+      );
+      for (const cycle of cycles) applyFormationCycleCadence(cycle, cadence);
       root.position.set(
         input.formation.anchor.x + sampled.translation.x,
         input.formation.anchor.y + sampled.translation.y,
@@ -211,6 +339,61 @@ export const buildInstancedFormation = (input: {
             });
             mesh.instanceMatrix.needsUpdate = true;
           }
+      }
+      // The members singled out, written after the unit-wide pass so a spacing
+      // rewrite cannot undo them. Only the exceptions are touched, so this costs
+      // what the author authored rather than what the crowd holds.
+      //
+      // The offset is authored in the unit's own frame and is turned by the
+      // unit's designed heading alone, because the scene graph above already
+      // carries the cue's own turn and its travel. That is the same composition
+      // the engine's placement performs in one step for a gate that has no
+      // scene graph to carry half of it.
+      for (const exception of exceptions) exception.chunk.removed = 0;
+      for (const exception of exceptions) {
+        const state = sampleFormationSlotMotion(
+          input.slotMotions ?? [],
+          input.formation.id,
+          exception.slot,
+          time ?? 0,
+        );
+        const offset = rotateFormationLocalOffset(
+          state.offset,
+          input.formation.facingDeg,
+        );
+        const position = formationSpacingOffset(
+          exception.designed.position,
+          input.formation.anchor,
+          spacing,
+          input.formation.facingDeg,
+        );
+        position.x += offset.x;
+        position.y += offset.y;
+        position.z += offset.z;
+        // A member out of the shot is written at zero scale rather than dropped
+        // from the buffer. Restacking an instance buffer would renumber every
+        // member after it and cost the crowd's own size every time one member
+        // left; a degenerate matrix rasterizes nothing and costs one write.
+        const matrix = new THREE.Matrix4().compose(
+          position,
+          new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            THREE.MathUtils.degToRad(
+              exception.designed.facingDeg + state.facingOffsetDeg,
+            ),
+          ),
+          state.present
+            ? new THREE.Vector3(1, 1, 1)
+            : new THREE.Vector3(0, 0, 0),
+        );
+        for (const mesh of exception.chunk.tiers.values()) {
+          mesh.setMatrixAt(exception.index, matrix);
+          mesh.instanceMatrix.needsUpdate = true;
+        }
+        if (state.present === false) {
+          ++exception.chunk.removed;
+          ++stats.removed;
+        }
       }
       root.updateMatrixWorld(true);
       camera.updateMatrixWorld(true);
@@ -303,7 +486,7 @@ export const buildInstancedFormation = (input: {
         );
         if (frustum.intersectsSphere(sphere) === false) {
           for (const mesh of chunk.tiers.values()) mesh.visible = false;
-          stats.culled += chunk.runtime.anonymousCount;
+          stats.culled += chunk.runtime.anonymousCount - chunk.removed;
           continue;
         }
         const distance = Math.max(0.001, cameraPosition.distanceTo(center));
@@ -322,60 +505,29 @@ export const buildInstancedFormation = (input: {
         chunk.selected = selected.tier;
         for (const [tier, mesh] of chunk.tiers)
           mesh.visible = tier === selected.tier;
-        stats.visible[selected.tier] += chunk.runtime.anonymousCount;
+        stats.visible[selected.tier] +=
+          chunk.runtime.anonymousCount - chunk.removed;
       }
     },
   };
 };
 
-/** Regenerate one exact slot from compact runtime parameters. */
+/**
+ * Regenerate one exact slot from compact runtime parameters.
+ *
+ * The placement itself is the engine's. A viewer that re-derived the layout
+ * arithmetic would be a second answer to the question the compiler already
+ * answered, and the pixels would be the second one: that is how a dressed unit
+ * came to be drawn on the exact lattice its compiler had deliberately broken,
+ * and it is how a crowd on a rise would come to be drawn flat. What stays here
+ * is only what a compiled record spells differently from a design: heroes are
+ * promoted slots rather than overrides.
+ */
 export const regenerateFormationSlot = (
   formation: IAutoMovieCompiledFormation,
   slot: number,
 ): IAutoMovieFormationSlot => {
-  if (
-    Number.isSafeInteger(slot) === false ||
-    slot < 0 ||
-    slot >= formation.count
-  )
-    throw new RangeError(
-      `Formation "${formation.id}" slot ${slot} is outside 0..${formation.count - 1}.`,
-    );
-  const layout = formation.layout;
-  let x: number;
-  let z: number;
-  if (layout.kind === "line" || layout.kind === "column") {
-    const rank =
-      layout.kind === "line"
-        ? Math.floor(slot / layout.files)
-        : slot % layout.ranks;
-    const file =
-      layout.kind === "line"
-        ? slot % layout.files
-        : Math.floor(slot / layout.ranks);
-    x = (file - (layout.files - 1) / 2) * layout.spacing.lateral;
-    z = rank * layout.spacing.depth;
-  } else if (layout.kind === "wedge") {
-    const row = Math.floor(Math.sqrt(slot));
-    x = (slot - row * row - row) * layout.spacing.lateral;
-    z = row * layout.spacing.depth;
-  } else if (layout.kind === "arc") {
-    const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
-    const radians = THREE.MathUtils.degToRad((ratio - 0.5) * layout.arcDegrees);
-    x = Math.sin(radians) * layout.radius;
-    z = Math.cos(radians) * layout.radius;
-  } else {
-    const radius =
-      Math.sqrt(seededValue(formation.seed, layout.seed, slot, 0)) *
-      layout.radius;
-    const angle =
-      seededValue(formation.seed, layout.seed, slot, 1) * Math.PI * 2;
-    x = Math.cos(angle) * radius;
-    z = Math.sin(angle) * radius;
-  }
-  const radians = THREE.MathUtils.degToRad(formation.facingDeg);
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
+  const position = formationSlotPosition(formation, slot);
   const actor =
     formation.heroes.find((hero) => hero.slot === slot)?.actor ?? null;
   return {
@@ -385,37 +537,75 @@ export const regenerateFormationSlot = (
       `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
     actor,
     modelRecipe: formation.modelRecipe,
-    position: {
-      x: formation.anchor.x + x * cosine + z * sine,
-      y: formation.anchor.y,
-      z: formation.anchor.z - x * sine + z * cosine,
-    },
+    position,
     facingDeg: formation.facingDeg,
     motionPhase: seededValue(formation.seed, slot, 0x70686173),
   };
 };
 
-/** Flatten one static runtime model for a chunked instancing consumer. */
+/**
+ * Flatten one runtime model for a chunked instancing consumer.
+ *
+ * The merge is still one geometry per LOD tier, so a chunk is still one draw
+ * call, but every vertex now also carries the index of the rigid part it
+ * belongs to. That single float is what lets a shader put the part where a
+ * cycle says it should be instead of where the rest pose left it, and it costs
+ * four bytes per vertex of shared geometry rather than anything per member.
+ *
+ * Passing `bake` additionally bakes the model's whole repertoire
+ * ({@link bakeFormationCycle}); a model that declares no gait, or carries no
+ * skeleton to move, returns a null cycle and renders exactly as before.
+ */
 export const flattenInstancedModel = (
   model: IAutoMovieModel,
   owner = `Instanced runtime model "${model.id}"`,
-): { geometry: THREE.BufferGeometry; materials: THREE.Material[] } => {
+  bake?: {
+    /** Even samples across the cycle. */
+    samples?: number;
+  },
+): {
+  geometry: THREE.BufferGeometry;
+  materials: THREE.Material[];
+  cycle: IAutoMovieFormationCycle | null;
+} => {
   const built = buildModel(model);
   built.object.updateMatrixWorld(true);
+  const parts = instancedModelParts(built.object);
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
-  built.object.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh !== true) return;
-    const mesh = object as THREE.Mesh;
+  parts.forEach((mesh, index) => {
     if (Array.isArray(mesh.material))
       throw new Error(`${owner} has a multi-material source mesh.`);
-    geometries.push(mesh.geometry.clone().applyMatrix4(mesh.matrixWorld));
+    const flattened = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+    flattened.setAttribute(
+      "automoviePart",
+      new THREE.Float32BufferAttribute(
+        new Float32Array(flattened.getAttribute("position")!.count).fill(index),
+        1,
+      ),
+    );
+    geometries.push(flattened);
     materials.push(mesh.material);
   });
   const geometry = mergeGeometries(geometries, true);
   if (geometry === null || materials.length === 0)
     throw new Error(`${owner} cannot be flattened for instancing.`);
-  return { geometry, materials };
+  // Geometry first, then the bake: baking poses the built object, and the
+  // flattened vertices above are the rest-space ones the bake's matrices are
+  // measured against.
+  return {
+    geometry,
+    materials,
+    cycle:
+      bake === undefined
+        ? null
+        : bakeFormationCycle({
+            model,
+            built,
+            parts,
+            samples: bake.samples,
+          }),
+  };
 };
 
 const slotMatrix = (

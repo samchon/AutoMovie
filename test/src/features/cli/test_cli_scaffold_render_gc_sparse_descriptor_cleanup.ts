@@ -45,38 +45,16 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
     catchVariables: string[];
     cleanup: string;
     containerKind: string;
-    containerStatements: number;
     failureHolder: string;
     finallyDigest: string;
     finallySubstantive: { digest: string; tokens: number };
     helper: string;
-    index: number;
     resource: string;
     tryBody: string;
     tryDigest: string;
     trySubstantive: { digest: string; tokens: number };
   }> = [];
-  const replacements: Array<{ end: number; start: number; text: string }> = [];
-  let outerDigest = "";
   const visit = (node: ts.Node): void => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "test_cli_scaffold" &&
-      node.initializer !== undefined &&
-      ts.isArrowFunction(node.initializer) &&
-      ts.isBlock(node.initializer.body)
-    ) {
-      const outer = node.initializer.body.statements.find(
-        (statement): statement is ts.TryStatement =>
-          ts.isTryStatement(statement) &&
-          statement.finallyBlock
-            ?.getText(source)
-            .includes("preserveCliRootFixtureCleanup") === true,
-      );
-      if (outer !== undefined)
-        outerDigest = digestText(outer.tryBlock.getText(source));
-    }
     if (
       ts.isTryStatement(node) &&
       node.catchClause !== undefined &&
@@ -122,12 +100,6 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
             const index = statements.indexOf(node);
             const failureHolder = statements[index - 1];
             if (failureHolder !== undefined) {
-              const cleanupBody = cleanup.initializer.body;
-              const originalCleanup = ts.isBlock(cleanupBody)
-                ? cleanupBody.statements
-                    .map((entry) => entry.getText(source))
-                    .join("\n")
-                : `${cleanupBody.getText(source)};`;
               lifecycles.push({
                 catchBodies: node.catchClause.block.statements.map((entry) =>
                   compact(entry, source),
@@ -138,7 +110,6 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
                     : [compact(node.catchClause.variableDeclaration, source)],
                 cleanup: compact(cleanup.initializer, source),
                 containerKind: ts.SyntaxKind[node.parent.parent.kind]!,
-                containerStatements: statements.length,
                 failureHolder: compact(failureHolder, source),
                 finallyDigest: digestText(node.finallyBlock.getText(source)),
                 finallySubstantive: leafTokenContract(
@@ -146,7 +117,6 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
                   source,
                 ),
                 helper: call.expression.getText(source),
-                index,
                 resource: label.initializer.text,
                 tryBody: compact(node.tryBlock, source),
                 tryDigest: digestText(node.tryBlock.getText(source)),
@@ -154,11 +124,6 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
                   node.tryBlock.statements,
                   source,
                 ),
-              });
-              replacements.push({
-                end: node.end,
-                start: failureHolder.getStart(source),
-                text: `try ${node.tryBlock.getText(source)} finally {\n${originalCleanup}\n}`,
               });
             }
           }
@@ -168,19 +133,16 @@ const sparseDescriptorCleanupContract = (text: string): unknown => {
     ts.forEachChild(node, visit);
   };
   visit(source);
-  let parent = text;
-  for (const replacement of replacements.sort(
-    (left, right) => right.start - left.start,
-  ))
-    parent = `${parent.slice(0, replacement.start)}${replacement.text}${parent.slice(replacement.end)}`;
+  // The guarded body, its teardown and the helper that preserves the failure --
+  // and nothing about the file around them. A digest of the whole owner, or of
+  // the owner with this guard stripped out, moves whenever any of the two
+  // thousand statements beside it is edited, which says nothing about whether
+  // this descriptor is closed.
   return {
     lifecycles,
-    outerDigest,
-    parentDigest: digestText(parent.replace(/\s+/g, "")),
     parseDiagnostics: (
       source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
     ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
-    rootDigest: digestText(text.replace(/\s+/g, "")),
   };
 };
 
@@ -197,7 +159,6 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
           catchVariables: ["error"],
           cleanup: "()=>fs.closeSync(gcSparseDescriptor)",
           containerKind: "TryStatement",
-          containerStatements: 2011,
           failureHolder:
             "letgcSparseDescriptorFailure:{error:unknown}|undefined;",
           finallyDigest:
@@ -208,7 +169,6 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
             tokens: 27,
           },
           helper: "preserveCliHarnessCleanup",
-          index: 1447,
           resource: "render GC sparse publication descriptor",
           tryBody: "{fs.ftruncateSync(gcSparseDescriptor,gcSparseBytes);}",
           tryDigest:
@@ -220,13 +180,7 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
           },
         },
       ],
-      outerDigest:
-        "3e3b4c3788de5b86fd353a83095a1a3b413d6c46ef16bc8fb71f7d94bba17691",
-      parentDigest:
-        "e2a05813309b38ac746ed8a655ff11e4207dc08c61ad9ef922bd714dcbab585d",
       parseDiagnostics: [],
-      rootDigest:
-        "5c027063e78d33381ab4d273f893c6a811b946e24e2eded64f98a9d3c33d45fd",
     };
     TestValidator.equals(
       "CLI scaffold protects sparse publication descriptor cleanup",

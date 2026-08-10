@@ -145,6 +145,28 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  packages/archetypes:
+    dependencies:
+      '@automovie/engine':
+        specifier: workspace:^
+        version: link:../engine
+      '@automovie/interface':
+        specifier: workspace:^
+        version: link:../interface
+    devDependencies:
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.26.0
+      rimraf:
+        specifier: catalog:utils
+        version: 6.1.3
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.26.0
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/cli:
     dependencies:
       '@automovie/engine':
@@ -275,6 +297,9 @@ importers:
 
   packages/mcp:
     dependencies:
+      '@automovie/archetypes':
+        specifier: workspace:^
+        version: link:../archetypes
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
@@ -327,6 +352,9 @@ importers:
 
   packages/playground:
     dependencies:
+      '@automovie/archetypes':
+        specifier: workspace:^
+        version: link:../archetypes
       '@automovie/engine':
         specifier: workspace:^
         version: link:../engine
@@ -447,6 +475,9 @@ importers:
 
   test:
     dependencies:
+      '@automovie/archetypes':
+        specifier: workspace:^
+        version: link:../packages/archetypes
       '@automovie/cli':
         specifier: workspace:^
         version: link:../packages/cli

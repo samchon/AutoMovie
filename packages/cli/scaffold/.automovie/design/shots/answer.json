@@ -13,16 +13,16 @@
   ],
   "durationSeconds": 6,
   "participants": [
-    { "kind": "actor", "id": "sentinel" }
+    { "kind": "actor", "id": "soloist" }
   ],
   "opening": [
     {
-      "id": "signal-seen",
-      "description": "The answering shot begins from the established raised signal.",
+      "id": "cue-seen",
+      "description": "The answering shot begins from the established raised cue.",
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": ">=",
@@ -35,11 +35,11 @@
   "closing": [
     {
       "id": "answer-held",
-      "description": "The signal remains legible through the second shot.",
+      "description": "The cue remains legible through the second shot.",
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": ">=",
@@ -51,19 +51,19 @@
   ],
   "camera": {
     "intent": "A second full-body view proves that film rendering and review cannot stop after the opening shot.",
-    "requiredSubjects": ["sentinel"],
+    "requiredSubjects": ["soloist"],
     "maxOcclusionRatio": 0.05
   },
   "events": [
     {
-      "id": "signal-answered",
+      "id": "cue-answered",
       "kind": "reveal",
       "window": { "from": 3, "to": 5 },
-      "subjects": ["sentinel"],
+      "subjects": ["soloist"],
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": ">=",
@@ -75,7 +75,7 @@
   ],
   "reviewFrames": [
     {
-      "id": "signal-answer",
+      "id": "cue-answer",
       "time": 4,
       "passes": ["beauty", "mask", "pose"]
     }

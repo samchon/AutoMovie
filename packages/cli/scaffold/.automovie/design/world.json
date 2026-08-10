@@ -3,7 +3,7 @@
   "units": "meter",
   "landmarks": [
     {
-      "id": "signal-ground",
+      "id": "plaza-center",
       "position": {
         "x": 0,
         "y": 0,
@@ -44,7 +44,7 @@
   "routes": [],
   "effectRecipes": [
     {
-      "id": "battle-smoke",
+      "id": "plaza-haze-smoke",
       "kind": "smoke",
       "seed": 1416,
       "emission": {
@@ -85,8 +85,8 @@
   ],
   "effectZones": [
     {
-      "id": "signal-smoke",
-      "recipe": "battle-smoke",
+      "id": "plaza-haze",
+      "recipe": "plaza-haze-smoke",
       "bounds": {
         "min": {
           "x": -4,

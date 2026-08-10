@@ -52,7 +52,7 @@ const instanceSet = (
   layout: IAutoMovieInstanceSetDesign["layout"],
 ): IAutoMovieInstanceSetDesign => ({
   id,
-  modelRecipe: "sentinel",
+  modelRecipe: "soloist",
   count,
   layout,
   anchor: { x: 2, y: 0, z: 3 },
@@ -323,7 +323,7 @@ export const test_mcp_production_instances = (): void => {
         ],
         [
           "compiledModelsSome",
-          () => compiled.models.some((model) => model.id.endsWith(":sentinel")),
+          () => compiled.models.some((model) => model.id.endsWith(":soloist")),
         ],
       ]),
       {

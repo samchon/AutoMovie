@@ -2,26 +2,26 @@
   "version": 1,
   "production": "{{name}}",
   "treatment": {
-    "path": "docs/{{name}}/02-treatment/SEQ-SIGNAL.md",
+    "path": "docs/{{name}}/02-treatment/SEQ-CUE.md",
     "sequences": [
       {
-        "id": "SEQ-SIGNAL",
+        "id": "SEQ-CUE",
         "title": "The call",
         "beats": [
           {
-            "id": "BEAT-SIGNAL",
-            "text": "A lone sentinel raises a signal while an ordered army remains visibly under the same command."
+            "id": "BEAT-CUE-1",
+            "text": "A soloist raises a hand while the chorus behind stays visibly in its rows."
           }
         ],
-        "path": "docs/{{name}}/02-treatment/SEQ-SIGNAL.md"
+        "path": "docs/{{name}}/02-treatment/SEQ-CUE.md"
       },
       {
         "id": "SEQ-ANSWER",
         "title": "The reply",
         "beats": [
           {
-            "id": "BEAT-ANSWER",
-            "text": "The answering gesture proves the signal changed the field rather than ending as an isolated pose."
+            "id": "BEAT-ANSWER-1",
+            "text": "The answering gesture proves the cue changed the plaza rather than ending as an isolated pose."
           }
         ],
         "path": "docs/{{name}}/02-treatment/SEQ-ANSWER.md"
@@ -41,15 +41,15 @@
     "scenes": [
       {
         "id": "SCN-001",
-        "title": "The signal",
+        "title": "The cue",
         "status": "active",
         "covers": [
           {
-            "reason": "The opening shot must establish the authored call and its commanded formation.",
-            "beat": "A lone sentinel raises a signal while an ordered army remains visibly under the same command."
+            "reason": "The opening shot must establish the authored cue and the rows that hold behind it.",
+            "beat": "A soloist raises a hand while the chorus behind stays visibly in its rows."
           }
         ],
-        "location": "signal-field",
+        "location": "plaza",
         "disposition": null,
         "path": "docs/{{name}}/04-scenes/SCN-001.md"
       },
@@ -59,11 +59,11 @@
         "status": "active",
         "covers": [
           {
-            "reason": "The second shot must show a consequence and reply to the opening signal.",
-            "beat": "The answering gesture proves the signal changed the field rather than ending as an isolated pose."
+            "reason": "The second shot must show a consequence and reply to the opening cue.",
+            "beat": "The answering gesture proves the cue changed the plaza rather than ending as an isolated pose."
           }
         ],
-        "location": "signal-field",
+        "location": "plaza",
         "disposition": null,
         "path": "docs/{{name}}/04-scenes/SCN-002.md"
       }
@@ -72,54 +72,54 @@
   "catalog": {
     "characters": [
       {
-        "id": "sentinel",
-        "name": "The Sentinel",
+        "id": "soloist",
+        "name": "The Soloist",
         "evidence": [
           {
-            "reason": "The screenplay explicitly gives the sentinel the signal action.",
+            "reason": "The screenplay explicitly gives the soloist the raised hand.",
             "scene": "SCN-001"
           }
         ],
         "bindings": [
           {
             "kind": "model",
-            "id": "sentinel"
+            "id": "soloist"
           }
         ]
       }
     ],
     "factions": [
       {
-        "id": "army",
-        "name": "The Ordered Army",
+        "id": "chorus",
+        "name": "The Chorus",
         "evidence": [
           {
-            "reason": "The ranks are a story force visibly commanded by the signal.",
+            "reason": "The rows are a story force the cue is visibly addressed to.",
             "scene": "SCN-001"
           }
         ],
         "bindings": [
           {
             "kind": "formation",
-            "id": "army"
+            "id": "chorus"
           }
         ]
       }
     ],
     "locations": [
       {
-        "id": "signal-field",
-        "name": "Signal Field",
+        "id": "plaza",
+        "name": "Plaza",
         "evidence": [
           {
-            "reason": "Both screenplay scenes explicitly occur on the same field.",
+            "reason": "Both screenplay scenes explicitly occur on the same plaza.",
             "scene": "SCN-001"
           }
         ],
         "bindings": [
           {
             "kind": "world-landmark",
-            "id": "signal-ground"
+            "id": "plaza-center"
           }
         ]
       }
@@ -127,8 +127,8 @@
   },
   "continuity": [
     {
-      "id": "signal-arm-readable",
-      "text": "The sentinel's raised signal arm remains readable.",
+      "id": "cue-arm-readable",
+      "text": "The soloist's raised cueing arm remains readable.",
       "verification": "frame-review",
       "proof": {
         "owner": "frame-review",
@@ -136,7 +136,7 @@
       },
       "evidence": [
         {
-          "reason": "The opening scene establishes the raised arm as the signal.",
+          "reason": "The opening scene establishes the raised hand as the cue.",
           "scene": "SCN-001"
         }
       ]

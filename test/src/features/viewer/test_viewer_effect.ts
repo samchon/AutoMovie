@@ -40,7 +40,7 @@ const effectWorld = (
   effectRecipes: [effectRecipe(kind)],
   effectZones: [
     {
-      id: "battle-zone",
+      id: "haze-zone",
       recipe: `${kind}-recipe`,
       bounds: {
         min: { x: -2, y: 0, z: -2 },
@@ -104,12 +104,12 @@ export const test_viewer_effect = (): void => {
   };
   const cues = [
     {
-      id: "battle-smoke",
-      zone: "battle-zone",
+      id: "haze-smoke",
+      zone: "haze-zone",
       start: 1,
       end: 5,
       intensity: { from: 0.4, to: 0.8 },
-      event: "signal-raised",
+      event: "cue-raised",
     },
   ];
   const [effect] = materializeCompiledEffects({

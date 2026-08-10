@@ -381,7 +381,7 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
               "letlinkedStateFailure:IProductionProjectFixtureFailure|undefined;",
             ],
             tryDigest:
-              "a270fecb4d6fc847e0b93709d29c2177a17ea36e188d9a8461806ff8598b4d89",
+              "61df623115e96fd308dd9e2dc5860e99df093bdd09940f71e25f7ffd75af4447",
             tryPrefixes: [
               'outsideState=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-state-outside-"),);',
             ],

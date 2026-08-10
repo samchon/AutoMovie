@@ -305,11 +305,11 @@ export const test_mcp_production_namespaces = (): void => {
       namedFacts([
         [
           "alphaDesignKind",
-          () => alpha.design({ kind: "model", id: "sentinel" }) !== null,
+          () => alpha.design({ kind: "model", id: "soloist" }) !== null,
         ],
         [
           "betaDesignKind",
-          () => beta.design({ kind: "model", id: "sentinel" }) !== null,
+          () => beta.design({ kind: "model", id: "soloist" }) !== null,
         ],
       ]),
       { alphaDesignKind: true, betaDesignKind: true },
@@ -404,7 +404,7 @@ export const test_mcp_production_namespaces = (): void => {
 
     const reviewTarget = {
       kind: "design" as const,
-      design: { kind: "model" as const, id: "sentinel" },
+      design: { kind: "model" as const, id: "soloist" },
     };
     for (const project of [alpha, beta]) {
       const prepared = new AutoMovieProductionReviewService(project).prepare({
@@ -511,7 +511,7 @@ export const test_mcp_production_namespaces = (): void => {
       "design",
       "shared",
       "models",
-      "sentinel.json",
+      "soloist.json",
     );
     const alphaDesign = path.join(
       fixture.root,

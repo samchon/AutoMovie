@@ -55,10 +55,10 @@ export const film = {
         ],
         captions: [
           {
-            id: "signal-caption",
-            text: "The sentinel raises the signal.",
+            id: "cue-caption",
+            text: "The soloist raises the cue.",
             language: "en",
-            speaker: "sentinel",
+            speaker: "soloist",
             start: { seconds: 1.5 },
             end: { seconds: 3 },
           },

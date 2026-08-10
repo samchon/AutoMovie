@@ -91,16 +91,16 @@ export const test_mcp_production_effect = (): void => {
     const summary = new AutoMovieProductionOracleService(project).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel"],
+        subjects: ["soloist"],
       },
     });
     const inactive = new AutoMovieProductionOracleService(project).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 5,
       },
@@ -108,10 +108,10 @@ export const test_mcp_production_effect = (): void => {
     const unsafeSubjects = new AutoMovieProductionOracleService(project).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2,
-        subjects: ["sentinel", "sentinel"],
+        subjects: ["soloist", "soloist"],
       },
     });
     const missingZone = new AutoMovieProductionOracleService(project).query({
@@ -126,7 +126,7 @@ export const test_mcp_production_effect = (): void => {
       new AutoMovieProductionOracleService(project).query({
         request: {
           query: "effect",
-          zone: "signal-smoke",
+          zone: "plaza-haze",
           shot: "opening",
           time,
         },
@@ -137,7 +137,7 @@ export const test_mcp_production_effect = (): void => {
     ).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "absent",
         time: 2,
       },
@@ -163,7 +163,7 @@ export const test_mcp_production_effect = (): void => {
             compileSucceeded &&
             compiled?.effects.length === 1 &&
             compiled.effects[0]?.kind === "smoke" &&
-            compiled.effects[0]?.event === "signal-raised",
+            compiled.effects[0]?.event === "cue-raised",
         ],
         [
           "summaryResultKind",
@@ -171,7 +171,7 @@ export const test_mcp_production_effect = (): void => {
             compileSucceeded &&
             compiled?.effects.length === 1 &&
             compiled.effects[0]?.kind === "smoke" &&
-            compiled.effects[0]?.event === "signal-raised" &&
+            compiled.effects[0]?.event === "cue-raised" &&
             summary.result?.kind === "measurement",
         ],
         [
@@ -180,7 +180,7 @@ export const test_mcp_production_effect = (): void => {
             compileSucceeded &&
             compiled?.effects.length === 1 &&
             compiled.effects[0]?.kind === "smoke" &&
-            compiled.effects[0]?.event === "signal-raised" &&
+            compiled.effects[0]?.event === "cue-raised" &&
             summary.result?.kind === "measurement" &&
             summary.result.values.active === true,
         ],
@@ -190,7 +190,7 @@ export const test_mcp_production_effect = (): void => {
             compileSucceeded &&
             compiled?.effects.length === 1 &&
             compiled.effects[0]?.kind === "smoke" &&
-            compiled.effects[0]?.event === "signal-raised" &&
+            compiled.effects[0]?.event === "cue-raised" &&
             summary.result?.kind === "measurement" &&
             summary.result.values.active === true &&
             Number(summary.result.values.particleCount) > 0,
@@ -385,7 +385,7 @@ export const test_mcp_production_effect = (): void => {
     ).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2.5,
       },
@@ -400,7 +400,7 @@ export const test_mcp_production_effect = (): void => {
     ).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2,
       },
@@ -423,16 +423,16 @@ export const test_mcp_production_effect = (): void => {
       const positioned = structuredClone(compiled!);
       positioned.shot.performances = [];
       positioned.scene.nodes.find(
-        (node) => node.id === "sentinel",
+        (node) => node.id === "soloist",
       )!.transform.translation = translation;
       writeCurrentShot(positioned);
       const output = new AutoMovieProductionOracleService(project).query({
         request: {
           query: "effect",
-          zone: "signal-smoke",
+          zone: "plaza-haze",
           shot: "opening",
           time: 2,
-          subjects: ["sentinel"],
+          subjects: ["soloist"],
         },
       });
       return output.result?.kind === "measurement"
@@ -456,7 +456,7 @@ export const test_mcp_production_effect = (): void => {
     ).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2,
       },
@@ -478,7 +478,7 @@ export const test_mcp_production_effect = (): void => {
     ).query({
       request: {
         query: "effect",
-        zone: "signal-smoke",
+        zone: "plaza-haze",
         shot: "opening",
         time: 2,
       },

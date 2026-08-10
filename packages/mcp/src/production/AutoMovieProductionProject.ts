@@ -27,6 +27,10 @@ import path from "node:path";
 import typia, { IValidation } from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import {
+  acceptanceAddressesShot,
+  acceptanceCriterionShots,
+} from "./acceptanceScope";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
@@ -40,6 +44,10 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+} from "./productionArchetypes";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -192,6 +200,11 @@ export class AutoMovieProductionProject {
     >,
     requestedProductionId?: string,
     readOnly = false,
+    /**
+     * The archetype catalogue every design record in this project is judged
+     * against, and the one its compiler builds from.
+     */
+    public readonly archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ) {
     this.readOnly_ = readOnly;
     this.rootReal = fs.realpathSync(root);
@@ -697,6 +710,7 @@ export class AutoMovieProductionProject {
   public static open(
     rootDirectory: string,
     productionId?: string,
+    archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ): AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
     if (path.parse(root).root === root)
@@ -710,6 +724,8 @@ export class AutoMovieProductionProject {
         lease.root,
         lease,
         productionId,
+        false,
+        archetypes,
       );
       assertProductionRootNamespaceLease(lease);
       return project;
@@ -725,6 +741,7 @@ export class AutoMovieProductionProject {
   public static openReadOnly(
     rootDirectory: string,
     productionId?: string,
+    archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ): AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
     if (path.parse(root).root === root)
@@ -739,6 +756,7 @@ export class AutoMovieProductionProject {
         lease,
         productionId,
         true,
+        archetypes,
       );
       assertProductionRootNamespaceLease(lease);
       return project;
@@ -2561,9 +2579,11 @@ export class AutoMovieProductionProject {
       screenplay,
     );
     const previousDiagnostics = new Set(
-      validateAutoMovieProductionGraph(graph, this.productionId).map(
-        diagnosticIdentity,
-      ),
+      validateAutoMovieProductionGraph(
+        graph,
+        this.productionId,
+        this.archetypes,
+      ).map(diagnosticIdentity),
     );
     if (validation.success === false)
       return {
@@ -2610,6 +2630,7 @@ export class AutoMovieProductionProject {
     const nextDiagnostics = validateAutoMovieProductionGraph(
       next,
       this.productionId,
+      this.archetypes,
     );
     const diagnostics = nextDiagnostics.filter(
       (diagnostic) =>
@@ -3653,13 +3674,7 @@ const referencesTo = (
         references.push(`shot:${id}`);
   } else if (target.kind === "shot") {
     for (const [id, acceptance] of graph.acceptance)
-      if (
-        (acceptance.target.kind === "shot" &&
-          acceptance.target.id === target.id) ||
-        ((acceptance.criterion.kind === "frame" ||
-          acceptance.criterion.kind === "event") &&
-          acceptance.criterion.shot === target.id)
-      )
+      if (acceptanceAddressesShot(acceptance, target.id))
         references.push(`acceptance:${id}`);
   } else if (target.kind === "world") {
     for (const [id, shot] of graph.shots)
@@ -3747,13 +3762,7 @@ const consequencesOf = (
     const source = graph.shots.get(target.id)?.source.module;
     if (source !== undefined) addReview({ kind: "source", path: source });
     for (const [id, acceptance] of graph.acceptance)
-      if (
-        (acceptance.target.kind === "shot" &&
-          acceptance.target.id === target.id) ||
-        ((acceptance.criterion.kind === "frame" ||
-          acceptance.criterion.kind === "event") &&
-          acceptance.criterion.shot === target.id)
-      )
+      if (acceptanceAddressesShot(acceptance, target.id))
         addReview({
           kind: "design",
           design: { kind: "acceptance", id },
@@ -3763,13 +3772,9 @@ const consequencesOf = (
     const acceptance = graph.acceptance.get(target.id);
     if (acceptance?.target.kind === "shot")
       affectedShots.add(acceptance.target.id);
-    if (
-      acceptance !== undefined &&
-      (acceptance.criterion.kind === "frame" ||
-        acceptance.criterion.kind === "event") &&
-      acceptance.criterion.shot !== undefined
-    )
-      affectedShots.add(acceptance.criterion.shot);
+    if (acceptance !== undefined)
+      for (const shot of acceptanceCriterionShots(acceptance))
+        affectedShots.add(shot);
   }
   if (target.kind === "production")
     for (const [id, acceptance] of graph.acceptance)

@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
+  IAutoMovieFormationBounds,
   IAutoMovieProductionPhonemeChunk,
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
@@ -10,7 +11,11 @@ import {
 } from "@automovie/interface";
 
 import { resolveCameraAt } from "../film/cameraProjection";
-import { sampleFormationMotion, transformFormationPoint } from "../formation";
+import {
+  sampleFormationMotion,
+  transformFormationBounds,
+  transformFormationPoint,
+} from "../formation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleClipSequence } from "../resolve/sampleClip";
@@ -33,6 +38,15 @@ export interface IAutoMovieProductionSoundRaster {
 /**
  * Lower semantic shot events, authored score cues, and shared caption timing
  * into one immutable sound plan on the finished-film clock.
+ *
+ * Each event's source is the extended incoherent mass its subjects add up to
+ * ({@link resolveSourceMass}), not a bare point: the plan carries how many
+ * members sound ({@link IAutoMovieProductionSoundEvent.memberCount}), how far
+ * they are spread ({@link IAutoMovieProductionSoundEvent.spreadRadiusMeters}),
+ * and the `sqrt(N)` level that many uncorrelated sources produce
+ * ({@link IAutoMovieProductionSoundEvent.densityGain}), so a mass sounds like a
+ * mass and a crowd's size is audible rather than assumed. A lone actor is a
+ * one-member mass of zero radius and plans exactly as it always did.
  */
 export const deriveProductionSoundPlan = (props: {
   timeline: IAutoMovieFilmTimeline;
@@ -75,13 +89,20 @@ export const deriveProductionSoundPlan = (props: {
         camera.id,
         sample.time,
       );
-      const emitter = resolveEmitter(compiled, event.subjects, sample.time);
+      const mass = resolveSourceMass(compiled, event.subjects, sample.time);
+      const emitter = mass.centroid;
       const delta = Vector3.subtract(emitter, listener.position);
       const distanceMeters = Vector3.length(delta);
       const local = Quaternion.rotateVector(
         Quaternion.inverse(listener.rotation),
         delta,
       );
+      // The listener is not `distanceMeters` from a source that has size: it is
+      // that far from the CENTROID. Substituting the root-mean-square
+      // source/listener distance is the whole of the extended-source model, and
+      // it serves the pan and the attenuation from one number.
+      const spreadRadiusMeters = Math.sqrt(mass.variance);
+      const rmsDistanceMeters = Math.hypot(distanceMeters, spreadRadiusMeters);
       events.push({
         id: `${segmentIndex}:${segment.shot}:${event.id}`,
         shot: segment.shot,
@@ -92,8 +113,11 @@ export const deriveProductionSoundPlan = (props: {
         emitter,
         listener: listener.position,
         distanceMeters,
-        pan: clamp(local.x / Math.max(distanceMeters, 1e-9), -1, 1),
-        attenuation: 1 / (1 + 0.08 * distanceMeters * distanceMeters),
+        memberCount: mass.count,
+        spreadRadiusMeters,
+        densityGain: Math.sqrt(mass.count),
+        pan: clamp(local.x / Math.max(rmsDistanceMeters, 1e-9), -1, 1),
+        attenuation: 1 / (1 + 0.08 * rmsDistanceMeters * rmsDistanceMeters),
         seed: soundSeed(
           `${props.timeline.inputFingerprint}|${segmentIndex}|${segment.shot}|${event.id}|${frame}`,
         ),
@@ -299,51 +323,159 @@ export const productionSoundSpectrogram = (
   return { width, height, rgba };
 };
 
-const resolveEmitter = (
+/**
+ * One subject's contribution to an event's sound source: where its members are
+ * centered, how many there are, and how far they lie from that center.
+ *
+ * `variance` is the MEAN SQUARED radius in m^2, not the radius, because that is
+ * the quantity that composes: variances of disjoint groups add by weight, radii
+ * do not.
+ */
+interface IAutoMovieSoundMass {
+  centroid: IAutoMovieVector3;
+  count: number;
+  variance: number;
+}
+
+/**
+ * Where an event's sound comes from, how much of it there is, and how far it is
+ * spread: the extended incoherent source its subjects add up to.
+ *
+ * A subject is a scene node (one member, no size), a formation, or an instance
+ * set (a member count and a compiled bounding box). Only the count and the box
+ * are read, never the individual slots: a compact formation deliberately never
+ * stores its members, and a source that had to expand a hundred thousand of
+ * them to be heard would not be heard at all.
+ *
+ * ## Combining subjects
+ *
+ * Each member is one equal, mutually uncorrelated source, so the group's
+ * acoustic center is the member-count-weighted mean of the subject centroids,
+ * not their arithmetic mean. The unweighted mean was the second half of the
+ * scale defect: an event naming one figure and the crowd behind it emitted from
+ * the empty midpoint between them, as though the crowd were one person.
+ *
+ * The combined spread follows by the parallel-axis identity, which makes it
+ * exact rather than approximate:
+ *
+ *     variance = sum_i n_i * (variance_i + |centroid_i - centroid|^2) / sum_i n_i
+ *
+ * ## A group's own radius
+ *
+ * The compiled runtime publishes a member count and an axis-aligned box, so the
+ * members are taken as uniformly distributed over that box, the only
+ * distribution its two facts support. For a uniform box with half-extents `h`,
+ * the mean squared distance from the center is `(hx^2 + hy^2 + hz^2)/3`, one
+ * third of the squared half-diagonal.
+ *
+ * A formation's box is transformed by its live cue first
+ * ({@link transformFormationBounds}), because a cue that rescales spacing
+ * changes the crowd's size, and a crowd closing ranks should tighten in the mix
+ * exactly as it tightens on screen.
+ *
+ * Throwing when nothing resolves also covers the degenerate group: a subject
+ * table that names only empty sets contributes no sources, and no sources is
+ * silence, which is a contradiction in an event the contract says is audible.
+ */
+const resolveSourceMass = (
   compiled: IAutoMovieCompiledShotSource,
   subjects: readonly string[],
   time: number,
-): IAutoMovieVector3 => {
+): IAutoMovieSoundMass => {
   const sampled = sampleClipSequence(compiled.shot.objectMotions, time);
-  const resolved = subjects.flatMap((subject): IAutoMovieVector3[] => {
+  const resolved = subjects.flatMap((subject): IAutoMovieSoundMass[] => {
     const node = compiled.scene.nodes.find(
       (candidate) => candidate.id === subject,
     );
     if (node !== undefined) {
       const translation = sampled.get(`node:${subject}:translation`)?.value;
       return [
-        translation === undefined
-          ? node.transform.translation
-          : { x: translation[0]!, y: translation[1]!, z: translation[2]! },
+        {
+          centroid:
+            translation === undefined
+              ? node.transform.translation
+              : { x: translation[0]!, y: translation[1]!, z: translation[2]! },
+          count: 1,
+          variance: 0,
+        },
       ];
     }
     const formation = compiled.formations.find(
       (candidate) => candidate.id === subject,
     );
-    if (formation !== undefined)
+    if (formation !== undefined) {
+      const motion = sampleFormationMotion(
+        compiled.formationMotions ?? [],
+        formation.id,
+        time,
+      );
       return [
-        transformFormationPoint(
-          formation.centroid,
-          formation.anchor,
-          sampleFormationMotion(
-            compiled.formationMotions ?? [],
-            formation.id,
-            time,
+        {
+          centroid: transformFormationPoint(
+            formation.centroid,
+            formation.anchor,
+            motion,
+            formation.facingDeg,
           ),
-          formation.facingDeg,
-        ),
+          count: formation.count,
+          variance: boxVariance(
+            transformFormationBounds(
+              formation.bounds,
+              formation.anchor,
+              motion,
+              formation.facingDeg,
+            ),
+          ),
+        },
       ];
+    }
     const instances = compiled.instanceSets.find(
       (candidate) => candidate.id === subject,
     );
-    return instances === undefined ? [] : [instances.centroid];
+    return instances === undefined
+      ? []
+      : [
+          {
+            centroid: instances.centroid,
+            count: instances.count,
+            variance: boxVariance(instances.bounds),
+          },
+        ];
   });
-  if (resolved.length === 0)
+  const count = resolved.reduce((sum, mass) => sum + mass.count, 0);
+  if (count === 0)
     throw new Error(
       `Sound event in shot "${compiled.shot.id}" has no spatially resolved subject among ${subjects.join(", ")}.`,
     );
-  const total = resolved.reduce(Vector3.add, Vector3.create());
-  return Vector3.scale(total, 1 / resolved.length);
+  const centroid = Vector3.scale(
+    resolved.reduce(
+      (sum, mass) => Vector3.add(sum, Vector3.scale(mass.centroid, mass.count)),
+      Vector3.create(),
+    ),
+    1 / count,
+  );
+  const variance =
+    resolved.reduce((sum, mass) => {
+      const offset = Vector3.length(Vector3.subtract(mass.centroid, centroid));
+      return sum + mass.count * (mass.variance + offset * offset);
+    }, 0) / count;
+  return { centroid, count, variance };
+};
+
+/**
+ * The mean squared distance from the center of an axis-aligned box to a point
+ * drawn uniformly inside it: `(hx^2 + hy^2 + hz^2)/3` over its half-extents.
+ *
+ * Each axis is independent and uniform over `[-h, h]`, whose second moment is
+ * `h^2/3`; summing the three gives the whole. A degenerate box (one slot, or a
+ * line of them) correctly yields zero on the collapsed axes, so a single-member
+ * formation is a point source and mixes exactly as it did before size existed.
+ */
+const boxVariance = (bounds: IAutoMovieFormationBounds): number => {
+  const x = (bounds.max.x - bounds.min.x) / 2;
+  const y = (bounds.max.y - bounds.min.y) / 2;
+  const z = (bounds.max.z - bounds.min.z) / 2;
+  return (x * x + y * y + z * z) / 3;
 };
 
 const mixEvent = (
@@ -354,7 +486,6 @@ const mixEvent = (
   const durationSeconds: Record<typeof event.kind, number> = {
     contact: 0.22,
     arrival: 0.7,
-    volley: 0.85,
     break: 0.48,
     reveal: 1.1,
     transition: 0.55,
@@ -375,9 +506,6 @@ const mixEvent = (
     const base: Record<typeof event.kind, number> = {
       contact: Math.sin(2 * Math.PI * 115 * t) + noise * 0.45,
       arrival: Math.sin(2 * Math.PI * (58 + 42 * normalized) * t),
-      volley:
-        noise * (0.65 + 0.35 * Math.cos(2 * Math.PI * 13 * t)) +
-        Math.sin(2 * Math.PI * 72 * t) * 0.4,
       break: noise * 0.9 + Math.sin(2 * Math.PI * 190 * t) * 0.3,
       reveal:
         Math.sin(2 * Math.PI * (220 + 440 * normalized) * t) * 0.7 +
@@ -385,8 +513,14 @@ const mixEvent = (
       transition: noise * 0.25 + Math.sin(2 * Math.PI * 88 * t) * 0.5,
     };
     const impulse = index === 0 ? 1 : 0;
+    // `densityGain` is applied unbounded and un-fudged: it IS the incoherent
+    // summation result, and clamping it would be an opinion about how loud a
+    // crowd is allowed to be. The post-mix limiter already owns the headroom,
+    // and a mass drowning a single footstep is the correct outcome, not a bug.
     const value =
-      (base[event.kind] * envelope * 0.28 + impulse * 0.5) * event.attenuation;
+      (base[event.kind] * envelope * 0.28 + impulse * 0.5) *
+      event.attenuation *
+      event.densityGain;
     pcm[(start + index) * 2] += value * left;
     pcm[(start + index) * 2 + 1] += value * right;
   }

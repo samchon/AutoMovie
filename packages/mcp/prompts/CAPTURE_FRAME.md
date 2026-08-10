@@ -8,7 +8,7 @@ Choose exactly one compiler-registry target:
 
 - A shot names `kind: "shot"`, an explicit `productionId`, registry `id`, non-negative shot-local `time`, and optional pass.
 - An asset turntable names `kind: "asset"`, registry `id`, azimuth `angleDeg`, optional elevation, `rest` or `rom-extremes` pose, and optional pass. Production may be omitted only when the host has an unambiguous default.
-- Width and height are optional positive integers bounded by production resolution. Omission requests production dimensions.
+- Width and height are optional positive integers bounded by production resolution. Omission requests production dimensions, which is what review needs: a frame captured at any smaller raster is downgraded with `render-frame-invalid` and can never discharge a required view. Override them only for a cheap diagnostic look you do not intend to cite.
 
 Use `beauty` to judge appearance. Use structural passes such as `pose`, `depth`, `normal`, or `segmentation` when the target, acceptance scenario, or repaint workflow needs them. A structural pass is evidence about geometry, not a substitute for beauty.
 
@@ -24,6 +24,8 @@ Use `beauty` to judge appearance. Use structural passes such as `pose`, `depth`,
 Only that exact receipt-backed frame may be cited in review. Never cite a console screenshot, a guessed output path, or a previous bundle.
 
 ## Refusal catalog
+
+Refusals arrive in two shapes and only one of them carries diagnostics. A refusal the tool can attribute to your target returns `captured:false` with its diagnostics in the payload; the catalog below lists those. A refusal of the call itself is thrown and reaches you as an MCP error text block with no payload at all: missing guide credit, `"captureFrame requires a current source compile"`, `"captureFrame requires a production frame format"`, and a commit-lock failure while the render bundle is written. `prepareReview` and `submitReview` also throw every production-resolution failure that `captureFrame` reports as a diagnostic. An error block means nothing was attempted and nothing was measured, so read its prose and satisfy the named precondition instead of hunting for a diagnostic list that does not exist.
 
 - Production invalid or unregistered: choose a trimmed registered namespace; do not retry with filesystem paths.
 - Registry unavailable or target missing: correct source/design and run the ordinary compile command.

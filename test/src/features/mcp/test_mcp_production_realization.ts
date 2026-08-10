@@ -123,7 +123,7 @@ export const test_mcp_production_realization = (): void => {
     );
     const held = structuredClone(base);
     held.shot.performances = [
-      { node: "sentinel", motion: null, startOffset: 0 },
+      { node: "soloist", motion: null, startOffset: 0 },
     ];
     const heldOutcome = realizeShotContract({
       contract: shotContract(),
@@ -208,7 +208,7 @@ export const test_mcp_production_realization = (): void => {
     const contract: IAutoMovieShotContract = {
       ...shotContract(),
       participants: [
-        { kind: "actor", id: "sentinel" },
+        { kind: "actor", id: "soloist" },
         { kind: "formation", id: formation.id },
       ],
       opening: [
@@ -226,7 +226,7 @@ export const test_mcp_production_realization = (): void => {
             },
             {
               kind: "position",
-              subject: { kind: "landmark", id: "signal-ground" },
+              subject: { kind: "landmark", id: "plaza-center" },
               axis: "z",
               operator: ">=",
               value: 0,
@@ -243,7 +243,7 @@ export const test_mcp_production_realization = (): void => {
             {
               kind: "distance",
               from: { kind: "node", id: "prop" },
-              to: { kind: "landmark", id: "signal-ground" },
+              to: { kind: "landmark", id: "plaza-center" },
               operator: "==",
               value: 2,
               tolerance: 0,
@@ -267,7 +267,7 @@ export const test_mcp_production_realization = (): void => {
             },
             {
               kind: "joint-angle",
-              actor: "sentinel",
+              actor: "soloist",
               bone: "leftHand",
               axis: "twist",
               operator: "==",
@@ -284,7 +284,7 @@ export const test_mcp_production_realization = (): void => {
           predicates: [
             {
               kind: "position",
-              subject: { kind: "node", id: "sentinel" },
+              subject: { kind: "node", id: "soloist" },
               axis: "x",
               operator: "==",
               value: 0,
@@ -292,7 +292,7 @@ export const test_mcp_production_realization = (): void => {
             },
             {
               kind: "position",
-              subject: { kind: "node", id: "sentinel" },
+              subject: { kind: "node", id: "soloist" },
               axis: "z",
               operator: "==",
               value: -0.5,
@@ -374,7 +374,7 @@ export const test_mcp_production_realization = (): void => {
       pose: null,
     });
     materialized.scene.nodes.push({
-      ...materialized.scene.nodes.find((node) => node.id === "sentinel")!,
+      ...materialized.scene.nodes.find((node) => node.id === "soloist")!,
       id: "unperformed",
     });
     for (const keyframe of materialized.motions[0]!.keyframes)
@@ -393,13 +393,13 @@ export const test_mcp_production_realization = (): void => {
             interpolation: "linear",
           },
           {
-            channel: { kind: "node", node: "sentinel", path: "rotation" },
+            channel: { kind: "node", node: "soloist", path: "rotation" },
             times: [0, contract.durationSeconds],
             values: [0, 0, 0, 1, 0, 0.7071067811865475, 0, 0.7071067811865476],
             interpolation: "linear",
           },
           {
-            channel: { kind: "node", node: "sentinel", path: "scale" },
+            channel: { kind: "node", node: "soloist", path: "scale" },
             times: [0, contract.durationSeconds],
             values: [1, 1, 1, 2, 2, 2],
             interpolation: "linear",
@@ -608,7 +608,7 @@ export const test_mcp_production_realization = (): void => {
 
     const unreadable = structuredClone(base);
     unreadable.scene.nodes.find(
-      (node) => node.id === "sentinel",
+      (node) => node.id === "soloist",
     )!.transform.translation.x = 1_000;
     const unreadableOutcome = realizeShotContract({
       contract: shotContract(),
@@ -704,7 +704,7 @@ export const test_mcp_production_realization = (): void => {
           "missingCameraOutcomeDiagnosticsItem2",
           () =>
             missingCameraOutcome.diagnostics.some((item) =>
-              item.message.includes('actor "sentinel"'),
+              item.message.includes('actor "soloist"'),
             ),
         ],
       ]),
@@ -722,7 +722,7 @@ export const test_mcp_production_realization = (): void => {
 
     const brokenCompiled = structuredClone(materialized);
     brokenCompiled.scene.nodes.push({
-      ...brokenCompiled.scene.nodes.find((node) => node.id === "sentinel")!,
+      ...brokenCompiled.scene.nodes.find((node) => node.id === "soloist")!,
       id: "missing-motion",
       motion: "absent-motion",
     });
@@ -799,7 +799,7 @@ export const test_mcp_production_realization = (): void => {
             },
             {
               kind: "joint-angle",
-              actor: "sentinel",
+              actor: "soloist",
               bone: "rightLowerLeg",
               axis: "twist",
               operator: "==",
