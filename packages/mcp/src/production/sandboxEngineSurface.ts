@@ -20,7 +20,9 @@ export type AutoMovieSandboxEngineExport =
   | "builtEnvironmentSpaceSurfaces"
   | "defineShot"
   | "extrudeAutoMovieProfile"
+  | "extrudeAutoMovieRegion"
   | "inspectAutoMovieMeshTopology"
+  | "loftAutoMovieSections"
   | "lowerBuiltEnvironment"
   | "matchAutoMovieAssemblyJunction"
   | "mergeAutoMovieMeshParts"
@@ -32,6 +34,7 @@ export type AutoMovieSandboxEngineExport =
   | "sweepAutoMovieProfile"
   | "tessellateSurface"
   | "transformAutoMovieMesh"
+  | "triangulateAutoMovieRegion"
   | "validateAutoMovieMaterialAssembly"
   | "validateAutoMovieMaterialSubstance"
   | "worldSurfaceHeight";
@@ -71,7 +74,9 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "builtEnvironmentSpaceSurfaces",
     "defineShot",
     "extrudeAutoMovieProfile",
+    "extrudeAutoMovieRegion",
     "inspectAutoMovieMeshTopology",
+    "loftAutoMovieSections",
     "lowerBuiltEnvironment",
     "matchAutoMovieAssemblyJunction",
     "mergeAutoMovieMeshParts",
@@ -83,6 +88,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "sweepAutoMovieProfile",
     "tessellateSurface",
     "transformAutoMovieMesh",
+    "triangulateAutoMovieRegion",
     "validateAutoMovieMaterialAssembly",
     "validateAutoMovieMaterialSubstance",
     "worldSurfaceHeight",
