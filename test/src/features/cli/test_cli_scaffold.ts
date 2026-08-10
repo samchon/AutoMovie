@@ -2320,7 +2320,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       [
         "theSweepReadsTheProjectsOwnSources",
         () =>
-          swept.length > 0 && swept.some(([name]) => name === "src/film.ts"),
+          ["src/film.ts", "viewer/src/shot.ts", "scripts/compile.ts"].every(
+            (expected) => swept.some(([name]) => name === expected),
+          ),
       ],
       [
         "noProjectSourceImportsAnExample",

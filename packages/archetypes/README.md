@@ -1,8 +1,9 @@
 # `@automovie/archetypes`
 
 A catalogue of primitive model archetypes: one parameter schema, one set of
-bounds, and one deterministic geometry builder per archetype, exported through
-a single registry. The package is headless and does not depend on Three.js.
+bounds, and one deterministic geometry builder per archetype, exported as one
+list a host closes into its own registry. The package is headless and does not
+depend on Three.js.
 
 The production core keeps the *shape* of a model recipe and never the
 catalogue. `IAutoMovieModelRecipe.archetype` is an opaque non-blank identifier;
@@ -23,9 +24,8 @@ registers, not a union the universal surface enumerates.
 | `HUMANOID_PROFILE`, `CAT_PROFILE`, `HORSE_PROFILE` | The profile each table binds onto a skeleton through.            |
 | `numberParameter`, `stringParameter`, `numberOf` | Write and read the parameter values a schema declares.            |
 
-The package ships a list and never a closed registry. Every consumer builds its
-own lookup, because that call is the seam where a host substitutes, extends, or
-drops definitions; the MCP server's own default is
+Every consumer builds its own lookup, because that call is the seam where a host
+substitutes, extends, or drops definitions. The MCP server's own default is
 `AUTOMOVIE_REGISTERED_ARCHETYPES` in
 `packages/mcp/src/production/productionArchetypes.ts`, and it is a parameter
 default rather than a fixed choice.
@@ -91,8 +91,8 @@ tables cannot be removed without editing `mcp`. The archetypes have a registry
 seam and the gait tables do not yet; closing that is the gait side's own work,
 and it is not a licence to add more named exports in the meantime.
 
-The scaffold inherits none of this. A generated project ships examples that teach
-an authoring technique, never a catalogue it can call.
+None of this reaches the scaffold. A generated project inherits examples that
+teach an authoring technique, never a catalogue it can call.
 
 ## Compiler boundary
 
@@ -102,7 +102,8 @@ Identity is the compiler's too, which is why a builder receives its material and
 skeleton ids rather than deriving them.
 
 `@automovie/archetypes`는 원시 모델 아키타입 카탈로그다. 아키타입 하나마다 파라미터 스키마와
-경계값, 그리고 결정론적 지오메트리 빌더를 담고, 이를 하나의 레지스트리로 내보낸다.
+경계값, 그리고 결정론적 지오메트리 빌더를 담고, 이를 하나의 목록으로 내보낸다. 레지스트리는
+호스트가 그 목록을 닫아 만들며, 그 호출이 호스트가 정의를 바꿔 끼우는 이음매다.
 
 코어는 모델 레시피의 *형태*만 알고 목록은 알지 않는다. `archetype`은 불투명한 비어 있지 않은
 식별자이며, 컴파일러는 등록된 레지스트리에서 이를 조회하고 등록되지 않은 이름은 진단으로
