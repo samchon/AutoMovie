@@ -1,3 +1,4 @@
+import { IAutoMovieEnvironmentContext } from "../analysis/IAutoMovieEnvironmentContext";
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieProfile } from "../core";
 import {
@@ -130,6 +131,21 @@ export interface IAutoMovieProductionDesign {
    * before the field existed.
    */
   renderBudgets?: IAutoMovieRenderBudget[];
+  /**
+   * Read-only site context every environmental analysis is measured against.
+   *
+   * Sun, sky, reference ground and neighbouring occluder masses are conditions
+   * a building is subject to, not parts of it. Declaring them here keeps that
+   * direction one-way: an analysis reads the context and the building, and
+   * neither the context nor a result it produces can become design.
+   *
+   * The compiler refuses a context whose ids collide with the building's own
+   * elements, spaces or boundaries, because a shading mass sharing an id with a
+   * wall is a mass the building would appear to own. Optional and purely
+   * additive: a production declaring none runs no analysis and is otherwise
+   * unaffected.
+   */
+  environmentContext?: IAutoMovieEnvironmentContext;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**

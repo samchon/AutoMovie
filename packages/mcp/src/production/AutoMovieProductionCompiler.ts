@@ -15,6 +15,7 @@ import {
   sampleFormationMotion,
   sampleFormationSlotMotion,
   unsupportedAutoMovieMaterialExtensions,
+  validateAutoMovieEnvironmentContext,
   validateBuiltEnvironment,
   validateModel,
   validateMotion,
@@ -645,6 +646,35 @@ export class AutoMovieProductionCompiler {
             target: "asset-manifest",
             path: ".automovie/manifest.json",
             message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
+          });
+    }
+    // Hold the read-only site context to its one-way direction. A context id
+    // colliding with a building's own element, space or boundary is a mass the
+    // building would appear to own, which is exactly how external conditions
+    // stop being external.
+    const environmentContext = graph.production?.environmentContext;
+    if (environmentContext !== undefined) {
+      const reserved: string[] = [];
+      for (const shot of compiled.values())
+        for (const environment of shot.builtEnvironments ?? []) {
+          for (const element of environment.elements) reserved.push(element.id);
+          for (const space of environment.spaces) reserved.push(space.id);
+          for (const boundary of environment.boundaries)
+            reserved.push(boundary.id);
+        }
+      const site = validateAutoMovieEnvironmentContext({
+        context: environmentContext,
+        reserved,
+      });
+      if (site.success === false)
+        for (const violation of site.violations)
+          diagnostics.push({
+            code: "environment-context-invalid",
+            category: "error",
+            phase: "compile",
+            target: `environment-context:${environmentContext.id}`,
+            path: null,
+            message: `${violation.path} ${violation.expected}. Correct the declared site context, or rename the building member it collides with, before compiling.`,
           });
     }
     diagnostics.sort(compareDiagnostics);
