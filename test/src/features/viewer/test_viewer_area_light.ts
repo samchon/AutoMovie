@@ -38,10 +38,12 @@ const emitted = (light: THREE.Object3D) => {
  * 1. An area light builds a `RectAreaLight` carrying its exact width, height,
  *    colour, intensity and placement, and emits along the −Z its staged
  *    rotation aimed, with no target child of its own.
- * 2. The one writer that maps light values writes the panel extent too, so a host
+ * 2. A second panel builds whole without repeating the one-per-process install of
+ *    the BRDF lookup tables area shading reads.
+ * 3. The one writer that maps light values writes the panel extent too, so a host
  *    that rebuilds state per frame cannot lose it, and the punctual kinds are
  *    untouched by the new arm.
- * 3. Folding a shot's lighting over an area light keeps its extent and its staged
+ * 4. Folding a shot's lighting over an area light keeps its extent and its staged
  *    shadow policy, and gives it no `range`: the panel's falloff comes from its
  *    own area, so no channel writes one.
  */
@@ -85,6 +87,25 @@ export const test_viewer_area_light = (): void => {
       noTarget: true,
       noShadow: true,
     },
+  );
+
+  // The BRDF lookup tables an area light shades through are global renderer
+  // state, so `buildLight` installs them the first time a panel is built and
+  // never again. A second panel is what proves "never again": with no guard the
+  // install would repeat once per staged panel, and a room with ten windows
+  // would pay for ten uploads of the same two textures.
+  const second = buildLight({
+    ...WINDOW,
+    id: "south-window",
+  }) as THREE.RectAreaLight;
+  TestValidator.equals(
+    "a second panel is built whole without reinstalling the lookup tables",
+    namedFacts([
+      ["kind", () => second instanceof THREE.RectAreaLight],
+      ["width", () => nclose(second.width, 2.4)],
+      ["noTarget", () => second.children.length === 0],
+    ]),
+    { kind: true, width: true, noTarget: true },
   );
 
   const rewritten = new THREE.RectAreaLight(0xffffff, 1, 1, 1);
