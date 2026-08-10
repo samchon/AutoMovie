@@ -302,6 +302,11 @@ export const test_render_room_visibility = (): void => {
  * joins, so its two ends carry no information the graph did not have. Every
  * fact the lift adds arrives through its landings: `middle-mezzanine` and
  * `middle-gallery` are reachable from nothing else in the fixture.
+ *
+ * Its route is the shaft's own centre line, on the party wall at `x = 10`
+ * between the two columns of rooms, and each stop names the space entered at
+ * that station rather than a space the line runs inside — which is why a
+ * vertical shaft can serve rooms on both sides of it.
  */
 const liftFixture = (): IAutoMovieBuiltEnvironment => {
   const environment = buildingFixture();
@@ -331,8 +336,8 @@ const liftFixture = (): IAutoMovieBuiltEnvironment => {
       { space: "middle-gallery", at: 0.7 },
     ],
     route: [
-      { x: 13, y: 0, z: 5 },
-      { x: 13, y: 9, z: 5 },
+      { x: 10, y: 0, z: 5 },
+      { x: 10, y: 9, z: 5 },
     ],
     width: 1.6,
     clearHeight: 2.3,
