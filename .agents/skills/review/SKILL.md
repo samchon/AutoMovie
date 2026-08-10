@@ -55,6 +55,19 @@ Use these rounds only through the solo issue-campaign skill.
 
 An unresolved accepted issue, external blocker, or incomplete implementation prevents a successful campaign conclusion. Report it as blocked or active rather than treating it as a clean round.
 
+## "It is missing" is a claim that needs its own evidence
+
+A failed search proves a name was not found, not that a capability is absent, and least of all that its absence was unintended. This repository records deliberate omissions in contract JSDoc and in the guide corpus rather than anywhere a grep for the capability would reach, so a candidate resting on a search result is the most common way a round produces work that has to be withdrawn; one campaign withdrew a third of what it published this way.
+
+Complete all four steps before writing that something is missing.
+
+1. Read the contract type's JSDoc. Deliberate exclusions are stated there ("the sun direction is an input, not a computation").
+2. Search `packages/mcp/prompts/*.md` in the user's vocabulary rather than the implementation's. The guides teach in a director's words (a curtain, a ridge, a reverberant room), so probing them with type names finds nothing even where the topic is covered.
+3. Check whether related fields already exist and, if they do, read why. Half a mechanism usually means the other half was deferred under another name.
+4. Confirm the probe. Verify how the target is actually spelled, count consumers by exported symbol rather than by module filename, and read checked-in source rather than a generated artifact.
+
+When the steps turn up a declared position, the finding is not "this is missing" but "this was deferred, and here is what now lets it be done deliberately and within stated bounds", which carries a different burden of proof.
+
 ## Explicit Multi-Agent Reviews
 
 When the user explicitly asks for a team, parallel, or multi-agent review, load the [multi-agent skill](../multi-agent/SKILL.md) and its review procedure instead of this workflow. It inherits the same whole-surface and fresh-round law while defining independent parallel reviewers and lead adjudication.

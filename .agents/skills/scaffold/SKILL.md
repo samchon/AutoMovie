@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: Defines how an automovie production is authored inside the scaffold - the docs ladder from logline to scene, the spec library, subjects as classes under src, and the evidence graph in lint.config.ts that makes each stage answer for the one above it. Use before authoring or reviewing production content, whether in packages/cli/scaffold itself or in a project generated from it.
+description: Defines how an automovie production is authored inside the scaffold - the docs ladder from logline to scene, the spec library, subjects as classes under src, why an example teaches a technique instead of shipping content, and the evidence graph in lint.config.ts that makes each stage answer for the one above it. Use before authoring or reviewing production content, whether in packages/cli/scaffold itself or in a project generated from it.
 ---
 
 # Authoring a production
@@ -85,6 +85,16 @@ State these to whoever is authoring rather than letting them discover it.
 - **`docs/objects/` and `src/objects/` ship empty.** The prop slot has never had
   an inhabitant, because the shipped screenplay calls for no prop. A production
   that wants artillery, colours or a drum is the first to exercise that path.
+- **`src/examples/` is outside the ladder and outside the production.** Nothing
+  imports it and no claim cites it, so an example owes no specification and
+  cannot be caught drifting from one. Each file teaches one authoring technique
+  against placeholder geometry, and the shipped `AGENTS.md` tells the reader to
+  copy the technique out and delete the rest. A finished part added here is a
+  content library shipped to every generated project, so add the technique and
+  never the part. `slopedFacadeWindows` is the standard: its JSDoc says why a
+  raked facade needs a full three-dimensional placement rather than a ground grid
+  with a shared heading. Its spacings, anchors, palettes and seeds are sample
+  values the author edits, and nothing may depend on them.
 - **`docs/research/` is outside the ladder**, as is `docs/art-direction.md`.
   They cite nothing and nothing cites them, so sourced research is currently
   unowned by the obligation graph. A production whose value rests on sources
