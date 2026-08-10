@@ -749,9 +749,11 @@ export const autoMoviePatternTextureTransforms = (props: {
       sheared.push(placement.id);
       continue;
     }
-    // Scaling and then rotating carries the second row to `ry · (sin, cos)` and
-    // the first to `rx · (cos, -sin)`, so the angle is read off the second row
-    // and the first row's signed length along it is the scale that may mirror.
+    // Scaling and then rotating carries the second row to `ry · (sin, cos)`, so
+    // the angle is read off that row and `ry` is its length. That leaves the
+    // first row as `rx · (cos, -sin)`, whose signed length along the same
+    // direction is the pair's determinant over `ry`, which is where a flipped
+    // piece shows up as a negative scale.
     const angle = Math.atan2(second.x, second.y);
     const base =
       sheet.kind === "module"
@@ -764,7 +766,7 @@ export const autoMoviePatternTextureTransforms = (props: {
         y: base.y - (second.x + second.y) / 2,
       },
       scale: {
-        x: first.x * Math.cos(angle) - first.y * Math.sin(angle),
+        x: (first.x * second.y - first.y * second.x) / down,
         y: down,
       },
       rotationDeg: -angle / Quaternion.DEG2RAD,
@@ -782,11 +784,11 @@ const sheetPoint = (
 ): { x: number; y: number } => {
   const cosine = Math.cos(grain);
   const sine = Math.sin(grain);
-  const across = point.u - origin.u;
-  const down = point.v - origin.v;
+  const alongU = point.u - origin.u;
+  const alongV = point.v - origin.v;
   return {
-    x: (cosine * across + sine * down) / tile.u,
-    y: (-sine * across + cosine * down) / tile.v,
+    x: (cosine * alongU + sine * alongV) / tile.u,
+    y: (-sine * alongU + cosine * alongV) / tile.v,
   };
 };
 
