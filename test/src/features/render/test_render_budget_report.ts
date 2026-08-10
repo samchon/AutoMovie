@@ -229,6 +229,8 @@ export const test_render_budget_report = (): void => {
         nodes: [],
         cells: 4096,
         particles: 512,
+        domain: null,
+        material: null,
       },
     ],
   });
@@ -407,6 +409,8 @@ export const test_render_budget_report = (): void => {
         nodes: [],
         cells: null,
         particles: null,
+        domain: null,
+        material: null,
       },
     ],
   });
@@ -604,6 +608,8 @@ export const test_render_budget_report = (): void => {
           nodes: [],
           cells: 10,
           particles: null,
+          domain: null,
+          material: null,
         },
       ],
       textures: [
@@ -680,7 +686,15 @@ export const test_render_budget_report = (): void => {
         environments: autoMovieRenderSubjectOfShot({
           compiled: { ...compiled, builtEnvironments: [buildingFixture()] },
           waterBodies: [
-            { id: "basin", owner: null, nodes: [], cells: 1, particles: 2 },
+            {
+              id: "basin",
+              owner: null,
+              nodes: [],
+              domain: null,
+              cells: 1,
+              particles: 2,
+              material: null,
+            },
           ],
           textures: [
             {
@@ -694,7 +708,15 @@ export const test_render_budget_report = (): void => {
         water: autoMovieRenderSubjectOfShot({
           compiled,
           waterBodies: [
-            { id: "basin", owner: null, nodes: [], cells: 1, particles: 2 },
+            {
+              id: "basin",
+              owner: null,
+              nodes: [],
+              domain: null,
+              cells: 1,
+              particles: 2,
+              material: null,
+            },
           ],
         }).waterBodies?.map((body) => body.id),
         textures: autoMovieRenderSubjectOfShot({

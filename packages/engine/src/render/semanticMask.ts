@@ -10,7 +10,12 @@ import {
   autoMovieRenderHash32,
   compareAutoMovieRenderIds,
 } from "./renderDigest";
-import { IAutoMovieRenderSubject } from "./renderSubject";
+import {
+  IAutoMovieRenderSubject,
+  autoMovieFluidSurfaceNodeName,
+  autoMoviePlantingNodeName,
+  autoMovieSoftBodyNodeName,
+} from "./renderSubject";
 
 /**
  * Colours the mask may assign: the exact 8-bit RGB space minus `#000000`, which
@@ -49,6 +54,12 @@ export const AUTOMOVIE_SEMANTIC_MASK_MAX_ENTRIES = 65536;
  * the building unit. An element that fills an opening is owned by that opening,
  * which is how a door prop is addressable as a door rather than as an anonymous
  * panel.
+ *
+ * Simulated drawables are addressed the same way. A cloth panel, a planting
+ * cluster and a bound water surface are held by no scene node, so they are
+ * joined by the names their own viewer builders assign; without those names
+ * every one of them would paint the reserved background and a segmentation
+ * consumer would read a curtain, a fern bed and a pond as nothing at all.
  *
  * Throws when the subject declares more entities than one bounded mask can
  * address. Silently dropping the excess would make a mask that segments a
@@ -179,7 +190,38 @@ const collectClaims = (subject: IAutoMovieRenderSubject): IClaim[] => {
       kind: "water-body",
       label: null,
       owner: body.owner,
-      nodes: body.nodes,
+      // The free surface a bound domain draws is one viewer object of its own,
+      // named after the domain rather than after the body, so the join has to
+      // carry that name too; without it the water would paint the reserved
+      // background and a segmentation consumer would read the pond as nothing.
+      nodes:
+        body.domain === null
+          ? body.nodes
+          : [...body.nodes, autoMovieFluidSurfaceNodeName(body.domain.id)],
+      slot: null,
+    });
+  // Cloth and planting paint pixels no scene node holds. Addressing them by the
+  // viewer names their own builders assign is what keeps a curtain a curtain in
+  // the mask instead of an unaddressed mesh painted background.
+  for (const panel of subject.softBodies ?? [])
+    claims.push({
+      id: `soft-body:${panel.domain.id}`,
+      kind: "soft-body",
+      label: null,
+      owner: panel.owner,
+      nodes: [autoMovieSoftBodyNodeName(panel.domain.id)],
+      slot: null,
+    });
+  for (const planting of subject.plantings ?? [])
+    claims.push({
+      id: `planting:${planting.cluster.id}`,
+      kind: "planting",
+      label: null,
+      owner: planting.owner,
+      // One claim for the cluster group, so both instanced batches under it
+      // resolve to the same colour: a bed of ferns is one thing a segmentation
+      // consumer asks about, not two.
+      nodes: [autoMoviePlantingNodeName(planting.cluster.id)],
       slot: null,
     });
   return claims;

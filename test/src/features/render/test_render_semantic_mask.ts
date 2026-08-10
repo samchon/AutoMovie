@@ -60,6 +60,8 @@ export const test_render_semantic_mask = (): void => {
         nodes: ["pool-surface"],
         cells: null,
         particles: null,
+        domain: null,
+        material: null,
       },
     ],
   });
