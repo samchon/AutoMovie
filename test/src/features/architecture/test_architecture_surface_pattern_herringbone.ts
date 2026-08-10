@@ -115,6 +115,7 @@ const floor = (
  * 6. The six whole boards become six instance slots on the floor frame, each
  *    carrying its own board's long axis, and the four cut ones are named
  *    instead.
+ * 7. The same declaration laid twice produces the same bytes.
  */
 export const test_architecture_surface_pattern_herringbone = (): void => {
   const laid = generateAutoMovieSurfacePattern({ pattern: floor() });
