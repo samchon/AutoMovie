@@ -136,8 +136,9 @@ const blocked = (bounds: IAutoMoviePropBox): string[] =>
  * 3. A station interior to a single segment still widens it: a corridor that
  *    bulges only in the middle blocks a probe its end sections would clear, and
  *    still clears a probe beyond its widest station.
- * 4. A connector declaring no section at all reports nothing, while validation
- *    refuses that very record at the field that is missing.
+ * 4. A connector declaring no section at all reports nothing, while the same probe
+ *    against the same route blocks it the moment a section is stated, and
+ *    validation refuses the undeclared record at the field that is missing.
  * 5. A probe clear of every corridor blocks nothing.
  */
 export const test_film_prop_passage_section = (): void => {
@@ -168,6 +169,21 @@ export const test_film_prop_passage_section = (): void => {
         "unstatedSectionSweepsNothing",
         () => blocked(box(0, 19.5, 10, 20.5)).includes("unstated") === false,
       ],
+      // Without this twin the fact above would hold just as well if the probe
+      // had been nowhere near the route, or if nothing were ever reported.
+      // The probe is on the route; only the missing declaration silences it.
+      [
+        "theSameProbeBlocksOnceTheSectionIsStated",
+        () => {
+          const stated = corridors();
+          stated.connectors[2]!.width = 2;
+          stated.connectors[2]!.clearHeight = 2;
+          return propBlockedPassages({
+            environment: stated,
+            bounds: box(0, 19.5, 10, 20.5),
+          }).some((blockage) => blockage.id === "unstated");
+        },
+      ],
       ["clearOfEverything", () => blocked(box(50, 50, 51, 51)).length === 0],
     ]),
     {
@@ -176,6 +192,7 @@ export const test_film_prop_passage_section = (): void => {
       interiorStationCounts: true,
       beyondTheWidestStationIsClear: true,
       unstatedSectionSweepsNothing: true,
+      theSameProbeBlocksOnceTheSectionIsStated: true,
       clearOfEverything: true,
     },
   );
