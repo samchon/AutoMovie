@@ -184,9 +184,12 @@ export const exampleCurtainDomain = (
       gustHz: 0.35,
     },
     // Declaring `true` here would be legitimate — it states what the panel
-    // actually needs — and the engine answers `unsupported` rather than
-    // quietly solving a panel that passes through itself. This one does not
-    // ask for it, so it says so.
+    // actually needs — and this tier answers `unsupported` rather than quietly
+    // solving a panel that passes through itself. The answer comes from the
+    // binding's lowering, not from the validator below: a domain on its own
+    // validates either way, and it is `lowerSoftFurnishing` that hands back the
+    // rest configuration with the status attached. This panel does not ask for
+    // contact, so it says so.
     selfCollision: false,
   };
 };
