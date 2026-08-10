@@ -355,6 +355,19 @@ export const test_film_prop_placement_utility = (): void => {
           }).length === 0,
       ],
       [
+        "unresolvedFillIsNeverBlocked",
+        () =>
+          propBlockedPassages({
+            environment: {
+              ...environment,
+              elements: environment.elements.filter(
+                (element) => element.id !== "door-leaf",
+              ),
+            },
+            bounds: box(3.9, 0.5, -0.02, 4.1, 1.5, 0.02),
+          }).length === 0,
+      ],
+      [
         "degenerateRouteSweepsNothing",
         () =>
           propBlockedPassages({
@@ -636,6 +649,7 @@ export const test_film_prop_placement_utility = (): void => {
       sweptConnectorIsBlocked: true,
       openCutIsNeverBlocked: true,
       unmodelledFillIsNeverBlocked: true,
+      unresolvedFillIsNeverBlocked: true,
       degenerateRouteSweepsNothing: true,
       clearOfEverythingBlocksNothing: true,
       spaceHasNoFrame: true,
