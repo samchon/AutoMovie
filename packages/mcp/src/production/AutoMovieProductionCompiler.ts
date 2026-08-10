@@ -17,6 +17,8 @@ import {
   unsupportedAutoMovieMaterialExtensions,
   validateAutoMovieEnvironmentContext,
   validateBuiltEnvironment,
+  validateDesignLineage,
+  validateDesignLineageBinding,
   validateModel,
   validateMotion,
   validatePropPlacements,
@@ -38,6 +40,9 @@ import {
   IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
+  IAutoMovieDesignEvidence,
+  IAutoMovieDesignLineage,
+  IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
@@ -96,6 +101,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
@@ -652,6 +658,87 @@ export class AutoMovieProductionCompiler {
             path: ".automovie/manifest.json",
             message: `${violation.path} ${violation.expected}. Register the image, correct its typed use, or stop binding it before compiling.`,
           });
+    }
+    // Hold every observation the buildings read against the bytes it claims,
+    // and every phase, alternative and derivation against the identities the
+    // buildings publish. Both run here rather than per shot: two shots that
+    // stage the same building carry the same documents, so a per-shot gate
+    // would read one production's evidence as a duplicate of itself.
+    if (input.scope !== "design" && compiled.size !== 0) {
+      const referenceOf = new Map<string, IAutoMovieDesignReference>();
+      const referenceDigests = new Map<string, AutoMovieContentDigest>();
+      const evidence: IAutoMovieDesignEvidence[] = [];
+      const lineages = new Map<string, IAutoMovieDesignLineage>();
+      const published = new Set<string>();
+      for (const shot of compiled.values()) {
+        for (const reference of shot.designReferences ?? []) {
+          const digest = digestAutoMovieBytes(
+            canonicalAutoMovieJsonBytes(reference),
+          );
+          const seen = referenceDigests.get(reference.id);
+          // The same document staged by two shots is one document. Only a
+          // second document wearing the same id is a collision, and the gate
+          // below is the one that reports it.
+          if (seen === undefined || seen !== digest)
+            referenceOf.set(reference.id, reference);
+          if (seen === undefined) referenceDigests.set(reference.id, digest);
+        }
+        for (const citation of shot.designEvidence ?? [])
+          evidence.push(citation);
+        for (const lineage of shot.designLineages ?? [])
+          lineages.set(lineage.id, lineage);
+        for (const environment of shot.builtEnvironments ?? []) {
+          for (const building of environment.buildings)
+            published.add(building.id);
+          for (const element of environment.elements) published.add(element.id);
+          for (const space of environment.spaces) published.add(space.id);
+          for (const boundary of environment.boundaries)
+            published.add(boundary.id);
+          for (const opening of environment.openings) published.add(opening.id);
+          for (const connector of environment.connectors)
+            published.add(connector.id);
+        }
+        for (const model of shot.models) published.add(model.id);
+      }
+      const production = graph.production?.id ?? this.project.productionId;
+      const uses = new Map<string, Set<string>>();
+      for (const record of assetRecords)
+        for (const use of record.uses) {
+          if (use.production !== production) continue;
+          published.add(use.consumer.id);
+          if (use.consumer.kind !== "design-reference") continue;
+          const documents = uses.get(record.path) ?? new Set<string>();
+          documents.add(use.consumer.id);
+          uses.set(record.path, documents);
+        }
+      if (referenceOf.size !== 0 || evidence.length !== 0 || uses.size !== 0)
+        diagnostics.push(
+          ...designReferenceDiagnostics({
+            path: projectManifest.assetManifest ?? ".automovie/assets.json",
+            references: [...referenceOf.values()],
+            evidence,
+            assets: new Map(
+              (contentInputs ?? []).map((entry) => [entry.path, entry.bytes]),
+            ),
+            uses,
+          }),
+        );
+      for (const lineage of lineages.values()) {
+        const bound = validateDesignLineageBinding({
+          lineage,
+          known: [...published],
+        });
+        if (bound.success === false)
+          for (const violation of bound.violations)
+            diagnostics.push({
+              code: "design-lineage-unbound",
+              category: "error",
+              phase: "compile",
+              target: `design-lineage:${lineage.id}`,
+              path: null,
+              message: `${violation.path} ${violation.expected}. Cite an identity the compiled buildings or the asset ledger publish, or drop the lineage subject.`,
+            });
+      }
     }
     // Hold the read-only site context to its one-way direction. A context id
     // colliding with a building's own element, space or boundary is a mass the

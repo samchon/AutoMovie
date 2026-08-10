@@ -1,6 +1,10 @@
 import type {
   IAutoMovieBuiltEnvironment,
+  IAutoMovieDesignEvidence,
+  IAutoMovieDesignLineage,
+  IAutoMovieDesignReference,
   IAutoMovieEffectRecipe,
+  IAutoMovieFluidDomain,
   IAutoMovieFormationMotion,
   IAutoMovieFormationSlotMotion,
   IAutoMovieInstanceSetDesign,
@@ -12,6 +16,7 @@ import type {
   IAutoMovieShotEffectCue,
   IAutoMovieSpace,
   IAutoMovieStageSetPiece,
+  IAutoMovieWaterFeature,
   IAutoMovieWorldEffectZone,
   IAutoMovieWorldLandmark,
   IAutoMovieWorldRoute,
@@ -41,6 +46,22 @@ export interface IAutoMovieSubjectContribution {
   spaces?: readonly IAutoMovieSpace[];
   /** Structured buildings retained for spatial queries and evidence. */
   builtEnvironments?: readonly IAutoMovieBuiltEnvironment[];
+  /**
+   * Observation documents the building source read, carried as provenance.
+   *
+   * A reading is not a design. These travel beside the building so the compiler
+   * can hold each one against the bytes it claims to have observed, and they
+   * never become geometry on their own.
+   */
+  designReferences?: readonly IAutoMovieDesignReference[];
+  /** Citations from authored design members back to those observations. */
+  designEvidence?: readonly IAutoMovieDesignEvidence[];
+  /** Phase, alternative and change-impact lineage over those same identities. */
+  designLineages?: readonly IAutoMovieDesignLineage[];
+  /** Independent deterministic fluid domains this subject declares. */
+  fluidDomains?: readonly IAutoMovieFluidDomain[];
+  /** Bindings that make those domains a building's own water features. */
+  waterFeatures?: readonly IAutoMovieWaterFeature[];
   /** Source-owned semantic props retained beside their staged placements. */
   props?: readonly IAutoMoviePropSpec[];
   /** Articulated performers this subject stages. */
@@ -72,6 +93,11 @@ const CONTRIBUTION_KEYS = [
   "set",
   "spaces",
   "builtEnvironments",
+  "designReferences",
+  "designEvidence",
+  "designLineages",
+  "fluidDomains",
+  "waterFeatures",
   "props",
   "actors",
   "clips",

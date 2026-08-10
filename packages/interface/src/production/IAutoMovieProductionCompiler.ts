@@ -1,10 +1,16 @@
-import { IAutoMovieBuiltEnvironment } from "../architecture";
+import {
+  IAutoMovieBuiltEnvironment,
+  IAutoMovieDesignEvidence,
+  IAutoMovieDesignLineage,
+  IAutoMovieDesignReference,
+} from "../architecture";
 import {
   IAutoMovieDefinedShot,
   IAutoMovieShotProgram,
 } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
 import { IAutoMovieClip } from "../core";
+import { IAutoMovieFluidDomain, IAutoMovieWaterFeature } from "../fluid";
 import {
   IAutoMovieQuaternion,
   IAutoMovieTransform,
@@ -1039,6 +1045,16 @@ export interface IAutoMovieShotSourceOutput {
   props?: IAutoMoviePropSpec[];
   /** Structured buildings retained for spatial queries and evidence. */
   builtEnvironments?: IAutoMovieBuiltEnvironment[];
+  /** Observation documents the building source read, kept as provenance. */
+  designReferences?: IAutoMovieDesignReference[];
+  /** Citations from authored design members back to those observations. */
+  designEvidence?: IAutoMovieDesignEvidence[];
+  /** Phase, alternative and change-impact lineage over those identities. */
+  designLineages?: IAutoMovieDesignLineage[];
+  /** Independent deterministic fluid domains this shot's source declares. */
+  fluidDomains?: IAutoMovieFluidDomain[];
+  /** Bindings that make those domains a building's own water features. */
+  waterFeatures?: IAutoMovieWaterFeature[];
   /** Event sample times selected inside authoritative event windows. */
   eventSamples: Array<{
     /** Exact event-contract id. */
@@ -1232,6 +1248,22 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * same record rather than transcribed into a second design.
    */
   builtEnvironments?: IAutoMovieBuiltEnvironment[];
+  /**
+   * Observation documents the building source read, carried as provenance.
+   *
+   * A reading is never promoted into the design. They are here so the compiler
+   * can hold each document against the bytes it claims to have observed and
+   * refuse a citation whose file has moved on.
+   */
+  designReferences?: IAutoMovieDesignReference[];
+  /** Citations from authored design members back to those observations. */
+  designEvidence?: IAutoMovieDesignEvidence[];
+  /** Phase, alternative and change-impact lineage over those identities. */
+  designLineages?: IAutoMovieDesignLineage[];
+  /** Independent deterministic fluid domains this shot's source declares. */
+  fluidDomains?: IAutoMovieFluidDomain[];
+  /** Bindings that make those domains a building's own water features. */
+  waterFeatures?: IAutoMovieWaterFeature[];
   /**
    * Optional source-computed clips cited only by explicit `enact` actions.
    *

@@ -24,4 +24,3 @@ export * from "./effect";
 export * from "./fluidSurface";
 export * from "./softBodySurface";
 export * from "./plantingInstances";
-export * from "./plantingInstances";
