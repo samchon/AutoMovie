@@ -54,6 +54,44 @@ export const production = {
     colorSpace: "srgb",
   },
   /**
+   * What this production is willing to draw, per render tier.
+   *
+   * The tier names are the ones a render job targets, because a budget filed
+   * under a name no job asks for is a limit that never runs. The proxy pass is
+   * the one an author looks at all day, so it is the tighter of the two; the
+   * final pass is allowed the textures and lights the proxy does without.
+   *
+   * These are this starter's numbers, not the engine's: nothing ships preset
+   * tiers, and a production that deletes this field is measured and reported
+   * without a verdict rather than judged against a number it never chose.
+   */
+  renderBudgets: [
+    {
+      version: 1,
+      tier: "proxy",
+      limits: {
+        triangles: 400_000,
+        drawCalls: 128,
+        materials: 32,
+        textures: 16,
+        lights: 8,
+        shadowMaps: 4,
+      },
+    },
+    {
+      version: 1,
+      tier: "final",
+      limits: {
+        triangles: 2_000_000,
+        drawCalls: 512,
+        materials: 64,
+        textures: 64,
+        lights: 16,
+        shadowMaps: 8,
+      },
+    },
+  ],
+  /**
    * The bounded visual grammar, specified by `docs/art-direction.md`.
    *
    * Palette and scale rules live here rather than inside a subject because they

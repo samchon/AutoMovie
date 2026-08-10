@@ -311,6 +311,7 @@ export const test_mcp_production_source_link = (): void => {
       "mergeAutoMovieMeshes",
       "mergeAutoMovieSpaces",
       "mergeAutoMovieSubjectContributions",
+      "placementChildNode",
       "resolveAutoMovieMaterialAssembly",
       "revolveAutoMovieProfile",
       "sweepAutoMovieProfile",

@@ -19,6 +19,7 @@ import {
   mergeAutoMovieMeshes,
   mergeAutoMovieSpaces,
   mergeAutoMovieSubjectContributions,
+  placementChildNode,
   resolveAutoMovieMaterialAssembly,
   revolveAutoMovieProfile,
   sweepAutoMovieProfile,
@@ -77,6 +78,7 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "mergeAutoMovieMeshParts",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
+    "placementChildNode",
     "resolveAutoMovieMaterialAssembly",
     "revolveAutoMovieProfile",
     "sweepAutoMovieProfile",
@@ -123,6 +125,7 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     mergeAutoMovieSubjectContributions: bridged(
       mergeAutoMovieSubjectContributions,
     ),
+    placementChildNode: bridged(placementChildNode),
     resolveAutoMovieMaterialAssembly: bridged(resolveAutoMovieMaterialAssembly),
     revolveAutoMovieProfile: bridged(revolveAutoMovieProfile),
     sweepAutoMovieProfile: bridged(sweepAutoMovieProfile),

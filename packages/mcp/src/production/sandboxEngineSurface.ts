@@ -30,6 +30,7 @@ export type AutoMovieSandboxEngineExport =
   | "mergeAutoMovieMeshes"
   | "mergeAutoMovieSpaces"
   | "mergeAutoMovieSubjectContributions"
+  | "placementChildNode"
   | "resolveAutoMovieMaterialAssembly"
   | "revolveAutoMovieProfile"
   | "sweepAutoMovieProfile"
@@ -85,6 +86,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "mergeAutoMovieMeshes",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
+    "placementChildNode",
     "resolveAutoMovieMaterialAssembly",
     "revolveAutoMovieProfile",
     "sweepAutoMovieProfile",
