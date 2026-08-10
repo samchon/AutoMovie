@@ -173,9 +173,6 @@ export const applyRenderMode = (
       case "outline":
         return () => applyEdgeMode(scene, options?.edgeWidth ?? EDGE_WIDTH);
       case "mask": {
-        // Resolved before the scene is touched, like every other pass builder,
-        // so a palette that cannot resolve this scene throws with nothing
-        // hidden and no material swapped.
         const semantic = autoMovieSemanticMaskOf(scene);
         return semantic === null
           ? () => applyMaskMode(scene)
@@ -194,7 +191,22 @@ export const applyRenderMode = (
   const restoreRenderables = hideNonMeshRenderables(scene);
   const restoreFog = suspendFog(scene);
   const restoreEnvironment = suspendEnvironment(scene);
-  const handle = build();
+  // A builder that throws returns no handle, so the three suspensions above
+  // would have no way back and the scene would keep drawing on black with its
+  // atmosphere off for the rest of the session. The semantic mask pass is the
+  // first builder that CAN throw (a palette whose design names more staged
+  // nodes than the scene holds refuses rather than resolving positionally
+  // against the wrong objects), and undoing them here keeps that a refusal
+  // instead of a refusal plus a broken scene.
+  let handle: IAutoMovieRenderModeHandle;
+  try {
+    handle = build();
+  } catch (error) {
+    restoreEnvironment();
+    restoreFog();
+    restoreRenderables();
+    throw error;
+  }
   return {
     mode,
     semantic: handle.semantic,

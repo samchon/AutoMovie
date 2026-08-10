@@ -20,7 +20,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { flatBasin, waterFeature } from "../internal/fluidFixtures";
-import { namedFacts } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 import {
   buildingFixture,
   instanceSetFixture,
@@ -67,6 +67,10 @@ import {
  *    named.
  * 6. A scene that drew every declared drawable audits clean, and an instanced set
  *    whose viewer group is missing is named by its own set id.
+ * 7. A palette that cannot resolve the scene refuses, and the refusal costs the
+ *    scene nothing: fog, image lighting, background and hidden renderables are
+ *    all back, because a throw past the pass boundary would leave them
+ *    suspended with no handle to undo them.
  */
 export const test_viewer_semantic_mask_pass = (): void => {
   const design = sceneFixture();
@@ -245,6 +249,46 @@ export const test_viewer_semantic_mask_pass = (): void => {
     "an instanced batch the scene never built is named by its set id",
     auditAutoMovieSemanticMaskScene({ scene: setless.scene, design, mask }),
     ["instance-set:windows"],
+  );
+
+  // A palette that cannot resolve the scene refuses, and the refusal must cost
+  // nothing: the pass boundary suspends the atmosphere, the image lighting and
+  // every non-mesh renderable BEFORE the builder runs, so a throw that left
+  // them suspended would hand back a scene that draws on black with its fog off
+  // for the rest of the session and no handle to undo it with.
+  const short = new THREE.Scene();
+  short.background = new THREE.Color(0x123456);
+  short.fog = new THREE.FogExp2(0x223344, 0.02);
+  short.environment = new THREE.Texture();
+  const grid = new THREE.LineSegments(new THREE.BufferGeometry());
+  short.add(grid);
+  attachAutoMovieSemanticMask(short, { design, mask });
+  TestValidator.equals(
+    "a refused palette leaves the scene exactly as it found it",
+    namedFacts([
+      [
+        "refused",
+        () =>
+          throwsError(
+            () => applyRenderMode(short, "mask"),
+            "cannot resolve staged nodes",
+          ),
+      ],
+      ["fog", () => short.fog !== null],
+      ["image lighting", () => short.environment !== null],
+      [
+        "background",
+        () => (short.background as THREE.Color).getHex() === 0x123456,
+      ],
+      ["grid visible", () => grid.visible],
+    ]),
+    {
+      refused: true,
+      fog: true,
+      "image lighting": true,
+      background: true,
+      "grid visible": true,
+    },
   );
 };
 
