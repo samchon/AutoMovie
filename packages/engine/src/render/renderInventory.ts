@@ -652,11 +652,14 @@ const sumBytes = (textures: readonly IAutoMovieRenderTextureCost[]): number =>
   textures.reduce((sum, texture) => sum + texture.bytes!, 0);
 
 /**
- * Quads one lattice axis of `count` sites spans.
+ * Quads one grid axis of `count` cells spans.
  *
- * A single site spans none, which is what makes a one-particle-wide cloth a
- * cord and a one-cell-wide pond a line: both draw nothing at all, and inventing
- * a sliver for either would be inventing geometry.
+ * A single cell spans none, which is what makes a one-cell-wide pond a line
+ * rather than a surface: it draws nothing at all, and inventing a sliver for it
+ * would be inventing geometry. The panel beside it needs no such helper because
+ * the soft-body domain publishes its own drawn triangle count; the fluid budget
+ * states cells and faces but not the surface it draws, so this is derived here
+ * from the grid the surface geometry reads.
  */
 const quads = (count: number): number => (count > 1 ? count - 1 : 0);
 
