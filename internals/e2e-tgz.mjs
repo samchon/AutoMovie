@@ -299,7 +299,13 @@ const runExpectedOutput = (
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   if (forbidden !== null)
     for (const line of output.split(/\r?\n/u))
-      if (line.trim().length !== 0 && forbidden.test(line) === false)
+      // npm prints its own banner for the script it runs, so only the
+      // command's own lines are held to the shape.
+      if (
+        line.trim().length !== 0 &&
+        line.startsWith(">") === false &&
+        forbidden.test(line) === false
+      )
         throw new Error(
           `${label}: every line had to match ${forbidden}, and this one did not: ${JSON.stringify(line)}.
 ${output}`,
