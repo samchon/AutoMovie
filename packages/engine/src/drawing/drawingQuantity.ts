@@ -178,17 +178,17 @@ export const measureAutoMovieQuantities = (props: {
       subject: "material-quantity",
       status: "unsupported",
       reason:
-        "the design carries no material layers, thicknesses or application areas, so no volume or mass of any material can be taken off",
+        "a material assembly is a separate record from the built environment and this measurement is handed only the environment, so no layer thickness or application area is in reach and no volume or mass of any material can be taken off",
       remedy:
-        "author material layers on the elements, then re-measure; a surface material alone cannot produce a take-off",
+        "extend the measurement to accept the work's material assemblies; a surface material alone cannot produce a take-off",
     },
     {
       subject: "pattern-cut-waste",
       status: "unsupported",
       reason:
-        "cut waste is a property of a module layout over a bounded area, and the design carries no pattern layout to lay out",
+        "cut waste is a property of a module layout over a bounded area, and a surface pattern is a separate record this measurement is not handed",
       remedy:
-        "author a module pattern with its module size, joint and boundary rule, then re-measure",
+        "extend the measurement to accept the work's surface patterns, then count the offcuts each bounded area produces",
     },
     {
       subject: "opening-deduction",

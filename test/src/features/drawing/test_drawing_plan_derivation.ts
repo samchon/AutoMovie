@@ -608,6 +608,36 @@ export const test_drawing_plan_derivation = (): void => {
     }).lines.some((line) => line.owner === "floor-slab"),
     false,
   );
+  const substituted = deriveAutoMovieDrawing({
+    environment: leafOnlyOpenings(environment),
+    view: drawingView({ id: "substituted" }),
+  });
+  TestValidator.equals(
+    "an opening measured from its leaf says so, and the sheet says so too",
+    [
+      substituted.openings.map((mark) => [
+        mark.opening,
+        mark.basis,
+        mark.width,
+      ]),
+      substituted.gaps.find((gap) => gap.subject === "opening-profile")?.status,
+      substituted.gaps.some(
+        (gap) => gap.subject === "opening-void-subtraction",
+      ),
+    ],
+    [
+      [
+        // The leaf is 0.9 x 2.1 x 0.05, so this is the leaf's own width and not
+        // the hole's; the twin's leaf draws nothing, so it proves nothing.
+        ["front-door", "fill", 0.9],
+        ["twin-door", "none", null],
+        ["vent", "none", null],
+      ],
+      "not-run",
+      // Nothing was drawn from a void, so there is no void to subtract.
+      false,
+    ],
+  );
   const blank = deriveAutoMovieDrawing({
     environment,
     view: drawingView({
@@ -1069,6 +1099,63 @@ const splitHall = (
         }
       : space,
   ),
+});
+
+/**
+ * The same design with no void anywhere and two doors backed by leaves.
+ *
+ * The front door's leaf has geometry and stands in for the hole it fills; the
+ * twin's leaf carries vertices and no triangle, so nothing about it can be
+ * measured. The oculus, which has a void and no leaf, is dropped so the sheet
+ * has nothing measured from a profile on it at all.
+ */
+const leafOnlyOpenings = (
+  environment: IAutoMovieBuiltEnvironment,
+): IAutoMovieBuiltEnvironment => ({
+  ...environment,
+  models: [
+    ...environment.models,
+    {
+      ...environment.models.find((model) => model.id === "leaf")!,
+      id: "hollow-leaf",
+      parts: [
+        {
+          ...environment.models.find((model) => model.id === "leaf")!.parts[0]!,
+          geometry: {
+            type: "mesh" as const,
+            mesh: {
+              positions: [0, 0, 0, 1, 0, 0, 0, 0, 1],
+              normals: null,
+              uvs: null,
+              indices: [],
+              skin: null,
+            },
+          },
+        },
+      ],
+    },
+  ],
+  elements: [
+    ...environment.elements,
+    {
+      id: "twin-leaf",
+      kind: "door-leaf",
+      parent: "shell",
+      transform: drawingPlace(4, 1.05, 0.1),
+      model: "hollow-leaf",
+      space: "hall",
+    },
+  ],
+  openings: [
+    {
+      id: "front-door",
+      kind: "door",
+      boundary: "north",
+      fill: "door-leaf",
+    },
+    { id: "twin-door", kind: "door", boundary: "north", fill: "twin-leaf" },
+    { id: "vent", kind: "vent", boundary: "north", fill: null },
+  ],
 });
 
 /** The same design with the footing declared on the slab's own layer. */

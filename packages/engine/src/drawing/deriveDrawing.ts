@@ -302,17 +302,17 @@ export const deriveAutoMovieDrawing = (props: {
       subject: "material-build-up",
       status: "unsupported",
       reason:
-        "a region's finish is the surface material bound to the elements realizing its boundaries; the design carries no layer order, thickness or pattern to hatch a construction build-up from",
+        "a region's finish is the surface material bound to the elements realizing its boundaries; a material assembly is a separate record from the built environment, this derivation is handed only the environment, and nothing here hatches a layer order, a thickness or a coursing pattern even when one is authored",
       remedy:
-        "author material layers on the boundary elements, then re-derive the finish view",
+        "extend the derivation to accept the work's material assemblies, then hatch each cut boundary by its own layers",
     },
     {
       subject: "service-network",
       status: "unsupported",
       reason:
-        "the design carries no typed service ports or networks, so a services view is a kind-filtered projection of ordinary elements rather than a network-aware one",
+        "a service network is a separate record from the built environment, this derivation is handed only the environment, and nothing here draws a segment, a port or a penetration even when one is authored, so a services view is a kind-filtered projection of ordinary elements rather than a network-aware one",
       remedy:
-        "author service ports and segments, then filter the view by their kinds",
+        "extend the derivation to accept the work's service networks, then draw their segments, ports and penetrations as their own linework",
     },
   );
 
