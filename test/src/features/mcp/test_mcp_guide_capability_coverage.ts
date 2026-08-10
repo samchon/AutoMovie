@@ -1,3 +1,4 @@
+import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
@@ -683,6 +684,89 @@ const ENGINE_ENTRIES: Record<string, string | null> = {
   "worldKit.ts": "WORLD_DESIGN",
 };
 
+/**
+ * Where an authoring agent may call one engine capability the corpus names.
+ *
+ * Being taught and being reachable are two facts, and this repository has
+ * already shipped them contradicting each other: a guide taught drawings,
+ * schedules, take-offs and performance studies in detail while no module an
+ * authoring agent may write could call any of them. A capability nobody can
+ * reach is worse than one nobody teaches, because the agent tries it and fails,
+ * then reads the compiler to find out why.
+ *
+ * There are exactly two places an agent's code runs, and they differ in what
+ * they may name.
+ *
+ * - `surface`: published on {@link AUTOMOVIE_SANDBOX_ENGINE_SURFACE}, so a shot or
+ *   film build function may import it and the result becomes a frame.
+ * - `script`: off that surface, so it may only be called from the project's
+ *   ordinary Node or browser code, and the starter proves the place is real by
+ *   calling it from `scripts/` or `viewer/src/`.
+ * - `unreached`: off that surface, and no module the starter ships calls it. The
+ *   honest hole, and the list a reviewer reads first.
+ */
+type AutoMovieCapabilityReach = "surface" | "script" | "unreached";
+
+/**
+ * Every engine value export a served guide names, and where it is called from.
+ *
+ * The population is derived rather than listed: naming an engine export in a
+ * guide's code span is what puts it here, so teaching a capability and deciding
+ * where it may be called are one edit. The value is checked against the sandbox
+ * surface and against the starter's own modules, so a name that moves onto or
+ * off the surface, or a call site that disappears, fails here by name.
+ */
+const CAPABILITY_REACH: Record<string, AutoMovieCapabilityReach> = {
+  AutoMovieSubject: "surface",
+  AutoMovieSubjectGroup: "surface",
+  analyzeAutoMovieAcoustics: "script",
+  analyzeAutoMovieDaylight: "script",
+  analyzeAutoMovieEnvelope: "script",
+  analyzeAutoMovieSpaceAir: "script",
+  // The world kit's placement validator. `WORLD_DESIGN` teaches it, the sandbox
+  // does not publish it, and no shipped module calls it: a world design record
+  // is emitted by `scripts/emitDesign.ts`, which is where the check belongs and
+  // does not yet run it.
+  assertWorldPlacements: "unreached",
+  autoMovieDrawingToSvg: "script",
+  autoMovieRenderSubjectOfCompiledShot: "script",
+  // The older render-subject reading, taught by `PRODUCTION_DESIGN` as the
+  // escape hatch for drawables the compiled artifact does not carry. Its own
+  // JSDoc records that the test suite is its only caller, so the starter
+  // demonstrates the compiled reading beside it and not this one.
+  autoMovieRenderSubjectOfShot: "unreached",
+  buildAutoMoviePolyhedron: "surface",
+  buildAutoMovieWall: "surface",
+  builtEnvironmentAdjacentSpaces: "surface",
+  builtEnvironmentBuildingOfSpace: "surface",
+  builtEnvironmentContainsPoint: "surface",
+  builtEnvironmentSpaceConnectors: "surface",
+  builtEnvironmentSpaceNodes: "surface",
+  builtEnvironmentSpaceSurfaces: "surface",
+  defineShot: "surface",
+  deriveAutoMovieDrawing: "script",
+  deriveAutoMovieDrawingSchedule: "script",
+  deriveAutoMovieSemanticMask: "script",
+  extrudeAutoMovieProfile: "surface",
+  extrudeAutoMovieRegion: "surface",
+  inspectAutoMovieMeshTopology: "surface",
+  loftAutoMovieSections: "surface",
+  lowerBuiltEnvironment: "surface",
+  lowerServiceNetwork: "script",
+  lowerWetZoneDrainage: "script",
+  measureAutoMovieQuantities: "script",
+  mergeAutoMovieMeshParts: "surface",
+  mergeAutoMovieMeshes: "surface",
+  mergeAutoMovieSpaces: "surface",
+  renderAutoMovieSemanticMaskSidecar: "script",
+  revolveAutoMovieProfile: "surface",
+  summarizeAutoMovieAnalysis: "script",
+  sweepAutoMovieProfile: "surface",
+  tessellateSurface: "surface",
+  transformAutoMovieMesh: "surface",
+  triangulateAutoMovieRegion: "surface",
+};
+
 /** Shortest fragment accepted as a distinctive teaching quotation. */
 const MINIMUM_PROBE_LENGTH = 20;
 
@@ -705,6 +789,70 @@ const recordFiles = (root: string): string[] => {
       );
   return walk(root, "").sort(compareCodeUnits);
 };
+
+/** Every `.ts` file under one tree, in no particular order. */
+const sourceFiles = (root: string): string[] =>
+  fs
+    .readdirSync(root, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? sourceFiles(path.join(root, entry.name))
+        : entry.name.endsWith(".ts")
+          ? [path.join(root, entry.name)]
+          : [],
+    );
+
+/** One tree's whole source text, for asking whether a name occurs in it. */
+const sourceText = (root: string): string =>
+  sourceFiles(root)
+    .map((file) => fs.readFileSync(file, "utf8"))
+    .join("\n");
+
+/**
+ * Every value one package source tree exports, excluding barrels.
+ *
+ * Values rather than types, because a type is reached by writing a record and
+ * the record population above already answers for that. A value has to be
+ * imported by name from a module the author's own code is allowed to import
+ * from, which is the reachability question this file asks.
+ */
+const valueExports = (root: string): string[] => {
+  const found = new Set<string>();
+  for (const file of sourceFiles(root)) {
+    if (path.basename(file) === "index.ts") continue;
+    const text = fs.readFileSync(file, "utf8");
+    for (const pattern of [
+      /^export const ([A-Za-z0-9_]+)/gm,
+      /^export (?:abstract )?class ([A-Za-z0-9_]+)/gm,
+      /^export function ([A-Za-z0-9_]+)/gm,
+    ])
+      for (const match of text.matchAll(pattern)) found.add(match[1]!);
+  }
+  return [...found].sort(compareCodeUnits);
+};
+
+/**
+ * Only the code spans and fenced blocks of one Markdown document.
+ *
+ * A guide names a function in backticks and describes a building in prose, so
+ * restricting the search to code keeps `ease`, `violation` and every other
+ * ordinary English word that happens to be an export out of the population.
+ */
+const codeSpans = (document: string): string =>
+  [
+    ...[...document.matchAll(/```[\s\S]*?```/g)].map((match) => match[0]),
+    ...[...document.matchAll(/`[^`\n]+`/g)].map((match) => match[0]),
+  ].join("\n");
+
+/**
+ * Whether one identifier is named on its own rather than as somebody's member.
+ *
+ * `context.engine.formationSlot` is a method on the injected build context and
+ * reached without importing anything, so a bare-name test is what separates the
+ * names an author has to import from the ones already handed to them.
+ */
+const names = (text: string, symbol: string): boolean =>
+  new RegExp(`(?<![A-Za-z0-9_.])${symbol}(?![A-Za-z0-9_])`, "u").test(text);
 
 /** Immediate children of one package source tree, folds and modules alike. */
 const sourceEntries = (root: string): string[] =>
@@ -759,6 +907,25 @@ const sourceEntries = (root: string): string[] =>
  * 5. The engine tree's immediate children on disk are exactly the classified ones,
  *    and every entry that claims a guide names a served guide some interface
  *    claim already proved teaches something.
+ * 6. Every engine value export the corpus names in a code span carries a reach,
+ *    and nothing else does. Naming a function in a guide is what creates the
+ *    obligation to say where it may be called from.
+ * 7. A reach reads `surface` exactly when the sandbox publishes that name, so a
+ *    capability promoted onto or demoted off the importable surface fails here
+ *    rather than leaving a guide teaching the wrong place to call it.
+ * 8. Every `script` capability is named by a module the starter ships outside the
+ *    sandbox, every `unreached` one is named by none, and the unreached total
+ *    is pinned so a hole cannot be opened by a one-line edit.
+ *
+ * What this case deliberately does not ask: whether a `script` capability is
+ * also named under `packages/cli/scaffold/src/**`. It is, today —
+ * `src/examples/drawings.ts`, `src/examples/services.ts` and
+ * `src/examples/renderBudgets.ts` demonstrate script-side calls from modules
+ * that sit in the sandbox half of the starter, so an author who follows the
+ * shipped instruction to copy an example into `src/units` or `src/world` is
+ * refused by the import gate. Moving those examples is a change to files this
+ * case does not own; until it happens the fact is stated here rather than left
+ * for an author to discover as a refusal.
  */
 export const test_mcp_guide_capability_coverage = (): void => {
   const promptRoot = path.join(ROOT, "packages/mcp/prompts");
@@ -854,5 +1021,59 @@ export const test_mcp_guide_capability_coverage = (): void => {
       )
       .map(([entry, guide]) => `${entry}: ${guide}`),
     [],
+  );
+
+  const spans = [...documents.values()].map(codeSpans);
+  const taught = valueExports(path.join(ROOT, "packages/engine/src")).filter(
+    (symbol) => spans.some((text) => names(text, symbol)),
+  );
+  TestValidator.equals(
+    "every engine value the corpus names carries a recorded reach",
+    Object.keys(CAPABILITY_REACH).sort(compareCodeUnits),
+    taught,
+  );
+
+  const surface = new Set<string>(AUTOMOVIE_SANDBOX_ENGINE_SURFACE);
+  TestValidator.equals(
+    "a reach reads `surface` exactly when the sandbox publishes the name",
+    Object.entries(CAPABILITY_REACH)
+      .filter(
+        ([symbol, reach]) => (reach === "surface") !== surface.has(symbol),
+      )
+      .map(([symbol, reach]) => `${symbol}: ${reach}`),
+    [],
+  );
+
+  // The starter's own non-sandbox halves. A `script` capability is only a place
+  // an agent can reach if something the agent receives actually calls it from
+  // there; otherwise the guide is naming a door with no room behind it.
+  const starter = [
+    sourceText(path.join(ROOT, "packages/cli/scaffold/scripts")),
+    sourceText(path.join(ROOT, "packages/cli/scaffold/viewer/src")),
+  ].join("\n");
+  TestValidator.equals(
+    "every `script` capability has a call site the starter ships",
+    Object.entries(CAPABILITY_REACH)
+      .filter(
+        ([symbol, reach]) =>
+          reach === "script" && names(starter, symbol) === false,
+      )
+      .map(([symbol]) => symbol),
+    [],
+  );
+  TestValidator.equals(
+    "every `unreached` capability really is called by nothing shipped",
+    Object.entries(CAPABILITY_REACH)
+      .filter(
+        ([symbol, reach]) => reach === "unreached" && names(starter, symbol),
+      )
+      .map(([symbol]) => symbol),
+    [],
+  );
+  TestValidator.equals(
+    "the unreached ledger holds exactly 2 taught capabilities",
+    Object.values(CAPABILITY_REACH).filter((reach) => reach === "unreached")
+      .length,
+    2,
   );
 };

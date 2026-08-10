@@ -24,7 +24,8 @@
     "test": "tsx test/opening.test.ts",
     "verify": "tsx scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json",
-    "design": "tsx scripts/emitDesign.ts"
+    "design": "tsx scripts/emitDesign.ts",
+    "building": "tsx scripts/deriveBuilding.ts"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",

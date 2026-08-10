@@ -1828,12 +1828,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "public/audio/starter-tone.json",
       "renders/README.md",
       "scripts/assertProxyBundle.ts",
+      "scripts/buildingReport.ts",
       "scripts/capture-browser.ts",
       "scripts/capture-doctor.ts",
       "scripts/capture-install.ts",
       "scripts/capture.ts",
       "scripts/captureExecutableSnapshot.ts",
       "scripts/compile.ts",
+      "scripts/deriveBuilding.ts",
       "scripts/dialogueCacheSnapshot.ts",
       "scripts/emitDesign.ts",
       "scripts/generatedShotPlugin.ts",
@@ -3772,6 +3774,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
           '"verify": "tsx scripts/verify.ts"',
         ),
       },
+      // The construction-document path an authoring agent is told to use. A
+      // guide that teaches a drawing, a take-off or a daylight study is
+      // teaching a call no shot source may make, so the starter has to ship the
+      // command that does make it; an unregistered script is a call site
+      // nobody can run.
+      {
+        contract:
+          'files["package.json"]!.includes(\'"building": "tsx scripts/deriveBuilding.ts"\')',
+        satisfied: files["package.json"]!.includes(
+          '"building": "tsx scripts/deriveBuilding.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/deriveBuilding.ts"]!.includes( "requireCurrentAutoMovieProjectState", )',
+        satisfied: files["scripts/deriveBuilding.ts"]!.includes(
+          "requireCurrentAutoMovieProjectState",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/buildingReport.ts"]!.includes("deriveAutoMovieDrawing")',
+        satisfied: files["scripts/buildingReport.ts"]!.includes(
+          "deriveAutoMovieDrawing",
+        ),
+      },
       {
         contract:
           'files["scripts/verify.ts"]!.includes(\'.lint({ scope: "final" })\')',
@@ -4168,12 +4196,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "public/audio/starter-tone.json",
         "renders/README.md",
         "scripts/assertProxyBundle.ts",
+        "scripts/buildingReport.ts",
         "scripts/capture-browser.ts",
         "scripts/capture-doctor.ts",
         "scripts/capture-install.ts",
         "scripts/capture.ts",
         "scripts/captureExecutableSnapshot.ts",
         "scripts/compile.ts",
+        "scripts/deriveBuilding.ts",
         "scripts/dialogueCacheSnapshot.ts",
         "scripts/emitDesign.ts",
         "scripts/generatedShotPlugin.ts",
