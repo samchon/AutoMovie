@@ -6,6 +6,7 @@ import {
 } from "@automovie/interface";
 import {
   AUTOMOVIE_MAX_GENERAL_INSTANCES,
+  AUTOMOVIE_WORLD_COORDINATE_LIMIT,
   IAutoMovieProductionDesignGraph,
   materializeProductionModels,
   validateAutoMovieProductionGraph,
@@ -244,6 +245,94 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
     }),
   );
+  // A lattice reaches half its column span sideways and its whole row span
+  // forward, and every explicit slot is placed relative to the anchor. Grid,
+  // scatter and along-route have been held to the world limit since they
+  // existed; these two were bounded only piecewise, so an anchor inside the
+  // limit and a spacing inside the limit still placed pieces outside it.
+  const reachingInstances = codes(
+    graph(model, {
+      ...world,
+      instanceSets: [
+        {
+          ...instances(),
+          id: "lattice-reaches-out",
+          count: 4,
+          anchor: { x: AUTOMOVIE_WORLD_COORDINATE_LIMIT - 10, y: 0, z: 0 },
+          layout: {
+            kind: "lattice",
+            rows: 2,
+            columns: 2,
+            layers: 1,
+            spacing: { x: 100, y: 1, z: 100 },
+          },
+        },
+        {
+          ...instances(),
+          id: "explicit-reaches-out",
+          count: 1,
+          anchor: { x: AUTOMOVIE_WORLD_COORDINATE_LIMIT - 10, y: 0, z: 0 },
+          layout: {
+            kind: "explicit",
+            transforms: [
+              {
+                id: "far",
+                translation: { x: 100, y: 0, z: 0 },
+                rotation: { x: 0, y: 0, z: 0, w: 1 },
+                scale: { x: 1, y: 1, z: 1 },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  const reachingWithin = codes(
+    graph(model, {
+      ...world,
+      instanceSets: [
+        {
+          ...instances(),
+          id: "lattice-stays-in",
+          count: 4,
+          anchor: { x: 0, y: 0, z: 0 },
+          layout: {
+            kind: "lattice",
+            rows: 2,
+            columns: 2,
+            layers: 1,
+            spacing: { x: 100, y: 1, z: 100 },
+          },
+        },
+        {
+          ...instances(),
+          id: "explicit-stays-in",
+          count: 1,
+          anchor: { x: 0, y: 0, z: 0 },
+          layout: {
+            kind: "explicit",
+            transforms: [
+              {
+                id: "near",
+                translation: { x: 100, y: 0, z: 0 },
+                rotation: { x: 0, y: 0, z: 0, w: 1 },
+                scale: { x: 1, y: 1, z: 1 },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  TestValidator.equals(
+    "a lattice and an explicit slot are measured from their anchor, like every other layout",
+    namedFacts([
+      ["reaching", () => reachingInstances.has("design-range-invalid")],
+      ["within", () => reachingWithin.has("design-range-invalid") === false],
+    ]),
+    { reaching: true, within: true },
+  );
+
   TestValidator.equals(
     "invalid layouts, routes, references, palettes and trait ranges are rejected",
     namedFacts([

@@ -2067,6 +2067,22 @@ const validateInstanceSets = (
           file,
           `Instance lattice capacity ${layout.rows * layout.columns * layout.layers} is below count ${instanceSet.count}. Increase rows, columns, or layers.`,
         );
+      // Columns are centred on the anchor and rows run forward from it, which
+      // is exactly how the slot is materialised, so the reach is measured the
+      // same way rather than assumed symmetric. Grid and scatter have been held
+      // to the world limit since they existed; a lattice reaches further than
+      // either for the same spacing and was never measured at all.
+      validateInstanceHorizontalExtent(
+        diagnostics,
+        instanceSet.anchor,
+        Math.hypot(
+          ((layout.columns - 1) * layout.spacing.x) / 2,
+          (layout.rows - 1) * layout.spacing.z,
+        ),
+        target,
+        file,
+        "lattice",
+      );
     } else {
       if (layout.transforms.length !== instanceSet.count)
         invalid(
@@ -2098,6 +2114,18 @@ const validateInstanceSets = (
           target,
           file,
           `layout.transforms[${index}].translation`,
+        );
+        // Each translation is anchor-relative, so a slot inside the limit and
+        // an anchor inside the limit still place a piece outside it. Every
+        // other layout is measured from its anchor; this one measured only the
+        // offset.
+        validateInstanceHorizontalExtent(
+          diagnostics,
+          instanceSet.anchor,
+          Math.hypot(transform.translation.x, transform.translation.z),
+          target,
+          file,
+          "explicit",
         );
         const norm = Math.hypot(
           transform.rotation.x,
