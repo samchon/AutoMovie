@@ -767,11 +767,23 @@ const totalQuantities = (
  * Measure every occurrence and every neighbouring pair against the declaration.
  *
  * Per-occurrence findings come first so a defect that belongs to one piece is
- * never buried under the pair findings its neighbours produced. Pairs are
- * gathered through a uniform bucket grid rather than an all-pairs sweep, sized
- * from the largest whole module so that any two pieces within the adjacency gap
- * must land in the same or an adjacent bucket; the partner list is then sorted,
- * so a bucket map's insertion order can never reach the output.
+ * never buried under the pair findings its neighbours produced. The partner
+ * list is then sorted, so a bucket map's insertion order can never reach the
+ * output.
+ *
+ * Pairs are gathered through a uniform bucket grid rather than an all-pairs
+ * sweep, and the grid is sized so the screen provably loses nothing. A piece
+ * lies inside its own module rectangle, so it is never further than half that
+ * rectangle's diagonal from the centre the grid buckets by. Two pieces whose
+ * true separation is within the adjacency gap therefore have centres no further
+ * apart than the largest module diagonal plus that gap, which is exactly the
+ * cell size, so they always share a bucket or an adjacent one.
+ *
+ * What is then reported is the edge-normal joint, which is how a joint is read
+ * and which never exceeds the true separation. A pair whose projections read
+ * close while the pieces themselves sit diagonally further apart than the
+ * adjacency gap is not scanned, and should not be: those two are not neighbours
+ * on the surface.
  *
  * Neighbours are measured between the pieces as laid, not between the modules
  * as designed. Two zones that each cut their modules at the border they share
