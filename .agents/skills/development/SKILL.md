@@ -58,6 +58,8 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 **A structural guard re-pins from the failure's own output, never from a hash you found nearby.** Guards that pin a source digest, a statement index or a token count go red on every legitimate edit to the file they read, which is what they are for. Read the reported actual value at its own key and replace the expected value at that key; picking hashes out of the surrounding text in output order writes a real digest into the wrong field and produces a guard that passes while measuring nothing.
 
+**A measurement nothing gates goes back up.** Counting a defect class is what makes it payable, and paying it down once is not the same as keeping it down. Three counts in this repository have drifted while a tool that measured them sat unused: diagnostic codes outgrew the guides that name them, guide coverage emptied and refilled without anyone noticing, and the folded-assertion count returned after a PR drove it down. When you build the measure, wire it to a check in the same change, and fix the total rather than a per-file exemption list, because an exemption list is the thing that never shrinks.
+
 **A new compiler obligation is first a claim about every existing fixture.** A gate the compiler did not have is a gate no fixture was written against, so the first run after adding one reports defects the fixtures were already carrying. Read each as a finding about the fixture before treating it as evidence the gate is too strict; a fixture is the cheapest place a real contradiction shows up.
 
 ## Coverage is 100% on what you write
