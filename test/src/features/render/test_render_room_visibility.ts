@@ -34,8 +34,9 @@ import { boxCell, buildingFixture } from "../internal/renderFixtures";
  * 9. A lift's intermediate landings are portals: from an endpoint, every storey
  *    the shaft stops at is kept, and its negative twin — the same shaft with
  *    the landings dropped — hides exactly those storeys again.
- * 10. A stop naming a space the design never declares reaches the closure and
- *     leaves the answer exactly as it found it.
+ * 10. A stop naming a space the design never declares — an environment the
+ *     validator refuses — reaches the closure and leaves the answer as it found
+ *     it, because the culler owes a record nobody validated totality.
  * 11. From a landing of a one-way shaft, sight reaches the stop below it, the stop
  *     above it, and the other landing, which no `from`/`to` join could
  *     produce.
@@ -249,9 +250,12 @@ export const test_render_room_visibility = (): void => {
   TestValidator.equals(
     "a stop naming a space the design never declares is a portal to nothing",
     {
-      // The stop is joined like any other, so it reaches the closure; it simply
-      // has no record, no container above it, and no place in an answer drawn
-      // from the declared spaces. Nothing is invented for it and nothing throws.
+      // `validateBuiltEnvironment` refuses this environment outright: a landing
+      // space that does not resolve is a stated violation. The culler is not
+      // the validator, so what it owes a record nobody validated is totality —
+      // the stop is joined like any other and reaches the closure, and it
+      // simply has no record, no container above it, and no place in an answer
+      // drawn from the declared spaces. Nothing is invented and nothing throws.
       hidden: strayStop.hidden,
       visible: strayStop.visible,
       inconclusive: strayStop.inconclusive,

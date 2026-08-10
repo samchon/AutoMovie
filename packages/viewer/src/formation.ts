@@ -259,10 +259,14 @@ export const buildInstancedFormation = (input: {
       removed: 0,
     };
   });
-  // Resolved once rather than at each reading. The same list decides which
-  // members are exceptions and what each of them is doing at a given instant,
-  // and a second `?? []` beside the sampling call would be an arm no input can
-  // reach: a unit whose cues are absent has no exception to sample for.
+  // The cues a unit was built with are the cues it performs, resolved once.
+  // Which members are singled out is settled here and never revisited, so a
+  // frame that re-read the caller's list would sample cues against a set of
+  // exceptions that no longer answers to them -- a member named after the build
+  // has no instance to write, and one named before it would keep performing
+  // whatever the new list happened to say. Reading it twice also left the second
+  // `?? []` an arm no input could take, since a unit whose cues are absent has
+  // no exception to sample for.
   const slotMotions = input.slotMotions ?? [];
   // Every member a cue singles out, located once. Nothing is stored for the
   // members no cue names, which is what keeps a crowd of a hundred thousand
@@ -682,8 +686,14 @@ const slotMatrix = (
     new THREE.Vector3(1, 1, 1),
   );
 
-/** The group node's own origin, which every local offset is measured about. */
-const ROOT_ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
+/**
+ * The group node's own origin, which every local offset is measured about.
+ *
+ * Frozen because one object stands in two of the engine's parameter slots at
+ * once, and every unit in the scene shares it: a caller that ever wrote through
+ * either slot would move the origin of every crowd at the same time.
+ */
+const ROOT_ORIGIN: IAutoMovieVector3 = Object.freeze({ x: 0, y: 0, z: 0 });
 
 /**
  * Where one designed point stands inside the group node, once the unit's own

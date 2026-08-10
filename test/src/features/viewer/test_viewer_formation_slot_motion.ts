@@ -446,6 +446,8 @@ export const test_viewer_formation_slot_motion = (): void => {
   const timelessDrawing = heroMatrices(timeless);
   const zeroed = strayBuild([aside]);
   zeroed.update(camera, 720, 0);
+  const later = strayBuild([aside]);
+  later.update(camera, 720, 3);
   TestValidator.equals(
     "a cue naming a member no batch holds singles nobody out",
     namedFacts([
@@ -462,11 +464,12 @@ export const test_viewer_formation_slot_motion = (): void => {
         "aFrameWithNoTimeReadsTheCuesAtZero",
         () => timelessDrawing === heroMatrices(zeroed),
       ],
-      // Negative twin: zero is not simply every time, so agreeing with it is a
-      // claim about the default and not about the cue doing nothing.
+      // Negative twin: the same crowd under the same cue draws differently at
+      // three seconds, so agreeing with zero is a claim about the default the
+      // frame took and not about the drawing being the same at every instant.
       [
         "andZeroIsNotJustAnyTime",
-        () => timelessDrawing !== heroMatrices(strayed),
+        () => timelessDrawing !== heroMatrices(later),
       ],
     ]),
     {
