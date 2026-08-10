@@ -93,14 +93,18 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    *   which is the edge this reads off the staged ground itself.
    */
   public farEdgeZ(context: IAutoMovieShotBuildContext): number {
-    const depths = context.world.surfaces.flatMap((surface) =>
-      surface.polygon.map((vertex) => vertex.z),
-    );
-    if (depths.length === 0)
+    // Folded rather than spread into `Math.min`, because a world may carry more
+    // vertices than an argument list holds and a ground large enough to matter
+    // is exactly the one this would fail on.
+    let edge: number | null = null;
+    for (const surface of context.world.surfaces)
+      for (const vertex of surface.polygon)
+        edge = edge === null ? vertex.z : Math.min(edge, vertex.z);
+    if (edge === null)
       throw new Error(
         `The "${this.id}" gate needs staged ground to stand at the edge of.`,
       );
-    return Math.min(...depths);
+    return edge;
   }
 
   /**
@@ -181,10 +185,10 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
           },
           material: null,
           attachedBone: null,
-          // Hinge-local, because this part rides the hinge: half a width away
-          // from the pivot, so the leaf sweeps the arc a leaf sweeps rather
-          // than spinning about its own middle.
-          transform: at({ x: this.width / 2, y: height / 2, z: 0 }),
+          // Model-local like every other part, because that is the frame the
+          // engine measures a prop's volume in. Riding the hinge changes what
+          // carries the leaf, never where the record says it stands.
+          transform: at({ x: 0, y: height / 2, z: 0 }),
         },
       ],
       asset: null,

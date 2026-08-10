@@ -1,4 +1,4 @@
-import { IAutoMovieClip } from "@automovie/interface";
+import { IAutoMovieClip, IAutoMoviePropSpec } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createDoorPropSpec as doorSpec } from "./test_film_forge_prop";
@@ -7,6 +7,7 @@ import {
   IDoorShotProps,
   compileDoorShot,
   swingClip,
+  yQuat,
 } from "./test_film_perform_shot_object_motions";
 
 /** Every diagnostic fact of a compile, or `"compiled"` when it succeeded. */
@@ -258,6 +259,56 @@ export const test_film_perform_shot_object_motion_gates = (): void => {
       ],
     }),
     "compiled",
+  );
+
+  // A door whose hinge already stands a quarter turn the wrong way at rest,
+  // which is outside the travel its own profile declares.
+  const restBreached = (): IAutoMoviePropSpec => {
+    const spec = doorSpec();
+    return {
+      ...spec,
+      articulation: {
+        ...spec.articulation!,
+        nodes: spec.articulation!.nodes.map((node) =>
+          node.id === "hinge"
+            ? {
+                ...node,
+                transform: {
+                  ...node.transform,
+                  rotation: { x: 0, y: -Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
+                },
+              }
+            : node,
+        ),
+      },
+    };
+  };
+  TestValidator.equals(
+    "a prop resting outside its own travel does not refuse another node's turn",
+    refusal({
+      objectMotions: [swingClip("panel-swing", "hall/panel", 30)],
+      props: [restBreached()],
+    }),
+    "compiled",
+  );
+  TestValidator.equals(
+    "one channel breaching at several keys is refused exactly once",
+    refusal({
+      objectMotions: [
+        {
+          ...swingClip("slam", HINGE, 150),
+          tracks: [
+            {
+              channel: { kind: "node", node: HINGE, path: "rotation" },
+              times: [0, 1],
+              values: [...yQuat(150), ...yQuat(150)],
+              interpolation: "linear",
+            },
+          ],
+        },
+      ],
+    }).split("past the travel profile").length - 1,
+    1,
   );
 
   TestValidator.predicate(

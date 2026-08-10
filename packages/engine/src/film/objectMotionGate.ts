@@ -258,6 +258,16 @@ export const gateAuthoredObjectMotions = (
     },
   );
   if (profiles.length === 0) return out.items;
+  // Only the channels these clips actually drive. `resolveFrame` clamps every
+  // bound profile in the scene, so a prop whose own REST joint already sits
+  // outside the travel it declares would breach here too, and blaming that on
+  // `objectMotions` would refuse a shot for a channel its author never touched.
+  // That prop's own record is wrong and its own gate is where it is answered.
+  const driven = new Set(
+    gate.clips.flatMap((clip) =>
+      clip.tracks.map((track) => channelKey(track.channel)),
+    ),
+  );
   const reported = new Set<string>();
   for (const seconds of [...times].sort((left, right) => left - right))
     for (const violation of resolveFrame({
@@ -269,7 +279,8 @@ export const gateAuthoredObjectMotions = (
     }).violations) {
       // One channel, one refusal. A hinge held past its travel breaches at
       // every sampled key, and an author correcting it corrects one number.
-      if (reported.has(violation.channel)) continue;
+      if (!driven.has(violation.channel) || reported.has(violation.channel))
+        continue;
       reported.add(violation.channel);
       out.push(
         "range",

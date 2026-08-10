@@ -79,8 +79,9 @@ const gateSpec = (
         },
         material: null,
         attachedBone: null,
-        // Hinge-local: half a width out from the pivot it hangs on.
-        transform: { ...IDENTITY, translation: { x: 0.5, y: 1, z: 0 } },
+        // Model-local, like every part: the leaf fills the opening the prop
+        // stands in, and the hinge it hangs on is half a width to its left.
+        transform: { ...IDENTITY, translation: { x: 0, y: 1, z: 0 } },
       },
     ],
     asset: null,
@@ -206,9 +207,16 @@ export const test_viewer_prop_articulation = (): void => {
     },
     { leaf: hinge, post: spec.model.name ?? spec.model.id },
   );
-  TestValidator.predicate(
-    "the hinge stands at the placement plus its own offset",
-    vclose(worldOf(root, hinge), { x: 1.5, y: 0, z: 0 }),
+  TestValidator.equals(
+    "the hinge sits at the placement plus its offset, and the leaf has not moved",
+    namedFacts([
+      [
+        "hingePlaced",
+        () => vclose(worldOf(root, hinge), { x: 1.5, y: 0, z: 0 }),
+      ],
+      ["leafHeld", () => vclose(worldOf(root, "leaf"), { x: 2, y: 1, z: 0 })],
+    ]),
+    { hingePlaced: true, leafHeld: true },
   );
 
   const before = worldOf(root, "leaf");

@@ -53,11 +53,12 @@ export interface IAutoMovieBuiltPropArticulation {
  *   clip channel names is found by the same string the artifact was gated
  *   against rather than by a second spelling of the prefix.
  * - **The part.** A joint that names a `mesh` takes that part of the prop's model
- *   out of the model root and parents it under itself, so turning the joint
- *   turns something visible. The part keeps its authored local transform, which
- *   means an authored part that rides a joint is positioned in THAT joint's
- *   frame: a door leaf hung on a hinge sits half a width from the pivot rather
- *   than centred on it.
+ *   out of the model root and carries it, so turning the joint turns something
+ *   visible. The part does not move when it changes hands: its authored
+ *   transform stays MODEL-local, which is the frame `propOccupancyBounds`
+ *   measures the prop's volume in and every containment, bearing and clearance
+ *   judgment is made against. A leaf hung on a hinge therefore stands exactly
+ *   where the record says it stands, and only what carries it changes.
  *
  * Anything that cannot resolve throws rather than being skipped, the rule
  * {@link buildScene} states for an unresolvable node: a silently unparented leaf
@@ -67,6 +68,13 @@ export interface IAutoMovieBuiltPropArticulation {
  * A prop drawing an imported appearance has no addressable parts (see
  * {@link createImportedModelObject}), so a joint of one may name no `mesh`; its
  * frame is still built and still turns whatever it holds.
+ *
+ * What this does NOT do is run a prop profile's drivers. A profile's limits and
+ * drivers are resolved by `resolveFrame`, which is the engine's frame solver
+ * rather than the viewer's, so a handle declared to mirror its hinge is honored
+ * where the shot is gated and stands still where the shot is drawn. Only the
+ * channels a clip carries move here, exactly as {@link applyObjectMotions}
+ * states for every other object it drives.
  *
  * @author Samchon
  */
@@ -128,6 +136,8 @@ export const buildPropArticulation = (props: {
         );
       parent.add(object);
     }
+    // World matrices before any part moves, because the move preserves them.
+    group.updateMatrixWorld(true);
     for (const joint of articulation.nodes) {
       if (joint.mesh === null) continue;
       const part = built.parts.get(joint.mesh);
@@ -135,7 +145,14 @@ export const buildPropArticulation = (props: {
         throw new Error(
           `prop joint "${placementChildNode(placement.id, joint.id)}" drives part "${joint.mesh}", which its built model does not carry`,
         );
-      local.get(joint.id)!.add(part);
+      // `attach`, not `add`: a part's authored transform is MODEL-local, which
+      // is the frame `propOccupancyBounds` measures its volume in and every
+      // containment, bearing and clearance judgment is made against. Reparenting
+      // with `add` would reinterpret that same transform as joint-local, so the
+      // engine and the frame would disagree about where the leaf is by exactly
+      // the hinge's own offset. `attach` keeps the part where the model put it
+      // and only changes what carries it afterwards.
+      local.get(joint.id)!.attach(part);
     }
   }
 
