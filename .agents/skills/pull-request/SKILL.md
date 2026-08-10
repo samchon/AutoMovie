@@ -39,7 +39,7 @@ A campaign owner pushes its own commits. It stages explicit paths, never `git ad
 
 ## Watch Checks After Every Push
 
-After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` (the 100% coverage gate) must pass; do not treat a green unrelated job as acceptance for a failed required surface.
+After every push, watch `gh pr checks <PR>` until each check settles. On failure, fetch the job log, diagnose the real cause, fix it in place, push a new commit, and let the checks resume. Both `build` and `test` must pass; do not treat a green unrelated job as acceptance for a failed required surface. `test` fails on a failing scenario, not on coverage: the coverage obligation is per change and the author reads the reported gaps, which the development skill explains.
 
 A campaign implementation cycle reads CI once per settled head instead, under its own development procedure. Its intermediate commits are not gates, and its merge still requires the settled head's green required checks.
 

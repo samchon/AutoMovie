@@ -59,9 +59,19 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 **A new compiler obligation is first a claim about every existing fixture.** A gate the compiler did not have is a gate no fixture was written against, so the first run after adding one reports defects the fixtures were already carrying. Read each as a finding about the fixture before treating it as evidence the gate is too strict; a fixture is the cheapest place a real contradiction shows up.
 
-## Coverage is always 100%
+## Coverage is 100% on what you write
 
-Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `archetypes`, `engine`, `face`, `ingest`, `render`, `viewer`, and `mcp` (see the `--src` list in the `coverage` script; it runs with `--all`, so a source no test imports is reported rather than silently absent). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow measures and reports it beside the suite but deliberately does not fail on it -- `test.yml` says why, and `internals/report-coverage-gaps.mjs` prints the exact uncovered statements, branches and functions on every run. So the gate is the author reading that output, not the build going red, and a gap that ships is a gap somebody chose.
+**Every source file a change creates or modifies ends at 100% on statements, branches, functions, and lines.** That is the obligation, it is per change, and it is not negotiable by difficulty.
+
+The repository total is a different number and always has been. `test.yml` says why: the whole measured set has never met 100%, a permanently red job told nobody anything, and it buried real regressions in the same colour. So the repository carries inherited gaps in files nobody has touched, and closing them is its own work rather than a toll on the next unrelated change.
+
+What that means in practice:
+
+- Bring a file you touched to 100%, including the parts you did not write, when your change is what makes them reachable or newly wrong. A branch your edit created is yours without argument.
+- Do not treat an inherited gap in a file you never opened as your obligation, and do not report the repository total as if it were your result.
+- Report the per-file numbers for the files you own, with the command and the moment you measured them.
+
+The measured set is `archetypes`, `engine`, `face`, `ingest`, `render`, `viewer`, and `mcp` (see the `--src` list in the `coverage` script; it runs with `--all`, so a source no test imports is reported rather than silently absent). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). CI measures and reports beside the suite without failing on it, and `internals/report-coverage-gaps.mjs` prints the exact uncovered statements, branches and functions on every run. So the gate is the author reading that output, not the build going red, and a gap that ships is a gap somebody chose.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 

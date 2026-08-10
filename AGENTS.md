@@ -25,7 +25,7 @@ What `automovie` is, the long-haul mission, the workspace layout, and the canoni
 
 ### Development
 
-Work rules, testing, the always-100% coverage mandate, validation, consequence analysis, change integrity, `.agents/skills/development/SKILL.md`. Read before writing or modifying code.
+Work rules, testing, the per-change 100% coverage obligation, validation, consequence analysis, change integrity, `.agents/skills/development/SKILL.md`. Read before writing or modifying code.
 
 ### Scaffold Authoring
 

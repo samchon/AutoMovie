@@ -11,7 +11,7 @@ description: Defines the automovie product contract, the long-haul mission, work
 
 The endgame is to represent **all objects and all motion** (rigs, range-of-motion constraints, joint dependencies/drivers, cameras, lights, scenes, time) well enough to assemble a film from objects and motion alone. The early AI/function-calling schema may stay humble (a clothed character that walks, runs, dances), but **`interface` and `engine` are built to the final goal and must stay permanently extensible**: every future axis (new rig profile, finer detail layer, camera, prop, dynamics, timeline) is additive, never a rewrite. A bare imported 3D model has no constraints or dependencies; adding that semantic layer is what makes automovie an engine rather than a model holder.
 
-This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.wiki/` revised as understanding changes and test coverage held at 100% throughout. Architecture and decisions belong in `.wiki/` (`.wiki/07-decisions/` for the decision log), which is local to a checkout and may be empty; write there as understanding accrues rather than expecting to find it. `interia` (sibling project, interior spaces) shares automovie's philosophy and conventions and forms one set with it long-term.
+This is a long-haul mission. Work proceeds in small reviewable PRs, with the `.wiki/` revised as understanding changes and every source file a change touches left at 100% coverage (the development skill states the obligation and its per-change scope). Architecture and decisions belong in `.wiki/` (`.wiki/07-decisions/` for the decision log), which is local to a checkout and may be empty; write there as understanding accrues rather than expecting to find it. `interia` (sibling project, interior spaces) shares automovie's philosophy and conventions and forms one set with it long-term.
 
 ## Layout
 
@@ -37,7 +37,7 @@ pnpm install                              # workspace install (native TypeScript
 pnpm run build                            # recursive ttsc + assertBuild over packages
 pnpm run format                           # prettier write
 pnpm --filter @automovie/test start          # run the test suite (ttsx, no separate compile step)
-pnpm --filter @automovie/test coverage       # run tests under the c8 100% gate
+pnpm --filter @automovie/test coverage       # run the suite and report c8 coverage
 ```
 
 Node 22 LTS, pnpm 10. CI: `.github/workflows/{build,test}.yml`.
