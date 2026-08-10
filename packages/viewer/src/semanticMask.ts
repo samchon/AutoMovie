@@ -93,10 +93,10 @@ export interface IAutoMovieSemanticMaskCoverage {
    * palette cannot name.
    *
    * A mask frame paints these the reserved background, so they vanish rather
-   * than mislead, and this count is the only thing that says they vanished. It
-   * is never silently zero, because the two known populations that land here
-   * are a formation's anonymous members and an effect's particles, neither of
-   * which the palette addresses yet.
+   * than mislead, and this count is the only thing that says they vanished.
+   * Zero is a real answer and means the palette named every mesh; above zero,
+   * the two populations that land here today are a formation's anonymous
+   * members and an effect's particles, which the palette does not address yet.
    */
   unaddressed: number;
 }
@@ -118,9 +118,9 @@ export interface IAutoMovieSemanticMaskCoverage {
  * paint nothing of their own and are reached through `owner`, so listing them
  * would report the whole ownership chain as missing on every well-drawn frame.
  *
- * Nothing here paints, hides, or suspends anything: a host reads its coverage
- * before it ever asks for a mask frame, and asking twice costs one traversal
- * each rather than a pass boundary.
+ * Nothing here paints, hides, or suspends anything, so a host reads its
+ * coverage once at build time and reports it beside every frame, instead of
+ * opening a pass boundary it would then have to close.
  *
  * @author Samchon
  */
