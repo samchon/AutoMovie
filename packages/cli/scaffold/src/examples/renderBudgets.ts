@@ -72,6 +72,9 @@ export const exampleRenderSubject = (
           pose: null,
         },
       ],
+      // No camera, deliberately. A budget is checked against what the scene
+      // commits the renderer to for EVERY camera — an upper bound, never an
+      // observed frame — so framing changes nothing this report measures.
       cameras: [],
       lights: [
         {
@@ -151,9 +154,10 @@ export const exampleRenderSubject = (
  * The limits this production commits to, per quality tier.
  *
  * Limits are inclusive, and an omitted metric is unbudgeted rather than
- * unlimited. Leaving `textureBytes` and `geometryBytes` out below is therefore
- * a visible decision in the report — "nobody thought about it" reads
- * differently from "allowed to be large", and the report keeps them apart.
+ * unlimited. Every metric this list leaves out — the memory pair, the instance
+ * counts, the fluid pair — therefore shows up in the report as a visible
+ * decision rather than as silence: "nobody thought about it" reads differently
+ * from "allowed to be large", and the report keeps the two apart.
  *
  * One production may declare several tiers and check an artifact against the
  * one a render job actually targets, which is why the tier is a plain label

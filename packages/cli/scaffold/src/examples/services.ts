@@ -153,10 +153,14 @@ export const exampleServiceNetwork = (
           },
         ],
         state: null,
-        // The rodding space in front of the access cover, in node-local metres.
-        // It is the same axis-aligned keep-out a prop declares, so one rule
-        // covers a chair parked in front of a cleaning eye and a duct run
-        // through it.
+        // The rodding space in front of the access cover, in node-local metres,
+        // offset by the node's own position to give the world volume. What it
+        // is checked against today is every run that does not terminate on this
+        // node: a duct threaded through the space somebody has to kneel in is
+        // named rather than discovered on site. It is the same axis-aligned box
+        // a prop declares as its keep-out, but a prop parked here is not yet
+        // checked against it, so state the envelope and do not read the pass as
+        // covering furniture.
         maintenance: {
           min: { x: -0.4, y: 0, z: -0.4 },
           max: { x: 0.4, y: 1.2, z: 0.4 },

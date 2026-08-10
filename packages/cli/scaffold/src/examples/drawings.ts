@@ -199,16 +199,11 @@ export const exampleQuantities = (): IAutoMovieQuantityReport =>
  * The pen belongs to the view, so serializing a drawing with a different view's
  * pen is refused rather than silently restyled.
  */
-export const exampleFloorPlanSheet = (): string => {
-  const view = exampleFloorPlanView();
-  return autoMovieDrawingToSvg({
-    drawing: deriveAutoMovieDrawing({
-      environment: new ExampleBuilding().design(),
-      view,
-    }),
-    view,
+export const exampleFloorPlanSheet = (): string =>
+  autoMovieDrawingToSvg({
+    drawing: exampleFloorPlan(),
+    view: exampleFloorPlanView(),
   });
-};
 
 /**
  * Check the four readings against each other, not against a stored answer.
