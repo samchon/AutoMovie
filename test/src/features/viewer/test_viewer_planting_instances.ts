@@ -55,6 +55,10 @@ const FOLIAGE = {
  * 6. A bare structure with no foliage rule produces no leaf batch at all rather
  *    than an empty one, and disposing releases what the object created while
  *    leaving a borrowed material alone.
+ * 7. A structure that never emerged draws nothing: the batch is hidden and its
+ *    bounding sphere is a point, rather than the empty sphere of radius
+ *    `-Infinity` that computing bounds over zero instances would leave for a
+ *    camera to cull against.
  */
 export const test_viewer_planting_instances = (): void => {
   const domain = plantingRecipe({ foliage: FOLIAGE });
@@ -344,6 +348,33 @@ export const test_viewer_planting_instances = (): void => {
     ]),
     { noLeaves: true, oneChild: true, borrowed: true },
   );
+  const dormant = buildPlantingObject({
+    plant: growPlanting(
+      plantingRecipe({ growth: { stage: 0, onset: 0.25 }, foliage: FOLIAGE }),
+    ),
+    arrangement,
+  });
+  TestValidator.equals(
+    "a structure that never emerged is hidden and bounded at a point",
+    namedFacts([
+      ["branchCount", () => dormant.branchCount === 0],
+      ["leafCount", () => dormant.leafCount === 0],
+      ["hidden", () => dormant.branches.visible === false],
+      ["bounded", () => dormant.branches.boundingSphere?.radius === 0],
+      ["noLeafBatch", () => dormant.leaves === null],
+      ["oneChild", () => dormant.object.children.length === 1],
+    ]),
+    {
+      branchCount: true,
+      leafCount: true,
+      hidden: true,
+      bounded: true,
+      noLeafBatch: true,
+      oneChild: true,
+    },
+  );
+  dormant.dispose();
+
   bare.dispose();
   object.dispose();
   borrowed.dispose();

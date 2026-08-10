@@ -209,6 +209,15 @@ export const growPlanting = (
  * is a function of the cluster as a whole rather than of each slot
  * independently — the authored slot order is the tie-break, and it is stable.
  *
+ * The spacing test is answered through a uniform grid of side `minSpacing`, so
+ * a candidate compares itself against the members of nine cells rather than
+ * against every member placed so far. Any member closer than `minSpacing` must
+ * lie in one of those nine, so the decision is identical to the exhaustive one;
+ * what changes is that the declared budget of ten thousand members at
+ * sixty-four attempts is bounded work rather than a quarter of a trillion
+ * distance tests. A budget a caller can exhaust the machine inside is not a
+ * budget.
+ *
  * Each placement carries translation, a unit quaternion and a per-axis scale,
  * which is exactly what GPU instancing consumes. Nothing is reduced to a yaw
  * angle or one uniform number on the way out.
@@ -220,6 +229,12 @@ export const arrangePlantingCluster = (
 ): IAutoMoviePlantingArrangement => {
   const placements: IAutoMoviePlantingPlacement[] = [];
   const spacing = cluster.minSpacing * cluster.minSpacing;
+  // With no spacing rule nothing can ever be refused, so no index is built and
+  // no neighbourhood is walked: `dx² + dz² < 0` has no solutions.
+  const occupied =
+    cluster.minSpacing > 0
+      ? new Map<string, { x: number; z: number }[]>()
+      : null;
   let rejected = 0;
   for (let slot = 0; slot < cluster.count; ++slot) {
     let placed = false;
@@ -233,14 +248,18 @@ export const arrangePlantingCluster = (
         (2 * seededValue(cluster.seed, slot, attempt, SALT_PLACE_Z) - 1) *
           cluster.extent.z;
       if (
-        placements.some((other) => {
-          const dx = other.translation.x - x;
-          const dz = other.translation.z - z;
-          return dx * dx + dz * dz < spacing;
-        })
+        occupied !== null &&
+        crowded(occupied, cluster.minSpacing, spacing, x, z)
       )
         continue;
       placed = true;
+      if (occupied !== null) {
+        const [cx, cz] = cell(cluster.minSpacing, x, z);
+        const key = `${cx},${cz}`;
+        const bucket = occupied.get(key);
+        if (bucket === undefined) occupied.set(key, [{ x, z }]);
+        else bucket.push({ x, z });
+      }
       placements.push({
         id: `${cluster.id}#${slot}`,
         slot,
@@ -369,6 +388,48 @@ export const plantingStateDigest = (state: IAutoMoviePlantingState): string => {
     }
   }
   return hash.toString(16).padStart(8, "0");
+};
+
+/**
+ * The uniform-grid key one ground position falls in.
+ *
+ * The neighbourhood walk offsets the two integer indices rather than the two
+ * coordinates: `floor((x + side)/side)` and `floor(x/side) + 1` are the same
+ * rational number and not always the same double, and a neighbourhood that
+ * misses a cell is a spacing rule that silently stops holding.
+ */
+const cell = (side: number, x: number, z: number): [number, number] => [
+  Math.floor(x / side),
+  Math.floor(z / side),
+];
+
+/**
+ * Whether an accepted member already stands closer than the minimum spacing.
+ *
+ * The grid side is the spacing itself, so a member within that distance can
+ * only be in the candidate's own cell or one of the eight around it. Walking
+ * those nine answers exactly what walking every member would, at a cost that
+ * does not grow with the size of the bed.
+ */
+const crowded = (
+  occupied: Map<string, { x: number; z: number }[]>,
+  side: number,
+  spacing: number,
+  x: number,
+  z: number,
+): boolean => {
+  const [cx, cz] = cell(side, x, z);
+  for (let dx = -1; dx <= 1; ++dx)
+    for (let dz = -1; dz <= 1; ++dz) {
+      const bucket = occupied.get(`${cx + dx},${cz + dz}`);
+      if (bucket === undefined) continue;
+      for (const other of bucket) {
+        const ox = other.x - x;
+        const oz = other.z - z;
+        if (ox * ox + oz * oz < spacing) return true;
+      }
+    }
+  return false;
 };
 
 /** Leaves borne by one derived branch, in stable index order. */

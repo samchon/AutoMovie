@@ -32,10 +32,12 @@ export interface IAutoMovieSoftBodyObject {
  * bounding sphere is the engine's own extent of the panel, so what a camera
  * culls and what the solve says are the same statement.
  *
- * The analysis status rides along in `userData.status`. A panel whose solve was
- * refused as `unsupported`, or never run, must be identifiable in the scene
- * graph and in a captured frame's sidecar; a still curtain that nobody can tell
- * apart from a solved one is exactly the silent pass this domain refuses.
+ * The analysis status rides along in `userData.status`, and it is a required
+ * argument. A panel whose solve was refused as `unsupported`, or never run,
+ * must be identifiable in the scene graph and in a captured frame's sidecar; a
+ * still curtain that nobody can tell apart from a solved one is exactly the
+ * silent pass this domain refuses, and a default value here would be the
+ * cheapest way to reintroduce it.
  *
  * @author Samchon
  */
@@ -43,8 +45,14 @@ export const buildSoftBodyObject = (props: {
   surface: IAutoMovieSoftBodySurface;
   /** Cloth material; a double-sided default is created when absent. */
   material?: THREE.Material;
-  /** Analysis status recorded on the object; defaults to `solved`. */
-  status?: AutoMovieSoftAnalysisStatus;
+  /**
+   * What the analysis that produced this surface actually did.
+   *
+   * Required, and deliberately not defaulted. A default would be a claim, and
+   * the one claim nobody should be able to make by omission is that a panel was
+   * solved.
+   */
+  status: AutoMovieSoftAnalysisStatus;
 }): IAutoMovieSoftBodyObject => {
   const geometry = new THREE.BufferGeometry();
   const owned = props.material === undefined;
@@ -93,7 +101,7 @@ export const buildSoftBodyObject = (props: {
     mesh.userData.step = surface.step;
   };
   upload(props.surface);
-  mesh.userData.status = props.status ?? "solved";
+  mesh.userData.status = props.status;
   return {
     object: mesh,
     update: upload,

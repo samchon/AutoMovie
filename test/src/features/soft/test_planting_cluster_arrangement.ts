@@ -39,7 +39,9 @@ const closestPair = (
  *    rectangle, with nothing rejected.
  * 2. The spacing rule is honoured: no two accepted members are closer than
  *    `minSpacing`, and the same rule made impossible by a wide spacing rejects
- *    the slots it cannot honour and reports exactly how many.
+ *    the slots it cannot honour and reports exactly how many. A cluster that
+ *    declares no spacing at all refuses nothing, even when every member is
+ *    drawn onto the same point.
  * 3. Every member's transform is lossless: a unit quaternion, a pure turn about
  *    `+y`, and three independently drawn scale axes inside the declared range.
  * 4. The arrangement is a pure function of the cluster: two calls agree bit for
@@ -48,7 +50,12 @@ const closestPair = (
  *    cluster with zero yaw jitter hands out the exact identity rotation; and a
  *    cluster whose extent is zero but whose spacing is positive rejects every
  *    slot after the first.
- * 6. The cost of the whole bed is derived from the recipe and the cluster alone,
+ * 6. A four-thousand-member meadow places, accounts for and spaces every slot, and
+ *    reproduces itself exactly. The spacing test is answered through a uniform
+ *    grid of side `minSpacing` rather than against every member placed so far,
+ *    which is what makes the declared budget bounded work instead of a number
+ *    of distance tests nobody could wait for.
+ * 7. The cost of the whole bed is derived from the recipe and the cluster alone,
  *    with no branch grown: the complete `k`-ary tree times the member count, so
  *    a production can be refused before anything is derived.
  */
@@ -94,8 +101,31 @@ export const test_planting_cluster_arrangement = (): void => {
       ["tightSpacing", () => closestPair(tight.placements) >= 3],
       ["refused", () => tight.rejected === 8 - tight.placements.length],
       ["someRefused", () => tight.rejected > 0],
+      [
+        "noRuleRefusesNothing",
+        () => {
+          const packed = arrangePlantingCluster(
+            plantingCluster({
+              count: 12,
+              minSpacing: 0,
+              extent: { x: 0, z: 0 },
+            }),
+          );
+          return (
+            packed.placements.length === 12 &&
+            packed.rejected === 0 &&
+            closestPair(packed.placements) === 0
+          );
+        },
+      ],
     ]),
-    { spacing: true, tightSpacing: true, refused: true, someRefused: true },
+    {
+      spacing: true,
+      tightSpacing: true,
+      refused: true,
+      someRefused: true,
+      noRuleRefusesNothing: true,
+    },
   );
 
   TestValidator.equals(
@@ -243,6 +273,48 @@ export const test_planting_cluster_arrangement = (): void => {
       restRefused: true,
       degenerateBounds: true,
     },
+  );
+
+  const crowd = arrangePlantingCluster(
+    plantingCluster({
+      id: "meadow",
+      count: 4_000,
+      extent: { x: 40, z: 40 },
+      minSpacing: 1,
+      attempts: 16,
+    }),
+  );
+  TestValidator.equals(
+    "the declared member budget is bounded work, not a quarter-trillion tests",
+    namedFacts([
+      ["placed", () => crowd.placements.length > 3_000],
+      ["accounted", () => crowd.placements.length + crowd.rejected === 4_000],
+      ["spacing", () => closestPair(crowd.placements) >= 1],
+      [
+        "reproducible",
+        () => {
+          const again = arrangePlantingCluster(
+            plantingCluster({
+              id: "meadow",
+              count: 4_000,
+              extent: { x: 40, z: 40 },
+              minSpacing: 1,
+              attempts: 16,
+            }),
+          );
+          return (
+            again.rejected === crowd.rejected &&
+            again.placements.every((placement, index) =>
+              Object.is(
+                placement.translation.x,
+                crowd.placements[index].translation.x,
+              ),
+            )
+          );
+        },
+      ],
+    ]),
+    { placed: true, accounted: true, spacing: true, reproducible: true },
   );
 
   TestValidator.equals(

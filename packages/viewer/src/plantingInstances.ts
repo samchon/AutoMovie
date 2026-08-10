@@ -39,6 +39,11 @@ export interface IAutoMoviePlantingObject {
  * uniform number: a member scaled `1.2 × 0.9 × 1.2` is drawn scaled `1.2 × 0.9
  * × 1.2`.
  *
+ * A structure that has not emerged, or a bed whose every slot was refused, is a
+ * hidden batch bounded at a point rather than an empty one bounded by nothing:
+ * a bounding sphere computed over zero instances has a radius of `-Infinity`,
+ * and a camera would cull against it.
+ *
  * A branch is a unit cylinder scaled to `(r, length, r)` with `r` the mean of
  * its two radii and rotated from `+y` onto its own axis. The taper a segment
  * carries in the derived structure is therefore averaged, which is the stated
@@ -186,7 +191,15 @@ export const buildPlantingObject = (props: {
     }
   }
   branches.instanceMatrix.needsUpdate = true;
-  branches.computeBoundingSphere();
+  // A plant that has not emerged, or a bed whose every slot was refused, draws
+  // no instance at all. `computeBoundingSphere` over zero instances leaves an
+  // empty box behind and a sphere of radius `-Infinity`, which a camera culls
+  // against as though it were a volume; the batch is hidden and bounded at a
+  // point instead.
+  if (branchCount === 0) {
+    branches.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
+    branches.visible = false;
+  } else branches.computeBoundingSphere();
   group.add(branches);
   if (leaves !== null) {
     leaves.instanceMatrix.needsUpdate = true;

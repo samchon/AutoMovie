@@ -59,12 +59,13 @@ const drape = (step: number) => {
  * 5. Cloth is drawn double-sided by default, and a supplied material is used as-is
  *    and not disposed by the object that borrowed it, while the default
  *    material is.
- * 6. The analysis status is recorded, so an `unsupported` panel is identifiable
- *    from the scene graph alone.
+ * 6. The analysis status is recorded and is a required argument, so each of
+ *    `solved`, `rest`, `not-run` and `unsupported` is identifiable from the
+ *    scene graph alone.
  */
 export const test_viewer_soft_body_panel = (): void => {
   const surface = drape(64);
-  const object = buildSoftBodyObject({ surface });
+  const object = buildSoftBodyObject({ surface, status: "solved" });
   const geometry = object.object.geometry;
   TestValidator.equals(
     "every attribute is the engine's own",
@@ -169,6 +170,7 @@ export const test_viewer_soft_body_panel = (): void => {
       domain: cord,
       state: simulateSoftBody(cord, 0),
     }),
+    status: "rest",
   });
   const sparse = buildSoftBodyObject({
     surface: {
@@ -183,6 +185,7 @@ export const test_viewer_soft_body_panel = (): void => {
       },
       bounds: null,
     },
+    status: "not-run",
   });
   TestValidator.equals(
     "a cord is hidden, and an attribute-less surface uploads empty buffers",
@@ -212,7 +215,11 @@ export const test_viewer_soft_body_panel = (): void => {
   sparse.dispose();
 
   const borrowed = new THREE.MeshBasicMaterial();
-  const lent = buildSoftBodyObject({ surface, material: borrowed });
+  const lent = buildSoftBodyObject({
+    surface,
+    material: borrowed,
+    status: "solved",
+  });
   const owned = object.object.material as THREE.Material;
   lent.dispose();
   object.dispose();
@@ -248,9 +255,21 @@ export const test_viewer_soft_body_panel = (): void => {
     "an unsupported panel is identifiable from the scene graph",
     namedFacts([
       ["status", () => flagged.object.userData.status === "unsupported"],
-      ["default", () => object.object.userData.status === "solved"],
+      ["solved", () => object.object.userData.status === "solved"],
+      ["rest", () => thread.object.userData.status === "rest"],
+      ["notRun", () => sparse.object.userData.status === "not-run"],
+      [
+        "restGeometry",
+        () => unsupported.state?.step === 0 && unsupported.surface !== null,
+      ],
     ]),
-    { status: true, default: true },
+    {
+      status: true,
+      solved: true,
+      rest: true,
+      notRun: true,
+      restGeometry: true,
+    },
   );
   flagged.dispose();
 };

@@ -86,6 +86,16 @@ const NEIGHBOURS: ReadonlyArray<
  *   face. Contacts are counted, so a panel that never touched anything says
  *   so.
  *
+ * Two limits of that last point are stated rather than implied. Colliders are
+ * resolved **once each, in the authored order**, so a particle wedged where two
+ * colliders overlap can end the step satisfying only the later one; adding a
+ * relaxation loop would trade a bounded step for an unbounded one, and the
+ * bounded step is what this tier promised. And a particle exactly on a box's
+ * mid-plane has no preferred face: the tie is broken toward the maximum side,
+ * which is deterministic but is the one place a mirrored panel need not stay
+ * mirrored. The constraint fold carries that property; a box collider whose
+ * exact centre plane a particle lands on does not.
+ *
  * ## Stability
  *
  * A position-based sweep is unconditionally stable, so the limit is not a
@@ -647,7 +657,15 @@ const escapeSphere = (
   predicted[base + 2] = collider.center.z + dz * factor;
 };
 
-/** Push a particle out of an axis-aligned box by its least-penetrated face. */
+/**
+ * Push a particle out of an axis-aligned box by its least-penetrated face.
+ *
+ * The axis is chosen by strict comparison, so the first axis wins a tie between
+ * axes and the maximum side wins a tie between the two faces of one axis. Both
+ * are deterministic; the second is the one degenerate configuration a mirrored
+ * panel does not survive, and it is documented on {@link simulateSoftBody}
+ * rather than hidden here.
+ */
 const escapeBox = (
   collider: IAutoMovieSoftCollider.IBox,
   predicted: Float64Array,
