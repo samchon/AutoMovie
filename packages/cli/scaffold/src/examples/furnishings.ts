@@ -36,6 +36,17 @@ import type {
  * The numbers below are one plant's worth of those parameters, exposed as
  * `props` so the whole habit changes when one of them is edited.
  *
+ * ## The two records do not share a frame, and it matters
+ *
+ * A panel's rest mesh and its colliders are **world** coordinates: the curtain
+ * hangs where you write it, and it drapes over the floor plane you name. A
+ * planting recipe is grown in **its own** frame from the origin and placed
+ * afterwards by a cluster, so its pruning envelope bounds the plant's reach
+ * from its own base rather than a region of the room. Reading either one in the
+ * other's frame is the mistake this pairing invites: a curtain authored at the
+ * origin hangs through the floor, and a plant pruned to the room's coordinates
+ * is cut away to nothing everywhere the bed actually put it.
+ *
  * ## The step is derived, never typed
  *
  * A position-based step may not travel further than the shortest constraint, or
