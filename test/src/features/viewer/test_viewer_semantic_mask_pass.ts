@@ -217,6 +217,10 @@ export const test_viewer_semantic_mask_pass = (): void => {
       // learns it without auditing the scene a second time.
       handle: missingHandle.semantic?.unresolved,
       painted: missingHandle.semantic?.painted,
+      // Two paths count the same population, one by painting and one without.
+      // A divergence would make the status line describe a different frame
+      // than the one the pass produced.
+      agree: missingHandle.semantic?.unaddressed,
       // Neither run may name a room, an opening or an instanced slot: those
       // claim no drawable of their own and are reached through `owner`.
       quiet: mask.entries
@@ -241,6 +245,7 @@ export const test_viewer_semantic_mask_pass = (): void => {
       },
       handle: ["planting:atrium-bed", "soft-body:panel", "water-body:basin"],
       painted: 6,
+      agree: 1,
       quiet: true,
     },
   );
