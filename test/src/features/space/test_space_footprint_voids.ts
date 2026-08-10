@@ -178,6 +178,10 @@ const pieceArea = (piece: { x: number; z: number }[]): number =>
  *     over the atrium bears on nothing while the same prop over an arm bears on
  *     the slab, a patch with no area is no face at all, and the take-off
  *     subtracts the void from the floor area somebody orders against.
+ * 14. Two vertices a hair apart in plan produce no sliver band: the slab between
+ *     them is thinner than the tolerance and is skipped, so the decomposition
+ *     is still exactly the region rather than the region plus a piece whose own
+ *     arithmetic divides by nearly nothing.
  */
 export const test_space_footprint_voids = (): void => {
   const holed = surfaceFootprint(plate);
@@ -646,6 +650,42 @@ export const test_space_footprint_voids = (): void => {
       aPatchWithNoAreaIsNoFace: true,
       theTakeOffSubtractsTheVoid: true,
       aPatchIsNotAVolume: true,
+    },
+  );
+
+  const skewed = surfaceFootprint({
+    ...ell,
+    polygon: [v(0, 0), v(4, 0), v(4, 2), v(2, 2), v(2 + 1e-10, 4), v(0, 4)],
+  });
+  const skewedPieces = footprintConvexPieces(skewed);
+  TestValidator.equals(
+    "a band thinner than the tolerance is skipped, not slivered",
+    namedFacts([
+      [
+        "itStillSumsToTheRegion",
+        () =>
+          nclose(
+            skewedPieces.reduce((sum, piece) => sum + pieceArea(piece), 0),
+            12,
+            1e-6,
+          ),
+      ],
+      [
+        "noPieceIsASliver",
+        () =>
+          skewedPieces.every(
+            (piece) =>
+              Math.max(...piece.map((point) => point.x)) -
+                Math.min(...piece.map((point) => point.x)) >
+              1e-9,
+          ),
+      ],
+      ["theNotchIsStillOut", () => footprintContains(skewed, 3, 3) === false],
+    ]),
+    {
+      itStillSumsToTheRegion: true,
+      noPieceIsASliver: true,
+      theNotchIsStillOut: true,
     },
   );
 };

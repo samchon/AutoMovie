@@ -81,12 +81,17 @@ const lattice = (
  *    before #1868: the ground query classifies against the ring rather than its
  *    hull, so the notch is the author's and no longer a shape the validator has
  *    to forbid on the query's behalf. 6c. A footprint with a collinear point on
- *    an edge is still allowed. 6d. A self-crossing (bowtie) footprint is
- *    refused: it has no inside for a foot to be on. 6e. Holes: a well-formed
- *    void through a plate passes; a hole of fewer than three points, a
- *    collinear hole, a hole reaching outside its plate, a hole flush against
- *    the outer ring, and two holes sharing plan area are each refused at the
- *    hole's own path, so an author is told which ring is wrong.
+ *    an edge is still allowed. 6d. A self-crossing footprint is refused: it has
+ *    no inside for a foot to be on, and its two spellings reach different
+ *    checks — a symmetric bowtie's lobes cancel and it is caught as a ring
+ *    enclosing no area, while a lopsided one encloses area and is caught as a
+ *    ring that crosses itself. 6e. Holes: a well-formed void through a plate
+ *    passes; a hole of fewer than three points, a collinear hole, a
+ *    self-crossing hole, a hole reaching outside its plate, a hole flush
+ *    against the outer ring, an outer ring reaching in to touch a hole, and two
+ *    holes sharing plan area are each refused at the hole's own path, so an
+ *    author is told which ring is wrong. A ring already refused on its own is
+ *    not compared with the others, and the holes that survived still are.
  * 7. A non-finite footprint plan coordinate is a `range` violation (`y` is
  *    documented-ignored and deliberately not checked).
  * 8. A non-finite height anchor is a `range` violation.
@@ -189,11 +194,23 @@ export const test_validation_space = (): void => {
     true,
   );
   TestValidator.predicate(
-    "self-crossing footprint rejected",
+    "a symmetric bowtie cancels to no area",
     hasViolation(
       validateSpace({
         space: withSurface({
           polygon: [v(0, 0), v(4, 4), v(4, 0), v(0, 4)],
+        }),
+      }),
+      "type",
+      ".polygon",
+    ),
+  );
+  TestValidator.predicate(
+    "a lopsided bowtie encloses area and is refused for crossing itself",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(4, 4), v(4, 0), v(0, 6)],
         }),
       }),
       "type",
@@ -297,11 +314,28 @@ export const test_validation_space = (): void => {
       validateSpace({
         space: withSurface({
           polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
-          holes: [[v(2, 2), v(6, 6), v(6, 2), v(2, 6)]],
+          holes: [[v(2, 2), v(6, 6), v(6, 2), v(2, 7)]],
         }),
       }),
       "type",
       ".holes[0]",
+    ),
+  );
+  TestValidator.predicate(
+    "a later hole is still compared against the holes that survived",
+    hasViolation(
+      validateSpace({
+        space: withSurface({
+          polygon: [v(0, 0), v(8, 0), v(8, 8), v(0, 8)],
+          holes: [
+            [v(1, 1), v(2, 2), v(3, 3)],
+            [v(4, 4), v(6, 4), v(6, 6), v(4, 6)],
+            [v(5, 5), v(7, 5), v(7, 7), v(5, 7)],
+          ],
+        }),
+      }),
+      "type",
+      ".holes[2]",
     ),
   );
   TestValidator.equals(
