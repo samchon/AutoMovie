@@ -561,6 +561,10 @@ const CLAIMS: ICapabilityClaim[] = [
 ];
 
 const EXEMPTIONS: ICapabilityExemption[] = [
+  // Vectors, quaternions, channels, tracks, drivers' curve shapes and the
+  // colour record. An author never decides one of these on its own; it is
+  // decided by the record that embeds it, and every such record is claimed
+  // above.
   {
     reason: "primitive",
     files: [
@@ -580,6 +584,9 @@ const EXEMPTIONS: ICapabilityExemption[] = [
       "geometry/IAutoMovieYawPitch.ts",
     ],
   },
+  // Request and selector shapes of the retired host harness API, plus the
+  // migration plan the CLI writes. The agent-facing surface is the five MCP
+  // tools; none of these is a payload an authoring agent composes.
   {
     reason: "host-contract",
     files: [
@@ -601,6 +608,12 @@ const EXEMPTIONS: ICapabilityExemption[] = [
       "production/IAutoMovieLegacyImport.ts",
     ],
   },
+  // The parametric head and face surface. No model recipe, production record,
+  // compiler path, or scaffold module references it, so an agent holding only
+  // the MCP surface cannot reach it at all, and a guide teaching it would be
+  // teaching a door with no room behind it. Teaching it is the same work as
+  // delivering it; until then this list says so out loud rather than letting
+  // the absence look like an oversight nobody noticed.
   {
     reason: "undelivered",
     files: [
