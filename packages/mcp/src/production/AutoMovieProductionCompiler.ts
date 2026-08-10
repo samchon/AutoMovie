@@ -7,6 +7,7 @@ import {
   defineShot,
   formationSlotPosition,
   heightAt,
+  inheritProductionLighting,
   makeActorSynthesizer,
   placeFormationSlot,
   realizeShotContract,
@@ -1678,9 +1679,32 @@ const compileShotSource = (
         ),
       ],
     };
+  // The production's own light, at the story moment this shot is pinned to.
+  //
+  // A film that runs across a stretch of story states its source once and
+  // every shot stands under it, instead of each scene restaging its own light
+  // with nothing relating one to the next. The merge is the engine's, by id:
+  // a staged light a source names is replaced in place, and a source no scene
+  // declares is appended. A production that declares no lighting, or a shot
+  // carrying no story pin, gets its staged lights back element by element, so
+  // the compiled bytes are unchanged for every film that says nothing.
+  //
+  // State, not motion: the shot inherits where the light IS at its own story
+  // origin. Carrying the source's motion in as well would mean resampling a
+  // story-clock curve onto a shot-local one, and a resampling is exact for
+  // some interpolations and an approximation for others -- a shot states its
+  // own light-over-time through `lightMotions`, which runs on top of this.
+  const scene = compiled.source.scene;
+  const inherited = inheritProductionLighting({
+    lighting: props.context.lighting ?? null,
+    lights: scene.lights,
+    pin: props.context.contract.storyTime ?? null,
+    seconds: 0,
+  });
   return {
     value: {
       ...compiled.source,
+      scene: { ...scene, lights: inherited },
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       formationSlotMotions: structuredClone(
         program.value.formationSlotMotions ?? [],
