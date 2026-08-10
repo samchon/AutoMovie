@@ -56,13 +56,15 @@ export namespace IAutoMovieForgedProp {
  *
  * The **articulation contract** (when present): joint node ids unique and
  * non-empty, parents resolving within the declared nodes (`null` = the prop's
- * root) without a cycle; the binding targeting the declared profile; every
- * `boneMap` value naming a declared node; and every semantic key the profile
- * references ({@link profileSemanticKeys}) mapped, reported **all at once**,
- * where `bindProfile` itself would throw on the first, so one correction round
- * sees the whole list. A spec that passes these gates binds without a throw;
- * the door round-trip test drives the forged artifact through `resolveFrame` to
- * prove the declared limit clamps and the declared driver drives.
+ * root) without a cycle; each joint's optional `mesh` naming one part of this
+ * prop's own model, and no part claimed by two joints; the binding targeting
+ * the declared profile; every `boneMap` value naming a declared node; and every
+ * semantic key the profile references ({@link profileSemanticKeys}) mapped,
+ * reported **all at once**, where `bindProfile` itself would throw on the
+ * first, so one correction round sees the whole list. A spec that passes these
+ * gates binds without a throw; the door round-trip test drives the forged
+ * artifact through `resolveFrame` to prove the declared limit clamps and the
+ * declared driver drives.
  */
 export const forgeProp = (spec: IAutoMoviePropSpec): IAutoMovieForgedProp => {
   const out = new ViolationCollector();
@@ -107,7 +109,8 @@ export const forgeProp = (spec: IAutoMoviePropSpec): IAutoMovieForgedProp => {
         path: violation.path.replace("$input", "$input.model"),
       });
 
-  if (spec.articulation !== null) gateArticulation(spec.articulation, out);
+  if (spec.articulation !== null)
+    gateArticulation(spec.articulation, spec.model, out);
 
   if (out.items.length > 0) return { success: false, violations: out.items };
   return { success: true, prop: spec };
@@ -296,11 +299,48 @@ const gateImportedAppearance = (
     );
 };
 
+/**
+ * Gate the prop's declared joints, and what each of them carries.
+ *
+ * The model is here for the `mesh` payload. An articulation node is an
+ * {@link IAutoMovieNode}, so it can name the piece of the prop that rides it,
+ * and that reference is the whole of how a declared joint becomes a part that
+ * visibly moves: without it a hinge turns an empty frame while the leaf stands
+ * still, which is a shot that validates clean and shows nothing. The reference
+ * resolves inside this prop's own model, because a prop's moving part is a part
+ * of the prop; two joints may not claim the same part, since a part rides one
+ * frame.
+ */
 const gateArticulation = (
   articulation: NonNullable<IAutoMoviePropSpec["articulation"]>,
+  model: IAutoMovieModel,
   out: ViolationCollector,
 ): void => {
   const path = "$input.articulation";
+  const parts = new Set(model.parts.map((part) => part.id));
+  const claimed = new Map<string, number>();
+  articulation.nodes.forEach((node, i) => {
+    if (node.mesh === null) return;
+    const np = `${path}.nodes[${i}].mesh`;
+    if (!parts.has(node.mesh)) {
+      out.push(
+        "type",
+        np,
+        `articulation node "${node.id}" drives mesh "${node.mesh}", which is not a part of this prop's model`,
+        node.mesh,
+      );
+      return;
+    }
+    const first = claimed.get(node.mesh);
+    if (first !== undefined)
+      out.push(
+        "type",
+        np,
+        `part "${node.mesh}" is already driven by ${path}.nodes[${first}]; a part rides one joint`,
+        node.mesh,
+      );
+    else claimed.set(node.mesh, i);
+  });
   if (articulation.nodes.length === 0)
     out.push(
       "type",

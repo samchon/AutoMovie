@@ -7,6 +7,7 @@ import type {
 } from "@automovie/interface";
 
 import { chorus } from "../formations/chorus";
+import { gate } from "../objects/gate";
 import { soloist } from "../units/soloist";
 import { plaza } from "../world/plaza";
 
@@ -178,9 +179,15 @@ const buildCue = (
   // stages. This shot states the beat and the frame; it does not rebuild the
   // figure.
   const performer = soloist.render(context, { from: openingAbduction });
+  // The gate is a fixture of the location rather than of one beat, so both
+  // shots stage it and the answering scene is the one that dramatizes it. It
+  // owns its own specification and its own placement; this shot only asks for
+  // them.
+  const fixture = gate.render(context);
   const sceneId = `${context.contract.id}-scene`;
   return {
     actors: [...(performer.actors ?? [])],
+    props: [...(fixture.props ?? [])],
     script: {
       logline: "A soloist raises a hand and the plaza answers.",
       theme: "one readable gesture changes the plaza",
@@ -227,6 +234,7 @@ const buildCue = (
           intensity: 2.5,
         },
       ],
+      set: [...(fixture.set ?? [])],
       // The world owns its ground, and the ground derives its extent from the
       // group standing on it. A polygon spelled out here would be a second
       // plaza, and it is the one the viewer draws.

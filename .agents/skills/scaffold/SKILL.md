@@ -83,9 +83,13 @@ a design record is a way of writing something no document answers for.
 
 State these to whoever is authoring rather than letting them discover it.
 
-- **`docs/objects/` and `src/objects/` ship empty.** The prop slot has never had
-  an inhabitant, because the shipped screenplay calls for no prop. A production
-  that wants artillery, colours or a drum is the first to exercise that path.
+- **`docs/objects/` and `src/objects/` ship one inhabitant, and only one.**
+  `gate.md` and `gate.ts` are the rung's worked example: a specification the
+  answering scene calls for, a class that forges as an `IAutoMoviePropSpec`,
+  one hinge under a declared travel the engine clamps against, and a placement
+  read off the staged ground rather than authored beside it. Two boxes stand in
+  for the geometry, deliberately. A production that wants artillery, colours or
+  a drum copies the shape and not the gate.
 - **`src/examples/` is outside the ladder and outside the production.** Nothing
   imports it and no claim cites it, so an example owes no specification and
   cannot be caught drifting from one. Each file teaches one authoring technique

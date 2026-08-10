@@ -9,6 +9,31 @@ import {
 import { lowerSkeletonNodes } from "./skeletonNodes";
 
 /**
+ * The prefix every node lowered under one scene placement carries.
+ *
+ * One law, one owner. The prefix appears in four unrelated places at once: the
+ * ids this bridge writes, the `nodePrefix` a profile binds with
+ * ({@link bindProfile}), the `nodePrefix` an actor's clip is baked with
+ * ({@link motionToClip}), and the channel a shot's `objectMotions` addresses a
+ * prop's moving part by. Spelled out at each of them, the four agree until one
+ * is edited, and a channel that silently addresses nothing is exactly the drop
+ * this package refuses everywhere else.
+ */
+export const placementNodePrefix = (placement: string): string =>
+  `${placement}/`;
+
+/**
+ * The scene-graph id of one node lowered under a placement.
+ *
+ * A bone of a placed actor and a joint of a placed prop are the same naming
+ * question, so they get the same answer: `"frontDoor"` plus `"hinge"` is
+ * `"frontDoor/hinge"`, which is what a clip track, a bound profile limit and a
+ * viewer lookup must all spell identically.
+ */
+export const placementChildNode = (placement: string, child: string): string =>
+  `${placementNodePrefix(placement)}${child}`;
+
+/**
  * Lower the specialized {@link IAutoMovieScene} onto the general
  * {@link IAutoMovieNode} graph, slice S3 of the core wiring: the same scene the
  * film pipeline stages becomes the flat node list {@link composeScene} composes,
@@ -89,7 +114,7 @@ export const sceneToNodes = (props: {
         nodes.push(
           ...lowerArticulationNodes(
             spec.articulation,
-            `${placement.id}/`,
+            placementNodePrefix(placement.id),
             placement.id,
           ),
         );
@@ -104,7 +129,7 @@ export const sceneToNodes = (props: {
     nodes.push(
       ...lowerSkeletonNodes({
         skeleton: model.skeleton,
-        prefix: `${placement.id}/`,
+        prefix: placementNodePrefix(placement.id),
         rootParent: placement.id,
       }),
     );

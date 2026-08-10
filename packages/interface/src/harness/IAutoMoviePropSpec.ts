@@ -26,6 +26,14 @@ export interface IAutoMoviePropArticulation {
    * scene bridge (`sceneToNodes`'s `props` registry) parents the subtree under
    * the prop's scene node with the placement prefix, so the profile binds with
    * the same prefix (`bindProfile`'s `nodePrefix`).
+   *
+   * A joint's {@link IAutoMovieNode.mesh} names the part of
+   * {@link IAutoMoviePropSpec.model} that rides it, and that reference is what
+   * makes a declared joint visible: a hinge with no part named turns an empty
+   * frame while the leaf stands still. `forgeProp` requires the name to be one
+   * of this prop's own parts and refuses a part claimed by two joints, since a
+   * part rides one frame. A joint that only positions other joints leaves it
+   * `null`.
    */
   nodes: IAutoMovieNode[];
 
