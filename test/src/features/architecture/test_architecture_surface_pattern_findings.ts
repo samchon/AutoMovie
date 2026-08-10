@@ -43,14 +43,18 @@ const course =
  * 1. Modules laid wider than their pitch overlap; every overlapping pair is
  *    reported with the metre penetration, and pairs beyond the adjacency gap
  *    are not reported at all.
- * 2. A course whose middle module is 40 mm narrower opens both its joints to 40 mm
+ * 2. Two zones whose modules the shared border cuts butt against each other on the
+ *    surface, so nothing is reported, even though the two modules as designed
+ *    occupy exactly the same rectangle. This is why neighbours are measured
+ *    between the pieces as laid rather than the modules as designed.
+ * 3. A course whose middle module is 40 mm narrower opens both its joints to 40 mm
  *    against a 20 mm nominal, so both pairs are reported; a course laid to the
  *    nominal reports nothing.
- * 3. When the same neighbouring pair also turns its grain, the joint finding and
+ * 4. When the same neighbouring pair also turns its grain, the joint finding and
  *    the grain finding are both raised, in that order.
- * 4. Two zones meeting at a shared edge report the grain turn across the border
+ * 5. Two zones meeting at a shared edge report the grain turn across the border
  *    and stay silent inside each zone.
- * 5. A null grain tolerance disables the grain scan entirely, even where the grain
+ * 6. A null grain tolerance disables the grain scan entirely, even where the grain
  *    turns ninety degrees.
  */
 export const test_architecture_surface_pattern_findings = (): void => {
@@ -60,7 +64,7 @@ export const test_architecture_surface_pattern_findings = (): void => {
       zones: [
         zone({
           id: "bad",
-          region: rectangle(0, 0, 1, 0.6),
+          region: rectangle(-0.1, 0, 2.1, 0.6),
           period: { u: 0.5, v: 2 },
           reach: { u: 0.6, v: 0.6 },
           generate: ({ column, row, origin }) =>
@@ -84,7 +88,13 @@ export const test_architecture_surface_pattern_findings = (): void => {
   TestValidator.equals(
     "every overlapping neighbour pair is reported, and no distant pair is",
     overlapping.findings.map((one) => one.occurrences.join("+")),
-    ["bad/m-1+bad/m0", "bad/m0+bad/m1", "bad/m1+bad/m2"],
+    [
+      "bad/m-1+bad/m0",
+      "bad/m0+bad/m1",
+      "bad/m1+bad/m2",
+      "bad/m2+bad/m3",
+      "bad/m3+bad/m4",
+    ],
   );
   TestValidator.equals(
     "an overlap reports the metre penetration against a zero limit",
@@ -107,7 +117,13 @@ export const test_architecture_surface_pattern_findings = (): void => {
             "instead of leaving a joint",
           ),
       ],
-      ["placements", () => overlapping.placements.length === 4],
+      ["placements", () => overlapping.placements.length === 6],
+      [
+        "outside",
+        () =>
+          overlapping.placements.map((one) => one.module).join() ===
+          "m-1,m0,m1,m2,m3,m4",
+      ],
     ]),
     {
       kinds: true,
@@ -115,6 +131,69 @@ export const test_architecture_surface_pattern_findings = (): void => {
       limit: true,
       detail: true,
       placements: true,
+      outside: true,
+    },
+  );
+
+  const straddle = zone({
+    period: { u: 1, v: 1 },
+    reach: { u: 0.6, v: 0.6 },
+    generate: ({ column, row, origin }) =>
+      row !== 0
+        ? []
+        : [
+            {
+              id: `c${column}`,
+              center: { u: origin.u, v: 0.25 },
+              size: { u: 1, v: 0.5 },
+              rotationDeg: 0,
+              grainDeg: 0,
+            },
+          ],
+  });
+  const shared = generateAutoMovieSurfacePattern({
+    pattern: pattern({
+      id: "border",
+      zones: [
+        { ...straddle, id: "a", region: rectangle(0, 0, 1, 0.5) },
+        {
+          ...straddle,
+          id: "b",
+          region: rectangle(1, 0, 2, 0.5),
+          origin: { u: 1, v: 0 },
+        },
+      ],
+      minimumPiece: 0.5,
+    }),
+  });
+  TestValidator.equals(
+    "pieces cut at a shared border butt on the surface and report nothing",
+    namedFacts([
+      [
+        "placements",
+        () =>
+          shared.placements.map((one) => one.id).join() ===
+          "a/c0,a/c1,b/c0,b/c1",
+      ],
+      [
+        "sameRectangle",
+        () =>
+          nclose(shared.placements[1]!.center.u, 1, 1e-12) &&
+          nclose(shared.placements[2]!.center.u, 1, 1e-12) &&
+          nclose(shared.placements[1]!.size.u, 1, 1e-12) &&
+          nclose(shared.placements[2]!.size.u, 1, 1e-12),
+      ],
+      [
+        "cutAtBorder",
+        () => shared.placements.every((one) => one.cut === "boundary"),
+      ],
+      ["findings", () => shared.findings.length === 0],
+    ]),
+    {
+      placements: true,
+      sameRectangle: true,
+      cutAtBorder: true,
+      findings: true,
     },
   );
 

@@ -235,7 +235,12 @@ export interface IAutoMoviePatternQuantities {
   wasteRatio: number;
   /** Zone area net of exclusions, in square metres. */
   netRegionArea: number;
-  /** Net region area left uncovered by modules, in square metres. */
+  /**
+   * Net region area left uncovered by modules, in square metres.
+   *
+   * Negative states that the pieces cover more than the region has, which only
+   * happens when they overlap each other; the overlap findings name the pairs.
+   */
   jointArea: number;
   /**
    * Joint area divided by the nominal joint width, in metres; zero when the
@@ -749,9 +754,14 @@ const totalQuantities = (
  * Per-occurrence findings come first so a defect that belongs to one piece is
  * never buried under the pair findings its neighbours produced. Pairs are
  * gathered through a uniform bucket grid rather than an all-pairs sweep, sized
- * so that any two modules within the adjacency gap must land in the same or an
- * adjacent bucket; the partner list is then sorted, so a bucket map's insertion
- * order can never reach the output.
+ * from the largest whole module so that any two pieces within the adjacency gap
+ * must land in the same or an adjacent bucket; the partner list is then sorted,
+ * so a bucket map's insertion order can never reach the output.
+ *
+ * Neighbours are measured between the pieces as laid, not between the modules
+ * as designed. Two zones that each cut their modules at the border they share
+ * would otherwise be judged on rectangles that overlap across it and reported
+ * as colliding when nothing on the surface does.
  */
 const findingsOf = (
   pattern: IAutoMovieSurfacePattern,
@@ -780,7 +790,11 @@ const findingsOf = (
 
   const cellSize =
     placements.reduce(
-      (largest, one) => Math.max(largest, Math.hypot(one.size.u, one.size.v)),
+      (largest, one) =>
+        Math.max(
+          largest,
+          Math.sqrt(one.size.u * one.size.u + one.size.v * one.size.v),
+        ),
       0,
     ) + pattern.adjacency;
   const buckets = new Map<string, number[]>();
@@ -790,15 +804,6 @@ const findingsOf = (
     if (bucket === undefined) buckets.set(key, [index]);
     else bucket.push(index);
   });
-  const corners = placements.map((placement) =>
-    moduleCorners({
-      id: placement.module,
-      center: placement.center,
-      size: placement.size,
-      rotationDeg: placement.rotationDeg,
-      grainDeg: placement.grainDeg,
-    }),
-  );
   placements.forEach((placement, index) => {
     const partners = new Set<number>();
     for (let du = -1; du <= 1; ++du)
@@ -809,7 +814,7 @@ const findingsOf = (
           if (candidate > index) partners.add(candidate);
     for (const partner of [...partners].sort((left, right) => left - right)) {
       const other = placements[partner]!;
-      const gap = separation(corners[index]!, corners[partner]!);
+      const gap = separation(placement.outline, other.outline);
       if (gap < -LENGTH_EPSILON) {
         findings.push({
           kind: "module-overlap",
@@ -862,10 +867,10 @@ const grainDeviation = (left: number, right: number): number => {
 };
 
 /**
- * The gap between two convex modules, measured along their own edge normals.
+ * The gap between two convex pieces, measured along their own edge normals.
  *
  * A joint is read perpendicular to the edges it separates, which is exactly the
- * separating-axis measurement: the largest projection gap over both modules'
+ * separating-axis measurement: the largest projection gap over both pieces'
  * edge normals. A negative result is a real overlap, because no axis separated
  * them.
  */
@@ -879,7 +884,7 @@ const separation = (
       const from = polygon[index]!;
       const to = polygon[(index + 1) % polygon.length]!;
       const axis = { u: -(to.v - from.v), v: to.u - from.u };
-      const length = Math.hypot(axis.u, axis.v);
+      const length = Math.sqrt(axis.u * axis.u + axis.v * axis.v);
       const normal = { u: axis.u / length, v: axis.v / length };
       const a = project(left, normal);
       const b = project(right, normal);
