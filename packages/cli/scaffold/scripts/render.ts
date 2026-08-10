@@ -37,6 +37,7 @@ import {
   canonicalAutoMovieCaptureRuntimeIdentity,
   canonicalAutoMovieJsonBytes,
   conformProductionRenditionVideoMp4,
+  decodeProductionAudioAsset,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   inspectAutoMovieProduction,
@@ -475,10 +476,33 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
   return published.plan;
 };
 
-const productionAudioAssets = (
+/**
+ * Resolve every audio asset the edit names to its plan identity and, when the
+ * asset really carries sound, to the mono samples the mix plays.
+ *
+ * The bytes come from `contentInputs()`, which is the project's own owned-file
+ * reader with its path fence already applied, so nothing here invents a second
+ * escape check. Decoding is `@automovie/mcp`'s, for the reason its own
+ * documentation gives: the mix has to be a pure function of what it is handed,
+ * so a codec and a filesystem live on this side of it.
+ *
+ * Two kinds of declared asset exist and they are not the same thing. A starter
+ * guide stem is a JSON descriptor: it states a duration and a format and
+ * carries no samples at all, so it plans as what it declares and mixes as the
+ * bus stand-in the engine already falls back to. Everything else is a
+ * container, and a container is parsed -- both for the plan identity, which is
+ * then the file's real duration and format rather than a claim about it, and
+ * for the samples. An unsupported container is refused by the decoder, by
+ * name.
+ */
+const productionAudioSources = (
   project: AutoMovieProductionProject,
   timeline: ReturnType<typeof readAutoMovieFilmTimeline>,
-): IAutoMovieProductionAudioAssetIdentity[] => {
+  sampleRate: number,
+): Array<{
+  identity: IAutoMovieProductionAudioAssetIdentity;
+  samples: Float32Array | null;
+}> => {
   const inputs = new Map(
     project.contentInputs().map((input) => [input.path, input.bytes]),
   );
@@ -490,40 +514,93 @@ const productionAudioAssets = (
         throw new Error(
           `Audio asset "${asset}" has no current compiler-owned bytes.`,
         );
-      let metadata: unknown;
-      try {
-        metadata = JSON.parse(Buffer.from(bytes).toString("utf8"));
-      } catch {
-        throw new Error(
-          `Audio asset "${asset}" is not a supported deterministic guide-stem descriptor.`,
-        );
-      }
-      const value = metadata as Partial<{
-        kind: string;
-        durationSeconds: number;
-        sampleRate: number;
-        channels: number;
-      }>;
-      if (
-        value.kind !== "placeholder-audio-stem" ||
-        Number.isFinite(value.durationSeconds) === false ||
-        Number.isSafeInteger(value.sampleRate) === false ||
-        Number.isSafeInteger(value.channels) === false ||
-        value.sampleRate !== 48_000 ||
-        value.channels !== 2
-      )
-        throw new Error(
-          `Audio asset "${asset}" must declare one 48 kHz stereo deterministic guide stem and finite duration.`,
-        );
-      return {
+      const digest = digestAutoMovieBytes(bytes);
+      const stem = placeholderAudioStem(asset, bytes);
+      if (stem !== null)
+        return { identity: { path: asset, digest, ...stem }, samples: null };
+      const decoded = decodeProductionAudioAsset({
         path: asset,
-        digest: digestAutoMovieBytes(bytes),
-        durationSeconds: value.durationSeconds!,
-        sampleRate: value.sampleRate,
-        channels: value.channels,
+        bytes,
+        sampleRate,
+      });
+      return {
+        identity: {
+          path: asset,
+          digest,
+          durationSeconds: decoded.durationSeconds,
+          sampleRate: decoded.sourceSampleRate,
+          channels: decoded.sourceChannels,
+        },
+        samples: decoded.samples,
       };
     });
 };
+
+/**
+ * Read one starter guide stem's declared format, or null when these bytes are
+ * not one and belong to the container decoder instead.
+ *
+ * A stem that says it is a stem and then contradicts itself throws here rather
+ * than falling through: it is a malformed descriptor, and reporting it as an
+ * unreadable container would name the wrong defect.
+ */
+const placeholderAudioStem = (
+  asset: string,
+  bytes: Uint8Array,
+): { durationSeconds: number; sampleRate: number; channels: number } | null => {
+  // Only a JSON object can be a descriptor, and deciding that from the first
+  // meaningful byte keeps a container -- which may be hundreds of megabytes --
+  // out of `toString("utf8")` on every plan, status, and verify.
+  const lead = bytes.find(
+    (byte) => byte !== 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d,
+  );
+  if (lead !== 0x7b) return null;
+  let metadata: unknown;
+  try {
+    metadata = JSON.parse(Buffer.from(bytes).toString("utf8"));
+  } catch {
+    return null;
+  }
+  const value = metadata as Partial<{
+    kind: string;
+    durationSeconds: number;
+    sampleRate: number;
+    channels: number;
+  }> | null;
+  if (value?.kind !== "placeholder-audio-stem") return null;
+  if (
+    Number.isFinite(value.durationSeconds) === false ||
+    Number.isSafeInteger(value.sampleRate) === false ||
+    Number.isSafeInteger(value.channels) === false ||
+    value.sampleRate !== 48_000 ||
+    value.channels !== 2
+  )
+    throw new Error(
+      `Audio asset "${asset}" must declare one 48 kHz stereo deterministic guide stem and finite duration.`,
+    );
+  return {
+    durationSeconds: value.durationSeconds!,
+    sampleRate: value.sampleRate,
+    channels: value.channels,
+  };
+};
+
+/**
+ * The plan's asset identities, taken from the one resolution that also produces
+ * the samples: a plan cannot then record a duration or a format the mix did not
+ * actually read, which is what makes it a preflight rather than a restatement.
+ *
+ * The identities are the container's own facts and do not depend on the rate
+ * the samples were decoded at, so the production's fixed 48 kHz clock stands in
+ * here -- planning happens before there is a sound plan to ask.
+ */
+const productionAudioAssets = (
+  project: AutoMovieProductionProject,
+  timeline: ReturnType<typeof readAutoMovieFilmTimeline>,
+): IAutoMovieProductionAudioAssetIdentity[] =>
+  productionAudioSources(project, timeline, 48_000).map(
+    (source) => source.identity,
+  );
 
 const renderSourceDigest = (
   project: AutoMovieProductionProject,
@@ -1701,6 +1778,19 @@ const produceProductionSound = async (
     throw new Error(
       "Sound plan and render plan do not share the exact film frame clock.",
     );
+  renderProgress("sound.assets.decode.start");
+  // A cue plays the asset it names only if something decoded it: the mix takes
+  // samples and never a path. A guide stem contributes no entry and falls back
+  // to the bus stand-in, which is why an unfinished production still mixes.
+  const assets = new Map(
+    productionAudioSources(project, timeline, soundPlan.sampleRate).flatMap(
+      (source) =>
+        source.samples === null
+          ? []
+          : [[source.identity.path, source.samples] as const],
+    ),
+  );
+  renderProgress("sound.assets.decode.complete", { decoded: assets.size });
   renderProgress("sound.synthesis.start");
   const synthesized = await synthesizeProductionDialogue(soundPlan);
   renderProgress("sound.synthesis.complete");
@@ -1708,6 +1798,7 @@ const produceProductionSound = async (
   const rendered = renderProductionSound({
     plan: soundPlan,
     dialogue: synthesized.pcm,
+    assets,
   });
   renderProgress("sound.render.complete");
   if (

@@ -1023,6 +1023,8 @@ export const test_cli_capture_cleanup = (): void => {
           "sourceFingerprint",
           "captureReviewEvidence",
           "currentPlan",
+          "productionAudioSources",
+          "placeholderAudioStem",
           "productionAudioAssets",
           "renderSourceDigest",
           "productionSoundRuntimeIdentity",
