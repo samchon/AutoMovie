@@ -92,6 +92,20 @@ const instanceTransformMatches = (
   );
 };
 
+/**
+ * The diffuse hex one batch material multiplies, or null when it has none.
+ *
+ * Read structurally rather than through `instanceof THREE.Color`. A material
+ * that came back from `GLTFLoader` carries a colour built by three's ESM entry
+ * while this file holds its CommonJS one, so the same class is two different
+ * constructors and an identity test calls a perfectly neutral material
+ * non-neutral. The value is what the claim is about.
+ */
+const diffuseHex = (material: THREE.Material): number | null => {
+  const color = (material as THREE.Material & { color?: THREE.Color }).color;
+  return color === undefined ? null : color.getHex();
+};
+
 /** Every instance matrix and color of one built set, in batch order. */
 const batchBytes = (object: THREE.Object3D): string =>
   JSON.stringify(
@@ -1432,10 +1446,7 @@ export const test_viewer_instance_set = async (): Promise<void> => {
         "multiPartNeutral",
         () =>
           multiPartMaterials.every(
-            (material) =>
-              "color" in material &&
-              material.color instanceof THREE.Color &&
-              material.color.getHex() === 0xffffff,
+            (material) => diffuseHex(material) === 0xffffff,
           ),
       ],
       [
