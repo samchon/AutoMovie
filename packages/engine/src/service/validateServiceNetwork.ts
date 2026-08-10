@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 
 import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
-import { outlineHull, pointInPolygon } from "../architecture/planarGeometry";
+import { outlineHull, polygonInside } from "../architecture/planarGeometry";
 import {
   propBoundsOverlap,
   propSpaceContainsBounds,
@@ -762,10 +762,12 @@ const appendCrossings = (
  * and a sleeve citing a declared opening must additionally sit inside that
  * opening's own void rather than merely somewhere on the same wall.
  *
- * The sleeve is held by the corners of the square that bounds it rather than by
- * its true circle, which errs towards refusing a hole tucked into a corner of
- * an irregular face. That is the same direction every other tolerance here
- * leans: a refused sleeve is moved, an unrefused one leaks.
+ * The sleeve is held as the square that bounds it rather than as its true
+ * circle, which errs towards refusing a hole tucked into a corner of an
+ * irregular face. That is the same direction every other tolerance here leans:
+ * a refused sleeve is moved, an unrefused one leaks. It is held by the very
+ * predicate the architecture holds a door inside a wall with, so a sleeve and a
+ * window cannot come to disagree about what "inside this face" means.
  *
  * A boundary with no face is not a failure. It is the pre-geometry record, and
  * `serviceAnalysisSupport` reports it as the reason this check is `unsupported`
@@ -805,7 +807,7 @@ const appendSleeveOnFace = (
     );
 
   const corners = sleeveCorners(local, sleeve.radius);
-  if (corners.some((corner) => !pointInPolygon(corner, face.outline)))
+  if (!polygonInside(corners, face.outline))
     out.push(
       "type",
       `${path}.position`,
@@ -819,8 +821,7 @@ const appendSleeveOnFace = (
   );
   if (opening === undefined || opening.boundary !== sleeve.boundary) return;
   if (opening.profile === undefined) return;
-  const hull = outlineHull(opening.profile);
-  if (corners.some((corner) => !pointInPolygon(corner, hull)))
+  if (!polygonInside(corners, outlineHull(opening.profile)))
     out.push(
       "type",
       `${path}.opening`,
