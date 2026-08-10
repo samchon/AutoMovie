@@ -33,6 +33,7 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `buildInstancedFormation` / `regenerateFormationSlot` | 컴파일된 formation 청크를 LOD tier별 `InstancedMesh`로 올리고, 카메라 갱신마다 청크 컬링·LOD 히스테리시스를 적용한다. hero 슬롯은 인스턴스 버퍼에서 빠지고 host가 넘긴 pre-formation 소스 스냅샷 위에 formation 모션을 합성한다. `slotMotions`로 지목된 소수의 멤버만 매 프레임 자기 상태로 다시 써서, 한 명이 이탈·정지하거나 아예 그려지지 않게 한다. 비용은 예외 수에 비례하며 군중 크기와 무관하고, 사라진 멤버는 `stats.removed`로 따로 센다(`near + far + culled + removed = anonymousCount`). |
 | `bakeFormationCycle` / `formationCyclePosition` / `sampleFormationCycleMatrix` / `applyFormationCycleMaterial` | LOD tier의 런타임 모델이 gait를 선언하면 한 사이클을 rigid part 행렬 표로 한 번 굽고, 각 멤버가 자기 `motionPhase`에서 그 표를 정점 단계에서 읽게 한다. 표는 tier당 하나라 멤버가 열 명이든 십만 명이든 인스턴스 버퍼는 그대로이고, 한 프레임이 갱신하는 것은 시간 uniform 하나뿐이다. gait가 없는 모델은 표를 갖지 않고 예전처럼 정지한 채 남는다. |
 | `buildInstancedEffect` | 컴파일된 fog/smoke/dust 볼륨을 고정 스텝으로 샘플링해 인스턴스 파티클로 그리고, 파티클 상한과 LOD 거리 컬링을 강제한다. |
+| `buildFluidSurfaceObject` / `buildFluidSprayObject` | 엔진이 푼 유체 상태의 자유수면과 분무를 그대로 올린다. 표면은 평범한 `Mesh`라 구조 가이드 패스가 모든 메시의 머티리얼을 바꾸는 것만으로 beauty/normal/depth/mask에 나타나고, bounding sphere도 엔진이 준 그려지는 범위를 쓴다. 분무는 `Points`라 같은 패스들이 의도적으로 숨긴다. 장식 안개가 segmentation mask를 물들이면 안 되기 때문이다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
 

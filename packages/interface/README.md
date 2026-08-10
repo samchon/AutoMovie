@@ -59,6 +59,7 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `motion/`     | 시간 모션: 키프레임 + 이징                                                                                                                                                                                       |
 | `material/`   | PBR 머티리얼                                                                                                                                                                                                     |
 | `scene/`      | 씬그래프: 모델/카메라/조명 배치                                                                                                                                                                                  |
+| `fluid/`      | 건축과 독립된 유체 도메인: 고정 격자·고정 스텝 shallow-water 설계(`IAutoMovieFluidDomain`), 절대 스텝 상태·표면·분무·예산(`IAutoMovieFluidState`), 건물이 논리 공간에 묶는 수경 바인딩(`IAutoMovieWaterFeature`)                                       |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
 | `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request 모양은 MCP 표면이 아님                                                      |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |

@@ -164,6 +164,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `film/`       | 필름 파이프라인 stage/block/perform/cut: 씬 스테이징, 비트 블로킹, 샷 수행, 카메라 무브·프로젝션, 부착·발사 컴파일, 비트 엔드 상태, 시퀀스 컷, 리뷰 |
 | `resolve/`    | 시각 t의 해석: 클립 샘플링, 드라이버·드리븐 커브, IK, 스프링, 채널 한계, 씬 합성, 조명 해석, 스켈레톤 노드화                                        |
 | `physics/`    | 탄도·투사체, 충돌과 반응, 임팩트·반동, 질량 특성                                                                                                    |
+| `fluid/` | 건축과 독립된 결정적 shallow-water 도메인: 고정 격자·고정 스텝 solver, 절대 스텝 seek, 질량 보존과 CFL 검증, 자유수면 지오메트리, 상한 있는 분무, 건물 수경 바인딩 |
 | `space/`      | 공간: 지면·standable surface, affordance 접촉                                                                                                       |
 | `text/`       | 결정적 문자열 비교(`compareCodeUnits`)                                                                                                              |
 | `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation`                                                                                                 |
