@@ -259,7 +259,7 @@ const CLAIMS: ICapabilityClaim[] = [
   },
   {
     guide: "GEOMETRY",
-    probe: "Five constructors cover the constructive vocabulary",
+    probe: "constructors cover the convex constructive vocabulary",
     files: ["model/IAutoMovieGeometry.ts"],
   },
   {

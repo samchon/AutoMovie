@@ -18,7 +18,7 @@ The geometry oracle is intentionally compact. Source code remains the right plac
 
 The same package builds geometry, not only measures it. A shot program may return `models`: complete model records whose parts carry meshes your own source constructed. That is the path for a building, a moulding, a balustrade, a machine housing, or any shape no registered archetype makes, and it does not go through a model recipe. A recipe is a bounded parameter map validated against an archetype catalogue; this is a program, and the two are not substitutes.
 
-Five constructors cover the constructive vocabulary, and each returns one mesh.
+Five constructors cover the convex constructive vocabulary, and each returns one mesh.
 
 - `extrudeAutoMovieProfile({ profile, depth })` gives a prism from a planar profile: a plinth, a mullion, a slab, a sign.
 - `revolveAutoMovieProfile({ profile, segments })` turns a profile about the vertical axis: a column, a baluster, a bowl, a dome. Every profile radius must be at or above zero, because a negative radius is a profile that crossed its own axis.
@@ -27,6 +27,8 @@ Five constructors cover the constructive vocabulary, and each returns one mesh.
 - `buildAutoMoviePolyhedron(faces)` takes explicit planar faces, for a shape stated by its corners rather than by a profile.
 
 Extrusion and sweep reduce their profile to its convex hull first, so an outline that crosses itself is resolved deterministically rather than trusted; author the profile you mean, and do not rely on winding order to carve a notch. Revolve does not, because a meridian is a silhouette rather than a section: it is taken exactly as authored and only its radii are checked. Closure there is yours to declare. A meridian that starts and ends on the axis closes into a solid whose pole rings collapse to zero-area triangles, one that does not is an open tube with a rim at each end, neither is repaired, and no UV atlas is generated.
+
+Three more constructors exist for the shapes a hull destroys. `triangulateAutoMovieRegion` ear-clips an arbitrary ring less its holes; `extrudeAutoMovieRegion` turns that region into a closed prism, which is also the arbitrary-shape host opening `buildAutoMovieWall` cannot cut; `loftAutoMovieSections` blends authored sections along a path, so a taper, a changing section, and a hollow sweep are one operation. Nothing there is approximated: a ring under three points, a non-finite coordinate, a point repeated beside itself, a spike doubling back, a ring of no area, a ring crossing itself, two rings that touch, and a hole outside the region each raise their own diagnostic. These three are engine exports and are not on the shot sandbox's importable surface, so today a `build` function cannot call them; reach them from a measurement script or a test until that changes.
 
 Compose with `transformAutoMovieMesh(mesh, { translation, rotation, scale })` and `mergeAutoMovieMeshes([...])` when the result is one drawable, or `mergeAutoMovieMeshParts([{ id, mesh, transform }])` when you need the merged mesh plus the index range each named member occupies, which is how a part stays addressable after the merge. Every one of them refuses a skinned mesh: this is rigid construction, and a deforming surface belongs to a skeleton and an archetype instead. A placement takes the full transform, normals take the inverse transpose so a non-uniform scale does not tilt them off the surface, a mirroring scale flips triangle winding so the outward face stays outward, and no axis may be collapsed to zero.
 
