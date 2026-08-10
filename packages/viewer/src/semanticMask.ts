@@ -29,8 +29,9 @@ export interface IAutoMovieSemanticMaskHandle {
    *
    * The mirror image of {@link unaddressed}: that one counts pixels no id
    * claimed, this one names ids no pixels answered. See
-   * {@link auditAutoMovieSemanticMaskScene} for why an empty list is the only
-   * proof that what a production declared is what it drew.
+   * {@link auditAutoMovieSemanticMaskScene}, which reports both without
+   * painting, for why an empty list is the only proof that what a production
+   * declared is what it drew.
    */
   unresolved: string[];
 
@@ -79,22 +80,47 @@ export const autoMovieSemanticMaskOf = (
     | IAutoMovieSemanticMaskBinding
     | undefined) ?? null;
 
+/** How completely one palette and one built scene account for each other. */
+export interface IAutoMovieSemanticMaskCoverage {
+  /**
+   * Semantic ids that name a drawable this scene does not hold, ascending: what
+   * the production declared and the viewer never built.
+   */
+  unresolved: string[];
+
+  /**
+   * Meshes in the scene that no entry claims: what the viewer built and the
+   * palette cannot name.
+   *
+   * A mask frame paints these the reserved background, so they vanish rather
+   * than mislead, and this count is the only thing that says they vanished. It
+   * is never silently zero, because the two known populations that land here
+   * are a formation's anonymous members and an effect's particles, neither of
+   * which the palette addresses yet.
+   */
+  unaddressed: number;
+}
+
 /**
- * Name every entity the palette addresses that the built scene never drew.
+ * Hold one palette against one built scene, in both directions.
  *
  * This is the join the pipeline was missing. The mask is derived from the
  * compiled artifact and states which drawables one frame commits to; the scene
  * is what a viewer actually assembled. A production can declare a pond, a
  * curtain and a fern bed, compile clean, and render a room with none of them in
  * it, and nothing anywhere goes red, because each half was only ever checked
- * against itself. Holding the two lists against each other is what turns
- * "declared" into "drawn", and an id returned here is a drawable that exists in
- * the design and in no pixel.
+ * against itself. Holding the two against each other is what turns "declared"
+ * into "drawn": an id in `unresolved` exists in the design and in no pixel, and
+ * `unaddressed` counts the pixels the palette has no name for.
  *
- * Only entries that claim a drawable are checked. A building unit, a storey, a
- * room, a wall opening and an instanced slot deliberately paint nothing of
- * their own and are reached through `owner`, so listing them would report the
- * whole ownership chain as missing on every well-drawn frame.
+ * Only entries that claim a drawable are checked for the first. A building
+ * unit, a storey, a room, a wall opening and an instanced slot deliberately
+ * paint nothing of their own and are reached through `owner`, so listing them
+ * would report the whole ownership chain as missing on every well-drawn frame.
+ *
+ * Nothing here paints, hides, or suspends anything: a host reads its coverage
+ * before it ever asks for a mask frame, and asking twice costs one traversal
+ * each rather than a pass boundary.
  *
  * @author Samchon
  */
@@ -105,7 +131,16 @@ export const auditAutoMovieSemanticMaskScene = (props: {
   design: IAutoMovieScene;
   /** Palette derived from the same production. */
   mask: IAutoMovieSemanticMask;
-}): string[] => unresolvedOf(props.mask, maskRoots(props));
+}): IAutoMovieSemanticMaskCoverage => {
+  const roots = maskRoots(props);
+  let unaddressed = 0;
+  props.scene.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (mesh.isMesh !== true) return;
+    if (nearest(mesh, roots) === undefined) ++unaddressed;
+  });
+  return { unresolved: unresolvedOf(props.mask, roots), unaddressed };
+};
 
 /** Prefix of the viewer group name a compiled instance set is built under. */
 const INSTANCE_SET_PREFIX = "instance-set:";

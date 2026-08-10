@@ -48,8 +48,10 @@ const mask = deriveAutoMovieSemanticMask(
 attachAutoMovieSemanticMask(runtime.scene, { design: compiled.scene, mask });
 // Declared against drawn, once, because scene membership is structural: a
 // water body, cloth panel or planting cluster the shot declared and the viewer
-// never built is named here rather than discovered by whoever opens the pixels.
-const unresolved = auditAutoMovieSemanticMaskScene({
+// never built is named here rather than discovered by whoever opens the pixels,
+// and the geometry the palette cannot name is counted rather than left to
+// vanish into the mask's reserved background.
+const coverage = auditAutoMovieSemanticMaskScene({
   scene: runtime.scene,
   design: compiled.scene,
   mask,
@@ -65,7 +67,7 @@ mounted.renderer.setClearColor(0x11151b, 1);
 const observe = (): IAutoMovieShotObservation => ({
   shot: compiled.shot.id,
   observed: observeAutoMovieSceneRender(runtime.scene),
-  unresolved,
+  coverage,
 });
 
 const seek = (time: number, pass: AutoMovieGuidePass): void => {
@@ -76,7 +78,10 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
   const { observed } = observe();
   status.textContent =
     `${drawn}  D${observed.drawCalls}/T${observed.triangles}/M${observed.materials}` +
-    (unresolved.length === 0 ? "" : `  UNDRAWN ${unresolved.join(",")}`);
+    (coverage.unresolved.length === 0
+      ? ""
+      : `  UNDRAWN ${coverage.unresolved.join(",")}`) +
+    (coverage.unaddressed === 0 ? "" : `  UNNAMED ${coverage.unaddressed}`);
 };
 window.__automovieCapture = {
   ready: true,

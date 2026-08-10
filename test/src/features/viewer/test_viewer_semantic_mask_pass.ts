@@ -65,7 +65,8 @@ import {
  *    are named by the audit and by the pass; entries that claim no drawable of
  *    their own, such as a room, an opening or an instanced slot, are never
  *    named.
- * 6. A scene that drew every declared drawable audits clean, and an instanced set
+ * 6. A scene that drew every declared drawable reports an empty `unresolved` and
+ *    still counts the geometry the palette cannot name, and an instanced set
  *    whose viewer group is missing is named by its own set id.
  * 7. A palette that cannot resolve the scene refuses, and the refusal costs the
  *    scene nothing: fog, image lighting, background and hidden renderables are
@@ -228,7 +229,16 @@ export const test_viewer_semantic_mask_pass = (): void => {
         ),
     },
     {
-      audit: ["planting:atrium-bed", "soft-body:panel", "water-body:basin"],
+      audit: {
+        unresolved: [
+          "planting:atrium-bed",
+          "soft-body:panel",
+          "water-body:basin",
+        ],
+        // The stray mesh, counted without painting anything: the audit reads
+        // the same population the pass leaves at the reserved background.
+        unaddressed: 1,
+      },
       handle: ["planting:atrium-bed", "soft-body:panel", "water-body:basin"],
       painted: 6,
       quiet: true,
@@ -237,9 +247,9 @@ export const test_viewer_semantic_mask_pass = (): void => {
   missingHandle.restore();
 
   TestValidator.equals(
-    "a scene that drew every declared drawable audits clean",
+    "a scene that drew every declared drawable audits clean, and still counts what the palette cannot name",
     auditAutoMovieSemanticMaskScene({ scene: complete.scene, design, mask }),
-    [],
+    { unresolved: [], unaddressed: 1 },
   );
 
   // An instanced set claims no `nodes` of its own and is joined by its entry id,
@@ -248,7 +258,7 @@ export const test_viewer_semantic_mask_pass = (): void => {
   TestValidator.equals(
     "an instanced batch the scene never built is named by its set id",
     auditAutoMovieSemanticMaskScene({ scene: setless.scene, design, mask }),
-    ["instance-set:windows"],
+    { unresolved: ["instance-set:windows"], unaddressed: 1 },
   );
 
   // A palette that cannot resolve the scene refuses, and the refusal must cost

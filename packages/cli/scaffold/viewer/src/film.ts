@@ -10,6 +10,7 @@ import type {
   IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import {
+  type IAutoMovieSemanticMaskCoverage,
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,
@@ -30,11 +31,11 @@ interface IFilmLayer {
   weight: number;
 }
 
-/** One film shot's runtime beside the palette and audit derived with it. */
+/** One film shot's runtime beside the palette and coverage derived with it. */
 interface IFilmShot {
   runtime: IAutoMovieCompiledShotRuntime;
   mask: IAutoMovieSemanticMask;
-  unresolved: string[];
+  coverage: IAutoMovieSemanticMaskCoverage;
 }
 
 const { canvas, status } = viewerDocument();
@@ -72,7 +73,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
   runtimes.set(shot, {
     runtime,
     mask,
-    unresolved: auditAutoMovieSemanticMaskScene({
+    coverage: auditAutoMovieSemanticMaskScene({
       scene: runtime.scene,
       design: compiled.scene,
       mask,
@@ -147,9 +148,12 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
   }
   status.textContent =
     `${timeline.id}  frame=${frame}/${timeline.totalFrames - 1}  ${pass}` +
-    (drawnShot.unresolved.length === 0
+    (drawnShot.coverage.unresolved.length === 0
       ? ""
-      : `  UNDRAWN ${drawnShot.unresolved.join(",")}`);
+      : `  UNDRAWN ${drawnShot.coverage.unresolved.join(",")}`) +
+    (drawnShot.coverage.unaddressed === 0
+      ? ""
+      : `  UNNAMED ${drawnShot.coverage.unaddressed}`);
 }
 
 window.__automovieCapture = {
@@ -161,7 +165,7 @@ window.__automovieCapture = {
   observe: () => ({
     shot: drawnShot.runtime.id,
     observed: observeAutoMovieSceneRender(drawnShot.runtime.scene),
-    unresolved: drawnShot.unresolved,
+    coverage: drawnShot.coverage,
   }),
   sidecar: () => renderAutoMovieSemanticMaskSidecar(drawnShot.mask),
 };

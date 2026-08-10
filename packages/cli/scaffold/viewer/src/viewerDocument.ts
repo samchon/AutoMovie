@@ -1,5 +1,8 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
-import type { IAutoMovieRenderObservation } from "@automovie/viewer";
+import type {
+  IAutoMovieRenderObservation,
+  IAutoMovieSemanticMaskCoverage,
+} from "@automovie/viewer";
 
 export interface IAutoMovieCaptureHook {
   ready: boolean;
@@ -37,13 +40,16 @@ export interface IAutoMovieShotObservation {
   observed: IAutoMovieRenderObservation;
 
   /**
-   * Semantic ids the palette addresses that this scene never drew, ascending.
+   * How completely the shot's palette and its built scene account for each
+   * other.
    *
-   * Empty is the only proof that what the production declared is what it drew.
-   * A non-empty list names a pond, a curtain or a fern bed that exists in the
-   * design and in no pixel.
+   * An empty `unresolved` is the only proof that what the production declared
+   * is what it drew; a non-empty one names a pond, a curtain or a fern bed that
+   * exists in the design and in no pixel. `unaddressed` is the other direction:
+   * geometry the mask frame paints its reserved background because the palette
+   * has no name for it.
    */
-  unresolved: string[];
+  coverage: IAutoMovieSemanticMaskCoverage;
 }
 
 declare global {
