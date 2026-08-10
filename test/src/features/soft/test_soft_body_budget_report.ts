@@ -40,6 +40,11 @@ import { softPanel } from "../internal/softFixtures";
  * 5. A single-particle lattice has no constraint to cross, so its travel number is
  *    exactly `0`; the same lattice is refused for holding no constraint at all,
  *    which is why that number is a boundary and not a licence.
+ * 6. A lattice declaring a billion columns is measured and refused without ever
+ *    being walked. The shortest rest edge is read over the declared lattice, so
+ *    a record the validator exists to refuse could otherwise cost a billion
+ *    iterations inside the validator itself — and inside every budget report
+ *    anybody asked for on the way there.
  */
 export const test_soft_body_budget_report = (): void => {
   const domain = softPanel({ columns: 5, rows: 4, overrides: { id: "drape" } });
@@ -135,6 +140,38 @@ export const test_soft_body_budget_report = (): void => {
       ],
     ]),
     { travel: true, refused: true, overshoot: true },
+  );
+
+  const absurd = softPanel({
+    columns: 2,
+    rows: 2,
+    overrides: { id: "absurd", lattice: { columns: 1e9, rows: 1e9 } },
+  });
+  TestValidator.equals(
+    "a lattice nobody could walk is measured without walking it",
+    namedFacts([
+      ["travel", () => Object.is(softBodyTravelNumber(absurd), 0)],
+      ["budget", () => Object.is(softBodyBudget(absurd).travel, 0)],
+      [
+        "refused",
+        () =>
+          hasViolation(
+            validateSoftBodyDomain({ domain: absurd }),
+            "range",
+            "$input.lattice",
+          ),
+      ],
+      [
+        "lengthNamed",
+        () =>
+          hasViolation(
+            validateSoftBodyDomain({ domain: absurd }),
+            "type",
+            "$input.rest",
+          ),
+      ],
+    ]),
+    { travel: true, budget: true, refused: true, lengthNamed: true },
   );
 
   const lone = softPanel({ columns: 1, rows: 1, overrides: { id: "lone" } });

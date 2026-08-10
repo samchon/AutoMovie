@@ -56,9 +56,13 @@ const check = (props: {
   domains?: IAutoMoviePlantingDomain[];
   fluidDomains?: IAutoMovieFluidDomain[];
   semantic?: boolean;
+  ceiling?: number;
 }) =>
   validatePlantingInstallations({
-    environment: roomEnvironment({ semantic: props.semantic }),
+    environment: roomEnvironment({
+      semantic: props.semantic,
+      ceiling: props.ceiling,
+    }),
     installations: props.installations ?? [plantingInstallation()],
     clusters: props.clusters ?? [plantingCluster()],
     domains: props.domains ?? [plantingRecipe()],
@@ -97,8 +101,12 @@ const check = (props: {
  *    array. A pond whose depth array does not reach the cell is refused for the
  *    same reason: reading past the end and comparing against `NaN` would report
  *    every reed as properly planted, because a comparison with `NaN` is false.
- * 5. Containment: members landing outside the room are refused, while a purely
- *    semantic space with no convex cells is not geometrically checked at all.
+ * 5. Containment reads the **canopy**, not only the point the plant is rooted at:
+ *    a member standing well inside the room whose crown grows through the
+ *    ceiling is refused, the same member under a taller ceiling is accepted,
+ *    and a recipe that has not emerged has no canopy to check. Members landing
+ *    outside the room are refused, while a purely semantic space with no convex
+ *    cells is not geometrically checked at all.
  * 6. A recipe's or a cluster's own refusal is re-pathed onto the binding, and the
  *    lowering reports `not-run` with no geometry for either — and for a cluster
  *    paired with a recipe it does not cite, since the two records arrive
@@ -505,6 +513,48 @@ export const test_planting_installation_binding = (): void => {
       outsideColumn: true,
       outsideRow: true,
       unstatedSurface: true,
+    },
+  );
+
+  // One member, no jitter and unit scale, so the canopy in the room is exactly
+  // the recipe's own derived bounds: `y` reaches 1.3902 metres.
+  const upright = {
+    clusters: [
+      plantingCluster({
+        count: 1,
+        extent: { x: 0, z: 0 },
+        yawJitter: 0,
+        scale: { min: { x: 1, y: 1, z: 1 }, max: { x: 1, y: 1, z: 1 } },
+      }),
+    ],
+  };
+  TestValidator.equals(
+    "the canopy is checked, not only the point the plant is rooted at",
+    namedFacts([
+      ["rooted", () => check({ ...upright, ceiling: 4 }).success === true],
+      [
+        "crownThroughCeiling",
+        () =>
+          hasViolation(
+            check({ ...upright, ceiling: 1 }),
+            "type",
+            "installations[0].cluster",
+          ),
+      ],
+      [
+        "dormantHasNoCanopy",
+        () =>
+          check({
+            ...upright,
+            ceiling: 1,
+            domains: [plantingRecipe({ growth: { stage: 0, onset: 0.25 } })],
+          }).success === true,
+      ],
+    ]),
+    {
+      rooted: true,
+      crownThroughCeiling: true,
+      dormantHasNoCanopy: true,
     },
   );
 

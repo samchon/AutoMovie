@@ -78,7 +78,11 @@ export const validateSoftBodyDomain = (props: {
   );
   integer(out, `${root}.lattice.rows`, "lattice rows", rows, 1, Infinity);
   const count = columns * rows;
-  if (Number.isSafeInteger(count) && count > SOFT_MAX_PARTICLES)
+  // Finite rather than a safe integer: a lattice whose particle count has run
+  // past the exactly representable integers is the largest lattice anyone can
+  // declare, and requiring exactness here let precisely those through the cap
+  // that exists to stop them.
+  if (Number.isFinite(count) && count > SOFT_MAX_PARTICLES)
     out.push(
       "range",
       `${root}.lattice`,

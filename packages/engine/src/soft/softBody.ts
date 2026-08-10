@@ -443,12 +443,22 @@ export const softBodyStateDigest = (state: IAutoMovieSoftBodyState): string => {
   return hash.toString(16).padStart(8, "0");
 };
 
-/** The shortest structural rest edge, or `Infinity` when there is none. */
+/**
+ * The shortest structural rest edge, or `Infinity` when there is none.
+ *
+ * A lattice whose rest array does not hold exactly one coordinate triple per
+ * particle has no answerable shortest edge and is reported as having none. That
+ * is not politeness: the walk is over the **declared** lattice, so a record
+ * claiming a billion columns would otherwise be walked a billion times by the
+ * very validator that exists to refuse it, and by every budget report anybody
+ * asked for on the way. The length mismatch is refused on its own path.
+ */
 export const shortestRestLength = (
   domain: IAutoMovieSoftBodyDomain,
 ): number => {
   const columns = domain.lattice.columns;
   const rows = domain.lattice.rows;
+  if (domain.rest.length !== columns * rows * 3) return Infinity;
   let shortest = Infinity;
   for (let row = 0; row < rows; ++row)
     for (let column = 0; column < columns; ++column) {

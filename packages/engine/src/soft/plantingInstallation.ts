@@ -5,9 +5,11 @@ import {
   IAutoMoviePlantingCluster,
   IAutoMoviePlantingDomain,
   IAutoMoviePlantingInstallation,
+  IAutoMoviePlantingPlacement,
   IAutoMoviePlantingState,
   IAutoMovieSoftAnalysis,
   IAutoMovieValidation,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
@@ -253,21 +255,38 @@ export const validatePlantingInstallations = (props: {
     }
     if (validatePlantingCluster({ cluster }).success === false) return;
     const arrangement = arrangePlantingCluster(cluster);
+    // The canopy is checked, not only the rooting point. A bed whose members
+    // all stand inside the room while their crowns grow through its wall is
+    // exactly the collision this binding exists to catch, and testing one point
+    // per member would report it clean. The recipe is derived once and its
+    // corner box is carried through each member's own transform.
+    const recipe = byDomain.get(cluster.domain);
+    const canopy =
+      recipe !== undefined &&
+      validatePlantingDomain({ domain: recipe }).success === true
+        ? (growPlanting(recipe).bounds ?? null)
+        : null;
     for (const placement of arrangement.placements) {
-      if (
-        space !== undefined &&
-        space.cells.length > 0 &&
-        builtEnvironmentContainsPoint(
-          environment,
-          installation.space,
-          placement.translation,
-        ) === false
-      ) {
+      const outside =
+        space !== undefined && space.cells.length > 0
+          ? [
+              placement.translation,
+              ...(canopy === null ? [] : corners(canopy, placement)),
+            ].find(
+              (point) =>
+                builtEnvironmentContainsPoint(
+                  environment,
+                  installation.space,
+                  point,
+                ) === false,
+            )
+          : undefined;
+      if (outside !== undefined) {
         out.push(
           "type",
           `${path}.cluster`,
-          `member "${placement.id}" lands outside space "${installation.space}"`,
-          placement.translation,
+          `member "${placement.id}" reaches outside space "${installation.space}"`,
+          outside,
         );
         break;
       }
@@ -392,6 +411,41 @@ const repath = (
   if (validation.success === true) return;
   for (const item of validation.violations)
     out.items.push({ ...item, path: item.path.replace("$input", path) });
+};
+
+/**
+ * The eight corners of one derived canopy, carried into world space by one
+ * member's own transform.
+ *
+ * The recipe's bounds are in the recipe's frame with the trunk's base at the
+ * origin, so every corner is rotated by the member's unit quaternion, scaled
+ * per axis, and translated. A rotated box therefore widens rather than being
+ * silently re-fitted, exactly as a staged prop's clearance volume does.
+ */
+const corners = (
+  bounds: { min: IAutoMovieVector3; max: IAutoMovieVector3 },
+  placement: IAutoMoviePlantingPlacement,
+): IAutoMovieVector3[] => {
+  const { x: qx, y: qy, z: qz, w: qw } = placement.rotation;
+  const out: IAutoMovieVector3[] = [];
+  for (const x of [bounds.min.x, bounds.max.x])
+    for (const y of [bounds.min.y, bounds.max.y])
+      for (const z of [bounds.min.z, bounds.max.z]) {
+        const sx = x * placement.scale.x;
+        const sy = y * placement.scale.y;
+        const sz = z * placement.scale.z;
+        // q * v * q⁻¹, written as the cross-product form so no matrix has to be
+        // built for eight points.
+        const tx = 2 * (qy * sz - qz * sy);
+        const ty = 2 * (qz * sx - qx * sz);
+        const tz = 2 * (qx * sy - qy * sx);
+        out.push({
+          x: placement.translation.x + sx + qw * tx + qy * tz - qz * ty,
+          y: placement.translation.y + sy + qw * ty + qz * tx - qx * tz,
+          z: placement.translation.z + sz + qw * tz + qx * ty - qy * tx,
+        });
+      }
+  return out;
 };
 
 /**

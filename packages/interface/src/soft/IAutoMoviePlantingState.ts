@@ -8,6 +8,12 @@ import { IAutoMovieSoftBounds } from "./IAutoMovieSoftBodyState";
  * A pure function of the recipe. Nothing accumulates between calls, so two
  * derivations of the same record are bit-identical and a plant re-derived in a
  * later chunk of the same render is the same plant.
+ *
+ * Every coordinate here is in the **recipe's own frame**, with the trunk's base
+ * at the origin. That is what makes one derived structure serve a whole bed:
+ * the cluster's placements carry the world transforms, and a renderer composes
+ * the two. A consumer that read these as world coordinates would draw forty
+ * ferns on top of each other at the origin.
  */
 export interface IAutoMoviePlantingState {
   /** Identity of the recipe this structure was derived from. */
@@ -23,8 +29,9 @@ export interface IAutoMoviePlantingState {
   leaves: IAutoMoviePlantingLeaf[];
 
   /**
-   * World extent of the derived structure, or `null` when nothing emerged at
-   * all — a plant at growth state `0`, or one pruned away entirely.
+   * Recipe-frame extent of the derived structure, or `null` when nothing
+   * emerged at all — a plant at growth state `0`, or one pruned away
+   * entirely.
    */
   bounds: IAutoMovieSoftBounds | null;
 }
@@ -40,10 +47,10 @@ export interface IAutoMoviePlantingBranch {
   /** Recursion level; `0` is the trunk. */
   level: number;
 
-  /** World position of the base. */
+  /** Recipe-frame position of the base. */
   start: IAutoMovieVector3;
 
-  /** World position of the tip, after growth and pruning. */
+  /** Recipe-frame position of the tip, after growth and pruning. */
   end: IAutoMovieVector3;
 
   /** Radius in metres at the base. */
@@ -70,7 +77,7 @@ export interface IAutoMoviePlantingLeaf {
   /** Id of the branch bearing this leaf. */
   branch: string;
 
-  /** World position of the leaf's origin. */
+  /** Recipe-frame position of the leaf's origin. */
   translation: IAutoMovieVector3;
 
   /** Unit quaternion in glTF `(x, y, z, w)` order. */
