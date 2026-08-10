@@ -25,12 +25,13 @@ import { closestPointOnSegmentXZ, convexHull2D } from "../math/hull";
  *
  * **This is not `triangulateAutoMovieRegion` under another name, and merging
  * the two would break both.** That one is a mesh constructor: it is handed an
- * authored profile, it raises a diagnostic for every defect it finds, and it
- * may because nothing is standing on its output yet. This one is a query: it is
- * handed whatever a record happens to say, including what `validateSpace`
- * refuses, and it has to answer a foot rather than throw under one. It also
- * leaves a convex footprint as its own hull, so every patch authored before
- * holes existed tessellates to the same bytes it always did.
+ * authored profile and it throws a diagnostic at every defect, which it can
+ * afford to do because a build is where an author finds out. This one is a
+ * query: it is handed whatever a record happens to say, including what
+ * `validateSpace` refuses, and a foot asking where the ground is has to be
+ * answered rather than thrown under. It also leaves a convex footprint as its
+ * own hull, so every patch authored before holes existed tessellates to the
+ * same bytes it always did.
  *
  * @author Samchon
  */
