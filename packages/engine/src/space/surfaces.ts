@@ -259,7 +259,7 @@ export const surfaceAt = (
  * **when that surface is walkable**: `null` over nothing and `null` when the
  * topmost surface is a no-go top (standing space is occupied by something an
  * actor may not stand on; this 2.5-D heightfield cannot walk _under_ it:
- * overhangs are interia's future refinement).
+ * overhang clearance belongs to the structured building volume layer).
  *
  * `isWalkable` is exactly `heightAt !== null`, so the two queries can never
  * disagree.

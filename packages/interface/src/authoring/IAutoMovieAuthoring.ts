@@ -2,6 +2,7 @@ import { IAutoMovieTransition } from "../cinematics/IAutoMovieTransition";
 import { IAutoMovieTrim } from "../cinematics/IAutoMovieTrim";
 import { IAutoMovieColor } from "../color/IAutoMovieColor";
 import { IAutoMovieNamedId } from "../core/IAutoMovieNamedId";
+import { IAutoMovieQuaternion } from "../geometry/IAutoMovieQuaternion";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieActionCall } from "../harness/IAutoMovieActionCall";
 import { IAutoMovieMountBinding } from "../harness/IAutoMovieMountBinding";
@@ -69,6 +70,11 @@ export interface IAutoMovieStageSetPiece {
   position: IAutoMovieVector3;
   /** Optional heading in degrees about +Y. */
   facingDeg?: number;
+  /**
+   * Optional full world rotation for sloped, vertical, or arbitrarily oriented
+   * architecture. Mutually exclusive with the simpler `facingDeg` spelling.
+   */
+  rotation?: IAutoMovieQuaternion;
   /** Positive uniform or per-axis scale applied to the model. */
   scale?: number | IAutoMovieVector3;
 }

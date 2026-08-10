@@ -570,6 +570,8 @@ export const materializeCompiledShot = (props: {
   const modelByRuntimeId = new Map(
     [...props.runtimeModels.values()].map((model) => [model.id, model]),
   );
+  for (const model of source.authoredModels ?? [])
+    modelByRuntimeId.set(model.id, model);
   const models = [
     ...new Set([
       ...source.scene.nodes.map((node) => node.model),

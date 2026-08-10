@@ -13,6 +13,7 @@ import {
   realizeShotContract,
   sampleFormationMotion,
   sampleFormationSlotMotion,
+  validateBuiltEnvironment,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -1070,6 +1071,10 @@ const SANDBOX_BOOTSTRAP = `
   // does not declare is a merge that silently carries a field nothing else
   // knows about.
   const CONTRIBUTION_KEYS = [
+    "models",
+    "set",
+    "spaces",
+    "builtEnvironments",
     "actors",
     "clips",
     "formationMotions",
@@ -1103,6 +1108,235 @@ const SANDBOX_BOOTSTRAP = `
       );
     }
   }
+  const buildingMatrixCompose = (transform) => {
+    const r = transform.rotation;
+    const s = transform.scale;
+    const t = transform.translation;
+    const x2 = r.x + r.x;
+    const y2 = r.y + r.y;
+    const z2 = r.z + r.z;
+    const xx = r.x * x2;
+    const xy = r.x * y2;
+    const xz = r.x * z2;
+    const yy = r.y * y2;
+    const yz = r.y * z2;
+    const zz = r.z * z2;
+    const wx = r.w * x2;
+    const wy = r.w * y2;
+    const wz = r.w * z2;
+    return [
+      (1 - (yy + zz)) * s.x,
+      (xy + wz) * s.x,
+      (xz - wy) * s.x,
+      0,
+      (xy - wz) * s.y,
+      (1 - (xx + zz)) * s.y,
+      (yz + wx) * s.y,
+      0,
+      (xz + wy) * s.z,
+      (yz - wx) * s.z,
+      (1 - (xx + yy)) * s.z,
+      0,
+      t.x,
+      t.y,
+      t.z,
+      1,
+    ];
+  };
+  const buildingMatrixMultiply = (a, b) => {
+    const out = new Array(16);
+    for (let column = 0; column < 4; ++column)
+      for (let row = 0; row < 4; ++row) {
+        let sum = 0;
+        for (let index = 0; index < 4; ++index)
+          sum += a[index * 4 + row] * b[column * 4 + index];
+        out[column * 4 + row] = sum;
+      }
+    return out;
+  };
+  const buildingQuaternionNormalize = (rotation) => {
+    const length = Math.hypot(
+      rotation.x,
+      rotation.y,
+      rotation.z,
+      rotation.w,
+    );
+    return length === 0
+      ? { x: 0, y: 0, z: 0, w: 1 }
+      : {
+          x: rotation.x / length,
+          y: rotation.y / length,
+          z: rotation.z / length,
+          w: rotation.w / length,
+        };
+  };
+  const buildingMatrixDecompose = (matrix) => {
+    const sx = Math.hypot(matrix[0], matrix[1], matrix[2]);
+    const sy = Math.hypot(matrix[4], matrix[5], matrix[6]);
+    const sz = Math.hypot(matrix[8], matrix[9], matrix[10]);
+    const nx = Math.max(sx, Number.EPSILON);
+    const ny = Math.max(sy, Number.EPSILON);
+    const nz = Math.max(sz, Number.EPSILON);
+    const r00 = matrix[0] / nx;
+    const r10 = matrix[1] / nx;
+    const r20 = matrix[2] / nx;
+    const r01 = matrix[4] / ny;
+    const r11 = matrix[5] / ny;
+    const r21 = matrix[6] / ny;
+    const r02 = matrix[8] / nz;
+    const r12 = matrix[9] / nz;
+    const r22 = matrix[10] / nz;
+    const trace = r00 + r11 + r22;
+    let x;
+    let y;
+    let z;
+    let w;
+    if (trace > 0) {
+      const factor = 0.5 / Math.sqrt(trace + 1);
+      w = 0.25 / factor;
+      x = (r21 - r12) * factor;
+      y = (r02 - r20) * factor;
+      z = (r10 - r01) * factor;
+    } else if (r00 > r11 && r00 > r22) {
+      const factor = 2 * Math.sqrt(1 + r00 - r11 - r22);
+      w = (r21 - r12) / factor;
+      x = 0.25 * factor;
+      y = (r01 + r10) / factor;
+      z = (r02 + r20) / factor;
+    } else if (r11 > r22) {
+      const factor = 2 * Math.sqrt(1 + r11 - r00 - r22);
+      w = (r02 - r20) / factor;
+      x = (r01 + r10) / factor;
+      y = 0.25 * factor;
+      z = (r12 + r21) / factor;
+    } else {
+      const factor = 2 * Math.sqrt(1 + r22 - r00 - r11);
+      w = (r10 - r01) / factor;
+      x = (r02 + r20) / factor;
+      y = (r12 + r21) / factor;
+      z = 0.25 * factor;
+    }
+    return {
+      position: { x: matrix[12], y: matrix[13], z: matrix[14] },
+      rotation: buildingQuaternionNormalize({ x, y, z, w }),
+      scale: { x: sx, y: sy, z: sz },
+    };
+  };
+  const lowerBuiltEnvironment = (environment) => {
+    const elements = Object.fromEntries(
+      environment.elements.map((element) => [element.id, element]),
+    );
+    const matrices = {};
+    const active = {};
+    const matrixOf = (id) => {
+      if (matrices[id] !== undefined) return matrices[id];
+      if (active[id] === true)
+        throw new Error(
+          'Built environment "' + environment.id + '" has a cyclic element hierarchy.',
+        );
+      const element = elements[id];
+      if (element === undefined)
+        throw new Error(
+          'Built environment "' + environment.id + '" has no element "' + id + '".',
+        );
+      active[id] = true;
+      const local = buildingMatrixCompose(element.transform);
+      const world =
+        element.parent === null
+          ? local
+          : buildingMatrixMultiply(matrixOf(element.parent), local);
+      active[id] = false;
+      matrices[id] = world;
+      return world;
+    };
+    for (const element of environment.elements) matrixOf(element.id);
+    return {
+      models: environment.models,
+      set: environment.elements
+        .filter((element) => element.model !== null)
+        .map((element) => {
+          const world = buildingMatrixDecompose(matrices[element.id]);
+          return {
+            node: environment.id + "/" + element.id,
+            model: element.model,
+            position: world.position,
+            rotation: world.rotation,
+            scale: world.scale,
+          };
+        }),
+      spaces: environment.spaces.map((space) => {
+        const surfaces = environment.surfaces
+          .filter((entry) => entry.space === space.id)
+          .map((entry) => entry.surface);
+        const surfaceIds = new Set(surfaces.map((surface) => surface.id));
+        return {
+          id: environment.id + "/" + space.id,
+          surfaces,
+          walkable: environment.walkable.filter((id) => surfaceIds.has(id)),
+        };
+      }),
+      builtEnvironments: [environment],
+    };
+  };
+  const mergeAutoMovieSpaces = (id, spaces) => ({
+    id,
+    surfaces: spaces.flatMap((space) => space.surfaces),
+    walkable: spaces.flatMap((space) => space.walkable),
+  });
+  const builtEnvironmentDescendants = (spaces, root) => {
+    const included = new Set([root]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const space of spaces)
+        if (
+          space.parent !== null &&
+          included.has(space.parent) &&
+          !included.has(space.id)
+        ) {
+          included.add(space.id);
+          changed = true;
+        }
+    }
+    return included;
+  };
+  const builtEnvironmentContainsPoint = (environment, spaceId, point) => {
+    if (!environment.spaces.some((space) => space.id === spaceId))
+      throw new Error(
+        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
+      );
+    const included = builtEnvironmentDescendants(environment.spaces, spaceId);
+    return environment.spaces.some(
+      (space) =>
+        included.has(space.id) &&
+        space.cells.some((cell) =>
+          cell.planes.every(
+            (plane) =>
+              plane.normal.x * point.x +
+                plane.normal.y * point.y +
+                plane.normal.z * point.z <=
+              plane.offset + 1e-9,
+          ),
+        ),
+    );
+  };
+  const builtEnvironmentAdjacentSpaces = (environment, spaceId) => {
+    if (!environment.spaces.some((space) => space.id === spaceId))
+      throw new Error(
+        'Built environment "' + environment.id + '" has no logical space "' + spaceId + '".',
+      );
+    const adjacent = new Set();
+    for (const boundary of environment.boundaries)
+      if (boundary.spaces.includes(spaceId))
+        for (const candidate of boundary.spaces)
+          if (candidate !== spaceId) adjacent.add(candidate);
+    for (const connector of environment.connectors) {
+      if (connector.from === spaceId) adjacent.add(connector.to);
+      if (connector.to === spaceId && connector.bidirectional)
+        adjacent.add(connector.from);
+    }
+    return [...adjacent];
+  };
   // A terrain subject answers height at a point by asking the engine rather
   // than reading the record itself, which is right for a level patch and wrong
   // the day it slopes. The arithmetic is pure and takes the record it is given,
@@ -1214,6 +1448,14 @@ const SANDBOX_BOOTSTRAP = `
       AutoMovieSubjectGroup: Object.freeze(AutoMovieSubjectGroup),
       mergeAutoMovieSubjectContributions: Object.freeze(
         mergeAutoMovieSubjectContributions,
+      ),
+      lowerBuiltEnvironment: Object.freeze(lowerBuiltEnvironment),
+      mergeAutoMovieSpaces: Object.freeze(mergeAutoMovieSpaces),
+      builtEnvironmentContainsPoint: Object.freeze(
+        builtEnvironmentContainsPoint,
+      ),
+      builtEnvironmentAdjacentSpaces: Object.freeze(
+        builtEnvironmentAdjacentSpaces,
       ),
       worldSurfaceHeight: Object.freeze(worldSurfaceHeight),
     }),
@@ -1610,17 +1852,30 @@ const compileShotSource = (
       diagnostics: program.diagnostics,
     };
 
+  const sourceRuntime = sourceRuntimeOf({
+    program: program.value,
+    runtimeModels: props.context.runtimeModels,
+    target: `shot:${props.id}`,
+    sourcePath: props.path,
+  });
   const runtime = actorRuntimeOf(
     program.value,
-    props.context.runtimeModels,
+    sourceRuntime.runtimeModels,
     `shot:${props.id}`,
     props.path,
   );
-  if (runtime.diagnostics.length !== 0)
+  if (
+    sourceRuntime.diagnostics.length !== 0 ||
+    runtime.diagnostics.length !== 0
+  )
     return {
       value: null,
       closing: null,
-      diagnostics: [...program.diagnostics, ...runtime.diagnostics],
+      diagnostics: [
+        ...program.diagnostics,
+        ...sourceRuntime.diagnostics,
+        ...runtime.diagnostics,
+      ],
     };
   const shot = defineShot(props.id, {
     scene: program.registrationScene!,
@@ -1657,7 +1912,7 @@ const compileShotSource = (
       // none so its compiled artifact keeps the exact bytes it had before this
       // channel existed.
       lightMotions: program.value.lightMotions,
-      models: Object.values(props.context.runtimeModels),
+      models: Object.values(sourceRuntime.runtimeModels),
       previous: props.previous ?? undefined,
     },
   });
@@ -1704,6 +1959,9 @@ const compileShotSource = (
   return {
     value: {
       ...compiled.source,
+      authoredModels: structuredClone(sourceRuntime.authoredModels),
+      props: structuredClone(program.value.props ?? []),
+      builtEnvironments: structuredClone(program.value.builtEnvironments ?? []),
       scene: { ...scene, lights: inherited },
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       formationSlotMotions: structuredClone(
@@ -1714,6 +1972,111 @@ const compileShotSource = (
     closing: compiled.continuity.closing,
     diagnostics: program.diagnostics,
   };
+};
+
+interface ISourceRuntime {
+  runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
+  authoredModels: IAutoMovieModel[];
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
+/** Validate and bind models and buildings created by deterministic shot code. */
+const sourceRuntimeOf = (props: {
+  program: IAutoMovieProductionShotProgram;
+  runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
+  target: string;
+  sourcePath: string;
+}): ISourceRuntime => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const authoredModels: IAutoMovieModel[] = [];
+  const authoredDigests = new Map<string, AutoMovieContentDigest>();
+  const runtimeModels: Record<string, IAutoMovieModel> = {
+    ...props.runtimeModels,
+  };
+  const runtimeIds = new Set([
+    ...Object.keys(props.runtimeModels),
+    ...Object.values(props.runtimeModels).map((model) => model.id),
+  ]);
+
+  const report = (message: string): void => {
+    diagnostics.push({
+      code: "source-scene-content-invalid",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: props.sourcePath,
+      message,
+    });
+  };
+  const acceptModel = (model: IAutoMovieModel, modelPath: string): void => {
+    const digest = digestAutoMovieBytes(canonicalAutoMovieJsonBytes(model));
+    const existing = authoredDigests.get(model.id);
+    if (existing !== undefined) {
+      if (existing !== digest)
+        report(
+          `${modelPath}.id "${model.id}" conflicts with another source-owned model of the same id. Keep one byte-identical generated model per id.`,
+        );
+      return;
+    }
+    authoredDigests.set(model.id, digest);
+    if (runtimeIds.has(model.id)) {
+      report(
+        `${modelPath}.id "${model.id}" shadows a compiler-owned runtime model. Rename the source model or cite the existing runtime id.`,
+      );
+      return;
+    }
+    if (model.origin !== "generated")
+      report(
+        `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
+      );
+    const validation = validateModel({ model });
+    if (validation.success === false)
+      for (const violation of validation.violations)
+        report(
+          `${modelPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the source-owned model before compiling the shot.`,
+        );
+    if (model.origin !== "generated" || validation.success === false) return;
+    authoredModels.push(model);
+    runtimeModels[model.id] = model;
+  };
+
+  (props.program.models ?? []).forEach((model, index) =>
+    acceptModel(model, `$program.models[${index}]`),
+  );
+  (props.program.props ?? []).forEach((prop, index) =>
+    acceptModel(prop.model, `$program.props[${index}].model`),
+  );
+  (props.program.builtEnvironments ?? []).forEach((environment, index) => {
+    const environmentPath = `$program.builtEnvironments[${index}]`;
+    const validation = validateBuiltEnvironment({ environment });
+    if (validation.success === false)
+      for (const violation of validation.violations)
+        report(
+          `${environmentPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the code-authored building before compiling the shot.`,
+        );
+    environment.models.forEach((model, modelIndex) =>
+      acceptModel(model, `${environmentPath}.models[${modelIndex}]`),
+    );
+    environment.modelReferences.forEach((id, referenceIndex) => {
+      if (!runtimeIds.has(id))
+        report(
+          `${environmentPath}.modelReferences[${referenceIndex}] "${id}" does not resolve to a compiler-owned runtime model. Register the asset/model recipe or remove the reference.`,
+        );
+    });
+  });
+
+  const available = new Set([
+    ...Object.keys(runtimeModels),
+    ...Object.values(runtimeModels).map((model) => model.id),
+  ]);
+  (props.program.stage.set ?? []).forEach((piece, index) => {
+    if (!available.has(piece.model))
+      report(
+        `$program.stage.set[${index}].model "${piece.model}" is unavailable. Add a generated source model or cite a compiler-owned runtime model.`,
+      );
+  });
+
+  return { runtimeModels, authoredModels, diagnostics };
 };
 
 const contractOfRegistration = (

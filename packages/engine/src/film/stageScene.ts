@@ -581,6 +581,36 @@ export const stageScene = (
         `set facingDeg must be finite when present, but was ${piece.facingDeg}`,
         piece.facingDeg,
       );
+    if (piece.facingDeg !== undefined && piece.rotation !== undefined)
+      out.push(
+        "type",
+        `$input.set[${i}].rotation`,
+        "set rotation and facingDeg are mutually exclusive",
+        piece.rotation,
+      );
+    if (piece.rotation !== undefined) {
+      const length = Math.hypot(
+        piece.rotation.x,
+        piece.rotation.y,
+        piece.rotation.z,
+        piece.rotation.w,
+      );
+      if (
+        ![
+          piece.rotation.x,
+          piece.rotation.y,
+          piece.rotation.z,
+          piece.rotation.w,
+        ].every(Number.isFinite) ||
+        Math.abs(length - 1) > 1e-6
+      )
+        out.push(
+          "range",
+          `$input.set[${i}].rotation`,
+          `set rotation must be a finite unit quaternion, but length was ${length}`,
+          piece.rotation,
+        );
+    }
     if (piece.scale !== undefined) {
       const scale = setPieceScale(piece.scale);
       // Zero collapses the piece to nothing (a set piece that draws no pixels
@@ -710,10 +740,12 @@ export const stageScene = (
         model: piece.model,
         transform: {
           translation: piece.position,
-          rotation: Quaternion.fromAxisAngle(
-            { x: 0, y: 1, z: 0 },
-            piece.facingDeg ?? 0,
-          ),
+          rotation:
+            piece.rotation ??
+            Quaternion.fromAxisAngle(
+              { x: 0, y: 1, z: 0 },
+              piece.facingDeg ?? 0,
+            ),
           scale: setPieceScale(piece.scale),
         },
         motion: null,

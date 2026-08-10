@@ -1,12 +1,16 @@
 import type {
+  IAutoMovieBuiltEnvironment,
   IAutoMovieEffectRecipe,
   IAutoMovieFormationMotion,
   IAutoMovieFormationSlotMotion,
   IAutoMovieInstanceSetDesign,
+  IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMovieShotActorProgram,
   IAutoMovieShotBuildContext,
   IAutoMovieShotEffectCue,
+  IAutoMovieSpace,
+  IAutoMovieStageSetPiece,
   IAutoMovieWorldEffectZone,
   IAutoMovieWorldLandmark,
   IAutoMovieWorldRoute,
@@ -28,6 +32,14 @@ import type {
  * rather than into per-member nodes.
  */
 export interface IAutoMovieSubjectContribution {
+  /** Source-authored models this subject makes available to the shot. */
+  models?: readonly IAutoMovieModel[];
+  /** Static visible placements this subject adds to the staged set. */
+  set?: readonly IAutoMovieStageSetPiece[];
+  /** Locomotion spaces this subject contributes for later deterministic merge. */
+  spaces?: readonly IAutoMovieSpace[];
+  /** Structured buildings retained for spatial queries and evidence. */
+  builtEnvironments?: readonly IAutoMovieBuiltEnvironment[];
   /** Articulated performers this subject stages. */
   actors?: readonly IAutoMovieShotActorProgram[];
   /** Source-computed clips cited by explicit `enact` actions. */
@@ -53,6 +65,10 @@ export interface IAutoMovieSubjectContribution {
 }
 
 const CONTRIBUTION_KEYS = [
+  "models",
+  "set",
+  "spaces",
+  "builtEnvironments",
   "actors",
   "clips",
   "formationMotions",

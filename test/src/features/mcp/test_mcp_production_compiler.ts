@@ -1,5 +1,6 @@
 import {
   IAutoMovieAssetManifest,
+  IAutoMovieCompiledShotSource,
   IAutoMovieModel,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
@@ -2459,6 +2460,162 @@ ${original}`,
         compareCodeUnits,
       ),
       beforeEnsemble,
+    );
+    fs.writeFileSync(sourcePath, original);
+
+    // A building class lowers through the same importable utility inside the
+    // deterministic VM that the host engine exports. The record stays in the
+    // compiled artifact while its derived set placement and merged support
+    // space become the ordinary scene inputs the rest of the pipeline reads.
+    let architectureSource = `import {
+  builtEnvironmentAdjacentSpaces,
+  builtEnvironmentContainsPoint,
+  lowerBuiltEnvironment,
+  mergeAutoMovieSpaces,
+} from "@automovie/engine";
+import type { IAutoMovieBuiltEnvironment } from "@automovie/interface";
+${original}`;
+    architectureSource = mutate(
+      architectureSource,
+      "  const performer = soloist.render(context, { from: openingAbduction });",
+      `  const performer = soloist.render(context, { from: openingAbduction });
+  const runtimeModel = Object.values(context.runtimeModels)[0];
+  if (runtimeModel === undefined) throw new Error("runtime model is required");
+  const environment: IAutoMovieBuiltEnvironment = {
+    version: 1,
+    id: "interior",
+    units: "meter",
+    models: [],
+    modelReferences: [runtimeModel.id],
+    elements: [
+      {
+        id: "root",
+        kind: "building",
+        parent: null,
+        transform: {
+          translation: { x: 1, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        model: null,
+        space: "lower",
+      },
+      {
+        id: "slab",
+        kind: "sloped-floor",
+        parent: "root",
+        transform: {
+          translation: { x: 2, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 2, y: 0.1, z: 2 },
+        },
+        model: runtimeModel.id,
+        space: "lower",
+      },
+    ],
+    spaces: [
+      {
+        id: "lower",
+        kind: "hall",
+        parent: null,
+        cells: [{
+          id: "lower-cell",
+          planes: [
+            { normal: { x: 1, y: 0, z: 0 }, offset: 4 },
+            { normal: { x: -1, y: 0, z: 0 }, offset: 0 },
+            { normal: { x: 0, y: 1, z: 0 }, offset: 3 },
+            { normal: { x: 0, y: -1, z: 0 }, offset: 0 },
+            { normal: { x: 0, y: 0, z: 1 }, offset: 2 },
+            { normal: { x: 0, y: 0, z: -1 }, offset: 2 },
+          ],
+        }],
+      },
+      { id: "upper", kind: "mezzanine", parent: null, cells: [] },
+    ],
+    boundaries: [],
+    openings: [],
+    connectors: [{
+      id: "lift",
+      kind: "lift",
+      from: "lower",
+      to: "upper",
+      bidirectional: true,
+      route: [{ x: 3, y: 0, z: 0 }, { x: 3, y: 3, z: 0 }],
+      width: 1,
+      clearHeight: 2,
+      elements: [],
+    }],
+    surfaces: [],
+    walkable: [],
+  };
+  const architecture = lowerBuiltEnvironment(environment);
+  if (architecture.set?.[0]?.position.x !== 3)
+    throw new Error("building hierarchy must lower to world placement");
+  if (!builtEnvironmentContainsPoint(environment, "lower", { x: 2, y: 1, z: 0 }))
+    throw new Error("building containment stand-in disagrees");
+  if (builtEnvironmentAdjacentSpaces(environment, "upper")[0] !== "lower")
+    throw new Error("building adjacency stand-in disagrees");`,
+    );
+    architectureSource = mutate(
+      architectureSource,
+      "  return {\n    actors: [...(performer.actors ?? [])],",
+      `  return {
+    models: [...(architecture.models ?? [])],
+    builtEnvironments: [...(architecture.builtEnvironments ?? [])],
+    actors: [...(performer.actors ?? [])],`,
+    );
+    architectureSource = mutate(
+      architectureSource,
+      "      cameras: [",
+      "      set: [...(architecture.set ?? [])],\n      cameras: [",
+    );
+    architectureSource = mutate(
+      architectureSource,
+      "      space: plaza.space(),",
+      `      space: mergeAutoMovieSpaces("combined", [
+        plaza.space(),
+        ...(architecture.spaces ?? []),
+      ]),`,
+    );
+    fs.writeFileSync(sourcePath, architectureSource);
+    const architectureCompile = compiler.compile({ scope: "source" });
+    TestValidator.predicate(
+      "a code-authored building lowers inside the source sandbox",
+      productionCompileSucceeded(
+        "sandbox building lowering",
+        architectureCompile,
+      ),
+    );
+    const architectureShot = JSON.parse(
+      fs.readFileSync(
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
+        "utf8",
+      ),
+    ) as IAutoMovieCompiledShotSource;
+    TestValidator.equals(
+      "compiled output retains the building and its derived set node",
+      {
+        buildings: architectureShot.builtEnvironments?.map((value) => value.id),
+        node: architectureShot.scene.nodes.find(
+          (node) => node.id === "interior/slab",
+        ),
+      },
+      {
+        buildings: ["interior"],
+        node: {
+          id: "interior/slab",
+          model: architectureShot.scene.nodes.find(
+            (node) => node.id === "interior/slab",
+          )!.model,
+          transform: {
+            translation: { x: 3, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 2, y: 0.1, z: 2 },
+          },
+          motion: null,
+          pose: null,
+        },
+      },
     );
     fs.writeFileSync(sourcePath, original);
 

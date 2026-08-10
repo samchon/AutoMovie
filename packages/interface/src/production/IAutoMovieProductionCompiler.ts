@@ -1,3 +1,4 @@
+import { IAutoMovieBuiltEnvironment } from "../architecture";
 import {
   IAutoMovieDefinedShot,
   IAutoMovieShotProgram,
@@ -5,6 +6,7 @@ import {
 import { IAutoMovieShot } from "../cinematics";
 import { IAutoMovieClip } from "../core";
 import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
+import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
@@ -1003,6 +1005,12 @@ export interface IAutoMovieCompiledEffect {
 
 /** Engine-compiled shot source before production materialization is added. */
 export interface IAutoMovieShotSourceOutput {
+  /** Source-owned generated models retained for materialization and evidence. */
+  authoredModels?: IAutoMovieModel[];
+  /** Source-owned production props retained with their semantic contracts. */
+  props?: IAutoMoviePropSpec[];
+  /** Structured buildings retained for spatial queries and evidence. */
+  builtEnvironments?: IAutoMovieBuiltEnvironment[];
   /** Event sample times selected inside authoritative event windows. */
   eventSamples: Array<{
     /** Exact event-contract id. */
@@ -1183,6 +1191,19 @@ export interface IAutoMovieShotSource {
  * motion, scene, and shot artifacts are deliberately absent.
  */
 export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
+  /**
+   * Source-owned generated models assembled by ordinary TypeScript. Imported
+   * assets remain compiler-owned production inputs rather than sandbox output.
+   */
+  models?: IAutoMovieModel[];
+  /** Source-owned semantic props whose model and behavior are validated. */
+  props?: IAutoMoviePropSpec[];
+  /**
+   * Code-authored buildings used by the shot. They remain structured in the
+   * compiled artifact; visible placements and support space are staged from the
+   * same record rather than transcribed into a second design.
+   */
+  builtEnvironments?: IAutoMovieBuiltEnvironment[];
   /**
    * Optional source-computed clips cited only by explicit `enact` actions.
    *

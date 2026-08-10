@@ -6,10 +6,10 @@ import { IAutoMoviePose } from "../pose/IAutoMoviePose";
  *
  * A scene node binds a model (a character or an object) to a world transform
  * and either a running motion clip or a held static pose. This is the seam
- * where automovie meets a spatial host, including, longer term, **interia**: an
- * interia interior defines the room, and automovie scene nodes place animated
- * models within it. The shared world transform is the integration contract (see
- * the scene coordinate note in the package README).
+ * where automovie's structured building lowering and ordinary stage authoring
+ * meet the renderer. A built environment defines logical rooms and visible
+ * elements; its lowering places those elements here with the shared world
+ * transform contract (see the scene coordinate note in the package README).
  *
  * @author Samchon
  */

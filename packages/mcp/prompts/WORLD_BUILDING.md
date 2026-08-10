@@ -2,6 +2,16 @@
 
 A world is a system of meaningful places, routes, constraints, and environmental cues. Decorative density is not world design. Begin with the actions and spatial decisions the screenplay requires, then build enough terrain and landmarks to make those decisions readable.
 
+## World and building are different owners
+
+The production world owns terrain, parks, streets, natural lakes, sky, weather, and the placement of buildings. An `IAutoMovieBuiltEnvironment` owns one building or a structurally connected group of wings/towers: interiors, facade, roof, balcony, exterior stair, ladder, rail, skybridge, and helipad. Do not put the surrounding site into the building merely because it appears in the same frame.
+
+Architecture has two linked graphs. `elements` is the visible parent-local full-TRS assembly; `spaces` is the logical partition used by story, placement, containment, and traversal. A continuous hall may still have separately named rooms, storeys, an attic, mezzanine, and double-height void. Boundaries/openings say what separates them, while connectors explicitly join them as passage, stair, ramp, lift, ladder, or bridge. Style and historical era are not schema variants: ancient masonry, a medieval hall, a modern apartment, and a speculative tower are different code and models assembled through the same open element kinds.
+
+Build a class with ordinary TypeScript loops and reusable functions. Its `design()` returns the structured building, and its `render()` calls `lowerBuiltEnvironment(this.design())`. The result owns generated models, derived set placements, per-region support spaces, and the original building record. Merge support spaces with `mergeAutoMovieSpaces` when a shot needs one stage space; do not transcribe the building into a second set array.
+
+Fluid is a separate engine domain. An indoor pond, channel, fountain, or waterfall may cite a building logical-space id as its host, but the building does not own the solver. The same fluid contract must also work in a production world without a building.
+
 ## Semantic layout
 
 List stable anchors before generating detail:

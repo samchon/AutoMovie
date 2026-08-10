@@ -51,6 +51,10 @@ export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set([
   "AutoMovieSubject",
   "AutoMovieSubjectGroup",
   "mergeAutoMovieSubjectContributions",
+  "lowerBuiltEnvironment",
+  "mergeAutoMovieSpaces",
+  "builtEnvironmentContainsPoint",
+  "builtEnvironmentAdjacentSpaces",
   "worldSurfaceHeight",
 ]);
 

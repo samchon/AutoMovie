@@ -260,6 +260,10 @@ export const test_mcp_production_source_link = (): void => {
   // divergence a single owner exists to prevent.
   const declared = mergeAutoMovieSubjectContributions([
     {
+      models: [],
+      set: [],
+      spaces: [],
+      builtEnvironments: [],
       actors: [],
       clips: [],
       formationMotions: [],
@@ -286,7 +290,11 @@ export const test_mcp_production_source_link = (): void => {
     [
       "AutoMovieSubject",
       "AutoMovieSubjectGroup",
+      "builtEnvironmentAdjacentSpaces",
+      "builtEnvironmentContainsPoint",
       "defineShot",
+      "lowerBuiltEnvironment",
+      "mergeAutoMovieSpaces",
       "mergeAutoMovieSubjectContributions",
       "worldSurfaceHeight",
     ],
