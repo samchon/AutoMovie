@@ -9,6 +9,7 @@ import {
   applyObjectMotions,
   applyPose,
   applyRenderMode,
+  applyRendererEnvironment,
   buildInstancedEffect,
   buildInstancedFormation,
   buildInstancedInstanceSet,
@@ -16,7 +17,10 @@ import {
 } from "@automovie/viewer";
 import type * as THREE from "three";
 
-import { loadCompiledModel } from "./loadCompiledModel";
+import {
+  loadCompiledModel,
+  loadEnvironmentAsset,
+} from "./loadCompiledModel";
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -41,13 +45,17 @@ export const createCompiledShotRuntime = async (
       return { node, model, object: await loadCompiledModel(model) };
     }),
   );
+  const environmentTexture =
+    compiled.scene.environment?.image == null
+      ? undefined
+      : await loadEnvironmentAsset(compiled.scene.environment.image);
   let cursor = 0;
   const scene = buildScene(compiled.scene, (modelId) => {
     const candidate = built[cursor++];
     if (candidate?.model.id !== modelId)
       throw new Error(`Scene build order disagrees at model "${modelId}".`);
     return candidate.object;
-  });
+  }, environmentTexture);
   const nodeObjects = new Map(
     compiled.scene.nodes.map((node, index) => {
       const object = scene.scene.children[index];
@@ -70,8 +78,33 @@ export const createCompiledShotRuntime = async (
     }),
   );
   for (const formation of formationObjects) scene.scene.add(formation.object);
+  const instancePrototypeModelIds = new Set(
+    compiled.instanceSets.flatMap((instanceSet) =>
+      (instanceSet.prototypes ?? [
+        {
+          lod: instanceSet.lod,
+        },
+      ]).flatMap((prototype) => prototype.lod.map((lod) => lod.model)),
+    ),
+  );
+  const instancePrototypeObjects = new Map(
+    await Promise.all(
+      [...instancePrototypeModelIds].map(async (modelId) => {
+        const model = models.get(modelId);
+        if (model === undefined)
+          throw new Error(
+            `Instance prototype references missing runtime model "${modelId}".`,
+          );
+        return [modelId, await loadCompiledModel(model)] as const;
+      }),
+    ),
+  );
   const instanceSetObjects = compiled.instanceSets.map((instanceSet) =>
-    buildInstancedInstanceSet({ instanceSet, models }),
+    buildInstancedInstanceSet({
+      instanceSet,
+      models,
+      prototypeObjects: instancePrototypeObjects,
+    }),
   );
   for (const instanceSet of instanceSetObjects)
     scene.scene.add(instanceSet.object);
@@ -231,9 +264,18 @@ export const createCompiledShotRuntime = async (
           `Instance-set viewer inventory diverged for "${runtime.id}".`,
         );
     });
+    const rendererEnvironment = applyRendererEnvironment(
+      renderer,
+      compiled.scene.environment,
+      pass,
+    );
     const handle = applyRenderMode(scene.scene, pass);
-    renderer.render(scene.scene, camera);
-    handle.restore();
+    try {
+      renderer.render(scene.scene, camera);
+    } finally {
+      handle.restore();
+      rendererEnvironment.restore();
+    }
     const formationStatus = formationObjects
       .map(
         ({ stats }) =>

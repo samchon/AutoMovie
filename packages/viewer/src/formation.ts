@@ -22,7 +22,7 @@ import {
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
-import { buildModel } from "./buildModel";
+import { IAutoMovieModelObject, buildModel } from "./buildModel";
 import {
   IAutoMovieFormationCycle,
   applyFormationCycleCadence,
@@ -592,9 +592,55 @@ export const flattenInstancedModel = (
   const built = buildModel(model);
   built.object.updateMatrixWorld(true);
   const parts = instancedModelParts(built.object);
+  const representation = flattenRigidParts(parts, owner);
+  // Geometry first, then the bake: baking poses the built object, and the
+  // flattened vertices above are the rest-space ones the bake's matrices are
+  // measured against.
+  return {
+    ...representation,
+    cycle:
+      bake === undefined
+        ? null
+        : bakeFormationCycle({
+            model,
+            built,
+            parts,
+            samples: bake.samples,
+          }),
+  };
+};
+
+/** Flatten one already-loaded rigid generated or imported model prototype. */
+export const flattenInstancedObject = (
+  built: IAutoMovieModelObject,
+  owner = "Loaded instanced runtime model",
+): {
+  geometry: THREE.BufferGeometry;
+  materials: THREE.Material[];
+  cycle: null;
+} => {
+  built.object.updateMatrixWorld(true);
+  return {
+    ...flattenRigidParts(instancedModelParts(built.object), owner),
+    cycle: null,
+  };
+};
+
+const flattenRigidParts = (
+  parts: readonly THREE.Mesh[],
+  owner: string,
+): { geometry: THREE.BufferGeometry; materials: THREE.Material[] } => {
   const geometries: THREE.BufferGeometry[] = [];
   const materials: THREE.Material[] = [];
   parts.forEach((mesh, index) => {
+    if (mesh instanceof THREE.SkinnedMesh)
+      throw new Error(`${owner} has a skinned source mesh.`);
+    if (
+      Object.values(mesh.geometry.morphAttributes).some(
+        (attributes) => attributes.length > 0,
+      )
+    )
+      throw new Error(`${owner} has morph-target source geometry.`);
     if (Array.isArray(mesh.material))
       throw new Error(`${owner} has a multi-material source mesh.`);
     const flattened = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
@@ -611,22 +657,7 @@ export const flattenInstancedModel = (
   const geometry = mergeGeometries(geometries, true);
   if (geometry === null || materials.length === 0)
     throw new Error(`${owner} cannot be flattened for instancing.`);
-  // Geometry first, then the bake: baking poses the built object, and the
-  // flattened vertices above are the rest-space ones the bake's matrices are
-  // measured against.
-  return {
-    geometry,
-    materials,
-    cycle:
-      bake === undefined
-        ? null
-        : bakeFormationCycle({
-            model,
-            built,
-            parts,
-            samples: bake.samples,
-          }),
-  };
+  return { geometry, materials };
 };
 
 const slotMatrix = (

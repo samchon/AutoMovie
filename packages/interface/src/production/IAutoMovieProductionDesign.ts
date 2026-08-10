@@ -1,6 +1,10 @@
 import { AutoMovieGuidePass } from "../cinematics";
 import { IAutoMovieProfile } from "../core";
-import { IAutoMovieHeightRule, IAutoMovieVector3 } from "../geometry";
+import {
+  IAutoMovieHeightRule,
+  IAutoMovieQuaternion,
+  IAutoMovieVector3,
+} from "../geometry";
 import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
@@ -258,12 +262,70 @@ export type IAutoMovieInstanceSetLayout =
       route: string;
       /** Maximum lateral offset from the route centerline in meters. */
       lateralJitter: number;
+    }
+  | {
+      /** Three-dimensional rectangular lattice. */
+      kind: "lattice";
+      /** Positive integer rows along local Z. */
+      rows: number;
+      /** Positive integer columns along local X. */
+      columns: number;
+      /** Positive integer layers along local Y. */
+      layers: number;
+      /** Positive center-to-center spacing in meters. */
+      spacing: IAutoMovieVector3;
+    }
+  | {
+      /** Source-authored exact transform block. */
+      kind: "explicit";
+      /** One exact entry per declared slot, in stable slot order. */
+      transforms: IAutoMovieExplicitInstanceTransform[];
     };
+
+/** One exact source-authored instance transform and sparse override. */
+export interface IAutoMovieExplicitInstanceTransform {
+  /** Stable non-blank identity unique inside the set. */
+  id: string;
+  /** Translation relative to the set anchor, in meters. */
+  translation: IAutoMovieVector3;
+  /** Exact unit quaternion in glTF `(x, y, z, w)` order. */
+  rotation: IAutoMovieQuaternion;
+  /** Strictly positive scale on each local axis. */
+  scale: IAutoMovieVector3;
+  /** Optional prototype id; omitted selects the set's default prototype. */
+  prototype?: string;
+  /** Omitted means visible. */
+  visible?: boolean;
+  /** Optional exact `#RRGGBB` palette override. */
+  palette?: string;
+  /** Optional exact overrides for declared numeric traits. */
+  traits?: Record<string, number>;
+}
+
+/** One reusable model prototype selectable by slots in a logical set. */
+export interface IAutoMovieInstancePrototypeDesign {
+  /** Stable non-blank id unique inside the set. */
+  id: string;
+  /** Existing model recipe used by this prototype. */
+  modelRecipe: string;
+  /** Positive deterministic selection weight. */
+  weight: number;
+}
 
 /** Seed-derived per-instance visual and semantic variation. */
 export interface IAutoMovieInstanceVariation {
   /** Inclusive uniform scale range, both strictly above zero. */
   scale: { min: number; max: number };
+  /** Optional independent scale ranges per local axis. */
+  scale3?: { min: IAutoMovieVector3; max: IAutoMovieVector3 };
+  /** Optional seeded XYZ Euler offsets in degrees, applied after facing. */
+  rotationDeg?: {
+    x: { min: number; max: number };
+    y: { min: number; max: number };
+    z: { min: number; max: number };
+  };
+  /** Seeded probability that a procedural slot is visible. */
+  visibleProbability?: number;
   /** Non-empty exact `#RRGGBB` palette choices applied per instance. */
   palette: string[];
   /** Named bounded numeric traits regenerated from seed and slot. */
@@ -283,6 +345,8 @@ export interface IAutoMovieInstanceSetDesign {
   id: string;
   /** Existing model recipe rendered by every member. */
   modelRecipe: string;
+  /** Optional weighted prototype table; `modelRecipe` remains the default. */
+  prototypes?: IAutoMovieInstancePrototypeDesign[];
   /** Integer slot count from one through 100,000. */
   count: number;
   /** Compact deterministic placement law. */

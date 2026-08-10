@@ -1983,7 +1983,7 @@ const validateInstanceSets = (
         file,
         "scatter",
       );
-    } else {
+    } else if (layout.kind === "along-route") {
       text(diagnostics, layout.route, target, file, "layout.route");
       if (routeIds.has(layout.route) === false)
         missing(
@@ -2022,6 +2022,193 @@ const validateInstanceSets = (
           file,
           `Along-route instance set "${instanceSet.id}" can jitter beyond the supported world coordinate limit. Reduce lateralJitter or move the route inward.`,
         );
+    } else if (layout.kind === "lattice") {
+      integer(
+        diagnostics,
+        layout.rows,
+        1,
+        instanceSet.count,
+        target,
+        file,
+        "layout.rows",
+      );
+      integer(
+        diagnostics,
+        layout.columns,
+        1,
+        instanceSet.count,
+        target,
+        file,
+        "layout.columns",
+      );
+      integer(
+        diagnostics,
+        layout.layers,
+        1,
+        instanceSet.count,
+        target,
+        file,
+        "layout.layers",
+      );
+      boundedVector(
+        diagnostics,
+        layout.spacing,
+        Number.EPSILON,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        target,
+        file,
+        "layout.spacing",
+      );
+      if (layout.rows * layout.columns * layout.layers < instanceSet.count)
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Instance lattice capacity ${layout.rows * layout.columns * layout.layers} is below count ${instanceSet.count}. Increase rows, columns, or layers.`,
+        );
+    } else {
+      if (layout.transforms.length !== instanceSet.count)
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Explicit transform count ${layout.transforms.length} must equal instance count ${instanceSet.count}.`,
+        );
+      const transformIds = new Set<string>();
+      const knownPrototypeIds = new Set([
+        "default",
+        ...(instanceSet.prototypes ?? []).map((prototype) => prototype.id),
+      ]);
+      for (const [index, transform] of layout.transforms.entries()) {
+        unique(
+          diagnostics,
+          transformIds,
+          transform.id,
+          target,
+          file,
+          "layout.transforms",
+        );
+        boundedVector(
+          diagnostics,
+          transform.translation,
+          -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          target,
+          file,
+          `layout.transforms[${index}].translation`,
+        );
+        const norm = Math.hypot(
+          transform.rotation.x,
+          transform.rotation.y,
+          transform.rotation.z,
+          transform.rotation.w,
+        );
+        if (Number.isFinite(norm) === false || Math.abs(norm - 1) > 1e-6)
+          invalid(
+            diagnostics,
+            "design-quaternion-invalid",
+            target,
+            file,
+            `Explicit transform "${transform.id}" rotation must be a finite unit quaternion.`,
+          );
+        boundedVector(
+          diagnostics,
+          transform.scale,
+          Number.EPSILON,
+          1_000,
+          target,
+          file,
+          `layout.transforms[${index}].scale`,
+        );
+        if (
+          transform.prototype !== undefined &&
+          knownPrototypeIds.has(transform.prototype) === false
+        )
+          missing(
+            diagnostics,
+            target,
+            file,
+            `instance prototype "${transform.prototype}"`,
+            `add it to ${instanceSet.id}.prototypes or use "default"`,
+          );
+        if (
+          transform.palette !== undefined &&
+          /^#[0-9a-f]{6}$/i.test(transform.palette) === false
+        )
+          invalid(
+            diagnostics,
+            "design-color-invalid",
+            target,
+            file,
+            `Explicit transform "${transform.id}" palette must be one opaque #RRGGBB value.`,
+          );
+        for (const [name, value] of Object.entries(transform.traits ?? {})) {
+          finite(
+            diagnostics,
+            value,
+            target,
+            file,
+            `layout.transforms[${index}].traits.${name}`,
+          );
+          if (
+            instanceSet.variation.traits.some((trait) => trait.name === name) ===
+            false
+          )
+            invalid(
+              diagnostics,
+              "design-reference-invalid",
+              target,
+              file,
+              `Explicit transform "${transform.id}" overrides undeclared trait "${name}".`,
+            );
+        }
+      }
+    }
+    const prototypeIds = new Set<string>();
+    let prototypeLodCount = 0;
+    for (const prototype of instanceSet.prototypes ?? []) {
+      unique(
+        diagnostics,
+        prototypeIds,
+        prototype.id,
+        target,
+        file,
+        "prototypes",
+      );
+      if (prototype.id === "default")
+        invalid(
+          diagnostics,
+          "design-id-reserved",
+          target,
+          file,
+          'Instance prototype id "default" is reserved for modelRecipe.',
+        );
+      text(
+        diagnostics,
+        prototype.modelRecipe,
+        target,
+        file,
+        `prototypes.${prototype.id}.modelRecipe`,
+      );
+      const prototypeModel = graph.models.get(prototype.modelRecipe);
+      if (prototypeModel === undefined)
+        missing(
+          diagnostics,
+          target,
+          file,
+          `model recipe "${prototype.modelRecipe}"`,
+          `create it or correct prototype "${prototype.id}"`,
+        );
+      positive(
+        diagnostics,
+        prototype.weight,
+        target,
+        file,
+        `prototypes.${prototype.id}.weight`,
+      );
+      prototypeLodCount += Math.max(1, prototypeModel?.lod.length ?? 0);
     }
     boundedRange(
       diagnostics,
@@ -2032,6 +2219,59 @@ const validateInstanceSets = (
       file,
       "variation.scale",
     );
+    if (instanceSet.variation.scale3 !== undefined) {
+      boundedVector(
+        diagnostics,
+        instanceSet.variation.scale3.min,
+        Number.EPSILON,
+        1_000,
+        target,
+        file,
+        "variation.scale3.min",
+      );
+      boundedVector(
+        diagnostics,
+        instanceSet.variation.scale3.max,
+        Number.EPSILON,
+        1_000,
+        target,
+        file,
+        "variation.scale3.max",
+      );
+      for (const axis of ["x", "y", "z"] as const)
+        if (
+          instanceSet.variation.scale3.min[axis] >
+          instanceSet.variation.scale3.max[axis]
+        )
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            target,
+            file,
+            `variation.scale3.${axis} min must not exceed max.`,
+          );
+    }
+    if (instanceSet.variation.rotationDeg !== undefined)
+      for (const axis of ["x", "y", "z"] as const)
+        boundedRange(
+          diagnostics,
+          instanceSet.variation.rotationDeg[axis],
+          -360_000,
+          360_000,
+          target,
+          file,
+          `variation.rotationDeg.${axis}`,
+        );
+    if (instanceSet.variation.visibleProbability !== undefined)
+      bounded(
+        diagnostics,
+        instanceSet.variation.visibleProbability,
+        0,
+        1,
+        target,
+        file,
+        "variation.visibleProbability",
+      );
     if (instanceSet.variation.palette.length === 0)
       invalid(
         diagnostics,
@@ -2093,7 +2333,8 @@ const validateInstanceSets = (
           `Instance trait "${trait.name}" min must not exceed max.`,
         );
     }
-    const lodCount = Math.max(1, model?.lod.length ?? 0);
+    const lodCount =
+      Math.max(1, model?.lod.length ?? 0) + prototypeLodCount;
     bufferBytes +=
       instanceSet.count *
       lodCount *

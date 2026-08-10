@@ -5,7 +5,11 @@ import {
 } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
 import { IAutoMovieClip } from "../core";
-import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
+import {
+  IAutoMovieQuaternion,
+  IAutoMovieTransform,
+  IAutoMovieVector3,
+} from "../geometry";
 import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
@@ -740,12 +744,20 @@ export interface IAutoMovieInstanceSlot {
   node: string;
   /** Runtime model recipe id. */
   modelRecipe: string;
+  /** Selected prototype id; omitted for a legacy single-prototype set. */
+  prototype?: string;
   /** Compiler-derived world position in meters. */
   position: IAutoMovieVector3;
   /** Compiler-derived world-space heading in degrees. */
   facingDeg: number;
   /** Positive uniform scale. */
   scale: number;
+  /** Exact full rotation for an enhanced set. */
+  rotation?: IAutoMovieQuaternion;
+  /** Exact non-uniform scale for an enhanced set. */
+  scale3?: IAutoMovieVector3;
+  /** Explicit or seeded visibility for an enhanced set. */
+  visible?: boolean;
   /** Selected exact sRGB palette value. */
   palette: string;
   /** Seed-derived numeric traits keyed by declared name. */
@@ -776,6 +788,8 @@ export interface IAutoMovieCompiledInstanceSet {
   count: number;
   /** Base design recipe. */
   modelRecipe: string;
+  /** Resolved prototype runtimes; omitted for a legacy single-prototype set. */
+  prototypes?: IAutoMovieCompiledInstancePrototype[];
   /** Exact compact placement law. */
   layout: IAutoMovieInstanceSetDesign["layout"];
   /**
@@ -805,6 +819,20 @@ export interface IAutoMovieCompiledInstanceSet {
   lod: IAutoMovieCompiledFormationLod[];
   /** Digest of every field above except this digest. */
   digest: AutoMovieContentDigest;
+}
+
+/** One compiler-resolved reusable prototype in a general instance set. */
+export interface IAutoMovieCompiledInstancePrototype {
+  /** Stable source prototype id. */
+  id: string;
+  /** Source model recipe. */
+  modelRecipe: string;
+  /** Positive deterministic selection weight. */
+  weight: number;
+  /** Ordered automatic LOD representations for this prototype. */
+  lod: IAutoMovieCompiledFormationLod[];
+  /** Conservative source-model radius before per-slot scaling. */
+  projectionRadius: number;
 }
 
 /** One compact formation-level transform state relative to its designed base. */

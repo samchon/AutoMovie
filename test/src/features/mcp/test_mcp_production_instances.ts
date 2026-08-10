@@ -206,6 +206,139 @@ export const test_mcp_production_instances = (): void => {
   );
 
   const recipes = new Map([[modelRecipe().id, modelRecipe()]]);
+  const alternateRecipe = {
+    ...modelRecipe(),
+    id: "alternate-prop",
+    lod: [],
+  };
+  recipes.set(alternateRecipe.id, alternateRecipe);
+  const lattice: IAutoMovieInstanceSetDesign = {
+    ...instanceSet("facade-windows", 10_000, {
+      kind: "lattice",
+      rows: 100,
+      columns: 100,
+      layers: 1,
+      spacing: { x: 1.25, y: 2, z: 0.1 },
+    }),
+    prototypes: [
+      { id: "alternate", modelRecipe: alternateRecipe.id, weight: 2 },
+    ],
+    variation: {
+      ...instanceSet("unused", 1, {
+        kind: "scatter",
+        radius: 1,
+      }).variation,
+      scale3: {
+        min: { x: 0.75, y: 0.9, z: 0.5 },
+        max: { x: 1.25, y: 1.1, z: 2 },
+      },
+      rotationDeg: {
+        x: { min: -20, max: 20 },
+        y: { min: 0, max: 360 },
+        z: { min: -45, max: 45 },
+      },
+      visibleProbability: 0.8,
+    },
+  };
+  const explicit: IAutoMovieInstanceSetDesign = {
+    ...instanceSet("spiral-balusters", 3, {
+      kind: "explicit",
+      transforms: [
+        {
+          id: "baluster-a",
+          translation: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 0.2, y: 2, z: 0.2 },
+          prototype: "default",
+        },
+        {
+          id: "baluster-b",
+          translation: { x: 1, y: 0.5, z: 1 },
+          rotation: {
+            x: 0,
+            y: Math.SQRT1_2,
+            z: 0,
+            w: Math.SQRT1_2,
+          },
+          scale: { x: 0.25, y: 2.25, z: 0.25 },
+          prototype: "alternate",
+          palette: "#abcdef",
+          traits: { pace: 1.25 },
+        },
+        {
+          id: "baluster-hidden",
+          translation: { x: 2, y: 1, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 0.2, y: 2.5, z: 0.2 },
+          visible: false,
+        },
+      ],
+    }),
+    prototypes: [
+      { id: "alternate", modelRecipe: alternateRecipe.id, weight: 1 },
+    ],
+  };
+  const latticeSlot = materializeInstanceSlot(lattice, world, 9_999);
+  const explicitSlot = materializeInstanceSlot(explicit, world, 1);
+  const explicitHidden = materializeInstanceSlot(explicit, world, 2);
+  const compiledLattice = materializeCompiledInstanceSet(
+    lattice,
+    world,
+    recipes,
+  );
+  const compiledExplicit = materializeCompiledInstanceSet(
+    explicit,
+    world,
+    recipes,
+  );
+  TestValidator.equals(
+    "enhanced instance sets retain 3D TRS, prototypes, stable ids and visibility",
+    namedFacts([
+      ["latticeCount", () => compiledLattice.count === 10_000],
+      ["latticeY", () => latticeSlot.position.y === lattice.anchor.y],
+      ["latticeRotation", () => latticeSlot.rotation !== undefined],
+      [
+        "latticeScale3",
+        () =>
+          latticeSlot.scale3 !== undefined &&
+          latticeSlot.scale3.x >= 0.75 &&
+          latticeSlot.scale3.z <= 2,
+      ],
+      ["latticePrototype", () => latticeSlot.prototype !== undefined],
+      [
+        "compiledPrototypes",
+        () => compiledLattice.prototypes?.length === 2,
+      ],
+      ["explicitNode", () => explicitSlot.node.endsWith(":baluster-b")],
+      [
+        "explicitRecipe",
+        () => explicitSlot.modelRecipe === alternateRecipe.id,
+      ],
+      ["explicitScale", () => explicitSlot.scale3?.y === 2.25],
+      ["explicitPalette", () => explicitSlot.palette === "#abcdef"],
+      ["explicitTrait", () => explicitSlot.traits.pace === 1.25],
+      ["explicitHidden", () => explicitHidden.visible === false],
+      [
+        "compiledExplicitDigest",
+        () => compiledExplicit.digest.startsWith("sha256:"),
+      ],
+    ]),
+    {
+      latticeCount: true,
+      latticeY: true,
+      latticeRotation: true,
+      latticeScale3: true,
+      latticePrototype: true,
+      compiledPrototypes: true,
+      explicitNode: true,
+      explicitRecipe: true,
+      explicitScale: true,
+      explicitPalette: true,
+      explicitTrait: true,
+      explicitHidden: true,
+      compiledExplicitDigest: true,
+    },
+  );
   const highCount = {
     ...scatter,
     count: AUTOMOVIE_INSTANCE_CHUNK_SIZE * 2 + 1,

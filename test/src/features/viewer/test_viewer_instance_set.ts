@@ -183,4 +183,118 @@ export const test_viewer_instance_set = (): void => {
         0,
       ),
   );
+
+  const facadeDesign = {
+    ...design,
+    id: "facade-window-grid",
+    count: 10_000,
+    layout: {
+      kind: "lattice" as const,
+      rows: 100,
+      columns: 100,
+      layers: 1,
+      spacing: { x: 1.2, y: 3, z: 0.05 },
+    },
+    facingDeg: 17,
+    variation: {
+      ...design.variation,
+      scale3: {
+        min: { x: 2, y: 3, z: 4 },
+        max: { x: 2, y: 3, z: 4 },
+      },
+      rotationDeg: {
+        x: { min: 20, max: 20 },
+        y: { min: 30, max: 30 },
+        z: { min: 40, max: 40 },
+      },
+      visibleProbability: 1,
+    },
+  };
+  const compiledFacade = materializeCompiledInstanceSet(
+    facadeDesign,
+    { ...world, instanceSets: [facadeDesign] },
+    recipes,
+  );
+  const builtFacade = buildInstancedInstanceSet({
+    instanceSet: compiledFacade,
+    models,
+  });
+  const targetSlot = regenerateInstanceSlot(compiledFacade, 9_999);
+  const targetMesh = builtFacade.object.children.find(
+    (object): object is THREE.InstancedMesh =>
+      object instanceof THREE.InstancedMesh &&
+      (object.userData.automovieSlots as number[]).includes(9_999),
+  );
+  const targetIndex = (
+    targetMesh?.userData.automovieSlots as number[] | undefined
+  )?.indexOf(9_999);
+  const matrix = new THREE.Matrix4();
+  if (
+    targetMesh !== undefined &&
+    targetIndex !== undefined &&
+    targetIndex >= 0
+  )
+    targetMesh.getMatrixAt(targetIndex, matrix);
+  const translation = new THREE.Vector3();
+  const rotation = new THREE.Quaternion();
+  const scale3 = new THREE.Vector3();
+  matrix.decompose(translation, rotation, scale3);
+  TestValidator.equals(
+    "10,000 full-TRS slots stay in bounded GPU batches with exact matrices",
+    namedFacts([
+      ["facadeCount", () => compiledFacade.count === 10_000],
+      [
+        "facadeChunks",
+        () =>
+          builtFacade.object.children.length === compiledFacade.chunks.length,
+      ],
+      ["targetMesh", () => targetMesh !== undefined],
+      ["targetScaleX", () => Math.abs(scale3.x - 2) < 1e-6],
+      ["targetScaleY", () => Math.abs(scale3.y - 3) < 1e-6],
+      ["targetScaleZ", () => Math.abs(scale3.z - 4) < 1e-6],
+      [
+        "targetRotation",
+        () =>
+          targetSlot.rotation !== undefined &&
+          1 -
+            Math.abs(
+              rotation.dot(
+                new THREE.Quaternion(
+                  targetSlot.rotation.x,
+                  targetSlot.rotation.y,
+                  targetSlot.rotation.z,
+                  targetSlot.rotation.w,
+                ),
+              ),
+            ) <
+            1e-6,
+      ],
+      [
+        "targetTranslation",
+        () =>
+          Math.abs(
+            translation.x -
+              (targetSlot.position.x - compiledFacade.anchor.x),
+          ) < 1e-5 &&
+          Math.abs(
+            translation.y -
+              (targetSlot.position.y - compiledFacade.anchor.y),
+          ) < 1e-5 &&
+          Math.abs(
+            translation.z -
+              (targetSlot.position.z - compiledFacade.anchor.z),
+          ) < 1e-5,
+      ],
+    ]),
+    {
+      facadeCount: true,
+      facadeChunks: true,
+      targetMesh: true,
+      targetScaleX: true,
+      targetScaleY: true,
+      targetScaleZ: true,
+      targetRotation: true,
+      targetTranslation: true,
+    },
+  );
 };
