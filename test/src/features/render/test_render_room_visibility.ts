@@ -31,6 +31,14 @@ import { boxCell, buildingFixture } from "../internal/renderFixtures";
  * 7. Two rooms whose only openings face outside still see one another, because the
  *    exterior is a portal node and not the absence of one.
  * 8. A one-way stair keeps both ends: traversal is directional, sight is not.
+ * 9. A lift's intermediate landings are portals: from an endpoint, every storey
+ *    the shaft stops at is kept, and its negative twin — the same shaft with
+ *    the landings dropped — hides exactly those storeys again.
+ * 10. A stop naming a space the design never declares reaches the closure and
+ *     leaves the answer exactly as it found it.
+ * 11. From a landing of a one-way shaft, sight reaches the stop below it, the stop
+ *     above it, and the other landing, which no `from`/`to` join could
+ *     produce.
  */
 export const test_render_room_visibility = (): void => {
   const inside = autoMovieRoomVisibility({
@@ -197,6 +205,136 @@ export const test_render_room_visibility = (): void => {
     }).hidden,
     ["ground-vault"],
   );
+
+  const served = liftFixture();
+  const unserved = liftFixture();
+  delete unserved.connectors.find(
+    (connector) => connector.id === "service-lift",
+  )!.landings;
+  TestValidator.equals(
+    "the storeys a shaft stops at in between are portals, and only its landings make them so",
+    {
+      served: autoMovieRoomVisibility({
+        environment: served,
+        camera: { x: 5, y: 1, z: 5 },
+      }).hidden,
+      // Negative twin: the same two rooms, the same shaft, the stops taken
+      // away. Without them the run is the two-ended relation it always was and
+      // the storeys it passes are unreachable again, so the case above is
+      // pinning the landings and not some other portal in the fixture.
+      unserved: autoMovieRoomVisibility({
+        environment: unserved,
+        camera: { x: 5, y: 1, z: 5 },
+      }).hidden,
+    },
+    {
+      served: ["ground-vault"],
+      unserved: [
+        "ground-vault",
+        "middle",
+        "middle-gallery",
+        "middle-mezzanine",
+      ],
+    },
+  );
+
+  const undeclared = liftFixture();
+  undeclared.connectors.find(
+    (connector) => connector.id === "service-lift",
+  )!.landings = [{ space: "plant-room", at: 0.9 }];
+  const strayStop = autoMovieRoomVisibility({
+    environment: undeclared,
+    camera: { x: 5, y: 1, z: 5 },
+  });
+  TestValidator.equals(
+    "a stop naming a space the design never declares is a portal to nothing",
+    {
+      // The stop is joined like any other, so it reaches the closure; it simply
+      // has no record, no container above it, and no place in an answer drawn
+      // from the declared spaces. Nothing is invented for it and nothing throws.
+      hidden: strayStop.hidden,
+      visible: strayStop.visible,
+      inconclusive: strayStop.inconclusive,
+    },
+    {
+      hidden: ["ground-vault", "middle", "middle-gallery", "middle-mezzanine"],
+      visible: ["ground", "ground-hall", "site", "upper", "upper-loft"],
+      inconclusive: null,
+    },
+  );
+
+  const boarded = liftFixture();
+  boarded.connectors.find(
+    (connector) => connector.id === "service-lift",
+  )!.bidirectional = false;
+  const fromLanding = autoMovieRoomVisibility({
+    environment: boarded,
+    camera: { x: 13, y: 4, z: 5 },
+  });
+  TestValidator.equals(
+    "a landing of a one-way shaft sees the stops before it, after it, and beside it",
+    {
+      camera: fromLanding.camera,
+      placement: fromLanding.cameraPlacement,
+      hidden: fromLanding.hidden,
+      inconclusive: fromLanding.inconclusive,
+    },
+    {
+      camera: "middle-mezzanine",
+      placement: "interior",
+      // `ground-hall` is behind the drive, `upper-loft` is ahead of it, and
+      // `middle-gallery` is another stop of the same run rather than an end of
+      // it. Only the room no portal reaches at all stays hidden.
+      hidden: ["ground-vault"],
+      inconclusive: null,
+    },
+  );
+};
+
+/**
+ * The tower with a service lift that stops at two storeys in between.
+ *
+ * The shaft runs from `ground-hall` up to `upper-loft`, which the stair already
+ * joins, so its two ends carry no information the graph did not have. Every
+ * fact the lift adds arrives through its landings: `middle-mezzanine` and
+ * `middle-gallery` are reachable from nothing else in the fixture.
+ */
+const liftFixture = (): IAutoMovieBuiltEnvironment => {
+  const environment = buildingFixture();
+  environment.spaces.push(
+    { id: "middle", kind: "storey", parent: "site", cells: [] },
+    {
+      id: "middle-mezzanine",
+      kind: "room",
+      parent: "middle",
+      cells: [boxCell({ id: "mezzanine", min: [10, 3, 0], max: [16, 6, 10] })],
+    },
+    {
+      id: "middle-gallery",
+      kind: "room",
+      parent: "middle",
+      cells: [boxCell({ id: "gallery", min: [10, 6, 0], max: [16, 9, 10] })],
+    },
+  );
+  environment.connectors.push({
+    id: "service-lift",
+    kind: "lift",
+    from: "ground-hall",
+    to: "upper-loft",
+    bidirectional: true,
+    landings: [
+      { space: "middle-mezzanine", at: 0.4 },
+      { space: "middle-gallery", at: 0.7 },
+    ],
+    route: [
+      { x: 13, y: 0, z: 5 },
+      { x: 13, y: 9, z: 5 },
+    ],
+    width: 1.6,
+    clearHeight: 2.3,
+    elements: [],
+  });
+  return environment;
 };
 
 /** Two rooms with no shared portal, each with its own exterior window. */
