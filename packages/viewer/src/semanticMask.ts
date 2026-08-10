@@ -24,9 +24,88 @@ export interface IAutoMovieSemanticMaskHandle {
    */
   unaddressed: number;
 
+  /**
+   * Semantic ids that name a drawable this scene does not hold, ascending.
+   *
+   * The mirror image of {@link unaddressed}: that one counts pixels no id
+   * claimed, this one names ids no pixels answered. See
+   * {@link auditAutoMovieSemanticMaskScene} for why an empty list is the only
+   * proof that what a production declared is what it drew.
+   */
+  unresolved: string[];
+
   /** Undo the override completely, disposing everything it created. */
   restore: () => void;
 }
+
+/** A built scene and the palette its structural mask pass must paint it with. */
+export interface IAutoMovieSemanticMaskBinding {
+  /** The design the scene was built from, in its own declaration order. */
+  design: IAutoMovieScene;
+
+  /** Palette derived from the same production. */
+  mask: IAutoMovieSemanticMask;
+}
+
+/** Where a built scene keeps the palette its mask pass paints with. */
+const SCENE_MASK_KEY = "automovieSemanticMask";
+
+/**
+ * Hand a built scene the palette its `mask` pass must paint it with.
+ *
+ * The scene carries it, rather than every caller passing it down, for the same
+ * reason a formation's baked cycle rides on its own mesh: the pass boundary
+ * that needs it is several calls below whoever knows it. A compiled shot's
+ * runtime hands `applyRenderMode` a pass name and nothing else, so a mask that
+ * had to arrive as an argument could only arrive by widening every signature
+ * between the page and the pass. A scene given no palette keeps the legacy
+ * index ramp, which is what an asset turntable and any host without a compiled
+ * design draw.
+ *
+ * @author Samchon
+ */
+export const attachAutoMovieSemanticMask = (
+  scene: THREE.Scene,
+  binding: IAutoMovieSemanticMaskBinding,
+): void => {
+  scene.userData[SCENE_MASK_KEY] = binding;
+};
+
+/** The palette a scene was given, or `null` when it was given none. */
+export const autoMovieSemanticMaskOf = (
+  scene: THREE.Scene,
+): IAutoMovieSemanticMaskBinding | null =>
+  (scene.userData[SCENE_MASK_KEY] as
+    | IAutoMovieSemanticMaskBinding
+    | undefined) ?? null;
+
+/**
+ * Name every entity the palette addresses that the built scene never drew.
+ *
+ * This is the join the pipeline was missing. The mask is derived from the
+ * compiled artifact and states which drawables one frame commits to; the scene
+ * is what a viewer actually assembled. A production can declare a pond, a
+ * curtain and a fern bed, compile clean, and render a room with none of them in
+ * it, and nothing anywhere goes red, because each half was only ever checked
+ * against itself. Holding the two lists against each other is what turns
+ * "declared" into "drawn", and an id returned here is a drawable that exists in
+ * the design and in no pixel.
+ *
+ * Only entries that claim a drawable are checked. A building unit, a storey, a
+ * room, a wall opening and an instanced slot deliberately paint nothing of
+ * their own and are reached through `owner`, so listing them would report the
+ * whole ownership chain as missing on every well-drawn frame.
+ *
+ * @author Samchon
+ */
+export const auditAutoMovieSemanticMaskScene = (props: {
+  /** The built scene. */
+  scene: THREE.Scene;
+  /** The design the scene was built from, in its own declaration order. */
+  design: IAutoMovieScene;
+  /** Palette derived from the same production. */
+  mask: IAutoMovieSemanticMask;
+}): string[] => unresolvedOf(props.mask, maskRoots(props));
 
 /** Prefix of the viewer group name a compiled instance set is built under. */
 const INSTANCE_SET_PREFIX = "instance-set:";
@@ -71,29 +150,12 @@ export const applyAutoMovieSemanticMask = (props: {
   /** Palette derived from the same production. */
   mask: IAutoMovieSemanticMask;
 }): IAutoMovieSemanticMaskHandle => {
-  const { scene, design, mask } = props;
-  if (scene.children.length < design.nodes.length)
-    throw new Error(
-      `semantic mask cannot resolve staged nodes: the scene holds ${scene.children.length} top-level children for ${design.nodes.length} designed nodes`,
-    );
-  const byNode = autoMovieSemanticMaskNodeIndex(mask);
+  const { scene, mask } = props;
+  const roots = maskRoots(props);
   const bySlot = new Map<string, IAutoMovieSemanticMaskEntry>();
   for (const entry of mask.entries)
     if (entry.slot !== null)
       bySlot.set(`${entry.slot.instanceSet}#${entry.slot.index}`, entry);
-
-  // Objects whose whole subtree belongs to one entry. Staged nodes are matched
-  // positionally because `buildScene` adds one anonymous group per designed
-  // node, in order; everything else is matched by its own name.
-  const roots = new Map<THREE.Object3D, IAutoMovieSemanticMaskEntry>();
-  design.nodes.forEach((node, index) => {
-    const entry = byNode.get(node.id);
-    if (entry !== undefined) roots.set(scene.children[index]!, entry);
-  });
-  scene.traverse((object) => {
-    const entry = byNode.get(object.name);
-    if (entry !== undefined) roots.set(object, entry);
-  });
 
   // A segmentation pass states an identity, and three things in a scene will
   // quietly overwrite one. Fog mixes every `MeshBasicMaterial` toward the fog
@@ -196,6 +258,7 @@ export const applyAutoMovieSemanticMask = (props: {
   return {
     painted,
     unaddressed,
+    unresolved: unresolvedOf(mask, roots),
     restore: (): void => {
       if (done) return;
       done = true;
@@ -213,6 +276,57 @@ export const applyAutoMovieSemanticMask = (props: {
       scene.fog = fog;
     },
   };
+};
+
+/**
+ * Objects whose whole subtree belongs to one entry.
+ *
+ * Staged nodes are matched positionally because {@link buildScene} adds one
+ * group per designed node, in order; everything else is matched by its own
+ * name. Both readings are kept because a host is free to leave those groups
+ * anonymous, and the mask must resolve the scene the viewer builds rather than
+ * the scene a test found convenient to assemble.
+ */
+const maskRoots = (props: {
+  scene: THREE.Scene;
+  design: IAutoMovieScene;
+  mask: IAutoMovieSemanticMask;
+}): Map<THREE.Object3D, IAutoMovieSemanticMaskEntry> => {
+  const { scene, design, mask } = props;
+  if (scene.children.length < design.nodes.length)
+    throw new Error(
+      `semantic mask cannot resolve staged nodes: the scene holds ${scene.children.length} top-level children for ${design.nodes.length} designed nodes`,
+    );
+  const byNode = autoMovieSemanticMaskNodeIndex(mask);
+  const roots = new Map<THREE.Object3D, IAutoMovieSemanticMaskEntry>();
+  design.nodes.forEach((node, index) => {
+    const entry = byNode.get(node.id);
+    if (entry !== undefined) roots.set(scene.children[index]!, entry);
+  });
+  scene.traverse((object) => {
+    const entry = byNode.get(object.name);
+    if (entry !== undefined) roots.set(object, entry);
+  });
+  return roots;
+};
+
+/**
+ * Ids that claim a drawable and resolved to no object, in the mask's own
+ * ascending order.
+ */
+const unresolvedOf = (
+  mask: IAutoMovieSemanticMask,
+  roots: ReadonlyMap<THREE.Object3D, IAutoMovieSemanticMaskEntry>,
+): string[] => {
+  const resolved = new Set<string>();
+  for (const entry of roots.values()) resolved.add(entry.id);
+  return mask.entries
+    .filter(
+      (entry) =>
+        (entry.nodes.length !== 0 || entry.kind === "instance-set") &&
+        !resolved.has(entry.id),
+    )
+    .map((entry) => entry.id);
 };
 
 /** The nearest ancestor (or the object itself) that an entry claims. */

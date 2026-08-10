@@ -1,8 +1,49 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
+import type { IAutoMovieRenderObservation } from "@automovie/viewer";
 
 export interface IAutoMovieCaptureHook {
   ready: boolean;
   seek: (time: number, pass: AutoMovieGuidePass) => void;
+
+  /**
+   * What the page has drawn, read off the scene graph the last seek left
+   * behind.
+   *
+   * The live viewer and the headless capture drive the SAME page through the
+   * same hook, so "the viewer and the capture agree about the frame" stops
+   * being an assurance and becomes one function reading one scene. `null` on a
+   * page that stages no compiled shot, such as an asset turntable.
+   */
+  observe: () => IAutoMovieShotObservation | null;
+
+  /**
+   * The semantic-mask sidecar for the shot the page is drawing, exactly as it
+   * must be written beside the pixels, or `null` when the page stages no
+   * compiled shot.
+   *
+   * A `mask` frame is unreadable without it: the pass paints stable per-entity
+   * colours, and this document is the only thing that says which entity each
+   * colour was.
+   */
+  sidecar: () => string | null;
+}
+
+/** One page's live render evidence for the shot it currently draws. */
+export interface IAutoMovieShotObservation {
+  /** Compiled shot the numbers belong to. */
+  shot: string;
+
+  /** What the built scene submits right now. */
+  observed: IAutoMovieRenderObservation;
+
+  /**
+   * Semantic ids the palette addresses that this scene never drew, ascending.
+   *
+   * Empty is the only proof that what the production declared is what it drew.
+   * A non-empty list names a pond, a curtain or a fern bed that exists in the
+   * design and in no pixel.
+   */
+  unresolved: string[];
 }
 
 declare global {

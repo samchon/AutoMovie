@@ -77,7 +77,15 @@ const seek = (time: number, pass: AutoMovieGuidePass): void => {
   handle.restore();
   status.textContent = `${model.id}  angle=${angle.toFixed(1)}° elevation=${elevation.toFixed(1)}°  ${pass}`;
 };
-window.__automovieCapture = { ready: true, seek };
+// An asset turntable stages no compiled shot, so it has no palette to paint a
+// mask with and no compiled inventory to hold a live one against. Both answer
+// null rather than a shape that would read as evidence about a production.
+window.__automovieCapture = {
+  ready: true,
+  seek,
+  observe: () => null,
+  sidecar: () => null,
+};
 seek(0, "beauty");
 
 function finiteParameter(name: string): number | null {

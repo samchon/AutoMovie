@@ -1,8 +1,18 @@
+import {
+  autoMovieRenderSubjectOfCompiledShot,
+  deriveAutoMovieSemanticMask,
+  renderAutoMovieSemanticMaskSidecar,
+} from "@automovie/engine";
 import type {
   AutoMovieGuidePass,
   IAutoMovieCompiledShotSource,
 } from "@automovie/interface";
-import { mountViewer } from "@automovie/viewer";
+import {
+  attachAutoMovieSemanticMask,
+  auditAutoMovieSemanticMaskScene,
+  mountViewer,
+  observeAutoMovieSceneRender,
+} from "@automovie/viewer";
 
 import { createCompiledShotRuntime } from "./shotRuntime";
 import { viewerDocument } from "./viewerDocument";
@@ -24,10 +34,23 @@ if (response.ok === false)
   throw new Error(
     `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
   );
-const runtime = await createCompiledShotRuntime(
-  (await response.json()) as IAutoMovieCompiledShotSource,
-  deliveryTone,
+const compiled = (await response.json()) as IAutoMovieCompiledShotSource;
+const runtime = await createCompiledShotRuntime(compiled, deliveryTone);
+// The palette is a pure function of the compiled artifact, so the page derives
+// the same one the compiler's own evidence path derives, and the mask pass
+// paints stable per-entity colours instead of a ramp keyed by scene order.
+const mask = deriveAutoMovieSemanticMask(
+  autoMovieRenderSubjectOfCompiledShot({ compiled }),
 );
+attachAutoMovieSemanticMask(runtime.scene, { design: compiled.scene, mask });
+// Declared against drawn, once, because scene membership is structural: a
+// water body, cloth panel or planting cluster the shot declared and the viewer
+// never built is named here rather than discovered by whoever opens the pixels.
+const unresolved = auditAutoMovieSemanticMaskScene({
+  scene: runtime.scene,
+  design: compiled.scene,
+  mask,
+});
 const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
   antialias: false,
   pixelRatio: 1,
@@ -36,7 +59,20 @@ const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
 mounted.renderer.setClearColor(0x11151b, 1);
 
 const seek = (time: number, pass: AutoMovieGuidePass): void => {
-  status.textContent = runtime.render(mounted.renderer, time, pass);
+  const drawn = runtime.render(mounted.renderer, time, pass);
+  status.textContent =
+    unresolved.length === 0
+      ? drawn
+      : `${drawn}  UNDRAWN ${unresolved.join(",")}`;
 };
-window.__automovieCapture = { ready: true, seek };
+window.__automovieCapture = {
+  ready: true,
+  seek,
+  observe: () => ({
+    shot: compiled.shot.id,
+    observed: observeAutoMovieSceneRender(runtime.scene),
+    unresolved,
+  }),
+  sidecar: () => renderAutoMovieSemanticMaskSidecar(mask),
+};
 seek(0, "beauty");

@@ -6,6 +6,11 @@ import {
   applyFormationCycleMaterial,
   formationCycleOf,
 } from "./formationCycle";
+import {
+  IAutoMovieSemanticMaskBinding,
+  applyAutoMovieSemanticMask,
+  autoMovieSemanticMaskOf,
+} from "./semanticMask";
 
 /**
  * A reversible render-mode override. `restore()` puts every touched material,
@@ -23,6 +28,24 @@ import {
 export interface IAutoMovieRenderModeHandle {
   /** The pass this override draws. */
   mode: AutoMovieGuidePass;
+
+  /**
+   * What the `mask` pass segmented, or `null` for every other pass and for a
+   * mask pass drawn from the legacy index ramp.
+   *
+   * A structural pass is evidence, and evidence has to answer for what it left
+   * out. These are the same three counts {@link IAutoMovieSemanticMaskHandle}
+   * carries, surfaced here so the caller that asked for the pass can read them
+   * without reaching past the handle it was given.
+   */
+  semantic: {
+    /** Meshes painted a semantic colour. */
+    painted: number;
+    /** Meshes left at the reserved background because no entry claimed them. */
+    unaddressed: number;
+    /** Semantic ids that name a drawable the scene does not hold. */
+    unresolved: string[];
+  } | null;
 
   /** Undo the override completely. Idempotent. */
   restore: () => void;
@@ -79,9 +102,13 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  *   ({@link DEPTH_NORMALIZATION_RANGE}, overridable) instead of the camera's
  *   near/far clip planes, so the same world depth reads the same gray across
  *   shots, cuts, and chunks; black background = infinitely far.
- * - `mask`: each top-level scene child gets its own flat unlit color
- *   (deterministic golden-angle palette by child index) on a black background:
- *   the per-node segmentation pass.
+ * - `mask`: the segmentation pass. A scene handed its palette by
+ *   {@link attachAutoMovieSemanticMask} is painted by
+ *   {@link applyAutoMovieSemanticMask}, so every colour is the one that entity's
+ *   own semantic id earned and survives a rebuild in a different order. A scene
+ *   handed none keeps the legacy ramp, where each top-level child gets a flat
+ *   unlit colour by its index: readable as coverage and silhouette, never as
+ *   identity, because inserting one node repaints everything after it.
  * - `normal`: every mesh swapped to `MeshNormalMaterial`: the unlit
  *   surface-normal conditioning pass (#1166).
  * - `outline`: REAL silhouette edges (#1166): black fills plus inverted-hull
@@ -129,7 +156,7 @@ export const applyRenderMode = (
     edgeWidth?: number;
   },
 ): IAutoMovieRenderModeHandle => {
-  if (mode === "beauty") return { mode, restore: () => {} };
+  if (mode === "beauty") return { mode, semantic: null, restore: () => {} };
   // Resolve (and validate) the structural pass builder BEFORE touching the
   // scene, so an unknown mode throws without leaving anything hidden.
   const build = ((): (() => IAutoMovieRenderModeHandle) => {
@@ -145,8 +172,15 @@ export const applyRenderMode = (
           overrideMaterials(scene, mode, () => new THREE.MeshNormalMaterial());
       case "outline":
         return () => applyEdgeMode(scene, options?.edgeWidth ?? EDGE_WIDTH);
-      case "mask":
-        return () => applyMaskMode(scene);
+      case "mask": {
+        // Resolved before the scene is touched, like every other pass builder,
+        // so a palette that cannot resolve this scene throws with nothing
+        // hidden and no material swapped.
+        const semantic = autoMovieSemanticMaskOf(scene);
+        return semantic === null
+          ? () => applyMaskMode(scene)
+          : () => applySemanticMaskMode(scene, semantic);
+      }
       case "pose":
         return () => applyPoseMode(scene);
       default:
@@ -163,6 +197,7 @@ export const applyRenderMode = (
   const handle = build();
   return {
     mode,
+    semantic: handle.semantic,
     restore: once(() => {
       handle.restore();
       restoreEnvironment();
@@ -284,6 +319,7 @@ const applyDepthMode = (
   );
   return {
     mode: "depth",
+    semantic: null,
     restore: once(() => {
       materials.restore();
       scene.background = background;
@@ -381,6 +417,7 @@ const applyEdgeMode = (
   }
   return {
     mode: "outline",
+    semantic: null,
     restore: once(() => {
       for (const shell of shells) shell.parent!.remove(shell);
       for (const shellMaterial of shellMaterials.values())
@@ -421,6 +458,7 @@ const overrideMaterials = (
   });
   return {
     mode,
+    semantic: null,
     restore: once(() => {
       for (const { mesh, original, override } of swaps) {
         mesh.material = original;
@@ -468,11 +506,42 @@ const applyMaskMode = (scene: THREE.Scene): IAutoMovieRenderModeHandle => {
   });
   return {
     mode: "mask",
+    semantic: null,
     restore: once(() => {
       for (const { mesh, material } of originals) mesh.material = material;
       for (const material of created) material.dispose();
       scene.background = background;
     }),
+  };
+};
+
+/**
+ * Mask pass over the stable semantic palette the scene was handed.
+ *
+ * The pass boundary above has already suspended fog, image lighting, the
+ * background and every non-mesh renderable, and
+ * {@link applyAutoMovieSemanticMask} suspends the same four itself so a direct
+ * caller is as correct as this one. Nesting them is exact rather than merely
+ * harmless: each side restores what it found, so the inner black background is
+ * put back before the outer one restores the scene's own.
+ */
+const applySemanticMaskMode = (
+  scene: THREE.Scene,
+  binding: IAutoMovieSemanticMaskBinding,
+): IAutoMovieRenderModeHandle => {
+  const handle = applyAutoMovieSemanticMask({
+    scene,
+    design: binding.design,
+    mask: binding.mask,
+  });
+  return {
+    mode: "mask",
+    semantic: {
+      painted: handle.painted,
+      unaddressed: handle.unaddressed,
+      unresolved: handle.unresolved,
+    },
+    restore: once(handle.restore),
   };
 };
 
@@ -507,6 +576,7 @@ const applyPoseMode = (scene: THREE.Scene): IAutoMovieRenderModeHandle => {
 
   return {
     mode: "pose",
+    semantic: null,
     restore: once(() => {
       scene.remove(overlay);
       for (const child of overlay.children)
