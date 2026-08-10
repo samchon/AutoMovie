@@ -1,3 +1,8 @@
+import {
+  lowerPlantingInstallation,
+  lowerSoftFurnishing,
+  lowerWaterFeature,
+} from "@automovie/engine";
 import type {
   AutoMovieGuidePass,
   IAutoMovieCompiledShotSource,
@@ -10,10 +15,14 @@ import {
   applyPose,
   applyRenderMode,
   applyRendererEnvironment,
+  buildFluidSprayObject,
+  buildFluidSurfaceObject,
   buildInstancedEffect,
   buildInstancedFormation,
   buildInstancedInstanceSet,
+  buildPlantingObject,
   buildScene,
+  buildSoftBodyObject,
 } from "@automovie/viewer";
 import type * as THREE from "three";
 
@@ -129,6 +138,106 @@ export const createCompiledShotRuntime = async (
     scene.scene.add(instanceSet.object);
   const effectObjects = compiled.effects.map(buildInstancedEffect);
   for (const effect of effectObjects) scene.scene.add(effect.object);
+  // Water, cloth and planting are independent domains a building binds rather
+  // than scene nodes, so nothing in the node list builds them. Each binding is
+  // lowered through the same engine call the compiler validated it with, and
+  // the result goes to the viewer's own builder: the runtime derives no
+  // geometry of its own, exactly as it derives none for a model.
+  const fluidDomains = new Map(
+    (compiled.fluidDomains ?? []).map((domain) => [domain.id, domain] as const),
+  );
+  const softBodyDomains = new Map(
+    (compiled.softBodyDomains ?? []).map(
+      (domain) => [domain.id, domain] as const,
+    ),
+  );
+  const plantingDomains = new Map(
+    (compiled.plantingDomains ?? []).map(
+      (domain) => [domain.id, domain] as const,
+    ),
+  );
+  const plantingClusters = new Map(
+    (compiled.plantingClusters ?? []).map(
+      (cluster) => [cluster.id, cluster] as const,
+    ),
+  );
+  const waterObjects = (compiled.waterFeatures ?? []).map((feature) => {
+    const domain = fluidDomains.get(feature.domain);
+    if (domain === undefined)
+      throw new Error(
+        `Water feature "${feature.id}" draws fluid domain "${feature.domain}", which this shot does not carry.`,
+      );
+    const lowered = lowerWaterFeature({ feature, domain, time: 0 });
+    return {
+      feature,
+      domain,
+      // A static feature is solved once and never re-solved, which is what
+      // "static" means; only a flowing one is stepped by the shot clock.
+      still: feature.mode === "static",
+      surface: buildFluidSurfaceObject({
+        surface: lowered.surface,
+        mode: feature.mode,
+      }),
+      spray: buildFluidSprayObject({ sample: lowered.spray }),
+    };
+  });
+  for (const water of waterObjects) {
+    scene.scene.add(water.surface.object);
+    scene.scene.add(water.spray.object);
+  }
+  const softObjects = (compiled.softFurnishings ?? []).flatMap((furnishing) => {
+    const domain = softBodyDomains.get(furnishing.domain);
+    if (domain === undefined)
+      throw new Error(
+        `Soft furnishing "${furnishing.id}" hangs soft body "${furnishing.domain}", which this shot does not carry.`,
+      );
+    const lowered = lowerSoftFurnishing({ furnishing, domain, time: 0 });
+    // A panel the engine refused to solve has no surface to draw. The refusal
+    // is already on the analysis it returned, so drawing a still rectangle
+    // instead would be the one thing this fold refuses: a curtain nobody can
+    // tell apart from a solved one.
+    if (lowered.surface === null) return [];
+    return [
+      {
+        furnishing,
+        domain,
+        object: buildSoftBodyObject({
+          surface: lowered.surface,
+          status: lowered.analysis.status,
+        }),
+      },
+    ];
+  });
+  for (const soft of softObjects) scene.scene.add(soft.object.object);
+  const plantingObjects = (compiled.plantingInstallations ?? []).flatMap(
+    (installation) => {
+      // The installation names its cluster and the cluster names the recipe it
+      // grows, so the recipe is reached through the cluster rather than named
+      // twice in two places that could disagree.
+      const cluster = plantingClusters.get(installation.cluster);
+      const domain =
+        cluster === undefined ? undefined : plantingDomains.get(cluster.domain);
+      if (cluster === undefined || domain === undefined)
+        throw new Error(
+          `Planting installation "${installation.id}" plants cluster "${installation.cluster}", whose cluster or recipe this shot does not carry.`,
+        );
+      const lowered = lowerPlantingInstallation({
+        installation,
+        cluster,
+        domain,
+      });
+      // Planting is grown from the recipe rather than stepped by the clock, so
+      // a refusal here is final for the shot rather than for one second.
+      if (lowered.plant === null || lowered.arrangement === null) return [];
+      return [
+        buildPlantingObject({
+          plant: lowered.plant,
+          arrangement: lowered.arrangement,
+        }),
+      ];
+    },
+  );
+  for (const planting of plantingObjects) scene.scene.add(planting.object);
   const stagedNodeTransforms = new Map(
     [...nodeObjects].map(([id, object]) => [
       id,
@@ -198,6 +307,31 @@ export const createCompiledShotRuntime = async (
     applyObjectMotions(compiled.shot.objectMotions, time, (node) =>
       nodeObjects.get(node),
     );
+    // A flowing feature and a hung panel are solved at the second being drawn,
+    // so a seek backwards shows what that second held rather than what the last
+    // draw happened to leave behind.
+    for (const water of waterObjects) {
+      if (water.still) continue;
+      const lowered = lowerWaterFeature({
+        feature: water.feature,
+        domain: water.domain,
+        time,
+      });
+      water.surface.update(lowered.surface);
+      water.spray.update(lowered.spray);
+    }
+    for (const soft of softObjects) {
+      const lowered = lowerSoftFurnishing({
+        furnishing: soft.furnishing,
+        domain: soft.domain,
+        time,
+      });
+      if (lowered.surface === null) continue;
+      soft.object.update({
+        surface: lowered.surface,
+        status: lowered.analysis.status,
+      });
+    }
     if (compiled.shot.cameraMotion !== null)
       applyObjectMotion(compiled.shot.cameraMotion, time, (node) =>
         node === compiled.shot.camera ? camera : undefined,
@@ -328,6 +462,14 @@ export const createCompiledShotRuntime = async (
     scene: scene.scene,
     camera,
     render,
-    dispose: () => textures.dispose(),
+    dispose: async () => {
+      for (const water of waterObjects) {
+        water.surface.dispose();
+        water.spray.dispose();
+      }
+      for (const soft of softObjects) soft.object.dispose();
+      for (const planting of plantingObjects) planting.dispose();
+      await textures.dispose();
+    },
   };
 };
