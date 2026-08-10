@@ -4,3 +4,4 @@ experimental/**
 **/dist/**
 .wiki/**
 packages/mcp/src/guides/AutoMovieGuideConstant.ts
+packages/cli/scaffold/.automovie/**

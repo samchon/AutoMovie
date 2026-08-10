@@ -7,7 +7,10 @@
       "claim": "cue-arm-readable"
     }
   ],
-  "target": { "kind": "shot", "id": "opening" },
+  "target": {
+    "kind": "shot",
+    "id": "opening"
+  },
   "criterion": {
     "kind": "frame",
     "frame": "cue-apex",
