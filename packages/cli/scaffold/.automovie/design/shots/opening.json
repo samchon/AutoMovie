@@ -14,8 +14,14 @@
   ],
   "durationSeconds": 6,
   "participants": [
-    { "kind": "actor", "id": "soloist" },
-    { "kind": "formation", "id": "chorus" }
+    {
+      "kind": "actor",
+      "id": "soloist"
+    },
+    {
+      "kind": "formation",
+      "id": "chorus"
+    }
   ],
   "opening": [
     {
@@ -53,15 +59,22 @@
   ],
   "camera": {
     "intent": "A full-body three-quarter view proves silhouette and pose-pass wiring.",
-    "requiredSubjects": ["soloist"],
+    "requiredSubjects": [
+      "soloist"
+    ],
     "maxOcclusionRatio": 0.05
   },
   "events": [
     {
       "id": "cue-raised",
       "kind": "reveal",
-      "window": { "from": 1.5, "to": 3 },
-      "subjects": ["soloist"],
+      "window": {
+        "from": 1.5,
+        "to": 3
+      },
+      "subjects": [
+        "soloist"
+      ],
       "predicates": [
         {
           "kind": "joint-angle",
@@ -79,7 +92,11 @@
     {
       "id": "cue-apex",
       "time": 2,
-      "passes": ["beauty", "mask", "pose"]
+      "passes": [
+        "beauty",
+        "mask",
+        "pose"
+      ]
     }
   ]
 }

@@ -13,7 +13,10 @@
   ],
   "durationSeconds": 6,
   "participants": [
-    { "kind": "actor", "id": "soloist" }
+    {
+      "kind": "actor",
+      "id": "soloist"
+    }
   ],
   "opening": [
     {
@@ -51,15 +54,22 @@
   ],
   "camera": {
     "intent": "A second full-body view proves that film rendering and review cannot stop after the opening shot.",
-    "requiredSubjects": ["soloist"],
+    "requiredSubjects": [
+      "soloist"
+    ],
     "maxOcclusionRatio": 0.05
   },
   "events": [
     {
       "id": "cue-answered",
       "kind": "reveal",
-      "window": { "from": 3, "to": 5 },
-      "subjects": ["soloist"],
+      "window": {
+        "from": 3,
+        "to": 5
+      },
+      "subjects": [
+        "soloist"
+      ],
       "predicates": [
         {
           "kind": "joint-angle",
@@ -77,7 +87,11 @@
     {
       "id": "cue-answer",
       "time": 4,
-      "passes": ["beauty", "mask", "pose"]
+      "passes": [
+        "beauty",
+        "mask",
+        "pose"
+      ]
     }
   ]
 }

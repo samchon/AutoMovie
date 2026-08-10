@@ -12,7 +12,11 @@
   },
   "artDirection": {
     "style": "primitive-3d",
-    "palette": ["#182235", "#d7b56d", "#b13f36"],
+    "palette": [
+      "#182235",
+      "#d7b56d",
+      "#b13f36"
+    ],
     "silhouettePriority": "The soloist and the raised hand remain distinct from the ground and background.",
     "scaleGrammar": "A named soloist and the promoted formation heroes remain readable against simultaneous near and far anonymous rows."
   },

@@ -6,7 +6,10 @@
       "scene": "SCN-001"
     }
   ],
-  "target": { "kind": "shot", "id": "opening" },
+  "target": {
+    "kind": "shot",
+    "id": "opening"
+  },
   "criterion": {
     "kind": "frame",
     "frame": "cue-apex",

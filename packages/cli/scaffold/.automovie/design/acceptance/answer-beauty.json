@@ -6,7 +6,10 @@
       "scene": "SCN-002"
     }
   ],
-  "target": { "kind": "shot", "id": "answer" },
+  "target": {
+    "kind": "shot",
+    "id": "answer"
+  },
   "criterion": {
     "kind": "frame",
     "frame": "cue-answer",
