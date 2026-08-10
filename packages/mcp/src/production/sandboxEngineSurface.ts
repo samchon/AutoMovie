@@ -23,8 +23,8 @@ export type AutoMovieSandboxEngineExport =
   | "inspectAutoMovieMeshTopology"
   | "lowerBuiltEnvironment"
   | "matchAutoMovieAssemblyJunction"
-  | "mergeAutoMovieMeshes"
   | "mergeAutoMovieMeshParts"
+  | "mergeAutoMovieMeshes"
   | "mergeAutoMovieSpaces"
   | "mergeAutoMovieSubjectContributions"
   | "resolveAutoMovieMaterialAssembly"
@@ -74,8 +74,8 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "inspectAutoMovieMeshTopology",
     "lowerBuiltEnvironment",
     "matchAutoMovieAssemblyJunction",
-    "mergeAutoMovieMeshes",
     "mergeAutoMovieMeshParts",
+    "mergeAutoMovieMeshes",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
     "resolveAutoMovieMaterialAssembly",
