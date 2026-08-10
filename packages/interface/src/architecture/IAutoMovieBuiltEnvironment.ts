@@ -439,6 +439,10 @@ export interface IAutoMovieBuiltConnector {
   /**
    * Slope of the travelled surface in radians, measured from horizontal.
    *
+   * It is the climb taken against the horizontal length **of the route**, not
+   * of the straight line between its endpoints, so a switchback's stated slope
+   * is the gradient actually walked rather than a chord that never existed.
+   *
    * The route already implies it, so stating it is a claim the engine checks
    * rather than a second source of truth: a declared slope that disagrees with
    * the route is refused instead of quietly winning.

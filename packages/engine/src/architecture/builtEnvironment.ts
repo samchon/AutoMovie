@@ -27,7 +27,6 @@ import { ViolationCollector } from "../validation/violation";
 import {
   PLANAR_EPSILON,
   outlineHull,
-  pointInPolygon,
   polygonBounds,
   polygonDoubleArea,
   polygonInside,
@@ -2096,6 +2095,15 @@ const routeMetrics = (
  * than its void: two leaves sharing one opening, or a sash inside a frame, are
  * ordinary designs, while a leaf larger than its own hole is not a design at
  * all.
+ *
+ * Only the two in-plane coordinates are compared. How far the leaf sits in
+ * front of or behind the face is a design freedom, not an error: a leaf in a
+ * rebate, a storm sash outside the frame, and a surface-mounted sliding leaf
+ * all rest off the face's own plane on purpose.
+ *
+ * Containment is the same test a void gets against its face, so a leaf that
+ * spans the notch of a concave void is refused even though each of its corners
+ * is inside.
  */
 const validatePanelFit = (
   environment: IAutoMovieBuiltEnvironment,
@@ -2127,7 +2135,7 @@ const validatePanelFit = (
         );
         return { x: local.x, y: local.y };
       });
-      if (planar.some((point) => pointInPolygon(point, hull) === false))
+      if (polygonInside(planar, hull) === false)
         collector.push(
           "range",
           `${root}.openings[${index}].operation.panels[${panelIndex}]`,

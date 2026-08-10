@@ -105,7 +105,13 @@ export const polygonIsSimple = (
   return true;
 };
 
-/** Whether a point is inside a simple polygon, its own boundary included. */
+/**
+ * Whether a point is inside a simple polygon, its own boundary included.
+ *
+ * Exported because the service-network validator locates a port on a boundary
+ * face with it: one planar containment answer for the whole architecture graph
+ * is the point of keeping these predicates in one module.
+ */
 export const pointInPolygon = (
   point: IAutoMoviePlanarPoint,
   polygon: readonly IAutoMoviePlanarPoint[],
