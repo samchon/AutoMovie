@@ -1404,13 +1404,16 @@ const SANDBOX_BOOTSTRAP = `
     const length = Math.sqrt(
       value.x * value.x + value.y * value.y + value.z * value.z,
     );
-    return length === 0
-      ? { x: 0, y: 0, z: 0 }
-      : {
-          x: value.x / length,
-          y: value.y / length,
-          z: value.z / length,
-        };
+    if (length === 0) return { x: 0, y: 0, z: 0 };
+    // Vector3.normalize scales by the reciprocal. Dividing each component
+    // rounds twice and drifts one ulp from the engine this must reproduce
+    // byte for byte.
+    const inverse = 1 / length;
+    return {
+      x: value.x * inverse,
+      y: value.y * inverse,
+      z: value.z * inverse,
+    };
   };
   const proceduralHullCross = (origin, left, right) =>
     (left.x - origin.x) * (right.z - origin.z) -
@@ -2415,7 +2418,10 @@ const SANDBOX_BOOTSTRAP = `
         axis.x * axis.x + axis.y * axis.y + axis.z * axis.z,
       );
       if (length === 0) return { x: 0, y: 0, z: 0, w: 1 };
-      const half = (angle * Math.PI) / 360;
+      // Quaternion.fromAxisAngle halves the radian angle in two steps, so
+      // folding both into a single division by 360 rounds differently and
+      // disagreed with the engine on 384 of 1441 sampled angles.
+      const half = (angle * (Math.PI / 180)) / 2;
       const scalar = Math.sin(half) / length;
       return {
         x: axis.x * scalar,
@@ -2466,14 +2472,17 @@ const SANDBOX_BOOTSTRAP = `
         combinedRotation.z * combinedRotation.z +
         combinedRotation.w * combinedRotation.w,
     );
+    // Quaternion.normalize scales by the reciprocal, so this divides once
+    // rather than four times and stays byte-identical to the engine.
+    const rotationInverse = rotationLength === 0 ? 0 : 1 / rotationLength;
     const rotation =
       rotationLength === 0
         ? { x: 0, y: 0, z: 0, w: 1 }
         : {
-            x: combinedRotation.x / rotationLength,
-            y: combinedRotation.y / rotationLength,
-            z: combinedRotation.z / rotationLength,
-            w: combinedRotation.w / rotationLength,
+            x: combinedRotation.x * rotationInverse,
+            y: combinedRotation.y * rotationInverse,
+            z: combinedRotation.z * rotationInverse,
+            w: combinedRotation.w * rotationInverse,
           };
     return freeze({
       ...base,

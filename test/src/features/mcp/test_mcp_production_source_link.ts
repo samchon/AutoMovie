@@ -290,6 +290,7 @@ export const test_mcp_production_source_link = (): void => {
     [
       "AutoMovieSubject",
       "AutoMovieSubjectGroup",
+      "buildAutoMovieWall",
       "builtEnvironmentAdjacentSpaces",
       "builtEnvironmentBuildingOfSpace",
       "builtEnvironmentContainsPoint",
@@ -297,9 +298,13 @@ export const test_mcp_production_source_link = (): void => {
       "builtEnvironmentSpaceNodes",
       "builtEnvironmentSpaceSurfaces",
       "defineShot",
+      "extrudeAutoMovieProfile",
       "lowerBuiltEnvironment",
+      "mergeAutoMovieMeshes",
       "mergeAutoMovieSpaces",
       "mergeAutoMovieSubjectContributions",
+      "revolveAutoMovieProfile",
+      "sweepAutoMovieProfile",
       "worldSurfaceHeight",
     ],
   );
