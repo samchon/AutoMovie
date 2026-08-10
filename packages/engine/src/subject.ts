@@ -10,10 +10,16 @@ import type {
   IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
   IAutoMovieMotion,
+  IAutoMoviePlantingCluster,
+  IAutoMoviePlantingDomain,
+  IAutoMoviePlantingInstallation,
   IAutoMoviePropSpec,
+  IAutoMovieServiceNetwork,
   IAutoMovieShotActorProgram,
   IAutoMovieShotBuildContext,
   IAutoMovieShotEffectCue,
+  IAutoMovieSoftBodyDomain,
+  IAutoMovieSoftFurnishing,
   IAutoMovieSpace,
   IAutoMovieStageSetPiece,
   IAutoMovieWaterFeature,
@@ -60,6 +66,18 @@ export interface IAutoMovieSubjectContribution {
   designLineages?: readonly IAutoMovieDesignLineage[];
   /** Independent deterministic fluid domains this subject declares. */
   fluidDomains?: readonly IAutoMovieFluidDomain[];
+  /** Cloth and cushion domains this subject declares. */
+  softBodyDomains?: readonly IAutoMovieSoftBodyDomain[];
+  /** Bindings that hang those domains on a building's own elements. */
+  softFurnishings?: readonly IAutoMovieSoftFurnishing[];
+  /** Growth recipes for the planting this subject declares. */
+  plantingDomains?: readonly IAutoMoviePlantingDomain[];
+  /** Arrangements those recipes are grown into. */
+  plantingClusters?: readonly IAutoMoviePlantingCluster[];
+  /** Bindings that plant those clusters in a building's own spaces. */
+  plantingInstallations?: readonly IAutoMoviePlantingInstallation[];
+  /** Port networks that serve the buildings this subject stages. */
+  serviceNetworks?: readonly IAutoMovieServiceNetwork[];
   /** Bindings that make those domains a building's own water features. */
   waterFeatures?: readonly IAutoMovieWaterFeature[];
   /** Source-owned semantic props retained beside their staged placements. */
@@ -97,6 +115,12 @@ const CONTRIBUTION_KEYS = [
   "designEvidence",
   "designLineages",
   "fluidDomains",
+  "softBodyDomains",
+  "softFurnishings",
+  "plantingDomains",
+  "plantingClusters",
+  "plantingInstallations",
+  "serviceNetworks",
   "waterFeatures",
   "props",
   "actors",

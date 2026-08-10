@@ -20,6 +20,14 @@ import { IAutoMoviePropSpec } from "../harness";
 import { IAutoMovieModel } from "../model";
 import { IAutoMovieMotion } from "../motion";
 import { IAutoMovieProductionLighting, IAutoMovieScene } from "../scene";
+import { IAutoMovieServiceNetwork } from "../service";
+import {
+  IAutoMoviePlantingCluster,
+  IAutoMoviePlantingDomain,
+  IAutoMoviePlantingInstallation,
+  IAutoMovieSoftBodyDomain,
+  IAutoMovieSoftFurnishing,
+} from "../soft";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -1055,6 +1063,18 @@ export interface IAutoMovieShotSourceOutput {
   fluidDomains?: IAutoMovieFluidDomain[];
   /** Bindings that make those domains a building's own water features. */
   waterFeatures?: IAutoMovieWaterFeature[];
+  /** Cloth and cushion domains this shot's source declares. */
+  softBodyDomains?: IAutoMovieSoftBodyDomain[];
+  /** Bindings that hang those domains on a building's own elements. */
+  softFurnishings?: IAutoMovieSoftFurnishing[];
+  /** Growth recipes for the planting this shot's source declares. */
+  plantingDomains?: IAutoMoviePlantingDomain[];
+  /** Arrangements those recipes are grown into. */
+  plantingClusters?: IAutoMoviePlantingCluster[];
+  /** Bindings that plant those clusters in a building's own spaces. */
+  plantingInstallations?: IAutoMoviePlantingInstallation[];
+  /** Port networks that serve the buildings this shot stages. */
+  serviceNetworks?: IAutoMovieServiceNetwork[];
   /** Event sample times selected inside authoritative event windows. */
   eventSamples: Array<{
     /** Exact event-contract id. */
@@ -1264,6 +1284,18 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
   fluidDomains?: IAutoMovieFluidDomain[];
   /** Bindings that make those domains a building's own water features. */
   waterFeatures?: IAutoMovieWaterFeature[];
+  /** Cloth and cushion domains this shot's source declares. */
+  softBodyDomains?: IAutoMovieSoftBodyDomain[];
+  /** Bindings that hang those domains on a building's own elements. */
+  softFurnishings?: IAutoMovieSoftFurnishing[];
+  /** Growth recipes for the planting this shot's source declares. */
+  plantingDomains?: IAutoMoviePlantingDomain[];
+  /** Arrangements those recipes are grown into. */
+  plantingClusters?: IAutoMoviePlantingCluster[];
+  /** Bindings that plant those clusters in a building's own spaces. */
+  plantingInstallations?: IAutoMoviePlantingInstallation[];
+  /** Port networks that serve the buildings this shot stages. */
+  serviceNetworks?: IAutoMovieServiceNetwork[];
   /**
    * Optional source-computed clips cited only by explicit `enact` actions.
    *

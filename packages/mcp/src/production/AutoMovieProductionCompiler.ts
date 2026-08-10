@@ -19,11 +19,19 @@ import {
   validateBuiltEnvironment,
   validateDesignLineage,
   validateDesignLineageBinding,
+  validateFluidDomain,
   validateModel,
   validateMotion,
+  validatePlantingDomain,
+  validatePlantingInstallations,
   validatePropPlacements,
+  validateServiceNetwork,
   validateShotArtifact,
+  validateSoftBodyDomain,
+  validateSoftFurnishings,
   validateTextureAssets,
+  validateWaterFeatures,
+  validateWetZones,
 } from "@automovie/engine";
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
@@ -70,6 +78,7 @@ import {
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
   IAutoMovieSpace,
+  IAutoMovieValidation,
   IAutoMovieVector3,
   IAutoMovieVideoEdit,
   IAutoMovieWorldDesign,
@@ -2174,6 +2183,205 @@ const compileShotSource = (
   };
 };
 
+/**
+ * One binding's own address inside the program that declared it.
+ *
+ * A fold's validator is handed the records for one building, so its violation
+ * paths count within that filtered list. An author reads the program, not the
+ * filter, so each local index is mapped back to the position the record
+ * actually occupies.
+ */
+const rewriteBindingPath = (
+  path: string,
+  fields: Readonly<Record<string, { key: string; indices: readonly number[] }>>,
+): string => {
+  const matched = /^\$input\.([A-Za-z]+)\[(\d+)\]/u.exec(path);
+  if (matched === null) return `$program${path.slice("$input".length)}`;
+  const field = fields[matched[1]!];
+  if (field === undefined) return `$program${path.slice("$input".length)}`;
+  const local = Number(matched[2]);
+  return `$program.${field.key}[${field.indices[local] ?? local}]${path.slice(matched[0].length)}`;
+};
+
+/** Records of one fold that name a building, kept with where they were written. */
+const bindingsOfEnvironment = <T extends { environment: string }>(
+  items: readonly T[],
+  environment: string,
+): { items: T[]; indices: number[] } => {
+  const kept: T[] = [];
+  const indices: number[] = [];
+  items.forEach((item, index) => {
+    if (item.environment !== environment) return;
+    kept.push(item);
+    indices.push(index);
+  });
+  return { items: kept, indices };
+};
+
+/**
+ * Refuse every fold that binds itself to a building this shot does not stage.
+ *
+ * Water, cloth, planting and building services are independent domains that
+ * become architecture only through a binding, and each binding names the
+ * building it belongs to. An unresolved name is the one failure none of those
+ * folds can see for itself: each validator is handed one building and answers
+ * about that one, so a record pointing at a building nobody staged would simply
+ * never be checked by anyone.
+ */
+const buildingBoundDiagnostics = (
+  program: IAutoMovieProductionShotProgram,
+): string[] => {
+  const messages: string[] = [];
+  const environments = program.builtEnvironments ?? [];
+  const known = new Set(environments.map((environment) => environment.id));
+  const waterFeatures = program.waterFeatures ?? [];
+  const softFurnishings = program.softFurnishings ?? [];
+  const plantingInstallations = program.plantingInstallations ?? [];
+  const serviceNetworks = program.serviceNetworks ?? [];
+  const unresolved = (
+    key: string,
+    items: readonly { environment: string }[],
+  ): void => {
+    items.forEach((item, index) => {
+      if (known.has(item.environment)) return;
+      messages.push(
+        `$program.${key}[${index}].environment "${item.environment}" does not resolve to a building this shot stages. Declare that building, or bind the record to one the shot already carries.`,
+      );
+    });
+  };
+  unresolved("waterFeatures", waterFeatures);
+  unresolved("softFurnishings", softFurnishings);
+  unresolved("plantingInstallations", plantingInstallations);
+  unresolved("serviceNetworks", serviceNetworks);
+
+  const fluidDomains = program.fluidDomains ?? [];
+  const softBodyDomains = program.softBodyDomains ?? [];
+  const plantingDomains = program.plantingDomains ?? [];
+  const plantingClusters = program.plantingClusters ?? [];
+  const allOf = (items: readonly unknown[]): number[] =>
+    items.map((_, index) => index);
+  const say = (
+    validation: IAutoMovieValidation,
+    fields: Readonly<
+      Record<string, { key: string; indices: readonly number[] }>
+    >,
+    remedy: string,
+  ): void => {
+    if (validation.success === true) return;
+    for (const violation of validation.violations)
+      messages.push(
+        `${rewriteBindingPath(violation.path, fields)} ${violation.expected}. ${remedy}`,
+      );
+  };
+
+  for (const environment of environments) {
+    const water = bindingsOfEnvironment(waterFeatures, environment.id);
+    if (water.items.length !== 0)
+      say(
+        validateWaterFeatures({
+          environment,
+          features: water.items,
+          domains: [...fluidDomains],
+        }),
+        {
+          features: { key: "waterFeatures", indices: water.indices },
+          domains: { key: "fluidDomains", indices: allOf(fluidDomains) },
+        },
+        "Correct the water feature or the domain it binds before compiling the shot.",
+      );
+    const cloth = bindingsOfEnvironment(softFurnishings, environment.id);
+    if (cloth.items.length !== 0)
+      say(
+        validateSoftFurnishings({
+          environment,
+          furnishings: cloth.items,
+          domains: [...softBodyDomains],
+        }),
+        {
+          furnishings: { key: "softFurnishings", indices: cloth.indices },
+          domains: { key: "softBodyDomains", indices: allOf(softBodyDomains) },
+        },
+        "Correct the soft furnishing or the domain it hangs before compiling the shot.",
+      );
+    const planting = bindingsOfEnvironment(
+      plantingInstallations,
+      environment.id,
+    );
+    if (planting.items.length !== 0)
+      say(
+        validatePlantingInstallations({
+          environment,
+          installations: planting.items,
+          clusters: [...plantingClusters],
+          domains: [...plantingDomains],
+        }),
+        {
+          installations: {
+            key: "plantingInstallations",
+            indices: planting.indices,
+          },
+          clusters: {
+            key: "plantingClusters",
+            indices: allOf(plantingClusters),
+          },
+          domains: { key: "plantingDomains", indices: allOf(plantingDomains) },
+        },
+        "Correct the planting installation, its cluster or its recipe before compiling the shot.",
+      );
+    serviceNetworks.forEach((network, index) => {
+      if (network.environment !== environment.id) return;
+      const fields = { network: { key: "serviceNetworks", indices: [index] } };
+      say(
+        validateServiceNetwork({ network, environment }),
+        fields,
+        "Correct the port network before compiling the shot.",
+      );
+      say(
+        validateWetZones({ network, environment }),
+        fields,
+        "Correct the wet zone before compiling the shot.",
+      );
+    });
+  }
+
+  // A domain nobody bound is still a domain the production declared, and an
+  // unsound one no feature happens to cite is exactly the record an author is
+  // about to bind. It answers for itself here rather than staying unchecked
+  // until the binding exists.
+  const boundFluid = new Set(waterFeatures.map((feature) => feature.domain));
+  fluidDomains.forEach((domain, index) => {
+    if (boundFluid.has(domain.id)) return;
+    say(
+      validateFluidDomain({ domain }),
+      { domain: { key: "fluidDomains", indices: [index] } },
+      "Correct the fluid domain before compiling the shot.",
+    );
+  });
+  const boundCloth = new Set(
+    softFurnishings.map((furnishing) => furnishing.domain),
+  );
+  softBodyDomains.forEach((domain, index) => {
+    if (boundCloth.has(domain.id)) return;
+    say(
+      validateSoftBodyDomain({ domain }),
+      { domain: { key: "softBodyDomains", indices: [index] } },
+      "Correct the soft body domain before compiling the shot.",
+    );
+  });
+  const boundPlanting = new Set(
+    plantingClusters.map((cluster) => cluster.domain),
+  );
+  plantingDomains.forEach((domain, index) => {
+    if (boundPlanting.has(domain.id)) return;
+    say(
+      validatePlantingDomain({ domain }),
+      { domain: { key: "plantingDomains", indices: [index] } },
+      "Correct the planting recipe before compiling the shot.",
+    );
+  });
+  return messages;
+};
+
 interface ISourceRuntime {
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
   authoredModels: IAutoMovieModel[];
@@ -2278,6 +2486,9 @@ const sourceRuntimeOf = (props: {
           `${lineagePath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the construction phase, alternative or derivation record before compiling the shot.`,
         );
   });
+
+  for (const message of buildingBoundDiagnostics(props.program))
+    report(message);
 
   const propPlacement = validatePropPlacements({
     props: props.program.props ?? [],
