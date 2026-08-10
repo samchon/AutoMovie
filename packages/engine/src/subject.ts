@@ -6,6 +6,7 @@ import type {
   IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
   IAutoMovieMotion,
+  IAutoMoviePropSpec,
   IAutoMovieShotActorProgram,
   IAutoMovieShotBuildContext,
   IAutoMovieShotEffectCue,
@@ -40,6 +41,8 @@ export interface IAutoMovieSubjectContribution {
   spaces?: readonly IAutoMovieSpace[];
   /** Structured buildings retained for spatial queries and evidence. */
   builtEnvironments?: readonly IAutoMovieBuiltEnvironment[];
+  /** Source-owned semantic props retained beside their staged placements. */
+  props?: readonly IAutoMoviePropSpec[];
   /** Articulated performers this subject stages. */
   actors?: readonly IAutoMovieShotActorProgram[];
   /** Source-computed clips cited by explicit `enact` actions. */
@@ -69,6 +72,7 @@ const CONTRIBUTION_KEYS = [
   "set",
   "spaces",
   "builtEnvironments",
+  "props",
   "actors",
   "clips",
   "formationMotions",

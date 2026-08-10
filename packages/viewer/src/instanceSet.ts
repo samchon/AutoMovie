@@ -1,8 +1,4 @@
-import {
-  Quaternion,
-  seededValue,
-  selectFormationLod,
-} from "@automovie/engine";
+import { Quaternion, seededValue, selectFormationLod } from "@automovie/engine";
 import {
   IAutoMovieCompiledFormationLod,
   IAutoMovieCompiledInstanceSet,
@@ -11,11 +7,8 @@ import {
 } from "@automovie/interface";
 import * as THREE from "three";
 
-import {
-  flattenInstancedModel,
-  flattenInstancedObject,
-} from "./formation";
 import { IAutoMovieModelObject } from "./buildModel";
+import { flattenInstancedModel, flattenInstancedObject } from "./formation";
 
 /** Bounded viewer accounting for one general instance set. */
 export interface IAutoMovieInstanceSetViewerStats {
@@ -66,17 +59,15 @@ export const buildInstancedInstanceSet = (input: {
   const root = new THREE.Group();
   root.name = `instance-set:${input.instanceSet.id}`;
   root.position.copy(vector(input.instanceSet.anchor));
-  const prototypes =
-    input.instanceSet.prototypes ??
-    [
-      {
-        id: "default",
-        modelRecipe: input.instanceSet.modelRecipe,
-        weight: 1,
-        lod: input.instanceSet.lod,
-        projectionRadius: input.instanceSet.projectionRadius,
-      },
-    ];
+  const prototypes = input.instanceSet.prototypes ?? [
+    {
+      id: "default",
+      modelRecipe: input.instanceSet.modelRecipe,
+      weight: 1,
+      lod: input.instanceSet.lod,
+      projectionRadius: input.instanceSet.projectionRadius,
+    },
+  ];
   const representations = new Map(
     prototypes.flatMap((prototype) =>
       prototype.lod.map((lod) => {
@@ -325,7 +316,8 @@ export const regenerateInstanceSlot = (
     facingDeg: instanceSet.facingDeg,
     scale,
     palette:
-      explicit?.palette ?? (instanceSet.variation.palette[paletteIndex] as string),
+      explicit?.palette ??
+      (instanceSet.variation.palette[paletteIndex] as string),
     traits: { ...traits, ...explicit?.traits },
   };
   const legacy =
@@ -362,10 +354,7 @@ export const regenerateInstanceSlot = (
     prototype: prototype.id,
     rotation: Quaternion.normalize(
       Quaternion.multiply(
-        Quaternion.fromAxisAngle(
-          { x: 0, y: 1, z: 0 },
-          instanceSet.facingDeg,
-        ),
+        Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, instanceSet.facingDeg),
         explicit?.rotation ?? seededInstanceRotation(instanceSet, slot),
       ),
     ),
@@ -383,9 +372,9 @@ const selectedInstancePrototype = (
   slot: number,
   explicit?: string,
 ): { id: string; modelRecipe: string; weight: number } => {
-  const choices =
-    instanceSet.prototypes ??
-    [{ id: "default", modelRecipe: instanceSet.modelRecipe, weight: 1 }];
+  const choices = instanceSet.prototypes ?? [
+    { id: "default", modelRecipe: instanceSet.modelRecipe, weight: 1 },
+  ];
   if (explicit !== undefined) {
     const selected = choices.find((choice) => choice.id === explicit);
     if (selected === undefined)

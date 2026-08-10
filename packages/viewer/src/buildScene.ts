@@ -10,6 +10,7 @@ import { applyLightState } from "./applyLightMotion";
 import { applyPose } from "./applyPose";
 import { IAutoMovieModelObject, applyTransform } from "./buildModel";
 import { buildSpaceObject } from "./buildSpace";
+import { applySceneEnvironment } from "./sceneEnvironment";
 
 /**
  * Result of building a scene: the `three.js` scene, its cameras (first is
@@ -55,6 +56,7 @@ export interface IAutoMovieSceneObject {
 export const buildScene = (
   scene: IAutoMovieScene,
   getModelObject: (modelId: string) => IAutoMovieModelObject | undefined,
+  environmentTexture?: THREE.Texture,
 ): IAutoMovieSceneObject => {
   const root = new THREE.Scene();
 
@@ -92,6 +94,7 @@ export const buildScene = (
   // The atmosphere is a scene property, not an object: it takes no top-level
   // child, so the mask palette's child indices are untouched by declaring it.
   applySceneFog(root, scene.fog);
+  applySceneEnvironment(root, scene.environment, environmentTexture);
 
   const cameras = scene.cameras.map(buildCamera);
   return { scene: root, cameras, lights };
@@ -163,6 +166,7 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
   if (light.type === "point") {
     const built = new THREE.PointLight();
     applyLightState(built, light);
+    applyShadow(built, light);
     return built;
   }
   const built =
@@ -170,7 +174,22 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
       ? new THREE.DirectionalLight()
       : new THREE.SpotLight();
   applyLightState(built, light);
+  applyShadow(built, light);
   return aimLight(built);
+};
+
+const applyShadow = (built: THREE.Light, light: IAutoMovieLight): void => {
+  built.castShadow = light.castShadow ?? false;
+  if (light.shadow === undefined || !("shadow" in built)) return;
+  const shadow = (
+    built as THREE.PointLight | THREE.SpotLight | THREE.DirectionalLight
+  ).shadow;
+  shadow.mapSize.set(light.shadow.mapSize, light.shadow.mapSize);
+  shadow.bias = light.shadow.bias;
+  shadow.normalBias = light.shadow.normalBias;
+  shadow.camera.near = light.shadow.near;
+  shadow.camera.far = light.shadow.far;
+  shadow.camera.updateProjectionMatrix();
 };
 
 /**

@@ -11,6 +11,7 @@ export * from "./validateFreeFall";
 export * from "./validateGroundContact";
 export * from "./validateMeshTopology";
 export * from "./validateModel";
+export * from "./validateSceneEnvironment";
 export * from "./validateMotion";
 export * from "./validatePose";
 export * from "./validateProfileCapabilities";

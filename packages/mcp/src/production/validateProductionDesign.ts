@@ -2153,8 +2153,9 @@ const validateInstanceSets = (
             `layout.transforms[${index}].traits.${name}`,
           );
           if (
-            instanceSet.variation.traits.some((trait) => trait.name === name) ===
-            false
+            instanceSet.variation.traits.some(
+              (trait) => trait.name === name,
+            ) === false
           )
             invalid(
               diagnostics,
@@ -2167,7 +2168,7 @@ const validateInstanceSets = (
       }
     }
     const prototypeIds = new Set<string>();
-    let prototypeLodCount = 0;
+    let maximumPrototypeLodCount = Math.max(1, model?.lod.length ?? 0);
     for (const prototype of instanceSet.prototypes ?? []) {
       unique(
         diagnostics,
@@ -2208,7 +2209,10 @@ const validateInstanceSets = (
         file,
         `prototypes.${prototype.id}.weight`,
       );
-      prototypeLodCount += Math.max(1, prototypeModel?.lod.length ?? 0);
+      maximumPrototypeLodCount = Math.max(
+        maximumPrototypeLodCount,
+        Math.max(1, prototypeModel?.lod.length ?? 0),
+      );
     }
     boundedRange(
       diagnostics,
@@ -2333,8 +2337,7 @@ const validateInstanceSets = (
           `Instance trait "${trait.name}" min must not exceed max.`,
         );
     }
-    const lodCount =
-      Math.max(1, model?.lod.length ?? 0) + prototypeLodCount;
+    const lodCount = maximumPrototypeLodCount;
     bufferBytes +=
       instanceSet.count *
       lodCount *

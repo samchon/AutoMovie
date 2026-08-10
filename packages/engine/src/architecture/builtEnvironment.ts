@@ -209,6 +209,77 @@ export const validateBuiltEnvironment = (props: {
     collector,
   );
 
+  const buildingIds = collectIds(
+    environment.buildings,
+    `${root}.buildings`,
+    "building unit",
+    collector,
+  );
+  if (environment.buildings.length === 0)
+    collector.push(
+      "range",
+      `${root}.buildings`,
+      "a built-environment work needs at least one building unit",
+      environment.buildings,
+    );
+  const buildingElementRoots = new Set<string>();
+  const buildingSpaceRoots = new Set<string>();
+  environment.buildings.forEach((building, index) => {
+    const path = `${root}.buildings[${index}]`;
+    if (buildingIds.has(building.id)) {
+      const element = environment.elements.find(
+        (candidate) => candidate.id === building.element,
+      );
+      if (element === undefined)
+        collector.push(
+          "type",
+          `${path}.element`,
+          `building root element "${building.element}" does not resolve`,
+          building.element,
+        );
+      else if (element.parent !== null)
+        collector.push(
+          "type",
+          `${path}.element`,
+          `building root element "${building.element}" must have no parent`,
+          building.element,
+        );
+      const space = environment.spaces.find(
+        (candidate) => candidate.id === building.space,
+      );
+      if (space === undefined)
+        collector.push(
+          "type",
+          `${path}.space`,
+          `building root space "${building.space}" does not resolve`,
+          building.space,
+        );
+      else if (space.parent !== null)
+        collector.push(
+          "type",
+          `${path}.space`,
+          `building root space "${building.space}" must have no parent`,
+          building.space,
+        );
+    }
+    if (buildingElementRoots.has(building.element))
+      collector.push(
+        "type",
+        `${path}.element`,
+        `building root element "${building.element}" is already owned by another building unit`,
+        building.element,
+      );
+    if (buildingSpaceRoots.has(building.space))
+      collector.push(
+        "type",
+        `${path}.space`,
+        `building root space "${building.space}" is already owned by another building unit`,
+        building.space,
+      );
+    buildingElementRoots.add(building.element);
+    buildingSpaceRoots.add(building.space);
+  });
+
   const boundaryIds = collectIds(
     environment.boundaries,
     `${root}.boundaries`,

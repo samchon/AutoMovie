@@ -1,9 +1,18 @@
 import {
+  buildAutoMovieWall,
+  extrudeAutoMovieProfile,
+  mergeAutoMovieMeshes,
+  revolveAutoMovieProfile,
+  sweepAutoMovieProfile,
+} from "@automovie/engine";
+import {
   IAutoMovieAssetManifest,
   IAutoMovieCompiledShotSource,
+  IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
+  IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
@@ -12,6 +21,7 @@ import {
   canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
+  materializeInstanceSlot,
   muxProductionFeatureMp4,
   probeProductionMedia,
 } from "@automovie/mcp";
@@ -2485,6 +2495,7 @@ ${original}`;
     version: 1,
     id: "interior",
     units: "meter",
+    buildings: [{ id: "main", element: "root", space: "lower" }],
     models: [],
     modelReferences: [runtimeModel.id],
     elements: [
@@ -2683,6 +2694,169 @@ ${original}`;
       "explicit geometry helpers run in the frozen sandbox",
       productionCompileSucceeded(
         "explicit geometry helper sandbox",
+        compiler.compile({ scope: "source" }),
+      ),
+    );
+    project.setWorldDesign(worldDesign());
+    fs.writeFileSync(sourcePath, original);
+
+    const proceduralProfile = [
+      { x: -1, y: -0.5 },
+      { x: 1, y: -0.5 },
+      { x: 1, y: 0.5 },
+      { x: -1, y: 0.5 },
+    ];
+    const proceduralPath = [
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 2 },
+      { x: 1, y: 1, z: 3 },
+    ];
+    const proceduralMeshes = [
+      extrudeAutoMovieProfile({ profile: proceduralProfile, depth: 0.4 }),
+      revolveAutoMovieProfile({
+        profile: [
+          { x: 0.25, y: -0.5 },
+          { x: 0.5, y: 0.5 },
+        ],
+        segments: 5,
+      }),
+      sweepAutoMovieProfile({
+        profile: proceduralProfile,
+        path: proceduralPath,
+      }),
+      buildAutoMovieWall({
+        width: 4,
+        height: 3,
+        depth: 0.2,
+        openings: [
+          { id: "door", x: 0.5, y: 0, width: 1, height: 2 },
+          { id: "window", x: 2, y: 1, width: 1, height: 1 },
+        ],
+      }),
+    ];
+    proceduralMeshes.push(
+      mergeAutoMovieMeshes([proceduralMeshes[0]!, proceduralMeshes[1]!]),
+    );
+    const legacyInstances: IAutoMovieInstanceSetDesign = {
+      id: "legacy-grid",
+      modelRecipe: "soloist",
+      count: 2,
+      layout: {
+        kind: "grid",
+        rows: 1,
+        columns: 2,
+        spacing: { x: 1.5, z: 2 },
+      },
+      anchor: { x: 2, y: 0.25, z: -1 },
+      facingDeg: 30,
+      seed: 11,
+      variation: {
+        scale: { min: 0.8, max: 1.2 },
+        palette: ["#112233", "#445566"],
+        traits: [{ name: "wear", min: 0.1, max: 0.9 }],
+      },
+    };
+    const latticeInstances: IAutoMovieInstanceSetDesign = {
+      id: "stacked-lattice",
+      modelRecipe: "soloist",
+      prototypes: [{ id: "alternate", modelRecipe: "soloist", weight: 2 }],
+      count: 2,
+      layout: {
+        kind: "lattice",
+        rows: 1,
+        columns: 1,
+        layers: 2,
+        spacing: { x: 1, y: 2.5, z: 1 },
+      },
+      anchor: { x: -2, y: 1, z: 4 },
+      facingDeg: -20,
+      seed: 23,
+      variation: {
+        scale: { min: 0.9, max: 1.1 },
+        scale3: {
+          min: { x: 0.5, y: 0.75, z: 1 },
+          max: { x: 1.5, y: 1.75, z: 2 },
+        },
+        rotationDeg: {
+          x: { min: -15, max: 15 },
+          y: { min: 10, max: 40 },
+          z: { min: -5, max: 5 },
+        },
+        visibleProbability: 0.4,
+        palette: ["#abcdef"],
+        traits: [],
+      },
+    };
+    const explicitInstances: IAutoMovieInstanceSetDesign = {
+      id: "authored-transform",
+      modelRecipe: "soloist",
+      prototypes: [{ id: "alternate", modelRecipe: "soloist", weight: 1 }],
+      count: 1,
+      layout: {
+        kind: "explicit",
+        transforms: [
+          {
+            id: "fixture-piece",
+            translation: { x: 1, y: 2, z: 3 },
+            rotation: { x: 0, y: Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
+            scale: { x: 2, y: 3, z: 4 },
+            prototype: "alternate",
+            visible: false,
+            palette: "#fedcba",
+            traits: { wear: 0.75 },
+          },
+        ],
+      },
+      anchor: { x: 5, y: 6, z: 7 },
+      facingDeg: 45,
+      seed: 37,
+      variation: {
+        scale: { min: 1, max: 1 },
+        palette: ["#000000"],
+        traits: [{ name: "wear", min: 0, max: 1 }],
+      },
+    };
+    const instanceWorld: IAutoMovieWorldDesign = {
+      ...worldDesign(),
+      instanceSets: [legacyInstances, latticeInstances, explicitInstances],
+    };
+    const instanceSlots = [
+      materializeInstanceSlot(legacyInstances, instanceWorld, 0),
+      materializeInstanceSlot(legacyInstances, instanceWorld, 1),
+      materializeInstanceSlot(latticeInstances, instanceWorld, 0),
+      materializeInstanceSlot(latticeInstances, instanceWorld, 1),
+      materializeInstanceSlot(explicitInstances, instanceWorld, 0),
+    ];
+    const sandboxParitySource = mutate(
+      injectBuildSignal(
+        `  const profile = ${JSON.stringify(proceduralProfile)};`,
+        `  const path = ${JSON.stringify(proceduralPath)};`,
+        "  const meshes = [",
+        "    extrudeAutoMovieProfile({ profile, depth: 0.4 }),",
+        "    revolveAutoMovieProfile({ profile: [{ x: 0.25, y: -0.5 }, { x: 0.5, y: 0.5 }], segments: 5 }),",
+        "    sweepAutoMovieProfile({ profile, path }),",
+        '    buildAutoMovieWall({ width: 4, height: 3, depth: 0.2, openings: [{ id: "door", x: 0.5, y: 0, width: 1, height: 2 }, { id: "window", x: 2, y: 1, width: 1, height: 1 }] }),',
+        "  ];",
+        "  meshes.push(mergeAutoMovieMeshes([meshes[0]!, meshes[1]!]));",
+        `  if (JSON.stringify(meshes) !== ${JSON.stringify(JSON.stringify(proceduralMeshes))}) throw new Error("procedural geometry sandbox parity failed");`,
+        "  const slots = [",
+        '    context.engine.instanceSlot("legacy-grid", 0),',
+        '    context.engine.instanceSlot("legacy-grid", 1),',
+        '    context.engine.instanceSlot("stacked-lattice", 0),',
+        '    context.engine.instanceSlot("stacked-lattice", 1),',
+        '    context.engine.instanceSlot("authored-transform", 0),',
+        "  ];",
+        `  if (JSON.stringify(slots) !== ${JSON.stringify(JSON.stringify(instanceSlots))}) throw new Error("instance slot sandbox parity failed");`,
+      ),
+      'import { defineShot } from "@automovie/engine";',
+      'import { buildAutoMovieWall, defineShot, extrudeAutoMovieProfile, mergeAutoMovieMeshes, revolveAutoMovieProfile, sweepAutoMovieProfile } from "@automovie/engine";',
+    );
+    project.setWorldDesign(instanceWorld);
+    fs.writeFileSync(sourcePath, sandboxParitySource);
+    TestValidator.predicate(
+      "sandbox engine matches procedural meshes and legacy or enhanced instance slots byte for byte",
+      productionCompileSucceeded(
+        "sandbox engine parity",
         compiler.compile({ scope: "source" }),
       ),
     );

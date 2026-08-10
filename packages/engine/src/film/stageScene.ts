@@ -18,6 +18,7 @@ import {
   isAutoMovieLightType,
 } from "../resolve/lightChannel";
 import { isRecord } from "../validation/artifactShape";
+import { validateSceneEnvironment } from "../validation/validateSceneEnvironment";
 import { validateSpace } from "../validation/validateSpace";
 import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
@@ -195,6 +196,86 @@ const validateLightPlacementShape = (
   }
 
   if (light.color !== undefined) validateLightColor(light.color, path, out);
+  validateLightShadow(light, path, out);
+};
+
+const validateLightShadow = (
+  light: IAutoMovieStageLight,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  if (light.castShadow !== undefined && typeof light.castShadow !== "boolean")
+    out.push(
+      "type",
+      `${path}.castShadow`,
+      "castShadow must be boolean",
+      light.castShadow,
+    );
+  if (light.shadow === undefined) {
+    if (light.castShadow === true)
+      out.push(
+        "type",
+        `${path}.shadow`,
+        "a shadow-casting light requires deterministic shadow settings",
+        light.shadow,
+      );
+    return;
+  }
+  if (light.castShadow !== true)
+    out.push(
+      "type",
+      `${path}.shadow`,
+      "shadow settings require castShadow to be true",
+      light.shadow,
+    );
+  if (!isRecord(light.shadow)) {
+    out.push(
+      "type",
+      `${path}.shadow`,
+      "shadow must be a JSON object",
+      light.shadow,
+    );
+    return;
+  }
+  const shadow = light.shadow;
+  if (!Number.isSafeInteger(shadow.mapSize) || (shadow.mapSize as number) <= 0)
+    out.push(
+      "range",
+      `${path}.shadow.mapSize`,
+      "shadow mapSize must be a positive safe integer",
+      shadow.mapSize,
+    );
+  for (const key of ["bias", "normalBias"] as const)
+    if (typeof shadow[key] !== "number" || !Number.isFinite(shadow[key]))
+      out.push(
+        "range",
+        `${path}.shadow.${key}`,
+        `shadow ${key} must be finite`,
+        shadow[key],
+      );
+  if (
+    typeof shadow.near !== "number" ||
+    !Number.isFinite(shadow.near) ||
+    shadow.near <= 0
+  )
+    out.push(
+      "range",
+      `${path}.shadow.near`,
+      "shadow near must be finite and greater than zero",
+      shadow.near,
+    );
+  if (
+    typeof shadow.far !== "number" ||
+    !Number.isFinite(shadow.far) ||
+    typeof shadow.near !== "number" ||
+    shadow.far <= shadow.near
+  )
+    out.push(
+      "range",
+      `${path}.shadow.far`,
+      "shadow far must be finite and greater than near",
+      shadow.far,
+    );
 };
 
 /**
@@ -345,6 +426,8 @@ const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
     },
     color: light.color ?? { r: 1, g: 1, b: 1, a: null, hex: null },
     intensity: light.intensity,
+    ...(light.castShadow === undefined ? {} : { castShadow: light.castShadow }),
+    ...(light.shadow === undefined ? {} : { shadow: light.shadow }),
   };
   if (type === "point") return { ...base, type, range: light.range ?? 0 };
   if (type === "spot")
@@ -650,6 +733,17 @@ export const stageScene = (
   // placement rules rather than in a module of its own.
   if (staging.fog !== undefined)
     validateFogPlacement(staging.fog, "$input.fog", out);
+  if (staging.environment !== undefined) {
+    const validated = validateSceneEnvironment({
+      environment: staging.environment,
+    });
+    if (validated.success === false)
+      for (const item of validated.violations)
+        out.items.push({
+          ...item,
+          path: item.path.replace("$input", "$input.environment"),
+        });
+  }
 
   staging.cameras.forEach((camera, i) => {
     claim(camera.node, `$input.cameras[${i}].node`, "camera node id");
@@ -797,6 +891,9 @@ export const stageScene = (
       // would change the bytes, and therefore the content digest, of every
       // production that never mentioned fog. Absent already means none.
       ...(staging.fog === undefined ? {} : { fog: staging.fog }),
+      ...(staging.environment === undefined
+        ? {}
+        : { environment: staging.environment }),
     },
     mounts,
   };

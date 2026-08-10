@@ -12,6 +12,7 @@ export * from "./defineShot";
 export * from "./filmGrammar";
 export * from "./forgeCast";
 export * from "./forgeProp";
+export * from "./propPlacement";
 export * from "./scriptGraph";
 export * from "./performShot";
 export * from "./playback";

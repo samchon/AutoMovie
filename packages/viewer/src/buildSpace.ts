@@ -1,4 +1,4 @@
-import { convexHull2D, surfaceHeightAt } from "@automovie/engine";
+import { tessellateSurface } from "@automovie/engine";
 import { IAutoMovieSpace, IAutoMovieSurface } from "@automovie/interface";
 import * as THREE from "three";
 
@@ -26,16 +26,10 @@ const SPACE_COLOR = 0.62;
  * `GridHelper`, which is a `LineSegments` and is hidden before every structural
  * pass.
  *
- * Each surface becomes its convex footprint hull, fan-triangulated, with every
- * vertex lifted to {@link surfaceHeightAt}, so a floor or platform is a flat
- * slab at its anchor height and a ramp is the plane its `anchor → rampTo` axis
- * describes, without a second interpretation of the surface math.
- *
- * A surface stating a `heightfield` height rule is drawn at its hull corners
- * only, so its relief is carried by the feet and the ground queries but not yet
- * by the mesh: the patch reads as the planar quad through those corners. The
- * missing piece is tessellation over the lattice, not a second height rule, and
- * every vertex it will add comes from this same function.
+ * Each surface is tessellated by the engine. Floors and ramps become a convex
+ * fan; heightfields split at their authored lattice and preserve every relief
+ * sample. Every vertex height comes from the same `surfaceHeightAt` query used
+ * by grounding, so semantic ground and visible ground cannot diverge.
  *
  * The hull is counter-clockwise in the XZ plan, whose fan normal points
  * **down**, so the fan is wound in reverse: front faces look up, which is what
@@ -74,25 +68,17 @@ export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {
 const buildSurfaceGeometry = (
   surface: IAutoMovieSurface,
 ): THREE.BufferGeometry | null => {
-  const hull = convexHull2D(surface.polygon);
-  if (hull.length < 3) return null;
-  const positions: number[] = [];
-  for (const point of hull)
-    positions.push(
-      point.x,
-      surfaceHeightAt(surface, point.x, point.z),
-      point.z,
-    );
-  // Reverse fan: the hull is counter-clockwise in (x, z), and a (0, i, i + 1)
-  // fan over that order has a −Y face normal (a floor visible only from below).
-  const indices: number[] = [];
-  for (let i = 1; i + 1 < hull.length; i++) indices.push(0, i + 1, i);
+  const mesh = tessellateSurface(surface);
+  if (mesh === null) return null;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
     "position",
-    new THREE.Float32BufferAttribute(positions, 3),
+    new THREE.Float32BufferAttribute(mesh.positions, 3),
   );
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
+  geometry.setAttribute(
+    "normal",
+    new THREE.Float32BufferAttribute(mesh.normals, 3),
+  );
+  geometry.setIndex(mesh.indices);
   return geometry;
 };

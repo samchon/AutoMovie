@@ -305,15 +305,9 @@ export const test_mcp_production_instances = (): void => {
           latticeSlot.scale3.z <= 2,
       ],
       ["latticePrototype", () => latticeSlot.prototype !== undefined],
-      [
-        "compiledPrototypes",
-        () => compiledLattice.prototypes?.length === 2,
-      ],
+      ["compiledPrototypes", () => compiledLattice.prototypes?.length === 2],
       ["explicitNode", () => explicitSlot.node.endsWith(":baluster-b")],
-      [
-        "explicitRecipe",
-        () => explicitSlot.modelRecipe === alternateRecipe.id,
-      ],
+      ["explicitRecipe", () => explicitSlot.modelRecipe === alternateRecipe.id],
       ["explicitScale", () => explicitSlot.scale3?.y === 2.25],
       ["explicitPalette", () => explicitSlot.palette === "#abcdef"],
       ["explicitTrait", () => explicitSlot.traits.pace === 1.25],
@@ -390,10 +384,11 @@ export const test_mcp_production_instances = (): void => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const fixtureWorld = project.graph().world!;
+    project.setModelRecipe(alternateRecipe);
     project.setWorldDesign({
       ...fixtureWorld,
       routes: [route],
-      instanceSets: [grid, scatter, alongRoute],
+      instanceSets: [grid, scatter, alongRoute, lattice, explicit],
     });
     const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const source = fs.readFileSync(sourcePath, "utf8");
@@ -406,6 +401,8 @@ export const test_mcp_production_instances = (): void => {
   const sampledGrid = context.engine.instanceSlot("civilians", 0);
   const sampledScatter = context.engine.instanceSlot("trees", 0);
   const sampledRoute = context.engine.instanceSlot("roadside", 0);
+  const sampledLattice = context.engine.instanceSlot("facade-windows", 9999);
+  const sampledExplicit = context.engine.instanceSlot("spiral-balusters", 1);
   if (JSON.stringify(sampledGrid) !== ${JSON.stringify(
     JSON.stringify(gridSlots[0]),
   )}) throw new Error("grid instance oracle diverged");
@@ -414,7 +411,13 @@ export const test_mcp_production_instances = (): void => {
   )}) throw new Error("scatter instance oracle diverged");
   if (JSON.stringify(sampledRoute) !== ${JSON.stringify(
     JSON.stringify(routeSlots[0]),
-  )}) throw new Error("route instance oracle diverged");`,
+  )}) throw new Error("route instance oracle diverged");
+  if (JSON.stringify(sampledLattice) !== ${JSON.stringify(
+    JSON.stringify(latticeSlot),
+  )}) throw new Error("lattice instance oracle diverged");
+  if (JSON.stringify(sampledExplicit) !== ${JSON.stringify(
+    JSON.stringify(explicitSlot),
+  )}) throw new Error("explicit instance oracle diverged");`,
     );
     if (injected === source)
       throw new Error("Scaffold source no longer declares a shot builder.");
@@ -438,13 +441,13 @@ export const test_mcp_production_instances = (): void => {
         ["outputSucceeded", () => outputSucceeded],
         [
           "compiledInstanceSetsLength",
-          () => outputSucceeded && compiled.instanceSets.length === 3,
+          () => outputSucceeded && compiled.instanceSets.length === 5,
         ],
         [
           "compiledInstanceSetsFind",
           () =>
             outputSucceeded &&
-            compiled.instanceSets.length === 3 &&
+            compiled.instanceSets.length === 5 &&
             compiled.instanceSets.find((item) => item.id === "civilians")
               ?.count === 100,
         ],
@@ -456,7 +459,11 @@ export const test_mcp_production_instances = (): void => {
         ],
         [
           "compiledModelsSome",
-          () => compiled.models.some((model) => model.id.endsWith(":soloist")),
+          () =>
+            compiled.models.some((model) => model.id.endsWith(":soloist")) &&
+            compiled.models.some((model) =>
+              model.id.endsWith(`:${alternateRecipe.id}`),
+            ),
         ],
       ]),
       {

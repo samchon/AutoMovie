@@ -346,8 +346,11 @@ export const materializeInstanceSlot = (
       explicit === undefined
         ? `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`
         : `instance:${instanceSet.id}:${explicit.id}`,
-    modelRecipe: selectedInstancePrototype(instanceSet, slot, explicit?.prototype)
-      .modelRecipe,
+    modelRecipe: selectedInstancePrototype(
+      instanceSet,
+      slot,
+      explicit?.prototype,
+    ).modelRecipe,
     position,
     facingDeg: instanceSet.facingDeg,
     scale,
@@ -384,11 +387,8 @@ export const materializeInstanceSlot = (
   );
   return {
     ...base,
-    prototype: selectedInstancePrototype(
-      instanceSet,
-      slot,
-      explicit?.prototype,
-    ).id,
+    prototype: selectedInstancePrototype(instanceSet, slot, explicit?.prototype)
+      .id,
     rotation,
     scale3,
     visible:
@@ -574,10 +574,7 @@ export const materializeCompiledInstanceSet = (
   const prototypes =
     instanceSet.prototypes === undefined
       ? undefined
-      : [
-          defaultPrototype,
-          ...instanceSet.prototypes.map(compilePrototype),
-        ];
+      : [defaultPrototype, ...instanceSet.prototypes.map(compilePrototype)];
   const lod = defaultPrototype.lod;
   const core = {
     version: 1 as const,
@@ -600,7 +597,9 @@ export const materializeCompiledInstanceSet = (
     projectionRadius:
       prototypes === undefined
         ? defaultPrototype.projectionRadius
-        : Math.max(...prototypes.map((prototype) => prototype.projectionRadius)),
+        : Math.max(
+            ...prototypes.map((prototype) => prototype.projectionRadius),
+          ),
     chunks,
     lod,
   };
@@ -694,7 +693,18 @@ export const materializeCompiledShot = (props: {
   }
   for (const instanceSet of Object.values(props.instanceSetRuntime ?? {})) {
     const ordinaryPrefix = `instance:${instanceSet.id}:slot:`;
+    const explicitIds = new Set(
+      instanceSet.layout.kind === "explicit"
+        ? instanceSet.layout.transforms.map(
+            (transform) => `instance:${instanceSet.id}:${transform.id}`,
+          )
+        : [],
+    );
     for (const node of source.scene.nodes) {
+      if (explicitIds.has(node.id)) {
+        collisions.push(node.id);
+        continue;
+      }
       if (node.id.startsWith(ordinaryPrefix) === false) continue;
       const suffix = node.id.slice(ordinaryPrefix.length);
       const slot = Number(suffix);
@@ -719,7 +729,9 @@ export const materializeCompiledShot = (props: {
         formation.lod.map((lod) => lod.model),
       ),
       ...Object.values(props.instanceSetRuntime ?? {}).flatMap((instanceSet) =>
-        instanceSet.lod.map((lod) => lod.model),
+        (instanceSet.prototypes ?? [{ lod: instanceSet.lod }]).flatMap(
+          (prototype) => prototype.lod.map((lod) => lod.model),
+        ),
       ),
     ]),
   ]

@@ -2,6 +2,7 @@ import { IAutoMovieStage } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieCamera } from "./IAutoMovieCamera";
 import { IAutoMovieFog } from "./IAutoMovieFog";
 import { IAutoMovieLight } from "./IAutoMovieLight";
+import { IAutoMovieSceneEnvironment } from "./IAutoMovieSceneEnvironment";
 import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
 import { IAutoMovieSpace } from "./IAutoMovieSpace";
 
@@ -32,6 +33,9 @@ export interface IAutoMovieScene {
 
   /** Scene lights. */
   lights: IAutoMovieLight[];
+
+  /** Optional physical render environment; omitted preserves legacy output. */
+  environment?: IAutoMovieSceneEnvironment | null;
 
   /**
    * The scene's space: standable surfaces and walkability (#605). Absent or

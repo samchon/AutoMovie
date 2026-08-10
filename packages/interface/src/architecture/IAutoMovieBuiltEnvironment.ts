@@ -4,8 +4,7 @@ import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { IAutoMovieSurface } from "../scene/IAutoMovieSurface";
 
 /**
- * A complete code-authored building, from one room to a structurally connected
- * group of wings or towers.
+ * A complete code-authored building work containing one or more building units.
  *
  * The record deliberately separates the visible element hierarchy from the
  * logical space hierarchy. A continuous hall may therefore contain named rooms,
@@ -31,6 +30,8 @@ export interface IAutoMovieBuiltEnvironment {
   id: string;
   /** All authored dimensions are measured in metres. */
   units: "meter";
+  /** Independently owned building units inside this work. */
+  buildings: IAutoMovieBuildingUnit[];
   /** Models owned by the environment and cited by visible elements. */
   models: IAutoMovieModel[];
   /**
@@ -52,6 +53,16 @@ export interface IAutoMovieBuiltEnvironment {
   surfaces: IAutoMovieBuiltSurface[];
   /** Surface ids on which locomotion is permitted. */
   walkable: string[];
+}
+
+/** One building unit and the roots of its visible and logical hierarchies. */
+export interface IAutoMovieBuildingUnit {
+  /** Stable building identity within the work. */
+  id: string;
+  /** Root visible element. It must have no element parent. */
+  element: string;
+  /** Root logical space. It must have no logical-space parent. */
+  space: string;
 }
 
 /** One transformable member of the visible building hierarchy. */

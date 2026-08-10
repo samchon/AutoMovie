@@ -17,10 +17,7 @@ import {
 } from "@automovie/viewer";
 import type * as THREE from "three";
 
-import {
-  loadCompiledModel,
-  loadEnvironmentAsset,
-} from "./loadCompiledModel";
+import { loadCompiledModel, loadEnvironmentAsset } from "./loadCompiledModel";
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -50,12 +47,16 @@ export const createCompiledShotRuntime = async (
       ? undefined
       : await loadEnvironmentAsset(compiled.scene.environment.image);
   let cursor = 0;
-  const scene = buildScene(compiled.scene, (modelId) => {
-    const candidate = built[cursor++];
-    if (candidate?.model.id !== modelId)
-      throw new Error(`Scene build order disagrees at model "${modelId}".`);
-    return candidate.object;
-  }, environmentTexture);
+  const scene = buildScene(
+    compiled.scene,
+    (modelId) => {
+      const candidate = built[cursor++];
+      if (candidate?.model.id !== modelId)
+        throw new Error(`Scene build order disagrees at model "${modelId}".`);
+      return candidate.object;
+    },
+    environmentTexture,
+  );
   const nodeObjects = new Map(
     compiled.scene.nodes.map((node, index) => {
       const object = scene.scene.children[index];
@@ -80,11 +81,13 @@ export const createCompiledShotRuntime = async (
   for (const formation of formationObjects) scene.scene.add(formation.object);
   const instancePrototypeModelIds = new Set(
     compiled.instanceSets.flatMap((instanceSet) =>
-      (instanceSet.prototypes ?? [
-        {
-          lod: instanceSet.lod,
-        },
-      ]).flatMap((prototype) => prototype.lod.map((lod) => lod.model)),
+      (
+        instanceSet.prototypes ?? [
+          {
+            lod: instanceSet.lod,
+          },
+        ]
+      ).flatMap((prototype) => prototype.lod.map((lod) => lod.model)),
     ),
   );
   const instancePrototypeObjects = new Map(

@@ -3,6 +3,7 @@ import {
   IAutoMovieProfile,
   IAutoMovieProfileBinding,
 } from "../core/IAutoMovieProfile";
+import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 
 /**
@@ -66,4 +67,61 @@ export interface IAutoMoviePropSpec {
 
   /** Self-declared moving parts, or `null` for a rigid prop. */
   articulation: IAutoMoviePropArticulation | null;
+
+  /**
+   * Optional semantic placement constraints checked beside the staged node.
+   * Omission preserves the original prop contract: the prop is forged and
+   * staged without claiming a building relation or a keep-out volume.
+   */
+  placement?: IAutoMoviePropPlacement;
+}
+
+/**
+ * Stable building relations and model-local keep-out proxies for one prop.
+ *
+ * These references name the architecture graph and other prop specifications;
+ * they never copy their geometry. The engine resolves the complete prop
+ * registry before checking them, so a support relation is independent of
+ * declaration order. A staged set piece supplies the prop's world TRS.
+ *
+ * @author Samchon
+ */
+export interface IAutoMoviePropPlacement {
+  /** Logical building space occupied by the prop, or null outside a building. */
+  space: { environment: string; space: string } | null;
+  /** Building element to which the prop is fixed, or null when free-standing. */
+  host: { environment: string; element: string } | null;
+  /** Surface or another prop affordance supporting this prop. */
+  support:
+    | {
+        kind: "surface";
+        environment: string;
+        surface: string;
+      }
+    | {
+        kind: "prop-affordance";
+        prop: string;
+        affordance: string;
+      }
+    | null;
+  /** Model-local keep-out boxes for doors, drawers, service, and use. */
+  clearance: IAutoMovieClearanceBox[];
+}
+
+/**
+ * One axis-aligned model-local volume another prop may not occupy.
+ *
+ * The validator transforms all eight corners by the prop's full staged TRS and
+ * compares the resulting conservative world bounds against the transformed
+ * visible bounds of every other uniquely staged, valid prop.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieClearanceBox {
+  /** Stable clearance identity. */
+  id: string;
+  /** Local minimum corner. */
+  min: IAutoMovieVector3;
+  /** Local maximum corner, strictly greater on every axis. */
+  max: IAutoMovieVector3;
 }

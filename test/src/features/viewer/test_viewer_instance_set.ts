@@ -9,6 +9,8 @@ import {
 } from "@automovie/mcp";
 import {
   buildInstancedInstanceSet,
+  createImportedModelObject,
+  flattenInstancedObject,
   regenerateInstanceSlot,
 } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
@@ -229,11 +231,7 @@ export const test_viewer_instance_set = (): void => {
     targetMesh?.userData.automovieSlots as number[] | undefined
   )?.indexOf(9_999);
   const matrix = new THREE.Matrix4();
-  if (
-    targetMesh !== undefined &&
-    targetIndex !== undefined &&
-    targetIndex >= 0
-  )
+  if (targetMesh !== undefined && targetIndex !== undefined && targetIndex >= 0)
     targetMesh.getMatrixAt(targetIndex, matrix);
   const translation = new THREE.Vector3();
   const rotation = new THREE.Quaternion();
@@ -273,16 +271,13 @@ export const test_viewer_instance_set = (): void => {
         "targetTranslation",
         () =>
           Math.abs(
-            translation.x -
-              (targetSlot.position.x - compiledFacade.anchor.x),
+            translation.x - (targetSlot.position.x - compiledFacade.anchor.x),
           ) < 1e-5 &&
           Math.abs(
-            translation.y -
-              (targetSlot.position.y - compiledFacade.anchor.y),
+            translation.y - (targetSlot.position.y - compiledFacade.anchor.y),
           ) < 1e-5 &&
           Math.abs(
-            translation.z -
-              (targetSlot.position.z - compiledFacade.anchor.z),
+            translation.z - (targetSlot.position.z - compiledFacade.anchor.z),
           ) < 1e-5,
       ],
     ]),
@@ -296,5 +291,131 @@ export const test_viewer_instance_set = (): void => {
       targetRotation: true,
       targetTranslation: true,
     },
+  );
+
+  const alternateRecipe: IAutoMovieModelRecipe = {
+    ...recipe,
+    id: "alternate-tree",
+    parameters: { shape: "box", width: 1, height: 2, depth: 1 },
+    lod: [],
+  };
+  const multiDesign = {
+    ...design,
+    id: "mixed-prototypes",
+    count: 2,
+    prototypes: [
+      { id: "alternate", modelRecipe: alternateRecipe.id, weight: 1 },
+    ],
+    layout: {
+      kind: "explicit" as const,
+      transforms: [
+        {
+          id: "primary",
+          translation: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        {
+          id: "alternate",
+          translation: { x: 2, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 2, z: 1 },
+          prototype: "alternate",
+        },
+      ],
+    },
+  };
+  const multiRecipes = new Map([
+    [recipe.id, recipe],
+    [alternateRecipe.id, alternateRecipe],
+  ]);
+  const multiModels = new Map(
+    [...materializeProductionModels(multiRecipes).values()].map((model) => [
+      model.id,
+      model,
+    ]),
+  );
+  const builtMulti = buildInstancedInstanceSet({
+    instanceSet: materializeCompiledInstanceSet(
+      multiDesign,
+      { ...world, instanceSets: [multiDesign] },
+      multiRecipes,
+    ),
+    models: multiModels,
+  });
+  TestValidator.equals(
+    "one logical set batches multiple selected prototypes without nodes",
+    namedFacts([
+      ["multiMeshes", () => builtMulti.object.children.length === 2],
+      [
+        "multiPrototypeIds",
+        () =>
+          new Set(
+            builtMulti.object.children.map(
+              (object) => object.userData.automoviePrototype as string,
+            ),
+          ).size === 2,
+      ],
+    ]),
+    { multiMeshes: true, multiPrototypeIds: true },
+  );
+
+  const staticRoot = new THREE.Group();
+  staticRoot.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(1, 2, 3),
+      new THREE.MeshStandardMaterial(),
+    ),
+  );
+  const staticRepresentation = flattenInstancedObject(
+    createImportedModelObject({ object: staticRoot, bones: new Map() }),
+    "static glTF prototype",
+  );
+  TestValidator.predicate(
+    "a loaded rigid static prototype flattens to shared instance geometry",
+    staticRepresentation.geometry.getAttribute("position").count > 0 &&
+      staticRepresentation.materials.length === 1,
+  );
+  const unsupported = (
+    mesh: THREE.Mesh,
+  ): ReturnType<typeof createImportedModelObject> => {
+    const object = new THREE.Group();
+    object.add(mesh);
+    return createImportedModelObject({ object, bones: new Map() });
+  };
+  TestValidator.error("skinned imported prototypes are refused", () =>
+    flattenInstancedObject(
+      unsupported(
+        new THREE.SkinnedMesh(
+          new THREE.BoxGeometry(),
+          new THREE.MeshBasicMaterial(),
+        ),
+      ),
+    ),
+  );
+  const morphed = new THREE.BoxGeometry();
+  morphed.morphAttributes.position = [morphed.getAttribute("position").clone()];
+  TestValidator.error("morphed imported prototypes are refused", () =>
+    flattenInstancedObject(
+      unsupported(new THREE.Mesh(morphed, new THREE.MeshBasicMaterial())),
+    ),
+  );
+  TestValidator.error("multi-material imported meshes are refused", () =>
+    flattenInstancedObject(
+      unsupported(
+        new THREE.Mesh(new THREE.BoxGeometry(), [
+          new THREE.MeshBasicMaterial(),
+          new THREE.MeshBasicMaterial(),
+        ]),
+      ),
+    ),
+  );
+  TestValidator.error("empty imported prototypes are refused", () =>
+    flattenInstancedObject(
+      createImportedModelObject({
+        object: new THREE.Group(),
+        bones: new Map(),
+      }),
+    ),
   );
 };

@@ -154,16 +154,18 @@ export const applyRenderMode = (
     }
   })();
   // A structural pass renders only the subject mesh geometry: hide every
-  // non-mesh renderable first (#1226), suspend the scene's atmosphere, then
-  // build the pass (whose own overlay, if any, is added afterward and stays
-  // visible). Restore reverses all three.
+  // non-mesh renderable first (#1226), suspend the scene's atmosphere and
+  // image lighting, then build the pass (whose own overlay, if any, is added
+  // afterward and stays visible). Restore reverses all four.
   const restoreRenderables = hideNonMeshRenderables(scene);
   const restoreFog = suspendFog(scene);
+  const restoreEnvironment = suspendEnvironment(scene);
   const handle = build();
   return {
     mode,
     restore: once(() => {
       handle.restore();
+      restoreEnvironment();
       restoreFog();
       restoreRenderables();
     }),
@@ -193,6 +195,25 @@ const suspendFog = (scene: THREE.Scene): (() => void) => {
   scene.fog = null;
   return () => {
     scene.fog = fog;
+  };
+};
+
+/**
+ * Remove image lighting and its background while a structural pass renders.
+ *
+ * Normal materials ignore the environment as a light source but would still
+ * render its background. The other structural builders currently install a
+ * black background themselves; central suspension makes that invariant belong
+ * to the pass boundary instead of to each material implementation.
+ */
+const suspendEnvironment = (scene: THREE.Scene): (() => void) => {
+  const environment = scene.environment;
+  const background = scene.background;
+  scene.environment = null;
+  scene.background = new THREE.Color(0x000000);
+  return () => {
+    scene.environment = environment;
+    scene.background = background;
   };
 };
 

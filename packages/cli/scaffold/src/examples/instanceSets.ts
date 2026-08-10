@@ -42,3 +42,84 @@ export const treeScatter = (
     traits: [{ name: "windPhase", min: 0, max: 1 }],
   },
 });
+
+/**
+ * Coffered-ceiling panels authored as one compact 3D lattice.
+ *
+ * Changing `rows`, `columns`, or spacing remains ordinary TypeScript; the
+ * compiler keeps the result as bounded instance chunks instead of expanding ten
+ * thousand repeated panels into scene nodes.
+ */
+export const cofferedCeiling = (
+  modelRecipe: string,
+  rows = 8,
+  columns = 12,
+): IAutoMovieInstanceSetDesign => ({
+  id: "coffered-ceiling",
+  modelRecipe,
+  count: rows * columns,
+  layout: {
+    kind: "lattice",
+    rows,
+    columns,
+    layers: 1,
+    spacing: { x: 1.2, y: 1, z: 1.2 },
+  },
+  anchor: { x: 0, y: 4.8, z: 0 },
+  facingDeg: 0,
+  seed: 1_451,
+  variation: {
+    scale: { min: 1, max: 1 },
+    scale3: {
+      min: { x: 1, y: 0.12, z: 1 },
+      max: { x: 1, y: 0.12, z: 1 },
+    },
+    palette: ["#d8cdbb"],
+    traits: [],
+  },
+});
+
+/**
+ * Spiral-stair balusters with exact per-slot transforms and stable identities.
+ *
+ * This is the escape hatch for sloped facades, vault ribs, railings, historic
+ * ornament, and any other placement law that is clearer as a program than as a
+ * fixed layout vocabulary.
+ */
+export const spiralBalusters = (
+  modelRecipe: string,
+  count = 48,
+): IAutoMovieInstanceSetDesign => ({
+  id: "spiral-balusters",
+  modelRecipe,
+  count,
+  layout: {
+    kind: "explicit",
+    transforms: Array.from({ length: count }, (_, slot) => {
+      const turn = (slot / Math.max(1, count - 1)) * Math.PI * 4;
+      return {
+        id: `baluster-${String(slot).padStart(3, "0")}`,
+        translation: {
+          x: Math.cos(turn) * 2,
+          y: slot * 0.16,
+          z: Math.sin(turn) * 2,
+        },
+        rotation: {
+          x: 0,
+          y: Math.sin(turn / 2),
+          z: 0,
+          w: Math.cos(turn / 2),
+        },
+        scale: { x: 0.12, y: 1.1, z: 0.12 },
+      };
+    }),
+  },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+  seed: 1_457,
+  variation: {
+    scale: { min: 1, max: 1 },
+    palette: ["#363330"],
+    traits: [],
+  },
+});

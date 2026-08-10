@@ -7,7 +7,12 @@ import {
 } from "@automovie/interface";
 import * as THREE from "three";
 
-import { buildGeometry, buildMaterial, defaultMaterial } from "./geometry";
+import {
+  IAutoMovieTextureResolver,
+  buildGeometry,
+  buildMaterial,
+  defaultMaterial,
+} from "./geometry";
 
 /** Expression sink supplied by imported runtimes such as VRM managers. */
 export interface IAutoMovieExpressionTarget {
@@ -65,7 +70,10 @@ export const applyTransform = (
  *
  * @author Samchon
  */
-export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
+export const buildModel = (
+  model: IAutoMovieModel,
+  resolveTexture?: IAutoMovieTextureResolver,
+): IAutoMovieModelObject => {
   const group = new THREE.Group();
   group.name = model.name ?? model.id;
 
@@ -102,7 +110,9 @@ export const buildModel = (model: IAutoMovieModel): IAutoMovieModelObject => {
   }
 
   const materials = new Map(
-    model.materials.map((m) => [m.id, buildMaterial(m)] as const),
+    model.materials.map(
+      (m) => [m.id, buildMaterial(m, resolveTexture)] as const,
+    ),
   );
   for (const part of model.parts) {
     const geo = buildGeometry(part.geometry);

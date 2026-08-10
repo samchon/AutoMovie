@@ -16,6 +16,8 @@ import { IAutoMovieTimingAnchor } from "../harness/IAutoMovieTimingAnchor";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
 import { IAutoMovieShotContract } from "../production/IAutoMovieProductionDesign";
 import { IAutoMovieFog } from "../scene/IAutoMovieFog";
+import { IAutoMovieLightShadow } from "../scene/IAutoMovieLight";
+import { IAutoMovieSceneEnvironment } from "../scene/IAutoMovieSceneEnvironment";
 import { IAutoMovieSpace } from "../scene/IAutoMovieSpace";
 
 /**
@@ -42,6 +44,8 @@ export interface IAutoMovieStage {
    * staged scene did before the field existed.
    */
   fog?: IAutoMovieFog;
+  /** Optional image-lighting, exposure, tone mapping, and shadow policy. */
+  environment?: IAutoMovieSceneEnvironment;
   /** Cameras available to the shot and its alternate coverage takes. */
   cameras: IAutoMovieStageCamera[];
   /** Physical light declarations lowered into the deterministic scene. */
@@ -111,6 +115,10 @@ export interface IAutoMovieStageLight {
   range?: number;
   /** Spot half-angle in degrees, greater than zero and at most 90. */
   coneAngle?: number;
+  /** Whether this source casts shadows. */
+  castShadow?: boolean;
+  /** Optional shadow-map camera and bias tuning. */
+  shadow?: IAutoMovieLightShadow;
 }
 
 /**

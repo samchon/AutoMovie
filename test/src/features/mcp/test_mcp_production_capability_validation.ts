@@ -371,6 +371,104 @@ export const test_mcp_production_capability_validation = (): void => {
     ),
   );
 
+  const invalidEnhancedInstances = codes(
+    graph(model, {
+      ...world,
+      instanceSets: [
+        {
+          ...instances(),
+          id: "bad-lattice",
+          count: 3,
+          layout: {
+            kind: "lattice",
+            rows: 1,
+            columns: 1,
+            layers: 1,
+            spacing: { x: 0, y: 0, z: 0 },
+          },
+          prototypes: [
+            { id: "default", modelRecipe: "missing", weight: 0 },
+            { id: "default", modelRecipe: "missing", weight: 0 },
+          ],
+          variation: {
+            ...instances().variation,
+            scale3: {
+              min: { x: 2, y: 0, z: 2 },
+              max: { x: 1, y: 1, z: 1 },
+            },
+            rotationDeg: {
+              x: { min: 1, max: -1 },
+              y: { min: Number.NaN, max: 0 },
+              z: { min: 0, max: 0 },
+            },
+            visibleProbability: 2,
+          },
+        },
+        {
+          ...instances(),
+          id: "bad-explicit",
+          count: 2,
+          layout: {
+            kind: "explicit",
+            transforms: [
+              {
+                id: "same",
+                translation: { x: 0, y: 0, z: 0 },
+                rotation: { x: 0, y: 0, z: 0, w: 0 },
+                scale: { x: 0, y: 1, z: 1 },
+                prototype: "missing",
+                palette: "invalid",
+                traits: { undeclared: Number.NaN },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+  );
+  TestValidator.equals(
+    "invalid 3D transforms, prototype tables and variation ranges are refused",
+    namedFacts([
+      [
+        "enhancedRange",
+        () => invalidEnhancedInstances.has("design-range-invalid"),
+      ],
+      [
+        "enhancedDuplicate",
+        () => invalidEnhancedInstances.has("design-duplicate-id"),
+      ],
+      [
+        "enhancedReserved",
+        () => invalidEnhancedInstances.has("design-id-reserved"),
+      ],
+      [
+        "enhancedReference",
+        () => invalidEnhancedInstances.has("design-reference-missing"),
+      ],
+      [
+        "enhancedQuaternion",
+        () => invalidEnhancedInstances.has("design-quaternion-invalid"),
+      ],
+      [
+        "enhancedColor",
+        () => invalidEnhancedInstances.has("design-color-invalid"),
+      ],
+      [
+        "enhancedTrait",
+        () => invalidEnhancedInstances.has("design-reference-invalid"),
+      ],
+    ]),
+    {
+      enhancedRange: true,
+      enhancedDuplicate: true,
+      enhancedReserved: true,
+      enhancedReference: true,
+      enhancedQuaternion: true,
+      enhancedColor: true,
+      enhancedTrait: true,
+    },
+  );
+
   const excessiveCount = codes(
     graph(model, {
       ...world,

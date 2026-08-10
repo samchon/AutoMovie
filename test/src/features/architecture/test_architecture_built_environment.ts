@@ -47,6 +47,7 @@ const building = (): IAutoMovieBuiltEnvironment => ({
   version: 1,
   id: "tower",
   units: "meter",
+  buildings: [{ id: "tower-a", element: "root", space: "whole" }],
   models: [{ ...createModel(null), id: "slab" }],
   modelReferences: ["external-stone"],
   elements: [
@@ -357,12 +358,74 @@ export const test_architecture_built_environment = (): void => {
     3,
   );
 
+  const campus = building();
+  campus.elements.push({
+    id: "annex-root",
+    kind: "building",
+    parent: null,
+    transform: transform(-20, 0, 4),
+    model: null,
+    space: "annex-space",
+  });
+  campus.spaces.push({
+    id: "annex-space",
+    kind: "building",
+    parent: null,
+    cells: [],
+  });
+  campus.buildings.push({
+    id: "annex",
+    element: "annex-root",
+    space: "annex-space",
+  });
+  TestValidator.equals(
+    "one work may own independently placed building units",
+    validateBuiltEnvironment({ environment: campus }).success,
+    true,
+  );
+
   const malformed: Array<
     readonly [string, (value: IAutoMovieBuiltEnvironment) => void]
   > = [
     ["blank building id", (value) => (value.id = " ")],
     ["unknown version", (value) => (value.version = 2 as 1)],
     ["unknown units", (value) => (value.units = "foot" as "meter")],
+    ["no building units", (value) => (value.buildings = [])],
+    [
+      "duplicate building unit",
+      (value) => value.buildings.push(value.buildings[0]!),
+    ],
+    ["blank building unit", (value) => (value.buildings[0]!.id = " ")],
+    [
+      "missing building element",
+      (value) => (value.buildings[0]!.element = "missing"),
+    ],
+    [
+      "nested building element",
+      (value) => (value.buildings[0]!.element = "ground-slab"),
+    ],
+    [
+      "missing building space",
+      (value) => (value.buildings[0]!.space = "missing"),
+    ],
+    [
+      "nested building space",
+      (value) => (value.buildings[0]!.space = "ground"),
+    ],
+    [
+      "shared building element root",
+      (value) =>
+        value.buildings.push({ id: "annex", element: "root", space: "upper" }),
+    ],
+    [
+      "shared building space root",
+      (value) =>
+        value.buildings.push({
+          id: "annex",
+          element: "bridge",
+          space: "whole",
+        }),
+    ],
     ["duplicate model", (value) => value.models.push(value.models[0]!)],
     ["invalid owned model", (value) => (value.models[0]!.id = " ")],
     ["blank model reference", (value) => (value.modelReferences[0] = " ")],

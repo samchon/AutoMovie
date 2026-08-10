@@ -16,6 +16,7 @@ import {
   validateBuiltEnvironment,
   validateModel,
   validateMotion,
+  validatePropPlacements,
   validateShotArtifact,
 } from "@automovie/engine";
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
@@ -1075,6 +1076,7 @@ const SANDBOX_BOOTSTRAP = `
     "set",
     "spaces",
     "builtEnvironments",
+    "props",
     "actors",
     "clips",
     "formationMotions",
@@ -1337,6 +1339,437 @@ const SANDBOX_BOOTSTRAP = `
     }
     return [...adjacent];
   };
+  const proceduralCross = (left, right) => ({
+    x: left.y * right.z - left.z * right.y,
+    y: left.z * right.x - left.x * right.z,
+    z: left.x * right.y - left.y * right.x,
+  });
+  const proceduralSubtract = (left, right) => ({
+    x: left.x - right.x,
+    y: left.y - right.y,
+    z: left.z - right.z,
+  });
+  const proceduralNormalize = (value) => {
+    const length = Math.sqrt(
+      value.x * value.x + value.y * value.y + value.z * value.z,
+    );
+    return length === 0
+      ? { x: 0, y: 0, z: 0 }
+      : {
+          x: value.x / length,
+          y: value.y / length,
+          z: value.z / length,
+        };
+  };
+  const proceduralHullCross = (origin, left, right) =>
+    (left.x - origin.x) * (right.z - origin.z) -
+    (left.z - origin.z) * (right.x - origin.x);
+  const proceduralConvexHull2D = (points) => {
+    const seen = new Set();
+    const unique = [];
+    for (const point of points) {
+      const key = String(point.x) + "," + String(point.z);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(point);
+    }
+    if (unique.length <= 2) return unique;
+    const sorted = [...unique].sort(
+      (left, right) => left.x - right.x || left.z - right.z,
+    );
+    const lower = [];
+    for (const point of sorted) {
+      while (
+        lower.length >= 2 &&
+        proceduralHullCross(
+          lower[lower.length - 2],
+          lower[lower.length - 1],
+          point,
+        ) <= 0
+      )
+        lower.pop();
+      lower.push(point);
+    }
+    const upper = [];
+    for (let index = sorted.length - 1; index >= 0; --index) {
+      const point = sorted[index];
+      while (
+        upper.length >= 2 &&
+        proceduralHullCross(
+          upper[upper.length - 2],
+          upper[upper.length - 1],
+          point,
+        ) <= 0
+      )
+        upper.pop();
+      upper.push(point);
+    }
+    lower.pop();
+    upper.pop();
+    const hull = [...lower, ...upper];
+    if (hull.length >= 3) return hull;
+    const result = [];
+    const outputKeys = new Set();
+    for (const point of hull) {
+      const key = String(point.x) + "," + String(point.z);
+      if (outputKeys.has(key)) continue;
+      outputKeys.add(key);
+      result.push(point);
+    }
+    return result;
+  };
+  const proceduralFinitePoint = (point, label) => {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y))
+      throw new Error(label + " must be finite");
+  };
+  const proceduralFiniteVector = (point, label) => {
+    if (![point.x, point.y, point.z].every(Number.isFinite))
+      throw new Error(label + " must be finite");
+  };
+  const proceduralPositive = (value, label) => {
+    if (!Number.isFinite(value) || value <= 0)
+      throw new Error(label + " must be a finite number > 0");
+  };
+  const proceduralSegments = (value, label) => {
+    if (!Number.isSafeInteger(value) || value < 3)
+      throw new Error(label + " must be a safe integer >= 3");
+  };
+  const proceduralProfileHull = (profile) => {
+    profile.forEach((point, index) =>
+      proceduralFinitePoint(point, "profile[" + index + "]"),
+    );
+    const hull = proceduralConvexHull2D(
+      profile.map((point) => ({ x: point.x, y: 0, z: point.y })),
+    ).map((point) => ({ x: point.x, y: point.z }));
+    if (hull.length < 3)
+      throw new Error("profile needs at least three non-collinear points");
+    if (hull.length !== profile.length)
+      throw new Error("profile must be convex and contain no interior points");
+    return hull;
+  };
+  const proceduralNormals = (positions, indices) => {
+    const normals = new Array(positions.length).fill(0);
+    for (let index = 0; index < indices.length; index += 3) {
+      const a = indices[index] * 3;
+      const b = indices[index + 1] * 3;
+      const c = indices[index + 2] * 3;
+      const normal = proceduralCross(
+        {
+          x: positions[b] - positions[a],
+          y: positions[b + 1] - positions[a + 1],
+          z: positions[b + 2] - positions[a + 2],
+        },
+        {
+          x: positions[c] - positions[a],
+          y: positions[c + 1] - positions[a + 1],
+          z: positions[c + 2] - positions[a + 2],
+        },
+      );
+      for (const offset of [a, b, c]) {
+        normals[offset] += normal.x;
+        normals[offset + 1] += normal.y;
+        normals[offset + 2] += normal.z;
+      }
+    }
+    for (let index = 0; index < normals.length; index += 3) {
+      const normal = proceduralNormalize({
+        x: normals[index],
+        y: normals[index + 1],
+        z: normals[index + 2],
+      });
+      normals[index] = normal.x;
+      normals[index + 1] = normal.y;
+      normals[index + 2] = normal.z;
+    }
+    return normals;
+  };
+  const proceduralMesh = (positions, indices) => ({
+    positions,
+    normals: proceduralNormals(positions, indices),
+    uvs: null,
+    indices,
+    skin: null,
+  });
+  const extrudeAutoMovieProfile = (props) => {
+    proceduralPositive(props.depth, "extrusion depth");
+    const profile = proceduralProfileHull(props.profile);
+    const half = props.depth / 2;
+    const positions = profile.flatMap((point) => [point.x, point.y, half]);
+    positions.push(
+      ...profile.flatMap((point) => [point.x, point.y, -half]),
+    );
+    const count = profile.length;
+    const indices = [];
+    for (let index = 1; index + 1 < count; ++index) {
+      indices.push(0, index, index + 1);
+      indices.push(count, count + index + 1, count + index);
+    }
+    for (let index = 0; index < count; ++index) {
+      const next = (index + 1) % count;
+      indices.push(index, count + index, next);
+      indices.push(next, count + index, count + next);
+    }
+    return proceduralMesh(positions, indices);
+  };
+  const revolveAutoMovieProfile = (props) => {
+    if (props.profile.length < 2)
+      throw new Error("revolve profile needs at least two points");
+    proceduralSegments(props.segments, "revolve segments");
+    props.profile.forEach((point, index) => {
+      proceduralFinitePoint(point, "revolve profile[" + index + "]");
+      if (point.x < 0)
+        throw new Error(
+          "revolve profile[" + index + "] radius must be >= 0",
+        );
+    });
+    const positions = [];
+    for (let segment = 0; segment <= props.segments; ++segment) {
+      const angle = (segment / props.segments) * Math.PI * 2;
+      const cosine = Math.cos(angle);
+      const sine = Math.sin(angle);
+      for (const point of props.profile)
+        positions.push(point.x * cosine, point.y, point.x * sine);
+    }
+    const count = props.profile.length;
+    const indices = [];
+    for (let segment = 0; segment < props.segments; ++segment)
+      for (let point = 0; point + 1 < count; ++point) {
+        const current = segment * count + point;
+        const next = current + count;
+        indices.push(current, current + 1, next);
+        indices.push(current + 1, next + 1, next);
+      }
+    return proceduralMesh(positions, indices);
+  };
+  const proceduralTangent = (path, index) => {
+    const from = index === 0 ? path[0] : path[index - 1];
+    const to = index + 1 === path.length ? path[index] : path[index + 1];
+    const delta = proceduralSubtract(to, from);
+    if (
+      Math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z) <=
+      Number.EPSILON
+    )
+      throw new Error("sweep path around point " + index + " is degenerate");
+    return proceduralNormalize(delta);
+  };
+  const sweepAutoMovieProfile = (props) => {
+    const profile = proceduralProfileHull(props.profile);
+    if (props.path.length < 2)
+      throw new Error("sweep path needs at least two points");
+    props.path.forEach((point, index) =>
+      proceduralFiniteVector(point, "sweep path[" + index + "]"),
+    );
+    const positions = [];
+    props.path.forEach((point, index) => {
+      const tangent = proceduralTangent(props.path, index);
+      const guide =
+        Math.abs(tangent.y) < 0.9
+          ? { x: 0, y: 1, z: 0 }
+          : { x: 1, y: 0, z: 0 };
+      const right = proceduralNormalize(proceduralCross(guide, tangent));
+      const up = proceduralNormalize(proceduralCross(tangent, right));
+      for (const profilePoint of profile)
+        positions.push(
+          point.x + right.x * profilePoint.x + up.x * profilePoint.y,
+          point.y + right.y * profilePoint.x + up.y * profilePoint.y,
+          point.z + right.z * profilePoint.x + up.z * profilePoint.y,
+        );
+    });
+    const count = profile.length;
+    const indices = [];
+    for (let ring = 0; ring + 1 < props.path.length; ++ring)
+      for (let point = 0; point < count; ++point) {
+        const nextPoint = (point + 1) % count;
+        const current = ring * count + point;
+        const nextRing = current + count;
+        indices.push(current, nextPoint + ring * count, nextRing);
+        indices.push(
+          nextPoint + ring * count,
+          nextRing + nextPoint - point,
+          nextRing,
+        );
+      }
+    for (let point = 1; point + 1 < count; ++point) {
+      indices.push(0, point + 1, point);
+      const last = (props.path.length - 1) * count;
+      indices.push(last, last + point, last + point + 1);
+    }
+    return proceduralMesh(positions, indices);
+  };
+  const proceduralBox = (width, height, depth) => {
+    const x = width / 2;
+    const y = height / 2;
+    const z = depth / 2;
+    const positions = [];
+    const normals = [];
+    const indices = [];
+    const faces = [
+      [[x, -y, -z, x, y, -z, x, y, z, x, -y, z], [1, 0, 0]],
+      [[-x, -y, z, -x, y, z, -x, y, -z, -x, -y, -z], [-1, 0, 0]],
+      [[-x, y, -z, -x, y, z, x, y, z, x, y, -z], [0, 1, 0]],
+      [[-x, -y, z, -x, -y, -z, x, -y, -z, x, -y, z], [0, -1, 0]],
+      [[-x, -y, z, x, -y, z, x, y, z, -x, y, z], [0, 0, 1]],
+      [[x, -y, -z, -x, -y, -z, -x, y, -z, x, y, -z], [0, 0, -1]],
+    ];
+    for (const [vertices, normal] of faces) {
+      const base = positions.length / 3;
+      for (let index = 0; index < 4; ++index) {
+        positions.push(
+          vertices[index * 3],
+          vertices[index * 3 + 1],
+          vertices[index * 3 + 2],
+        );
+        normals.push(normal[0], normal[1], normal[2]);
+      }
+      indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+    return { positions, normals, uvs: null, indices, skin: null };
+  };
+  const proceduralTranslateMesh = (mesh, translation) => ({
+    ...mesh,
+    positions: mesh.positions.map((value, index) => {
+      const axis = index % 3;
+      return (
+        value +
+        (axis === 0
+          ? translation.x
+          : axis === 1
+            ? translation.y
+            : translation.z)
+      );
+    }),
+  });
+  const mergeAutoMovieMeshes = (meshes) => {
+    if (meshes.some((mesh) => mesh.skin !== null))
+      throw new Error("procedural rigid-mesh merge does not accept skinning");
+    const positions = [];
+    const normals = [];
+    const indices = [];
+    const keepNormals = meshes.every((mesh) => mesh.normals !== null);
+    const keepUvs = meshes.every((mesh) => mesh.uvs !== null);
+    const uvs = [];
+    for (const mesh of meshes) {
+      const base = positions.length / 3;
+      const count = mesh.positions.length / 3;
+      positions.push(...mesh.positions);
+      if (keepNormals) normals.push(...mesh.normals);
+      if (keepUvs) uvs.push(...mesh.uvs);
+      const sourceIndices =
+        mesh.indices ?? Array.from({ length: count }, (_, index) => index);
+      indices.push(...sourceIndices.map((index) => index + base));
+    }
+    return {
+      positions,
+      normals: keepNormals ? normals : null,
+      uvs: keepUvs ? uvs : null,
+      indices,
+      skin: null,
+    };
+  };
+  const buildAutoMovieWall = (props) => {
+    proceduralPositive(props.width, "wall width");
+    proceduralPositive(props.height, "wall height");
+    proceduralPositive(props.depth, "wall depth");
+    const ids = new Set();
+    props.openings.forEach((opening, index) => {
+      if (opening.id.trim().length === 0)
+        throw new Error("wall opening[" + index + "] id must be non-empty");
+      if (ids.has(opening.id))
+        throw new Error(
+          'wall opening id "' + opening.id + '" must be unique',
+        );
+      ids.add(opening.id);
+      proceduralFinitePoint(opening, "wall opening[" + index + "]");
+      proceduralPositive(
+        opening.width,
+        "wall opening[" + index + "] width",
+      );
+      proceduralPositive(
+        opening.height,
+        "wall opening[" + index + "] height",
+      );
+      if (
+        opening.x < 0 ||
+        opening.y < 0 ||
+        opening.x + opening.width > props.width ||
+        opening.y + opening.height > props.height
+      )
+        throw new Error(
+          'wall opening "' + opening.id + '" must stay inside the wall',
+        );
+    });
+    for (let left = 0; left < props.openings.length; ++left)
+      for (let right = left + 1; right < props.openings.length; ++right) {
+        const a = props.openings[left];
+        const b = props.openings[right];
+        if (
+          a.x < b.x + b.width &&
+          a.x + a.width > b.x &&
+          a.y < b.y + b.height &&
+          a.y + a.height > b.y
+        )
+          throw new Error(
+            'wall openings "' +
+              a.id +
+              '" and "' +
+              b.id +
+              '" overlap',
+          );
+      }
+    const xs = [
+      ...new Set([
+        0,
+        props.width,
+        ...props.openings.flatMap((opening) => [
+          opening.x,
+          opening.x + opening.width,
+        ]),
+      ]),
+    ].sort((left, right) => left - right);
+    const ys = [
+      ...new Set([
+        0,
+        props.height,
+        ...props.openings.flatMap((opening) => [
+          opening.y,
+          opening.y + opening.height,
+        ]),
+      ]),
+    ].sort((left, right) => left - right);
+    const cells = [];
+    for (let x = 0; x + 1 < xs.length; ++x)
+      for (let y = 0; y + 1 < ys.length; ++y) {
+        const centerX = (xs[x] + xs[x + 1]) / 2;
+        const centerY = (ys[y] + ys[y + 1]) / 2;
+        if (
+          props.openings.some(
+            (opening) =>
+              centerX > opening.x &&
+              centerX < opening.x + opening.width &&
+              centerY > opening.y &&
+              centerY < opening.y + opening.height,
+          )
+        )
+          continue;
+        cells.push(
+          proceduralTranslateMesh(
+            proceduralBox(
+              xs[x + 1] - xs[x],
+              ys[y + 1] - ys[y],
+              props.depth,
+            ),
+            {
+              x: centerX - props.width / 2,
+              y: centerY - props.height / 2,
+              z: 0,
+            },
+          ),
+        );
+      }
+    if (cells.length === 0)
+      throw new Error("wall openings remove the entire wall");
+    return mergeAutoMovieMeshes(cells);
+  };
   // A terrain subject answers height at a point by asking the engine rather
   // than reading the record itself, which is right for a level patch and wrong
   // the day it slopes. The arithmetic is pure and takes the record it is given,
@@ -1457,6 +1890,11 @@ const SANDBOX_BOOTSTRAP = `
       builtEnvironmentAdjacentSpaces: Object.freeze(
         builtEnvironmentAdjacentSpaces,
       ),
+      extrudeAutoMovieProfile: Object.freeze(extrudeAutoMovieProfile),
+      revolveAutoMovieProfile: Object.freeze(revolveAutoMovieProfile),
+      sweepAutoMovieProfile: Object.freeze(sweepAutoMovieProfile),
+      buildAutoMovieWall: Object.freeze(buildAutoMovieWall),
+      mergeAutoMovieMeshes: Object.freeze(mergeAutoMovieMeshes),
       worldSurfaceHeight: Object.freeze(worldSurfaceHeight),
     }),
   };
@@ -1642,21 +2080,48 @@ const SANDBOX_BOOTSTRAP = `
           " is unavailable.",
       );
     const layout = instanceSet.layout;
-    let x;
-    let z;
+    let point;
     if (layout.kind === "grid") {
       const row = Math.floor(slot / layout.columns);
       const column = slot % layout.columns;
-      x = (column - (layout.columns - 1) / 2) * layout.spacing.x;
-      z = row * layout.spacing.z;
+      point = {
+        x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+        y: 0,
+        z: row * layout.spacing.z,
+      };
     } else if (layout.kind === "scatter") {
       const radius =
         Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
         layout.radius;
       const angle =
         seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
-      x = Math.cos(angle) * radius;
-      z = Math.sin(angle) * radius;
+      point = {
+        x: Math.cos(angle) * radius,
+        y: 0,
+        z: Math.sin(angle) * radius,
+      };
+    } else if (layout.kind === "lattice") {
+      const perLayer = layout.rows * layout.columns;
+      const layer = Math.floor(slot / perLayer);
+      const within = slot % perLayer;
+      const row = Math.floor(within / layout.columns);
+      const column = within % layout.columns;
+      point = {
+        x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+        y: layer * layout.spacing.y,
+        z: row * layout.spacing.z,
+      };
+    } else if (layout.kind === "explicit") {
+      const transform = layout.transforms[slot];
+      if (transform === undefined)
+        throw new Error(
+          'Instance set "' +
+            instanceSet.id +
+            '" slot ' +
+            slot +
+            " has no explicit transform.",
+        );
+      point = transform.translation;
     } else {
       const route = instanceSet.route;
       if (route === null || route.waypoints.length < 2)
@@ -1679,6 +2144,14 @@ const SANDBOX_BOOTSTRAP = `
         (sum, segment) => sum + segment.length,
         0,
       );
+      if (Number.isFinite(total) === false || total <= 0)
+        throw new RangeError(
+          'Instance set "' +
+            instanceSet.id +
+            '" route "' +
+            layout.route +
+            '" must have finite non-zero length.',
+        );
       let remaining = ((slot + 0.5) / instanceSet.count) * total;
       let segment = segments[segments.length - 1];
       for (const candidate of segments) {
@@ -1696,14 +2169,17 @@ const SANDBOX_BOOTSTRAP = `
       const jitter =
         (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
         layout.lateralJitter;
-      x =
-        segment.left.x +
-        tangentX * ratio -
-        (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter);
-      z =
-        segment.left.z +
-        tangentZ * ratio +
-        (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter);
+      point = {
+        x:
+          segment.left.x +
+          tangentX * ratio -
+          (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter),
+        y: 0,
+        z:
+          segment.left.z +
+          tangentZ * ratio +
+          (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter),
+      };
     }
     const radians = (instanceSet.facingDeg * Math.PI) / 180;
     const cosine = Math.cos(radians);
@@ -1723,41 +2199,231 @@ const SANDBOX_BOOTSTRAP = `
           instanceSet.variation.palette.length,
       ),
     );
-    const traits = {};
-    instanceSet.variation.traits.forEach((trait, index) => {
-      const ratio = seededValue(
-        instanceSet.seed,
-        slot,
-        index,
-        0x74726169,
+    const position =
+      layout.kind === "along-route"
+        ? { x: point.x, y: instanceSet.anchor.y, z: point.z }
+        : {
+            x:
+              instanceSet.anchor.x +
+              point.x * cosine +
+              point.z * sine,
+            y: instanceSet.anchor.y + point.y,
+            z:
+              instanceSet.anchor.z -
+              point.x * sine +
+              point.z * cosine,
+          };
+    const traits = Object.fromEntries(
+      instanceSet.variation.traits.map((trait, index) => {
+        const ratio = seededValue(
+          instanceSet.seed,
+          slot,
+          index,
+          0x74726169,
+        );
+        return [
+          trait.name,
+          trait.min * (1 - ratio) + trait.max * ratio,
+        ];
+      }),
+    );
+    const explicit =
+      layout.kind === "explicit" ? layout.transforms[slot] : undefined;
+    const palette =
+      explicit?.palette ?? instanceSet.variation.palette[paletteIndex];
+    if (
+      [position.x, position.y, position.z, scale, ...values(traits)].some(
+        (value) => Number.isFinite(value) === false,
+      ) ||
+      palette === undefined
+    )
+      throw new RangeError(
+        'Instance set "' +
+          instanceSet.id +
+          '" slot ' +
+          slot +
+          " derived non-finite variation or an empty palette.",
       );
-      Object.defineProperty(traits, trait.name, {
-        configurable: true,
-        enumerable: true,
-        value: trait.min * (1 - ratio) + trait.max * ratio,
-        writable: true,
-      });
-    });
-    return freeze({
+    const choices =
+      instanceSet.prototypes ?? [
+        {
+          id: "default",
+          modelRecipe: instanceSet.modelRecipe,
+          weight: 1,
+        },
+      ];
+    const selectPrototype = () => {
+      if (explicit?.prototype !== undefined) {
+        const selected = choices.find(
+          (choice) => choice.id === explicit.prototype,
+        );
+        if (selected === undefined)
+          throw new Error(
+            'Instance set "' +
+              instanceSet.id +
+              '" slot ' +
+              slot +
+              ' references missing prototype "' +
+              explicit.prototype +
+              '".',
+          );
+        return selected;
+      }
+      const total = choices.reduce(
+        (sum, choice) => sum + choice.weight,
+        0,
+      );
+      let sample =
+        seededValue(instanceSet.seed, slot, 0x70726f74) * total;
+      for (const choice of choices) {
+        if (sample < choice.weight) return choice;
+        sample -= choice.weight;
+      }
+      return choices[choices.length - 1];
+    };
+    const selectedPrototype = selectPrototype();
+    const legacy =
+      instanceSet.prototypes === undefined &&
+      layout.kind !== "lattice" &&
+      layout.kind !== "explicit" &&
+      instanceSet.variation.scale3 === undefined &&
+      instanceSet.variation.rotationDeg === undefined &&
+      instanceSet.variation.visibleProbability === undefined;
+    const base = {
       slot,
       node:
-        "instance:" +
-        instanceSet.id +
-        ":slot:" +
-        String(slot).padStart(6, "0"),
-      modelRecipe: instanceSet.modelRecipe,
-      position:
-        layout.kind === "along-route"
-          ? { x, y: instanceSet.anchor.y, z }
-          : {
-              x: instanceSet.anchor.x + x * cosine + z * sine,
-              y: instanceSet.anchor.y,
-              z: instanceSet.anchor.z - x * sine + z * cosine,
-            },
+        explicit === undefined
+          ? "instance:" +
+            instanceSet.id +
+            ":slot:" +
+            String(slot).padStart(6, "0")
+          : "instance:" + instanceSet.id + ":" + explicit.id,
+      modelRecipe: selectedPrototype.modelRecipe,
+      position,
       facingDeg: instanceSet.facingDeg,
       scale,
-      palette: instanceSet.variation.palette[paletteIndex],
-      traits,
+      palette,
+      traits: { ...traits, ...explicit?.traits },
+    };
+    if (legacy) return freeze(base);
+    const scale3 =
+      explicit?.scale ??
+      (instanceSet.variation.scale3 === undefined
+        ? { x: scale, y: scale, z: scale }
+        : {
+            x:
+              instanceSet.variation.scale3.min.x *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637878)) +
+              instanceSet.variation.scale3.max.x *
+                seededValue(instanceSet.seed, slot, 0x73637878),
+            y:
+              instanceSet.variation.scale3.min.y *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637979)) +
+              instanceSet.variation.scale3.max.y *
+                seededValue(instanceSet.seed, slot, 0x73637979),
+            z:
+              instanceSet.variation.scale3.min.z *
+                (1 - seededValue(instanceSet.seed, slot, 0x73637a7a)) +
+              instanceSet.variation.scale3.max.z *
+                seededValue(instanceSet.seed, slot, 0x73637a7a),
+          });
+    const quaternionMultiply = (left, right) => ({
+      x:
+        left.w * right.x +
+        left.x * right.w +
+        left.y * right.z -
+        left.z * right.y,
+      y:
+        left.w * right.y -
+        left.x * right.z +
+        left.y * right.w +
+        left.z * right.x,
+      z:
+        left.w * right.z +
+        left.x * right.y -
+        left.y * right.x +
+        left.z * right.w,
+      w:
+        left.w * right.w -
+        left.x * right.x -
+        left.y * right.y -
+        left.z * right.z,
+    });
+    const quaternionAxisAngle = (axis, angle) => {
+      const length = Math.sqrt(
+        axis.x * axis.x + axis.y * axis.y + axis.z * axis.z,
+      );
+      if (length === 0) return { x: 0, y: 0, z: 0, w: 1 };
+      const half = (angle * Math.PI) / 360;
+      const scalar = Math.sin(half) / length;
+      return {
+        x: axis.x * scalar,
+        y: axis.y * scalar,
+        z: axis.z * scalar,
+        w: Math.cos(half),
+      };
+    };
+    const ranges = instanceSet.variation.rotationDeg;
+    const sampledRotation =
+      ranges === undefined
+        ? { x: 0, y: 0, z: 0, w: 1 }
+        : [
+            [
+              { x: 1, y: 0, z: 0 },
+              ranges.x.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f7478)) +
+                ranges.x.max *
+                  seededValue(instanceSet.seed, slot, 0x726f7478),
+            ],
+            [
+              { x: 0, y: 1, z: 0 },
+              ranges.y.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f7479)) +
+                ranges.y.max *
+                  seededValue(instanceSet.seed, slot, 0x726f7479),
+            ],
+            [
+              { x: 0, y: 0, z: 1 },
+              ranges.z.min *
+                  (1 - seededValue(instanceSet.seed, slot, 0x726f747a)) +
+                ranges.z.max *
+                  seededValue(instanceSet.seed, slot, 0x726f747a),
+            ],
+          ]
+            .map(([axis, angle]) => quaternionAxisAngle(axis, angle))
+            .reduce(
+              (rotation, next) => quaternionMultiply(rotation, next),
+              { x: 0, y: 0, z: 0, w: 1 },
+            );
+    const combinedRotation = quaternionMultiply(
+      quaternionAxisAngle({ x: 0, y: 1, z: 0 }, instanceSet.facingDeg),
+      explicit?.rotation ?? sampledRotation,
+    );
+    const rotationLength = Math.sqrt(
+      combinedRotation.x * combinedRotation.x +
+        combinedRotation.y * combinedRotation.y +
+        combinedRotation.z * combinedRotation.z +
+        combinedRotation.w * combinedRotation.w,
+    );
+    const rotation =
+      rotationLength === 0
+        ? { x: 0, y: 0, z: 0, w: 1 }
+        : {
+            x: combinedRotation.x / rotationLength,
+            y: combinedRotation.y / rotationLength,
+            z: combinedRotation.z / rotationLength,
+            w: combinedRotation.w / rotationLength,
+          };
+    return freeze({
+      ...base,
+      prototype: selectedPrototype.id,
+      rotation,
+      scale3,
+      visible:
+        explicit?.visible ??
+        (instanceSet.variation.visibleProbability === undefined ||
+          seededValue(instanceSet.seed, slot, 0x76697369) <
+            instanceSet.variation.visibleProbability),
     });
   };
   const insidePolygon = (point, polygon) => {
@@ -2064,6 +2730,17 @@ const sourceRuntimeOf = (props: {
         );
     });
   });
+
+  const propPlacement = validatePropPlacements({
+    props: props.program.props ?? [],
+    set: props.program.stage.set ?? [],
+    builtEnvironments: props.program.builtEnvironments ?? [],
+  });
+  if (propPlacement.success === false)
+    for (const violation of propPlacement.violations)
+      report(
+        `${violation.path} ${violation.expected}. Correct the code-authored prop registry or staged placement before compiling the shot.`,
+      );
 
   const available = new Set([
     ...Object.keys(runtimeModels),
@@ -5717,13 +6394,26 @@ const refuseUnsupportedExternalInstancing = (
         `Formation "${formation.id}" selects a registered external model for anonymous members, but imported-mesh instancing is not yet supported. Use generated anonymous tiers or named hero nodes.`,
       );
   }
-  for (const instanceSet of graph.world?.instanceSets ?? [])
-    if (externalModels.has(instanceSet.modelRecipe))
-      diagnostic(
-        "asset-model-instancing-unsupported",
-        instanceSet.id,
-        `Instance set "${instanceSet.id}" selects registered external model "${instanceSet.modelRecipe}", but imported-mesh instancing is not yet supported. Use a generated recipe or named nodes.`,
-      );
+  for (const instanceSet of graph.world?.instanceSets ?? []) {
+    const recipes = [
+      instanceSet.modelRecipe,
+      ...(instanceSet.prototypes ?? []).map(
+        (prototype) => prototype.modelRecipe,
+      ),
+    ].flatMap((recipe) => [
+      recipe,
+      ...(graph.models.get(recipe)?.lod.map((lod) => lod.recipe) ?? []),
+    ]);
+    for (const recipe of new Set(recipes)) {
+      const external = externalModels.get(recipe);
+      if (external !== undefined && external.profile !== "gltf-static-v1")
+        diagnostic(
+          "asset-model-instancing-unsupported",
+          instanceSet.id,
+          `Instance set "${instanceSet.id}" selects external model "${recipe}" with profile "${external.profile}". General instancing accepts only rigid gltf-static-v1 prototypes; use named nodes for skinned, morphed, or animated assets.`,
+        );
+    }
+  }
 };
 
 const validateCompiledAssetUses = (

@@ -8,6 +8,7 @@ export * from "./applyLightMotion";
 export * from "./applyDissolve";
 export * from "./buildSpace";
 export * from "./buildScene";
+export * from "./sceneEnvironment";
 export * from "./AutoMoviePlayer";
 export * from "./mount";
 export * from "./captureSize";

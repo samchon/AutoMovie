@@ -103,6 +103,7 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
       version: 1,
       id: this.id,
       units: "meter",
+      buildings: [{ id: "main", element: "root", space: "whole-building" }],
       models: [boxModel()],
       modelReferences: [],
       elements: [
