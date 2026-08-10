@@ -56,12 +56,19 @@ const makeSpace = (
  *    the 0 m fallback off every footprint.
  * 2. Omitting `space` composes `space: null`, the scalar ground plane the engine
  *    assumed before spaces existed: an absent ground is stated, not implied.
- * 3. The gates fire at the submitted field: a concave footprint, a degenerate ramp
- *    axis, and a walkable id resolving to no surface are each refused under
- *    `$input.space.*` in one round.
- * 4. The negative twin: the same footprint with its notch vertex moved back onto
- *    the hull boundary stages clean, so the convexity gate is not an over-match
- *    on any four-point polygon.
+ * 3. The gates fire at the submitted field: a self-crossing footprint, a
+ *    degenerate ramp axis, and a walkable id resolving to no surface are each
+ *    refused under `$input.space.*` in one round. The footprint witness used to
+ *    be a concave one, which #1868 made legal — `surfaceContains` classifies
+ *    against the authored ring now, so a notch is a shape rather than something
+ *    the validator has to forbid on the query's behalf. A ring that crosses
+ *    itself is what the footprint gate still refuses, because two lobes meeting
+ *    at a crossing leave no inside for a foot to be on.
+ * 4. The negative twin, and it is the exact inverse of what this case pinned
+ *    before: the concave quadrilateral one property away from that bowtie —
+ *    same four corners, one of them pulled inside instead of across — stages
+ *    clean. So the footprint gate refuses a ring with no inside rather than
+ *    every four-point polygon that is not convex.
  */
 export const test_film_stage_scene_space = (): void => {
   const staged = stageScene(
@@ -114,13 +121,13 @@ export const test_film_stage_scene_space = (): void => {
           {
             id: "floor",
             kind: "floor",
-            // (0, 0) sits strictly inside the hull of the other three: the
-            // notch the ground query would silently fill.
+            // The first edge and the third cross each other, so the ring
+            // encloses two lobes that meet at a point and no region at all.
             polygon: [
               { x: -2, y: 0, z: -2 },
+              { x: 2, y: 0, z: 2 },
               { x: 2, y: 0, z: -2 },
-              { x: 0, y: 0, z: 2 },
-              { x: 0, y: 0, z: 0 },
+              { x: -2, y: 0, z: 3 },
             ],
             anchor: { x: 0, y: 0, z: 0 },
             rampTo: null,
@@ -173,8 +180,9 @@ export const test_film_stage_scene_space = (): void => {
     },
   );
 
-  // 4. the negative twin: the notch vertex pulled back onto the hull edge.
-  const convex = stageScene(
+  // 4. the negative twin: the same corners, with the fourth pulled inside the
+  // ring instead of across it. A notch is a shape the ground query answers for.
+  const notched = stageScene(
     makeScriptWrite(),
     makeStagingWrite({
       space: makeSpace({
@@ -186,7 +194,7 @@ export const test_film_stage_scene_space = (): void => {
               { x: -2, y: 0, z: -2 },
               { x: 2, y: 0, z: -2 },
               { x: 0, y: 0, z: 2 },
-              { x: 0, y: 0, z: -2 },
+              { x: 0, y: 0, z: 0 },
             ],
             anchor: { x: 0, y: 0, z: 0 },
             rampTo: null,
@@ -197,8 +205,8 @@ export const test_film_stage_scene_space = (): void => {
     }),
   );
   TestValidator.equals(
-    "a collinear-on-edge vertex is not a concave notch",
-    convex.success,
+    "a notch is a footprint, not a defect",
+    notched.success,
     true,
   );
 };
