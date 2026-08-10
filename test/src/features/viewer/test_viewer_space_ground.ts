@@ -118,10 +118,13 @@ export const test_viewer_space_ground = (): void => {
       },
     ]),
   );
+  // A node group now carries its own scene id, so this reads the ordering it
+  // always meant to pin and additionally proves the node is addressable by
+  // name rather than only by its position among the children.
   TestValidator.equals(
     "the space group is appended after the nodes and lights",
     floor.scene.children.map((child) => child.name),
-    ["", "", SPACE_GROUP_NAME],
+    ["node-a", "", SPACE_GROUP_NAME],
   );
   const ground = floor.scene.children[2]!;
   TestValidator.equals(
