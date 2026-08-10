@@ -4,11 +4,26 @@ import {
   extrudeAutoMovieRegion,
   inspectAutoMovieMeshTopology,
   validateMeshTopology,
+  validateModel,
 } from "@automovie/engine";
-import { IAutoMovieMesh } from "@automovie/interface";
+import { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { makeProp } from "../internal/fixtures";
 import { namedFacts, nclose, throwsError } from "../internal/predicates";
+
+/** One prop model carrying nothing but this mesh, as a model would hold it. */
+const asPart = (mesh: IAutoMovieMesh): IAutoMovieModel =>
+  makeProp([
+    {
+      id: "member",
+      name: null,
+      geometry: { type: "mesh", mesh },
+      material: null,
+      attachedBone: null,
+      transform: null,
+    },
+  ]);
 
 const ell = [
   { x: 0, y: 0 },
@@ -26,7 +41,14 @@ const box = (half: number): Array<{ x: number; y: number }> => [
   { x: -half, y: half },
 ];
 
-/** A closed solid measured two ways: by its own topology and by the validator. */
+/**
+ * A closed solid measured three ways: by this kernel's own arithmetic, by the
+ * engine's independent verdict on the same surface, and by a model holding it.
+ *
+ * The last one is what makes the metric UV atlas a claim rather than an
+ * assumption: a builder whose output no model can carry is a builder whose
+ * output never reaches a frame, however watertight it measures.
+ */
 const closes = (mesh: IAutoMovieMesh, volume: number): boolean => {
   const topology = inspectAutoMovieMeshTopology(mesh);
   return (
@@ -34,6 +56,7 @@ const closes = (mesh: IAutoMovieMesh, volume: number): boolean => {
     topology.degenerate === 0 &&
     topology.nonFinite === 0 &&
     validateMeshTopology({ mesh, expectClosed: true }).success &&
+    validateModel({ model: asPart(mesh) }).success &&
     nclose(topology.volume, volume, 1e-12)
   );
 };
