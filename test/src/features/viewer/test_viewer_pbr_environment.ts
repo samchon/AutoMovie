@@ -71,7 +71,35 @@ const materialRefusedAt = (
   path: string,
 ): boolean => hasViolation(validateMaterial(patch), kind, path);
 
-/** PBR texture sampling and render environment reach their Three.js consumers. */
+/**
+ * A declared PBR finish and render environment reach Three.js unchanged, and a
+ * malformed one never reaches it at all.
+ *
+ * Scenarios:
+ *
+ * 1. A material declaring all five maps, a UV transform, a sampler, alpha coverage
+ *    and the physical lobes lowers every one of them onto
+ *    `MeshPhysicalMaterial`, and the legacy shapes beside it (a bare asset id,
+ *    an unresolvable binding, no resolver at all, omitted `alphaMode`, omitted
+ *    cutoff) keep the output they had before textures existed.
+ * 2. Every malformed binding, sampler value, UV set, transform component and
+ *    contradictory alpha/transmission pairing is refused by `validateModel` at
+ *    the authored path, while the one-away twins that must NOT fire (a negative
+ *    normal scale, opaque transmission, legacy opacity blending) stay valid.
+ * 3. Generated geometry uploads exactly one UV set, the only set a binding's
+ *    `texCoord` may address.
+ * 4. Image lighting mounts as both environment and background, decodes on the
+ *    image's own storage (8-bit sRGB, float linear), is suspended and restored
+ *    exactly by a structural pass, and falls back to a solid or transparent
+ *    background when no image resolves.
+ * 5. The renderer's curve, exposure and shadow policy follow the declared
+ *    precedence: a scene environment owns them, the delivery curve applies only
+ *    where no environment does, a structural pass bypasses both, a shadowless
+ *    scene turns a shadow-casting host off, and every apply restores
+ *    idempotently.
+ * 6. A light's shadow settings reach its shadow camera and map, and a light that
+ *    declares none stays at the legacy no-shadow default.
+ */
 export const test_viewer_pbr_environment = (): void => {
   const base = createModel().materials[0]!;
   const material: IAutoMovieMaterial = {
@@ -663,6 +691,7 @@ export const test_viewer_pbr_environment = (): void => {
 
   const scene = new THREE.Scene();
   const texture = new THREE.Texture();
+  const ldrVersion = texture.version;
   applySceneEnvironment(scene, ENVIRONMENT, texture);
   TestValidator.predicate(
     "IBL image configures scene environment and background",
@@ -672,6 +701,36 @@ export const test_viewer_pbr_environment = (): void => {
       nclose(scene.environmentRotation.y, Math.PI / 2) &&
       nclose(scene.environmentIntensity, 0.75),
   );
+  // An 8-bit sky stores sRGB-encoded texels and a float one stores linear
+  // radiance, so a decoding left at the loader's default lights the room off a
+  // radiance the image never held. The storage is the fact that decides it.
+  const hdr = new THREE.DataTexture(
+    new Uint16Array(4),
+    1,
+    1,
+    THREE.RGBAFormat,
+    THREE.HalfFloatType,
+  );
+  const hdrVersion = hdr.version;
+  applySceneEnvironment(scene, ENVIRONMENT, hdr);
+  TestValidator.equals(
+    "environment decoding follows the image's own storage",
+    namedFacts([
+      ["ldrSrgb", () => texture.colorSpace === THREE.SRGBColorSpace],
+      ["ldrUploaded", () => texture.version > ldrVersion],
+      ["hdrLinear", () => hdr.colorSpace === THREE.LinearSRGBColorSpace],
+      ["hdrUploaded", () => hdr.version > hdrVersion],
+      ["hdrMounted", () => scene.environment === hdr],
+    ]),
+    {
+      ldrSrgb: true,
+      ldrUploaded: true,
+      hdrLinear: true,
+      hdrUploaded: true,
+      hdrMounted: true,
+    },
+  );
+  applySceneEnvironment(scene, ENVIRONMENT, texture);
   const normalPass = applyRenderMode(scene, "normal");
   TestValidator.predicate(
     "structural mode suspends and restores image lighting independently",
@@ -815,6 +874,25 @@ export const test_viewer_pbr_environment = (): void => {
     THREE.VSMShadowMap,
   );
   vsm.restore();
+  // A scene that declares shadows off must turn them off, not merely decline to
+  // turn them on: one renderer draws every shot on the page, so "leave it
+  // alone" would inherit whatever the previous scene asked for.
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  const shadowless = applyRendererEnvironment(
+    renderer,
+    { ...ENVIRONMENT, shadows: { enabled: false, type: "vsm" } },
+    "beauty",
+  );
+  const suspended = !renderer.shadowMap.enabled;
+  shadowless.restore();
+  TestValidator.equals(
+    "a shadowless scene overrides a shadow-casting host and gives it back",
+    [suspended, renderer.shadowMap.enabled, renderer.shadowMap.type],
+    [true, true, THREE.PCFShadowMap],
+  );
+  renderer.shadowMap.enabled = false;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
 
   const shadowed = buildLight({
     id: "sun",

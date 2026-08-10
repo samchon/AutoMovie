@@ -68,6 +68,17 @@ export const applyTransform = (
  *
  * The returned `bones` map is what {@link applyPose} drives.
  *
+ * `resolveTexture` is how a declared PBR finish gets its pixels, and it is the
+ * host's to supply because this package performs no I/O: the caller decodes the
+ * model's bindings first (an `AutoMovieTextureCache` primes them in one pass)
+ * and hands over an {@link IAutoMovieTextureResolver} that answers
+ * synchronously. Omitting it builds every material with its scalar coefficients
+ * and no maps, which is exactly what a model declaring no texture renders and
+ * what every pre-texture production still renders. The resolver must answer
+ * with a texture object PER BINDING, because {@link buildMaterial} writes that
+ * binding's color space, UV transform and sampler onto whatever it is given,
+ * and two slots sharing one object would fight over one repeat.
+ *
  * @author Samchon
  */
 export const buildModel = (

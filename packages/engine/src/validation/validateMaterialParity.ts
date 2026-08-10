@@ -35,10 +35,14 @@ export const AUTO_MOVIE_SUPPORTED_MATERIAL_EXTENSIONS: ReadonlySet<string> =
  *
  * Decided from the name's own segments rather than from a list of known
  * offenders, because a denylist is silent about the extension published
- * tomorrow. Geometry, compression, lighting and container extensions
+ * tomorrow. Geometry, lighting and container extensions that name neither
  * (`KHR_draco_mesh_compression`, `KHR_mesh_quantization`,
  * `KHR_lights_punctual`, `VRMC_vrm`) are not this gate's business and are left
- * to theirs.
+ * to theirs. One that DOES name a texture stays this gate's business even when
+ * it only changes an encoding: `KHR_texture_basisu` needs a transcoder the
+ * viewer installs no loader for, so an asset declaring it does not render at
+ * all, and saying so beside the material extensions is more useful than staying
+ * silent because the bytes are "only" compressed.
  */
 export const isAutoMovieMaterialExtension = (name: string): boolean =>
   name

@@ -144,6 +144,10 @@ const closure = (props: {
  * 4. One image bound as both a colour and a measurement is refused at every
  *    contradicting slot, including through legacy bare-id bindings whose intent
  *    comes from the slot itself.
+ * 5. A scene environment joins that rule with the intent its media proves: an
+ *    8-bit sky and a linear material map over the same bytes are refused at
+ *    both consumers, the same sky beside a base-color binding of those bytes is
+ *    clean, and a Radiance sky never shares a decoding to contradict at all.
  */
 export const test_validation_texture_assets = (): void => {
   TestValidator.equals(
@@ -508,6 +512,73 @@ export const test_validation_texture_assets = (): void => {
       ],
       scenes: [{ shot: "opening" }],
       assets: [CLEAN_ASSETS[1]!],
+    }).success,
+    true,
+  );
+
+  // An equirectangular image declares no intent of its own, so its container
+  // decides one: an 8-bit sky is sRGB-encoded colour and a Radiance sky is
+  // linear radiance. The first therefore collides with a material measurement
+  // over the same bytes exactly as two material slots would.
+  const litByLdr = (patch: Partial<IAutoMovieMaterial>) =>
+    closure({
+      models: [model("floor", [material(patch)])],
+      scenes: [
+        {
+          shot: "opening",
+          environment: {
+            ...ENVIRONMENT,
+            image: "public/textures/tile-base.png",
+          },
+        },
+      ],
+      assets: [
+        record("public/textures/tile-base.png", [
+          use("material-texture", "floor"),
+          use("scene-environment", "opening"),
+        ]),
+      ],
+    });
+  const skyAsMeasurement = litByLdr({
+    normalTexture: {
+      asset: "public/textures/tile-base.png",
+      texCoord: 0,
+      colorSpace: "linear",
+    },
+  });
+  TestValidator.equals(
+    "an 8-bit sky and a linear map over the same bytes are both refused",
+    [
+      hasViolation(
+        skyAsMeasurement,
+        "type",
+        "$input.scenes[0].environment.image",
+      ),
+      hasViolation(skyAsMeasurement, "type", ".normalTexture"),
+      violationCount(skyAsMeasurement),
+    ],
+    [true, true, 2],
+  );
+  TestValidator.equals(
+    "the same sky beside a base-color binding of those bytes agrees",
+    litByLdr({
+      baseColorTexture: {
+        asset: "public/textures/tile-base.png",
+        texCoord: 0,
+        colorSpace: "srgb",
+      },
+    }).success,
+    true,
+  );
+  TestValidator.equals(
+    "a Radiance sky and a material map never share a decoding to contradict",
+    closure({
+      models: [
+        model("floor", [
+          material({ normalTexture: "public/textures/tile-normal.png" }),
+        ]),
+      ],
+      assets: [CLEAN_ASSETS[1]!, CLEAN_ASSETS[2]!],
     }).success,
     true,
   );

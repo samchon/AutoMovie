@@ -99,9 +99,11 @@ export interface IAutoMovieTextureClosureInput {
  *    so a stale entry keeps a file in the distributable forever;
  * 3. The bytes are not the image they are used as: a renamed `.png` that is really
  *    a PDF, or a Radiance HDR bound as a base-color map;
- * 4. Two slots bind the same bytes under contradictory color-space intent, so the
- *    same pixels are both a colour and a measurement and one of the two is
- *    silently wrong.
+ * 4. Two consumers bind the same bytes under contradictory color-space intent, so
+ *    the same pixels are both a colour and a measurement and one of the two is
+ *    silently wrong. A material slot states its intent; a scene environment
+ *    takes it from its proven media, because an equirectangular image is always
+ *    a colour and only its container says how that colour is stored.
  *
  * Byte identity itself is NOT rechecked here. The manifest gate already digests
  * every registered asset against its resident bytes, and repeating that would
@@ -126,6 +128,11 @@ export const validateTextureAssets = (
   };
 
   const intents = new Map<string, Map<string, string>>();
+  const intend = (asset: string, path: string, intent: string): void => {
+    const seen = intents.get(asset) ?? new Map<string, string>();
+    seen.set(path, intent);
+    intents.set(asset, seen);
+  };
   props.models.forEach((model, modelIndex) => {
     model.materials.forEach((material, materialIndex) => {
       const path = `$input.models[${modelIndex}].materials[${materialIndex}]`;
@@ -134,11 +141,11 @@ export const validateTextureAssets = (
         if (binding === null || binding === undefined) continue;
         const asset = bindingAsset(binding);
         claim("material-texture", model.id, asset);
-        const intent =
-          typeof binding === "string" ? slot.colorSpace : binding.colorSpace;
-        const seen = intents.get(asset) ?? new Map<string, string>();
-        seen.set(`${path}.${slot.field}`, intent);
-        intents.set(asset, seen);
+        intend(
+          asset,
+          `${path}.${slot.field}`,
+          typeof binding === "string" ? slot.colorSpace : binding.colorSpace,
+        );
         checkAsset({
           asset,
           path: `${path}.${slot.field}`,
@@ -155,16 +162,24 @@ export const validateTextureAssets = (
   props.scenes.forEach((scene, sceneIndex) => {
     const image = scene.environment?.image ?? null;
     if (image === null) return;
+    const path = `$input.scenes[${sceneIndex}].environment.image`;
     claim("scene-environment", scene.shot, image);
     checkAsset({
       asset: image,
-      path: `$input.scenes[${sceneIndex}].environment.image`,
+      path,
       consumer: { kind: "scene-environment", id: scene.shot },
       media: ENVIRONMENT_MEDIA,
       out,
       input: props,
       records,
     });
+    // An environment image declares no intent of its own, so the media its own
+    // bytes prove decides one, and that intent joins the same contradiction
+    // rule the material slots answer to. Bytes that read as no image at all are
+    // already reported above; inventing a decoding for them would only add a
+    // second complaint about the same file.
+    const facts = props.facts(image);
+    if (facts !== undefined) intend(image, path, environmentIntent(facts));
   });
 
   // The same bytes cannot be both a colour and a measurement.
@@ -206,6 +221,23 @@ export const validateTextureAssets = (
 /** The one asset id a legacy or structured binding names. */
 const bindingAsset = (binding: string | IAutoMovieTextureReference): string =>
   typeof binding === "string" ? binding : binding.asset;
+
+/**
+ * The one decoding an equirectangular environment image can mean.
+ *
+ * A material slot states its intent because one image can be either a colour or
+ * a measurement; an environment image is always a colour, and only its
+ * container says how that colour is stored. Radiance holds linear radiance
+ * already, which is why it is the container an HDR sky arrives in; the three
+ * 8-bit containers hold sRGB-encoded texels, which is what the viewer decodes
+ * them as. Deriving it here rather than asking the author for it keeps the
+ * bytes the single authority, and lets an image bound both as image lighting
+ * and as a linear material map be refused like any other contradiction.
+ */
+const environmentIntent = (
+  facts: IAutoMovieTextureImageFacts,
+): "srgb" | "linear" =>
+  facts.mediaType === "image/vnd.radiance" ? "linear" : "srgb";
 
 /**
  * The PBR slots that bind an image, with the decoding each one requires.
