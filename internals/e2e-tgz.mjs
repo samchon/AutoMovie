@@ -1852,8 +1852,9 @@ PNG.sync.read = function (input) {
   // the hook fires on nothing -- and that is worth asserting rather than
   // repairing: a finalize that decodes no frame is the property the chunked
   // assembly was built for, and the hook is exactly the instrument that proves
-  // it. What is no longer covered here is the diagnostic-preservation claim
-  // itself; it belongs to the chunk render, which is where decoding moved.
+  // it. The diagnostic-preservation claim itself moved with the decoding, to
+  // the chunk render, and the last step of this harness makes the same hook
+  // fire there.
   run(
     "finalize the packaged starter without decoding a frame",
     "npm run render -- finalize",
@@ -2068,6 +2069,62 @@ PNG.sync.read = function (input) {
     "run the packaged read-only final verifier",
     "npm run verify",
     starterDir,
+  );
+
+  // The chunk render is the only place the renderer still decodes a PNG, so it
+  // owns the claim the finalize step used to carry: an error raised inside the
+  // decoder reaches the operator as its own message. It reaches them through a
+  // catch now -- the job turns a failed chunk into a `correction` it prints and
+  // exits non-zero on -- which is exactly the shape in which a message gets
+  // swallowed or replaced by a generic one, and nothing else in this harness
+  // would notice if it were. It also proves the hook above is a live
+  // instrument: the finalize step passes by nothing happening, so a `--require`
+  // that silently failed to load would look identical there.
+  //
+  // The packaged harness, not test/src/features/cli: scripts/render.ts awaits
+  // main() at module scope, reads ../automovie.config, and keeps renderChunk
+  // module-local, so reaching that decoder needs a scaffolded project, a real
+  // browser capture and the packaged encoder -- this stage, in other words. The
+  // cli suite reads render.ts as source, and no source assertion can say what
+  // the operator ends up seeing. Nothing already here can carry it either: the
+  // proxy and resume renders have to succeed, and a decoder that throws on
+  // sight is only provable by a run that fails.
+  //
+  // Cheap, and last. Emptying one frame of one published chunk makes exactly
+  // that chunk non-current, so `render run` re-renders one chunk and dies on
+  // its first capture, decoding nothing else and re-encoding no film. Running
+  // it after every verifier has read the render state keeps the debris it
+  // leaves -- an emptied frame, a failed attempt, an abandoned temporary tree
+  // that the next run would quarantine as `abandoned-partial` -- from
+  // pre-satisfying the damaged/retained comparison and the quarantine
+  // assertions above, which would subtract evidence rather than add it.
+  const decoderSentinelChunk = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    retainedChunk,
+  );
+  writeFileSync(
+    join(
+      decoderSentinelChunk.directory,
+      decoderSentinelChunk.receipt.frames[0].path,
+    ),
+    Buffer.alloc(0),
+  );
+  runExpectedFailure(
+    "preserve packaged chunk render decoder diagnostics",
+    "npm run render -- run",
+    starterDir,
+    "automovie-encoder-consumer-sentinel",
+    300_000,
+    {
+      ...process.env,
+      NODE_OPTIONS: [
+        process.env.NODE_OPTIONS,
+        "--require=./fail-packaged-encoder.cjs",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    },
   );
 
   console.log(
