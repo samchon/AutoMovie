@@ -259,13 +259,20 @@ export const propSupportFace = (props: {
  * all, which is the answer for a prop that does not stand over its support
  * rather than one standing at the wrong height on it.
  *
- * The footprint is probed at its four corners and its centre, and the deepest
- * of the probes that land on the face answers. That is what lets a box resting
- * along one edge of a ramp still be resting on it while a box whose near corner
- * has gone through the ramp is not, and it is the same footprint sampling
+ * Contact is probed from both sides: at the footprint's four corners and its
+ * centre where those land on the face, and at the face's own corners where
+ * those land under the footprint. One side alone would be wrong in one
+ * direction each. A prop standing on a patch smaller than itself covers none of
+ * its own probes with the patch, and a patch wider than the prop is never
+ * reached at its corners, so a bench on a plinth and a chair on a floor are the
+ * same question asked from whichever side can answer it.
+ *
+ * The deepest of those probes answers, which is what lets a box resting along
+ * one edge of a ramp still be resting on it while a box whose near corner has
+ * gone through the ramp is not, and it is the same footprint sampling
  * {@link supportContactsFor} decides a scene's supports by. Relief between the
- * probes is not read: a support that rises and falls inside the footprint is
- * answered where the probes stand.
+ * probes is not read: a support that rises and falls between them is answered
+ * where they stand.
  */
 export const propSupportGap = (props: {
   /** The face the prop claims to rest on. */
@@ -274,11 +281,17 @@ export const propSupportGap = (props: {
   /** The prop's world occupancy, from {@link propOccupancyBounds}. */
   bounds: IAutoMoviePropBox;
 }): number | null => {
+  const bounds = props.bounds;
+  const probes = [
+    ...footprintProbes(bounds).filter((probe) =>
+      pointInHull(probe, props.face.polygon),
+    ),
+    ...props.face.polygon.filter((corner) => underFootprint(corner, bounds)),
+  ];
   let gap: number | null = null;
-  for (const probe of footprintProbes(props.bounds)) {
-    if (!pointInHull(probe, props.face.polygon)) continue;
+  for (const probe of probes) {
     const rise =
-      props.bounds.min.y - surfaceHeightAt(props.face.height, probe.x, probe.z);
+      bounds.min.y - surfaceHeightAt(props.face.height, probe.x, probe.z);
     gap = gap === null ? rise : Math.min(gap, rise);
   }
   return gap;
@@ -1377,6 +1390,16 @@ const facePlane = (matrix: number[]): IAutoMovieHeightSurface | null => {
     },
   };
 };
+
+/** Whether a ground-plan point stands under a staged prop's own footprint. */
+const underFootprint = (
+  point: IAutoMovieVector3,
+  bounds: IAutoMoviePropBox,
+): boolean =>
+  point.x >= bounds.min.x &&
+  point.x <= bounds.max.x &&
+  point.z >= bounds.min.z &&
+  point.z <= bounds.max.z;
 
 /** The five ground-plan points a footprint is judged to bear on. */
 const footprintProbes = (bounds: IAutoMoviePropBox): IAutoMovieVector3[] => [

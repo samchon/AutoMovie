@@ -64,22 +64,26 @@ const patch = (props: {
   half: number;
   originHeight: number;
   slopeZ?: number;
-}): IAutoMoviePropSupportFace => ({
-  polygon: [
-    { x: -props.half, y: 0, z: -props.half },
-    { x: props.half, y: 0, z: -props.half },
-    { x: props.half, y: 0, z: props.half },
-    { x: -props.half, y: 0, z: props.half },
-  ],
-  height: {
+  atX?: number;
+}): IAutoMoviePropSupportFace => {
+  const centre = props.atX ?? 0;
+  return {
+    polygon: [
+      { x: centre - props.half, y: 0, z: -props.half },
+      { x: centre + props.half, y: 0, z: -props.half },
+      { x: centre + props.half, y: 0, z: props.half },
+      { x: centre - props.half, y: 0, z: props.half },
+    ],
     height: {
-      kind: "plane",
-      originHeight: props.originHeight,
-      slopeX: 0,
-      slopeZ: props.slopeZ ?? 0,
+      height: {
+        kind: "plane",
+        originHeight: props.originHeight,
+        slopeX: 0,
+        slopeZ: props.slopeZ ?? 0,
+      },
     },
-  },
-});
+  };
+};
 
 /** The table's own top face, read off the registry the room is staged with. */
 const tableTop = (
@@ -182,8 +186,9 @@ const chairRing = (props: {
  *    contact with no face, an empty polygon, and a top staged edge-on state
  *    none. The bearing on that face is zero where the prop rests, signed where
  *    it floats or sinks, taken at the highest probe over a ramp, `null` where
- *    the prop does not stand over it, and found by the centre probe alone when
- *    the face is smaller than the footprint.
+ *    the prop does not stand over it on either side, and found from whichever
+ *    side can answer when the face is smaller than the footprint, centred under
+ *    it or not.
  * 8. Twelve chairs authored as one seeded loop validate, reproduce byte for byte
  *    across runs, and move as a body when the seed changes.
  */
@@ -966,6 +971,27 @@ export const test_film_prop_placement_utility = (): void => {
             bounds: box(-1, 0, -1, 1, 2, 1),
           }) === 0,
       ],
+      [
+        "aFaceOffTheFootprintsCentreIsFoundByItsOwnCorners",
+        () =>
+          propSupportGap({
+            face: patch({ half: 0.1, originHeight: 0, atX: 0.3 }),
+            bounds: box(-3, 0, -0.5, 3, 2, 0.5),
+          }) === 0,
+      ],
+      [
+        "aFaceBesideTheFootprintOnEitherSideIsStillNull",
+        () =>
+          (
+            [box(-1, 0, 0.5, 1, 2, 1.5), box(-1, 0, -1.5, 1, 2, -0.5)] as const
+          ).every(
+            (bounds) =>
+              propSupportGap({
+                face: patch({ half: 0.1, originHeight: 0 }),
+                bounds,
+              }) === null,
+          ),
+      ],
     ]),
     {
       aPatchIsItsOwnPolygonAndHeight: true,
@@ -984,6 +1010,8 @@ export const test_film_prop_placement_utility = (): void => {
       standingOffTheFaceIsNull: true,
       aRampBearsAtItsHighestProbe: true,
       aFaceSmallerThanTheFootprintIsFoundByItsCentre: true,
+      aFaceOffTheFootprintsCentreIsFoundByItsOwnCorners: true,
+      aFaceBesideTheFootprintOnEitherSideIsStillNull: true,
     },
   );
 
