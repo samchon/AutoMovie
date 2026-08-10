@@ -233,7 +233,15 @@ export interface IAutoMovieBuiltOpening {
  * general shape and the rectangle is one of its cases.
  */
 export interface IAutoMovieOpeningProfile {
-  /** Closed outline in host-boundary-local XY metres, at least three points. */
+  /**
+   * Closed outline in host-boundary-local XY metres, at least two points.
+   *
+   * Two is the floor rather than three because a circle is two arcs, and
+   * demanding a third corner would outlaw a round oculus for no geometric
+   * reason. What must hold is that the outline encloses area once its arcs are
+   * taken into account, so two points with no bulge between them are still
+   * refused.
+   */
   outline: IAutoMoviePlanarPoint[];
   /**
    * Per-edge circular bulge, one entry per edge when stated at all.
