@@ -273,8 +273,10 @@ export const serviceSystemReach = (props: {
  * measured against a load of zero — a capacity check that cannot fail is worse
  * than none, because it reads as one that passed.
  *
- * A junction merely passing the medium on declares `0` and contributes nothing.
- * A `bidirectional` port is counted at neither end: it is the fitting on a ring
+ * A fitting merely passing the medium on — a tee, a valve, a damper — declares
+ * `0` and contributes nothing, so the water that reaches a basin through a
+ * shut-off is counted where the basin draws it and not again at the valve. A
+ * `bidirectional` port is counted at neither end: it is the fitting on a ring
  * that may be fed from either side, and a tap's draw is stated on the port that
  * draws it rather than on the ring it hangs off.
  *
@@ -485,13 +487,13 @@ export const serviceAnalysisSupport = (props: {
     },
     located
       ? {
-          check: "fixture-placement",
+          check: "node-placement",
           status: "supported",
           reason:
             "every node whose logical space declares a volume, and every port that node offers a run, is held inside it",
         }
       : {
-          check: "fixture-placement",
+          check: "node-placement",
           status: "unsupported",
           reason:
             "no logical space of this building declares a volume, so nothing can be shown to stand inside or outside one",

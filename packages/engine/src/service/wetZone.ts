@@ -262,6 +262,13 @@ export const validateWetZones = (props: {
  * above it. A weir with a raised sill is a different fixture and is authored on
  * the domain directly.
  *
+ * Every supply inlet in the room becomes a source, including the inlet of a
+ * fitting that merely passes the medium on. That is not a double count: such a
+ * fitting declares `0`, so it lowers to a source that delivers nothing, and the
+ * water is counted once where it is actually drawn. Dropping those inlets by
+ * node kind would instead make `kind` decide a hydraulic quantity the port's
+ * own `demand` already states.
+ *
  * The network is expected to have been validated already; this lowering answers
  * only for the placement it performs, not for the graph it reads.
  *

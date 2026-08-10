@@ -380,7 +380,7 @@ export const test_service_network_topology = (): void => {
             .filter((entry) => entry.status === "supported")
             .map((entry) => entry.check)
             .join() ===
-          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,fixture-placement,boundary-penetration,penetration-on-boundary-face,waterproof-coverage",
+          "port-connectivity,medium-direction-unit,segment-clash,maintenance-envelope,node-placement,boundary-penetration,penetration-on-boundary-face,waterproof-coverage",
       ],
       [
         "volumelessDropsBothPlacementAnswers",
@@ -398,7 +398,7 @@ export const test_service_network_topology = (): void => {
             .filter((entry) => entry.status === "unsupported")
             .map((entry) => entry.check)
             .join()
-            .startsWith("fixture-placement,boundary-penetration"),
+            .startsWith("node-placement,boundary-penetration"),
       ],
       [
         "boundaryFace",
