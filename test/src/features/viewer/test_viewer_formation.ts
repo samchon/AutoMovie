@@ -868,8 +868,17 @@ export const test_viewer_formation = (): void => {
     models,
     motions: [reformed],
   });
-  const reformProgress = 0.5;
-  reforming.update(camera, 1_080, reformed.end * reformProgress);
+  // The instant is chosen; how far along the re-form it is, and how open the
+  // arrangement is there, are read from the engine's own sampler rather than
+  // worked out again here. What the case is claiming is that the renderer
+  // agrees with the engine, so both halves of the expectation come from it.
+  const reformTime = 3;
+  const reformState = sampleFormationMotion(
+    [reformed],
+    formation.id,
+    reformTime,
+  );
+  reforming.update(camera, 1_080, reformTime);
   const reformMesh = reforming.object.children.find(
     (object): object is THREE.InstancedMesh =>
       object instanceof THREE.InstancedMesh &&
@@ -879,21 +888,18 @@ export const test_viewer_formation = (): void => {
   reformMesh.getMatrixAt(0, reformMatrix);
   const reformDrawn = new THREE.Vector3().setFromMatrixPosition(reformMatrix);
   const reformExpected = transformFormationPoint(
-    formationSlotPosition(formation, 0, {
-      layout: reformed.layout,
-      progress: reformProgress,
-    }),
+    formationSlotPosition(formation, 0, reformState.reform),
     formation.anchor,
     {
       translation: { x: 0, y: 0, z: 0 },
       facingOffsetDeg: 0,
-      spacingScale: { lateral: 1, depth: 1 },
+      spacingScale: reformState.spacingScale,
     },
     formation.facingDeg,
   );
   const designedInPlace = regenerateFormationSlot(formation, 0).position;
   const reformBefore = reformMatrix.elements.join(",");
-  reforming.update(camera, 1_080, reformed.end * reformProgress);
+  reforming.update(camera, 1_080, reformTime);
   const reformRepeat = new THREE.Matrix4();
   reformMesh.getMatrixAt(0, reformRepeat);
   const reformStable = reformRepeat.elements.join(",") === reformBefore;
@@ -905,6 +911,15 @@ export const test_viewer_formation = (): void => {
         () =>
           nclose(reformDrawn.x, reformExpected.x - formation.anchor.x, 1e-4) &&
           nclose(reformDrawn.z, reformExpected.z - formation.anchor.z, 1e-4),
+      ],
+      // The cue is genuinely mid-travel rather than at either end, so the
+      // reading above is of a blended arrangement and not of one of the two
+      // layouts standing still.
+      [
+        "theReformIsHalfway",
+        () =>
+          reformState.reform !== null &&
+          nclose(reformState.reform.progress, 0.5),
       ],
       // Negative twin: the designed place is metres away, so agreeing with the
       // engine above is a claim about the cue and not about the two answers
@@ -923,6 +938,7 @@ export const test_viewer_formation = (): void => {
     ]),
     {
       drawnWhereTheEngineReformsIt: true,
+      theReformIsHalfway: true,
       theReformActuallyMovedIt: true,
       aRepeatedFrameRewritesNothing: true,
     },
@@ -931,9 +947,11 @@ export const test_viewer_formation = (): void => {
   // A host may hand over none of a unit's promoted heroes, or hand one over
   // without saying where its own source put it. Neither is an error: the first
   // leaves every hero to whatever else placed it and counts none of them, and
-  // the second reads the transform captured when the unit was built — which is
-  // the transform the host itself handed over — and culls from the hero object
-  // rather than from a pose root it never supplied.
+  // the second reads the transform captured when the unit was built, which is
+  // the transform the host itself handed over. The hero object also stands in
+  // for the pose root the host never supplied; what that substitution does to
+  // culling belongs to scenario 3, which displaces a pose root and watches the
+  // answer change, so it is not claimed again here.
   const unhosted = buildInstancedFormation({ formation, models });
   unhosted.update(camera, 1_080, 3);
   const bareHero = heroObjects.get("second")!;
@@ -1096,16 +1114,18 @@ export const test_viewer_formation = (): void => {
   // The camera stands beside chunk zero and every other chunk of the column is
   // hundreds of metres down the line, so the tier is read off that one chunk's
   // own batches rather than off a total the other chunks also contribute to.
+  // The batch is looked up rather than searched for a visible one: a mesh that
+  // is not there would otherwise read as a mesh that is not drawn, and the two
+  // halves of the boundary would both pass against nothing at all.
   const tierVisible = (
     unit: ReturnType<typeof buildInstancedFormation>,
     tier: string,
   ): boolean =>
-    unit.object.children.some(
-      (object) =>
+    unit.object.children.find(
+      (object): object is THREE.InstancedMesh =>
         object instanceof THREE.InstancedMesh &&
-        object.name === `${parityFormation.id}:${parityChunk.index}:${tier}` &&
-        object.visible,
-    );
+        object.name === `${parityFormation.id}:${parityChunk.index}:${tier}`,
+    )!.visible;
   TestValidator.equals(
     "the renderer places a unit's mass on the engine's own double, not a rounded one",
     namedFacts([
@@ -1131,6 +1151,14 @@ export const test_viewer_formation = (): void => {
         "roundedConversionDiffers",
         () => effectiveDistanceTo(roundedCentre) !== parityBoundary,
       ],
+      // The second fixture really is one double below the first, rather than a
+      // NaN a bit-decrement off the end of the range would have produced.
+      [
+        "theSecondBoundaryIsOneDoubleBelow",
+        () =>
+          previousDouble(parityBoundary) < parityBoundary &&
+          Number.isFinite(previousDouble(parityBoundary)),
+      ],
       // Exactly at the boundary the comparison is `<=`, so the near tier is
       // kept; one double below it, the near tier is out and the open far tier
       // is what remains. A centre off by any amount at all fails one of the two.
@@ -1146,6 +1174,7 @@ export const test_viewer_formation = (): void => {
       boundedNearOpenFar: true,
       boundaryApplied: true,
       roundedConversionDiffers: true,
+      theSecondBoundaryIsOneDoubleBelow: true,
       atBoundaryStaysNear: true,
       atBoundaryDropsFar: true,
       pastBoundaryFallsToFar: true,
