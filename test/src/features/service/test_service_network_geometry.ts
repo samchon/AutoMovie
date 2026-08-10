@@ -72,10 +72,19 @@ export const test_service_network_geometry = (): void => {
   const coldBranch = network.segments[1]!;
 
   const overall = serviceSegmentBounds(coldRun);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a run's overall bound is its extremes grown by its radius",
-    vclose(overall.min, { x: 3.475, y: 2.475, z: 0.975 }, 1e-12) &&
-      vclose(overall.max, { x: 8.025, y: 2.525, z: 1.025 }, 1e-12),
+    namedFacts([
+      [
+        "min",
+        () => vclose(overall.min, { x: 3.475, y: 2.475, z: 0.975 }, 1e-12),
+      ],
+      [
+        "max",
+        () => vclose(overall.max, { x: 8.025, y: 2.525, z: 1.025 }, 1e-12),
+      ],
+    ]),
+    { min: true, max: true },
   );
   TestValidator.predicate(
     "a run with no route has no bound to give",
@@ -86,24 +95,62 @@ export const test_service_network_geometry = (): void => {
   );
 
   const spans = serviceSegmentSpanBounds(coldBranch);
-  TestValidator.predicate(
+  TestValidator.equals(
     "each leg of a turning run carries its own volume",
-    spans.length === 2 &&
-      vclose(spans[0]!.min, { x: 0.98, y: 2.48, z: 0.98 }, 1e-12) &&
-      vclose(spans[0]!.max, { x: 3.52, y: 2.52, z: 1.02 }, 1e-12) &&
-      vclose(spans[1]!.min, { x: 0.98, y: 0.88, z: 0.98 }, 1e-12) &&
-      vclose(spans[1]!.max, { x: 1.02, y: 2.52, z: 1.02 }, 1e-12) &&
-      serviceSegmentSpanBounds(segment({ route: [{ x: 1, y: 2, z: 3 }] }))
-        .length === 0,
+    namedFacts([
+      ["legCount", () => spans.length === 2],
+      [
+        "firstMin",
+        () => vclose(spans[0]!.min, { x: 0.98, y: 2.48, z: 0.98 }, 1e-12),
+      ],
+      [
+        "firstMax",
+        () => vclose(spans[0]!.max, { x: 3.52, y: 2.52, z: 1.02 }, 1e-12),
+      ],
+      [
+        "secondMin",
+        () => vclose(spans[1]!.min, { x: 0.98, y: 0.88, z: 0.98 }, 1e-12),
+      ],
+      [
+        "secondMax",
+        () => vclose(spans[1]!.max, { x: 1.02, y: 2.52, z: 1.02 }, 1e-12),
+      ],
+      [
+        "singleVertexHasNoLeg",
+        () =>
+          serviceSegmentSpanBounds(segment({ route: [{ x: 1, y: 2, z: 3 }] }))
+            .length === 0,
+      ],
+    ]),
+    {
+      legCount: true,
+      firstMin: true,
+      firstMax: true,
+      secondMin: true,
+      secondMax: true,
+      singleVertexHasNoLeg: true,
+    },
   );
 
   const ahu = serviceMaintenanceBounds(network.nodes[5]!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an access volume travels with the equipment that needs it",
-    ahu !== null &&
-      vclose(ahu.min, { x: 7.5, y: 0.2, z: 4 }, 1e-12) &&
-      vclose(ahu.max, { x: 8.5, y: 3, z: 5 }, 1e-12) &&
-      serviceMaintenanceBounds(network.nodes[9]!) === null,
+    namedFacts([
+      ["present", () => ahu !== null],
+      [
+        "min",
+        () => ahu !== null && vclose(ahu.min, { x: 7.5, y: 0.2, z: 4 }, 1e-12),
+      ],
+      [
+        "max",
+        () => ahu !== null && vclose(ahu.max, { x: 8.5, y: 3, z: 5 }, 1e-12),
+      ],
+      [
+        "absentWhereUnneeded",
+        () => serviceMaintenanceBounds(network.nodes[9]!) === null,
+      ],
+    ]),
+    { present: true, min: true, max: true, absentWhereUnneeded: true },
   );
 
   TestValidator.equals(

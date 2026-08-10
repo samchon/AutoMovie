@@ -127,17 +127,28 @@ export const test_drawing_quantity_report = (): void => {
       ],
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the door and the oculus are measured from their own voids",
-    nclose(
-      finding("opening-area").contributors.find(
-        (entry) => entry.owner === "oculus",
-      )!.value,
-      Math.PI * 0.09,
-    ) &&
-      finding("opening-area").contributors.find(
-        (entry) => entry.owner === "front-door",
-      )!.value === 1.89,
+    namedFacts([
+      [
+        "oculus",
+        () =>
+          nclose(
+            finding("opening-area").contributors.find(
+              (entry) => entry.owner === "oculus",
+            )!.value,
+            Math.PI * 0.09,
+          ),
+      ],
+      [
+        "frontDoor",
+        () =>
+          finding("opening-area").contributors.find(
+            (entry) => entry.owner === "front-door",
+          )!.value === 1.89,
+      ],
+    ]),
+    { oculus: true, frontDoor: true },
   );
 
   // 3. The bound.

@@ -220,26 +220,36 @@ export const test_drawing_annotation_resolution = (): void => {
     ],
     [6, { x: 3.5, y: -0.1 }, false],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a page dimension measures the drawing and a world dimension measures the building",
-    nclose(dimensioned(environment, "page").dimensions[0]!.value!, 6) &&
-      nclose(
-        deriveAutoMovieDrawing({
-          environment,
-          view: drawingView({
-            id: "sloped",
-            dimensions: [
-              {
-                id: "diagonal",
-                from: feature({ kind: "vertex", index: 0 }),
-                to: feature({ kind: "vertex", index: 7 }),
-                measure: "page",
-              },
-            ],
-          }),
-        }).dimensions[0]!.value!,
-        Math.hypot(6, 0.2),
-      ),
+    namedFacts([
+      [
+        "level",
+        () => nclose(dimensioned(environment, "page").dimensions[0]!.value!, 6),
+      ],
+      [
+        "sloped",
+        () =>
+          nclose(
+            deriveAutoMovieDrawing({
+              environment,
+              view: drawingView({
+                id: "sloped",
+                dimensions: [
+                  {
+                    id: "diagonal",
+                    from: feature({ kind: "vertex", index: 0 }),
+                    to: feature({ kind: "vertex", index: 7 }),
+                    measure: "page",
+                  },
+                ],
+              }),
+            }).dimensions[0]!.value!,
+            Math.hypot(6, 0.2),
+          ),
+      ],
+    ]),
+    { level: true, sloped: true },
   );
 
   // 3-5. Staleness.

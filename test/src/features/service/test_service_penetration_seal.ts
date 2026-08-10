@@ -129,14 +129,25 @@ export const test_service_penetration_seal = (): void => {
     },
     environment,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a sleeve nobody runs through is advice, not a failure",
-    validationHasWarning(
-      "spare sleeve",
-      spare,
-      "coverage",
-      "$input.penetrations[13]",
-    ) && validationHasWarningCount("spare sleeve", spare, 1),
+    namedFacts([
+      [
+        "warned",
+        () =>
+          validationHasWarning(
+            "spare sleeve",
+            spare,
+            "coverage",
+            "$input.penetrations[13]",
+          ),
+      ],
+      [
+        "onlyWarning",
+        () => validationHasWarningCount("spare sleeve", spare, 1),
+      ],
+    ]),
+    { warned: true, onlyWarning: true },
   );
 
   const tight = refuse(
@@ -360,8 +371,18 @@ export const test_service_penetration_seal = (): void => {
     })),
     environment: semantic(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "where no room declares a volume, no crossing is invented",
-    nowhere.success === true && (nowhere.warnings ?? []).length === 2,
+    namedFacts([
+      ["accepted", () => nowhere.success === true],
+      [
+        "warningCount",
+        () =>
+          // The `success` comparison is restated only to narrow the union
+          // inside this closure.
+          nowhere.success === true && (nowhere.warnings ?? []).length === 2,
+      ],
+    ]),
+    { accepted: true, warningCount: true },
   );
 };

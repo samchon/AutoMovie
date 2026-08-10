@@ -13,7 +13,13 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { nclose, qclose, qunit, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  qclose,
+  qunit,
+  vclose,
+} from "../internal/predicates";
 
 const NO_ROTATION: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -290,14 +296,24 @@ export const test_architecture_built_connector = (): void => {
   );
 
   const flight = builtConnectorGeometry(source, "flight");
-  TestValidator.predicate(
+  TestValidator.equals(
     "route metrics are the route's own arithmetic",
-    nclose(flight.rise, 3) &&
-      nclose(flight.run, 4) &&
-      nclose(flight.length, 5) &&
-      nclose(flight.slope, Math.atan2(3, 4)) &&
-      nclose(flight.stations[0]!.at, 0) &&
-      nclose(flight.stations[1]!.at, 1),
+    namedFacts([
+      ["rise", () => nclose(flight.rise, 3)],
+      ["run", () => nclose(flight.run, 4)],
+      ["length", () => nclose(flight.length, 5)],
+      ["slope", () => nclose(flight.slope, Math.atan2(3, 4))],
+      ["firstStation", () => nclose(flight.stations[0]!.at, 0)],
+      ["lastStation", () => nclose(flight.stations[1]!.at, 1)],
+    ]),
+    {
+      rise: true,
+      run: true,
+      length: true,
+      slope: true,
+      firstStation: true,
+      lastStation: true,
+    },
   );
   TestValidator.predicate(
     "station parameters are arc length, not index",

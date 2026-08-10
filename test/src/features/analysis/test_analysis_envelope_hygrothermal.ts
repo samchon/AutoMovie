@@ -175,23 +175,53 @@ export const test_analysis_envelope_hygrothermal = (): void => {
   );
 
   const dry = study({ indoor: { airTemperature: 20, relativeHumidity: 0.88 } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "the dew point is the Magnus value for the declared indoor air",
-    nclose(of(base.moisture, "space.dewPoint") ?? Number.NaN, 9.2552, 1e-3) &&
-      nclose(of(dry.moisture, "space.dewPoint") ?? Number.NaN, 17.9501, 1e-3),
+    namedFacts([
+      [
+        "base",
+        () =>
+          nclose(
+            of(base.moisture, "space.dewPoint") ?? Number.NaN,
+            9.2552,
+            1e-3,
+          ),
+      ],
+      [
+        "humid",
+        () =>
+          nclose(
+            of(dry.moisture, "space.dewPoint") ?? Number.NaN,
+            17.9501,
+            1e-3,
+          ),
+      ],
+    ]),
+    { base: true, humid: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "condensation margins follow the dew point on every assembly",
-    nclose(
-      of(base.moisture, "envelope.condensationMargin") ?? Number.NaN,
-      8.66149,
-      1e-4,
-    ) &&
-      nclose(
-        of(base.moisture, "envelope.condensationMargin.min") ?? Number.NaN,
-        17.5 - 9.255174598981256,
-        1e-9,
-      ),
+    namedFacts([
+      [
+        "mean",
+        () =>
+          nclose(
+            of(base.moisture, "envelope.condensationMargin") ?? Number.NaN,
+            8.66149,
+            1e-4,
+          ),
+      ],
+      [
+        "min",
+        () =>
+          nclose(
+            of(base.moisture, "envelope.condensationMargin.min") ?? Number.NaN,
+            17.5 - 9.255174598981256,
+            1e-9,
+          ),
+      ],
+    ]),
+    { mean: true, min: true },
   );
   TestValidator.equals(
     "raising the indoor humidity puts exactly the coldest surface at risk",

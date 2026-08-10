@@ -10,7 +10,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError, vclose } from "../internal/predicates";
+import { namedFacts, throwsError, vclose } from "../internal/predicates";
 
 const PLAN_DIGEST =
   "sha256:1111111111111111111111111111111111111111111111111111111111111111" as AutoMovieContentDigest;
@@ -388,12 +388,24 @@ export const test_architecture_design_observation_promotion = (): void => {
     source,
     observation(),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the promoted west run is the hand-computed metric polyline",
-    first.promoted[0]!.outlines[0]!.length === 3 &&
-      vclose(first.promoted[0]!.outlines[0]![0]!, { x: 1, y: 0, z: 1 }) &&
-      vclose(first.promoted[0]!.outlines[0]![1]!, { x: 1, y: 0, z: 5 }) &&
-      vclose(first.promoted[0]!.outlines[0]![2]!, { x: 3, y: 0, z: 5 }),
+    namedFacts([
+      ["vertexCount", () => first.promoted[0]!.outlines[0]!.length === 3],
+      [
+        "start",
+        () => vclose(first.promoted[0]!.outlines[0]![0]!, { x: 1, y: 0, z: 1 }),
+      ],
+      [
+        "corner",
+        () => vclose(first.promoted[0]!.outlines[0]![1]!, { x: 1, y: 0, z: 5 }),
+      ],
+      [
+        "end",
+        () => vclose(first.promoted[0]!.outlines[0]![2]!, { x: 3, y: 0, z: 5 }),
+      ],
+    ]),
+    { vertexCount: true, start: true, corner: true, end: true },
   );
   TestValidator.equals(
     "the promoted reading carries the candidate's own semantic label",

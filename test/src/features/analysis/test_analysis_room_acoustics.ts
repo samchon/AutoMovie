@@ -117,17 +117,36 @@ export const test_analysis_room_acoustics = (): void => {
       fields: [["desk", "room.soundPressureLevel"]],
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the receiver reads the direct field plus the diffuse field exactly",
-    nclose(of(hall, "room.soundPressureLevel") ?? Number.NaN, 70, 1e-9) &&
-      nclose(of(hall, "room.soundPressureLevel.max") ?? Number.NaN, 70, 1e-9) &&
-      nclose(
-        hall.outcome.status === "solved"
-          ? (hall.outcome.samples[0]?.value ?? Number.NaN)
-          : Number.NaN,
-        70,
-        1e-9,
-      ),
+    namedFacts([
+      [
+        "level",
+        () =>
+          nclose(of(hall, "room.soundPressureLevel") ?? Number.NaN, 70, 1e-9),
+      ],
+      [
+        "max",
+        () =>
+          nclose(
+            of(hall, "room.soundPressureLevel.max") ?? Number.NaN,
+            70,
+            1e-9,
+          ),
+      ],
+      [
+        "sample",
+        () =>
+          nclose(
+            hall.outcome.status === "solved"
+              ? (hall.outcome.samples[0]?.value ?? Number.NaN)
+              : Number.NaN,
+            70,
+            1e-9,
+          ),
+      ],
+    ]),
+    { level: true, max: true, sample: true },
   );
 
   const silent = study({ sources: [] });
@@ -204,15 +223,28 @@ export const test_analysis_room_acoustics = (): void => {
   const nearlyDead = study({
     surfaces: [{ id: "boundaries", area: 100, absorption: 0.99 }],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a room that absorbs almost everything still has a reverberation time",
-    statusOf(nearlyDead, "room.reverberationTime") === "untargeted" &&
-      nclose(
-        of(nearlyDead, "room.reverberationTime") ?? Number.NaN,
-        (0.161 * 100) / 99,
-        1e-12,
-      ) &&
-      nclose(of(nearlyDead, "room.constant") ?? Number.NaN, 9900, 1e-9),
+    namedFacts([
+      [
+        "reported",
+        () => statusOf(nearlyDead, "room.reverberationTime") === "untargeted",
+      ],
+      [
+        "decay",
+        () =>
+          nclose(
+            of(nearlyDead, "room.reverberationTime") ?? Number.NaN,
+            (0.161 * 100) / 99,
+            1e-12,
+          ),
+      ],
+      [
+        "constant",
+        () => nclose(of(nearlyDead, "room.constant") ?? Number.NaN, 9900, 1e-9),
+      ],
+    ]),
+    { reported: true, decay: true, constant: true },
   );
 
   const mute = study({

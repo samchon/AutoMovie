@@ -65,9 +65,19 @@ export const test_film_stage_scene_environment = (): void => {
       ENVIRONMENT,
     );
   const bare = stageScene(makeScriptWrite(), makeStagingWrite());
-  TestValidator.predicate(
+  TestValidator.equals(
     "omitted environment preserves legacy scene bytes",
-    bare.success === true && !("environment" in bare.scene),
+    namedFacts([
+      ["staged", () => bare.success === true],
+      [
+        "noKey",
+        () =>
+          // The `success` comparison is restated only to narrow the union
+          // inside this closure.
+          bare.success === true && !("environment" in bare.scene),
+      ],
+    ]),
+    { staged: true, noKey: true },
   );
 
   const color = { r: 0.1, g: 0.2, b: 0.3, a: null, hex: null };
@@ -277,11 +287,24 @@ export const test_film_stage_scene_environment = (): void => {
       },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "shadow declaration lowers onto the scene light",
-    shadowed.success === true &&
-      shadowed.scene.lights[0]?.castShadow === true &&
-      shadowed.scene.lights[0]?.shadow?.mapSize === 1024,
+    namedFacts([
+      ["staged", () => shadowed.success === true],
+      [
+        "castShadow",
+        () =>
+          shadowed.success === true &&
+          shadowed.scene.lights[0]?.castShadow === true,
+      ],
+      [
+        "mapSize",
+        () =>
+          shadowed.success === true &&
+          shadowed.scene.lights[0]?.shadow?.mapSize === 1024,
+      ],
+    ]),
+    { staged: true, castShadow: true, mapSize: true },
   );
 
   const invalidShadowCases: Array<[unknown, string]> = [

@@ -1533,10 +1533,16 @@ export const test_viewer_instance_set = async (): Promise<void> => {
     createImportedModelObject({ object: staticRoot, bones: new Map() }),
     "static glTF prototype",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a loaded rigid static prototype flattens to shared instance geometry",
-    staticRepresentation.geometry.getAttribute("position").count > 0 &&
-      staticRepresentation.materials.length === 1,
+    namedFacts([
+      [
+        "vertices",
+        () => staticRepresentation.geometry.getAttribute("position").count > 0,
+      ],
+      ["oneMaterial", () => staticRepresentation.materials.length === 1],
+    ]),
+    { vertices: true, oneMaterial: true },
   );
   TestValidator.error("skinned imported prototypes are refused", () =>
     flattenInstancedObject(

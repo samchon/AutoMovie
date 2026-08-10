@@ -161,13 +161,23 @@ export const test_drawing_sheet_set = (): void => {
       4,
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the take-off grows by the new void's own area and by nothing else",
-    nclose(total(quantities, "opening-area"), 1.89 + Math.PI * 0.09) &&
-      nclose(
-        total(extendedQuantities, "opening-area"),
-        1.89 + Math.PI * 0.09 + 2.1,
-      ),
+    namedFacts([
+      [
+        "before",
+        () => nclose(total(quantities, "opening-area"), 1.89 + Math.PI * 0.09),
+      ],
+      [
+        "after",
+        () =>
+          nclose(
+            total(extendedQuantities, "opening-area"),
+            1.89 + Math.PI * 0.09 + 2.1,
+          ),
+      ],
+    ]),
+    { before: true, after: true },
   );
 
   // 4. One moved wall, and only the sheets that draw it.

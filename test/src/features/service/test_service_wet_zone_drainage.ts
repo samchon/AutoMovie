@@ -416,14 +416,24 @@ export const test_service_wet_zone_drainage = (): void => {
       system: "no-such-system",
     })),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a gully whose waste port names no system discharges into nothing",
-    strandedDrain.success === false &&
-      strandedDrain.violations.some(
-        (item) =>
-          item.path === "$input.zones[0].drains[0]" &&
-          item.expected.includes("carries no outgoing waste-water port"),
-      ),
+    namedFacts([
+      ["refused", () => strandedDrain.success === false],
+      [
+        "atDrain",
+        () =>
+          // The `success` comparison is restated only to narrow the union
+          // inside this closure.
+          strandedDrain.success === false &&
+          strandedDrain.violations.some(
+            (item) =>
+              item.path === "$input.zones[0].drains[0]" &&
+              item.expected.includes("carries no outgoing waste-water port"),
+          ),
+      ],
+    ]),
+    { refused: true, atDrain: true },
   );
 
   const lowered = lowerWetZoneDrainage({

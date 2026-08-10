@@ -228,16 +228,27 @@ const flowing = (flow: AutoMovieServiceFlow): IAutoMovieServiceNetwork =>
 export const test_service_circulation_loop = (): void => {
   const loop = circulation();
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "a loop that returns to the machine it left validates clean",
-    validationHasNoWarnings(
-      "circulation graph",
-      validateServiceNetwork({ network: loop, environment }),
-    ) &&
-      validationHasNoWarnings(
-        "circulation zones",
-        validateWetZones({ network: loop, environment }),
-      ),
+    namedFacts([
+      [
+        "graph",
+        () =>
+          validationHasNoWarnings(
+            "circulation graph",
+            validateServiceNetwork({ network: loop, environment }),
+          ),
+      ],
+      [
+        "zones",
+        () =>
+          validationHasNoWarnings(
+            "circulation zones",
+            validateWetZones({ network: loop, environment }),
+          ),
+      ],
+    ]),
+    { graph: true, zones: true },
   );
 
   TestValidator.equals(

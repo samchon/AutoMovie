@@ -13,6 +13,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import {
   hasViolation,
+  namedFacts,
   validationHasWarning,
   validationHasWarningCount,
   violationCount,
@@ -395,19 +396,30 @@ export const test_architecture_design_reference = (): void => {
     acquisition: { ...generated(), seed: 4211 },
     digest: STUDY_DIGEST,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a seed on an irreproducible generation warns instead of failing",
-    validationHasWarning(
-      "irreproducible generation carrying a seed",
-      decorated,
-      "type",
-      "$input.seed",
-    ) &&
-      validationHasWarningCount(
-        "irreproducible generation carrying a seed",
-        decorated,
-        1,
-      ),
+    namedFacts([
+      [
+        "warned",
+        () =>
+          validationHasWarning(
+            "irreproducible generation carrying a seed",
+            decorated,
+            "type",
+            "$input.seed",
+          ),
+      ],
+      [
+        "onlyWarning",
+        () =>
+          validationHasWarningCount(
+            "irreproducible generation carrying a seed",
+            decorated,
+            1,
+          ),
+      ],
+    ]),
+    { warned: true, onlyWarning: true },
   );
   const seedRefusals: ReadonlyArray<readonly [string, number]> = [
     ["a fractional seed", 4211.5],
@@ -431,10 +443,13 @@ export const test_architecture_design_reference = (): void => {
       acquisition: { ...generated(), seed },
       digest: STUDY_DIGEST,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       `${name} on an irreproducible generation fails outright rather than warning`,
-      hasViolation(irreproducible, "range", "$input.seed") &&
-        violationCount(irreproducible) === 1,
+      namedFacts([
+        ["refused", () => hasViolation(irreproducible, "range", "$input.seed")],
+        ["onlyViolation", () => violationCount(irreproducible) === 1],
+      ]),
+      { refused: true, onlyViolation: true },
     );
   });
   TestValidator.equals(
@@ -552,10 +567,20 @@ export const test_architecture_design_reference = (): void => {
       references: [source],
       evidence: value,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       `${name} evidence is refused at ${path}`,
-      validation.success === false &&
-        validation.violations.some((violation) => violation.path === path),
+      namedFacts([
+        ["refused", () => validation.success === false],
+        [
+          "atPath",
+          () =>
+            // The `success` comparison is restated only to narrow the union
+            // inside this closure.
+            validation.success === false &&
+            validation.violations.some((violation) => violation.path === path),
+        ],
+      ]),
+      { refused: true, atPath: true },
     );
   });
   TestValidator.equals(

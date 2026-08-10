@@ -441,10 +441,13 @@ export const test_architecture_built_opening = (): void => {
       );
     })(),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the wall cut is placed by the boundary's own frame",
-    vclose(cut.origin, { x: 4.5, y: 1.5, z: 0 }) &&
-      qclose(cut.rotation, NO_ROTATION),
+    namedFacts([
+      ["origin", () => vclose(cut.origin, { x: 4.5, y: 1.5, z: 0 })],
+      ["rotation", () => qclose(cut.rotation, NO_ROTATION)],
+    ]),
+    { origin: true, rotation: true },
   );
   const cutWall = buildAutoMovieWall({
     width: cut.width,

@@ -552,13 +552,27 @@ export const test_architecture_built_environment_topology = (): void => {
   const rises = elevations
     .slice(1)
     .map((value, index) => value - elevations[index]!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "storey heights are deliberately unequal, so no floor pitch is baked in",
-    nclose(rises[0]!, 9) &&
-      nclose(rises[1]!, 3.2) &&
-      nclose(rises[2]!, 2.8) &&
-      nclose(rises[3]!, 3) &&
-      new Set(rises.map((rise) => Math.round(rise * 10))).size === rises.length,
+    namedFacts([
+      ["hallToLevel2", () => nclose(rises[0]!, 9)],
+      ["level2ToDuplexLower", () => nclose(rises[1]!, 3.2)],
+      ["duplexLowerToUpper", () => nclose(rises[2]!, 2.8)],
+      ["duplexUpperToAttic", () => nclose(rises[3]!, 3)],
+      [
+        "allDistinct",
+        () =>
+          new Set(rises.map((rise) => Math.round(rise * 10))).size ===
+          rises.length,
+      ],
+    ]),
+    {
+      hallToLevel2: true,
+      level2ToDuplexLower: true,
+      duplexLowerToUpper: true,
+      duplexUpperToAttic: true,
+      allDistinct: true,
+    },
   );
   TestValidator.equals(
     "the sky-bridge is reported from both of its ends",
@@ -575,27 +589,49 @@ export const test_architecture_built_environment_topology = (): void => {
 
   const pieces = lowerBuiltEnvironment(citadel).set ?? [];
   const wing = pieces.find((piece) => piece.node === "citadel/keep-wing-slab")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a yawed wing places its child by the composed rotation",
-    vclose(wing.position, {
-      x: 6 + 4 * Math.cos(WING_YAW),
-      y: 9,
-      z: -4 * Math.sin(WING_YAW),
-    }) &&
-      qclose(wing.rotation!, yaw(WING_YAW)) &&
-      typeof wing.scale === "object" &&
-      vclose(wing.scale, { x: 6, y: 0.2, z: 4 }),
+    namedFacts([
+      [
+        "position",
+        () =>
+          vclose(wing.position, {
+            x: 6 + 4 * Math.cos(WING_YAW),
+            y: 9,
+            z: -4 * Math.sin(WING_YAW),
+          }),
+      ],
+      ["rotation", () => qclose(wing.rotation!, yaw(WING_YAW))],
+      ["perAxisScale", () => typeof wing.scale === "object"],
+      [
+        "scale",
+        () =>
+          // The `typeof` is restated only to narrow the union inside this
+          // closure; a comparison cannot move the answer.
+          typeof wing.scale === "object" &&
+          vclose(wing.scale, { x: 6, y: 0.2, z: 4 }),
+      ],
+    ]),
+    { position: true, rotation: true, perAxisScale: true, scale: true },
   );
   const annex = pieces.find(
     (piece) => piece.node === "citadel/annex-upper-slab",
   )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a tilted unit root is a real coordinate root",
-    vclose(annex.position, {
-      x: 30 + 6 * Math.cos(ANNEX_TILT) - 4.2 * Math.sin(ANNEX_TILT),
-      y: 6 * Math.sin(ANNEX_TILT) + 4.2 * Math.cos(ANNEX_TILT),
-      z: 0,
-    }) && qclose(annex.rotation!, roll(ANNEX_TILT)),
+    namedFacts([
+      [
+        "position",
+        () =>
+          vclose(annex.position, {
+            x: 30 + 6 * Math.cos(ANNEX_TILT) - 4.2 * Math.sin(ANNEX_TILT),
+            y: 6 * Math.sin(ANNEX_TILT) + 4.2 * Math.cos(ANNEX_TILT),
+            z: 0,
+          }),
+      ],
+      ["rotation", () => qclose(annex.rotation!, roll(ANNEX_TILT))],
+    ]),
+    { position: true, rotation: true },
   );
   TestValidator.equals(
     "the dome and the door leaf stage like any other element",

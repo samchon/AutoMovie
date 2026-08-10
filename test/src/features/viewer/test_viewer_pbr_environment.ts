@@ -210,9 +210,10 @@ export const test_viewer_pbr_environment = (): void => {
     },
   );
   const unresolved = buildMaterial({ ...base, baseColorTexture: "base.png" });
-  TestValidator.predicate(
+  TestValidator.equals(
     "legacy material and unresolved texture preserve the no-map path",
-    unresolved.map === null && !unresolved.transparent,
+    { mapped: unresolved.map !== null, transparent: unresolved.transparent },
+    { mapped: false, transparent: false },
   );
   const missing = buildMaterial(
     { ...base, baseColorTexture: "missing.png" },
@@ -241,14 +242,19 @@ export const test_viewer_pbr_environment = (): void => {
     nclose(emissive.emissive.g, 0.3),
   );
   const blend = buildMaterial({ ...base, opacity: 0.5, alphaMode: "blend" });
-  TestValidator.predicate(
+  TestValidator.equals(
     "blend mode enables blending without writing opaque depth",
-    blend.transparent && !blend.depthWrite,
+    { transparent: blend.transparent, depthWrite: blend.depthWrite },
+    { transparent: true, depthWrite: false },
   );
   const legacyBlend = buildMaterial({ ...base, opacity: 0.5 });
-  TestValidator.predicate(
+  TestValidator.equals(
     "omitted alpha mode preserves legacy opacity blending",
-    legacyBlend.transparent && !legacyBlend.depthWrite,
+    {
+      transparent: legacyBlend.transparent,
+      depthWrite: legacyBlend.depthWrite,
+    },
+    { transparent: true, depthWrite: false },
   );
   const defaultMask = buildMaterial({ ...base, alphaMode: "mask" });
   TestValidator.equals(
@@ -693,13 +699,25 @@ export const test_viewer_pbr_environment = (): void => {
   const texture = new THREE.Texture();
   const ldrVersion = texture.version;
   applySceneEnvironment(scene, ENVIRONMENT, texture);
-  TestValidator.predicate(
+  TestValidator.equals(
     "IBL image configures scene environment and background",
-    scene.environment === texture &&
-      scene.background === texture &&
-      texture.mapping === THREE.EquirectangularReflectionMapping &&
-      nclose(scene.environmentRotation.y, Math.PI / 2) &&
-      nclose(scene.environmentIntensity, 0.75),
+    namedFacts([
+      ["environment", () => scene.environment === texture],
+      ["background", () => scene.background === texture],
+      [
+        "mapping",
+        () => texture.mapping === THREE.EquirectangularReflectionMapping,
+      ],
+      ["rotation", () => nclose(scene.environmentRotation.y, Math.PI / 2)],
+      ["intensity", () => nclose(scene.environmentIntensity, 0.75)],
+    ]),
+    {
+      environment: true,
+      background: true,
+      mapping: true,
+      rotation: true,
+      intensity: true,
+    },
   );
   // An 8-bit sky stores sRGB-encoded texels and a float one stores linear
   // radiance, so a decoding left at the loader's default lights the room off a
@@ -732,35 +750,65 @@ export const test_viewer_pbr_environment = (): void => {
   );
   applySceneEnvironment(scene, ENVIRONMENT, texture);
   const normalPass = applyRenderMode(scene, "normal");
-  TestValidator.predicate(
+  TestValidator.equals(
     "structural mode suspends and restores image lighting independently",
-    scene.environment === null &&
-      scene.background instanceof THREE.Color &&
-      scene.background.getHex() === 0,
+    namedFacts([
+      ["environmentCleared", () => scene.environment === null],
+      ["backgroundIsColor", () => scene.background instanceof THREE.Color],
+      [
+        "backgroundBlack",
+        () =>
+          // The `instanceof` is restated only to narrow the union inside this
+          // closure; a comparison cannot move the answer.
+          scene.background instanceof THREE.Color &&
+          scene.background.getHex() === 0,
+      ],
+    ]),
+    {
+      environmentCleared: true,
+      backgroundIsColor: true,
+      backgroundBlack: true,
+    },
   );
   normalPass.restore();
-  TestValidator.predicate(
+  TestValidator.equals(
     "structural mode restores exact environment instances",
-    scene.environment === texture && scene.background === texture,
+    {
+      environment: scene.environment === texture,
+      background: scene.background === texture,
+    },
+    { environment: true, background: true },
   );
   applySceneEnvironment(scene, {
     ...ENVIRONMENT,
     image: null,
     background: { r: 0.1, g: 0.2, b: 0.3, a: null, hex: null },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "solid environment background clears IBL",
-    scene.environment === null && scene.background instanceof THREE.Color,
+    {
+      environmentCleared: scene.environment === null,
+      backgroundIsColor: scene.background instanceof THREE.Color,
+    },
+    { environmentCleared: true, backgroundIsColor: true },
   );
   applySceneEnvironment(scene, { ...ENVIRONMENT, image: "missing.hdr" });
-  TestValidator.predicate(
+  TestValidator.equals(
     "unresolved environment image is explicit transparent no-IBL",
-    scene.environment === null && scene.background === null,
+    {
+      environmentCleared: scene.environment === null,
+      backgroundCleared: scene.background === null,
+    },
+    { environmentCleared: true, backgroundCleared: true },
   );
   applySceneEnvironment(scene, null);
-  TestValidator.predicate(
+  TestValidator.equals(
     "null clears scene environment",
-    scene.environment === null && scene.background === null,
+    {
+      environmentCleared: scene.environment === null,
+      backgroundCleared: scene.background === null,
+    },
+    { environmentCleared: true, backgroundCleared: true },
   );
 
   const renderer = {
@@ -768,46 +816,60 @@ export const test_viewer_pbr_environment = (): void => {
     toneMappingExposure: 3,
     shadowMap: { enabled: false, type: THREE.BasicShadowMap },
   } as unknown as THREE.WebGLRenderer;
+  /** The photographic policy the renderer carries at this instant. */
+  const policy = () => ({
+    toneMapping: renderer.toneMapping,
+    exposure: renderer.toneMappingExposure,
+    shadows: renderer.shadowMap.enabled,
+    shadowType: renderer.shadowMap.type,
+  });
   const beauty = applyRendererEnvironment(renderer, ENVIRONMENT, "beauty");
-  TestValidator.predicate(
-    "beauty applies tone, exposure and shadows",
-    renderer.toneMapping === THREE.ACESFilmicToneMapping &&
-      renderer.toneMappingExposure === 1.25 &&
-      renderer.shadowMap.enabled &&
-      renderer.shadowMap.type === THREE.PCFSoftShadowMap,
-  );
+  TestValidator.equals("beauty applies tone, exposure and shadows", policy(), {
+    toneMapping: THREE.ACESFilmicToneMapping,
+    exposure: 1.25,
+    shadows: true,
+    shadowType: THREE.PCFSoftShadowMap,
+  });
   beauty.restore();
   beauty.restore();
-  TestValidator.predicate(
-    "renderer state restores idempotently",
-    renderer.toneMapping === THREE.LinearToneMapping &&
-      renderer.toneMappingExposure === 3 &&
-      !renderer.shadowMap.enabled &&
-      renderer.shadowMap.type === THREE.BasicShadowMap,
-  );
+  TestValidator.equals("renderer state restores idempotently", policy(), {
+    toneMapping: THREE.LinearToneMapping,
+    exposure: 3,
+    shadows: false,
+    shadowType: THREE.BasicShadowMap,
+  });
   const structural = applyRendererEnvironment(renderer, ENVIRONMENT, "mask");
-  TestValidator.predicate(
+  TestValidator.equals(
     "structural pass bypasses photographic settings",
-    renderer.toneMapping === THREE.NoToneMapping &&
-      renderer.toneMappingExposure === 1 &&
-      !renderer.shadowMap.enabled,
+    {
+      toneMapping: renderer.toneMapping,
+      exposure: renderer.toneMappingExposure,
+      shadows: renderer.shadowMap.enabled,
+    },
+    { toneMapping: THREE.NoToneMapping, exposure: 1, shadows: false },
   );
   structural.restore();
   const legacyBeauty = applyRendererEnvironment(renderer, null, "beauty");
-  TestValidator.predicate(
+  TestValidator.equals(
     "legacy beauty leaves host renderer policy unchanged",
-    renderer.toneMapping === THREE.LinearToneMapping &&
-      renderer.toneMappingExposure === 3 &&
-      !renderer.shadowMap.enabled &&
-      renderer.shadowMap.type === THREE.BasicShadowMap,
+    policy(),
+    {
+      toneMapping: THREE.LinearToneMapping,
+      exposure: 3,
+      shadows: false,
+      shadowType: THREE.BasicShadowMap,
+    },
   );
   legacyBeauty.restore();
   const legacyStructural = applyRendererEnvironment(renderer, null, "normal");
-  TestValidator.predicate(
+  TestValidator.equals(
     "legacy structural pass still bypasses photographic renderer state",
-    renderer.toneMapping === THREE.NoToneMapping &&
-      renderer.toneMappingExposure === 1 &&
-      !renderer.shadowMap.enabled,
+    {
+      toneMapping: renderer.toneMapping,
+      exposure: renderer.toneMappingExposure,
+      shadows: renderer.shadowMap.enabled,
+    },
+    { toneMapping: THREE.NoToneMapping, exposure: 1, shadows: false },
   );
   legacyStructural.restore();
   // Precedence: the delivery curve reaches the renderer only where no scene
@@ -818,10 +880,13 @@ export const test_viewer_pbr_environment = (): void => {
     "beauty",
     "acesFilmic",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the render spec curve applies only to an environment-less scene",
-    renderer.toneMapping === THREE.ACESFilmicToneMapping &&
-      renderer.toneMappingExposure === 3,
+    {
+      toneMapping: renderer.toneMapping,
+      exposure: renderer.toneMappingExposure,
+    },
+    { toneMapping: THREE.ACESFilmicToneMapping, exposure: 3 },
   );
   delivered.restore();
   const overridden = applyRendererEnvironment(
@@ -857,10 +922,10 @@ export const test_viewer_pbr_environment = (): void => {
     },
     "beauty",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "none tone map and PCF map exactly",
-    renderer.toneMapping === THREE.NoToneMapping &&
-      renderer.shadowMap.type === THREE.PCFShadowMap,
+    { toneMapping: renderer.toneMapping, shadowType: renderer.shadowMap.type },
+    { toneMapping: THREE.NoToneMapping, shadowType: THREE.PCFShadowMap },
   );
   none.restore();
   const vsm = applyRendererEnvironment(
@@ -907,14 +972,24 @@ export const test_viewer_pbr_environment = (): void => {
     castShadow: true,
     shadow: { mapSize: 512, bias: -0.001, normalBias: 0.1, near: 0.2, far: 80 },
   }) as THREE.DirectionalLight;
-  TestValidator.predicate(
+  TestValidator.equals(
     "light shadow settings reach its camera and map",
-    shadowed.castShadow &&
-      shadowed.shadow.mapSize.x === 512 &&
-      shadowed.shadow.bias === -0.001 &&
-      shadowed.shadow.normalBias === 0.1 &&
-      shadowed.shadow.camera.near === 0.2 &&
-      shadowed.shadow.camera.far === 80,
+    {
+      castShadow: shadowed.castShadow,
+      mapSize: shadowed.shadow.mapSize.x,
+      bias: shadowed.shadow.bias,
+      normalBias: shadowed.shadow.normalBias,
+      near: shadowed.shadow.camera.near,
+      far: shadowed.shadow.camera.far,
+    },
+    {
+      castShadow: true,
+      mapSize: 512,
+      bias: -0.001,
+      normalBias: 0.1,
+      near: 0.2,
+      far: 80,
+    },
   );
   TestValidator.predicate(
     "light without shadow stays legacy",

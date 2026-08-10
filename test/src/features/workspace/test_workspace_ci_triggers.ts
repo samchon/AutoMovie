@@ -198,6 +198,8 @@ const SUITE_INPUTS = [
   "internals/license-policy.mjs",
   // packaged capture and production verification
   "internals/e2e-tgz.mjs",
+  // test_workspace_folded_assertions
+  "internals/scan-folded-predicates.mjs",
   // this scenario
   ".github/workflows/build.yml",
   ".github/workflows/test.yml",

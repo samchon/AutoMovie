@@ -15,7 +15,7 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { nclose, qclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, qclose, vclose } from "../internal/predicates";
 
 const NO_ROTATION: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -465,12 +465,18 @@ export const test_architecture_built_connector_operation = (): void => {
   );
 
   const lift = builtConnectorGeometry(source, "lift");
-  TestValidator.predicate(
+  TestValidator.equals(
     "a landing sits on the run's own route by arc length",
-    lift.landings.length === 1 &&
-      lift.landings[0]!.space === "level-1" &&
-      nclose(lift.landings[0]!.at, 0.5) &&
-      vclose(lift.landings[0]!.position, { x: 0, y: STOREY, z: 0 }),
+    namedFacts([
+      ["count", () => lift.landings.length === 1],
+      ["space", () => lift.landings[0]!.space === "level-1"],
+      ["at", () => nclose(lift.landings[0]!.at, 0.5)],
+      [
+        "position",
+        () => vclose(lift.landings[0]!.position, { x: 0, y: STOREY, z: 0 }),
+      ],
+    ]),
+    { count: true, space: true, at: true, position: true },
   );
   TestValidator.predicate(
     "an uneven route places its landing by length, not by station index",
@@ -505,13 +511,34 @@ export const test_architecture_built_connector_operation = (): void => {
     })(),
   );
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "each car stands where its own state puts it",
-    nclose(carAt(source, "car"), CAR_REST) &&
-      nclose(carAt(source, "car", "at-level-1"), CAR_REST + STOREY) &&
-      nclose(carAt(source, "car", "at-level-2"), CAR_REST + 2 * STOREY) &&
-      nclose(carAt(source, "counterweight"), CAR_REST + 2 * STOREY) &&
-      nclose(carAt(source, "counterweight", "at-level-2"), CAR_REST),
+    namedFacts([
+      ["carRest", () => nclose(carAt(source, "car"), CAR_REST)],
+      [
+        "carLevel1",
+        () => nclose(carAt(source, "car", "at-level-1"), CAR_REST + STOREY),
+      ],
+      [
+        "carLevel2",
+        () => nclose(carAt(source, "car", "at-level-2"), CAR_REST + 2 * STOREY),
+      ],
+      [
+        "counterweightRest",
+        () => nclose(carAt(source, "counterweight"), CAR_REST + 2 * STOREY),
+      ],
+      [
+        "counterweightLevel2",
+        () => nclose(carAt(source, "counterweight", "at-level-2"), CAR_REST),
+      ],
+    ]),
+    {
+      carRest: true,
+      carLevel1: true,
+      carLevel2: true,
+      counterweightRest: true,
+      counterweightLevel2: true,
+    },
   );
   TestValidator.equals(
     "the state hands back the floor it serves, and nothing for what serves none",
