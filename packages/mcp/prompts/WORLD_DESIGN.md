@@ -15,7 +15,7 @@ Reach for `lattice` when the repetition is volumetric: a curtain-wall grid over 
 A set may declare a weighted `prototypes` table beside its `modelRecipe`, which stays the default. Each prototype names its own recipe and a positive selection weight, and the choice is deterministic from seed and slot, so a hedgerow of three shrub recipes or a facade of four panel types is one set rather than three sets that have to be kept in step. Variation widens the same way: `scale3` gives independent per-axis ranges, `rotationDeg` gives seeded XYZ Euler offsets applied after facing, and `visibleProbability` thins a procedural set without changing its declared count. All of it regenerates from the seed; none of it is stored per member.
 
 The engine world kit constructs constant terrain, ramps, sampled heightfields,
-visible wall/building box blocks, and the three instance layouts. `assertWorldPlacements` rejects
+visible wall/building box blocks, and the three seeded instance layouts (`grid`, `scatter`, `along-route`); `lattice` and `explicit` are compiler-materialized and have no world-kit builder. `assertWorldPlacements` rejects
 overlapping blocks, a block whose entire footprint lacks one matching support
 surface, blocked routes, and unreachable landmarks. It evaluates every
 candidate support surface, so an overlapping lower ground plane cannot hide the
