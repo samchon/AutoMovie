@@ -553,6 +553,30 @@ export const test_architecture_built_opening = (): void => {
     })(),
   );
 
+  TestValidator.predicate(
+    "a state that gives a panel no value leaves that panel at rest",
+    (() => {
+      const partial = partition();
+      // The record is now invalid, and validation says so; the query still has
+      // to answer rather than fail on a value it was never given.
+      partial.openings[0]!.operation!.states[1]!.panels.pop();
+      const inner = builtOpeningPanelPlacements(partial, "door", "open").find(
+        (entry) => entry.panel === "inner",
+      )!;
+      return (
+        validateBuiltEnvironment({ environment: partial }).success === false &&
+        // Carried a quarter turn by its parent leaf, but not turned itself.
+        vclose(inner.position, { x: 1, y: 0, z: -1 }) &&
+        qclose(inner.rotation, {
+          x: 0,
+          y: Math.SQRT1_2,
+          z: 0,
+          w: Math.SQRT1_2,
+        })
+      );
+    })(),
+  );
+
   TestValidator.equals(
     "an opening with no operation answers with no panel and no envelope",
     {
@@ -727,6 +751,27 @@ export const test_architecture_built_opening = (): void => {
           { x: 1, y: 2.9 },
         ]),
       "$input.openings[4].profile.outline",
+    ],
+    [
+      // A concave face is legal, and a void may then have every corner inside
+      // the face while an edge still crosses out through the reentrant corner.
+      "a void spanning the notch of a concave face",
+      (value) => {
+        value.boundaries[0]!.face!.outline = [
+          { x: 0, y: 0 },
+          { x: 9, y: 0 },
+          { x: 9, y: 3 },
+          { x: 5, y: 3 },
+          { x: 5, y: 1.5 },
+          { x: 0, y: 1.5 },
+        ];
+        value.openings[0]!.profile!.outline = [
+          { x: 1, y: 1 },
+          { x: 8, y: 2.5 },
+          { x: 8, y: 1 },
+        ];
+      },
+      "$input.openings[0].profile.outline",
     ],
     [
       "two voids sharing the same part of one boundary",

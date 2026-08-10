@@ -262,6 +262,10 @@ export interface IAutoMovieOpeningProfile {
  * panel, a slide leaf is one prismatic panel, and a folding leaf is a revolute
  * panel whose element is parented to another leaf's element, so the existing
  * element hierarchy carries the chaining without a second parent notion.
+ *
+ * An opening that declares an operation must name the element the panels belong
+ * to in {@link IAutoMovieBuiltOpening.fill}: a moving leaf that fills nothing is
+ * a leaf nobody can point at.
  */
 export interface IAutoMovieOpeningOperation {
   /** Travelling leaves, sashes, or slats; at least one. */
@@ -289,7 +293,12 @@ export interface IAutoMovieOpeningOperation {
 export interface IAutoMovieMovablePanel {
   /** Stable panel identity within the opening. */
   id: string;
-  /** Visible element this panel drives; its local transform is the rest pose. */
+  /**
+   * Visible element this panel drives; its local transform is the rest pose.
+   *
+   * It is the opening's own {@link IAutoMovieBuiltOpening.fill} or an element
+   * below it, so a panel can only move part of the thing that fills the hole.
+   */
   element: string;
   /** Positive leaf extent along the element's local X, in metres. */
   width: number;
@@ -443,7 +452,11 @@ export interface IAutoMovieBuiltConnector {
 
 /** The usable section of a connector at one point along its route. */
 export interface IAutoMovieConnectorSection {
-  /** Normalized route position, `0` at the first point and `1` at the last. */
+  /**
+   * Arc-length fraction of the 3D route polyline, `0` at the first point and
+   * `1` at the last. Measuring along the route rather than by point index is
+   * what keeps a station on an unevenly spaced route where it was put.
+   */
   at: number;
   /** Positive usable width in metres here. */
   width: number;

@@ -367,7 +367,7 @@ export const validateBuiltEnvironment = (props: {
   });
 
   collectIds(environment.openings, `${root}.openings`, "opening", collector);
-  const openingHulls = new Map<string, IAutoMoviePlanarPoint[]>();
+  const openingHulls = new Map<number, IAutoMoviePlanarPoint[]>();
   environment.openings.forEach((opening, index) => {
     const path = `${root}.openings[${index}]`;
     nonEmpty(opening.kind, `${path}.kind`, "opening kind", collector);
@@ -399,7 +399,7 @@ export const validateBuiltEnvironment = (props: {
         );
       if (profileIsUsable(opening.profile, profilePath, collector)) {
         const hull = outlineHull(opening.profile);
-        openingHulls.set(opening.id, hull);
+        openingHulls.set(index, hull);
         const face = boundaryFaces.get(opening.boundary);
         // A missing or malformed host face is already reported on its own path,
         // and repeating it here would only hide the one defect worth acting on.
@@ -421,14 +421,17 @@ export const validateBuiltEnvironment = (props: {
     });
   });
   environment.openings.forEach((opening, index) => {
-    const hull = openingHulls.get(opening.id);
+    const hull = openingHulls.get(index);
     if (hull === undefined) return;
-    for (const earlier of environment.openings.slice(0, index)) {
-      const other = openingHulls.get(earlier.id);
+    // Hulls are keyed by position rather than by id, so a work that declares
+    // one opening id twice reports that one defect on its own path instead of
+    // also reporting the record as overlapping itself.
+    environment.openings.slice(0, index).forEach((earlier, other) => {
+      const against = openingHulls.get(other);
       if (
-        other !== undefined &&
+        against !== undefined &&
         earlier.boundary === opening.boundary &&
-        polygonsOverlap(hull, other)
+        polygonsOverlap(hull, against)
       )
         collector.push(
           "range",
@@ -436,7 +439,7 @@ export const validateBuiltEnvironment = (props: {
           `openings "${earlier.id}" and "${opening.id}" occupy the same part of boundary "${opening.boundary}"`,
           opening.profile!.outline,
         );
-    }
+    });
   });
 
   collectIds(
@@ -830,10 +833,16 @@ export interface IAutoMovieConnectorSectionAt {
  * This is the join that stops the declared opening and the modelled hole from
  * being two unrelated facts: the returned voids carry the architectural
  * opening's own id, so `buildAutoMovieWall` cuts the wall against the same
- * records validation held inside the face. The kernel cuts axis-aligned
- * rectangles, so an arched or round void is handed over as the rectangle that
- * exactly bounds it; an author who needs the arch's own spandrel back composes
- * it from the profile rather than being told the rectangle was the arch.
+ * records validation held inside the face.
+ *
+ * The kernel is rectangular, and that shows in two places rather than being
+ * hidden. An arched or round void is handed over as the rectangle that exactly
+ * bounds it, so an author who needs the arch's own spandrel back composes it
+ * from the profile rather than being told the rectangle was the arch. A concave
+ * face likewise becomes its own bounding panel. Two voids that clear each other
+ * as outlines may therefore still have overlapping bounds, and the kernel
+ * refuses that pair by name; that refusal is the rectangle's limit speaking,
+ * not a defect in the design it was handed.
  */
 export const builtBoundaryWallCut = (
   environment: IAutoMovieBuiltEnvironment,
@@ -947,25 +956,18 @@ export const builtOpeningSweepEnvelope = (
   const opening = requireOpening(environment, openingId);
   const operation = opening.operation;
   if (operation === undefined) return [];
-  const staged = worldMatricesOf(environment, operationDeltas(environment));
-  const byId = new Map(
-    environment.elements.map((element) => [element.id, element]),
-  );
+  const staged = operationDeltas(environment);
   return operation.panels.map((panel) => {
-    const element = byId.get(panel.element);
-    if (element === undefined)
-      throw new Error(
-        `built environment "${environment.id}" has no element "${panel.element}" for panel "${panel.id}"`,
-      );
-    const rest = Matrix4.compose(
-      element.transform.translation,
-      element.transform.rotation,
-      element.transform.scale,
+    // The panel's own travel is what is being measured, so it is the one joint
+    // left at rest; every other joint, its ancestors included, stands where the
+    // environment's current state puts it.
+    const held = new Map(staged);
+    held.delete(panel.element);
+    const base = requirePanelMatrix(
+      environment,
+      worldMatricesOf(environment, held),
+      panel,
     );
-    const base =
-      element.parent === null
-        ? rest
-        : Matrix4.multiply(staged.get(element.parent)!, rest);
     const corners: IAutoMovieVector3[] = [
       { x: 0, y: 0, z: 0 },
       { x: panel.width, y: 0, z: 0 },
@@ -1006,7 +1008,7 @@ export const builtConnectorGeometry = (
 ): IAutoMovieConnectorGeometry => {
   const connector = requireConnector(environment, connectorId);
   const cumulative = cumulativeRouteLengths(connector.route);
-  const total = cumulative[cumulative.length - 1] ?? 0;
+  const total = cumulative[cumulative.length - 1]!;
   if (connector.route.length < 2 || total === 0)
     throw new Error(
       `connector "${connectorId}" of built environment "${environment.id}" has no measurable route`,
@@ -1345,7 +1347,14 @@ const panelDelta = (motion: IAutoMoviePanelMotion, value: number): number[] => {
  *
  * The default is the environment's own current state; a caller asking for
  * another state gets that one instead, which is how a shot stages the same
- * building with its doors open without editing the record.
+ * building with its doors open without editing the record. An opening that has
+ * no such state simply does not move, so asking for `open` swings the doors
+ * that can open and leaves every other opening exactly where it was.
+ *
+ * A state that names no value for a panel leaves that panel at rest.
+ * `validateBuiltEnvironment` refuses such a record by name, and answering at
+ * rest is what keeps a query over an unvalidated one from failing on a value it
+ * was never given.
  */
 const operationDeltas = (
   environment: IAutoMovieBuiltEnvironment,
@@ -2030,13 +2039,13 @@ const validatePanelFit = (
   environment: IAutoMovieBuiltEnvironment,
   root: string,
   faces: ReadonlyMap<string, IAutoMovieBoundaryFace>,
-  hulls: ReadonlyMap<string, IAutoMoviePlanarPoint[]>,
+  hulls: ReadonlyMap<number, IAutoMoviePlanarPoint[]>,
   collector: ViolationCollector,
 ): void => {
   const matrices = worldMatricesOf(environment);
   environment.openings.forEach((opening, index) => {
     const operation = opening.operation;
-    const hull = hulls.get(opening.id);
+    const hull = hulls.get(index);
     const face = faces.get(opening.boundary);
     if (operation === undefined || hull === undefined || face === undefined)
       return;
