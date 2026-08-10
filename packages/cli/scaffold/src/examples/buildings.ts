@@ -125,6 +125,12 @@ const floorSurface = (props: {
  * Surrounding ground, sky, sun, and natural water are not: they stay with the
  * production world and are read as context, never copied in here.
  *
+ * Each storey's partition carries a located face, and the door in it carries
+ * the void it cuts in that face plus one hinged panel with named `closed` and
+ * `open` states. The engine holds the leaf inside its own hole and stages
+ * whichever state the record stands in, so "the door is open" cannot become a
+ * fact the render contradicts.
+ *
  * The geometry is deliberately crude: one unit box scaled per member. What this
  * file demonstrates is the authoring technique — how a subject class composes
  * elements, spaces, boundaries, openings, connectors and surfaces and returns a
@@ -271,14 +277,28 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           space: `tower-storey-${index}`,
         },
         {
-          id: `tower-door-leaf-${index}`,
-          kind: "door-leaf",
+          // The hinge, not the leaf, is the frame the door turns in: it shares
+          // the partition's own face frame, so the leaf spans local +X by its
+          // width and local +Y by its height from the pivot at its origin.
+          id: `tower-door-hinge-${index}`,
+          kind: "door",
           parent: "tower-root",
           transform: place(
-            { x: 0, y: this.storeyElevation(index) + 1.05, z: 1.2 },
-            NO_ROTATION,
-            { x: 0.1, y: 2.1, z: 0.9 },
+            { x: 0, y: this.storeyElevation(index), z: 0.75 },
+            yaw(-Math.PI / 2),
           ),
+          model: null,
+          space: `tower-room-${index}`,
+        },
+        {
+          id: `tower-door-leaf-${index}`,
+          kind: "door-leaf",
+          parent: `tower-door-hinge-${index}`,
+          transform: place({ x: 0.45, y: 1.05, z: 0 }, NO_ROTATION, {
+            x: 0.9,
+            y: 2.1,
+            z: 0.1,
+          }),
           model: "building-box",
           space: `tower-room-${index}`,
         },
@@ -374,6 +394,23 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
         kind: "wall",
         spaces: [`tower-storey-${index}`, `tower-room-${index}`],
         elements: [`tower-partition-${index}`],
+        // The separation is somewhere, and saying where is what lets the door
+        // below be held inside it instead of merely declared next to it.
+        face: {
+          origin: {
+            x: 0,
+            y: this.storeyElevation(index),
+            z: -this.towerHalf.z,
+          },
+          rotation: yaw(-Math.PI / 2),
+          outline: [
+            { x: 0, y: 0 },
+            { x: this.towerHalf.z * 2, y: 0 },
+            { x: this.towerHalf.z * 2, y: this.storeyHeight },
+            { x: 0, y: this.storeyHeight },
+          ],
+          thickness: 0.2,
+        },
       })),
     ];
 
@@ -381,7 +418,44 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
       id: `tower-door-${index}`,
       kind: "door",
       boundary: `tower-partition-boundary-${index}`,
-      fill: `tower-door-leaf-${index}`,
+      fill: `tower-door-hinge-${index}`,
+      // The void is written in the host boundary's own frame, so the leaf and
+      // the hole it fills are measured in one coordinate system. A rectangle is
+      // the simplest outline; an arched head would be the same four corners
+      // with one bulged edge.
+      profile: {
+        outline: [
+          { x: this.towerHalf.z + 0.75, y: 0 },
+          { x: this.towerHalf.z + 1.65, y: 0 },
+          { x: this.towerHalf.z + 1.65, y: 2.1 },
+          { x: this.towerHalf.z + 0.75, y: 2.1 },
+        ],
+      },
+      operation: {
+        panels: [
+          {
+            id: "leaf",
+            element: `tower-door-hinge-${index}`,
+            width: 0.9,
+            height: 2.1,
+            motion: {
+              kind: "revolute",
+              axis: { x: 0, y: 1, z: 0 },
+              pivot: { x: 0, y: 0, z: 0 },
+              min: 0,
+              max: Math.PI / 2,
+            },
+          },
+        ],
+        // The names are this production's to choose; the engine only checks
+        // that each state drives every panel inside its own travel.
+        states: [
+          { id: "closed", panels: [{ panel: "leaf", value: 0 }] },
+          { id: "open", panels: [{ panel: "leaf", value: Math.PI / 2 }] },
+        ],
+        state: "closed",
+        hardware: [{ id: "frame", kind: "door-frame", element: null }],
+      },
     }));
 
     const connectors: IAutoMovieBuiltConnector[] = [
@@ -395,8 +469,19 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
           { x: -4, y: this.storeyElevation(index - 1), z: 0 },
           { x: -2, y: this.storeyElevation(index), z: 0 },
         ],
+        // A straight flight faces one way the whole climb; a turning or
+        // helical one would vary this station by station, which is the only
+        // way its treads could be told apart at all.
+        orientations: [yaw(Math.PI / 2), yaw(Math.PI / 2)],
         width: 1.4,
         clearHeight: 2.2,
+        // Derived from the storey it climbs rather than typed beside it, so
+        // the risers still add up when `storeyHeight` changes.
+        steps: {
+          count: 16,
+          rise: this.storeyHeight / 16,
+          run: 2 / 16,
+        },
         elements: [],
       })),
       ...towers.map((index) => ({
@@ -465,8 +550,15 @@ export class ExampleBuilding extends AutoMovieSubject<IAutoMovieBuiltEnvironment
             z: this.annexOrigin.z,
           },
         ],
-        width: 2.4,
-        clearHeight: 2.6,
+        // A bridge that widens into a landing at each end states a section
+        // along its route instead of one scalar. The constant pair and this
+        // varying spelling are mutually exclusive: two spellings of one fact
+        // are two facts that can disagree.
+        sections: [
+          { at: 0, width: 3, clearHeight: 2.6 },
+          { at: 0.5, width: 2.4, clearHeight: 2.6 },
+          { at: 1, width: 3, clearHeight: 2.6 },
+        ],
         elements: [],
       },
     ];

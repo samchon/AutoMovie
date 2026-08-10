@@ -13,7 +13,10 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
+import {
+  builtConnectorSection,
+  builtEnvironmentContainsPoint,
+} from "../architecture/builtEnvironment";
 import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
@@ -131,7 +134,8 @@ export const propSpaceContainsBounds = (props: {
  * describes cannot be proven blocked, and guessing where the hole is would be
  * worse than saying nothing. A connector is swept from its own route: each
  * segment widens by half the usable width horizontally and rises by the clear
- * height, which is the volume a body traversing it needs.
+ * height, which is the volume a body traversing it needs. A connector that
+ * declares no section at all is skipped for the same reason as an open cut.
  */
 export const propBlockedPassages = (props: {
   environment: IAutoMovieBuiltEnvironment;
@@ -828,15 +832,15 @@ const contactPairs = (staged: readonly IResolvedProp[]): Set<string> => {
 };
 
 const pairKey = (left: string, right: string): string =>
-  left < right ? `${left} ${right}` : `${right} ${left}`;
+  left < right ? `${left}\0${right}` : `${right}\0${left}`;
 
 const relationKey = (relation: IAutoMoviePropRelation): string => {
   const target = relation.target;
   const tail =
     target.kind === "prop-affordance"
-      ? `${target.prop} ${target.affordance}`
-      : `${target.environment} ${targetId(target)}`;
-  return `${relation.kind} ${target.kind} ${tail}`;
+      ? `${target.prop}\0${target.affordance}`
+      : `${target.environment}\0${targetId(target)}`;
+  return `${relation.kind}\0${target.kind}\0${tail}`;
 };
 
 const targetId = (
@@ -1009,15 +1013,53 @@ const openingRevealBounds = (
   return matrix === null ? null : transformedModelBounds(model, matrix);
 };
 
-/** Axis-aligned volumes a connector's route sweeps at its usable size. */
+/**
+ * Axis-aligned volumes a connector's route sweeps at its usable size.
+ *
+ * A connector that states no section at all sweeps nothing here, and a prop
+ * standing in it is therefore reported by neither this predicate nor the
+ * validator, for the same reason an open cut is: an unstated width is not a
+ * width of zero, and a passage whose size nobody declared cannot be proven
+ * blocked. `validateBuiltEnvironment` refuses that record on its own path, so
+ * the missing declaration is reported where it can be fixed rather than guessed
+ * at here.
+ *
+ * A varying section is read where the segment actually is, and each segment
+ * takes the widest section it spans. The box is already an outer bound of the
+ * segment it sweeps, so widening it to the segment's most generous station
+ * keeps the answer on the conservative side rather than letting a prop hide in
+ * the narrow half of a tapering corridor.
+ */
 const connectorCorridors = (
   connector: IAutoMovieBuiltConnector,
 ): IAutoMoviePropBox[] => {
-  const half = connector.width / 2;
+  const cumulative = [0];
+  for (let index = 0; index + 1 < connector.route.length; ++index) {
+    const from = connector.route[index]!;
+    const to = connector.route[index + 1]!;
+    cumulative.push(
+      cumulative[index]! +
+        Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z),
+    );
+  }
+  const total = cumulative[cumulative.length - 1]!;
+  // Whether a section is stated is a property of the record alone, so one probe
+  // settles it for every station read below.
+  if (total <= 0 || builtConnectorSection(connector, 0) === null) return [];
   const boxes: IAutoMoviePropBox[] = [];
   for (let index = 0; index + 1 < connector.route.length; ++index) {
     const from = connector.route[index]!;
     const to = connector.route[index + 1]!;
+    const start = cumulative[index]! / total;
+    const end = cumulative[index + 1]! / total;
+    const samples = [start, end];
+    for (const section of connector.sections ?? [])
+      if (section.at > start && section.at < end) samples.push(section.at);
+    const sections = samples.map((at) => builtConnectorSection(connector, at)!);
+    const half = Math.max(...sections.map((section) => section.width)) / 2;
+    const clearHeight = Math.max(
+      ...sections.map((section) => section.clearHeight),
+    );
     boxes.push({
       min: {
         x: Math.min(from.x, to.x) - half,
@@ -1026,7 +1068,7 @@ const connectorCorridors = (
       },
       max: {
         x: Math.max(from.x, to.x) + half,
-        y: Math.max(from.y, to.y) + connector.clearHeight,
+        y: Math.max(from.y, to.y) + clearHeight,
         z: Math.max(from.z, to.z) + half,
       },
     });

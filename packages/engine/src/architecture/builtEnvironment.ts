@@ -1,25 +1,48 @@
 import {
+  IAutoMovieBoundaryFace,
   IAutoMovieBuiltConnector,
   IAutoMovieBuiltEnvironment,
+  IAutoMovieBuiltOpening,
   IAutoMovieBuiltSpace,
+  IAutoMovieConnectorSection,
+  IAutoMovieMovablePanel,
+  IAutoMovieOpeningProfile,
+  IAutoMoviePanelMotion,
+  IAutoMoviePlanarPoint,
+  IAutoMovieQuaternion,
   IAutoMovieSpace,
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { IAutoMovieWallOpening } from "../geometry/proceduralMesh";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
 import { IAutoMovieSubjectContribution } from "../subject";
 import { validateModel } from "../validation/validateModel";
 import { validateSpace } from "../validation/validateSpace";
 import { validateTransformScalars } from "../validation/validateTransformScalars";
 import { ViolationCollector } from "../validation/violation";
+import {
+  PLANAR_EPSILON,
+  outlineHull,
+  pointInPolygon,
+  polygonBounds,
+  polygonDoubleArea,
+  polygonInside,
+  polygonIsSimple,
+  polygonShortestEdge,
+  polygonsOverlap,
+} from "./planarGeometry";
 
 const CONNECTOR_KINDS = [
   "passage",
   "stair",
   "ramp",
   "lift",
+  "escalator",
+  "moving-walk",
   "ladder",
   "bridge",
   "other",
@@ -27,6 +50,14 @@ const CONNECTOR_KINDS = [
 const PLANE_NORMAL_EPSILON = 1e-12;
 const MATRIX_ROUND_TRIP_EPSILON = 1e-8;
 const CONTAINMENT_EPSILON = 1e-9;
+/** Largest deviation from unit norm a stated quaternion may carry. */
+const UNIT_QUATERNION_EPSILON = 1e-6;
+/** Shortest distance, in metres, two consecutive route stations may sit apart. */
+const ROUTE_EPSILON = 1e-9;
+/** Largest disagreement, in metres, between a stated step run and its route. */
+const STEP_TOLERANCE = 1e-3;
+/** Largest disagreement, in radians, between a stated slope and its route. */
+const SLOPE_TOLERANCE = 1e-6;
 
 /** Validate the graph, geometry references, and spatial topology of a building. */
 export const validateBuiltEnvironment = (props: {
@@ -303,6 +334,7 @@ export const validateBuiltEnvironment = (props: {
     "boundary",
     collector,
   );
+  const boundaryFaces = new Map<string, IAutoMovieBoundaryFace>();
   environment.boundaries.forEach((boundary, index) => {
     const path = `${root}.boundaries[${index}]`;
     nonEmpty(boundary.kind, `${path}.kind`, "boundary kind", collector);
@@ -327,9 +359,15 @@ export const validateBuiltEnvironment = (props: {
       "building element",
       collector,
     );
+    if (
+      boundary.face !== undefined &&
+      faceIsUsable(boundary.face, path, collector)
+    )
+      boundaryFaces.set(boundary.id, boundary.face);
   });
 
   collectIds(environment.openings, `${root}.openings`, "opening", collector);
+  const openingHulls = new Map<string, IAutoMoviePlanarPoint[]>();
   environment.openings.forEach((opening, index) => {
     const path = `${root}.openings[${index}]`;
     nonEmpty(opening.kind, `${path}.kind`, "opening kind", collector);
@@ -347,6 +385,58 @@ export const validateBuiltEnvironment = (props: {
         `opening fill element "${opening.fill}" does not resolve`,
         opening.fill,
       );
+    if (opening.profile !== undefined) {
+      const profilePath = `${path}.profile`;
+      const host = environment.boundaries.find(
+        (candidate) => candidate.id === opening.boundary,
+      );
+      if (host !== undefined && host.face === undefined)
+        collector.push(
+          "type",
+          profilePath,
+          `opening "${opening.id}" states a void, but its host boundary "${opening.boundary}" declares no face to cut it in`,
+          opening.boundary,
+        );
+      if (profileIsUsable(opening.profile, profilePath, collector)) {
+        const hull = outlineHull(opening.profile);
+        openingHulls.set(opening.id, hull);
+        const face = boundaryFaces.get(opening.boundary);
+        // A missing or malformed host face is already reported on its own path,
+        // and repeating it here would only hide the one defect worth acting on.
+        if (face !== undefined && polygonInside(hull, face.outline) === false)
+          collector.push(
+            "range",
+            `${profilePath}.outline`,
+            `opening "${opening.id}" leaves the face of its host boundary "${opening.boundary}"`,
+            opening.profile.outline,
+          );
+      }
+    }
+    validateOpeningOperation({
+      opening,
+      path,
+      elements: elementIds,
+      environment,
+      collector,
+    });
+  });
+  environment.openings.forEach((opening, index) => {
+    const hull = openingHulls.get(opening.id);
+    if (hull === undefined) return;
+    for (const earlier of environment.openings.slice(0, index)) {
+      const other = openingHulls.get(earlier.id);
+      if (
+        other !== undefined &&
+        earlier.boundary === opening.boundary &&
+        polygonsOverlap(hull, other)
+      )
+        collector.push(
+          "range",
+          `${root}.openings[${index}].profile.outline`,
+          `openings "${earlier.id}" and "${opening.id}" occupy the same part of boundary "${opening.boundary}"`,
+          opening.profile!.outline,
+        );
+    }
   });
 
   collectIds(
@@ -394,13 +484,7 @@ export const validateBuiltEnvironment = (props: {
         collector,
       ),
     );
-    positive(connector.width, `${path}.width`, "connector width", collector);
-    positive(
-      connector.clearHeight,
-      `${path}.clearHeight`,
-      "connector clear height",
-      collector,
-    );
+    validateConnectorShape(connector, path, collector);
     validateReferences(
       connector.elements,
       elementIds,
@@ -431,7 +515,8 @@ export const validateBuiltEnvironment = (props: {
   );
 
   if (!collector.items.some((item) => item.severity === "error")) {
-    const matrices = worldMatricesOf(environment);
+    validatePanelFit(environment, root, boundaryFaces, openingHulls, collector);
+    const matrices = worldMatricesOf(environment, operationDeltas(environment));
     environment.elements.forEach((element, index) => {
       const world = matrices.get(element.id)!;
       const decomposed = Matrix4.decompose(world);
@@ -465,6 +550,13 @@ export const validateBuiltEnvironment = (props: {
  * Visible element transforms are composed parent-to-child and flattened into
  * world-space set pieces because staged scene nodes are world TRS. The original
  * hierarchy remains in `builtEnvironments` for spatial queries and evidence.
+ *
+ * An opening's current operating state is applied on the way down, so a door
+ * authored open is staged open. Without that, "the door is open" would be a
+ * fact of the record that the render contradicts, which is exactly the drift
+ * between the declared passage and the visible hole this graph exists to close.
+ * A record that declares no operation lowers byte-for-byte as it always did,
+ * because the joint displacement it would contribute is the identity.
  */
 export const lowerBuiltEnvironment = (
   environment: IAutoMovieBuiltEnvironment,
@@ -477,7 +569,7 @@ export const lowerBuiltEnvironment = (
     );
   }
 
-  const matrices = worldMatricesOf(environment);
+  const matrices = worldMatricesOf(environment, operationDeltas(environment));
   const spaces: IAutoMovieSpace[] = environment.spaces.map((space) => {
     const surfaces = environment.surfaces
       .filter((entry) => entry.space === space.id)
@@ -656,6 +748,379 @@ export const builtEnvironmentBuildingOfSpace = (
   return owner.id;
 };
 
+/** The rectangular wall panel and cut voids one boundary's own face implies. */
+export interface IAutoMovieBoundaryWallCut {
+  /** Panel extent along the boundary's local X, in metres. */
+  width: number;
+  /** Panel extent along the boundary's local Y, in metres. */
+  height: number;
+  /** Panel extent along the boundary's local Z, in metres. */
+  depth: number;
+  /** World position of the panel's own centre. */
+  origin: IAutoMovieVector3;
+  /** World rotation of the panel, taken from the boundary's face. */
+  rotation: IAutoMovieQuaternion;
+  /** Kernel voids, each keyed by the architectural opening that declared it. */
+  openings: IAutoMovieWallOpening[];
+}
+
+/** Where one movable panel stands, in world space, at one operating state. */
+export interface IAutoMovieOpeningPanelPlacement {
+  /** Panel id inside its opening. */
+  panel: string;
+  /** The visible element the panel drives. */
+  element: string;
+  /** The staged node id {@link lowerBuiltEnvironment} emits for that element. */
+  node: string;
+  /** World translation of the panel's element. */
+  position: IAutoMovieVector3;
+  /** World rotation of the panel's element, as a unit quaternion. */
+  rotation: IAutoMovieQuaternion;
+  /** World per-axis scale of the panel's element. */
+  scale: IAutoMovieVector3;
+}
+
+/** The world volume one movable panel sweeps across its whole travel. */
+export interface IAutoMovieOpeningSweep {
+  /** Panel id inside its opening. */
+  panel: string;
+  /** The visible element the panel drives. */
+  element: string;
+  /** World minimum corner of the swept volume. */
+  min: IAutoMovieVector3;
+  /** World maximum corner of the swept volume. */
+  max: IAutoMovieVector3;
+}
+
+/** One oriented station of a connector's route. */
+export interface IAutoMovieConnectorStation {
+  /** World position of the station. */
+  position: IAutoMovieVector3;
+  /** Authored facing, or null when the connector declared none. */
+  rotation: IAutoMovieQuaternion | null;
+  /** Arc-length fraction of the station along the route, in `[0, 1]`. */
+  at: number;
+}
+
+/** The measured traversal shape of one connector. */
+export interface IAutoMovieConnectorGeometry {
+  /** Signed climb from the first station to the last, in metres. */
+  rise: number;
+  /** Horizontal length of the route polyline, in metres. */
+  run: number;
+  /** Total 3D length of the route polyline, in metres. */
+  length: number;
+  /** Slope of the run from horizontal, in radians within `[0, PI / 2]`. */
+  slope: number;
+  /** The route's own stations, in authored order. */
+  stations: IAutoMovieConnectorStation[];
+}
+
+/** The usable section of a connector at one point of its route. */
+export interface IAutoMovieConnectorSectionAt {
+  /** Usable width in metres. */
+  width: number;
+  /** Vertical clearance in metres. */
+  clearHeight: number;
+}
+
+/**
+ * Turn one boundary's declared face into the wall panel a mesh kernel can cut.
+ *
+ * This is the join that stops the declared opening and the modelled hole from
+ * being two unrelated facts: the returned voids carry the architectural
+ * opening's own id, so `buildAutoMovieWall` cuts the wall against the same
+ * records validation held inside the face. The kernel cuts axis-aligned
+ * rectangles, so an arched or round void is handed over as the rectangle that
+ * exactly bounds it; an author who needs the arch's own spandrel back composes
+ * it from the profile rather than being told the rectangle was the arch.
+ */
+export const builtBoundaryWallCut = (
+  environment: IAutoMovieBuiltEnvironment,
+  boundaryId: string,
+): IAutoMovieBoundaryWallCut => {
+  const boundary = environment.boundaries.find(
+    (candidate) => candidate.id === boundaryId,
+  );
+  if (boundary === undefined)
+    throw new Error(
+      `built environment "${environment.id}" has no boundary "${boundaryId}"`,
+    );
+  const face = boundary.face;
+  if (face === undefined)
+    throw new Error(
+      `boundary "${boundaryId}" of built environment "${environment.id}" declares no face to cut`,
+    );
+  const bounds = polygonBounds(face.outline);
+  return {
+    width: bounds.max.x - bounds.min.x,
+    height: bounds.max.y - bounds.min.y,
+    depth: face.thickness,
+    origin: Vector3.add(
+      face.origin,
+      Quaternion.rotateVector(face.rotation, {
+        x: (bounds.min.x + bounds.max.x) / 2,
+        y: (bounds.min.y + bounds.max.y) / 2,
+        z: 0,
+      }),
+    ),
+    rotation: face.rotation,
+    openings: environment.openings
+      .filter(
+        (opening) =>
+          opening.boundary === boundaryId && opening.profile !== undefined,
+      )
+      .map((opening) => {
+        const void_ = polygonBounds(outlineHull(opening.profile!));
+        return {
+          id: opening.id,
+          x: void_.min.x - bounds.min.x,
+          y: void_.min.y - bounds.min.y,
+          width: void_.max.x - void_.min.x,
+          height: void_.max.y - void_.min.y,
+        };
+      }),
+  };
+};
+
+/**
+ * Where an opening's panels stand, in world space, at one named state.
+ *
+ * Omitting the state answers for the state the record itself stands in, which
+ * is the placement {@link lowerBuiltEnvironment} stages. Naming another one
+ * answers for that state without editing the record, so a shot can ask where
+ * the leaf would be when open without a second building.
+ */
+export const builtOpeningPanelPlacements = (
+  environment: IAutoMovieBuiltEnvironment,
+  openingId: string,
+  stateId?: string,
+): IAutoMovieOpeningPanelPlacement[] => {
+  const opening = requireOpening(environment, openingId);
+  const operation = opening.operation;
+  if (operation === undefined) return [];
+  if (
+    stateId !== undefined &&
+    !operation.states.some((state) => state.id === stateId)
+  )
+    throw new Error(
+      `opening "${openingId}" of built environment "${environment.id}" has no operating state "${stateId}"`,
+    );
+  const matrices = worldMatricesOf(
+    environment,
+    operationDeltas(environment, stateId),
+  );
+  return operation.panels.map((panel) => {
+    const world = Matrix4.decompose(
+      requirePanelMatrix(environment, matrices, panel),
+    );
+    return {
+      panel: panel.id,
+      element: panel.element,
+      node: `${environment.id}/${panel.element}`,
+      position: world.position,
+      rotation: Quaternion.normalize(world.rotation),
+      scale: world.scale,
+    };
+  });
+};
+
+/**
+ * The world volume each panel of an opening sweeps across its whole travel.
+ *
+ * The envelope is solved rather than sampled. Every corner of a turning leaf
+ * traces `A + B cos(t) + D sin(t)` under the panel's own placement, and an
+ * affine world matrix keeps that form, so each axis is a single cosine whose
+ * extremes are its endpoints and the critical angles the travel actually
+ * crosses. A sliding leaf is linear and reaches its extremes at its limits.
+ * Nothing here judges whether a person can pass the leaf: this is the volume a
+ * later clearance or collision analysis reads, not its verdict.
+ *
+ * Ancestors stand where the environment's current state puts them, so the
+ * envelope of an inner folding leaf is measured against the outer leaf as it
+ * currently stands rather than against a pose the design is not in.
+ */
+export const builtOpeningSweepEnvelope = (
+  environment: IAutoMovieBuiltEnvironment,
+  openingId: string,
+): IAutoMovieOpeningSweep[] => {
+  const opening = requireOpening(environment, openingId);
+  const operation = opening.operation;
+  if (operation === undefined) return [];
+  const staged = worldMatricesOf(environment, operationDeltas(environment));
+  const byId = new Map(
+    environment.elements.map((element) => [element.id, element]),
+  );
+  return operation.panels.map((panel) => {
+    const element = byId.get(panel.element);
+    if (element === undefined)
+      throw new Error(
+        `built environment "${environment.id}" has no element "${panel.element}" for panel "${panel.id}"`,
+      );
+    const rest = Matrix4.compose(
+      element.transform.translation,
+      element.transform.rotation,
+      element.transform.scale,
+    );
+    const base =
+      element.parent === null
+        ? rest
+        : Matrix4.multiply(staged.get(element.parent)!, rest);
+    const corners: IAutoMovieVector3[] = [
+      { x: 0, y: 0, z: 0 },
+      { x: panel.width, y: 0, z: 0 },
+      { x: panel.width, y: panel.height, z: 0 },
+      { x: 0, y: panel.height, z: 0 },
+    ];
+    const swept = corners.map((corner) =>
+      sweptCornerBounds(base, panel.motion, corner),
+    );
+    return {
+      panel: panel.id,
+      element: panel.element,
+      min: {
+        x: Math.min(...swept.map((bound) => bound.min.x)),
+        y: Math.min(...swept.map((bound) => bound.min.y)),
+        z: Math.min(...swept.map((bound) => bound.min.z)),
+      },
+      max: {
+        x: Math.max(...swept.map((bound) => bound.max.x)),
+        y: Math.max(...swept.map((bound) => bound.max.y)),
+        z: Math.max(...swept.map((bound) => bound.max.z)),
+      },
+    };
+  });
+};
+
+/**
+ * Measure one connector's traversal shape: climb, run, length, slope, stations.
+ *
+ * A station's facing is answered as authored or as `null`, never as a heading
+ * this function invented. A connector that declared no orientation has no
+ * orientation, and saying so is what keeps a later analysis from reading a
+ * derived guess as a design decision.
+ */
+export const builtConnectorGeometry = (
+  environment: IAutoMovieBuiltEnvironment,
+  connectorId: string,
+): IAutoMovieConnectorGeometry => {
+  const connector = requireConnector(environment, connectorId);
+  const cumulative = cumulativeRouteLengths(connector.route);
+  const total = cumulative[cumulative.length - 1] ?? 0;
+  if (connector.route.length < 2 || total === 0)
+    throw new Error(
+      `connector "${connectorId}" of built environment "${environment.id}" has no measurable route`,
+    );
+  return {
+    ...routeMetrics(connector.route),
+    stations: connector.route.map((position, index) => ({
+      position,
+      rotation: connector.orientations?.[index] ?? null,
+      at: cumulative[index]! / total,
+    })),
+  };
+};
+
+/**
+ * The usable section of a connector at one arc-length fraction of its route.
+ *
+ * A constant section answers the same pair everywhere; a varying one is read as
+ * the piecewise-linear function its stations describe, so a corridor that
+ * narrows between two stations narrows evenly rather than in a step nothing
+ * declared.
+ */
+export const builtConnectorSectionAt = (
+  environment: IAutoMovieBuiltEnvironment,
+  connectorId: string,
+  at: number,
+): IAutoMovieConnectorSectionAt => {
+  const connector = requireConnector(environment, connectorId);
+  if (!Number.isFinite(at) || at < 0 || at > 1)
+    throw new Error(
+      `connector "${connectorId}" of built environment "${environment.id}" can only be sectioned within [0, 1], but was asked at ${at}`,
+    );
+  const section = builtConnectorSection(connector, at);
+  if (section === null)
+    throw new Error(
+      `connector "${connectorId}" of built environment "${environment.id}" states no usable section`,
+    );
+  return section;
+};
+
+/**
+ * The usable section of one connector record, or null when it states none.
+ *
+ * This is the record-addressed form {@link builtConnectorSectionAt} answers
+ * through. A caller already holding the record reads it here rather than
+ * resolving an id a second time, because a work carrying two connectors under
+ * one id would otherwise be sectioned against whichever one was declared first
+ * — a contradiction validation refuses by name, and one this function has no
+ * business re-deciding. The route parameter is not range-checked here; the
+ * id-addressed form owns that guard.
+ */
+export const builtConnectorSection = (
+  connector: IAutoMovieBuiltConnector,
+  at: number,
+): IAutoMovieConnectorSectionAt | null => {
+  const sections = connector.sections ?? [];
+  if (sections.length === 0)
+    return connector.width === undefined || connector.clearHeight === undefined
+      ? null
+      : { width: connector.width, clearHeight: connector.clearHeight };
+  let index = 0;
+  while (index + 1 < sections.length && sections[index + 1]!.at <= at)
+    index += 1;
+  const from = sections[index]!;
+  const to = sections[index + 1] ?? from;
+  const span = to.at - from.at;
+  const ratio = span <= 0 ? 0 : (at - from.at) / span;
+  return {
+    width: from.width + (to.width - from.width) * ratio,
+    clearHeight: from.clearHeight + (to.clearHeight - from.clearHeight) * ratio,
+  };
+};
+
+const requireOpening = (
+  environment: IAutoMovieBuiltEnvironment,
+  openingId: string,
+): IAutoMovieBuiltOpening => {
+  const opening = environment.openings.find(
+    (candidate) => candidate.id === openingId,
+  );
+  if (opening === undefined)
+    throw new Error(
+      `built environment "${environment.id}" has no opening "${openingId}"`,
+    );
+  return opening;
+};
+
+const requireConnector = (
+  environment: IAutoMovieBuiltEnvironment,
+  connectorId: string,
+): IAutoMovieBuiltConnector => {
+  const connector = environment.connectors.find(
+    (candidate) => candidate.id === connectorId,
+  );
+  if (connector === undefined)
+    throw new Error(
+      `built environment "${environment.id}" has no connector "${connectorId}"`,
+    );
+  return connector;
+};
+
+const requirePanelMatrix = (
+  environment: IAutoMovieBuiltEnvironment,
+  matrices: ReadonlyMap<string, number[]>,
+  panel: IAutoMovieMovablePanel,
+): number[] => {
+  const world = matrices.get(panel.element);
+  if (world === undefined)
+    throw new Error(
+      `built environment "${environment.id}" has no element "${panel.element}" for panel "${panel.id}"`,
+    );
+  return world;
+};
+
 const requireSpace = (
   environment: IAutoMovieBuiltEnvironment,
   spaceId: string,
@@ -808,8 +1273,17 @@ const appendBuildingSpaceValidation = (
     });
 };
 
+/**
+ * World matrices for every element, optionally displaced by panel travel.
+ *
+ * A joint displacement is applied after the element's own local transform and
+ * therefore rides down the hierarchy, which is what makes a folding leaf work
+ * without a second parenting notion: parent its element to the leaf it folds
+ * against and the outer leaf's travel carries it.
+ */
 const worldMatricesOf = (
   environment: IAutoMovieBuiltEnvironment,
+  joints: ReadonlyMap<string, number[]> = new Map(),
 ): Map<string, number[]> => {
   const byId = new Map(
     environment.elements.map((element) => [element.id, element]),
@@ -819,11 +1293,13 @@ const worldMatricesOf = (
     const cached = matrices.get(id);
     if (cached !== undefined) return cached;
     const element = byId.get(id)!;
-    const local = Matrix4.compose(
+    const rest = Matrix4.compose(
       element.transform.translation,
       element.transform.rotation,
       element.transform.scale,
     );
+    const joint = joints.get(id);
+    const local = joint === undefined ? rest : Matrix4.multiply(rest, joint);
     const world =
       element.parent === null
         ? local
@@ -833,6 +1309,62 @@ const worldMatricesOf = (
   };
   environment.elements.forEach((element) => read(element.id));
   return matrices;
+};
+
+/** The element-local displacement one panel carries at one travel value. */
+const panelDelta = (motion: IAutoMoviePanelMotion, value: number): number[] => {
+  const axis = Vector3.normalize(motion.axis);
+  if (motion.kind === "prismatic")
+    return Matrix4.compose(
+      Vector3.scale(axis, value),
+      { x: 0, y: 0, z: 0, w: 1 },
+      { x: 1, y: 1, z: 1 },
+    );
+  const half = value / 2;
+  const sine = Math.sin(half);
+  const rotation: IAutoMovieQuaternion = {
+    x: axis.x * sine,
+    y: axis.y * sine,
+    z: axis.z * sine,
+    w: Math.cos(half),
+  };
+  // Turning about a pivot is a turn about the origin plus the offset that puts
+  // the pivot back where it was.
+  return Matrix4.compose(
+    Vector3.subtract(
+      motion.pivot,
+      Quaternion.rotateVector(rotation, motion.pivot),
+    ),
+    rotation,
+    { x: 1, y: 1, z: 1 },
+  );
+};
+
+/**
+ * The element-local displacement every panel carries in a named state.
+ *
+ * The default is the environment's own current state; a caller asking for
+ * another state gets that one instead, which is how a shot stages the same
+ * building with its doors open without editing the record.
+ */
+const operationDeltas = (
+  environment: IAutoMovieBuiltEnvironment,
+  stateId?: string,
+): Map<string, number[]> => {
+  const deltas = new Map<string, number[]>();
+  for (const opening of environment.openings) {
+    const operation = opening.operation;
+    if (operation === undefined) continue;
+    const wanted = stateId ?? operation.state;
+    const state = operation.states.find((candidate) => candidate.id === wanted);
+    if (state === undefined) continue;
+    for (const panel of operation.panels) {
+      const entry = state.panels.find((value) => value.panel === panel.id);
+      if (entry === undefined) continue;
+      deltas.set(panel.element, panelDelta(panel.motion, entry.value));
+    }
+  }
+  return deltas;
 };
 
 const descendantSpaces = (
@@ -883,16 +1415,743 @@ const finiteVector = (
 };
 
 const positive = (
-  value: number,
+  value: number | undefined,
   path: string,
   label: string,
   collector: ViolationCollector,
 ): void => {
-  if (!Number.isFinite(value) || value <= 0)
+  if (value === undefined || !Number.isFinite(value) || value <= 0)
     collector.push(
       "range",
       path,
       `${label} must be a finite number > 0, but was ${value}`,
+      value ?? null,
+    );
+};
+
+const unitQuaternion = (
+  value: IAutoMovieQuaternion,
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): void => {
+  const norm = Math.hypot(value.x, value.y, value.z, value.w);
+  if (!Number.isFinite(norm) || Math.abs(norm - 1) > UNIT_QUATERNION_EPSILON)
+    collector.push(
+      "range",
+      path,
+      `${label} must be a unit quaternion, but its norm was ${norm}`,
       value,
     );
 };
+
+/**
+ * Whether a closed planar outline names distinct, finite corners.
+ *
+ * The minimum corner count differs by what the outline may carry: a straight
+ * face needs three, while an outline whose edges may bulge needs only two,
+ * because a full circle is two half-turn arcs and demanding a third corner
+ * would outlaw a round oculus for no geometric reason.
+ */
+const closedOutline = (
+  outline: readonly IAutoMoviePlanarPoint[],
+  least: number,
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): boolean => {
+  if (outline.length < least) {
+    collector.push(
+      "range",
+      path,
+      `${label} needs at least ${least} points, but had ${outline.length}`,
+      outline.length,
+    );
+    return false;
+  }
+  let finite = true;
+  outline.forEach((point, index) => {
+    for (const axis of ["x", "y"] as const)
+      if (!Number.isFinite(point[axis])) {
+        finite = false;
+        collector.push(
+          "range",
+          `${path}[${index}].${axis}`,
+          `${label} ${axis} must be finite, but was ${point[axis]}`,
+          point[axis],
+        );
+      }
+  });
+  if (!finite) return false;
+  if (polygonShortestEdge(outline) <= PLANAR_EPSILON) {
+    collector.push(
+      "range",
+      path,
+      `${label} must not repeat a point at consecutive corners`,
+      outline,
+    );
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Whether a closed region is one an inside test can be run against.
+ *
+ * Real area and no self-crossing are not stylistic demands: without them
+ * "inside this region" has no answer, and every later containment or separation
+ * result would be arbitrary rather than merely wrong.
+ */
+const closedRegion = (
+  region: readonly IAutoMoviePlanarPoint[],
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): void => {
+  if (Math.abs(polygonDoubleArea(region)) <= PLANAR_EPSILON)
+    collector.push("range", path, `${label} encloses no area`, region);
+  else if (polygonIsSimple(region) === false)
+    collector.push("type", path, `${label} must not cross itself`, region);
+};
+
+/** Whether a boundary's face is complete enough to place an opening on. */
+const faceIsUsable = (
+  face: IAutoMovieBoundaryFace,
+  path: string,
+  collector: ViolationCollector,
+): boolean => {
+  const before = collector.items.length;
+  finiteVector(
+    face.origin,
+    `${path}.face.origin`,
+    "boundary face origin",
+    collector,
+  );
+  unitQuaternion(
+    face.rotation,
+    `${path}.face.rotation`,
+    "boundary face rotation",
+    collector,
+  );
+  positive(
+    face.thickness,
+    `${path}.face.thickness`,
+    "boundary thickness",
+    collector,
+  );
+  if (
+    closedOutline(
+      face.outline,
+      3,
+      `${path}.face.outline`,
+      "boundary face outline",
+      collector,
+    )
+  )
+    closedRegion(
+      face.outline,
+      `${path}.face.outline`,
+      "boundary face outline",
+      collector,
+    );
+  return collector.items.length === before;
+};
+
+/** Whether an opening's void is complete enough to be located and bounded. */
+const profileIsUsable = (
+  profile: IAutoMovieOpeningProfile,
+  path: string,
+  collector: ViolationCollector,
+): boolean => {
+  const before = collector.items.length;
+  closedOutline(
+    profile.outline,
+    2,
+    `${path}.outline`,
+    "opening outline",
+    collector,
+  );
+  if (profile.bulges !== undefined) {
+    if (profile.bulges.length !== profile.outline.length)
+      collector.push(
+        "type",
+        `${path}.bulges`,
+        `an opening states ${profile.bulges.length} bulges for ${profile.outline.length} edges`,
+        profile.bulges.length,
+      );
+    profile.bulges.forEach((bulge, index) => {
+      if (!Number.isFinite(bulge) || Math.abs(bulge) > 1)
+        collector.push(
+          "range",
+          `${path}.bulges[${index}]`,
+          `an edge bulge must be a finite number within [-1, 1], because an arc longer than a half turn is authored as two edges, but was ${bulge}`,
+          bulge,
+        );
+    });
+  }
+  // The region an arc encloses is the hull's, not the corner polygon's: two
+  // corners and two half turns are a circle, which the corners alone call flat.
+  if (collector.items.length === before)
+    closedRegion(
+      outlineHull(profile),
+      `${path}.outline`,
+      "opening outline",
+      collector,
+    );
+  return collector.items.length === before;
+};
+
+/** Validate the movable panels, named states, and hardware of one opening. */
+const validateOpeningOperation = (props: {
+  opening: IAutoMovieBuiltOpening;
+  path: string;
+  elements: ReadonlySet<string>;
+  environment: IAutoMovieBuiltEnvironment;
+  collector: ViolationCollector;
+}): void => {
+  const { opening, path, collector } = props;
+  const operation = opening.operation;
+  if (operation === undefined) return;
+  const base = `${path}.operation`;
+  if (opening.fill === null)
+    collector.push(
+      "type",
+      `${path}.fill`,
+      `opening "${opening.id}" declares movable panels, so it must name the element they belong to`,
+      null,
+    );
+  if (operation.panels.length === 0)
+    collector.push(
+      "range",
+      `${base}.panels`,
+      `opening "${opening.id}" declares an operation with no movable panel`,
+      operation.panels.length,
+    );
+  const panelIds = collectIds(
+    operation.panels,
+    `${base}.panels`,
+    "panel",
+    collector,
+  );
+  const owned = fillDescendants(props.environment, opening.fill);
+  operation.panels.forEach((panel, index) => {
+    const panelPath = `${base}.panels[${index}]`;
+    if (!props.elements.has(panel.element))
+      collector.push(
+        "type",
+        `${panelPath}.element`,
+        `panel element "${panel.element}" does not resolve`,
+        panel.element,
+      );
+    else if (opening.fill !== null && !owned.has(panel.element))
+      collector.push(
+        "type",
+        `${panelPath}.element`,
+        `panel element "${panel.element}" must be the filling element "${opening.fill}" of opening "${opening.id}" or descend from it`,
+        panel.element,
+      );
+    positive(panel.width, `${panelPath}.width`, "panel width", collector);
+    positive(panel.height, `${panelPath}.height`, "panel height", collector);
+    validatePanelMotion(panel.motion, `${panelPath}.motion`, collector);
+  });
+  if (operation.states.length === 0)
+    collector.push(
+      "range",
+      `${base}.states`,
+      `opening "${opening.id}" declares an operation with no named state`,
+      operation.states.length,
+    );
+  collectIds(operation.states, `${base}.states`, "operating state", collector);
+  operation.states.forEach((state, index) => {
+    const statePath = `${base}.states[${index}]`;
+    const seen = new Set<string>();
+    state.panels.forEach((entry, valueIndex) => {
+      const valuePath = `${statePath}.panels[${valueIndex}]`;
+      if (!panelIds.has(entry.panel))
+        collector.push(
+          "type",
+          `${valuePath}.panel`,
+          `operating state "${state.id}" drives unknown panel "${entry.panel}"`,
+          entry.panel,
+        );
+      if (seen.has(entry.panel))
+        collector.push(
+          "type",
+          `${valuePath}.panel`,
+          `operating state "${state.id}" drives panel "${entry.panel}" twice`,
+          entry.panel,
+        );
+      seen.add(entry.panel);
+      const panel = operation.panels.find(
+        (candidate) => candidate.id === entry.panel,
+      );
+      if (panel === undefined) return;
+      if (
+        !Number.isFinite(entry.value) ||
+        entry.value < panel.motion.min ||
+        entry.value > panel.motion.max
+      )
+        collector.push(
+          "range",
+          `${valuePath}.value`,
+          `operating state "${state.id}" drives panel "${panel.id}" to ${entry.value}, outside its travel [${panel.motion.min}, ${panel.motion.max}]`,
+          entry.value,
+        );
+    });
+    for (const panel of operation.panels)
+      if (!seen.has(panel.id))
+        collector.push(
+          "type",
+          `${statePath}.panels`,
+          `operating state "${state.id}" gives panel "${panel.id}" no value`,
+          panel.id,
+        );
+  });
+  if (!operation.states.some((state) => state.id === operation.state))
+    collector.push(
+      "type",
+      `${base}.state`,
+      `current operating state "${operation.state}" does not resolve`,
+      operation.state,
+    );
+  collectIds(operation.hardware, `${base}.hardware`, "hardware", collector);
+  operation.hardware.forEach((piece, index) => {
+    const piecePath = `${base}.hardware[${index}]`;
+    nonEmpty(piece.kind, `${piecePath}.kind`, "hardware kind", collector);
+    if (piece.element !== null && !props.elements.has(piece.element))
+      collector.push(
+        "type",
+        `${piecePath}.element`,
+        `hardware element "${piece.element}" does not resolve`,
+        piece.element,
+      );
+  });
+};
+
+/** Validate the one degree of freedom a panel travels on. */
+const validatePanelMotion = (
+  motion: IAutoMoviePanelMotion,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  finiteVector(motion.axis, `${path}.axis`, "panel travel axis", collector);
+  if (Vector3.length(motion.axis) <= PLANE_NORMAL_EPSILON)
+    collector.push(
+      "range",
+      `${path}.axis`,
+      "panel travel axis must be non-zero",
+      motion.axis,
+    );
+  if (motion.kind === "revolute")
+    finiteVector(motion.pivot, `${path}.pivot`, "panel pivot", collector);
+  if (!Number.isFinite(motion.min) || motion.min > 0)
+    collector.push(
+      "range",
+      `${path}.min`,
+      `panel travel is measured from its rest pose, so the lowest value must be a finite number <= 0, but was ${motion.min}`,
+      motion.min,
+    );
+  if (!Number.isFinite(motion.max) || motion.max < 0)
+    collector.push(
+      "range",
+      `${path}.max`,
+      `panel travel is measured from its rest pose, so the highest value must be a finite number >= 0, but was ${motion.max}`,
+      motion.max,
+    );
+  else if (motion.max <= motion.min)
+    collector.push(
+      "range",
+      `${path}.max`,
+      `a movable panel needs travel, but its range was [${motion.min}, ${motion.max}]`,
+      motion.max,
+    );
+  else if (
+    motion.kind === "revolute" &&
+    motion.max - motion.min > 2 * Math.PI + SLOPE_TOLERANCE
+  )
+    collector.push(
+      "range",
+      `${path}.max`,
+      `a turning panel may travel at most a full turn, but its range spanned ${motion.max - motion.min} radians`,
+      motion.max,
+    );
+};
+
+/** The filling element of an opening and every element below it. */
+const fillDescendants = (
+  environment: IAutoMovieBuiltEnvironment,
+  fill: string | null,
+): Set<string> => {
+  const owned = new Set<string>();
+  if (fill === null) return owned;
+  owned.add(fill);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const element of environment.elements)
+      if (
+        element.parent !== null &&
+        owned.has(element.parent) &&
+        !owned.has(element.id)
+      ) {
+        owned.add(element.id);
+        changed = true;
+      }
+  }
+  return owned;
+};
+
+/** Validate a connector's stations, section spelling, slope, and steps. */
+const validateConnectorShape = (
+  connector: IAutoMovieBuiltConnector,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  const measurable =
+    connector.route.length >= 2 &&
+    connector.route.every((point) =>
+      [point.x, point.y, point.z].every(Number.isFinite),
+    );
+  if (measurable)
+    for (let index = 0; index + 1 < connector.route.length; ++index)
+      if (
+        Vector3.length(
+          Vector3.subtract(
+            connector.route[index + 1]!,
+            connector.route[index]!,
+          ),
+        ) <= ROUTE_EPSILON
+      )
+        collector.push(
+          "range",
+          `${path}.route[${index + 1}]`,
+          "consecutive connector route stations must be distinct",
+          connector.route[index + 1],
+        );
+  if (connector.orientations !== undefined) {
+    if (connector.orientations.length !== connector.route.length)
+      collector.push(
+        "type",
+        `${path}.orientations`,
+        `a connector states ${connector.orientations.length} station facings for ${connector.route.length} route points`,
+        connector.orientations.length,
+      );
+    connector.orientations.forEach((rotation, index) =>
+      unitQuaternion(
+        rotation,
+        `${path}.orientations[${index}]`,
+        "connector station facing",
+        collector,
+      ),
+    );
+  }
+
+  const scalar =
+    connector.width !== undefined || connector.clearHeight !== undefined;
+  if (connector.sections !== undefined && scalar)
+    collector.push(
+      "type",
+      `${path}.sections`,
+      "a connector states a constant width and clear height or a varying section, never both",
+      connector.sections.length,
+    );
+  else if (connector.sections === undefined && !scalar)
+    collector.push(
+      "range",
+      `${path}.width`,
+      "a connector must state a constant width and clear height, or a varying section",
+      null,
+    );
+  else if (scalar) {
+    positive(connector.width, `${path}.width`, "connector width", collector);
+    positive(
+      connector.clearHeight,
+      `${path}.clearHeight`,
+      "connector clear height",
+      collector,
+    );
+  } else
+    validateConnectorSections(
+      connector.sections!,
+      `${path}.sections`,
+      collector,
+    );
+
+  const metrics = measurable ? routeMetrics(connector.route) : null;
+  if (connector.slope !== undefined) {
+    if (
+      !Number.isFinite(connector.slope) ||
+      connector.slope < 0 ||
+      connector.slope > Math.PI / 2
+    )
+      collector.push(
+        "range",
+        `${path}.slope`,
+        `connector slope must be a finite number within [0, PI / 2], but was ${connector.slope}`,
+        connector.slope,
+      );
+    else if (
+      metrics !== null &&
+      Math.abs(connector.slope - metrics.slope) > SLOPE_TOLERANCE
+    )
+      collector.push(
+        "range",
+        `${path}.slope`,
+        `connector states a slope of ${connector.slope} radians, but its own route rises at ${metrics.slope}`,
+        connector.slope,
+      );
+  }
+  if (connector.steps !== undefined) {
+    const steps = connector.steps;
+    const before = collector.items.length;
+    if (!Number.isSafeInteger(steps.count) || steps.count < 1)
+      collector.push(
+        "range",
+        `${path}.steps.count`,
+        `a stepped connector needs a safe integer step count >= 1, but had ${steps.count}`,
+        steps.count,
+      );
+    positive(steps.rise, `${path}.steps.rise`, "step rise", collector);
+    positive(steps.run, `${path}.steps.run`, "step run", collector);
+    if (collector.items.length === before && metrics !== null) {
+      if (
+        Math.abs(steps.count * steps.rise - Math.abs(metrics.rise)) >
+        STEP_TOLERANCE
+      )
+        collector.push(
+          "range",
+          `${path}.steps.rise`,
+          `${steps.count} steps of ${steps.rise} m climb ${steps.count * steps.rise} m, but the route climbs ${Math.abs(metrics.rise)} m`,
+          steps.rise,
+        );
+      if (Math.abs(steps.count * steps.run - metrics.run) > STEP_TOLERANCE)
+        collector.push(
+          "range",
+          `${path}.steps.run`,
+          `${steps.count} steps of ${steps.run} m run ${steps.count * steps.run} m, but the route runs ${metrics.run} m`,
+          steps.run,
+        );
+    }
+  }
+};
+
+/** Validate a connector's varying section stations. */
+const validateConnectorSections = (
+  sections: readonly IAutoMovieConnectorSection[],
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  if (sections.length < 2) {
+    collector.push(
+      "range",
+      path,
+      `a varying connector section needs at least 2 stations, but had ${sections.length}`,
+      sections.length,
+    );
+    return;
+  }
+  if (sections[0]!.at !== 0)
+    collector.push(
+      "range",
+      `${path}[0].at`,
+      `a varying connector section must begin at 0, but began at ${sections[0]!.at}`,
+      sections[0]!.at,
+    );
+  const last = sections.length - 1;
+  if (sections[last]!.at !== 1)
+    collector.push(
+      "range",
+      `${path}[${last}].at`,
+      `a varying connector section must end at 1, but ended at ${sections[last]!.at}`,
+      sections[last]!.at,
+    );
+  sections.forEach((section, index) => {
+    if (index > 0 && !(section.at > sections[index - 1]!.at))
+      collector.push(
+        "range",
+        `${path}[${index}].at`,
+        `connector section stations must strictly increase, but ${section.at} followed ${sections[index - 1]!.at}`,
+        section.at,
+      );
+    positive(
+      section.width,
+      `${path}[${index}].width`,
+      "section width",
+      collector,
+    );
+    positive(
+      section.clearHeight,
+      `${path}[${index}].clearHeight`,
+      "section clear height",
+      collector,
+    );
+  });
+};
+
+/** Cumulative 3D arc length at each route station, starting at zero. */
+const cumulativeRouteLengths = (
+  route: readonly IAutoMovieVector3[],
+): number[] => {
+  const lengths = [0];
+  for (let index = 0; index + 1 < route.length; ++index)
+    lengths.push(
+      lengths[index]! +
+        Vector3.length(Vector3.subtract(route[index + 1]!, route[index]!)),
+    );
+  return lengths;
+};
+
+/** Climb, horizontal run, 3D length, and slope of one route polyline. */
+const routeMetrics = (
+  route: readonly IAutoMovieVector3[],
+): { rise: number; run: number; length: number; slope: number } => {
+  let run = 0;
+  let length = 0;
+  for (let index = 0; index + 1 < route.length; ++index) {
+    const delta = Vector3.subtract(route[index + 1]!, route[index]!);
+    run += Math.hypot(delta.x, delta.z);
+    length += Vector3.length(delta);
+  }
+  const rise = route[route.length - 1]!.y - route[0]!.y;
+  return { rise, run, length, slope: Math.atan2(Math.abs(rise), run) };
+};
+
+/**
+ * Refuse a closed leaf that does not fit the void it fills.
+ *
+ * The leaf is measured where it actually rests, projected into the host
+ * boundary's own frame, so a leaf and a void authored in unrelated coordinates
+ * disagree here instead of at render time. Nothing is said about a leaf smaller
+ * than its void: two leaves sharing one opening, or a sash inside a frame, are
+ * ordinary designs, while a leaf larger than its own hole is not a design at
+ * all.
+ */
+const validatePanelFit = (
+  environment: IAutoMovieBuiltEnvironment,
+  root: string,
+  faces: ReadonlyMap<string, IAutoMovieBoundaryFace>,
+  hulls: ReadonlyMap<string, IAutoMoviePlanarPoint[]>,
+  collector: ViolationCollector,
+): void => {
+  const matrices = worldMatricesOf(environment);
+  environment.openings.forEach((opening, index) => {
+    const operation = opening.operation;
+    const hull = hulls.get(opening.id);
+    const face = faces.get(opening.boundary);
+    if (operation === undefined || hull === undefined || face === undefined)
+      return;
+    const inverse = Quaternion.inverse(face.rotation);
+    operation.panels.forEach((panel, panelIndex) => {
+      const world = matrices.get(panel.element)!;
+      const corners: IAutoMovieVector3[] = [
+        { x: 0, y: 0, z: 0 },
+        { x: panel.width, y: 0, z: 0 },
+        { x: panel.width, y: panel.height, z: 0 },
+        { x: 0, y: panel.height, z: 0 },
+      ];
+      const planar = corners.map((corner) => {
+        const local = Quaternion.rotateVector(
+          inverse,
+          Vector3.subtract(applyMatrix(world, corner), face.origin),
+        );
+        return { x: local.x, y: local.y };
+      });
+      if (planar.some((point) => pointInPolygon(point, hull) === false))
+        collector.push(
+          "range",
+          `${root}.openings[${index}].operation.panels[${panelIndex}]`,
+          `panel "${panel.id}" does not fit inside the void of opening "${opening.id}" when it rests closed`,
+          { width: panel.width, height: panel.height },
+        );
+    });
+  });
+};
+
+/** Apply a column-major matrix to a point. */
+const applyMatrix = (
+  matrix: readonly number[],
+  point: IAutoMovieVector3,
+): IAutoMovieVector3 => ({
+  x:
+    matrix[0]! * point.x +
+    matrix[4]! * point.y +
+    matrix[8]! * point.z +
+    matrix[12]!,
+  y:
+    matrix[1]! * point.x +
+    matrix[5]! * point.y +
+    matrix[9]! * point.z +
+    matrix[13]!,
+  z:
+    matrix[2]! * point.x +
+    matrix[6]! * point.y +
+    matrix[10]! * point.z +
+    matrix[14]!,
+});
+
+/** Apply a column-major matrix's linear part to a direction. */
+const applyDirection = (
+  matrix: readonly number[],
+  vector: IAutoMovieVector3,
+): IAutoMovieVector3 => ({
+  x: matrix[0]! * vector.x + matrix[4]! * vector.y + matrix[8]! * vector.z,
+  y: matrix[1]! * vector.x + matrix[5]! * vector.y + matrix[9]! * vector.z,
+  z: matrix[2]! * vector.x + matrix[6]! * vector.y + matrix[10]! * vector.z,
+});
+
+/** The world bounds one leaf corner reaches across a panel's whole travel. */
+const sweptCornerBounds = (
+  base: readonly number[],
+  motion: IAutoMoviePanelMotion,
+  corner: IAutoMovieVector3,
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
+  const axis = Vector3.normalize(motion.axis);
+  if (motion.kind === "prismatic") {
+    const ends = [motion.min, motion.max].map((value) =>
+      applyMatrix(base, Vector3.add(corner, Vector3.scale(axis, value))),
+    );
+    return boundsOf(ends);
+  }
+  const offset = Vector3.subtract(corner, motion.pivot);
+  const along = Vector3.scale(axis, Vector3.dot(axis, offset));
+  const center = applyMatrix(base, Vector3.add(motion.pivot, along));
+  const cosine = applyDirection(base, Vector3.subtract(offset, along));
+  const sine = applyDirection(base, Vector3.cross(axis, offset));
+  const reach = (component: "x" | "y" | "z"): { low: number; high: number } => {
+    const phase = Math.atan2(sine[component], cosine[component]);
+    const angles = [motion.min, motion.max];
+    const first = Math.ceil((motion.min - phase) / Math.PI);
+    const last = Math.floor((motion.max - phase) / Math.PI);
+    for (let step = first; step <= last; ++step)
+      angles.push(phase + step * Math.PI);
+    const values = angles.map(
+      (angle) =>
+        center[component] +
+        cosine[component] * Math.cos(angle) +
+        sine[component] * Math.sin(angle),
+    );
+    return { low: Math.min(...values), high: Math.max(...values) };
+  };
+  const x = reach("x");
+  const y = reach("y");
+  const z = reach("z");
+  return {
+    min: { x: x.low, y: y.low, z: z.low },
+    max: { x: x.high, y: y.high, z: z.high },
+  };
+};
+
+const boundsOf = (
+  points: readonly IAutoMovieVector3[],
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => ({
+  min: {
+    x: Math.min(...points.map((point) => point.x)),
+    y: Math.min(...points.map((point) => point.y)),
+    z: Math.min(...points.map((point) => point.z)),
+  },
+  max: {
+    x: Math.max(...points.map((point) => point.x)),
+    y: Math.max(...points.map((point) => point.y)),
+    z: Math.max(...points.map((point) => point.z)),
+  },
+});
