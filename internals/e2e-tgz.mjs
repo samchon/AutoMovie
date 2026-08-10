@@ -771,9 +771,13 @@ const effectAcceptance = graph.acceptance.get("opening-effect-mask");
 // Read from the shot rather than written down. A review frame is named by
 // the production, and a literal here strands the whole packaged run on the
 // day a name changes -- which is exactly what it did.
+// A review frame declares the passes it is rendered in, plural: one frame
+// carries beauty, mask and pose at the same instant. Reading a singular pass
+// off it found nothing and left this comparison against undefined, which no
+// acceptance criterion can equal.
 const openingReviewFrame = graph.shots
   .get("opening")
-  ?.reviewFrames.find((frame) => frame.pass === "mask")?.id;
+  ?.reviewFrames.find((frame) => frame.passes.includes("mask"))?.id;
 assert(
   "starter-effect-beauty-mask-frame",
   effectSummary.result?.kind === "measurement" &&
