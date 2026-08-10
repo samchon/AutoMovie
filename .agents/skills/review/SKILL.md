@@ -1,13 +1,15 @@
 ---
 name: review
-description: Defines exhaustive solo review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the default review mode inside issue campaigns. This skill never spawns review agents; use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
+description: Defines exhaustive review, Self-Review, and solo repository-wide issue-discovery rounds for automovie. Use for every self-review or unqualified review request and as the review mode inside issue campaigns, where each parallel issue owner reviews its own surface and the main agent then reviews the integrated diff. One reviewer always covers one whole declared surface; this skill never splits a surface across agents. Use the multi-agent skill only when the user explicitly requests a team, parallel, or multi-agent review.
 ---
 
 # Review
 
 ## Non-Negotiable Review Law
 
-One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill. The [commit early-warning pass](#commit-early-warning-pass) is not a review under this skill and is the sole read-only subagent a solo campaign author runs alongside implementation.
+One reviewer performs every review in this skill from scratch over the entire declared surface. Do not spawn a subagent, delegate a concern, or load the discussion skill.
+
+The unit the law governs is one declared surface, not one person. An issue campaign runs several reviews under it: each parallel owner reviews its own issue's whole surface, and the main agent then reviews the whole base-to-head diff. Both are complete rounds under all four rules. What the law forbids is splitting one declared surface across reviewers, and it forbids the integration round inheriting any owner's round.
 
 Apply [AGENTS.md's **Choose the principled course** rule](../../../AGENTS.md#attitude) to every review decision. A review's duration, difficulty, and consequence surface are reasons to inspect more deeply, never reasons to pass over a sound improvement, accept an unsupported claim, or lower the completion standard.
 
@@ -31,13 +33,13 @@ Self-Review and an unqualified review request use this solo workflow:
 
 Self-Review does not authorize creating, pushing, updating, or merging a pull request. Those actions follow the pull-request skill's own authorization rules.
 
-## Commit Early-Warning Pass
+## Campaign Reviews Do Not Add Up
 
-A commit early-warning pass is not a review under this skill. It is the read-only per-commit reader a solo campaign author runs on every pushed commit while still implementing, defined by the [solo campaign development document](../issue-campaign/development.md#implement-and-write-tests).
+An issue campaign's parallel owners each complete a Self-Review over their own issue, and the main agent completes one over the integrated diff. The [campaign development document](../issue-campaign/development.md#validate-with-ci-and-the-integration-self-review) defines both.
 
-It delegates nothing the Non-Negotiable Review Law governs. The law governs the author's own round, which still runs alone over the whole surface before merge under all four rules. One commit is not a declared surface, a reported candidate is not an accepted finding, and the passes do not add up to a round.
+The owners' rounds never substitute for the integration round. An owner reads the surface of one issue, so what appears only between issues is invisible to all of them: a helper two owners wrote twice, a validator whose new branch leaves a mirrored DTO stale, a document claiming a verification nothing performs, a limit one owner recorded honestly and another silently relied on.
 
-Never call the pass a Self-Review, and never report it as one. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
+Never report the owners' rounds as the campaign's Self-Review. A reader who sees that name concludes the gate already ran, and the whole-surface round disappears without anyone deciding to drop it.
 
 ## Solo Issue Discovery Rounds
 

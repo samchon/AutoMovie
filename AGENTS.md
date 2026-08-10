@@ -37,11 +37,11 @@ The `.wiki/` working knowledge base, package READMEs, code JSDoc, and the writin
 
 ### Review
 
-Default solo Self-Review, unqualified review, and exhaustive solo issue-discovery rounds, `.agents/skills/review/SKILL.md`. The main agent inspects the whole declared surface and repeats fresh rounds until a complete pass finds no sound improvement or meaningful candidate. Read the multi-agent skill only for an explicitly requested team, parallel, or multi-agent review.
+Self-Review, unqualified review, and exhaustive solo issue-discovery rounds, `.agents/skills/review/SKILL.md`. One reviewer inspects one whole declared surface and repeats fresh rounds until a complete pass finds no sound improvement or meaningful candidate. Inside a campaign that means each issue owner reviews its own issue and the main agent then reviews the integrated diff; a surface is never split across agents. Read the multi-agent skill only for an explicitly requested team, parallel, or multi-agent review.
 
 ### Multi-Agent Workflows
 
-Explicitly parallel review and issue-campaign variants live under one overview skill, `.agents/skills/multi-agent/SKILL.md`, with separate detailed topic documents. Read it only when the user explicitly asks for a team, parallel, or multi-agent workflow. Multi-agent issue campaigns parallelize discovery and implementation by default, and switch to solo implementation only when the user explicitly asks for parallel discovery with solo implementation. Self-Review remains solo.
+Isolated-topology variants live under one overview skill, `.agents/skills/multi-agent/SKILL.md`, with separate detailed topic documents. Read it only when the user explicitly asks to split discovery or review across agents, or to isolate implementation into per-batch worktrees, branches, and pull requests. Parallel implementation by itself is not a reason to read it: the ordinary issue campaign already implements in parallel inside one checkout and one branch.
 
 ### Discussion
 
@@ -49,7 +49,7 @@ Structured multi-agent topic discussion with persistent research notes and trans
 
 ### Issue Campaign
 
-Default solo repository-wide issue discovery, main-agent-vetted issue publication, one unified implementation pull request per cycle, and campaign closure (the conquest loop), `.agents/skills/issue-campaign/SKILL.md`. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign without explicitly requesting parallel agents; do not use it for one already-defined issue.
+Solo repository-wide issue discovery, main-agent-vetted issue publication, DAG-ordered parallel implementation by one owner per issue in one checkout and one branch, one unified pull request per cycle, and campaign closure (the conquest loop), `.agents/skills/issue-campaign/SKILL.md`. Each owner Self-Reviews and pushes its own work; the main agent owns every shared integration file and closes the cycle with one integration Self-Review. Read when the user asks for a broad audit, many issue candidates, or an issue-to-implementation campaign; do not use it for one already-defined issue.
 
 ### Experiment
 

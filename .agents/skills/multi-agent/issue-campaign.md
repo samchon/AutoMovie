@@ -6,17 +6,19 @@ The base issue-campaign skill owns authorization, the knowledge base, discovery 
 
 ## Select The Parallel Boundary
 
-A multi-agent issue campaign parallelizes both discovery and implementation by default.
+What this document adds is **parallel discovery** and **isolated implementation batches**. The base campaign already implements in parallel, so parallelism alone never selects this document.
 
-Switch to parallel discovery with solo implementation only when the user explicitly requests that combination. In that mode:
+A multi-agent issue campaign parallelizes discovery and partitions implementation into per-batch worktrees, branches, and pull requests.
+
+Keep implementation in the base campaign's shared checkout unless the user asked for that isolation. In that mode:
 
 1. Run Parallel Discovery and let the lead complete candidate adjudication and authorized publication.
 2. Stop every discovery agent before implementation begins.
-3. Read the base issue campaign's [solo development procedure](../issue-campaign/development.md).
-4. Put every implementation-ready issue into its one empty-claim pull request, use the current checkout without a clone or worktree, complete the local gates, validate through ordinary CI, and complete solo Self-Review while CI runs.
+3. Read the base issue campaign's [development procedure](../issue-campaign/development.md).
+4. Put every implementation-ready issue into its one empty-claim pull request, dispatch one owner per issue in dependency-DAG waves against the current checkout without a clone or worktree, complete the local gates, validate through ordinary CI, and complete the lead's integration Self-Review over the whole base-to-head diff.
 5. Repair every red CI lane in that same pull request, commit and push the repair even when the failure predates the campaign or is unrelated to its original issues, then return here for the next parallel discovery round.
 
-Do not infer solo implementation from quota concerns, a small issue count, or the fact that the lead performs publication. Only the user's explicit phase boundary selects it.
+Do not infer isolated batches from quota concerns, a large issue count, or the fact that several owners implement at once. Only the user's explicit phase boundary selects them.
 
 ## Parallel Discovery
 
@@ -46,7 +48,7 @@ For each immediately executable batch:
 2. Create an implementation-free commit with `git commit --allow-empty`.
 3. Push and open a draft pull request referencing every batch issue by number and stating its owned files. The [solo claim rule](../issue-campaign/development.md#claim-the-complete-cycle) applies unchanged: no closing keyword in a body written before the code exists.
 4. Record the batch, worktree, branch, issues, owned files, and pull request in the campaign knowledge base.
-5. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Run `pnpm run format`, then commit and push coherent increments, each carrying the [commit closing lines](../issue-campaign/development.md#implement-and-write-tests) for the issues it earns.
+5. Implement the full consequence surface and the required positive, negative, boundary, and regression coverage. Run `pnpm run format`, then commit and push coherent increments, each carrying the [commit closing lines](../issue-campaign/development.md#implement-in-parallel) for the issues it earns.
 6. Run the narrowest local proving commands followed by the broader locally owned lanes. Freeze the head and complete solo Self-Review. If code changes, rerun the necessary local gates and restart the full review.
 7. Watch the pull request's CI. Repair every red lane in this same pull request, even when the failure predates the campaign or is unrelated to its original issues, then commit, push, and restart the required review and CI loop.
 8. Let the lead independently verify issue fit, dispositions, evidence, and batch scope. Merge only with user authorization after the required checks and final clean Self-Review are complete.
