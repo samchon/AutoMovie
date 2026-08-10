@@ -14,7 +14,7 @@ const slabs = (flipOdd: boolean) =>
     region: rectangle(0, 0, 1.2, 1),
     origin: { u: 0, v: 0 },
     period: { u: 0.6, v: 2 },
-    reach: { u: 0.6, v: 1 },
+    reach: { u: 0.61, v: 1.01 },
     material: "stone",
     generate: ({ column, row, origin }) =>
       row !== 0

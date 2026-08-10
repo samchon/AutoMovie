@@ -12,7 +12,6 @@ const course =
   (
     size: number,
     grainDeg: number,
-    mirror: false,
     height: number,
   ): AutoMovieSurfacePatternGenerator =>
   ({ column, row, origin, period }) =>
@@ -25,6 +24,7 @@ const course =
             size: { u: size, v: height },
             rotationDeg: 0,
             grainDeg,
+            mirror: false,
           },
         ];
 
