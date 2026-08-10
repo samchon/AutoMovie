@@ -8,11 +8,13 @@ import {
  * compiled artifact rather than guessed from the design.
  *
  * The inventory is the evidence a budget is checked against, and it is
- * deliberately separate from that check: the same numbers are read by the
- * headless capture path and by the live viewer, and a disagreement between the
- * two is a defect the report can name. Nothing here is an observation of a
- * frame that was drawn; these are the exact quantities the compiled artifact
- * commits the renderer to, so the numbers exist before any GPU does.
+ * deliberately separate from that check so that a headless capture and a live
+ * viewer can read one measurement instead of each counting for itself. Neither
+ * reads it yet: `measureAutoMovieRenderInventory` is called by the test suite
+ * alone, so a disagreement between the two is a defect the report could name
+ * rather than one it does. Nothing here is an observation of a frame that was
+ * drawn; these are the exact quantities the compiled artifact commits the
+ * renderer to, so the numbers exist before any GPU does.
  *
  * The three per-kind arrays below are not a complete decomposition of the
  * totals. A cloth panel, a planting cluster and a water surface are none of a

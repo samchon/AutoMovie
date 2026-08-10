@@ -202,11 +202,16 @@ export interface IAutoMovieRenderTextureSource {
 /**
  * Read a compiled shot as a render subject.
  *
- * One conversion, so every evidence path measures the same artifact. Simulated
- * drawables and texture dimensions are not carried by the compiled shot yet and
- * are supplied by the caller, which is why they are separate arguments rather
- * than silently defaulted to empty inside a report that would then read as
- * complete.
+ * One conversion is the point: every evidence path reading its subject here
+ * would measure the same artifact. The test suite is currently the only caller,
+ * so that is a property of the signature and not of the pipeline. It becomes a
+ * property of the pipeline when the inventory path and the capture path both
+ * take their subject from this call instead of assembling one each.
+ *
+ * Simulated drawables and texture dimensions are not carried by the compiled
+ * shot yet and are supplied by the caller, which is why they are separate
+ * arguments rather than silently defaulted to empty inside a report that would
+ * then read as complete.
  */
 export const autoMovieRenderSubjectOfShot = (props: {
   /** Fully compiler-owned shot artifact. */

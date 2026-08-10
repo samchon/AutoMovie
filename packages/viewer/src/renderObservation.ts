@@ -36,10 +36,14 @@ export interface IAutoMovieRenderObservation {
  *
  * This is the live half of the evidence pair. The compiled report states an
  * upper bound before a renderer exists; this states what the scene graph in
- * front of you actually submits, and the two are compared rather than trusted
- * separately. A live viewer and a headless capture run this same function over
- * the same built scene, so "the viewer and the capture agree" is a checked fact
- * and not an assurance.
+ * front of you actually submits, and {@link auditAutoMovieRenderObservation}
+ * compares the two rather than trusting either alone.
+ *
+ * "The viewer and the capture agree" is not a checked fact yet. The test suite
+ * is the only caller: no playground, scaffold viewer runtime, or capture host
+ * observes its built scene through this function. It becomes a checked fact
+ * when a live viewer and a headless capture both run this one function over
+ * their own built scene and audit the result against the same report.
  *
  * Only DRAWN geometry counts. An object hidden by its own flag or by any
  * ancestor's submits nothing, and counting it would make a culled crowd look

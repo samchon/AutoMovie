@@ -5,11 +5,16 @@ import { AutoMovieRenderMetric } from "./AutoMovieRenderMetric";
  * tier.
  *
  * A budget is a design decision, not a measurement: it is authored beside the
- * production it constrains, and the compiler refuses an artifact that exceeds
- * it. That direction matters. Numbers derived from whatever the current scene
- * happens to cost would ratify every regression the moment it lands, so no
- * limit here is ever inferred from an inventory; a production that declares no
- * budget is reported as unbudgeted rather than silently given one.
+ * production it constrains rather than read back off it. That direction
+ * matters. Numbers derived from whatever the current scene happens to cost
+ * would ratify every regression the moment it lands, so no limit here is ever
+ * inferred from an inventory; a production that declares no budget is reported
+ * as unbudgeted rather than silently given one.
+ *
+ * Declaring a budget is not a check running. No compile scope reads
+ * `renderBudgets`, so nothing refuses an artifact for exceeding one; a
+ * production's own code picks the tier a render targets and evaluates it with
+ * `evaluateAutoMovieRenderBudget` against the engine's inventory.
  *
  * Limits are inclusive: a measurement exactly equal to its limit is inside the
  * budget. An omitted metric is unbudgeted, which the report states explicitly
