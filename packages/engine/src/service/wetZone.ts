@@ -117,13 +117,6 @@ export const validateWetZones = (props: {
         zone.slope,
       );
 
-    if (zoneOf.get(zone.space) !== zone.id)
-      out.push(
-        "type",
-        `${path}.space`,
-        `logical space "${zone.space}" already carries wet zone "${zoneOf.get(zone.space)}"`,
-        zone.space,
-      );
     if (!spaceIds.has(zone.space)) {
       out.push(
         "type",
@@ -133,6 +126,16 @@ export const validateWetZones = (props: {
       );
       return;
     }
+    // Only after the space is known to exist: a room that is not there cannot
+    // already be carrying anything, and reporting both would send an author
+    // looking for a second mistake at the same address.
+    if (zoneOf.get(zone.space) !== zone.id)
+      out.push(
+        "type",
+        `${path}.space`,
+        `logical space "${zone.space}" already carries wet zone "${zoneOf.get(zone.space)}"`,
+        zone.space,
+      );
 
     const bounding = environment.boundaries.filter((boundary) =>
       boundary.spaces.includes(zone.space),
