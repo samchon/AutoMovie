@@ -6,219 +6,113 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 import { namedFacts } from "../internal/predicates";
+import {
+  inSpace,
+  propEnvironment,
+  propRegistry,
+  propSet,
+  sculpture,
+} from "./propPlacementFixtures";
 
-const environment = (id = "house"): IAutoMovieBuiltEnvironment => ({
-  version: 1,
-  id,
-  units: "meter",
-  buildings: [{ id: "main", element: "root", space: "room" }],
-  models: [],
-  modelReferences: [],
-  elements: [
-    {
-      id: "root",
-      kind: "building",
-      parent: null,
-      transform: IDENTITY_TRANSFORM,
-      model: null,
-      space: "room",
-    },
-    {
-      id: "wall",
-      kind: "wall",
-      parent: "root",
-      transform: IDENTITY_TRANSFORM,
-      model: null,
-      space: "room",
-    },
-    {
-      id: "annex-wall",
-      kind: "wall",
-      parent: "root",
-      transform: IDENTITY_TRANSFORM,
-      model: null,
-      space: "annex",
-    },
-  ],
-  spaces: [
-    { id: "room", kind: "room", parent: null, cells: [] },
-    { id: "annex", kind: "room", parent: "room", cells: [] },
-  ],
-  boundaries: [],
-  openings: [],
-  connectors: [],
-  surfaces: [
-    {
-      space: "room",
-      surface: {
-        id: "floor",
-        kind: "floor",
-        polygon: [
-          { x: -5, y: 0, z: -5 },
-          { x: 5, y: 0, z: -5 },
-          { x: 5, y: 0, z: 5 },
-          { x: -5, y: 0, z: 5 },
-        ],
-        anchor: { x: 0, y: 0, z: 0 },
-        rampTo: null,
-      },
-    },
-    {
-      space: "annex",
-      surface: {
-        id: "annex-floor",
-        kind: "floor",
-        polygon: [
-          { x: 5, y: 0, z: -5 },
-          { x: 10, y: 0, z: -5 },
-          { x: 10, y: 0, z: 5 },
-          { x: 5, y: 0, z: 5 },
-        ],
-        anchor: { x: 0, y: 0, z: 0 },
-        rampTo: null,
-      },
-    },
-  ],
-  walkable: ["floor", "annex-floor"],
-});
-
-const table = (): IAutoMoviePropSpec => ({
-  node: "table",
-  model: {
-    ...createModel(null),
-    id: "table",
-    affordances: [
-      {
-        id: "top",
-        kind: "stack-top",
-        frame: IDENTITY_TRANSFORM,
-        extent: [
-          { x: -0.5, y: 0, z: -0.5 },
-          { x: 0.5, y: 0, z: -0.5 },
-          { x: 0.5, y: 0, z: 0.5 },
-          { x: -0.5, y: 0, z: 0.5 },
-        ],
-      },
-    ],
-  },
-  articulation: null,
-  placement: {
-    space: { environment: "house", space: "room" },
-    host: null,
-    support: { kind: "surface", environment: "house", surface: "floor" },
-    clearance: [],
-  },
-});
-
-const lamp = (): IAutoMoviePropSpec => ({
-  node: "lamp",
-  model: { ...createModel(null), id: "lamp" },
-  articulation: null,
-  placement: {
-    space: { environment: "house", space: "room" },
-    host: { environment: "house", element: "wall" },
-    support: { kind: "prop-affordance", prop: "table", affordance: "top" },
-    clearance: [
-      {
-        id: "shade-service",
-        min: { x: -0.2, y: 0, z: 4 },
-        max: { x: 0.2, y: 1, z: 5 },
-      },
-    ],
-  },
-});
-
-const sculpture = (): IAutoMoviePropSpec => ({
-  node: "sculpture",
-  model: {
-    ...createModel(null),
-    id: "sculpture",
-    parts: [
-      {
-        id: "tetrahedron",
-        name: null,
-        geometry: {
-          type: "mesh",
-          mesh: {
-            positions: [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
-            normals: null,
-            uvs: null,
-            indices: [0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3],
-            skin: null,
-          },
-        },
-        material: "mat-1",
-        attachedBone: null,
-        transform: {
-          translation: { x: 0.1, y: 0, z: 0 },
-          rotation: { x: 0, y: 0, z: 0, w: 1 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
-      },
-    ],
-  },
-  articulation: null,
-});
-
-const setPieces = (): IAutoMovieStageSetPiece[] => [
-  { node: "table", model: "table", position: { x: 0, y: 0, z: 0 } },
-  {
-    node: "lamp",
-    model: "lamp",
-    position: { x: 3, y: 1, z: 0 },
-    facingDeg: 30,
-    scale: 1.2,
-  },
-  {
-    node: "sculpture",
-    model: "sculpture",
-    position: { x: -3, y: 0, z: 0 },
-    rotation: { x: 0, y: Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
-    scale: { x: 1, y: 2, z: 0.5 },
-  },
-];
+const TABLE = 0;
+const LAMP = 1;
+const SCONCE = 2;
+const CHARGER = 3;
+const PENDANT = 4;
+const CHIME = 5;
+const CABINET = 6;
+const DOOR = 7;
+const CRATE = 8;
+const SCULPTURE = 9;
 
 const validate = (
-  props: IAutoMoviePropSpec[] = [table(), lamp(), sculpture()],
-  set: IAutoMovieStageSetPiece[] = setPieces(),
-  builtEnvironments: IAutoMovieBuiltEnvironment[] = [environment()],
+  props: IAutoMoviePropSpec[] = propRegistry(),
+  set: IAutoMovieStageSetPiece[] = propSet(),
+  builtEnvironments: IAutoMovieBuiltEnvironment[] = [propEnvironment()],
 ) => validatePropPlacements({ props, set, builtEnvironments });
 
 /**
- * Semantic prop placement is order-independent and preserves the legacy prop
- * path while making every spatial relation and clearance failure locatable.
+ * A mutated registry must fail at `path`, and with `message` when one is given.
+ *
+ * The mutation runs against a fresh registry every time, so a case never
+ * inherits the damage of the one before it.
+ */
+const violated = (
+  mutate: (
+    props: IAutoMoviePropSpec[],
+    set: IAutoMovieStageSetPiece[],
+    environments: IAutoMovieBuiltEnvironment[],
+  ) => void,
+  path: string,
+  message?: string,
+): boolean => {
+  const props = propRegistry();
+  const set = propSet();
+  const environments = [propEnvironment()];
+  mutate(props, set, environments);
+  const result = validate(props, set, environments);
+  return (
+    result.success === false &&
+    result.violations.some(
+      (item) =>
+        item.path === path &&
+        (message === undefined || item.expected.includes(message)),
+    )
+  );
+};
+
+/** The same mutation, asserted to leave the registry valid. */
+const tolerated = (
+  mutate: (
+    props: IAutoMoviePropSpec[],
+    set: IAutoMovieStageSetPiece[],
+    environments: IAutoMovieBuiltEnvironment[],
+  ) => void,
+): boolean => {
+  const props = propRegistry();
+  const set = propSet();
+  const environments = [propEnvironment()];
+  mutate(props, set, environments);
+  return validate(props, set, environments).success;
+};
+
+/**
+ * Semantic prop placement resolves order-independently, judges every relation
+ * the architecture graph can answer for, and refuses only what it can measure.
  *
  * Scenarios:
  *
- * 1. A valid registry, its reversed forward reference, a legacy unplaced prop, and
- *    the empty registry pass without inferred spatial claims.
- * 2. Duplicate prop, set, and environment ids plus missing and forged joins fail
- *    at the identity or model field that authored the contradiction.
- * 3. Space, host, surface, prop-affordance, and support-cycle references cover
- *    missing, ambiguous, and cross-environment negative twins without treating
- *    intentionally overlapping logical spaces as geometric contradictions.
- * 4. Clearance ids and all three finite ordered axes are gated before geometry and
- *    invalid owners or candidates do not make the geometry pass throw.
- * 5. Facing/scalar scale and quaternion/per-axis scale, primitive and mesh
- *    geometry, part-local transforms, collision, separation, and exact contact
- *    exercise the full transformed-bounds predicate.
+ * 1. A furnished room exercising all six relation kinds against both the building
+ *    graph and other props passes, as does its reversal, a legacy registry that
+ *    declares no placement at all, and the empty registry.
+ * 2. Prop, set-piece, and environment identity failures, a missing or forged
+ *    staged join, and a staged model that contradicts the spec are located at
+ *    the field that authored the contradiction.
+ * 3. Each relation kind refuses a target kind it does not accept, and every
+ *    citation (space, element, boundary, opening, surface, prop, affordance)
+ *    has a missing, ambiguous, wrong-kind, or cross-environment negative twin.
+ * 4. A prop occupies at most one space and fills at most one opening, a relation
+ *    cannot be declared twice for the same target, and a support graph closing
+ *    on itself is refused both directly and through a cycle.
+ * 5. Footprint and clearance boxes are gated on all three axes before any geometry
+ *    runs, and an invalid box does not make the geometry pass throw.
+ * 6. Containment, opening fit, prop overlap, clearance intrusion, and blocked
+ *    opening and connector each fail once and are each paired with the adjacent
+ *    case where they must not fire: exact contact, a declared contact pair, a
+ *    cell-less space, an unfilled opening, and a prop that declares no
+ *    placement at all.
  */
 export const test_film_prop_placement = (): void => {
+  TestValidator.equals("the furnished room resolves", validate().success, true);
   TestValidator.equals(
-    "valid prop registry resolves",
-    validate().success,
+    "forward references are declaration-order independent",
+    validate(propRegistry().reverse(), propSet().reverse()).success,
     true,
   );
   TestValidator.equals(
-    "forward support reference is declaration-order independent",
-    validate([lamp(), table(), sculpture()]).success,
-    true,
-  );
-  TestValidator.equals(
-    "legacy prop without placement stays compatible",
-    validate([sculpture()], [setPieces()[2]!], []).success,
+    "a legacy registry without placements stays compatible",
+    validate([sculpture()], [propSet()[SCULPTURE]!], []).success,
     true,
   );
   TestValidator.equals(
@@ -227,272 +121,479 @@ export const test_film_prop_placement = (): void => {
     true,
   );
 
-  const invalid = (
-    mutate: (
-      props: IAutoMoviePropSpec[],
-      set: IAutoMovieStageSetPiece[],
-      environments: IAutoMovieBuiltEnvironment[],
-    ) => void,
-    path: string,
-  ): boolean => {
-    const props = [table(), lamp(), sculpture()];
-    const set = setPieces();
-    const environments = [environment()];
-    mutate(props, set, environments);
-    const result = validate(props, set, environments);
-    return (
-      result.success === false &&
-      result.violations.some((item) => item.path === path)
-    );
-  };
-
   TestValidator.equals(
-    "identity, relation, range and collision failures are located",
+    "identity, relation, box and geometry failures are located",
     namedFacts([
+      // 2. identity and the staged join.
       [
         "duplicateProp",
-        () => invalid((props) => props.push(props[0]!), "$input.props[3].node"),
+        () =>
+          violated(
+            (props) => props.push(props[TABLE]!),
+            "$input.props[10].node",
+            "duplicated",
+          ),
       ],
       [
         "ambiguousSupportingProp",
         () =>
-          invalid(
-            (props) => props.push(props[0]!),
-            "$input.props[1].placement.support.prop",
+          violated(
+            (props) => props.push(props[TABLE]!),
+            "$input.props[1].placement.relations[1].target.prop",
+            "ambiguous",
           ),
       ],
       [
         "duplicateSet",
-        () => invalid((_props, set) => set.push(set[0]!), "$input.set[3].node"),
+        () =>
+          violated(
+            (_props, set) => set.push(set[TABLE]!),
+            "$input.set[10].node",
+            "duplicated",
+          ),
       ],
       [
         "duplicateEnvironment",
         () =>
-          invalid(
-            (_props, _set, environments) => environments.push(environment()),
+          violated(
+            (_p, _s, environments) => environments.push(propEnvironment()),
             "$input.builtEnvironments[1].id",
+            "duplicated",
           ),
       ],
       [
         "ambiguousEnvironment",
         () =>
-          invalid(
-            (_props, _set, environments) => environments.push(environment()),
-            "$input.props[0].placement.space.environment",
+          violated(
+            (_p, _s, environments) => environments.push(propEnvironment()),
+            "$input.props[0].placement.relations[0].target.environment",
+            "ambiguous",
           ),
       ],
       [
-        "forge",
+        "forgeFailure",
         () =>
-          invalid(
-            (props) => (props[0]!.model.id = "wrong"),
+          violated(
+            (props) => (props[TABLE]!.model.id = "wrong"),
             "$input.props[0].model.id",
           ),
       ],
       [
-        "clearanceOwnerForge",
+        "missingStagedPiece",
         () =>
-          invalid(
-            (props) => (props[1]!.model.id = "wrong"),
-            "$input.props[1].model.id",
+          violated(
+            (_props, set) => set.splice(LAMP, 1),
+            "$input.props[1].node",
+            "needs one staged set placement",
           ),
       ],
       [
-        "missingSet",
+        "stagedModelMismatch",
         () =>
-          invalid((_props, set) => set.splice(1, 1), "$input.props[1].node"),
-      ],
-      [
-        "missingCandidateSet",
-        () =>
-          invalid((_props, set) => set.splice(2, 1), "$input.props[2].node"),
-      ],
-      [
-        "setModel",
-        () =>
-          invalid(
-            (_props, set) => (set[1]!.model = "wrong"),
+          violated(
+            (_props, set) => (set[LAMP]!.model = "wrong"),
             "$input.set[1].model",
+            "instead of",
+          ),
+      ],
+      // 3. relation shape and citations.
+      [
+        "unacceptedTargetKind",
+        () =>
+          violated(
+            (props) =>
+              (props[TABLE]!.placement!.relations[0] = {
+                kind: "in-space",
+                target: {
+                  kind: "element",
+                  environment: "house",
+                  element: "wall",
+                },
+              }),
+            "$input.props[0].placement.relations[0].target.kind",
+            'does not accept a "element" target',
           ),
       ],
       [
-        "spaceEnvironment",
+        "unacceptedPropAffordanceTarget",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.space!.environment = "missing"),
-            "$input.props[1].placement.space.environment",
+          violated(
+            (props) =>
+              (props[DOOR]!.placement!.relations[1] = {
+                kind: "fill-opening",
+                target: {
+                  kind: "prop-affordance",
+                  prop: "table",
+                  affordance: "top",
+                },
+              }),
+            "$input.props[7].placement.relations[1].target.kind",
+            'does not accept a "prop-affordance" target',
           ),
       ],
       [
-        "space",
+        "missingEnvironment",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.space!.space = "missing"),
-            "$input.props[1].placement.space.space",
+          violated(
+            (props) => {
+              const target = props[TABLE]!.placement!.relations[0]!.target;
+              if (target.kind === "space") target.environment = "missing";
+            },
+            "$input.props[0].placement.relations[0].target.environment",
+            "does not resolve",
           ),
       ],
       [
-        "hostEnvironment",
+        "missingSpace",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.host!.environment = "missing"),
-            "$input.props[1].placement.host.environment",
+          violated(
+            (props) => {
+              const target = props[TABLE]!.placement!.relations[0]!.target;
+              if (target.kind === "space") target.space = "missing";
+            },
+            "$input.props[0].placement.relations[0].target.space",
+            "does not resolve",
           ),
       ],
       [
-        "host",
+        "missingElement",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.host!.element = "missing"),
-            "$input.props[1].placement.host.element",
+          violated(
+            (props) => {
+              const target = props[SCONCE]!.placement!.relations[1]!.target;
+              if (target.kind === "element") target.element = "missing";
+            },
+            "$input.props[2].placement.relations[1].target.element",
+            "does not resolve",
           ),
       ],
       [
-        "hostEnvironmentMismatch",
+        "missingBoundary",
         () =>
-          invalid((props, _set, environments) => {
-            environments.push(environment("other-house"));
-            props[1]!.placement!.host!.environment = "other-house";
-          }, "$input.props[1].placement.host.environment"),
+          violated(
+            (props) => {
+              const target = props[CABINET]!.placement!.relations[1]!.target;
+              if (target.kind === "boundary") target.boundary = "missing";
+            },
+            "$input.props[6].placement.relations[1].target.boundary",
+            "does not resolve",
+          ),
       ],
       [
-        "surfaceEnvironment",
+        "missingOpening",
         () =>
-          invalid((props) => {
-            const support = props[0]!.placement!.support;
-            if (support?.kind === "surface") support.environment = "missing";
-          }, "$input.props[0].placement.support.environment"),
+          violated(
+            (props) => {
+              const target = props[DOOR]!.placement!.relations[1]!.target;
+              if (target.kind === "opening") target.opening = "missing";
+            },
+            "$input.props[7].placement.relations[1].target.opening",
+            "does not resolve",
+          ),
       ],
       [
-        "surface",
+        "missingSurface",
         () =>
-          invalid((props) => {
-            const support = props[0]!.placement!.support;
-            if (support?.kind === "surface") support.surface = "missing";
-          }, "$input.props[0].placement.support.surface"),
+          violated(
+            (props) => {
+              const target = props[TABLE]!.placement!.relations[1]!.target;
+              if (target.kind === "surface") target.surface = "missing";
+            },
+            "$input.props[0].placement.relations[1].target.surface",
+            "does not resolve",
+          ),
       ],
       [
-        "surfaceEnvironmentMismatch",
+        "crossEnvironmentRelation",
         () =>
-          invalid((props, _set, environments) => {
-            environments.push(environment("other-house"));
-            const support = props[0]!.placement!.support;
-            if (support?.kind === "surface")
-              support.environment = "other-house";
-          }, "$input.props[0].placement.support.environment"),
+          violated(
+            (props, _set, environments) => {
+              environments.push(propEnvironment("annexe"));
+              const target = props[SCONCE]!.placement!.relations[1]!.target;
+              if (target.kind === "element") target.environment = "annexe";
+            },
+            "$input.props[2].placement.relations[1].target.environment",
+            "differs from occupied space environment",
+          ),
       ],
       [
-        "self",
+        "selfSupport",
         () =>
-          invalid((props) => {
-            const support = props[1]!.placement!.support;
-            if (support?.kind === "prop-affordance") support.prop = "lamp";
-          }, "$input.props[1].placement.support.prop"),
+          violated(
+            (props) => {
+              const target = props[LAMP]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance") target.prop = "lamp";
+            },
+            "$input.props[1].placement.relations[1].target.prop",
+            "cannot rest on",
+          ),
       ],
       [
-        "supportProp",
+        "missingSupportingProp",
         () =>
-          invalid((props) => {
-            const support = props[1]!.placement!.support;
-            if (support?.kind === "prop-affordance") support.prop = "missing";
-          }, "$input.props[1].placement.support.prop"),
+          violated(
+            (props) => {
+              const target = props[LAMP]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance") target.prop = "missing";
+            },
+            "$input.props[1].placement.relations[1].target.prop",
+            "does not resolve",
+          ),
       ],
       [
-        "affordance",
+        "missingAffordance",
         () =>
-          invalid((props) => {
-            const support = props[1]!.placement!.support;
-            if (support?.kind === "prop-affordance")
-              support.affordance = "missing";
-          }, "$input.props[1].placement.support.affordance"),
+          violated(
+            (props) => {
+              const target = props[LAMP]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance")
+                target.affordance = "missing";
+            },
+            "$input.props[1].placement.relations[1].target.affordance",
+            "does not resolve",
+          ),
       ],
       [
-        "supportEnvironmentMismatch",
+        "wrongAffordanceKindForSupport",
         () =>
-          invalid((props, _set, environments) => {
-            environments.push(environment("other-house"));
-            props[0]!.placement!.space!.environment = "other-house";
-          }, "$input.props[1].placement.support.prop"),
+          violated(
+            (props) => {
+              const target = props[LAMP]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance") target.affordance = "plug";
+            },
+            "$input.props[1].placement.relations[1].target.affordance",
+            'needs a "stack-top" affordance',
+          ),
+      ],
+      [
+        "wrongAffordanceKindForAttachment",
+        () =>
+          violated(
+            (props) => {
+              const target = props[CHARGER]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance") target.affordance = "peg";
+            },
+            "$input.props[3].placement.relations[1].target.affordance",
+            'needs a "socket" affordance',
+          ),
+      ],
+      [
+        "wrongAffordanceKindForSuspension",
+        () =>
+          violated(
+            (props) => {
+              const target = props[CHIME]!.placement!.relations[1]!.target;
+              if (target.kind === "prop-affordance") target.affordance = "top";
+            },
+            "$input.props[5].placement.relations[1].target.affordance",
+            'needs a "hook" affordance',
+          ),
+      ],
+      [
+        "supportingPropInAnotherEnvironment",
+        () =>
+          violated(
+            (props, _set, environments) => {
+              environments.push(propEnvironment("annexe"));
+              props[TABLE]!.placement!.relations[0] = inSpace("room", "annexe");
+            },
+            "$input.props[1].placement.relations[1].target.prop",
+            "occupies environment",
+          ),
+      ],
+      // 4. relation multiplicity and the support graph.
+      [
+        "duplicateRelation",
+        () =>
+          violated(
+            (props) =>
+              props[SCONCE]!.placement!.relations.push(
+                props[SCONCE]!.placement!.relations[1]!,
+              ),
+            "$input.props[2].placement.relations[2]",
+            "declared twice",
+          ),
+      ],
+      [
+        "secondOccupiedSpace",
+        () =>
+          violated(
+            (props) =>
+              props[SCONCE]!.placement!.relations.push(inSpace("annex")),
+            "$input.props[2].placement.relations[2].kind",
+            "at most one logical space",
+          ),
+      ],
+      [
+        "secondFilledOpening",
+        () =>
+          violated(
+            (props) =>
+              props[DOOR]!.placement!.relations.push({
+                kind: "fill-opening",
+                target: {
+                  kind: "opening",
+                  environment: "house",
+                  opening: "arch",
+                },
+              }),
+            "$input.props[7].placement.relations[2].kind",
+            "at most one opening",
+          ),
+      ],
+      [
+        "filledOpeningInAnotherEnvironment",
+        () =>
+          violated(
+            (props, _set, environments) => {
+              environments.push(propEnvironment("annexe"));
+              const target = props[DOOR]!.placement!.relations[1]!.target;
+              if (target.kind === "opening") target.environment = "annexe";
+            },
+            "$input.props[7].placement.relations[1].target.environment",
+            "differs from occupied space environment",
+          ),
       ],
       [
         "supportCycle",
         () =>
-          invalid((props) => {
-            props[0]!.placement!.support = {
-              kind: "prop-affordance",
-              prop: "lamp",
-              affordance: "missing",
-            };
-          }, "$input.props[1].placement.support.prop"),
+          violated(
+            (props) => {
+              props[TABLE]!.placement!.relations.push({
+                kind: "on-support",
+                target: {
+                  kind: "prop-affordance",
+                  prop: "lamp",
+                  affordance: "top",
+                },
+              });
+            },
+            "$input.props[1].placement.relations[1].target.prop",
+            "forms a cycle",
+          ),
       ],
+      // 5. box gates.
       [
-        "blankClearance",
+        "footprintAxis",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.clearance[0]!.id = " "),
-            "$input.props[1].placement.clearance[0].id",
+          violated(
+            (props) => (props[CABINET]!.placement!.footprint!.max.x = -1),
+            "$input.props[6].placement.footprint.x",
+            "min < max",
           ),
       ],
       [
-        "duplicateClearance",
+        "blankClearanceId",
         () =>
-          invalid(
+          violated(
+            (props) => (props[LAMP]!.placement!.clearance[0]!.id = " "),
+            "$input.props[1].placement.clearance[0].id",
+            "non-empty",
+          ),
+      ],
+      [
+        "duplicateClearanceId",
+        () =>
+          violated(
             (props) =>
-              props[1]!.placement!.clearance.push(
-                props[1]!.placement!.clearance[0]!,
+              props[LAMP]!.placement!.clearance.push(
+                props[LAMP]!.placement!.clearance[0]!,
               ),
             "$input.props[1].placement.clearance[1].id",
+            "duplicated",
           ),
       ],
       [
-        "xBounds",
+        "clearanceXOrder",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.clearance[0]!.max.x = -1),
+          violated(
+            (props) => (props[LAMP]!.placement!.clearance[0]!.max.x = -1),
             "$input.props[1].placement.clearance[0].x",
           ),
       ],
       [
-        "yBounds",
+        "clearanceYNotFinite",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.clearance[0]!.min.y = NaN),
+          violated(
+            (props) => (props[LAMP]!.placement!.clearance[0]!.min.y = NaN),
             "$input.props[1].placement.clearance[0].y",
           ),
       ],
       [
-        "zBounds",
+        "clearanceZInfinite",
         () =>
-          invalid(
-            (props) => (props[1]!.placement!.clearance[0]!.max.z = Infinity),
+          violated(
+            (props) => (props[LAMP]!.placement!.clearance[0]!.max.z = Infinity),
             "$input.props[1].placement.clearance[0].z",
           ),
       ],
+      // 6. geometry.
       [
-        "facingAndPartTransformCollision",
+        "leavesOccupiedSpace",
         () =>
-          invalid((_props, set) => {
-            set[2]!.position = { x: 5.7, y: 1.6, z: 4.68 };
-          }, "$input.props[1].placement.clearance[0]"),
+          violated(
+            (_props, set) => (set[PENDANT]!.position = { x: 0, y: 3, z: 12 }),
+            "$input.props[4].placement.relations[0].target.space",
+            "leaves logical space",
+          ),
       ],
       [
-        "quaternionAndNonUniformScaleCollision",
+        "doorDoesNotFitOpening",
         () =>
-          invalid((props, set) => {
-            props[2]!.placement = {
-              space: null,
-              host: null,
-              support: null,
-              clearance: [
-                {
-                  id: "rotated-service",
-                  min: { x: 1, y: 0, z: 0 },
-                  max: { x: 2, y: 1, z: 1 },
-                },
-              ],
-            };
-            set[0]!.position = { x: -2.75, y: 1, z: -1.5 };
-          }, "$input.props[2].placement.clearance[0]"),
+          violated(
+            (_props, set) => (set[DOOR]!.scale = 3),
+            "$input.props[7].placement.relations[1].target.opening",
+            "does not fit the fill element",
+          ),
+      ],
+      [
+        "spacelessLeafIsStillMeasured",
+        () =>
+          violated(
+            (props, set) => {
+              props[DOOR]!.placement!.relations.splice(0, 1);
+              set[DOOR]!.scale = 3;
+            },
+            "$input.props[7].placement.relations[0].target.opening",
+            "does not fit the fill element",
+          ),
+      ],
+      [
+        "occupancyOverlapsUndeclaredProp",
+        () =>
+          violated(
+            (_props, set) => (set[PENDANT]!.position = { x: 0, y: 2, z: -2 }),
+            "$input.props[5].placement.footprint",
+            "declares no contact with it",
+          ),
+      ],
+      [
+        "clearanceIntersectsProp",
+        () =>
+          violated(
+            (_props, set) =>
+              (set[CHARGER]!.position = { x: 1.5, y: 0.9, z: 0 }),
+            "$input.props[1].placement.clearance[0]",
+            "intersects staged prop",
+          ),
+      ],
+      [
+        "blocksOpening",
+        () =>
+          violated(
+            (_props, set) => (set[SCONCE]!.position = { x: 3.9, y: 1, z: 0 }),
+            "$input.props[2].placement",
+            'blocks opening "doorway"',
+          ),
+      ],
+      [
+        "blocksConnector",
+        () =>
+          violated(
+            (_props, set) => (set[SCONCE]!.position = { x: -4.5, y: 1, z: -3 }),
+            "$input.props[2].placement",
+            'blocks connector "stair"',
+          ),
       ],
     ]),
     {
@@ -501,51 +602,151 @@ export const test_film_prop_placement = (): void => {
       duplicateSet: true,
       duplicateEnvironment: true,
       ambiguousEnvironment: true,
-      forge: true,
-      clearanceOwnerForge: true,
-      missingSet: true,
-      missingCandidateSet: true,
-      setModel: true,
-      spaceEnvironment: true,
-      space: true,
-      hostEnvironment: true,
-      host: true,
-      hostEnvironmentMismatch: true,
-      surfaceEnvironment: true,
-      surface: true,
-      surfaceEnvironmentMismatch: true,
-      self: true,
-      supportProp: true,
-      affordance: true,
-      supportEnvironmentMismatch: true,
+      forgeFailure: true,
+      missingStagedPiece: true,
+      stagedModelMismatch: true,
+      unacceptedTargetKind: true,
+      unacceptedPropAffordanceTarget: true,
+      missingEnvironment: true,
+      missingSpace: true,
+      missingElement: true,
+      missingBoundary: true,
+      missingOpening: true,
+      missingSurface: true,
+      crossEnvironmentRelation: true,
+      selfSupport: true,
+      missingSupportingProp: true,
+      missingAffordance: true,
+      wrongAffordanceKindForSupport: true,
+      wrongAffordanceKindForAttachment: true,
+      wrongAffordanceKindForSuspension: true,
+      supportingPropInAnotherEnvironment: true,
+      duplicateRelation: true,
+      secondOccupiedSpace: true,
+      secondFilledOpening: true,
+      filledOpeningInAnotherEnvironment: true,
       supportCycle: true,
-      blankClearance: true,
-      duplicateClearance: true,
-      xBounds: true,
-      yBounds: true,
-      zBounds: true,
-      facingAndPartTransformCollision: true,
-      quaternionAndNonUniformScaleCollision: true,
+      footprintAxis: true,
+      blankClearanceId: true,
+      duplicateClearanceId: true,
+      clearanceXOrder: true,
+      clearanceYNotFinite: true,
+      clearanceZInfinite: true,
+      leavesOccupiedSpace: true,
+      doorDoesNotFitOpening: true,
+      spacelessLeafIsStillMeasured: true,
+      occupancyOverlapsUndeclaredProp: true,
+      clearanceIntersectsProp: true,
+      blocksOpening: true,
+      blocksConnector: true,
     },
   );
 
-  const touchingProps = [table(), lamp(), sculpture()];
-  touchingProps[0]!.placement!.clearance = [
-    {
-      id: "touching-is-not-occupied",
-      min: { x: -1, y: -1, z: -1 },
-      max: { x: 1, y: 1, z: 1 },
-    },
-  ];
-  const touchingSet = setPieces();
-  touchingSet[1] = {
-    node: "lamp",
-    model: "lamp",
-    position: { x: 1.2, y: 0, z: 0 },
-  };
   TestValidator.equals(
-    "exactly touching clearance and occupancy bounds do not overlap",
-    validate(touchingProps, touchingSet).success,
-    true,
+    "each refusal has an adjacent case where it must not fire",
+    namedFacts([
+      [
+        "exactContactIsNotOccupancy",
+        () =>
+          tolerated(
+            (_props, set) => (set[PENDANT]!.position = { x: 0, y: 2.6, z: -2 }),
+          ),
+      ],
+      [
+        "declaredContactMayOverlap",
+        () =>
+          tolerated(
+            (_props, set) => (set[CHARGER]!.position = { x: 0, y: 0.15, z: 0 }),
+          ),
+      ],
+      [
+        "cellLessSpaceContainsAnything",
+        () =>
+          tolerated(
+            (_props, set) =>
+              (set[CRATE]!.position = { x: 900, y: 900, z: 900 }),
+          ),
+      ],
+      [
+        "unfilledOpeningNeverBlocks",
+        () =>
+          tolerated((props, set, environments) => {
+            environments[0]!.openings[0]!.fill = null;
+            props.splice(DOOR, 1);
+            set.splice(DOOR, 1);
+            set[SCONCE]!.position = { x: 3.9, y: 1, z: 0 };
+          }),
+      ],
+      [
+        "unmodelledFillNeverBlocks",
+        () =>
+          tolerated((props, set, environments) => {
+            environments[0]!.models = [];
+            props.splice(DOOR, 1);
+            set.splice(DOOR, 1);
+            set[SCONCE]!.position = { x: 3.9, y: 1, z: 0 };
+          }),
+      ],
+      [
+        "placementlessPropIsNeitherJudgedNorCounted",
+        () =>
+          tolerated(
+            (_props, set) =>
+              (set[SCULPTURE]!.position = { x: 0, y: 0.3, z: 0 }),
+          ),
+      ],
+      [
+        "clearanceOverInvalidBoxDoesNotThrow",
+        () =>
+          violated((props, set) => {
+            props[LAMP]!.placement!.clearance[0]!.min.x = NaN;
+            set[CHARGER]!.position = { x: 1.5, y: 0.9, z: 0 };
+          }, "$input.props[1].placement.clearance[0].x"),
+      ],
+      [
+        "relationsAcrossTwoBuildingsMeasureNothing",
+        () =>
+          tolerated((props, _set, environments) => {
+            environments.push(propEnvironment("annexe"));
+            props[CABINET]!.placement!.relations.splice(0, 1);
+            const target = props[CABINET]!.placement!.relations[0]!.target;
+            if (target.kind === "boundary") target.environment = "annexe";
+          }),
+      ],
+      [
+        "propAffordanceAloneLocatesNothing",
+        () =>
+          tolerated((props) => props[LAMP]!.placement!.relations.splice(0, 1)),
+      ],
+      [
+        "supportingPropWithoutPlacementMakesNoClaim",
+        () => tolerated((props) => delete props[TABLE]!.placement),
+      ],
+      [
+        "cyclicElementParentDoesNotHang",
+        () =>
+          tolerated((_props, _set, environments) => {
+            environments[0]!.elements = environments[0]!.elements.map(
+              (element) =>
+                element.id === "root"
+                  ? { ...element, parent: "door-leaf" }
+                  : element,
+            );
+          }),
+      ],
+    ]),
+    {
+      exactContactIsNotOccupancy: true,
+      declaredContactMayOverlap: true,
+      cellLessSpaceContainsAnything: true,
+      unfilledOpeningNeverBlocks: true,
+      unmodelledFillNeverBlocks: true,
+      placementlessPropIsNeitherJudgedNorCounted: true,
+      clearanceOverInvalidBoxDoesNotThrow: true,
+      relationsAcrossTwoBuildingsMeasureNothing: true,
+      propAffordanceAloneLocatesNothing: true,
+      supportingPropWithoutPlacementMakesNoClaim: true,
+      cyclicElementParentDoesNotHang: true,
+    },
   );
 };

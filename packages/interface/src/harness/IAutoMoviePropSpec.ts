@@ -77,51 +77,181 @@ export interface IAutoMoviePropSpec {
 }
 
 /**
- * Stable building relations and model-local keep-out proxies for one prop.
+ * Stable building relations and model-local proxies for one prop.
  *
  * These references name the architecture graph and other prop specifications;
  * they never copy their geometry. The engine resolves the complete prop
- * registry before checking them, so a support relation is independent of
- * declaration order. A staged set piece supplies the prop's world TRS.
+ * registry before checking them, so a relation may cite a prop declared later
+ * without changing the result. A staged set piece supplies the prop's world
+ * TRS, and every model-local box below is read through that same transform.
  *
  * @author Samchon
  */
 export interface IAutoMoviePropPlacement {
-  /** Logical building space occupied by the prop, or null outside a building. */
-  space: { environment: string; space: string } | null;
-  /** Building element to which the prop is fixed, or null when free-standing. */
-  host: { environment: string; element: string } | null;
-  /** Surface or another prop affordance supporting this prop. */
-  support:
-    | {
-        kind: "surface";
-        environment: string;
-        surface: string;
-      }
-    | {
-        kind: "prop-affordance";
-        prop: string;
-        affordance: string;
-      }
-    | null;
+  /**
+   * Typed spatial relations this prop claims, in authored order.
+   *
+   * Order never changes the outcome. At most one `in-space` and at most one
+   * `fill-opening` relation may be declared, because a prop occupies one
+   * logical space and fills one passage; every other kind may repeat (a cabinet
+   * standing against two walls, a rail socketed into three posts).
+   */
+  relations: IAutoMoviePropRelation[];
+
+  /**
+   * Model-local occupancy box, or `null` to derive it from visible geometry.
+   *
+   * A declared footprint is what other props must not intrude on and what the
+   * occupied space must contain. Deriving is the honest default: it is the
+   * exact bound of the prop's own parts. Declaring one states a use volume the
+   * geometry does not show (a chair needs the room its seat sweeps back into)
+   * or trims a decorative overhang that is not really in the way.
+   */
+  footprint: IAutoMoviePropBox | null;
+
   /** Model-local keep-out boxes for doors, drawers, service, and use. */
   clearance: IAutoMovieClearanceBox[];
 }
 
 /**
- * One axis-aligned model-local volume another prop may not occupy.
+ * What a prop claims about where it sits, as one typed relation.
  *
- * The validator transforms all eight corners by the prop's full staged TRS and
- * compares the resulting conservative world bounds against the transformed
- * visible bounds of every other uniquely staged, valid prop.
+ * The six kinds are the contact semantics the architecture graph can answer
+ * for, and each one restricts which targets it accepts:
+ *
+ * - `"in-space"`: the prop is contained by a logical space (`space` target).
+ * - `"on-support"`: it rests on a support patch or another prop's `stack-top`
+ *   affordance (`surface` or `prop-affordance` target).
+ * - `"against-boundary"`: it stands against a wall, floor, or ceiling separation
+ *   (`boundary` target).
+ * - `"fill-opening"`: it is the leaf, sash, or gate filling a passage cut through
+ *   a boundary (`opening` target).
+ * - `"attached"`: it is fixed to a building element or plugged into another
+ *   prop's `socket` affordance (`element` or `prop-affordance` target).
+ * - `"suspended"`: it hangs from a building element or from another prop's `hook`
+ *   affordance (`element` or `prop-affordance` target).
  *
  * @author Samchon
  */
-export interface IAutoMovieClearanceBox {
-  /** Stable clearance identity. */
-  id: string;
+export interface IAutoMoviePropRelation {
+  /** Which contact semantics this relation asserts. */
+  kind: AutoMoviePropRelationKind;
+  /** The stable spatial, element, or affordance id the relation cites. */
+  target: IAutoMoviePropRelationTarget;
+}
+
+/** The closed set of contact semantics a prop placement can assert. */
+export type AutoMoviePropRelationKind =
+  | "in-space"
+  | "on-support"
+  | "against-boundary"
+  | "fill-opening"
+  | "attached"
+  | "suspended";
+
+/**
+ * What a placement relation points at.
+ *
+ * Every arm cites an existing stable id rather than restating geometry: the
+ * building graph owns spaces, elements, boundaries, openings, and support
+ * patches, and a prop spec owns its affordances.
+ *
+ * @author Samchon
+ */
+export type IAutoMoviePropRelationTarget =
+  | IAutoMoviePropRelationTarget.ISpace
+  | IAutoMoviePropRelationTarget.IElement
+  | IAutoMoviePropRelationTarget.IBoundary
+  | IAutoMoviePropRelationTarget.IOpening
+  | IAutoMoviePropRelationTarget.ISurface
+  | IAutoMoviePropRelationTarget.IPropAffordance;
+export namespace IAutoMoviePropRelationTarget {
+  /** A logical space of a built environment. */
+  export interface ISpace {
+    /** Discriminator. */
+    kind: "space";
+    /** Built environment id. */
+    environment: string;
+    /** Logical space id inside that environment. */
+    space: string;
+  }
+
+  /** A visible or grouping element of a built environment. */
+  export interface IElement {
+    /** Discriminator. */
+    kind: "element";
+    /** Built environment id. */
+    environment: string;
+    /** Element id inside that environment. */
+    element: string;
+  }
+
+  /** A separation between spaces, such as a wall, floor, or ceiling. */
+  export interface IBoundary {
+    /** Discriminator. */
+    kind: "boundary";
+    /** Built environment id. */
+    environment: string;
+    /** Boundary id inside that environment. */
+    boundary: string;
+  }
+
+  /** A passage cut through a boundary. */
+  export interface IOpening {
+    /** Discriminator. */
+    kind: "opening";
+    /** Built environment id. */
+    environment: string;
+    /** Opening id inside that environment. */
+    opening: string;
+  }
+
+  /** A support patch assigned to a logical space. */
+  export interface ISurface {
+    /** Discriminator. */
+    kind: "surface";
+    /** Built environment id. */
+    environment: string;
+    /** Support surface id inside that environment. */
+    surface: string;
+  }
+
+  /** A contact point declared by another prop's model. */
+  export interface IPropAffordance {
+    /** Discriminator. */
+    kind: "prop-affordance";
+    /** Scene node id of the supporting or hosting prop. */
+    prop: string;
+    /** Affordance id declared by that prop's model. */
+    affordance: string;
+  }
+}
+
+/**
+ * One axis-aligned model-local volume.
+ *
+ * The engine transforms all eight corners by the prop's full staged TRS
+ * (translation, unit quaternion, per-axis scale) and takes the world bounds of
+ * the result, so a rotated box widens rather than being silently re-fitted.
+ *
+ * @author Samchon
+ */
+export interface IAutoMoviePropBox {
   /** Local minimum corner. */
   min: IAutoMovieVector3;
   /** Local maximum corner, strictly greater on every axis. */
   max: IAutoMovieVector3;
+}
+
+/**
+ * One axis-aligned model-local volume another prop may not occupy.
+ *
+ * The validator compares the transformed keep-out volume against the
+ * transformed occupancy of every other uniquely staged, valid prop.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieClearanceBox extends IAutoMoviePropBox {
+  /** Stable clearance identity, unique within the prop. */
+  id: string;
 }

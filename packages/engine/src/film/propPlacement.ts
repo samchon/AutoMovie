@@ -1,18 +1,245 @@
 import {
+  AutoMovieAffordanceKind,
+  IAutoMovieBuiltConnector,
   IAutoMovieBuiltEnvironment,
-  IAutoMovieClearanceBox,
   IAutoMovieModel,
+  IAutoMoviePropBox,
+  IAutoMoviePropRelation,
+  IAutoMoviePropRelationTarget,
   IAutoMoviePropSpec,
   IAutoMovieStageSetPiece,
+  IAutoMovieTransform,
   IAutoMovieValidation,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { builtEnvironmentContainsPoint } from "../architecture/builtEnvironment";
 import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
+import { surfaceHeightAt } from "../space/surfaces";
 import { ViolationCollector } from "../validation/violation";
 import { forgeProp } from "./forgeProp";
+
+/** Tolerance for containment and fit comparisons, in metres. */
+const PLACEMENT_EPSILON = 1e-9;
+
+/** One passage a staged volume intrudes on. */
+export interface IAutoMoviePassageBlockage {
+  /** Which passage family the blocked id belongs to. */
+  kind: "opening" | "connector";
+  /** Stable opening or connector id inside the environment. */
+  id: string;
+}
+
+/** One transformed keep-out volume, still carrying the id that declared it. */
+export interface IAutoMoviePropClearanceBounds extends IAutoMoviePropBox {
+  /** The clearance id this world volume came from. */
+  id: string;
+}
+
+/**
+ * The world-axis-aligned volume one staged prop occupies.
+ *
+ * A declared `footprint` wins because it is the prop's own statement of what it
+ * takes up; otherwise the bound is derived from the visible parts, which is the
+ * only honest answer a prop that says nothing can be given. Either way all
+ * eight corners travel through the piece's full TRS (translation, unit
+ * quaternion, per-axis scale) before the world bound is taken, so a rotated
+ * prop widens rather than being silently re-fitted to its local box.
+ *
+ * A prop whose parts carry no vertices at all collapses to the staged origin
+ * rather than to an empty bound, so a caller never has to special-case it.
+ */
+export const propOccupancyBounds = (props: {
+  prop: IAutoMoviePropSpec;
+  piece: IAutoMovieStageSetPiece;
+}): IAutoMoviePropBox => {
+  const matrix = stagedMatrix(props.piece);
+  const footprint = props.prop.placement?.footprint ?? null;
+  if (footprint !== null) return transformedBox(footprint, matrix);
+  return transformedModelBounds(props.prop.model, matrix);
+};
+
+/**
+ * The world-axis-aligned keep-out volumes one staged prop declares.
+ *
+ * Every declared box is transformed, including one whose bounds the validator
+ * rejects: filtering here would hide a malformed volume from a source-side
+ * search instead of letting the validator name it.
+ */
+export const propClearanceBounds = (props: {
+  prop: IAutoMoviePropSpec;
+  piece: IAutoMovieStageSetPiece;
+}): IAutoMoviePropClearanceBounds[] => {
+  const matrix = stagedMatrix(props.piece);
+  return (props.prop.placement?.clearance ?? []).map((clearance) => ({
+    id: clearance.id,
+    ...transformedBox(clearance, matrix),
+  }));
+};
+
+/**
+ * Whether two axis-aligned volumes share interior space.
+ *
+ * Contact is not occupancy: two boxes that meet exactly on a face do not
+ * overlap, which is what lets a lamp stand on a table top without the table
+ * reporting that the lamp is inside it.
+ */
+export const propBoundsOverlap = (
+  left: IAutoMoviePropBox,
+  right: IAutoMoviePropBox,
+): boolean =>
+  left.min.x < right.max.x &&
+  left.max.x > right.min.x &&
+  left.min.y < right.max.y &&
+  left.max.y > right.min.y &&
+  left.min.z < right.max.z &&
+  left.max.z > right.min.z;
+
+/**
+ * Whether a world volume lies inside a logical space or any space below it.
+ *
+ * A space whose subtree declares no convex cell locates nothing, so it excludes
+ * nothing and the answer is `true`: a purely semantic container ("the west
+ * wing") is a name, not a boundary, and refusing props inside it would invent a
+ * geometric claim the author never made. Throws when the space is not declared,
+ * exactly as {@link builtEnvironmentContainsPoint} does.
+ */
+export const propSpaceContainsBounds = (props: {
+  environment: IAutoMovieBuiltEnvironment;
+  space: string;
+  bounds: IAutoMoviePropBox;
+}): boolean => {
+  const inside = boxCorners(props.bounds).map((point) =>
+    builtEnvironmentContainsPoint(props.environment, props.space, point),
+  );
+  const included = descendantSpaces(props.environment, props.space);
+  const locates = props.environment.spaces.some(
+    (space) => included.has(space.id) && space.cells.length > 0,
+  );
+  if (!locates) return true;
+  return inside.every((value) => value);
+};
+
+/**
+ * Every opening and connector a world volume intrudes on.
+ *
+ * An opening is only measurable through the element that fills it, so an open
+ * cut (`fill: null`) and a fill whose model lives outside the record are
+ * reported by neither this predicate nor the validator: a passage nothing
+ * describes cannot be proven blocked, and guessing where the hole is would be
+ * worse than saying nothing. A connector is swept from its own route: each
+ * segment widens by half the usable width horizontally and rises by the clear
+ * height, which is the volume a body traversing it needs.
+ */
+export const propBlockedPassages = (props: {
+  environment: IAutoMovieBuiltEnvironment;
+  bounds: IAutoMoviePropBox;
+}): IAutoMoviePassageBlockage[] => {
+  const blocked: IAutoMoviePassageBlockage[] = [];
+  for (const opening of props.environment.openings) {
+    const reveal = openingRevealBounds(props.environment, opening.id);
+    if (reveal !== null && propBoundsOverlap(props.bounds, reveal))
+      blocked.push({ kind: "opening", id: opening.id });
+  }
+  for (const connector of props.environment.connectors)
+    if (
+      connectorCorridors(connector).some((corridor) =>
+        propBoundsOverlap(props.bounds, corridor),
+      )
+    )
+      blocked.push({ kind: "connector", id: connector.id });
+  return blocked;
+};
+
+/**
+ * The world frame a placement relation anchors to, or `null` when it has none.
+ *
+ * This is the relative-transform half of placement: a source that wants twelve
+ * chairs around a table asks for the table's `stack-top` frame once and offsets
+ * from it in a loop, instead of typing twelve world positions that stop being
+ * right the moment the table moves. Regions have no frame, so a `space` target
+ * answers `null`; a `boundary` answers with its first realizing element and an
+ * `opening` with its filling element, because those are the only members of
+ * those records that carry a transform.
+ */
+export const propAnchorFrame = (props: {
+  target: IAutoMoviePropRelationTarget;
+  environments: readonly IAutoMovieBuiltEnvironment[];
+  props?: readonly IAutoMoviePropSpec[];
+  set?: readonly IAutoMovieStageSetPiece[];
+}): IAutoMovieTransform | null => {
+  const target = props.target;
+  if (target.kind === "prop-affordance") {
+    const spec = (props.props ?? []).find((prop) => prop.node === target.prop);
+    const piece = (props.set ?? []).find((item) => item.node === target.prop);
+    const affordance = spec?.model.affordances?.find(
+      (candidate) => candidate.id === target.affordance,
+    );
+    if (spec === undefined || piece === undefined || affordance === undefined)
+      return null;
+    return transformOf(
+      Matrix4.multiply(
+        stagedMatrix(piece),
+        Matrix4.compose(
+          affordance.frame.translation,
+          affordance.frame.rotation,
+          affordance.frame.scale,
+        ),
+      ),
+    );
+  }
+  const environment = props.environments.find(
+    (candidate) => candidate.id === target.environment,
+  );
+  if (environment === undefined) return null;
+  switch (target.kind) {
+    case "space":
+      return null;
+    case "element": {
+      const matrix = elementWorldMatrix(environment, target.element);
+      return matrix === null ? null : transformOf(matrix);
+    }
+    case "boundary": {
+      const boundary = environment.boundaries.find(
+        (candidate) => candidate.id === target.boundary,
+      );
+      const element = boundary?.elements[0];
+      if (element === undefined) return null;
+      const matrix = elementWorldMatrix(environment, element);
+      return matrix === null ? null : transformOf(matrix);
+    }
+    case "opening": {
+      const opening = environment.openings.find(
+        (candidate) => candidate.id === target.opening,
+      );
+      const fill = opening?.fill ?? null;
+      if (fill === null) return null;
+      const matrix = elementWorldMatrix(environment, fill);
+      return matrix === null ? null : transformOf(matrix);
+    }
+    case "surface": {
+      const entry = environment.surfaces.find(
+        (candidate) => candidate.surface.id === target.surface,
+      );
+      if (entry === undefined || entry.surface.polygon.length === 0)
+        return null;
+      const centroid = entry.surface.polygon.reduce(
+        (sum, point) => ({ x: sum.x + point.x, z: sum.z + point.z }),
+        { x: 0, z: 0 },
+      );
+      const count = entry.surface.polygon.length;
+      const x = centroid.x / count;
+      const z = centroid.z / count;
+      return {
+        translation: { x, y: surfaceHeightAt(entry.surface, x, z), z },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+      };
+    }
+  }
+};
 
 interface IIndexed<Value> {
   value: Value;
@@ -25,15 +252,59 @@ interface IResolvedProp extends IIndexed<IAutoMoviePropSpec> {
   unique: boolean;
 }
 
+type Environments = ReadonlyMap<
+  string,
+  readonly IIndexed<IAutoMovieBuiltEnvironment>[]
+>;
+type Props = ReadonlyMap<string, readonly IIndexed<IAutoMoviePropSpec>[]>;
+
+/** Which target kinds each relation kind accepts. */
+const RELATION_TARGETS: Readonly<
+  Record<
+    IAutoMoviePropRelation["kind"],
+    readonly IAutoMoviePropRelationTarget["kind"][]
+  >
+> = {
+  "in-space": ["space"],
+  "on-support": ["surface", "prop-affordance"],
+  "against-boundary": ["boundary"],
+  "fill-opening": ["opening"],
+  attached: ["element", "prop-affordance"],
+  suspended: ["element", "prop-affordance"],
+};
+
 /**
- * Validate a source-owned prop registry, its unique staged join, building
- * relations, support graph, and transformed clearance proxies.
+ * Which affordance a prop-affordance target must declare.
+ *
+ * Only the three kinds whose {@link RELATION_TARGETS} entry admits a
+ * prop-affordance target ever reach this, so every arm is live: resting is a
+ * `stack-top`, plugging in is a `socket`, hanging is a `hook`.
+ */
+const requiredAffordance = (
+  kind: IAutoMoviePropRelation["kind"],
+): AutoMovieAffordanceKind => {
+  if (kind === "attached") return "socket";
+  if (kind === "suspended") return "hook";
+  return "stack-top";
+};
+
+/**
+ * Validate a source-owned prop registry, its unique staged join, its typed
+ * building relations, its support graph, and every transformed volume it
+ * claims.
  *
  * Registry construction is deliberately a separate first pass. A lamp may cite
  * a table declared later without changing the result, while duplicate prop,
  * set-piece, or building-environment identities stay explicit rather than being
- * hidden by `Map`'s last-write-wins behavior. Props that omit `placement`
- * retain the original forge-and-stage contract.
+ * hidden by `Map`'s last-write-wins behavior.
+ *
+ * Two silences are contractual. A prop that omits `placement` retains the
+ * original forge-and-stage contract: it claims no relation and is claimed by
+ * none, so it takes part in no containment, overlap, or passage judgment. And a
+ * geometric judgment is only made where the record can answer it, so a
+ * cell-less logical space, an opening whose fill has no model, and a prop whose
+ * staged join is missing or ambiguous are reported as what they are rather than
+ * silently failing a spatial test they cannot be measured against.
  */
 export const validatePropPlacements = (props: {
   props: readonly IAutoMoviePropSpec[];
@@ -87,7 +358,8 @@ export const validatePropPlacements = (props: {
       index,
       forged: forged.success,
       piece: pieces.length === 1 ? pieces[0] : undefined,
-      unique: (byNode.get(prop.node)?.length ?? 0) === 1,
+      // The prop indexed itself, so its own bucket always exists.
+      unique: byNode.get(prop.node)!.length === 1,
     };
   });
 
@@ -95,254 +367,516 @@ export const validatePropPlacements = (props: {
     if (entry.value.placement !== undefined)
       validatePlacement(entry, environments, byNode, out);
   validateSupportCycles(byNode, out);
-
-  for (const entry of resolved) {
-    const placement = entry.value.placement;
-    if (
-      placement === undefined ||
-      entry.piece === undefined ||
-      !entry.forged ||
-      !entry.unique
-    )
-      continue;
-    const matrix = pieceMatrix(entry.piece.value);
-    placement.clearance.forEach((clearance, clearanceIndex) => {
-      if (!validClearance(clearance)) return;
-      const keepOut = transformedBox(clearance, matrix);
-      resolved.forEach((candidate) => {
-        if (
-          candidate.value.node === entry.value.node ||
-          candidate.piece === undefined ||
-          !candidate.forged ||
-          !candidate.unique
-        )
-          return;
-        const occupied = transformedModelBounds(
-          candidate.value.model,
-          pieceMatrix(candidate.piece.value),
-        );
-        if (overlap(keepOut, occupied))
-          out.push(
-            "range",
-            `$input.props[${entry.index}].placement.clearance[${clearanceIndex}]`,
-            `clearance "${clearance.id}" intersects staged prop "${candidate.value.node}"`,
-            candidate.value.node,
-          );
-      });
-    });
-  }
+  validateGeometry(resolved, environments, out);
   return out.toValidation();
+};
+
+/** The single `in-space` relation a placement declares, when it has one. */
+const occupiedSpace = (
+  prop: IAutoMoviePropSpec,
+): IAutoMoviePropRelationTarget.ISpace | null => {
+  for (const relation of prop.placement?.relations ?? [])
+    if (relation.kind === "in-space" && relation.target.kind === "space")
+      return relation.target;
+  return null;
+};
+
+/** The environment a prop is located in, when exactly one record declares it. */
+const locatedEnvironment = (
+  prop: IAutoMoviePropSpec,
+  environments: Environments,
+): IAutoMovieBuiltEnvironment | null => {
+  const space = occupiedSpace(prop);
+  if (space === null) return null;
+  return uniqueEnvironment(space.environment, environments);
+};
+
+/**
+ * The environment a prop's geometry is judged against.
+ *
+ * The occupied space answers first, because that is the prop's own statement of
+ * where it is. A prop that names no space but cites one building anyway (a leaf
+ * that only declares which opening it fills) is still judged there: refusing to
+ * measure it would let the strongest claim a prop can make, that it fits a
+ * passage, go unchecked because a weaker one was left out. Relations pointing
+ * at two buildings at once name no single place, so nothing is measured and the
+ * relation-level refusals stand on their own.
+ */
+const geometryEnvironment = (
+  prop: IAutoMoviePropSpec,
+  relations: readonly IAutoMoviePropRelation[],
+  environments: Environments,
+): IAutoMovieBuiltEnvironment | null => {
+  const occupied = locatedEnvironment(prop, environments);
+  if (occupied !== null) return occupied;
+  const cited = new Set<string>();
+  for (const relation of relations)
+    if (relation.target.kind !== "prop-affordance")
+      cited.add(relation.target.environment);
+  if (cited.size !== 1) return null;
+  return uniqueEnvironment([...cited][0]!, environments);
+};
+
+const uniqueEnvironment = (
+  id: string,
+  environments: Environments,
+): IAutoMovieBuiltEnvironment | null => {
+  const matches = environments.get(id) ?? [];
+  return matches.length === 1 ? matches[0]!.value : null;
 };
 
 const validatePlacement = (
   entry: IIndexed<IAutoMoviePropSpec>,
-  environments: ReadonlyMap<
-    string,
-    readonly IIndexed<IAutoMovieBuiltEnvironment>[]
-  >,
-  props: ReadonlyMap<string, readonly IIndexed<IAutoMoviePropSpec>[]>,
+  environments: Environments,
+  props: Props,
   out: ViolationCollector,
 ): void => {
   const prop = entry.value;
   const path = `$input.props[${entry.index}]`;
   const placement = prop.placement!;
-  let located:
-    | {
-        environment: IAutoMovieBuiltEnvironment;
-      }
-    | undefined;
-  if (placement.space !== null) {
-    const environment = resolveUnique(
-      environments,
-      placement.space.environment,
-      `${path}.placement.space.environment`,
-      "built environment",
-      out,
-    );
-    if (
-      environment !== undefined &&
-      !environment.spaces.some((space) => space.id === placement.space!.space)
-    )
+  const located = locatedEnvironment(prop, environments);
+  const seen = new Set<string>();
+  let spaces = 0;
+  let openings = 0;
+
+  placement.relations.forEach((relation, index) => {
+    const rp = `${path}.placement.relations[${index}]`;
+    const key = relationKey(relation);
+    if (seen.has(key))
       out.push(
         "type",
-        `${path}.placement.space.space`,
-        `logical space "${placement.space.space}" does not resolve`,
-        placement.space.space,
+        rp,
+        `relation "${relation.kind}" is declared twice for the same target`,
+        key,
       );
-    else if (environment !== undefined) located = { environment };
-  }
-  if (placement.host !== null) {
-    const environment = resolveUnique(
-      environments,
-      placement.host.environment,
-      `${path}.placement.host.environment`,
-      "built environment",
-      out,
-    );
-    const host = environment?.elements.find(
-      (element) => element.id === placement.host!.element,
-    );
-    if (environment !== undefined && host === undefined)
-      out.push(
-        "type",
-        `${path}.placement.host.element`,
-        `building element "${placement.host.element}" does not resolve`,
-        placement.host.element,
-      );
-    if (located !== undefined && environment !== undefined) {
-      if (environment.id !== located.environment.id)
+    seen.add(key);
+    if (relation.kind === "in-space") {
+      spaces += 1;
+      if (spaces > 1)
         out.push(
           "type",
-          `${path}.placement.host.environment`,
-          `host environment "${environment.id}" differs from occupied space environment "${located.environment.id}"`,
-          environment.id,
+          `${rp}.kind`,
+          "a prop occupies at most one logical space",
+          relation.kind,
         );
     }
-  }
-  if (placement.support?.kind === "surface") {
-    const support = placement.support;
-    const environment = resolveUnique(
-      environments,
-      support.environment,
-      `${path}.placement.support.environment`,
-      "built environment",
-      out,
-    );
-    const surface = environment?.surfaces.find(
-      (candidate) => candidate.surface.id === support.surface,
-    );
-    if (environment !== undefined && surface === undefined)
-      out.push(
-        "type",
-        `${path}.placement.support.surface`,
-        `support surface "${placement.support.surface}" does not resolve`,
-        placement.support.surface,
-      );
-    if (located !== undefined && environment !== undefined) {
-      if (environment.id !== located.environment.id)
+    if (relation.kind === "fill-opening") {
+      openings += 1;
+      if (openings > 1)
         out.push(
           "type",
-          `${path}.placement.support.environment`,
-          `support environment "${environment.id}" differs from occupied space environment "${located.environment.id}"`,
-          environment.id,
+          `${rp}.kind`,
+          "a prop fills at most one opening",
+          relation.kind,
         );
     }
-  } else if (placement.support?.kind === "prop-affordance") {
-    const support = placement.support;
-    const matches = props.get(support.prop) ?? [];
-    if (support.prop === prop.node)
+    if (!RELATION_TARGETS[relation.kind].includes(relation.target.kind)) {
       out.push(
         "type",
-        `${path}.placement.support.prop`,
-        "a prop cannot support itself",
-        placement.support.prop,
+        `${rp}.target.kind`,
+        `relation "${relation.kind}" does not accept a "${relation.target.kind}" target`,
+        relation.target.kind,
       );
-    else if (matches.length === 0)
-      out.push(
-        "type",
-        `${path}.placement.support.prop`,
-        `supporting prop "${placement.support.prop}" does not resolve`,
-        placement.support.prop,
-      );
-    else if (matches.length > 1)
-      out.push(
-        "type",
-        `${path}.placement.support.prop`,
-        `supporting prop "${placement.support.prop}" is ambiguous`,
-        placement.support.prop,
-      );
-    else if (
-      !matches[0]!.value.model.affordances?.some(
-        (affordance) => affordance.id === support.affordance,
-      )
-    )
-      out.push(
-        "type",
-        `${path}.placement.support.affordance`,
-        `support affordance "${placement.support.affordance}" does not resolve`,
-        placement.support.affordance,
-      );
-    else {
-      const supportingSpace = matches[0]!.value.placement?.space;
-      if (
-        located !== undefined &&
-        supportingSpace !== undefined &&
-        supportingSpace !== null &&
-        supportingSpace.environment !== located.environment.id
-      )
+      return;
+    }
+    const target = relation.target;
+    if (target.kind !== "prop-affordance") {
+      validateBuildingTarget(target, rp, environments, out);
+      if (located !== null && target.environment !== located.id)
         out.push(
           "type",
-          `${path}.placement.support.prop`,
-          `supporting prop "${support.prop}" occupies environment "${supportingSpace.environment}" instead of "${located.environment.id}"`,
-          support.prop,
+          `${rp}.target.environment`,
+          `relation environment "${target.environment}" differs from occupied space environment "${located.id}"`,
+          target.environment,
         );
+      return;
     }
-  }
+    validatePropTarget(relation, target, rp, prop, props, out);
+    const matches = props.get(target.prop) ?? [];
+    if (matches.length !== 1 || located === null) return;
+    const supporting = locatedEnvironment(matches[0]!.value, environments);
+    if (supporting !== null && supporting.id !== located.id)
+      out.push(
+        "type",
+        `${rp}.target.prop`,
+        `prop "${target.prop}" occupies environment "${supporting.id}" instead of "${located.id}"`,
+        target.prop,
+      );
+  });
+
+  if (placement.footprint !== null)
+    validateBox(placement.footprint, `${path}.placement.footprint`, out);
   const ids = new Set<string>();
   placement.clearance.forEach((clearance, index) => {
-    const clearancePath = `${path}.placement.clearance[${index}]`;
+    const cp = `${path}.placement.clearance[${index}]`;
     if (clearance.id.trim().length === 0)
       out.push(
         "type",
-        `${clearancePath}.id`,
+        `${cp}.id`,
         "clearance id must be non-empty",
         clearance.id,
       );
     if (ids.has(clearance.id))
       out.push(
         "type",
-        `${clearancePath}.id`,
+        `${cp}.id`,
         `clearance id "${clearance.id}" is duplicated`,
         clearance.id,
       );
     ids.add(clearance.id);
-    for (const axis of ["x", "y", "z"] as const)
-      if (
-        !Number.isFinite(clearance.min[axis]) ||
-        !Number.isFinite(clearance.max[axis]) ||
-        clearance.min[axis] >= clearance.max[axis]
-      )
-        out.push(
-          "range",
-          `${clearancePath}.${axis}`,
-          `clearance ${axis} bounds must be finite and min < max`,
-          { min: clearance.min[axis], max: clearance.max[axis] },
-        );
+    validateBox(clearance, cp, out);
   });
 };
 
-const validateSupportCycles = (
-  props: ReadonlyMap<string, readonly IIndexed<IAutoMoviePropSpec>[]>,
+/** Gate a relation that cites another prop's declared contact point. */
+const validatePropTarget = (
+  relation: IAutoMoviePropRelation,
+  target: IAutoMoviePropRelationTarget.IPropAffordance,
+  rp: string,
+  prop: IAutoMoviePropSpec,
+  props: Props,
   out: ViolationCollector,
 ): void => {
+  if (target.prop === prop.node) {
+    out.push(
+      "type",
+      `${rp}.target.prop`,
+      "a prop cannot rest on, plug into, or hang from itself",
+      target.prop,
+    );
+    return;
+  }
+  const matches = props.get(target.prop) ?? [];
+  if (matches.length !== 1) {
+    out.push(
+      "type",
+      `${rp}.target.prop`,
+      matches.length === 0
+        ? `prop "${target.prop}" does not resolve`
+        : `prop "${target.prop}" is ambiguous`,
+      target.prop,
+    );
+    return;
+  }
+  const affordance = matches[0]!.value.model.affordances?.find(
+    (candidate) => candidate.id === target.affordance,
+  );
+  if (affordance === undefined) {
+    out.push(
+      "type",
+      `${rp}.target.affordance`,
+      `affordance "${target.affordance}" does not resolve on prop "${target.prop}"`,
+      target.affordance,
+    );
+    return;
+  }
+  const expected = requiredAffordance(relation.kind);
+  if (affordance.kind !== expected)
+    out.push(
+      "type",
+      `${rp}.target.affordance`,
+      `relation "${relation.kind}" needs a "${expected}" affordance, but "${target.affordance}" is a "${affordance.kind}"`,
+      affordance.kind,
+    );
+};
+
+/** Gate a relation that cites the architecture graph. */
+const validateBuildingTarget = (
+  target: Exclude<
+    IAutoMoviePropRelationTarget,
+    IAutoMoviePropRelationTarget.IPropAffordance
+  >,
+  rp: string,
+  environments: Environments,
+  out: ViolationCollector,
+): void => {
+  const environment = resolveUnique(
+    environments,
+    target.environment,
+    `${rp}.target.environment`,
+    "built environment",
+    out,
+  );
+  if (environment === undefined) return;
+  switch (target.kind) {
+    case "space":
+      if (!environment.spaces.some((space) => space.id === target.space))
+        out.push(
+          "type",
+          `${rp}.target.space`,
+          `logical space "${target.space}" does not resolve`,
+          target.space,
+        );
+      return;
+    case "element":
+      if (!environment.elements.some((item) => item.id === target.element))
+        out.push(
+          "type",
+          `${rp}.target.element`,
+          `building element "${target.element}" does not resolve`,
+          target.element,
+        );
+      return;
+    case "boundary":
+      if (!environment.boundaries.some((item) => item.id === target.boundary))
+        out.push(
+          "type",
+          `${rp}.target.boundary`,
+          `boundary "${target.boundary}" does not resolve`,
+          target.boundary,
+        );
+      return;
+    case "opening":
+      if (!environment.openings.some((item) => item.id === target.opening))
+        out.push(
+          "type",
+          `${rp}.target.opening`,
+          `opening "${target.opening}" does not resolve`,
+          target.opening,
+        );
+      return;
+    case "surface":
+      if (!environment.surfaces.some((e) => e.surface.id === target.surface))
+        out.push(
+          "type",
+          `${rp}.target.surface`,
+          `support surface "${target.surface}" does not resolve`,
+          target.surface,
+        );
+      return;
+  }
+};
+
+/** Refuse a prop that transitively rests on, plugs into, or hangs from itself. */
+const validateSupportCycles = (props: Props, out: ViolationCollector): void => {
   const visiting = new Set<string>();
   const visited = new Set<string>();
   const visit = (entry: IIndexed<IAutoMoviePropSpec>): void => {
     if (visited.has(entry.value.node)) return;
     visiting.add(entry.value.node);
-    const support = entry.value.placement?.support;
-    if (
-      support?.kind === "prop-affordance" &&
-      support.prop !== entry.value.node
-    ) {
-      const matches = props.get(support.prop) ?? [];
-      if (matches.length === 1) {
-        if (visiting.has(support.prop))
-          out.push(
-            "type",
-            `$input.props[${entry.index}].placement.support.prop`,
-            `prop support relation forms a cycle through "${support.prop}"`,
-            support.prop,
-          );
-        else visit(matches[0]!);
-      }
-    }
+    (entry.value.placement?.relations ?? []).forEach((relation, index) => {
+      const target = relation.target;
+      if (target.kind !== "prop-affordance" || target.prop === entry.value.node)
+        return;
+      const matches = props.get(target.prop) ?? [];
+      if (matches.length !== 1) return;
+      if (visiting.has(target.prop))
+        out.push(
+          "type",
+          `$input.props[${entry.index}].placement.relations[${index}].target.prop`,
+          `prop contact relation forms a cycle through "${target.prop}"`,
+          target.prop,
+        );
+      else visit(matches[0]!);
+    });
     visiting.delete(entry.value.node);
     visited.add(entry.value.node);
   };
   for (const matches of props.values())
     if (matches.length === 1) visit(matches[0]!);
 };
+
+/**
+ * Judge every volume the sound part of the registry can be measured against.
+ *
+ * "Sound" is deliberately narrow: a prop is only measured when it forged, when
+ * its node is declared once, and when exactly one staged piece places it.
+ * Measuring an ambiguous or unforged prop would report a second failure caused
+ * by the first, and the author would correct the wrong line.
+ */
+const validateGeometry = (
+  resolved: readonly IResolvedProp[],
+  environments: Environments,
+  out: ViolationCollector,
+): void => {
+  const staged = resolved.filter(
+    (entry) => entry.forged && entry.unique && entry.piece !== undefined,
+  );
+  const occupancy = new Map<number, IAutoMoviePropBox>(
+    staged.map((entry) => [
+      entry.index,
+      propOccupancyBounds({ prop: entry.value, piece: entry.piece!.value }),
+    ]),
+  );
+
+  for (const entry of staged) {
+    const placement = entry.value.placement;
+    if (placement === undefined) continue;
+    const path = `$input.props[${entry.index}]`;
+    propClearanceBounds({
+      prop: entry.value,
+      piece: entry.piece!.value,
+    }).forEach((clearance, index) => {
+      if (!finiteBox(placement.clearance[index]!)) return;
+      for (const candidate of staged)
+        if (
+          candidate.index !== entry.index &&
+          propBoundsOverlap(clearance, occupancy.get(candidate.index)!)
+        )
+          out.push(
+            "range",
+            `${path}.placement.clearance[${index}]`,
+            `clearance "${clearance.id}" intersects staged prop "${candidate.value.node}"`,
+            candidate.value.node,
+          );
+    });
+  }
+
+  const contacts = contactPairs(staged);
+  for (let left = 0; left < staged.length; ++left)
+    for (let right = left + 1; right < staged.length; ++right) {
+      const a = staged[left]!;
+      const b = staged[right]!;
+      if (a.value.placement === undefined || b.value.placement === undefined)
+        continue;
+      if (contacts.has(pairKey(a.value.node, b.value.node))) continue;
+      if (!propBoundsOverlap(occupancy.get(a.index)!, occupancy.get(b.index)!))
+        continue;
+      out.push(
+        "range",
+        `$input.props[${b.index}].placement.footprint`,
+        `staged occupancy overlaps prop "${a.value.node}", which declares no contact with it`,
+        a.value.node,
+      );
+    }
+
+  for (const entry of staged) {
+    const placement = entry.value.placement;
+    if (placement === undefined) continue;
+    const environment = geometryEnvironment(
+      entry.value,
+      placement.relations,
+      environments,
+    );
+    if (environment === null) continue;
+    validateOccupancy(entry, environment, occupancy.get(entry.index)!, out);
+  }
+};
+
+/** Containment, opening fit, and passage intrusion for one located prop. */
+const validateOccupancy = (
+  entry: IResolvedProp,
+  environment: IAutoMovieBuiltEnvironment,
+  bounds: IAutoMoviePropBox,
+  out: ViolationCollector,
+): void => {
+  const path = `$input.props[${entry.index}]`;
+  const relations = entry.value.placement!.relations;
+  const filled = new Set<string>();
+  relations.forEach((relation, index) => {
+    const rp = `${path}.placement.relations[${index}]`;
+    const target = relation.target;
+    if (
+      relation.kind === "in-space" &&
+      target.kind === "space" &&
+      target.environment === environment.id
+    ) {
+      if (!environment.spaces.some((space) => space.id === target.space))
+        return;
+      if (
+        !propSpaceContainsBounds({ environment, space: target.space, bounds })
+      )
+        out.push(
+          "range",
+          `${rp}.target.space`,
+          `staged occupancy leaves logical space "${target.space}"`,
+          target.space,
+        );
+      return;
+    }
+    if (relation.kind !== "fill-opening" || target.kind !== "opening") return;
+    if (target.environment !== environment.id) return;
+    filled.add(target.opening);
+    const reveal = openingRevealBounds(environment, target.opening);
+    if (reveal === null) return;
+    if (!boxContains(reveal, bounds))
+      out.push(
+        "range",
+        `${rp}.target.opening`,
+        `staged occupancy does not fit the fill element of opening "${target.opening}"`,
+        target.opening,
+      );
+  });
+
+  for (const blockage of propBlockedPassages({ environment, bounds })) {
+    if (blockage.kind === "opening" && filled.has(blockage.id)) continue;
+    out.push(
+      "range",
+      `${path}.placement`,
+      `staged occupancy blocks ${blockage.kind} "${blockage.id}"`,
+      blockage.id,
+    );
+  }
+};
+
+/** Unordered node pairs that declare a contact and may therefore touch. */
+const contactPairs = (staged: readonly IResolvedProp[]): Set<string> => {
+  const pairs = new Set<string>();
+  for (const entry of staged)
+    for (const relation of entry.value.placement?.relations ?? [])
+      if (relation.target.kind === "prop-affordance")
+        pairs.add(pairKey(entry.value.node, relation.target.prop));
+  return pairs;
+};
+
+const pairKey = (left: string, right: string): string =>
+  left < right ? `${left} ${right}` : `${right} ${left}`;
+
+const relationKey = (relation: IAutoMoviePropRelation): string => {
+  const target = relation.target;
+  const tail =
+    target.kind === "prop-affordance"
+      ? `${target.prop} ${target.affordance}`
+      : `${target.environment} ${targetId(target)}`;
+  return `${relation.kind} ${target.kind} ${tail}`;
+};
+
+const targetId = (
+  target: Exclude<
+    IAutoMoviePropRelationTarget,
+    IAutoMoviePropRelationTarget.IPropAffordance
+  >,
+): string => {
+  switch (target.kind) {
+    case "space":
+      return target.space;
+    case "element":
+      return target.element;
+    case "boundary":
+      return target.boundary;
+    case "opening":
+      return target.opening;
+    case "surface":
+      return target.surface;
+  }
+};
+
+const validateBox = (
+  box: IAutoMoviePropBox,
+  path: string,
+  out: ViolationCollector,
+): void => {
+  for (const axis of ["x", "y", "z"] as const)
+    if (
+      !Number.isFinite(box.min[axis]) ||
+      !Number.isFinite(box.max[axis]) ||
+      box.min[axis] >= box.max[axis]
+    )
+      out.push(
+        "range",
+        `${path}.${axis}`,
+        `${axis} bounds must be finite and min < max`,
+        { min: box.min[axis], max: box.max[axis] },
+      );
+};
+
+const finiteBox = (box: IAutoMoviePropBox): boolean =>
+  (["x", "y", "z"] as const).every(
+    (axis) =>
+      Number.isFinite(box.min[axis]) &&
+      Number.isFinite(box.max[axis]) &&
+      box.min[axis] < box.max[axis],
+  );
 
 const indexBy = <Value>(
   values: readonly Value[],
@@ -395,12 +929,104 @@ const resolveUnique = <Value>(
   return undefined;
 };
 
-interface IBounds {
-  min: IAutoMovieVector3;
-  max: IAutoMovieVector3;
-}
+/** Every logical space at or below `root`, by declared parent links. */
+const descendantSpaces = (
+  environment: IAutoMovieBuiltEnvironment,
+  root: string,
+): Set<string> => {
+  const included = new Set([root]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const space of environment.spaces)
+      if (
+        space.parent !== null &&
+        included.has(space.parent) &&
+        !included.has(space.id)
+      ) {
+        included.add(space.id);
+        changed = true;
+      }
+  }
+  return included;
+};
 
-const pieceMatrix = (piece: IAutoMovieStageSetPiece): number[] => {
+/**
+ * The world matrix of one element, or `null` when it or an ancestor is missing
+ * or its parent chain closes on itself. A cyclic record is refused by
+ * `validateBuiltEnvironment`, and answering `null` here rather than recursing
+ * forever is what lets both gates report their own defect in one run.
+ */
+const elementWorldMatrix = (
+  environment: IAutoMovieBuiltEnvironment,
+  id: string,
+): number[] | null => {
+  const byId = new Map(
+    environment.elements.map((element) => [element.id, element]),
+  );
+  const trail = new Set<string>();
+  const read = (current: string): number[] | null => {
+    if (trail.has(current)) return null;
+    trail.add(current);
+    const element = byId.get(current);
+    if (element === undefined) return null;
+    const local = Matrix4.compose(
+      element.transform.translation,
+      element.transform.rotation,
+      element.transform.scale,
+    );
+    if (element.parent === null) return local;
+    const parent = read(element.parent);
+    return parent === null ? null : Matrix4.multiply(parent, local);
+  };
+  return read(id);
+};
+
+/** World bounds of the element filling an opening, or `null` when unmeasurable. */
+const openingRevealBounds = (
+  environment: IAutoMovieBuiltEnvironment,
+  id: string,
+): IAutoMoviePropBox | null => {
+  const opening = environment.openings.find((candidate) => candidate.id === id);
+  const fill = opening?.fill ?? null;
+  if (fill === null) return null;
+  const element = environment.elements.find(
+    (candidate) => candidate.id === fill,
+  );
+  const model = environment.models.find(
+    (candidate) => candidate.id === element?.model,
+  );
+  if (model === undefined) return null;
+  const matrix = elementWorldMatrix(environment, fill);
+  return matrix === null ? null : transformedModelBounds(model, matrix);
+};
+
+/** Axis-aligned volumes a connector's route sweeps at its usable size. */
+const connectorCorridors = (
+  connector: IAutoMovieBuiltConnector,
+): IAutoMoviePropBox[] => {
+  const half = connector.width / 2;
+  const boxes: IAutoMoviePropBox[] = [];
+  for (let index = 0; index + 1 < connector.route.length; ++index) {
+    const from = connector.route[index]!;
+    const to = connector.route[index + 1]!;
+    boxes.push({
+      min: {
+        x: Math.min(from.x, to.x) - half,
+        y: Math.min(from.y, to.y),
+        z: Math.min(from.z, to.z) - half,
+      },
+      max: {
+        x: Math.max(from.x, to.x) + half,
+        y: Math.max(from.y, to.y) + connector.clearHeight,
+        z: Math.max(from.z, to.z) + half,
+      },
+    });
+  }
+  return boxes;
+};
+
+const stagedMatrix = (piece: IAutoMovieStageSetPiece): number[] => {
   const scale =
     piece.scale === undefined
       ? { x: 1, y: 1, z: 1 }
@@ -415,10 +1041,19 @@ const pieceMatrix = (piece: IAutoMovieStageSetPiece): number[] => {
   );
 };
 
+const transformOf = (matrix: number[]): IAutoMovieTransform => {
+  const world = Matrix4.decompose(matrix);
+  return {
+    translation: world.position,
+    rotation: Quaternion.normalize(world.rotation),
+    scale: world.scale,
+  };
+};
+
 const transformedModelBounds = (
   model: IAutoMovieModel,
   world: number[],
-): IBounds => {
+): IAutoMoviePropBox => {
   const points: IAutoMovieVector3[] = [];
   for (const part of model.parts) {
     const positions =
@@ -448,27 +1083,34 @@ const transformedModelBounds = (
         ),
       );
   }
+  if (points.length === 0) {
+    const origin = Matrix4.position(world);
+    return { min: { ...origin }, max: { ...origin } };
+  }
   return boundsOf(points);
 };
 
 const transformedBox = (
-  box: IAutoMovieClearanceBox,
+  box: IAutoMoviePropBox,
   matrix: number[],
-): IBounds =>
-  boundsOf(
-    [box.min.x, box.max.x].flatMap((x) =>
-      [box.min.y, box.max.y].flatMap((y) =>
-        [box.min.z, box.max.z].map((z) => transformPoint({ x, y, z }, matrix)),
-      ),
+): IAutoMoviePropBox =>
+  boundsOf(boxCorners(box).map((point) => transformPoint(point, matrix)));
+
+const boxCorners = (box: IAutoMoviePropBox): IAutoMovieVector3[] =>
+  [box.min.x, box.max.x].flatMap((x) =>
+    [box.min.y, box.max.y].flatMap((y) =>
+      [box.min.z, box.max.z].map((z) => ({ x, y, z })),
     ),
   );
 
-const validClearance = (clearance: IAutoMovieClearanceBox): boolean =>
+const boxContains = (
+  outer: IAutoMoviePropBox,
+  inner: IAutoMoviePropBox,
+): boolean =>
   (["x", "y", "z"] as const).every(
     (axis) =>
-      Number.isFinite(clearance.min[axis]) &&
-      Number.isFinite(clearance.max[axis]) &&
-      clearance.min[axis] < clearance.max[axis],
+      inner.min[axis] >= outer.min[axis] - PLACEMENT_EPSILON &&
+      inner.max[axis] <= outer.max[axis] + PLACEMENT_EPSILON,
   );
 
 const transformPoint = (
@@ -492,9 +1134,9 @@ const transformPoint = (
     matrix[14]!,
 });
 
-const boundsOf = (points: readonly IAutoMovieVector3[]): IBounds => {
+const boundsOf = (points: readonly IAutoMovieVector3[]): IAutoMoviePropBox => {
   const first = points[0]!;
-  const bounds: IBounds = {
+  const bounds: IAutoMoviePropBox = {
     min: { ...first },
     max: { ...first },
   };
@@ -508,11 +1150,3 @@ const boundsOf = (points: readonly IAutoMovieVector3[]): IBounds => {
   }
   return bounds;
 };
-
-const overlap = (left: IBounds, right: IBounds): boolean =>
-  left.min.x < right.max.x &&
-  left.max.x > right.min.x &&
-  left.min.y < right.max.y &&
-  left.max.y > right.min.y &&
-  left.min.z < right.max.z &&
-  left.max.z > right.min.z;
