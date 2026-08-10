@@ -41,9 +41,9 @@ import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
  *    keeps the viewer's anonymous inventory adding up.
  * 5. The same compiled crowd and the same cues reproduce the same instance
  *    matrices.
- * 6. A cue naming a member the batches do not hold — a promoted hero, or an index
- *    past the unit — singles nobody out, and a frame drawn without a time reads
- *    the cues at zero.
+ * 6. A departure cue naming a member the batches do not hold — a promoted hero, or
+ *    an index past the unit — draws nobody away and removes nobody, and a frame
+ *    drawn without a time reads the cues at zero.
  */
 export const test_viewer_formation_slot_motion = (): void => {
   const recipe: IAutoMovieModelRecipe = {
@@ -404,14 +404,17 @@ export const test_viewer_formation_slot_motion = (): void => {
   // scene node rather than an instance, and an index past the unit is not a
   // member at all; the compiler's own gate refuses both, so what is left here
   // is that the renderer locates nobody rather than writing into whatever
-  // index the arithmetic happened to land on.
+  // index the arithmetic happened to land on. Both strays are departures, so a
+  // renderer that had located either would show it twice over: an instance
+  // written at zero scale, and a removal counted against a crowd that never
+  // lost anybody.
   const withHero = materializeCompiledFormation(
     { ...design, heroOverrides: [{ slot: 3, actor: "captain" }] },
     recipes,
   );
   const strayCues: IAutoMovieFormationSlotMotion[] = [
-    { ...aside, id: "crowd-hero-aside", slots: [3] },
-    { ...aside, id: "crowd-past-the-end", slots: [design.count + 4] },
+    { ...departs, id: "crowd-hero-departure", slots: [3] },
+    { ...departs, id: "crowd-past-the-end", slots: [design.count + 4] },
   ];
   const strayBuild = (cues: readonly IAutoMovieFormationSlotMotion[]) =>
     buildInstancedFormation({

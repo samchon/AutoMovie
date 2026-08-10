@@ -267,7 +267,7 @@ export const buildInstancedFormation = (input: {
   // The cues a unit was built with are the cues it performs, resolved once.
   // Which members are singled out is settled here and never revisited, so a
   // frame that re-read the caller's list would sample cues against a set of
-  // exceptions that no longer answers to them -- a member named after the build
+  // exceptions that no longer answers to them — a member named after the build
   // has no instance to write, and one named before it would keep performing
   // whatever the new list happened to say. Reading it twice also left the second
   // `?? []` an arm no input could take, since a unit whose cues are absent has
