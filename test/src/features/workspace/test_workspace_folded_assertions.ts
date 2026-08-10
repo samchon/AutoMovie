@@ -20,9 +20,9 @@ interface IScanResult {
  * The scanner walks `test/src` relative to its own working directory while
  * resolving its compiler from this repository, so pointing `cwd` elsewhere
  * scans that tree with the very same walk the repository command runs. Nothing
- * is reimplemented here: a gate that carried its own copy of the detector would
- * measure something the `node internals/scan-folded-predicates.mjs` in the
- * issue and the contributing docs no longer measures.
+ * is reimplemented here: a gate carrying its own copy of the detector would
+ * drift from what `node internals/scan-folded-predicates.mjs` reports, and the
+ * number a contributor sees would stop being the number that gates them.
  *
  * Separators are normalized because the walk joins with the host's own, and
  * blank lines are dropped so the report is the lines that carry a claim.
@@ -66,7 +66,12 @@ const writeFixture = (root: string, name: string, source: string): void => {
  * The fault injection is what makes the first assertion mean something. A gate
  * over a clean tree passes identically whether it is measuring correctly or
  * measuring nothing, so the same scanner is pointed at a scratch tree carrying
- * known folds and known non-folds, and its report is read line for line.
+ * known folds and known non-folds, and its report is read line for line. That
+ * closes the vacuity between them: the injection proves the walk descends into
+ * `test/src/features/<domain>` and reports what it finds there, the walk skips
+ * no directory, and this file is itself a module in one of those directories,
+ * so a clean report over this repository is a report about a population that
+ * demonstrably includes the case reading it.
  *
  * The scratch tree is removed before any assertion runs, so there is no
  * cleanup-after-failure lifecycle here and no preservation helper: the removal
