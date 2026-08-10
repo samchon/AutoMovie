@@ -104,17 +104,15 @@ export const test_cli_scaffold_delivery_tone = (): void => {
       comparisons: [
         // A frame that produced no receipt names no bundle, and a bundle that
         // does not verify is not evidence about anything, so both are skipped
-        // before the drift comparison and the emptiness of what is left is what
-        // makes "checked nothing" a refusal rather than a pass.
+        // before the drift comparison. Reaching the end of the walk without one
+        // is what makes "checked nothing" a refusal rather than a pass.
         ["frame.receipt", "===", "null"],
         ["manifest", "===", "null"],
-        ["manifests.length", "===", "0"],
         [
-          "entry.manifest.renderSpec.toneMapping",
-          "!==",
+          "manifest.renderSpec.toneMapping",
+          "===",
           "PRODUCTION_DELIVERY_TONE_MAPPING",
         ],
-        ["drifted.length", "!==", "0"],
       ],
       called: true,
       unverifiable: true,

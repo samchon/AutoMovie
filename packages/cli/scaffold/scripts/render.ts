@@ -424,6 +424,11 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
  * when they disagree: without this, a spec that started delivering ACES would
  * keep photographing untone-mapped frames and label them ACES.
  *
+ * The delivery curve is one production-wide fact, so the first bundle that
+ * verifies settles it and the walk stops there. Verifying every bundle would
+ * re-read and re-digest every review frame the capture just wrote, to re-answer
+ * a question whose answer cannot differ between two bundles of one production.
+ *
  * A run whose frames produced no verifiable manifest checks nothing and says
  * so, rather than passing on the absence of evidence.
  */
@@ -438,32 +443,20 @@ const assertCapturedDeliveryToneMapping = (
       ),
     ),
   ].sort(compareCodeUnits);
-  const manifests = bundles.flatMap((bundle) => {
+  for (const bundle of bundles) {
     const manifest = project.verifiedRenderManifest(
       path.join(project.renderRoot(), ...bundle.split("/"), "manifest.json"),
     );
-    return manifest === null ? [] : [{ bundle, manifest }];
-  });
-  if (manifests.length === 0)
+    if (manifest === null) continue;
+    if (manifest.renderSpec.toneMapping === PRODUCTION_DELIVERY_TONE_MAPPING)
+      return;
     throw new Error(
-      "Review capture committed no verifiable render bundle, so the delivery tone mapping the capture requested could not be checked against the manifest that records it.",
+      `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but bundle "${bundle}" records "${manifest.renderSpec.toneMapping}". Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
     );
-  const drifted = manifests.filter(
-    (entry) =>
-      entry.manifest.renderSpec.toneMapping !==
-      PRODUCTION_DELIVERY_TONE_MAPPING,
+  }
+  throw new Error(
+    "Review capture committed no verifiable render bundle, so the delivery tone mapping the capture requested could not be checked against the manifest that records it.",
   );
-  if (drifted.length !== 0)
-    throw new Error(
-      `The capture host opened the viewer with tone mapping "${PRODUCTION_DELIVERY_TONE_MAPPING}", but ${drifted
-        .map(
-          (entry) =>
-            `"${entry.bundle}" records "${entry.manifest.renderSpec.toneMapping}"`,
-        )
-        .join(
-          ", ",
-        )}. Correct PRODUCTION_DELIVERY_TONE_MAPPING in scripts/capture.ts so the page and the sealed render spec state one curve.`,
-    );
 };
 
 /**
