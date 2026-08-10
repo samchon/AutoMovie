@@ -15,6 +15,10 @@ import { namedFacts } from "../internal/predicates";
 const answer = (name: string, args: unknown[]): unknown =>
   JSON.parse(callAutoMovieSandboxEngine(name, JSON.stringify(args)));
 
+/** The value a successful crossing carried, which is what a caller receives. */
+const carried = (name: string, args: unknown[]): unknown =>
+  (answer(name, args) as { ok: boolean; value: unknown }).value;
+
 /**
  * The deterministic sandbox answers a kernel call with the engine's own answer.
  *
@@ -51,7 +55,7 @@ export const test_mcp_sandbox_engine_bridge = (): void => {
   ];
   TestValidator.equals(
     "a bridged kernel answers byte for byte what the engine answers",
-    answer("extrudeAutoMovieProfile", [{ profile, depth: 0.4 }]),
+    carried("extrudeAutoMovieProfile", [{ profile, depth: 0.4 }]),
     JSON.parse(
       JSON.stringify(extrudeAutoMovieProfile({ profile, depth: 0.4 })),
     ),
@@ -59,7 +63,7 @@ export const test_mcp_sandbox_engine_bridge = (): void => {
 
   TestValidator.equals(
     "arguments cross in the order they were written",
-    answer("mergeAutoMovieSpaces", ["merged", []]),
+    carried("mergeAutoMovieSpaces", ["merged", []]),
     JSON.parse(JSON.stringify(mergeAutoMovieSpaces("merged", []))),
   );
 
@@ -143,7 +147,7 @@ export const test_mcp_sandbox_engine_bridge = (): void => {
 
   TestValidator.equals(
     "a kernel that reads a props object still reads it whole",
-    answer("buildAutoMovieWall", [
+    carried("buildAutoMovieWall", [
       { width: 4, height: 3, depth: 0.2, openings: [] },
     ]),
     JSON.parse(
