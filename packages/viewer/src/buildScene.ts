@@ -5,6 +5,7 @@ import {
   IAutoMovieScene,
 } from "@automovie/interface";
 import * as THREE from "three";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 import { applyLightState } from "./applyLightMotion";
 import { applyPose } from "./applyPose";
@@ -169,6 +170,25 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
     applyShadow(built, light);
     return built;
   }
+  if (light.type === "area") {
+    // A `RectAreaLight` shades through a lookup texture pair the core bundle
+    // does not install, and an uninitialized one lights nothing at all. The
+    // install is global renderer state, so it happens once, here, where the
+    // first panel is built: a host that stages no area light pays nothing, and
+    // one that stages ten cannot forget.
+    initRectAreaLightUniforms();
+    const built = new THREE.RectAreaLight(
+      undefined,
+      undefined,
+      light.width,
+      light.height,
+    );
+    applyLightState(built, light);
+    // No `aimLight`: a `RectAreaLight` has no target object and emits from the
+    // face its own local −Z points at, which is already the forward axis
+    // `stageScene` rotated onto the authored direction.
+    return built;
+  }
   const built =
     light.type === "directional"
       ? new THREE.DirectionalLight()
@@ -176,6 +196,15 @@ export const buildLight = (light: IAutoMovieLight): THREE.Light => {
   applyLightState(built, light);
   applyShadow(built, light);
   return aimLight(built);
+};
+
+let rectAreaLightUniformsInstalled = false;
+
+/** Install the `RectAreaLight` BRDF lookup tables exactly once per process. */
+const initRectAreaLightUniforms = (): void => {
+  if (rectAreaLightUniformsInstalled) return;
+  rectAreaLightUniformsInstalled = true;
+  RectAreaLightUniformsLib.init();
 };
 
 const applyShadow = (built: THREE.Light, light: IAutoMovieLight): void => {

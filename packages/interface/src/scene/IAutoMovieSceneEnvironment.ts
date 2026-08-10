@@ -12,7 +12,13 @@ export interface IAutoMovieSceneEnvironment {
   rotationDeg: number;
   /** Positive renderer exposure multiplier. */
   exposure: number;
-  /** Beauty-pass tone mapping; structural passes always bypass it. */
+  /**
+   * Beauty-pass tone mapping; structural passes always bypass it.
+   *
+   * Authoritative over {@link IAutoMovieRenderSpec.toneMapping} for every scene
+   * that declares an environment: the curve belongs with the exposure and image
+   * lighting it is chosen against, and one render spec spans many scenes.
+   */
   toneMapping: "none" | "acesFilmic";
   /** Renderer shadow-map policy for physical scene lights. */
   shadows: {

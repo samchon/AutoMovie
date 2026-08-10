@@ -651,9 +651,14 @@ export const test_viewer_pbr_environment = (): void => {
     },
   });
   TestValidator.equals(
-    "logical UV zero is available to AO and every PBR map",
-    geometry.getAttribute("uv1").array,
-    geometry.getAttribute("uv").array,
+    "one UV set is uploaded, the only set a binding may address",
+    [
+      [...geometry.getAttribute("uv").array],
+      geometry.hasAttribute("uv1"),
+      built.map?.channel,
+      built.aoMap?.channel,
+    ],
+    [[0, 0, 1, 0, 0, 1], false, 0, 0],
   );
 
   const scene = new THREE.Scene();
@@ -746,6 +751,44 @@ export const test_viewer_pbr_environment = (): void => {
       !renderer.shadowMap.enabled,
   );
   legacyStructural.restore();
+  // Precedence: the delivery curve reaches the renderer only where no scene
+  // environment owns one, and never over a scene that does.
+  const delivered = applyRendererEnvironment(
+    renderer,
+    null,
+    "beauty",
+    "acesFilmic",
+  );
+  TestValidator.predicate(
+    "the render spec curve applies only to an environment-less scene",
+    renderer.toneMapping === THREE.ACESFilmicToneMapping &&
+      renderer.toneMappingExposure === 3,
+  );
+  delivered.restore();
+  const overridden = applyRendererEnvironment(
+    renderer,
+    { ...ENVIRONMENT, toneMapping: "none" },
+    "beauty",
+    "acesFilmic",
+  );
+  TestValidator.equals(
+    "a scene environment outranks the delivery default",
+    renderer.toneMapping,
+    THREE.NoToneMapping,
+  );
+  overridden.restore();
+  const deliveredStructural = applyRendererEnvironment(
+    renderer,
+    null,
+    "depth",
+    "acesFilmic",
+  );
+  TestValidator.equals(
+    "a structural pass ignores the delivery curve too",
+    renderer.toneMapping,
+    THREE.NoToneMapping,
+  );
+  deliveredStructural.restore();
   const none = applyRendererEnvironment(
     renderer,
     {

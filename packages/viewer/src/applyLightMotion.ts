@@ -7,8 +7,9 @@ import { applyTransform } from "./buildModel";
 /**
  * Write one {@link IAutoMovieLight}'s value onto the `three.js` light that plays
  * it: its PLACEMENT for every kind, colour and intensity for every kind,
- * falloff distance for the two that have one, and the cone half-angle (degrees
- * on the artifact, radians in `three.js`) for a spot.
+ * falloff distance for the two that have one, the cone half-angle (degrees on
+ * the artifact, radians in `three.js`) for a spot, and the panel extent for an
+ * area source.
  *
  * The one place the mapping lives. {@link buildLight} calls it to place a staged
  * light and {@link applyLightMotion} calls it to move that same light over time,
@@ -44,6 +45,13 @@ export const applyLightState = (
   else if (light.type === "spot" && target instanceof THREE.SpotLight) {
     target.distance = light.range;
     target.angle = (light.coneAngle * Math.PI) / 180;
+  } else if (light.type === "area" && target instanceof THREE.RectAreaLight) {
+    // Extent carries no channel, so it never changes between frames; it is
+    // written here anyway because this is the one place a light's values are
+    // mapped, and a second writer at build time is the duplicate that survives
+    // until the two copies disagree.
+    target.width = light.width;
+    target.height = light.height;
   }
 };
 

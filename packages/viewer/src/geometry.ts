@@ -37,10 +37,12 @@ export const buildGeometry = (
       "normal",
       new THREE.Float32BufferAttribute(mesh.normals, 3),
     );
+  // One UV set, deliberately. `three.js` reads a map's `channel` to pick
+  // between `uv`, `uv1`, `uv2` and `uv3`, and the artifact admits `texCoord` 0
+  // alone (`validateModel`), so a mirrored `uv1` would be a second copy of the
+  // same buffer that no material could ever address.
   if (mesh.uvs !== null)
     geo.setAttribute("uv", new THREE.Float32BufferAttribute(mesh.uvs, 2));
-  if (mesh.uvs !== null)
-    geo.setAttribute("uv1", new THREE.Float32BufferAttribute(mesh.uvs, 2));
   if (mesh.indices !== null) geo.setIndex(mesh.indices);
   if (mesh.skin !== null) {
     geo.setAttribute(
@@ -66,6 +68,156 @@ export const buildGeometry = (
 export type IAutoMovieTextureResolver = (
   binding: AutoMovieTextureBinding,
 ) => THREE.Texture | undefined;
+
+/** The asset id a legacy or structured binding names. */
+export const textureBindingAsset = (
+  binding: AutoMovieTextureBinding,
+): string => (typeof binding === "string" ? binding : binding.asset);
+
+/** Every texture binding one material declares, in slot order, nulls dropped. */
+export const materialTextureBindings = (
+  material: IAutoMovieMaterial,
+): AutoMovieTextureBinding[] =>
+  [
+    material.baseColorTexture,
+    material.metallicRoughnessTexture,
+    material.normalTexture,
+    material.occlusionTexture,
+    material.emissiveTexture,
+  ].filter(
+    (value): value is AutoMovieTextureBinding =>
+      value !== null && value !== undefined,
+  );
+
+/** Decode one project texture asset. Host-owned: the viewer has no I/O. */
+export type IAutoMovieTextureLoader = (asset: string) => Promise<THREE.Texture>;
+
+/**
+ * One shot's decoded texture assets: loaded once, handed out per binding, and
+ * released once.
+ *
+ * Two facts pull in opposite directions and this class is where they meet.
+ * {@link buildMaterial} writes a binding's color space, UV transform and sampler
+ * ONTO the texture object it is given, so two slots that name the same image
+ * must not receive the same object: a floor repeating its tile 40 times and a
+ * table top repeating the same tile twice would otherwise fight over one
+ * `repeat`, last writer winning. But decoding that image twice is a second
+ * download and a second GPU upload of identical pixels, per model, for a
+ * building whose whole point is that the same tile recurs everywhere.
+ *
+ * So the asset is decoded once and each binding gets `clone()` of it. A
+ * `three.js` clone shares its source's `Source` object, which is what the
+ * renderer keys its GPU upload on, so N clones of one asset are N cheap
+ * descriptors over ONE upload while each keeps its own sampling state.
+ *
+ * The cache is per shot rather than per model because a shot is the lifetime a
+ * host can actually end: {@link dispose} releases every clone it issued and
+ * every source it decoded, exactly once however many times it is called, and a
+ * cache that has been disposed refuses further work rather than quietly
+ * decoding into a bucket nobody will empty.
+ */
+export class AutoMovieTextureCache {
+  private readonly pending = new Map<string, Promise<THREE.Texture>>();
+  private readonly sources = new Map<string, THREE.Texture>();
+  private readonly issued: THREE.Texture[] = [];
+  private disposed = false;
+
+  /** Build a cache over one host-owned loader. */
+  public constructor(private readonly load: IAutoMovieTextureLoader) {
+    this.resolve = (binding) => {
+      this.assertLive();
+      const asset = textureBindingAsset(binding);
+      const source = this.sources.get(asset);
+      if (source === undefined)
+        throw new Error(
+          `Texture asset "${asset}" was never primed into this shot cache.`,
+        );
+      const clone = source.clone();
+      this.issued.push(clone);
+      return clone;
+    };
+  }
+
+  /**
+   * Decode every distinct asset the given bindings name, at most once each.
+   *
+   * Awaiting this is what makes {@link resolve} synchronous, which is what lets
+   * {@link buildMaterial} stay a pure function of a material. A binding whose
+   * asset fails to decode rejects here, naming every asset that failed, rather
+   * than surfacing later as a silently untextured surface.
+   */
+  public async prime(
+    bindings: Iterable<AutoMovieTextureBinding | null | undefined>,
+  ): Promise<void> {
+    this.assertLive();
+    const assets = new Set<string>();
+    for (const binding of bindings)
+      if (binding !== null && binding !== undefined)
+        assets.add(textureBindingAsset(binding));
+    const settled = await Promise.allSettled(
+      [...assets].map((asset) => this.decodeOnce(asset)),
+    );
+    const failed = [...assets].filter(
+      (_asset, index) => settled[index]!.status === "rejected",
+    );
+    if (failed.length !== 0)
+      throw new Error(
+        `Texture assets could not be decoded: ${failed.join(", ")}.`,
+      );
+  }
+
+  /**
+   * A binding-private texture over the primed source, for {@link buildMaterial}.
+   *
+   * A bound field rather than a method so it can be handed straight to
+   * {@link buildModel} as the resolver itself. An asset that was never primed
+   * throws instead of returning `undefined`: `undefined` is the host's honest
+   * "this project ships no such map", and answering it for an asset the
+   * material DOES declare would render a floor with no tile and call that
+   * success.
+   */
+  public readonly resolve: IAutoMovieTextureResolver;
+
+  /** How many distinct assets this cache has decoded. */
+  public get size(): number {
+    return this.sources.size;
+  }
+
+  /**
+   * Release every issued clone and every decoded source, exactly once.
+   *
+   * In-flight decodes are awaited before release, so a host that tears a shot
+   * down mid-load frees what it started rather than leaking whatever landed
+   * after the teardown.
+   */
+  public async dispose(): Promise<void> {
+    if (this.disposed) return;
+    this.disposed = true;
+    const settled = await Promise.allSettled(this.pending.values());
+    for (const clone of this.issued) clone.dispose();
+    this.issued.length = 0;
+    for (const result of settled)
+      if (result.status === "fulfilled") result.value.dispose();
+    this.pending.clear();
+    this.sources.clear();
+  }
+
+  private decodeOnce(asset: string): Promise<THREE.Texture> {
+    const existing = this.pending.get(asset);
+    if (existing !== undefined) return existing;
+    const decoding = this.load(asset).then((texture) => {
+      this.sources.set(asset, texture);
+      return texture;
+    });
+    this.pending.set(asset, decoding);
+    return decoding;
+  }
+
+  private assertLive(): void {
+    if (this.disposed)
+      throw new Error("This shot texture cache has already been disposed.");
+  }
+}
 
 /** Build a `three.js` physical PBR material from an automovie material. */
 export const buildMaterial = (

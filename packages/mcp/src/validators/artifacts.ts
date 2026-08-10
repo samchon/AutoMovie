@@ -175,6 +175,20 @@ export const validateSceneArtifact = (
         violations,
         false,
       );
+    // The one kind with extent. Both axes are gated, and gated exclusively, so
+    // an artifact cannot describe a panel with only a width nor a punctual
+    // light that quietly carries one.
+    if (validLightType && lightType === "area")
+      for (const axis of ["width", "height"] as const)
+        validateRange(
+          light[axis],
+          `${path}.${axis}`,
+          0,
+          Infinity,
+          `area ${axis}`,
+          violations,
+          false,
+        );
     if (light.castShadow !== undefined && typeof light.castShadow !== "boolean")
       pushViolation(
         violations,
@@ -183,6 +197,19 @@ export const validateSceneArtifact = (
         "castShadow must be boolean",
         light.castShadow,
       );
+    // `three.js` renders no shadow map for a rectangular area source, so the
+    // artifact may not claim one; the whole point of the gate is that a
+    // declared capability is a rendered capability.
+    else if (light.castShadow === true && lightType === "area") {
+      pushViolation(
+        violations,
+        "type",
+        `${path}.castShadow`,
+        "an area light is analytically integrated and casts no shadow map",
+        light.castShadow,
+      );
+      return;
+    }
     const shadow = light.shadow;
     if (light.castShadow === true && shadow === undefined)
       pushViolation(

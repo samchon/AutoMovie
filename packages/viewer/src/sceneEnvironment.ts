@@ -48,11 +48,19 @@ export interface IAutoMovieRendererEnvironmentHandle {
 /**
  * Configure exposure, tone mapping and shadow policy for one pass. Structural
  * passes bypass all three so their values remain geometric facts.
+ *
+ * Precedence, settled once here so no caller has to decide it: a scene that
+ * declares an `environment` owns the renderer's curve, exposure and shadow
+ * policy for its own beauty pass. `delivery` is the render spec's
+ * `toneMapping`, the value a whole sequence carries, and it applies only to a
+ * scene that declared no environment. Omitting it keeps `none`, which is
+ * exactly what every pre-environment production rendered.
  */
 export const applyRendererEnvironment = (
   renderer: THREE.WebGLRenderer,
   environment: IAutoMovieSceneEnvironment | null | undefined,
   pass: AutoMovieGuidePass,
+  delivery?: IAutoMovieSceneEnvironment["toneMapping"],
 ): IAutoMovieRendererEnvironmentHandle => {
   const prior = {
     toneMapping: renderer.toneMapping,
@@ -66,14 +74,12 @@ export const applyRendererEnvironment = (
     renderer.toneMappingExposure = 1;
     renderer.shadowMap.enabled = false;
   } else if (environment !== null && environment !== undefined) {
-    renderer.toneMapping =
-      environment.toneMapping === "acesFilmic"
-        ? THREE.ACESFilmicToneMapping
-        : THREE.NoToneMapping;
+    renderer.toneMapping = toneMapping(environment.toneMapping);
     renderer.toneMappingExposure = environment.exposure;
     renderer.shadowMap.enabled = environment.shadows.enabled;
     renderer.shadowMap.type = shadowType(environment.shadows.type);
-  }
+  } else if (delivery !== undefined)
+    renderer.toneMapping = toneMapping(delivery);
   let restored = false;
   return {
     restore: () => {
@@ -86,6 +92,11 @@ export const applyRendererEnvironment = (
     },
   };
 };
+
+const toneMapping = (
+  curve: IAutoMovieSceneEnvironment["toneMapping"],
+): THREE.ToneMapping =>
+  curve === "acesFilmic" ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
 
 const shadowType = (
   type: IAutoMovieSceneEnvironment["shadows"]["type"],

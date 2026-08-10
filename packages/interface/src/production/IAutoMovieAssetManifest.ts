@@ -1,3 +1,4 @@
+import { IAutoMovieGeneratedAcquisition } from "../architecture/IAutoMovieDesignReference";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /** License identity shipped with one distributable project asset. */
@@ -50,6 +51,40 @@ export type IAutoMovieAssetConsumer =
       /** Fixed style or character reference consumed by one repaint shot. */
       kind: "rendition-reference";
       /** Exact shot id. */
+      id: string;
+    }
+  | {
+      /**
+       * Image bound by one compiled material's PBR texture slots.
+       *
+       * The consumer is the MODEL, not the material or the slot: one image
+       * routinely serves several slots of several materials of one model (an
+       * ORM map is occlusion, roughness and metalness at once), and a ledger
+       * keyed per slot would demand one entry per use of the same bytes for the
+       * same reason.
+       */
+      kind: "material-texture";
+      /** Exact compiled model id whose materials bind this image. */
+      id: string;
+    }
+  | {
+      /** Equirectangular image lighting the scene of one compiled shot. */
+      kind: "scene-environment";
+      /** Exact shot id whose scene environment names this image. */
+      id: string;
+    }
+  | {
+      /**
+       * Observed plan, section, elevation, detail, or generated design study.
+       *
+       * The consumer is the observation DOCUMENT, not the building it informs:
+       * one sheet is routinely read by several buildings, and the reading — not
+       * the building — is what the bytes justify. Registering the use never
+       * converts the image into design; it only authorizes an observation
+       * document to cite these exact bytes as evidence.
+       */
+      kind: "design-reference";
+      /** Exact design-reference document id observing these bytes. */
       id: string;
     };
 
@@ -156,13 +191,29 @@ export interface IAutoMovieAssetProvenance {
   path: string;
   /** SHA-256 of the current bytes at {@link path}. */
   digest: AutoMovieContentDigest;
-  /** Acquisition identity before any local processing. */
-  original: {
+  /**
+   * Acquisition identity before any local processing, for bytes some source
+   * served.
+   *
+   * Exactly one of {@link original} and {@link generated} is present. Every
+   * manifest written before generated assets existed carries this one, so
+   * making it optional reads those ledgers unchanged.
+   */
+  original?: {
     /** Current source URL verified when the asset was acquired. */
     url: string;
     /** SHA-256 of the acquired original bytes. */
     digest: AutoMovieContentDigest;
   };
+  /**
+   * Generation identity, for bytes nothing ever served.
+   *
+   * An image-generation result has no acquisition URL. Recording the provider,
+   * model, request, instruction and returned digest states what actually
+   * happened; inventing a URL or a replay seed to satisfy {@link original} would
+   * not.
+   */
+  generated?: IAutoMovieGeneratedAcquisition;
   /** Distribution terms that apply to the current bytes. */
   license: IAutoMovieAssetLicense;
   /** Ordered transformation chain; empty only when current equals original. */

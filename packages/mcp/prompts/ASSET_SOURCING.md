@@ -28,6 +28,18 @@ Asset registration declares more than existence. Restrict each asset to the prod
 
 Record provider, model, exact version, execution boundary, prompt, seed, controls, references, terms, and output digest. Research current provider rights and retention policy at acquisition time. Do not claim reproducibility from a seed when model, scheduler, service implementation, or references are unpinned.
 
+## Texture and environment images
+
+A PBR map and an equirectangular environment are assets like any other, and they carry three facts beyond licence and digest.
+
+Media is decided by the bytes, not the extension. PNG, JPEG and WebP are sampled as material maps; a Radiance HDR is sampled only as scene image lighting. A renamed file, a placeholder that never got replaced, and an HDR bound as a base-color map are all refused before compilation, naming the material slot or scene that bound them.
+
+Size is a shipping decision. Both edges must be whole positive pixel counts and neither may exceed the portable 8192 limit; downscale past that in a recorded processing step rather than shipping a tile no target samples without a driver-side rescale.
+
+Decoding intent is part of the asset's identity. Base-color and emissive maps are colours stored in sRGB; metallic-roughness, normal and occlusion maps are measurements and must stay linear. One image bound under both intents is refused: the same pixels cannot be both a colour and a measurement, and the fix is two registered images, not one binding quietly decoded the wrong way.
+
+Register each image with a typed use: `material-texture` naming the compiled model whose materials bind it, or `scene-environment` naming the shot whose scene lights itself from it. An image no model or scene binds any more is a stale use and is refused too, so the distributable never accumulates files nothing samples.
+
 ## Acceptance checklist
 
 - exact source and license are available;
@@ -36,5 +48,6 @@ Record provider, model, exact version, execution boundary, prompt, seed, control
 - parser facts and conversion identity are recorded;
 - scale, axes, rig, color, audio, and bounds are normalized;
 - production and consumer permission are explicit;
+- image media, both edge lengths, and decoding intent are proved from the bytes;
 - current asset review proves the delivery appearance and range;
 - no untracked remote alias is required to recreate the accepted state.
