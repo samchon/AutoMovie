@@ -191,12 +191,14 @@ const importedObject = (mesh: THREE.Object3D): IAutoMovieModelObject => {
  *    accounts every slot as drawn or culled. Negative twins: a missing runtime
  *    model, an out-of-range slot (non-integer, negative and past the end) and a
  *    route layout with no compiled route each refuse.
- * 2. Scatter, along-route and a degenerate zero-length route exercise every
- *    compact placement law the viewer regenerates.
+ * 2. Scatter and along-route regenerate slot for slot against the compiler, across
+ *    a route whose walk both stops inside an early segment and runs on into the
+ *    last one, and a one-slot set still keeps a usable chunk radius.
  * 3. Ten thousand lattice slots with independent per-axis scale and three-axis
  *    rotation match their compiled matrices at the first, middle and last slot,
- *    stay inside bounded chunks, expand into no scene node, and rebuild
- *    byte-identically from the same seed and input.
+ *    agree bit for bit with the compiler's own regeneration, stay inside
+ *    bounded chunks, expand into no scene node, and rebuild byte-identically
+ *    from the same seed and input.
  * 4. One logical set selects several prototypes: stable explicit ids, per-slot
  *    palette and trait overrides, an invisible slot that is not batched, and a
  *    declared prototype no slot selects, which contributes no batch.
@@ -632,6 +634,20 @@ export const test_viewer_instance_set = async (): Promise<void> => {
           ),
       ],
       [
+        // The viewer regenerates a slot rather than reading one, so the lattice
+        // it regenerates has to be the exact lattice the compiler published,
+        // down to the last bit of the quaternion.
+        "facadeOracle",
+        () =>
+          facadeSlots.every(
+            (slot) =>
+              JSON.stringify(regenerateInstanceSlot(compiledFacade, slot)) ===
+              JSON.stringify(
+                materializeInstanceSlot(facadeDesign, world, slot),
+              ),
+          ),
+      ],
+      [
         // Distinct per-axis scale on every sampled slot: a set that had
         // silently fallen back to one scalar would compare equal here.
         "facadeNonUniform",
@@ -677,6 +693,7 @@ export const test_viewer_instance_set = async (): Promise<void> => {
       facadeNoNodes: true,
       facadeBatched: true,
       facadeMatrices: true,
+      facadeOracle: true,
       facadeNonUniform: true,
       facadeRotated: true,
       facadeDeterministic: true,
@@ -808,6 +825,15 @@ export const test_viewer_instance_set = async (): Promise<void> => {
           instanceTransformMatches(builtMulti.object, compiledMulti, 1),
       ],
       [
+        "multiOracle",
+        () =>
+          [0, 1, 2].every(
+            (slot) =>
+              JSON.stringify(regenerateInstanceSlot(compiledMulti, slot)) ===
+              JSON.stringify(materializeInstanceSlot(multiDesign, world, slot)),
+          ),
+      ],
+      [
         "multiOverriddenColor",
         () => {
           const located = locateSlot(builtMulti.object, 1)!;
@@ -830,6 +856,7 @@ export const test_viewer_instance_set = async (): Promise<void> => {
       multiHiddenStat: true,
       multiBatched: true,
       multiMatrices: true,
+      multiOracle: true,
       multiOverriddenColor: true,
     },
   );
