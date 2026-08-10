@@ -638,7 +638,7 @@ export const loftAutoMovieSections = (props: {
   )
     throw new Error("loft sections must run from at 0 to at 1");
   const plans = props.sections.map((section, index) =>
-    triangulateRegion(
+    canonicalRegion(
       section.outer,
       section.holes ?? [],
       `loft section[${index}]`,
@@ -695,11 +695,11 @@ export const loftAutoMovieSections = (props: {
   });
 
   const target = emptyMeshTarget();
-  for (const [outward, station, plan] of [
-    [-1, stations[0]!, plans[0]!],
-    [1, stations[stations.length - 1]!, plans[plans.length - 1]!],
+  for (const [outward, station, triangles] of [
+    [-1, stations[0]!, trianglesOf(plans[0]!)],
+    [1, stations[stations.length - 1]!, trianglesOf(plans[plans.length - 1]!)],
   ] as ReadonlyArray<
-    readonly [1 | -1, (typeof stations)[number], IAutoMovieRegionTriangulation]
+    readonly [1 | -1, (typeof stations)[number], readonly number[]]
   >) {
     const base = target.positions.length / 3;
     station.points.forEach((point, index) => {
@@ -714,11 +714,11 @@ export const loftAutoMovieSections = (props: {
         station.profile[index]!.y * outward,
       );
     });
-    for (let at = 0; at < plan.triangles.length; at += 3)
+    for (let at = 0; at < triangles.length; at += 3)
       target.indices.push(
-        base + plan.triangles[at]!,
-        base + plan.triangles[at + (outward === 1 ? 1 : 2)]!,
-        base + plan.triangles[at + (outward === 1 ? 2 : 1)]!,
+        base + triangles[at]!,
+        base + triangles[at + (outward === 1 ? 1 : 2)]!,
+        base + triangles[at + (outward === 1 ? 2 : 1)]!,
       );
   }
   for (const span of plans[0]!.rings)
@@ -755,6 +755,19 @@ export const loftAutoMovieSections = (props: {
 
 /**
  * Merge rigid meshes, rebasing their indices in declared order.
+ *
+ * This concatenates; it is not a boolean union, and no solid-solid union,
+ * intersection, or difference exists in this kernel. Two members that overlap
+ * come back with both their surfaces, including the parts now inside the other,
+ * and an edge where they touch belongs to four triangles rather than two, which
+ * `validateMeshTopology` reads as non-manifold. What replaces a boolean here is
+ * the region: {@link extrudeAutoMovieRegion} takes the outline and its voids
+ * together, so a wall less its openings, a hollow section, and a plate less its
+ * cut-outs are each one solid built from one description rather than two solids
+ * differenced afterwards. What that does not reach is a subtraction along a
+ * direction the section does not run in, a niche that stops partway through a
+ * wall among them; that is refused by absence rather than approximated, and
+ * {@link buildAutoMovieWall} raises it by name where it bites.
  *
  * Every buffer is appended element by element rather than by spreading the
  * source into `push`. A spread is an argument list, and an argument list has a
@@ -1101,17 +1114,23 @@ const pushFlatTriangle = (
 };
 
 /**
- * Triangulate one region, naming its rings the way its caller calls them.
+ * Validate one region and lay its rings out canonically, naming them the way
+ * its caller calls them.
  *
  * The public entry says `polygon`, a loft says which section it is checking, so
  * an author reading a refusal learns which of six sections carries the ring
  * that crosses itself rather than that "the outer ring" does.
+ *
+ * Triangles are not cut here, because a loft needs every section validated and
+ * laid out but only triangulates the two it caps with. Cutting them for all of
+ * them would be work thrown away, which is also a claim in the code that the
+ * middle sections are triangulated when nothing reads those triangles.
  */
-const triangulateRegion = (
+const canonicalRegion = (
   outer: readonly IAutoMovieProfilePoint[],
   holes: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
   label: string,
-): IAutoMovieRegionTriangulation => {
+): Omit<IAutoMovieRegionTriangulation, "triangles"> => {
   const labels = [
     `${label} outer ring`,
     ...holes.map((_hole, index) => `${label} hole[${index}]`),
@@ -1130,10 +1149,24 @@ const triangulateRegion = (
   return {
     points,
     rings,
-    triangles: earClip(points, bridgeHoles(points, rings)),
     area: loops.reduce((total, loop) => total + signedArea(loop), 0),
   };
 };
+
+/** One canonical region, bridged into a single ring and ear-clipped. */
+const triangulateRegion = (
+  outer: readonly IAutoMovieProfilePoint[],
+  holes: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
+  label: string,
+): IAutoMovieRegionTriangulation => {
+  const region = canonicalRegion(outer, holes, label);
+  return { ...region, triangles: trianglesOf(region) };
+};
+
+/** The triangles one already-validated region resolves to. */
+const trianglesOf = (
+  region: Omit<IAutoMovieRegionTriangulation, "triangles">,
+): number[] => earClip(region.points, bridgeHoles(region.points, region.rings));
 
 /**
  * Copy one ring, refusing every shape a triangulator cannot answer for.
@@ -1153,10 +1186,21 @@ const simpleRing = (
   const points = ring.map((point) => ({ x: point.x, y: point.y }));
   const size = points.length;
   points.forEach((point, index) => {
+    if (
+      Math.hypot(
+        points[(index + 1) % size]!.x - point.x,
+        points[(index + 1) % size]!.y - point.y,
+      ) <= PLANAR_EPSILON
+    )
+      throw new Error(`${label}[${index}] repeats the point beside it`);
+  });
+  // Before the spike check, because a ring of collinear points is a spike at
+  // every corner, and "encloses no area" is what its author needs to read.
+  if (Math.abs(signedArea(points)) <= PLANAR_EPSILON)
+    throw new Error(`${label} encloses no area`);
+  points.forEach((point, index) => {
     const previous = points[(index + size - 1) % size]!;
     const next = points[(index + 1) % size]!;
-    if (Math.hypot(next.x - point.x, next.y - point.y) <= PLANAR_EPSILON)
-      throw new Error(`${label}[${index}] repeats the point beside it`);
     if (
       Math.abs(cross2(previous, point, next)) <= PLANAR_EPSILON &&
       (point.x - previous.x) * (next.x - point.x) +
@@ -1165,8 +1209,6 @@ const simpleRing = (
     )
       throw new Error(`${label}[${index}] doubles back along its own edge`);
   });
-  if (Math.abs(signedArea(points)) <= PLANAR_EPSILON)
-    throw new Error(`${label} encloses no area`);
   for (let left = 0; left < size; ++left)
     for (let right = left + 1; right < size; ++right)
       if (
@@ -1191,7 +1233,14 @@ const neighbouringEdges = (
   right: number,
 ): boolean => (left + 1) % size === right || (right + 1) % size === left;
 
-/** The ring wound the way asked for; reversing keeps its first point first. */
+/**
+ * The ring wound the way asked for, reversed in place when it disagrees.
+ *
+ * Reversal maps corner `k` to corner `size - 1 - k`, which is a relabelling a
+ * triangulation does not care about and a loft does: the loft refuses sections
+ * whose rings disagree in winding, so every section is reversed or none is, and
+ * corner `k` of one section still answers to corner `k` of the next.
+ */
 const orientedRing = (
   points: IAutoMovieProfilePoint[],
   counterClockwise: boolean,
@@ -1351,6 +1400,9 @@ const bridgeHoles = (
   const loops = rings.map((span) =>
     Array.from({ length: span.count }, (_unused, index) => span.start + index),
   );
+  const shapes = rings.map((span) =>
+    points.slice(span.start, span.start + span.count),
+  );
   const ring = [...loops[0]!];
   for (let hole = 1; hole < loops.length; ++hole) {
     const bridge = ring
@@ -1358,7 +1410,7 @@ const bridgeHoles = (
         loops[hole]!.map((_corner, from) => ({ at, from })),
       )
       .find((candidate) =>
-        bridgeIsClear(points, rings, ring, loops, hole, candidate),
+        bridgeIsClear(points, shapes, ring, loops, hole, candidate),
       )!;
     const rotated = [
       ...loops[hole]!.slice(bridge.from),
@@ -1376,7 +1428,7 @@ const bridgeHoles = (
 /** Does one candidate bridge stay inside the region and meet nothing? */
 const bridgeIsClear = (
   points: readonly IAutoMovieProfilePoint[],
-  rings: readonly IAutoMovieRegionRing[],
+  shapes: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
   ring: readonly number[],
   loops: ReadonlyArray<readonly number[]>,
   hole: number,
@@ -1417,13 +1469,11 @@ const bridgeIsClear = (
     x: (start.x + end.x) / 2,
     y: (start.y + end.y) / 2,
   };
-  const ringPoints = (span: IAutoMovieRegionRing): IAutoMovieProfilePoint[] =>
-    points.slice(span.start, span.start + span.count);
   return (
-    pointInRing(middle, ringPoints(rings[0]!)) &&
-    rings
-      .slice(1)
-      .every((span) => pointInRing(middle, ringPoints(span)) === false)
+    pointInRing(middle, shapes[0]!) &&
+    shapes.every(
+      (shape, at) => at === 0 || pointInRing(middle, shape) === false,
+    )
   );
 };
 
@@ -1527,7 +1577,7 @@ const loftSectionRings = (
  * the authored section and still sit on the surface the sides sweep out.
  */
 const loftSectionAt = (
-  plans: readonly IAutoMovieRegionTriangulation[],
+  plans: ReadonlyArray<Omit<IAutoMovieRegionTriangulation, "triangles">>,
   declared: readonly IAutoMovieLoftSection[],
   fraction: number,
 ): IAutoMovieProfilePoint[] => {

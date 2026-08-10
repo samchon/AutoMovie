@@ -1,4 +1,5 @@
 import {
+  buildAutoMovieWall,
   extrudeAutoMovieProfile,
   extrudeAutoMovieRegion,
   inspectAutoMovieMeshTopology,
@@ -91,7 +92,9 @@ const OCULUS_AREA =
  * 5. A hollow tube: the section's void runs the whole depth and the walls close
  *    around it.
  * 6. The -Z cap mirrors its V coordinate so its atlas reads from outside.
- * 7. Determinism, and the refusal of a non-positive depth.
+ * 7. The pinched shape `buildAutoMovieWall` refuses is refused here too, so the
+ *    free-form path is not the way around a solid that touches itself.
+ * 8. Determinism, and the refusal of a non-positive depth.
  */
 export const test_geometry_region_extrusion = (): void => {
   const prism = extrudeAutoMovieRegion({ outer: ell, depth: 2 });
@@ -222,6 +225,65 @@ export const test_geometry_region_extrusion = (): void => {
       ["tubeIndices", () => tube.indices!.length === (8 * 2 + 8 * 2) * 3],
     ]),
     { doorway: true, tube: true, tubeIndices: true },
+  );
+
+  // Two openings meeting at a corner pinch the standing wall to a line, which
+  // is a surface no edge-pair rule can describe. The wall builder refuses it by
+  // name; the free-form path must refuse the same shape rather than become the
+  // way around it, and it does, because rings may not touch.
+  TestValidator.equals(
+    "the pinch the wall builder refuses is refused here by the ring-contact rule",
+    namedFacts([
+      [
+        "wall",
+        () =>
+          throwsError(
+            () =>
+              buildAutoMovieWall({
+                width: 2,
+                height: 2,
+                depth: 0.2,
+                openings: [
+                  { id: "low", x: 0, y: 0, width: 1, height: 1 },
+                  { id: "high", x: 1, y: 1, width: 1, height: 1 },
+                ],
+              }),
+            "pinch the wall to a line",
+          ),
+      ],
+      [
+        "region",
+        () =>
+          throwsError(
+            () =>
+              extrudeAutoMovieRegion({
+                outer: [
+                  { x: 0, y: 0 },
+                  { x: 4, y: 0 },
+                  { x: 4, y: 4 },
+                  { x: 0, y: 4 },
+                ],
+                holes: [
+                  [
+                    { x: 1, y: 1 },
+                    { x: 2, y: 1 },
+                    { x: 2, y: 2 },
+                    { x: 1, y: 2 },
+                  ],
+                  [
+                    { x: 2, y: 2 },
+                    { x: 3, y: 2 },
+                    { x: 3, y: 3 },
+                    { x: 2, y: 3 },
+                  ],
+                ],
+                depth: 0.2,
+              }),
+            "polygon hole[0] and polygon hole[1] touch or cross",
+          ),
+      ],
+    ]),
+    { wall: true, region: true },
   );
 
   TestValidator.equals(
