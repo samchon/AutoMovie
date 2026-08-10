@@ -6,7 +6,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { fluidDomain } from "../internal/fluidFixtures";
-import { namedFacts, nclose, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const JET: IAutoMovieFluidSpray = {
   id: "jet",
@@ -76,6 +81,13 @@ const misted = (sprays: IAutoMovieFluidSpray[]): IAutoMovieFluidDomain =>
  * 5. Boundaries: a domain with no emitter samples nothing, a sample before the
  *    first lifetime has elapsed holds only the particles born so far, and two
  *    emitters contribute in declared order.
+ * 6. What cannot be sampled is refused rather than silently emptied. A state
+ *    solved from another domain puts every nozzle at a free surface this
+ *    lattice never had, and a camera distance that is not a real number makes
+ *    the LOD stride not a real number too — `index % NaN` rejects every
+ *    particle, so the fountain would simply stop with nobody told. Their twins
+ *    are this domain's own state and a merely enormous finite distance, which
+ *    thins hard and still returns.
  */
 export const test_fluid_spray_budget = (): void => {
   const domain = misted([JET]);
@@ -234,5 +246,70 @@ export const test_fluid_spray_budget = (): void => {
       ],
     ]),
     { noEmitter: true, beforeFirstLifetime: true, twoEmitters: true },
+  );
+
+  const foreign = fluidDomain({ id: "other-basin" });
+  TestValidator.equals(
+    "an unsamplable request is named, never answered with an empty jet",
+    namedFacts([
+      [
+        "foreignState",
+        () =>
+          throwsError(
+            () =>
+              sampleFluidSpray({
+                domain,
+                state: simulateFluidDomain(foreign, 0),
+              }),
+            ["jet-basin", "other-basin"],
+          ),
+      ],
+      [
+        "nanDistance",
+        () =>
+          throwsError(
+            () =>
+              sampleFluidSpray({
+                domain,
+                state,
+                cameraDistance: Number.NaN,
+              }),
+            ["jet-basin", "non-finite camera distance"],
+          ),
+      ],
+      [
+        "infiniteDistance",
+        () =>
+          throwsError(
+            () =>
+              sampleFluidSpray({
+                domain,
+                state,
+                cameraDistance: Number.POSITIVE_INFINITY,
+              }),
+            ["non-finite camera distance"],
+          ),
+      ],
+      [
+        // Stride 8 over the live indices 1..8 keeps exactly index 8: heavy
+        // thinning still answers, which is what makes the refusals above about
+        // the number being unreal rather than about the distance being large.
+        "heavyButFinite",
+        () =>
+          sampleFluidSpray({
+            domain,
+            state,
+            cameraDistance: 70,
+          })
+            .particles.map((particle) => particle.index)
+            .join(",") === "8",
+      ],
+    ]),
+    {
+      foreignState: true,
+      nanDistance: true,
+      infiniteDistance: true,
+      heavyButFinite: true,
+    },
   );
 };

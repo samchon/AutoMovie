@@ -41,7 +41,9 @@ const FEATURE_MODES = new Set(["static", "flowing", "simulated"]);
  * A basin declared as a purely semantic container (a logical space with no
  * convex cells) is not geometrically checked: there is no volume to check
  * against, and inventing one would be the design deciding a fact the author did
- * not state.
+ * not state. Neither is a domain that already failed its own validation: an
+ * unusable grid has no lattice to place, and reporting where its cells fell
+ * would be a second answer derived from the first bad one.
  *
  * @author Samchon
  */
@@ -61,6 +63,10 @@ export const validateWaterFeatures = (props: {
   const byDomain = new Map(domains.map((domain) => [domain.id, domain]));
 
   const seenDomains = new Set<string>();
+  // Whether each domain is usable on its own terms, in the same last-one-wins
+  // order `byDomain` resolves an id in, so the verdict the geometry check reads
+  // belongs to the record it is about to measure.
+  const soundness = new Map<string, boolean>();
   domains.forEach((domain, index) => {
     if (seenDomains.has(domain.id))
       out.push(
@@ -71,6 +77,7 @@ export const validateWaterFeatures = (props: {
       );
     seenDomains.add(domain.id);
     const validation = validateFluidDomain({ domain });
+    soundness.set(domain.id, validation.success);
     // Re-path rather than re-word: the domain's own violation keeps its kind,
     // its measured overshoot and its severity, so a binding report reads as the
     // same finding `validateFluidDomain` would give, at the address the binding
@@ -123,6 +130,16 @@ export const validateWaterFeatures = (props: {
         `water feature must cite its owning built environment "${environment.id}"`,
         feature.environment,
       );
+    // `null` is the renderer's own default and says so; a blank string is a
+    // citation of a material with no name, which a budget would then attribute
+    // to a material nobody can find.
+    if (feature.material !== null && feature.material.trim().length === 0)
+      out.push(
+        "type",
+        `${path}.material`,
+        "water feature material must be a material id or null for the default",
+        feature.material,
+      );
 
     const space = spaces.get(feature.space);
     if (space === undefined)
@@ -172,20 +189,29 @@ export const validateWaterFeatures = (props: {
       );
       return;
     }
-    if (space === undefined || space.cells.length === 0) return;
-    for (const corner of latticeCorners(domain))
-      if (
-        builtEnvironmentContainsPoint(environment, feature.space, corner) ===
-        false
-      ) {
-        out.push(
-          "type",
-          `${path}.domain`,
-          `fluid lattice of "${domain.id}" reaches outside basin space "${feature.space}"`,
-          corner,
-        );
-        return;
-      }
+    if (
+      space === undefined ||
+      space.cells.length === 0 ||
+      soundness.get(feature.domain) !== true
+    )
+      return;
+    const stray = strayCell({
+      environment,
+      space: feature.space,
+      domain,
+      // One convex cell is decided exactly by the lattice's own corners; a
+      // basin written as several is not convex, and there the corners only say
+      // the ends of the lattice are somewhere in the room while its middle may
+      // stand over the notch between two of them.
+      exhaustive: space.cells.length > 1,
+    });
+    if (stray !== null)
+      out.push(
+        "type",
+        `${path}.domain`,
+        `fluid lattice of "${domain.id}" reaches outside basin space "${feature.space}"`,
+        stray,
+      );
   });
 
   return out.toValidation();
@@ -223,7 +249,11 @@ export const lowerWaterFeature = (props: {
   feature: IAutoMovieWaterFeature;
   domain: IAutoMovieFluidDomain;
   time: number;
-  /** Camera distance in metres driving spray LOD; defaults to `0`. */
+  /**
+   * Camera distance in metres driving spray LOD; defaults to `0`. It must be a
+   * real number: {@link sampleFluidSpray} refuses a non-finite one rather than
+   * thinning the mist to nothing and reading as a fountain that stopped.
+   */
   cameraDistance?: number;
 }): IAutoMovieWaterFeatureFrame => {
   const state =
@@ -242,20 +272,41 @@ export const lowerWaterFeature = (props: {
   };
 };
 
-/** The four bed points under the lattice's corner cells, in world space. */
-const latticeCorners = (
-  domain: IAutoMovieFluidDomain,
-): { x: number; y: number; z: number }[] => {
-  const lastColumn = domain.grid.columns - 1;
-  const lastRow = domain.grid.rows - 1;
-  return [
-    [0, 0],
-    [lastColumn, 0],
-    [0, lastRow],
-    [lastColumn, lastRow],
-  ].map(([column, row]) => ({
-    x: domain.grid.origin.x + (column + 0.5) * domain.grid.cellX,
-    y: domain.grid.origin.y + domain.bed[row * domain.grid.columns + column],
-    z: domain.grid.origin.z + (row + 0.5) * domain.grid.cellZ,
-  }));
+/**
+ * The first bed point of the lattice standing outside the basin, or `null`.
+ *
+ * The points measured are cell centres, because that is where the water is: the
+ * free surface carries one vertex per cell at its centre, so the drawn water
+ * never reaches past the outermost centres and a rim half a cell wide is not
+ * flooded by arithmetic nobody authored.
+ *
+ * `exhaustive` walks every cell; otherwise only the corner cells are measured,
+ * which decides a rectangle against a single convex region exactly. The caller
+ * pays the full walk exactly when the basin is not convex, and only for a
+ * domain whose own cell budget has already been enforced.
+ */
+const strayCell = (props: {
+  environment: IAutoMovieBuiltEnvironment;
+  space: string;
+  domain: IAutoMovieFluidDomain;
+  exhaustive: boolean;
+}): { x: number; y: number; z: number } | null => {
+  const { domain } = props;
+  const span = (length: number): number[] =>
+    props.exhaustive ? Array.from({ length }, (_, at) => at) : [0, length - 1];
+  for (const row of span(domain.grid.rows))
+    for (const column of span(domain.grid.columns)) {
+      const point = {
+        x: domain.grid.origin.x + (column + 0.5) * domain.grid.cellX,
+        y:
+          domain.grid.origin.y + domain.bed[row * domain.grid.columns + column],
+        z: domain.grid.origin.z + (row + 0.5) * domain.grid.cellZ,
+      };
+      if (
+        builtEnvironmentContainsPoint(props.environment, props.space, point) ===
+        false
+      )
+        return point;
+    }
+  return null;
 };

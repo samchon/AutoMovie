@@ -3,7 +3,12 @@ import { IAutoMovieFluidDomain } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { fluidDomain } from "../internal/fluidFixtures";
-import { namedFacts, nclose, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const pool = (props: {
   columns: number;
@@ -63,6 +68,11 @@ const at = (values: number[], index: number, stride: number, offset: number) =>
  *    corner positions, and every remaining triangle is wet.
  * 6. The per-vertex flow equals the average of the four face velocities around the
  *    cell, taken from a genuinely moving state.
+ * 7. A state solved from a different domain is refused rather than drawn. Two
+ *    water features over two lattices is the ordinary case, so crossing them is
+ *    the ordinary mistake, and the mistake reads depths that were never indexed
+ *    for this grid — an empty pond nobody was told about. Its twin is the same
+ *    lattice paired with its own state, which draws.
  */
 export const test_fluid_surface_geometry = (): void => {
   const flat = pool({
@@ -310,5 +320,35 @@ export const test_fluid_surface_geometry = (): void => {
       ["step", () => flowing.step === 20],
     ]),
     { matchesFaces: true, actuallyFlowing: true, step: true },
+  );
+
+  const other = fluidDomain({ id: "other-pool" });
+  TestValidator.equals(
+    "a surface is derived from its own domain's state or from none",
+    namedFacts([
+      [
+        "foreignState",
+        () =>
+          throwsError(
+            () =>
+              fluidSurfaceGeometry({
+                domain: moving,
+                state: simulateFluidDomain(other, 0),
+              }),
+            ["reflecting-pool", "other-pool"],
+          ),
+      ],
+      [
+        "ownState",
+        () =>
+          throwsError(() =>
+            fluidSurfaceGeometry({
+              domain: moving,
+              state: simulateFluidDomain(moving, 0),
+            }),
+          ) === false,
+      ],
+    ]),
+    { foreignState: true, ownState: true },
   );
 };

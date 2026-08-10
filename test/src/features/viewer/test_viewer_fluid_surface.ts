@@ -13,7 +13,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { flatBasin } from "../internal/fluidFixtures";
-import { namedFacts, nclose } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const pool = (overrides: Partial<IAutoMovieFluidDomain> = {}) =>
   flatBasin({
@@ -73,7 +73,10 @@ const surfaceAt = (domain: IAutoMovieFluidDomain, step: number) =>
  *    the original back on restore, and the beauty pass leaves it alone.
  * 4. A structural pass hides the spray and restores its visibility.
  * 5. `update` re-uploads a later step in place, and a drained pool hides itself
- *    rather than drawing a sheet of nothing.
+ *    rather than drawing a sheet of nothing. A surface belonging to another
+ *    domain is refused instead: the mesh is named for the domain it was built
+ *    from and a segmentation pass resolves it by that name, so uploading
+ *    someone else's water under it would paint one pond as another.
  * 6. `dispose` releases what the object created and never disposes a material the
  *    caller supplied and still owns.
  */
@@ -265,6 +268,15 @@ export const test_viewer_fluid_surface = (): void => {
         "bareEmptySphere",
         () => (bare.object.geometry.boundingSphere?.radius ?? -1) === 0,
       ],
+      [
+        "foreignUpload",
+        () =>
+          throwsError(
+            () => bare.update(surfaceAt(domain, 0)),
+            ["hand-built", "atrium-pool"],
+          ),
+      ],
+      ["foreignName", () => bare.object.name === "water:hand-built"],
     ]),
     {
       updatedStep: true,
@@ -276,6 +288,8 @@ export const test_viewer_fluid_surface = (): void => {
       bareAttributes: true,
       bareHidden: true,
       bareEmptySphere: true,
+      foreignUpload: true,
+      foreignName: true,
     },
   );
 

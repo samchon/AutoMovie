@@ -33,6 +33,11 @@ const JITTER_Z = 0x7370727a;
  * are enforced here rather than trusted to the renderer, so the CPU reference
  * and any GPU projection agree on how many particles exist.
  *
+ * Throws when the state was not solved from this domain — the nozzle stands at
+ * the free surface, so a foreign state puts every jet at a depth that lattice
+ * never had — and when the camera distance is not a real number, which would
+ * otherwise thin the live set to nothing and read as a fountain that stopped.
+ *
  * @author Samchon
  */
 export const sampleFluidSpray = (props: {
@@ -42,7 +47,15 @@ export const sampleFluidSpray = (props: {
   cameraDistance?: number;
 }): IAutoMovieFluidSpraySample => {
   const { domain, state } = props;
+  if (state.domain !== domain.id)
+    throw new Error(
+      `fluid domain "${domain.id}" cannot sample spray from a state of "${state.domain}"`,
+    );
   const cameraDistance = props.cameraDistance ?? 0;
+  if (!Number.isFinite(cameraDistance))
+    throw new Error(
+      `fluid domain "${domain.id}" cannot sample spray at a non-finite camera distance`,
+    );
   const time = state.time;
   const particles: IAutoMovieFluidSprayParticle[] = [];
   for (const spray of domain.sprays)

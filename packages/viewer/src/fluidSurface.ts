@@ -10,7 +10,12 @@ export interface IAutoMovieFluidSurfaceObject {
   /** Add this mesh to the current scene. */
   object: THREE.Mesh;
 
-  /** Re-upload the surface of a newly solved step. */
+  /**
+   * Re-upload the surface of a newly solved step of the **same** domain. Throws
+   * for any other one: the mesh is named for the domain it was built from, and
+   * a segmentation pass resolves it by that name, so a surface uploaded under
+   * the wrong name is painted as the water it is not.
+   */
   update: (surface: IAutoMovieFluidSurface) => void;
 
   /** Release the geometry, and the material when this object created it. */
@@ -70,8 +75,13 @@ export const buildFluidSurfaceObject = (props: {
       side: THREE.DoubleSide,
     });
   const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = `water:${props.surface.domain}`;
+  const domain = props.surface.domain;
+  mesh.name = `water:${domain}`;
   const upload = (surface: IAutoMovieFluidSurface): void => {
+    if (surface.domain !== domain)
+      throw new Error(
+        `water surface object of "${domain}" cannot upload a surface of "${surface.domain}"`,
+      );
     geometry.setAttribute(
       "position",
       new THREE.Float32BufferAttribute(surface.mesh.positions, 3),
