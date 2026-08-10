@@ -44,13 +44,20 @@ export interface IAutoMovieSceneObject {
  * Cameras and the three punctual light kinds map onto their `three.js`
  * equivalents.
  *
+ * **The first `scene.nodes.length` top-level children ARE the designed nodes,
+ * in design order.** Both mask passes read that: the legacy ramp colours the
+ * Nth child with the Nth colour, and the stable semantic palette resolves a
+ * designed node to `root.children[index]` (see
+ * {@link applyAutoMovieSemanticMask}). Anything this function adds of its own
+ * goes after them, and a host that prepends a child of its own breaks the
+ * second one exactly as it always broke the first.
+ *
  * A scene carrying a `space` also gets its ground drawn (#1173): the standable
  * surfaces become real meshes under one `SPACE_GROUP_NAME` group (see
  * {@link buildSpaceObject}), so the structural guide passes describe a world
  * instead of actors floating in a void. The group is added LAST, after the
- * nodes and lights, because the mask palette is keyed by top-level child index:
- * appending leaves every node's segmentation color exactly where it was, and
- * the whole ground reads as one further color rather than one per surface.
+ * nodes and lights, for that reason, and so the whole ground reads as one
+ * colour rather than one per surface.
  *
  * @author Samchon
  */
@@ -63,10 +70,10 @@ export const buildScene = (
 
   for (const node of scene.nodes) {
     const built = getModelObject(node.model);
-    // Caller data that cannot resolve is an error, not a skip (#1051): the
-    // segmentation mask palette is keyed by top-level child INDEX, so a
-    // silently dropped node would shift every later node one color over and
-    // a mask consumer would attribute pixels to the wrong node.
+    // Caller data that cannot resolve is an error, not a skip (#1051): both
+    // mask passes read a designed node off its top-level child INDEX, so a
+    // silently dropped node would shift every later node one place over and a
+    // mask consumer would attribute pixels to the wrong node.
     if (built === undefined)
       throw new Error(
         `scene node "${node.id}" references model "${node.model}", which getModelObject could not resolve`,
@@ -84,9 +91,10 @@ export const buildScene = (
     root.add(nodeGroup);
   }
 
-  // Lights stay top-level children in staging order: the mask palette is keyed
-  // by that index. The id map is built alongside so a shot's `lightMotions` can
-  // find one without depending on where it landed.
+  // Lights stay top-level children, after the nodes, so the designed nodes keep
+  // the leading run of `root.children` that both mask passes read them off. The
+  // id map is built alongside so a shot's `lightMotions` can find one without
+  // depending on where it landed.
   const lights = new Map<string, THREE.Light>();
   for (const light of scene.lights) {
     const object = buildLight(light);
