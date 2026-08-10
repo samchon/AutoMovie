@@ -13,6 +13,7 @@ export * from "./production/AutoMovieProductionProject";
 export * from "./production/AutoMovieProductionReviewService";
 export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
+export * from "./production/decodeProductionAudioAsset";
 export * from "./production/filmGrammarDiagnostics";
 export * from "./production/filmTimeline";
 export * from "./production/linkProductionSource";

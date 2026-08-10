@@ -240,6 +240,137 @@ export const productionPng = (width: number, height: number): Uint8Array => {
   return PNG.sync.write(image);
 };
 
+/**
+ * Assemble one RIFF/WAVE container from exactly the header fields asked for.
+ *
+ * Every malformed variant a decoder has to refuse is BUILT here rather than
+ * patched into a valid file afterwards. A byte patched at a computed offset
+ * stops landing the moment the layout moves, and a fixture that quietly stops
+ * being malformed leaves its refusal case asserting nothing.
+ *
+ * Samples are given per channel in the container's own units: raw signed codes
+ * for 16-bit PCM, unit floats for 32-bit float. That keeps a case's expected
+ * decoded value hand-derivable (`16384 / 32768` is `0.5`) instead of taken from
+ * whatever the encoder happened to produce.
+ */
+export const productionWav = (props: {
+  /** WAVE format tag; 1 is PCM, 3 is IEEE float, 0xfffe is extensible. */
+  formatTag?: number;
+  /** Leading tag of an extensible header's sub-format GUID. */
+  subFormatTag?: number;
+  /** Declared bit depth; 32 encodes float samples, anything else int16. */
+  bitsPerSample?: number;
+  /** Declared channel count; defaults to how many channels were supplied. */
+  declaredChannels?: number;
+  sampleRate?: number;
+  /** One sample array per channel, all of the same length. */
+  channels?: readonly (readonly number[])[];
+  /** Exact data-chunk payload, replacing the encoded channels. */
+  data?: Uint8Array;
+  /** Declared "data" chunk size; defaults to the real payload length. */
+  declaredDataSize?: number;
+  /** Declared "fmt " chunk size; defaults to 16, or 40 when extensible. */
+  formatChunkSize?: number;
+  /** RIFF form tag; defaults to "WAVE". */
+  form?: string;
+  /** Write one ignorable metadata chunk ahead of the format chunk. */
+  metadata?: boolean;
+  omitFormatChunk?: boolean;
+  omitDataChunk?: boolean;
+}): Uint8Array => {
+  const formatTag = props.formatTag ?? 1;
+  const bitsPerSample = props.bitsPerSample ?? 16;
+  const channels = props.channels ?? [];
+  const declaredChannels = props.declaredChannels ?? channels.length;
+  const sampleRate = props.sampleRate ?? 48_000;
+  const payload = props.data ?? encodeWavSamples(channels, bitsPerSample);
+  const formatChunkSize =
+    props.formatChunkSize ?? (formatTag === 0xfffe ? 40 : 16);
+  const format = new Uint8Array(formatChunkSize);
+  const formatView = new DataView(format.buffer);
+  const blockAlign = Math.trunc((declaredChannels * bitsPerSample) / 8);
+  // A deliberately short format chunk still carries every declared field that
+  // fits in it, so a "too short" case is short and otherwise well formed.
+  const put16 = (at: number, value: number): void => {
+    if (at + 2 <= formatChunkSize) formatView.setUint16(at, value, true);
+  };
+  const put32 = (at: number, value: number): void => {
+    if (at + 4 <= formatChunkSize) formatView.setUint32(at, value, true);
+  };
+  put16(0, formatTag);
+  put16(2, declaredChannels);
+  put32(4, sampleRate);
+  put32(8, sampleRate * blockAlign);
+  put16(12, blockAlign);
+  put16(14, bitsPerSample);
+  if (formatTag === 0xfffe) {
+    put16(16, 22);
+    put16(18, bitsPerSample);
+    put32(20, 0);
+    put16(24, props.subFormatTag ?? 1);
+  }
+  const chunks: Array<{
+    id: string;
+    payload: Uint8Array;
+    declaredSize?: number;
+  }> = [];
+  if (props.metadata === true)
+    chunks.push({ id: "LIST", payload: Buffer.from("INFOfixture", "utf8") });
+  if (props.omitFormatChunk !== true)
+    chunks.push({ id: "fmt ", payload: format });
+  if (props.omitDataChunk !== true)
+    chunks.push({
+      id: "data",
+      payload,
+      declaredSize: props.declaredDataSize,
+    });
+  const padded = (length: number): number => length + (length % 2);
+  const riffSize = chunks.reduce(
+    (total, chunk) => total + 8 + padded(chunk.payload.length),
+    4,
+  );
+  const bytes = new Uint8Array(8 + riffSize);
+  const view = new DataView(bytes.buffer);
+  writeWavTag(bytes, 0, "RIFF");
+  view.setUint32(4, riffSize, true);
+  writeWavTag(bytes, 8, props.form ?? "WAVE");
+  let cursor = 12;
+  for (const chunk of chunks) {
+    writeWavTag(bytes, cursor, chunk.id);
+    view.setUint32(
+      cursor + 4,
+      chunk.declaredSize ?? chunk.payload.length,
+      true,
+    );
+    bytes.set(chunk.payload, cursor + 8);
+    cursor += 8 + padded(chunk.payload.length);
+  }
+  return bytes;
+};
+
+const encodeWavSamples = (
+  channels: readonly (readonly number[])[],
+  bitsPerSample: number,
+): Uint8Array => {
+  const frames = channels[0]?.length ?? 0;
+  const bytesPerSample = bitsPerSample / 8;
+  const payload = new Uint8Array(frames * channels.length * bytesPerSample);
+  const view = new DataView(payload.buffer);
+  for (let frame = 0; frame < frames; ++frame)
+    for (let channel = 0; channel < channels.length; ++channel) {
+      const at = (frame * channels.length + channel) * bytesPerSample;
+      const value = channels[channel]![frame]!;
+      if (bitsPerSample === 32) view.setFloat32(at, value, true);
+      else view.setInt16(at, value, true);
+    }
+  return payload;
+};
+
+const writeWavTag = (bytes: Uint8Array, at: number, tag: string): void => {
+  for (let index = 0; index < 4; ++index)
+    bytes[at + index] = tag.charCodeAt(index);
+};
+
 /** Encode one valid WebVTT document with two observable cues. */
 export const productionWebVtt = (): Uint8Array =>
   Buffer.from(
