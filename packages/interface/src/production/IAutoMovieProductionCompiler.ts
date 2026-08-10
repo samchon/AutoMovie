@@ -848,6 +848,27 @@ export interface IAutoMovieFormationMotion {
    * no figure of the unit declares is refused rather than silently replaced.
    */
   gait?: string;
+
+  /**
+   * The arrangement this unit is in when the cue ends.
+   *
+   * A unit's `layout` is a design constant: it says how the unit is arranged,
+   * once, for the whole production. That is the right unit for how a crowd is
+   * built and the wrong one for a crowd that re-forms -- a line becoming a
+   * column, a block falling into an arc, a scatter closing into ranks. Spacing
+   * alone cannot say it: opening and closing an arrangement is not changing
+   * it.
+   *
+   * Each member travels from its place in the design's arrangement to its place
+   * in this one, in the unit's own frame, on this cue's declared easing. Any
+   * two arrangements re-form into one another whatever their kinds, because
+   * what is blended is where a member stands and not the parameters that put it
+   * there.
+   *
+   * Omitted, the unit keeps the arrangement it is already in, and the compiled
+   * cue is byte-identical to one authored before this channel existed.
+   */
+  layout?: IAutoMovieFormationDesign["layout"];
   /** Inclusive shot-local cue start. */
   start: number;
   /** Exclusive shot-local cue end. */

@@ -17,6 +17,34 @@ import { Vector3 } from "./math/Vector3";
 import { seededValue } from "./math/random";
 import { worldGroundHeight } from "./worldKit";
 
+/**
+ * The arrangement a unit is travelling toward, and how far along it is.
+ *
+ * Carried beside the sampled state rather than inside it, because `from` and
+ * `to` are what an author writes and a re-form is a property of the cue rather
+ * than of either end: a cue states one target arrangement, and both its ends
+ * describe the same unit standing in different places. `progress` is the cue's
+ * own eased progress, so a re-form bends on the curve its author declared and
+ * not on a second one.
+ */
+export interface IAutoMovieFormationReform {
+  /** The arrangement the unit is in when the cue ends. */
+  layout: IAutoMovieFormationDesign["layout"];
+  /** Eased fraction of the way there, 0 at the cue's start and 1 at its end. */
+  progress: number;
+}
+
+/** One sampled unit state, with the arrangement it is travelling toward. */
+export interface IAutoMovieSampledFormationMotion extends IAutoMovieFormationMotionState {
+  /**
+   * The re-form under way, or null when the unit keeps its designed
+   * arrangement. Null rather than an identity re-form, because "no target" and
+   * "a target identical to the design" are different statements and only the
+   * first is what a unit with no cue is doing.
+   */
+  reform: IAutoMovieFormationReform | null;
+}
+
 /** Inputs to the deterministic automatic formation LOD selector. */
 export interface IAutoMovieFormationLodInput {
   /** Ordered compiled anonymous representations. */
@@ -113,6 +141,7 @@ export type IAutoMovieFormationPlacement = Pick<
 export const formationSlotPosition = (
   formation: IAutoMovieFormationPlacement,
   slot: number,
+  reform: IAutoMovieFormationReform | null = null,
 ): IAutoMovieVector3 => {
   if (
     Number.isSafeInteger(slot) === false ||
@@ -122,7 +151,22 @@ export const formationSlotPosition = (
     throw new RangeError(
       `Formation "${formation.id}" slot ${slot} is outside 0..${formation.count - 1}.`,
     );
-  const point = localFormationPoint(formation, slot);
+  // Blended in the unit's OWN frame, before its heading and its terrain are
+  // applied. A member re-forming travels to its new place inside the unit; if
+  // the two world points were blended instead, a unit that is also turning
+  // would fold its heading into the arrangement and members would swing along
+  // arcs their layout never describes.
+  const designed = localFormationPoint(formation, slot);
+  const point =
+    reform === null
+      ? designed
+      : (() => {
+          const target = localFormationPoint(formation, slot, reform.layout);
+          return {
+            x: lerp(designed.x, target.x, reform.progress),
+            z: lerp(designed.z, target.z, reform.progress),
+          };
+        })();
   const radians = (formation.facingDeg * Math.PI) / 180;
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
@@ -233,7 +277,7 @@ export const sampleFormationMotion = (
   motions: readonly IAutoMovieFormationMotion[],
   formation: string,
   time: number,
-): IAutoMovieFormationMotionState => {
+): IAutoMovieSampledFormationMotion => {
   const cues = motions
     .filter((cue) => cue.formation === formation)
     .sort(
@@ -241,13 +285,20 @@ export const sampleFormationMotion = (
         left.start - right.start ||
         (left.id < right.id ? -1 : left.id > right.id ? 1 : 0),
     );
-  const identity: IAutoMovieFormationMotionState = {
+  const identity: IAutoMovieSampledFormationMotion = {
     translation: { x: 0, y: 0, z: 0 },
     facingOffsetDeg: 0,
     spacingScale: { lateral: 1, depth: 1 },
+    reform: null,
   };
   if (cues.length === 0 || time < cues[0]!.start) return identity;
-  let retained = cues[0]!.from;
+  // The arrangement the unit is standing in before the next cue moves it: the
+  // target of the last cue that finished, held at one, so a unit that
+  // re-formed stays re-formed instead of snapping back the moment its cue ends.
+  let retained: IAutoMovieSampledFormationMotion = {
+    ...cues[0]!.from,
+    reform: null,
+  };
   for (const cue of cues) {
     if (time < cue.start) return retained;
     if (time < cue.end) {
@@ -278,9 +329,19 @@ export const sampleFormationMotion = (
             progress,
           ),
         },
+        reform:
+          cue.layout === undefined
+            ? retained.reform
+            : { layout: cue.layout, progress },
       };
     }
-    retained = cue.to;
+    retained = {
+      ...cue.to,
+      reform:
+        cue.layout === undefined
+          ? retained.reform
+          : { layout: cue.layout, progress: 1 },
+    };
   }
   return retained;
 };
@@ -412,8 +473,8 @@ const dressedFormationPoint = (
 const localFormationPoint = (
   formation: IAutoMovieFormationPlacement,
   slot: number,
+  layout: IAutoMovieFormationDesign["layout"] = formation.layout,
 ): { x: number; z: number } => {
-  const layout = formation.layout;
   if (layout.kind === "line" || layout.kind === "column") {
     const rank =
       layout.kind === "line"
