@@ -146,8 +146,10 @@ const tolerated = (mutate: (spec: IAutoMoviePropSpec) => void): boolean => {
  *    bytes the ledger does not cover, when there is no hero at all, and when
  *    the hero binds bytes other than the ones the prop draws.
  * 8. An imported appearance changes none of the other prop contracts: a skeleton
- *    still makes it an actor, a model id still has to equal the node, and
- *    `validateModel` still judges the deterministic proxy it left behind.
+ *    still makes it an actor, a model id still has to equal the node,
+ *    `validateModel` still judges the deterministic proxy it left behind, and
+ *    the door's own hinge articulation both rides on it and is still gated on
+ *    it, so the reference buys the pixels and not an exemption.
  */
 export const test_film_prop_imported_appearance = (): void => {
   const forged = forgeProp(createImportedPropSpec());
@@ -591,40 +593,22 @@ export const test_film_prop_imported_appearance = (): void => {
       [
         "anImportedPropMayStillArticulate",
         () =>
-          tolerated((spec) => {
-            spec.articulation = {
-              nodes: [
-                {
-                  id: "root",
-                  name: null,
-                  parent: null,
-                  kind: "group",
-                  transform: {
-                    translation: { x: 0, y: 0, z: 0 },
-                    rotation: { x: 0, y: 0, z: 0, w: 1 },
-                    scale: { x: 1, y: 1, z: 1 },
-                  },
-                  mesh: null,
-                  camera: null,
-                  light: null,
-                  skin: null,
-                },
-              ],
-              profile: {
-                id: "recline",
-                name: "recline",
-                controls: [],
-                drivers: [],
-                limits: [],
-              },
-              binding: {
-                profile: "recline",
-                root: "root",
-                instanceName: null,
-                boneMap: {},
-              },
-            };
-          }),
+          tolerated(
+            (spec) => (spec.articulation = createDoorPropSpec().articulation),
+          ),
+      ],
+      [
+        "andItsArticulationIsStillGated",
+        () =>
+          refuses(
+            (spec) => {
+              const articulation = createDoorPropSpec().articulation!;
+              articulation.binding.boneMap.pivot = "ghost";
+              spec.articulation = articulation;
+            },
+            '$input.articulation.binding.boneMap["pivot"]',
+            "which is not a declared articulation node",
+          ),
       ],
     ]),
     {
@@ -632,6 +616,7 @@ export const test_film_prop_imported_appearance = (): void => {
       theModelIdStillHasToEqualTheNode: true,
       validateModelStillJudgesTheProxy: true,
       anImportedPropMayStillArticulate: true,
+      andItsArticulationIsStillGated: true,
     },
   );
 };
