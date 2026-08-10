@@ -95,6 +95,22 @@ export interface IAutoMoviePropSpec {
    * external appearance: the visible primitives become one registered collision
    * proxy and the imported bytes are kept for the viewer.
    *
+   * So this does not repeal "crude primitive proxy, rich meaning" (D011). That
+   * principle never said the pixels have to be ours; it said the meaning has to
+   * be in the record rather than inferred from a mesh, which is exactly why the
+   * proxy survives the reference instead of being replaced by it. What the
+   * reference does repeal is the accident that the one category where free-form
+   * geometry actually lives, furniture and fixtures and ironmongery, was also
+   * the only category forbidden to bring any in.
+   *
+   * The reference is itself the classification the hatch demands, in the sense
+   * Revit's DirectShape demands a category: free geometry is admitted, but only
+   * under a registration it can be found and filtered by, so a blank reference
+   * is refused. No second label rides along, because a per-prop category
+   * nothing in this repository schedules or filters on would be decoration, and
+   * the meaning a prop is classified by is already the affordances, body, and
+   * relations it declares.
+   *
    * The value names a registration the compiler owns, a model recipe id or the
    * runtime model id it materializes, exactly as a built environment's
    * `modelReferences` entries do. It is not the spelling a cast member's
