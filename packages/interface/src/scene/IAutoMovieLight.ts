@@ -49,6 +49,12 @@ export interface IAutoMovieLightBase {
   /**
    * Whether this source casts a shadow map. Omitted preserves legacy output.
    *
+   * What this light WOULD cast, not what the frame renders: a scene's
+   * `environment.shadows.enabled` is the master switch and turning it off
+   * renders no shadow map for any light, which is also how the render budget
+   * prices it. A scene declaring no environment leaves the decision to the host
+   * renderer, exactly as it did before environments existed.
+   *
    * Only the three punctual kinds can cast one. A rectangular area source is
    * analytically integrated rather than rasterized from a light-space camera,
    * so `three.js` renders no shadow map for it and the engine refuses
