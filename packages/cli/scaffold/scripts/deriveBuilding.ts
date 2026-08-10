@@ -60,6 +60,12 @@ import {
  *
  * They are sidecars, never sources. Editing one changes nothing; correct the
  * design and derive again.
+ *
+ * Nothing here removes a sidecar. Rename a building or a view and its old files
+ * stay where they were, still naming the revision they were derived from, which
+ * is why the revision is in them: this directory is yours, and a derivation
+ * that deleted files it had not written would be the worse trade. Delete a
+ * stale folder yourself.
  */
 const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({
@@ -138,9 +144,10 @@ const waterFeatures: IAutoMovieWaterFeature[] = staged(
  * numbers can come from here, and a study invented out of defaults would be
  * indistinguishable from one that was measured.
  *
- * Declare yours here. `daylight` additionally needs the production design to
- * carry an `environmentContext`; without one the run is reported `not-run`
- * naming the missing site rather than solved against a sun nobody placed.
+ * Declare yours here. `daylight` and `envelope` additionally read the site, so
+ * they need the production design to carry an `environmentContext`; without one
+ * the gap names the missing site rather than a run solved against a sun nobody
+ * placed and an outdoor air nobody stated.
  */
 const studies: IAutoMovieBuildingStudies = {
   daylight: [],
@@ -184,12 +191,13 @@ const announce = (gaps: readonly IAutoMovieBuildingGap[]): void => {
     { gap: IAutoMovieBuildingGap; count: number }
   >();
   for (const gap of gaps) {
-    const seen = counted.get(`${gap.status}\n${gap.reason}\n${gap.remedy}`);
-    if (seen === undefined)
-      counted.set(`${gap.status}\n${gap.reason}\n${gap.remedy}`, {
-        gap,
-        count: 1,
-      });
+    // Keyed by what the gap says rather than by the artifact it came from: the
+    // three constant limits of the drawing derivation carry identical text on
+    // every sheet, while a gap naming this building's own spaces or openings
+    // differs and stays its own row.
+    const key = `${gap.status}\n${gap.reason}\n${gap.remedy}`;
+    const seen = counted.get(key);
+    if (seen === undefined) counted.set(key, { gap, count: 1 });
     else ++seen.count;
   }
   for (const entry of counted.values())
