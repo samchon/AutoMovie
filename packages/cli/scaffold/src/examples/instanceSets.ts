@@ -44,11 +44,18 @@ export const treeScatter = (
 });
 
 /**
- * Coffered-ceiling panels authored as one compact 3D lattice.
+ * A three-dimensional lattice: one prototype repeated on a regular grid.
  *
- * Changing `rows`, `columns`, or spacing remains ordinary TypeScript; the
- * compiler keeps the result as bounded instance chunks instead of expanding ten
- * thousand repeated panels into scene nodes.
+ * This is the layout to reach for whenever a placement is a regular repetition
+ * — panels on a ceiling, modules on a wall, bays down a length — because it
+ * states the rule instead of the result. The set holds three counts and one
+ * spacing no matter how many members it produces, so changing `rows`,
+ * `columns`, or spacing stays ordinary TypeScript and the compiler still keeps
+ * the result as bounded instance chunks rather than expanding ten thousand
+ * repeats into scene nodes.
+ *
+ * The prototype is the caller's own model recipe and the constants below are
+ * illustrative values to edit, not a shape this template supplies.
  */
 export const cofferedCeiling = (
   modelRecipe: string,
@@ -80,11 +87,94 @@ export const cofferedCeiling = (
 });
 
 /**
- * Spiral-stair balusters with exact per-slot transforms and stable identities.
+ * Windows on a raked facade, placed on the leaning plane they belong to.
  *
- * This is the escape hatch for sloped facades, vault ribs, railings, historic
- * ornament, and any other placement law that is clearer as a program than as a
- * fixed layout vocabulary.
+ * A rake is why a facade needs full three-dimensional placement rather than a
+ * ground grid with one shared heading: every opening is both moved back as it
+ * rises and tilted by the same angle, so its own rotation is part of its
+ * placement. Each window still costs one instance matrix, and the whole
+ * elevation stays one bounded set instead of one node per opening.
+ *
+ * The prototype is the caller's own model recipe and the dimensions are
+ * illustrative parameters to edit; what this shows is the technique, not a
+ * facade the template supplies.
+ */
+export const slopedFacadeWindows = (
+  modelRecipe: string,
+  props: {
+    /** Openings across one floor. */
+    columns?: number;
+    /** Floors up the elevation. */
+    floors?: number;
+    /** Center-to-center horizontal bay in meters. */
+    bay?: number;
+    /** Floor-to-floor rise along the raked plane, in meters. */
+    floorHeight?: number;
+    /** Rake of the elevation from vertical, in degrees. */
+    rakeDeg?: number;
+  } = {},
+): IAutoMovieInstanceSetDesign => {
+  const columns = props.columns ?? 12;
+  const floors = props.floors ?? 9;
+  const bay = props.bay ?? 1.8;
+  const floorHeight = props.floorHeight ?? 3.4;
+  const rakeDeg = props.rakeDeg ?? 12;
+  const rake = (rakeDeg * Math.PI) / 180;
+  return {
+    id: "sloped-facade-windows",
+    modelRecipe,
+    count: columns * floors,
+    layout: {
+      kind: "explicit",
+      transforms: Array.from({ length: columns * floors }, (_, slot) => {
+        const floor = Math.floor(slot / columns);
+        const column = slot % columns;
+        const rise = floor * floorHeight;
+        return {
+          id: `window-${String(floor).padStart(2, "0")}-${String(
+            column,
+          ).padStart(2, "0")}`,
+          translation: {
+            x: (column - (columns - 1) / 2) * bay,
+            y: rise * Math.cos(rake),
+            z: -rise * Math.sin(rake),
+          },
+          // The opening leans with its wall: one rotation about the facade's
+          // horizontal axis, stated as the exact unit quaternion rather than a
+          // heading the placement law would have to reinterpret.
+          rotation: {
+            x: Math.sin(rake / 2),
+            y: 0,
+            z: 0,
+            w: Math.cos(rake / 2),
+          },
+          scale: { x: 1.1, y: 1.6, z: 0.14 },
+        };
+      }),
+    },
+    anchor: { x: 0, y: 0.9, z: 0 },
+    facingDeg: 0,
+    seed: 1_459,
+    variation: {
+      scale: { min: 1, max: 1 },
+      palette: ["#8fa7b8"],
+      traits: [],
+    },
+  };
+};
+
+/**
+ * An explicit transform block: a placement law written as a program.
+ *
+ * The compact layouts state a rule the compiler already knows. When the rule is
+ * the author's own — a helix here, but equally a vault rib, a catenary, a
+ * measured survey, or anything else a function can produce — this is how it is
+ * expressed without inventing new layout vocabulary: emit one exact
+ * translation, unit quaternion, and per-axis scale per slot, keep a stable id
+ * on each, and the whole block still compiles to bounded instance chunks.
+ *
+ * The constants below are illustrative values to edit; the prototype is the
+ * caller's own model recipe.
  */
 export const spiralBalusters = (
   modelRecipe: string,

@@ -31,11 +31,18 @@ export interface IAutoMovieInstanceSetViewerObject {
 }
 
 interface IInstancePrototypeChunkObject {
+  /** Conservative world radius of one unscaled prototype instance. */
   projectionRadius: number;
   count: number;
   lod: IAutoMovieCompiledInstanceSet["lod"];
   tiers: Map<IAutoMovieCompiledFormationLod["tier"], THREE.InstancedMesh>;
   selected: IAutoMovieCompiledFormationLod["tier"] | null;
+}
+
+/** One flattened prototype tier ready to be cloned into a chunk batch. */
+interface IInstanceRepresentation {
+  geometry: THREE.BufferGeometry;
+  materials: THREE.Material[];
 }
 
 interface IInstanceChunkObject {
@@ -45,15 +52,28 @@ interface IInstanceChunkObject {
 }
 
 /**
- * Build one non-formation crowd, vegetation, prop, or debris set.
+ * Build one non-formation crowd, vegetation, prop, facade, or ornament set.
  *
  * Matrices, colors, scales, and numeric trait attributes are regenerated from
- * compact runtime data. No slot is promoted into a scene node.
+ * compact runtime data. No slot is promoted into a scene node: a set of a
+ * hundred thousand members holds one batch per chunk, prototype and LOD tier,
+ * and each member costs one instance matrix rather than one object.
+ *
+ * A prototype is either the compiler's generated recipe or a host-loaded
+ * object; passing `prototypeObjects` is what lets a registered static glTF be
+ * the prototype, and it is flattened by the same rigid path a generated recipe
+ * takes. Rigid is the whole condition: a skinned, morphed, or multi-material
+ * source mesh is refused by name rather than instanced as something else.
  */
 export const buildInstancedInstanceSet = (input: {
   instanceSet: IAutoMovieCompiledInstanceSet;
   models: ReadonlyMap<string, IAutoMovieModel>;
-  /** Optional already-loaded generated or imported prototype objects. */
+  /**
+   * Already-loaded prototype objects keyed by runtime model id.
+   *
+   * A host that has decoded a registered external asset passes it here; a model
+   * absent from the map is built from its compiler-owned recipe instead.
+   */
   prototypeObjects?: ReadonlyMap<string, IAutoMovieModelObject>;
 }): IAutoMovieInstanceSetViewerObject => {
   const root = new THREE.Group();
@@ -68,30 +88,45 @@ export const buildInstancedInstanceSet = (input: {
       projectionRadius: input.instanceSet.projectionRadius,
     },
   ];
-  const representations = new Map(
-    prototypes.flatMap((prototype) =>
-      prototype.lod.map((lod) => {
-        const model = input.models.get(lod.model);
-        if (model === undefined)
-          throw new Error(
-            `Instance set "${input.instanceSet.id}" prototype "${prototype.id}" LOD "${lod.tier}" references missing runtime model "${lod.model}".`,
-          );
-        const owner = `Instance set "${input.instanceSet.id}" prototype "${prototype.id}" LOD "${lod.tier}"`;
-        const loaded = input.prototypeObjects?.get(lod.model);
-        const representation =
-          loaded === undefined
-            ? flattenInstancedModel(model, owner)
-            : flattenInstancedObject(loaded, owner);
-        return [
-          `${prototype.id}:${lod.tier}`,
-          {
-            ...representation,
-            materials: representation.materials.map(exactPaletteMaterial),
-          },
-        ] as const;
-      }),
-    ),
+  // Keyed by prototype and then by tier rather than by one joined string: a
+  // prototype id is author-owned text, so `"panel:near"` and a `"panel"` tier
+  // named `"near"` would otherwise be the same entry and one prototype would
+  // silently draw the other's geometry.
+  const representations = new Map<
+    string,
+    Map<IAutoMovieCompiledFormationLod["tier"], IInstanceRepresentation>
+  >(
+    prototypes.map((prototype) => [
+      prototype.id,
+      new Map(
+        prototype.lod.map((lod) => {
+          const model = input.models.get(lod.model);
+          if (model === undefined)
+            throw new Error(
+              `Instance set "${input.instanceSet.id}" prototype "${prototype.id}" LOD "${lod.tier}" references missing runtime model "${lod.model}".`,
+            );
+          const owner = `Instance set "${input.instanceSet.id}" prototype "${prototype.id}" LOD "${lod.tier}"`;
+          const loaded = input.prototypeObjects?.get(lod.model);
+          const representation =
+            loaded === undefined
+              ? flattenInstancedModel(model, owner)
+              : flattenInstancedObject(loaded, owner);
+          return [
+            lod.tier,
+            {
+              geometry: representation.geometry,
+              materials: representation.materials.map(exactPaletteMaterial),
+            },
+          ] as const;
+        }),
+      ),
+    ]),
   );
+  // The largest axis scale any slot of this set can reach, measured once. It is
+  // read for every chunk of every frame, and an explicit block may hold a
+  // hundred thousand transforms, so measuring it per frame would both cost the
+  // set's own size each frame and blow the argument limit of a spread.
+  const maximumScale = maximumInstanceScale(input.instanceSet);
   const traitNames = input.instanceSet.variation.traits.map(
     (trait) => trait.name,
   );
@@ -110,17 +145,18 @@ export const buildInstancedInstanceSet = (input: {
           IAutoMovieCompiledFormationLod["tier"],
           THREE.InstancedMesh
         >();
+        const tierRepresentations = representations.get(prototype.id)!;
         for (const lod of prototype.lod) {
-          const representation = representations.get(
-            `${prototype.id}:${lod.tier}`,
-          )!;
+          const representation = tierRepresentations.get(lod.tier)!;
           const geometry = representation.geometry.clone();
           for (const [traitIndex, traitName] of traitNames.entries())
             geometry.setAttribute(
               `automovieTrait${traitIndex}`,
               new THREE.InstancedBufferAttribute(
+                // Every declared trait is regenerated for every slot, so a
+                // declared name always names a value on the slot it came from.
                 new Float32Array(
-                  selectedSlots.map((slot) => slot.traits[traitName] ?? 0),
+                  selectedSlots.map((slot) => slot.traits[traitName]!),
                 ),
                 1,
               ),
@@ -142,8 +178,9 @@ export const buildInstancedInstanceSet = (input: {
             mesh.setColorAt(index, new THREE.Color(slot.palette));
           });
           mesh.instanceMatrix.needsUpdate = true;
-          if (mesh.instanceColor !== null)
-            mesh.instanceColor.needsUpdate = true;
+          // A batch is only built for a prototype that owns at least one slot,
+          // so `setColorAt` above has already allocated the color attribute.
+          mesh.instanceColor!.needsUpdate = true;
           mesh.computeBoundingBox();
           mesh.computeBoundingSphere();
           mesh.frustumCulled = false;
@@ -207,11 +244,14 @@ export const buildInstancedInstanceSet = (input: {
             chunk.runtime.centroid.z - input.instanceSet.anchor.z,
           ),
         );
+        // The chunk's own bounds hold slot origins only, so the sphere is
+        // widened by the largest world radius one instance of this set can
+        // occupy. That radius is rotation-invariant, which is exactly why a
+        // rotated, non-uniformly scaled instance whose origin sits outside the
+        // frustum still keeps its chunk on screen.
         const sphere = new THREE.Sphere(
           center,
-          chunk.radius +
-            input.instanceSet.projectionRadius *
-              maximumInstanceScale(input.instanceSet),
+          chunk.radius + input.instanceSet.projectionRadius * maximumScale,
         );
         if (frustum.intersectsSphere(sphere) === false) {
           for (const prototype of chunk.prototypes)
@@ -229,9 +269,7 @@ export const buildInstancedInstanceSet = (input: {
         );
         for (const prototype of chunk.prototypes) {
           const projectedPixels =
-            (prototype.projectionRadius *
-              maximumInstanceScale(input.instanceSet) *
-              viewportHeight) /
+            (prototype.projectionRadius * maximumScale * viewportHeight) /
             (halfY * cameraDepth);
           const selected = selectFormationLod({
             lod: prototype.lod,
@@ -383,13 +421,17 @@ const selectedInstancePrototype = (
       );
     return selected;
   }
+  // Every choice but the last is tested; the last one is what remains, which is
+  // both the weighted answer and the answer when a float residue leaves the
+  // sample a hair above the final weight. Testing it as well would add an arm
+  // only that residue could ever take.
   const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
   let sample = seededValue(instanceSet.seed, slot, 0x70726f74) * total;
-  for (const choice of choices) {
+  for (const choice of choices.slice(0, -1)) {
     if (sample < choice.weight) return choice;
     sample -= choice.weight;
   }
-  return choices.at(-1)!;
+  return choices[choices.length - 1]!;
 };
 
 const seededInstanceRotation = (
@@ -479,29 +521,32 @@ const instancePoint = (
   });
   const total = segments.reduce((sum, segment) => sum + segment.length, 0);
   let remaining = ((slot + 0.5) / instanceSet.count) * total;
-  const segment = (segments.find((candidate) => {
-    if (remaining <= candidate.length) return true;
+  // The final segment is what the walk ends on, so it is not tested: an
+  // arc-length below the total always lands inside it once every earlier
+  // segment has been spent, and only a float residue could put it past.
+  let segment = segments[segments.length - 1]!;
+  for (const candidate of segments.slice(0, -1)) {
+    if (remaining <= candidate.length) {
+      segment = candidate;
+      break;
+    }
     remaining -= candidate.length;
-    return false;
-  }) ?? segments.at(-1))!;
-  const ratio =
-    segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
+  }
+  // The chosen segment always has positive length. Every slot's arc-length is
+  // strictly above zero, an earlier segment is only taken when it covers that
+  // length, and the final one is only reached with what is left of a route the
+  // compiler already refused to materialize at zero length.
+  const ratio = Math.min(1, remaining / segment.length);
   const tangentX = segment.right.x - segment.left.x;
   const tangentZ = segment.right.z - segment.left.z;
-  const tangentLength = Math.hypot(tangentX, tangentZ);
+  const tangentLength = segment.length;
   const jitter =
     (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
     layout.lateralJitter;
   return {
-    x:
-      segment.left.x +
-      tangentX * ratio -
-      (tangentLength === 0 ? 0 : (tangentZ / tangentLength) * jitter),
+    x: segment.left.x + tangentX * ratio - (tangentZ / tangentLength) * jitter,
     y: 0,
-    z:
-      segment.left.z +
-      tangentZ * ratio +
-      (tangentLength === 0 ? 0 : (tangentX / tangentLength) * jitter),
+    z: segment.left.z + tangentZ * ratio + (tangentX / tangentLength) * jitter,
   };
 };
 
@@ -531,18 +576,29 @@ const instanceMatrix = (
       : vector(slot.scale3),
   );
 
+/**
+ * The largest axis scale any slot of one set can reach.
+ *
+ * An explicit block states each slot's scale outright, so its own transforms
+ * are the answer and the seeded ranges never apply. The reduction is a loop
+ * rather than a spread because a set may declare a hundred thousand explicit
+ * transforms, and spreading three hundred thousand arguments into `Math.max`
+ * exceeds the engine's argument limit and throws instead of measuring.
+ */
 const maximumInstanceScale = (
   instanceSet: IAutoMovieCompiledInstanceSet,
 ): number => {
-  if (instanceSet.layout.kind === "explicit")
-    return Math.max(
-      Number.EPSILON,
-      ...instanceSet.layout.transforms.flatMap((transform) => [
+  if (instanceSet.layout.kind === "explicit") {
+    let maximum = Number.EPSILON;
+    for (const transform of instanceSet.layout.transforms)
+      maximum = Math.max(
+        maximum,
         transform.scale.x,
         transform.scale.y,
         transform.scale.z,
-      ]),
-    );
+      );
+    return maximum;
+  }
   const range = instanceSet.variation.scale3;
   return range === undefined
     ? instanceSet.variation.scale.max
@@ -577,8 +633,10 @@ const stableInterpolate = (from: number, to: number, ratio: number): number =>
  * channels.
  */
 const exactPaletteMaterial = (material: THREE.Material): THREE.Material => {
-  const clone = material.clone();
-  if ("color" in clone && clone.color instanceof THREE.Color)
-    clone.color.set(0xffffff);
+  // A three.js material either carries a diffuse `color` or has none at all;
+  // there is no third state to test for, so the presence of the channel is the
+  // whole question.
+  const clone = material.clone() as THREE.Material & { color?: THREE.Color };
+  clone.color?.set(0xffffff);
   return clone;
 };

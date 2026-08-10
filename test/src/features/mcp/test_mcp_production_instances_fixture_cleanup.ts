@@ -348,7 +348,7 @@ export const test_mcp_production_instances_fixture_cleanup = (): void => {
         lifecycles: [
           {
             acquisition: "constfixture=productionFixture();",
-            bodyStatements: 36,
+            bodyStatements: 46,
             catchBodies: ["productionInstancesFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -356,14 +356,14 @@ export const test_mcp_production_instances_fixture_cleanup = (): void => {
             finallyBodies: [
               "preserveProductionInstancesFixtureCleanup(productionInstancesFailure,()=>fixture.dispose(),);",
             ],
-            index: 35,
+            index: 45,
             ownerParameters: [],
             prefixDigest:
-              "45fd00dbaeb416774c467b785c5863ba88612f7b5718512d6e65601de7f11011",
-            prefixStatements: 33,
+              "2757dbe48633cb967f9b19ea1d628a22b1b5d8d70456842310b7653a90a0a786",
+            prefixStatements: 43,
             tryDigest:
-              "d0d3a8b3a495d59c6ee9060b0ad8ec4105b0cc49c82ab0d575bfb9e188c14820",
-            tryStatements: 12,
+              "4367c0e1d7352d88ab1b3c17708112784fb7a4b694d344fe24c9bd036a1d1154",
+            tryStatements: 15,
           },
         ],
       },

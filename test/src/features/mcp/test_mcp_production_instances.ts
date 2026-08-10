@@ -1,16 +1,19 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieInstanceSetDesign,
+  IAutoMovieModelRecipe,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
   AUTOMOVIE_INSTANCE_CHUNK_SIZE,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledInstanceSet,
   materializeCompiledInstanceSetInventory,
   materializeInstanceSlot,
   materializeInstanceSlots,
+  materializeProductionModels,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -206,10 +209,14 @@ export const test_mcp_production_instances = (): void => {
   );
 
   const recipes = new Map([[modelRecipe().id, modelRecipe()]]);
-  const alternateRecipe = {
+  // A prototype recipe is an ordinary tracked model recipe and answers to the
+  // same design gate: an empty `lod` is refused there, so a fixture that
+  // declared one would never be written and every prototype reference to it
+  // would dangle at compile time.
+  const alternateRecipe: IAutoMovieModelRecipe = {
     ...modelRecipe(),
     id: "alternate-prop",
-    lod: [],
+    lod: [{ tier: "hero", maxDistance: null, recipe: "alternate-prop" }],
   };
   recipes.set(alternateRecipe.id, alternateRecipe);
   const lattice: IAutoMovieInstanceSetDesign = {
@@ -333,6 +340,118 @@ export const test_mcp_production_instances = (): void => {
       compiledExplicitDigest: true,
     },
   );
+  // A registered rigid glTF is a prototype like any other: the recipe supplies
+  // the identity and the manifest-sealed binding supplies the bytes, the LOD
+  // members and the measurement envelope the viewer culls against.
+  const panelDigest =
+    "sha256:0000000000000000000000000000000000000000000000000000000000000001" as const;
+  const externalBinding: IAutoMovieExternalModelRuntimeBinding = {
+    asset: "public/models/panel.glb",
+    profile: "gltf-static-v1",
+    lod: [
+      {
+        level: "near",
+        asset: "public/models/panel.glb",
+        digest: panelDigest,
+        profile: "gltf-static-v1",
+        humanoidBones: [],
+      },
+    ],
+    assets: [{ path: "public/models/panel.glb", digest: panelDigest }],
+    humanoidBones: [],
+    collision: {
+      recipe: "box-v1",
+      parameters: { width: 1, height: 2, depth: 1 },
+    },
+    measurement: {
+      recipe: "box-v1",
+      parameters: { width: 1, height: 2, depth: 1 },
+    },
+  };
+  const externalRecipe: IAutoMovieModelRecipe = {
+    ...modelRecipe(),
+    id: "registered-panel",
+    role: "prop",
+    archetype: "primitive-prop",
+    parameters: { shape: "box", width: 1, height: 2, depth: 1 },
+    capabilities: [],
+    attachments: [],
+    lod: [{ tier: "near", maxDistance: null, recipe: "registered-panel" }],
+  };
+  const externalRecipes = new Map([
+    [modelRecipe().id, modelRecipe()],
+    [externalRecipe.id, externalRecipe],
+  ]);
+  const externalModels = new Map([[externalRecipe.id, externalBinding]]);
+  const externalSet: IAutoMovieInstanceSetDesign = {
+    ...instanceSet("registered-panels", 2, {
+      kind: "lattice",
+      rows: 1,
+      columns: 2,
+      layers: 1,
+      spacing: { x: 1.4, y: 3, z: 0.1 },
+    }),
+    prototypes: [{ id: "panel", modelRecipe: externalRecipe.id, weight: 1 }],
+  };
+  const compiledExternal = materializeCompiledInstanceSet(
+    externalSet,
+    world,
+    externalRecipes,
+    externalModels,
+  );
+  const externalRuntime = materializeProductionModels(
+    externalRecipes,
+    externalModels,
+  ).get(externalRecipe.id)!;
+  const generatedRuntime = materializeProductionModels(
+    externalRecipes,
+    externalModels,
+  ).get(modelRecipe().id)!;
+  TestValidator.equals(
+    "a registered rigid glTF prototype resolves to its sealed external model",
+    namedFacts([
+      [
+        "externalPrototypeModel",
+        () =>
+          compiledExternal.prototypes?.find(
+            (prototype) => prototype.id === "panel",
+          )?.lod[0]?.model === externalRuntime.id,
+      ],
+      ["externalOrigin", () => externalRuntime.origin === "imported"],
+      ["externalAsset", () => externalRuntime.asset === externalBinding.asset],
+      [
+        "externalProfile",
+        () => externalRuntime.imported?.profile === "gltf-static-v1",
+      ],
+      [
+        // The byte ledger travels with the model, so a host that decodes this
+        // prototype is decoding exactly what the compiler sealed.
+        "externalClosure",
+        () =>
+          JSON.stringify(externalRuntime.imported?.assets) ===
+          JSON.stringify(externalBinding.assets),
+      ],
+      [
+        // Negative twin: the generated prototype of the same set is untouched
+        // by the binding and stays a compiler-owned recipe.
+        "generatedUntouched",
+        () =>
+          generatedRuntime.origin === "generated" &&
+          generatedRuntime.asset === null,
+      ],
+      ["externalProjectionRadius", () => compiledExternal.projectionRadius > 0],
+    ]),
+    {
+      externalPrototypeModel: true,
+      externalOrigin: true,
+      externalAsset: true,
+      externalProfile: true,
+      externalClosure: true,
+      generatedUntouched: true,
+      externalProjectionRadius: true,
+    },
+  );
+
   const highCount = {
     ...scatter,
     count: AUTOMOVIE_INSTANCE_CHUNK_SIZE * 2 + 1,
@@ -364,6 +483,71 @@ export const test_mcp_production_instances = (): void => {
         () => inventory.roadside?.route?.id === route.id,
       ],
       ["inventoryTreesRoute", () => inventory.trees?.route === null],
+      [
+        // A set that declares none of the expanded features keeps exactly the
+        // shape it always had. Every one of these keys is digested, so gaining
+        // one would change the compiled bytes of productions already shipped.
+        "legacyCompiledKeys",
+        () =>
+          JSON.stringify(Object.keys(compact)) ===
+          JSON.stringify([
+            "version",
+            "id",
+            "count",
+            "modelRecipe",
+            "layout",
+            "route",
+            "anchor",
+            "facingDeg",
+            "seed",
+            "variation",
+            "bounds",
+            "centroid",
+            "projectionRadius",
+            "chunks",
+            "lod",
+            "digest",
+          ]),
+      ],
+      [
+        "legacySlotKeys",
+        () =>
+          JSON.stringify(Object.keys(gridSlots[0]!)) ===
+          JSON.stringify([
+            "slot",
+            "node",
+            "modelRecipe",
+            "position",
+            "facingDeg",
+            "scale",
+            "palette",
+            "traits",
+          ]),
+      ],
+      [
+        "enhancedCompiledKeys",
+        () =>
+          JSON.stringify(Object.keys(compiledLattice)) ===
+          JSON.stringify([
+            "version",
+            "id",
+            "count",
+            "modelRecipe",
+            "prototypes",
+            "layout",
+            "route",
+            "anchor",
+            "facingDeg",
+            "seed",
+            "variation",
+            "bounds",
+            "centroid",
+            "projectionRadius",
+            "chunks",
+            "lod",
+            "digest",
+          ]),
+      ],
     ]),
     {
       compactChunks: true,
@@ -374,6 +558,9 @@ export const test_mcp_production_instances = (): void => {
       keysInventory: true,
       inventoryRoadsideRoute: true,
       inventoryTreesRoute: true,
+      legacyCompiledKeys: true,
+      legacySlotKeys: true,
+      enhancedCompiledKeys: true,
     },
   );
 
@@ -395,29 +582,46 @@ export const test_mcp_production_instances = (): void => {
     // The oracle only proves anything while it is actually injected; a builder
     // signature the scaffold no longer writes would leave this case compiling
     // untouched source and reporting success.
+    // A divergence here is a difference in the last bits of a transform, so the
+    // refusal has to carry both readings. "diverged" alone names the fact and
+    // hides the fact's content, and the sandbox has no other way to report it.
+    const oracle = (
+      label: string,
+      set: string,
+      slot: number,
+      expected: unknown,
+    ): string => `
+  {
+    const sampled = context.engine.instanceSlot(${JSON.stringify(
+      set,
+    )}, ${slot});
+    const expected = ${JSON.stringify(JSON.stringify(expected))};
+    if (JSON.stringify(sampled) !== expected)
+      throw new Error(
+        ${JSON.stringify(`${label} instance oracle diverged: sandbox `)} +
+          JSON.stringify(sampled) +
+          " but compiler " +
+          expected,
+      );
+  }`;
     const injected = source.replace(
       "): IAutoMovieProductionShotProgram => {",
-      `): IAutoMovieProductionShotProgram => {
-  const sampledGrid = context.engine.instanceSlot("civilians", 0);
-  const sampledScatter = context.engine.instanceSlot("trees", 0);
-  const sampledRoute = context.engine.instanceSlot("roadside", 0);
-  const sampledLattice = context.engine.instanceSlot("facade-windows", 9999);
-  const sampledExplicit = context.engine.instanceSlot("spiral-balusters", 1);
-  if (JSON.stringify(sampledGrid) !== ${JSON.stringify(
-    JSON.stringify(gridSlots[0]),
-  )}) throw new Error("grid instance oracle diverged");
-  if (JSON.stringify(sampledScatter) !== ${JSON.stringify(
-    JSON.stringify(scatterSlots[0]),
-  )}) throw new Error("scatter instance oracle diverged");
-  if (JSON.stringify(sampledRoute) !== ${JSON.stringify(
-    JSON.stringify(routeSlots[0]),
-  )}) throw new Error("route instance oracle diverged");
-  if (JSON.stringify(sampledLattice) !== ${JSON.stringify(
-    JSON.stringify(latticeSlot),
-  )}) throw new Error("lattice instance oracle diverged");
-  if (JSON.stringify(sampledExplicit) !== ${JSON.stringify(
-    JSON.stringify(explicitSlot),
-  )}) throw new Error("explicit instance oracle diverged");`,
+      `): IAutoMovieProductionShotProgram => {${oracle(
+        "grid",
+        "civilians",
+        0,
+        gridSlots[0],
+      )}${oracle("scatter", "trees", 0, scatterSlots[0])}${oracle(
+        "route",
+        "roadside",
+        0,
+        routeSlots[0],
+      )}${oracle("lattice", "facade-windows", 9_999, latticeSlot)}${oracle(
+        "explicit",
+        "spiral-balusters",
+        1,
+        explicitSlot,
+      )}`,
     );
     if (injected === source)
       throw new Error("Scaffold source no longer declares a shot builder.");
@@ -425,9 +629,17 @@ export const test_mcp_production_instances = (): void => {
     const output = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
+    // The compiled shot is read straight off disk below, so a refused compile
+    // has to be reported as the refusal it is. Reading a file the compiler
+    // deliberately never wrote replaces the diagnostics that explain the
+    // refusal with a bare ENOENT, which names nothing.
     const outputSucceeded = productionCompileSucceeded(
       "world instance fixture",
       output,
+    );
+    TestValidator.predicate(
+      "the world instance fixture compiles before its artifact is read",
+      outputSucceeded,
     );
     const compiled = JSON.parse(
       fs.readFileSync(
