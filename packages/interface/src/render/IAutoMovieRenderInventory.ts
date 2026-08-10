@@ -10,13 +10,13 @@ import {
  * The inventory is the evidence a budget is checked against, and it is
  * deliberately separate from that check so that a headless capture and a live
  * viewer can read one measurement instead of each counting for itself. The
- * render job's budget preflight measures it. The live viewer does not: it
- * counts what its scene graph actually submitted, through the viewer's own
- * render observation, and nothing compares the two, so a disagreement between
- * them is a defect the report could name rather than one it does. Nothing here
- * is an observation of a frame that was drawn; these are the exact quantities
- * the compiled artifact commits the renderer to, so the numbers exist before
- * any GPU does.
+ * render job's budget preflight measures it. Nothing on the viewer side does:
+ * the viewer package answers the other question instead, counting what a scene
+ * graph actually submitted, and nothing holds the two answers against each
+ * other, so a disagreement between them is a defect the report could name
+ * rather than one it does. Nothing here is an observation of a frame that was
+ * drawn; these are the exact quantities the compiled artifact commits the
+ * renderer to, so the numbers exist before any GPU does.
  *
  * The three per-kind arrays below are not a complete decomposition of the
  * totals. A cloth panel, a planting cluster and a water surface are none of a

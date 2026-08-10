@@ -39,12 +39,10 @@ export interface IAutoMovieRenderObservation {
  * front of you actually submits, and {@link auditAutoMovieRenderObservation} is
  * where the two are held against each other instead of trusted separately.
  *
- * The scaffold viewer's shot and film pages call it and publish the count on
- * their capture handle, so a live viewer and the headless capture driving that
- * same page do read one function's answer rather than two. The comparison is
- * what nobody runs: {@link auditAutoMovieRenderObservation} is called by the
- * test suite alone, so a scene that outdraws its report is detectable rather
- * than detected.
+ * "The viewer and the capture agree" is not a checked fact. Whoever counts a
+ * scene, nothing holds the count against the report that cleared it: the test
+ * suite is the only caller of that audit, so a scene which outdraws its report
+ * is detectable rather than detected.
  *
  * Only DRAWN geometry counts. An object hidden by its own flag or by any
  * ancestor's submits nothing, and counting it would make a culled crowd look
