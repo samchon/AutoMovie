@@ -137,8 +137,10 @@ export interface IAutoMoviePlantingGrowth {
  * A branch whose base is already outside is not grown at all; a branch that
  * crosses the boundary is cut exactly at the crossing, and only the children
  * that emerge before the cut survive. That is pruning, not clipping in the
- * renderer: the derived structure is what a quantity take-off and a collision
- * check both read.
+ * renderer: what the envelope removes is gone from the derived structure every
+ * reader of the plant works from. The installation binding's canopy collision
+ * check reads that structure today. A quantity take-off would read the same
+ * one, and none measures planting yet.
  */
 export type IAutoMoviePruningEnvelope =
   | IAutoMoviePruningEnvelope.INone
