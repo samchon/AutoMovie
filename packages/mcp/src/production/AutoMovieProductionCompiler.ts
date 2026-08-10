@@ -5860,13 +5860,13 @@ const compilerAssetInventory = (
       diagnostic(
         "asset-provenance-incomplete",
         asset.path,
-        `Asset "${asset.path}" lacks a full source URL, original/current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
+        `Asset "${asset.path}" lacks a complete acquisition (exactly one of a fetched "original" with a real source URL and SHA-256, or a "generated" provider/model/prompt/output ledger), current SHA-256, license, processing identity, or reasoned use. Complete the distribution ledger before compiling.`,
       );
     if (assetProcessingOmitted(asset))
       diagnostic(
         "asset-processing-missing",
         asset.path,
-        `Asset "${asset.path}" differs from its original digest but records no processing steps. Record the reproducible transformation chain before compiling.`,
+        `Asset "${asset.path}" differs from the digest it was acquired or generated at but records no processing steps. Record the reproducible transformation chain before compiling.`,
       );
     if (
       isExternalModelAsset(asset.path) &&
