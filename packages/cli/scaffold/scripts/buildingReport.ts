@@ -200,7 +200,13 @@ export interface IAutoMovieBuildingReport {
   services: IAutoMovieBuildingServices[];
   /** Every analysis run submitted for this building, in study order. */
   runs: IAutoMovieAnalysisRun[];
-  /** The bounded verdict over those runs, or null when no site is declared. */
+  /**
+   * The bounded verdict over those runs, or null when no run was produced.
+   *
+   * A verdict over nothing would clear everything, so no report is written
+   * rather than an empty one. Why there is no run — no study declared, or a
+   * declared study whose site the production never stated — is in {@link gaps}.
+   */
   analysis: IAutoMovieAnalysisReport | null;
   /**
    * Every gap the artifacts above declared, namespaced by the artifact that
@@ -385,6 +391,15 @@ export const autoMovieBuildingServices = (props: {
   /** Sink for wet zones that reached no water. */
   gaps: IAutoMovieBuildingGap[];
 }): IAutoMovieBuildingServices => {
+  // Lowered before anything reads the zones, because this call is the one that
+  // refuses an unsound graph. The drainage lowering answers only for the
+  // placement it performs and trusts the graph it was handed, so running it
+  // first would report a misplaced gully on a network whose real fault is a
+  // dangling port.
+  const contribution = lowerServiceNetwork({
+    network: props.network,
+    environment: props.environment,
+  });
   const drainage: IAutoMovieFluidDomain[] = [];
   for (const zone of props.network.zones) {
     const feature = props.waterFeatures.find(
@@ -415,14 +430,7 @@ export const autoMovieBuildingServices = (props: {
       }),
     );
   }
-  return {
-    network: props.network.id,
-    contribution: lowerServiceNetwork({
-      network: props.network,
-      environment: props.environment,
-    }),
-    drainage,
-  };
+  return { network: props.network.id, contribution, drainage };
 };
 
 /**
@@ -457,17 +465,16 @@ export const autoMovieBuildingAnalysis = (props: {
   const runs: IAutoMovieAnalysisRun[] = [];
   const identity = (domain: string, index: number): string =>
     `${props.environment.id}.${domain}.${index}`;
+  const sited = props.studies.daylight.length + props.studies.envelope.length;
+  const declared =
+    sited + props.studies.acoustic.length + props.studies.air.length;
 
   if (props.context === null) {
-    if (
-      props.studies.daylight.length !== 0 ||
-      props.studies.envelope.length !== 0
-    )
+    if (sited !== 0)
       props.gaps.push({
         subject: "analysis/environment-context",
         status: "not-run",
-        reason:
-          "daylight and envelope studies are declared, but the production design carries no environmentContext, so no sun, sky, reference ground or outdoor air was supplied to measure them against",
+        reason: `${sited} declared daylight or envelope study/studies read the site, and the production design carries no environmentContext, so no sun, sky, reference ground or outdoor air was supplied to measure them against`,
         remedy:
           "declare environmentContext on the production design with the instants this film wants answered, then derive again",
       });
@@ -524,7 +531,11 @@ export const autoMovieBuildingAnalysis = (props: {
     );
   });
 
-  if (runs.length === 0) {
+  // Declaring nothing and declaring a study the site could not answer are two
+  // different facts, and only the first is a missing study. Reporting both as
+  // "no study is declared" would tell an author to write one they already
+  // wrote.
+  if (declared === 0)
     props.gaps.push({
       subject: "analysis/studies",
       status: "not-run",
@@ -532,8 +543,7 @@ export const autoMovieBuildingAnalysis = (props: {
       remedy:
         "declare the studies this production wants in the script's own study block, or drop the domains it requires",
     });
-    return { runs, report: null };
-  }
+  if (runs.length === 0) return { runs, report: null };
   return {
     runs,
     report: summarizeAutoMovieAnalysis({
