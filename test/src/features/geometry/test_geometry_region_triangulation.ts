@@ -105,8 +105,8 @@ const inner = [
  *    covering exactly its own area, which the convex kernel refuses outright.
  * 2. A square holding a square hole bridges into one ring of ten corners, resolves
  *    to eight triangles, and covers the outer ring less the hole.
- * 3. Two holes bridge independently, and a hole inside a concave notch bridges
- *    around the reflex corner that hides the nearest outer edge.
+ * 3. Two holes bridge independently, and a hole inside a concave outer ring
+ *    bridges against a contour that is not convex.
  * 4. Winding is canonicalized, not demanded: a clockwise outer ring and a
  *    counter-clockwise hole come back counter-clockwise and clockwise, and the
  *    triangles are identical to the ones the canonical authoring produces.
@@ -179,9 +179,8 @@ export const test_geometry_region_triangulation = (): void => {
       ],
     ],
   });
-  // A concave outer ring whose notch stands between most corner pairs and the
-  // hole, so the bridge search has to reject candidates that cross the contour
-  // before it finds the pair that does not.
+  // A hole inside a concave outer ring, so the contour the bridge is chosen
+  // against is not convex.
   const notched = triangulateAutoMovieRegion({
     outer: [
       { x: 0, y: 0 },
@@ -203,7 +202,7 @@ export const test_geometry_region_triangulation = (): void => {
     ],
   });
   TestValidator.equals(
-    "several holes and a hole behind a reflex corner each bridge and cover",
+    "several holes and a hole inside a concave contour each bridge and cover",
     namedFacts([
       ["twoHoles", () => coversExactly(twoHoles, 16 - 1 - 1)],
       ["twoHoleTriangles", () => twoHoles.triangles.length === 14 * 3],

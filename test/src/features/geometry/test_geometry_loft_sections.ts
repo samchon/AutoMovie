@@ -80,9 +80,9 @@ const frustum = (near: number, far: number, height: number): number =>
  *
  * Scenarios:
  *
- * 1. A concave L section and a hollow section each loft to a closed prism of `area
- *    * length`, which is the concave and holed sweep the convex path refuses
- *    outright.
+ * 1. A concave L section and a hollow section each loft to a closed prism of the
+ *    section's own area times the path length, which is the concave and holed
+ *    sweep the convex path refuses outright.
  * 2. A taper between two sections is a pyramid frustum to the last digit, and a
  *    section waisted at a declared midpoint is two of them.
  * 3. A station between two declared sections carries the blend: the midpoint of a
@@ -277,6 +277,21 @@ export const test_geometry_loft_sections = (): void => {
           sections: twin(ell),
         }),
       "loft path[1] must be finite",
+    ],
+    [
+      // Distinct neighbours are not enough: a path that doubles back leaves the
+      // centred tangent at the fold with no direction at all.
+      "path folding back on itself",
+      () =>
+        loftAutoMovieSections({
+          path: [
+            { x: 0, y: 0, z: 0 },
+            { x: 1, y: 0, z: 0 },
+            { x: 0, y: 0, z: 0 },
+          ],
+          sections: twin(ell),
+        }),
+      "loft path around point 1 is degenerate",
     ],
     [
       "repeated path point",
