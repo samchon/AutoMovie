@@ -2171,6 +2171,23 @@ const compileShotSource = (
       authoredModels: structuredClone(sourceRuntime.authoredModels),
       props: structuredClone(program.value.props ?? []),
       builtEnvironments: structuredClone(program.value.builtEnvironments ?? []),
+      // Every fold a building binds travels with the artifact, because the
+      // renderer reads the artifact and nothing else. A record validated at
+      // compile and dropped here is a pond the compiler approved and the frame
+      // does not contain.
+      designReferences: structuredClone(program.value.designReferences ?? []),
+      designEvidence: structuredClone(program.value.designEvidence ?? []),
+      designLineages: structuredClone(program.value.designLineages ?? []),
+      fluidDomains: structuredClone(program.value.fluidDomains ?? []),
+      waterFeatures: structuredClone(program.value.waterFeatures ?? []),
+      softBodyDomains: structuredClone(program.value.softBodyDomains ?? []),
+      softFurnishings: structuredClone(program.value.softFurnishings ?? []),
+      plantingDomains: structuredClone(program.value.plantingDomains ?? []),
+      plantingClusters: structuredClone(program.value.plantingClusters ?? []),
+      plantingInstallations: structuredClone(
+        program.value.plantingInstallations ?? [],
+      ),
+      serviceNetworks: structuredClone(program.value.serviceNetworks ?? []),
       scene: { ...scene, lights: inherited },
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       formationSlotMotions: structuredClone(

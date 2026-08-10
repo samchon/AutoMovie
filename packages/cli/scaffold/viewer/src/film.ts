@@ -19,6 +19,13 @@ interface IFilmLayer {
 }
 
 const { canvas, status } = viewerDocument();
+// The delivery's own tone mapping, carried on the page URL so the capture and
+// this viewer read one value instead of each deciding a curve.
+const requestedTone = new URLSearchParams(window.location.search).get("tone");
+const deliveryTone =
+  requestedTone === "acesFilmic" || requestedTone === "none"
+    ? requestedTone
+    : undefined;
 const timelineResponse = await fetch("/__automovie/film.json");
 if (timelineResponse.ok === false)
   throw new Error(
