@@ -401,9 +401,8 @@ const skyIlluminance = (props: {
   solids: readonly IAutoMovieAnalysisSolid[];
   directions: readonly IAutoMovieVector3[];
 }): number => {
-  const directions = props.directions;
   let visible = 0;
-  for (const direction of directions) {
+  for (const direction of props.directions) {
     if (!autoMovieSkyward(direction, props.ground)) continue;
     if (
       autoMovieRayObstructed({
@@ -416,7 +415,7 @@ const skyIlluminance = (props: {
       continue;
     ++visible;
   }
-  return (props.illuminance * visible) / directions.length;
+  return (props.illuminance * visible) / props.directions.length;
 };
 
 /** Summed luminaire illuminance at one point. */

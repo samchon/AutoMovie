@@ -59,7 +59,11 @@ export const buildAnalysisOverlayObject = (props: {
   run: IAutoMovieAnalysisRun;
   /** Metric key whose spatial field is drawn. */
   metric: string;
-  /** Point size in world metres; defaults to `0.1`. */
+  /**
+   * Point size in world metres for the material this call creates; defaults to
+   * `0.1`. A lent {@link material} keeps its own size, because the caller that
+   * built it already decided.
+   */
   size?: number;
   /** Explicit ramp domain; defaults to the drawn samples' own range. */
   domain?: { min: number; max: number };
