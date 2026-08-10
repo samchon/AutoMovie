@@ -71,7 +71,15 @@ export const resolveAutoMovieDrawingFeature = (
   )!;
 
   if (feature.kind === "axis") {
-    if (feature.index < 0 || feature.index > 2)
+    // Integral on purpose: a fractional index names no axis, and without this
+    // it would select none of the three, produce a zero direction, and be
+    // reported as a wall flattened by its own scale — a true message about the
+    // wrong thing, which is worse than no message.
+    if (
+      !Number.isInteger(feature.index) ||
+      feature.index < 0 ||
+      feature.index > 2
+    )
       return stale(
         `element "${element.id}" axis index must be 0, 1 or 2, but was ${feature.index}`,
       );

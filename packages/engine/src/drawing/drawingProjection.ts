@@ -485,10 +485,26 @@ export const autoMovieDrawingCellVolume = (
   // Normalized so a plane's offset is a true distance: the design deliberately
   // does not require a unit normal, and a cone height taken against an
   // unnormalized one would scale the volume by whatever length the author wrote.
-  const scaled = planes.map((plane) => ({
-    normal: Vector3.normalize(plane.normal),
-    offset: plane.offset / Vector3.length(plane.normal),
-  }));
+  //
+  // Deduplicated for a sharper reason. The volume below is the sum of the cones
+  // standing on the solid's faces, so a plane written twice — or written once
+  // long and once short — would stand a second cone on a face that exists once
+  // and inflate the solid by that whole face. A repeated half-space bounds
+  // nothing new, and it must measure nothing new.
+  const scaled = [
+    ...new Map(
+      planes.map((plane) => {
+        const normal = Vector3.normalize(plane.normal);
+        const offset = plane.offset / Vector3.length(plane.normal);
+        return [
+          [normal.x, normal.y, normal.z, offset]
+            .map(roundAutoMovieDrawingScalar)
+            .join(","),
+          { normal, offset },
+        ] as const;
+      }),
+    ).values(),
+  ];
   const vertices: IAutoMovieVector3[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < scaled.length; ++i)

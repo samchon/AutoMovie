@@ -278,14 +278,14 @@ const dashAttribute = (dashes: readonly number[]): Array<[string, string]> =>
 /**
  * Format one page millimetre value.
  *
- * Fixed decimals so two runs cannot differ in a trailing digit, and negative
- * zero collapsed to zero so a coordinate that lands on an axis prints the same
- * regardless of which side it approached from.
+ * Fixed decimals so two runs cannot differ in a trailing digit. Rounding first
+ * is also what keeps a coordinate that lands on an axis from printing its sign:
+ * a value a whisker below zero rounds to negative zero, which `toFixed` writes
+ * as `0.000` rather than `-0.000`, so which side the geometry approached from
+ * cannot change the bytes.
  */
-const number = (value: number): string => {
-  const rounded = Math.round(value * 1000) / 1000;
-  return (Object.is(rounded, -0) ? 0 : rounded).toFixed(3);
-};
+const number = (value: number): string =>
+  (Math.round(value * 1000) / 1000).toFixed(3);
 
 const xml = (text: string): string =>
   text
