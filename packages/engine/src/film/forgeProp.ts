@@ -185,6 +185,7 @@ const gateImportedAppearance = (
   const ledger = new Map<string, string>();
   imported.assets.forEach((entry, index) => {
     const ap = `${path}.imported.assets[${index}]`;
+    const known = ledger.has(entry.path);
     if (entry.path.trim().length === 0)
       out.push(
         "type",
@@ -192,7 +193,7 @@ const gateImportedAppearance = (
         "a sealed asset path must be a non-empty project-relative path",
         entry.path,
       );
-    else if (ledger.has(entry.path))
+    else if (known)
       out.push(
         "type",
         `${ap}.path`,
@@ -201,7 +202,7 @@ const gateImportedAppearance = (
       );
     // The first entry wins, so a path sealed twice is reported once above
     // rather than turning every later reader of it into a second complaint.
-    if (!ledger.has(entry.path)) ledger.set(entry.path, entry.digest);
+    if (!known) ledger.set(entry.path, entry.digest);
     if (!SEALED_DIGEST.test(entry.digest))
       out.push(
         "type",
