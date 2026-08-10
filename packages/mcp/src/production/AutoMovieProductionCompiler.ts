@@ -2175,19 +2175,11 @@ const compileShotSource = (
       // renderer reads the artifact and nothing else. A record validated at
       // compile and dropped here is a pond the compiler approved and the frame
       // does not contain.
-      designReferences: structuredClone(program.value.designReferences ?? []),
-      designEvidence: structuredClone(program.value.designEvidence ?? []),
-      designLineages: structuredClone(program.value.designLineages ?? []),
-      fluidDomains: structuredClone(program.value.fluidDomains ?? []),
-      waterFeatures: structuredClone(program.value.waterFeatures ?? []),
-      softBodyDomains: structuredClone(program.value.softBodyDomains ?? []),
-      softFurnishings: structuredClone(program.value.softFurnishings ?? []),
-      plantingDomains: structuredClone(program.value.plantingDomains ?? []),
-      plantingClusters: structuredClone(program.value.plantingClusters ?? []),
-      plantingInstallations: structuredClone(
-        program.value.plantingInstallations ?? [],
-      ),
-      serviceNetworks: structuredClone(program.value.serviceNetworks ?? []),
+      //
+      // A fold nobody declared stays absent rather than arriving as an empty
+      // array: the artifact is content-addressed, and eleven empty keys would
+      // rewrite the digest of every production that has never heard of water.
+      ...boundFolds(program.value),
       scene: { ...scene, lights: inherited },
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       formationSlotMotions: structuredClone(
@@ -2399,6 +2391,31 @@ const buildingBoundDiagnostics = (
   return messages;
 };
 
+/** The building-bound folds a program declared, absent when it declared none. */
+const boundFolds = (
+  program: IAutoMovieProductionShotProgram,
+): Partial<IAutoMovieShotSourceOutput> => {
+  const carried: Record<string, unknown> = {};
+  for (const key of [
+    "designReferences",
+    "designEvidence",
+    "designLineages",
+    "fluidDomains",
+    "waterFeatures",
+    "softBodyDomains",
+    "softFurnishings",
+    "plantingDomains",
+    "plantingClusters",
+    "plantingInstallations",
+    "serviceNetworks",
+  ] as const) {
+    const records = program[key];
+    if (records === undefined || records.length === 0) continue;
+    carried[key] = structuredClone(records);
+  }
+  return carried as Partial<IAutoMovieShotSourceOutput>;
+};
+
 interface ISourceRuntime {
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
   authoredModels: IAutoMovieModel[];
@@ -2433,7 +2450,12 @@ const sourceRuntimeOf = (props: {
       message,
     });
   };
-  const acceptModel = (model: IAutoMovieModel, modelPath: string): void => {
+  const acceptModel = (
+    model: IAutoMovieModel,
+    modelPath: string,
+    /** The registered appearance this model borrows, when a prop cites one. */
+    modelRef: string | null = null,
+  ): void => {
     const digest = digestAutoMovieBytes(canonicalAutoMovieJsonBytes(model));
     const existing = authoredDigests.get(model.id);
     if (existing !== undefined) {
@@ -2450,17 +2472,60 @@ const sourceRuntimeOf = (props: {
       );
       return;
     }
-    if (model.origin !== "generated")
-      report(
-        `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
-      );
+    // A prop that cites a registered appearance is the one case where source
+    // may hand back an imported model, and it is only allowed to hand back the
+    // one the compiler already sealed. Everything the prop means -- its proxy
+    // parts, its body, its affordances, its articulation -- stays in the
+    // record, so borrowing bytes never buys an escape from the semantics.
+    if (modelRef === null) {
+      if (model.origin !== "generated")
+        report(
+          `${modelPath}.origin is "${model.origin}". Shot source may create generated geometry only; register imported asset bytes in the production model registry and cite that runtime id.`,
+        );
+    } else {
+      const registered = runtimeIds.has(modelRef)
+        ? (props.runtimeModels[modelRef] ??
+          Object.values(props.runtimeModels).find(
+            (candidate) => candidate.id === modelRef,
+          ))
+        : undefined;
+      if (registered === undefined)
+        report(
+          `${modelPath} cites modelRef "${modelRef}", which does not resolve to a compiler-owned runtime model. Register the asset or model recipe, or drop the reference.`,
+        );
+      else if (
+        registered.imported === undefined ||
+        registered.imported === null
+      )
+        report(
+          `${modelPath} cites modelRef "${modelRef}", which is not a registered external appearance. Register glTF, GLB or VRM bytes for it, or drop the reference.`,
+        );
+      else if (
+        digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(registered.imported),
+        ) !==
+        digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(model.imported ?? null),
+        )
+      )
+        report(
+          `${modelPath}.imported is not the closure the compiler sealed for "${modelRef}". Restate the registered closure verbatim, or recompile after registering the asset again.`,
+        );
+      else if (model.asset !== registered.asset)
+        report(
+          `${modelPath}.asset "${String(model.asset)}" is not the registered appearance "${String(registered.asset)}" of "${modelRef}".`,
+        );
+    }
     const validation = validateModel({ model });
     if (validation.success === false)
       for (const violation of validation.violations)
         report(
           `${modelPath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the source-owned model before compiling the shot.`,
         );
-    if (model.origin !== "generated" || validation.success === false) return;
+    // The origin refusal above already reported a source-authored import, and a
+    // cited appearance is refused by the reference checks rather than by its
+    // origin, so what remains here is only whether the record itself validated.
+    if (validation.success === false) return;
     authoredModels.push(model);
     runtimeModels[model.id] = model;
   };
@@ -2469,7 +2534,11 @@ const sourceRuntimeOf = (props: {
     acceptModel(model, `$program.models[${index}]`),
   );
   (props.program.props ?? []).forEach((prop, index) =>
-    acceptModel(prop.model, `$program.props[${index}].model`),
+    acceptModel(
+      prop.model,
+      `$program.props[${index}].model`,
+      prop.modelRef ?? null,
+    ),
   );
   (props.program.builtEnvironments ?? []).forEach((environment, index) => {
     const environmentPath = `$program.builtEnvironments[${index}]`;
