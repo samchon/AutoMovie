@@ -21,6 +21,7 @@ import {
   buildInstancedFormation,
   buildInstancedInstanceSet,
   buildPlantingObject,
+  buildPropArticulation,
   buildScene,
   buildSoftBodyObject,
 } from "@automovie/viewer";
@@ -93,6 +94,16 @@ export const createCompiledShotRuntime = async (
   const nodeVisualObjects = new Map(
     built.map((item) => [item.node.id, item.object.object] as const),
   );
+  // A prop's moving parts are nodes the scene never declared: the engine names
+  // them from the placement that carries them, and the same names are what a
+  // shot's object motions address. Building them here is what lets a compiled
+  // door actually turn instead of standing open in a still frame.
+  const articulation = buildPropArticulation({
+    scene: compiled.scene,
+    props: compiled.props ?? [],
+    nodeObjects,
+    modelObjects: new Map(built.map((item) => [item.node.id, item.object])),
+  });
   const formationObjects = compiled.formations.map((formation) =>
     buildInstancedFormation({
       formation,
@@ -304,8 +315,11 @@ export const createCompiledShotRuntime = async (
         applyPose(item.object, item.node.pose, item.model.skeleton);
     for (const item of players)
       item.player.update(Math.max(0, time - item.startOffset));
-    applyObjectMotions(compiled.shot.objectMotions, time, (node) =>
-      nodeObjects.get(node),
+    articulation.restore();
+    applyObjectMotions(
+      compiled.shot.objectMotions,
+      time,
+      (node) => nodeObjects.get(node) ?? articulation.joints.get(node),
     );
     // A flowing feature and a hung panel are solved at the second being drawn,
     // so a seek backwards shows what that second held rather than what the last

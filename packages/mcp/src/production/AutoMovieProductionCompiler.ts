@@ -2121,6 +2121,12 @@ const compileShotSource = (
       // none so its compiled artifact keeps the exact bytes it had before this
       // channel existed.
       lightMotions: program.value.lightMotions,
+      // The shot's own turning things: a building panel on its opening, a
+      // prop's leaf on its hinge. Without them the performance boundary has
+      // nothing to gate, so a source could author a door swing, pass every
+      // validator, and be dropped here without a word.
+      objectMotions: program.value.objectMotions,
+      props: program.value.props,
       models: Object.values(sourceRuntime.runtimeModels),
       previous: props.previous ?? undefined,
     },
