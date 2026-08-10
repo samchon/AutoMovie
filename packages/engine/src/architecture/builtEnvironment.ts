@@ -2716,12 +2716,13 @@ const validateSpaceShell = (
     );
     return;
   }
-  if (builtSpaceShellVolume(shell) <= 0)
+  const volume = builtSpaceShellVolume(shell);
+  if (volume <= 0)
     collector.push(
       "range",
       `${path}.triangles`,
       "shell encloses no positive volume: wind its facets counter-clockwise seen from outside the solid",
-      builtSpaceShellVolume(shell),
+      volume,
     );
 };
 
