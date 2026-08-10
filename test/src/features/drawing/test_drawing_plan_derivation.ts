@@ -511,6 +511,16 @@ export const test_drawing_plan_derivation = (): void => {
         },
       ],
       [
+        "one name written twice is one mistake, not two",
+        () =>
+          filterGap(["level-2", "level-2"], "twice").gaps.find(
+            (entry) => entry.subject === "view-space-filter",
+          )?.reason ===
+          filterGap(["level-2"], "once").gaps.find(
+            (entry) => entry.subject === "view-space-filter",
+          )?.reason,
+      ],
+      [
         "a filter every name of which the design declares reports nothing",
         () =>
           filterGap(["hall"], "known-only").gaps.every(
@@ -525,6 +535,7 @@ export const test_drawing_plan_derivation = (): void => {
     {
       "a filter of only unknown names draws nothing and reports the names": true,
       "one bad name beside a good one is still reported, and the good one draws": true,
+      "one name written twice is one mistake, not two": true,
       "a filter every name of which the design declares reports nothing": true,
       "an unfiltered view has no filter to be wrong about": true,
     },

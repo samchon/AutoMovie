@@ -115,7 +115,10 @@ export const deriveAutoMovieDrawing = (props: {
   // same way, because kinds are an open vocabulary with no registry to be
   // absent from, and a discipline that matches nothing is an honest empty
   // sheet rather than a mistake.
-  const unknownSpaces = view.spaces
+  // Deduplicated because the filter itself is: a name written twice restricts
+  // the view no further than a name written once, so counting it twice would
+  // report two mistakes where the author made one.
+  const unknownSpaces = [...new Set(view.spaces)]
     .filter((id) => !environment.spaces.some((space) => space.id === id))
     .sort(compareAutoMovieRenderIds);
   if (unknownSpaces.length !== 0)
