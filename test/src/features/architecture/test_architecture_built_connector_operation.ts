@@ -250,6 +250,20 @@ const runs = (): IAutoMovieBuiltEnvironment => ({
               { carriage: "counterweight", value: -STOREY / 2, serves: null },
             ],
           },
+          {
+            // The twin of the refusal below: a run that goes both ways may be
+            // driven backwards, and only a one-way run may not.
+            id: "descending",
+            drive: "reverse",
+            carriages: [
+              { carriage: "car", value: (3 * STOREY) / 2, serves: null },
+              {
+                carriage: "counterweight",
+                value: (-3 * STOREY) / 2,
+                serves: null,
+              },
+            ],
+          },
         ],
         state: "at-level-0",
       },
@@ -438,8 +452,9 @@ const carAt = (
  *    nothing, and a current state that does not resolve serves nothing either.
  * 8. Thirty-one malformed runs are each refused at their own path, including a car
  *    that does not stand in the floor it claims, a reverse drive on a one-way
- *    run, an element two members try to drive at once, and a state the scene
- *    could not stage even though the record's current one can.
+ *    run — which the two-way lift's own reverse state is the twin of — an
+ *    element two members try to drive at once, and a state the scene could not
+ *    stage even though the record's current one can.
  */
 export const test_architecture_built_connector_operation = (): void => {
   const source = runs();
