@@ -2265,6 +2265,20 @@ const sourceRuntimeOf = (props: {
     });
   });
 
+  // Lineage is checked for coherence here, where the shot that authored it is
+  // in hand, and bound to published identities later, where the production's
+  // assets are. Splitting it that way is what lets a phase cite a texture the
+  // shot itself never names.
+  (props.program.designLineages ?? []).forEach((lineage, index) => {
+    const lineagePath = `$program.designLineages[${index}]`;
+    const coherent = validateDesignLineage({ lineage });
+    if (coherent.success === false)
+      for (const violation of coherent.violations)
+        report(
+          `${lineagePath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the construction phase, alternative or derivation record before compiling the shot.`,
+        );
+  });
+
   const propPlacement = validatePropPlacements({
     props: props.program.props ?? [],
     set: props.program.stage.set ?? [],

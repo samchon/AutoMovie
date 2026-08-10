@@ -1,4 +1,5 @@
 import {
+  buildAutoMoviePolyhedron,
   buildAutoMovieWall,
   builtEnvironmentAdjacentSpaces,
   builtEnvironmentBuildingOfSpace,
@@ -7,12 +8,16 @@ import {
   builtEnvironmentSpaceNodes,
   builtEnvironmentSpaceSurfaces,
   extrudeAutoMovieProfile,
+  inspectAutoMovieMeshTopology,
   lowerBuiltEnvironment,
+  mergeAutoMovieMeshParts,
   mergeAutoMovieMeshes,
   mergeAutoMovieSpaces,
   mergeAutoMovieSubjectContributions,
   revolveAutoMovieProfile,
   sweepAutoMovieProfile,
+  tessellateSurface,
+  transformAutoMovieMesh,
 } from "@automovie/engine";
 
 import { AutoMovieSandboxEngineExport } from "./sandboxEngineSurface";
@@ -43,6 +48,7 @@ export type IAutoMovieSandboxEngineAnswer =
  */
 export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandboxEngineExport[] =
   [
+    "buildAutoMoviePolyhedron",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
     "builtEnvironmentBuildingOfSpace",
@@ -51,12 +57,16 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "builtEnvironmentSpaceNodes",
     "builtEnvironmentSpaceSurfaces",
     "extrudeAutoMovieProfile",
+    "inspectAutoMovieMeshTopology",
     "lowerBuiltEnvironment",
     "mergeAutoMovieMeshes",
+    "mergeAutoMovieMeshParts",
     "mergeAutoMovieSpaces",
     "mergeAutoMovieSubjectContributions",
     "revolveAutoMovieProfile",
     "sweepAutoMovieProfile",
+    "tessellateSurface",
+    "transformAutoMovieMesh",
   ];
 
 /**
@@ -73,6 +83,7 @@ const bridged =
 
 const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
   {
+    buildAutoMoviePolyhedron: bridged(buildAutoMoviePolyhedron),
     buildAutoMovieWall: bridged(buildAutoMovieWall),
     builtEnvironmentAdjacentSpaces: bridged(builtEnvironmentAdjacentSpaces),
     builtEnvironmentBuildingOfSpace: bridged(builtEnvironmentBuildingOfSpace),
@@ -81,14 +92,18 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     builtEnvironmentSpaceNodes: bridged(builtEnvironmentSpaceNodes),
     builtEnvironmentSpaceSurfaces: bridged(builtEnvironmentSpaceSurfaces),
     extrudeAutoMovieProfile: bridged(extrudeAutoMovieProfile),
+    inspectAutoMovieMeshTopology: bridged(inspectAutoMovieMeshTopology),
     lowerBuiltEnvironment: bridged(lowerBuiltEnvironment),
     mergeAutoMovieMeshes: bridged(mergeAutoMovieMeshes),
+    mergeAutoMovieMeshParts: bridged(mergeAutoMovieMeshParts),
     mergeAutoMovieSpaces: bridged(mergeAutoMovieSpaces),
     mergeAutoMovieSubjectContributions: bridged(
       mergeAutoMovieSubjectContributions,
     ),
     revolveAutoMovieProfile: bridged(revolveAutoMovieProfile),
     sweepAutoMovieProfile: bridged(sweepAutoMovieProfile),
+    tessellateSurface: bridged(tessellateSurface),
+    transformAutoMovieMesh: bridged(transformAutoMovieMesh),
   };
 
 /**
