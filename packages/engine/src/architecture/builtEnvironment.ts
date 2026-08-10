@@ -58,6 +58,15 @@ const ROUTE_EPSILON = 1e-9;
 const STEP_TOLERANCE = 1e-3;
 /** Largest disagreement, in radians, between a stated slope and its route. */
 const SLOPE_TOLERANCE = 1e-6;
+/**
+ * Slack, in radians, on the full turn a revolute panel may travel.
+ *
+ * Validation and the swept-envelope solver share this on purpose: the cap is
+ * what bounds the solver's critical-angle walk, so a range the validator waved
+ * through but the solver could not enumerate would be a hang rather than a
+ * disagreement.
+ */
+const FULL_TURN_EPSILON = 1e-6;
 
 /** Validate the graph, geometry references, and spatial topology of a building. */
 export const validateBuiltEnvironment = (props: {
@@ -945,9 +954,14 @@ export const builtOpeningPanelPlacements = (
  * Nothing here judges whether a person can pass the leaf: this is the volume a
  * later clearance or collision analysis reads, not its verdict.
  *
- * Ancestors stand where the environment's current state puts them, so the
- * envelope of an inner folding leaf is measured against the outer leaf as it
- * currently stands rather than against a pose the design is not in.
+ * The answer is **per panel, and only that panel's own travel**. Ancestors
+ * stand where the environment's current state puts them, so an inner folding
+ * leaf is measured against the outer leaf as it currently stands. That is the
+ * volume this leaf sweeps from where the design has it, not the union over
+ * every configuration a chain of leaves could reach between its named states. A
+ * caller wanting that union asks for each state in turn and takes the hull
+ * itself; inventing it here would quietly report a chain's envelope under one
+ * panel's name.
  */
 export const builtOpeningSweepEnvelope = (
   environment: IAutoMovieBuiltEnvironment,
@@ -958,6 +972,7 @@ export const builtOpeningSweepEnvelope = (
   if (operation === undefined) return [];
   const staged = operationDeltas(environment);
   return operation.panels.map((panel) => {
+    requireEnumerableTravel(environment, panel);
     // The panel's own travel is what is being measured, so it is the one joint
     // left at rest; every other joint, its ancestors included, stands where the
     // environment's current state puts it.
@@ -1108,6 +1123,32 @@ const requireConnector = (
       `built environment "${environment.id}" has no connector "${connectorId}"`,
     );
   return connector;
+};
+
+/**
+ * Refuse a panel whose travel the swept envelope could not enumerate.
+ *
+ * The solver walks the critical angles the travel actually crosses, so an
+ * infinite limit or a range spanning more than a full turn is not a wrong
+ * answer waiting to happen: it is a walk that never reaches its end.
+ * {@link validateBuiltEnvironment} refuses both by name and shares the very same
+ * cap, so this only ever fires on a record that was never validated — and on
+ * one of those, a named refusal is the only acceptable outcome.
+ */
+const requireEnumerableTravel = (
+  environment: IAutoMovieBuiltEnvironment,
+  panel: IAutoMovieMovablePanel,
+): void => {
+  const { min, max } = panel.motion;
+  if (
+    Number.isFinite(min) === false ||
+    Number.isFinite(max) === false ||
+    (panel.motion.kind === "revolute" &&
+      max - min > 2 * Math.PI + FULL_TURN_EPSILON)
+  )
+    throw new Error(
+      `panel "${panel.id}" of built environment "${environment.id}" travels [${min}, ${max}], which no swept envelope can enumerate`,
+    );
 };
 
 const requirePanelMatrix = (
@@ -1776,7 +1817,7 @@ const validatePanelMotion = (
     );
   else if (
     motion.kind === "revolute" &&
-    motion.max - motion.min > 2 * Math.PI + SLOPE_TOLERANCE
+    motion.max - motion.min > 2 * Math.PI + FULL_TURN_EPSILON
   )
     collector.push(
       "range",

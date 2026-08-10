@@ -395,7 +395,8 @@ const refusalPaths = (
  * 7. The swept envelope is solved, not sampled: a quarter-turn leaf reaches
  *    exactly its own radius, and a double-acting leaf reaches its widest at the
  *    interior critical angle its travel crosses rather than at either limit.
- * 8. A sliding leaf sweeps its own travel and no more.
+ * 8. A sliding leaf sweeps its own travel and no more, and a travel no walk can
+ *    enumerate is refused by name instead of entered.
  * 9. Every query refuses an unknown opening, an unknown state, and an opening that
  *    carries no operation answers emptily rather than throwing.
  * 10. Thirty-three malformed openings are each refused at their own path.
@@ -608,6 +609,27 @@ export const test_architecture_built_opening = (): void => {
   TestValidator.error("a dangling panel element refuses an envelope", () => {
     const broken = partition();
     broken.openings[0]!.operation!.panels[0]!.element = "missing";
+    builtOpeningSweepEnvelope(broken, "door");
+  });
+  // A travel the solver cannot walk to the end of is refused by name rather
+  // than entered: the critical-angle walk over an infinite or unbounded range
+  // would never terminate, which is worse than any wrong number.
+  TestValidator.error("an unbounded lowest travel refuses an envelope", () => {
+    const broken = partition();
+    broken.openings[0]!.operation!.panels[0]!.motion.min =
+      Number.NEGATIVE_INFINITY;
+    builtOpeningSweepEnvelope(broken, "door");
+  });
+  TestValidator.error("an unbounded highest travel refuses an envelope", () => {
+    const broken = partition();
+    broken.openings[0]!.operation!.panels[0]!.motion.max =
+      Number.POSITIVE_INFINITY;
+    builtOpeningSweepEnvelope(broken, "door");
+  });
+  TestValidator.error("a travel beyond a full turn refuses an envelope", () => {
+    const broken = partition();
+    broken.openings[0]!.operation!.panels[0]!.motion.min = -100;
+    broken.openings[0]!.operation!.panels[0]!.motion.max = 100;
     builtOpeningSweepEnvelope(broken, "door");
   });
 
