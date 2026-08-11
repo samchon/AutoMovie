@@ -16,6 +16,10 @@ Opening, edge, corner, drain, fixture와 불규칙 boundary에서 full unit, cut
 
 색, 무늬, rotation, offset, wear와 handmade irregularity는 bounded rule과 stable seed로 재현되어야 하며 관련 없는 수정으로 기존 배치가 다시 섞이지 않아야 한다.
 
+### Group 상관 변주 {#interior-pattern-group-correlated-variation}
+
+하나의 tile lot, row, course, panel batch와 installation zone은 group-level seed와 bias를 공유하고 각 instance는 그 안에서 파생된 bounded deviation을 가질 수 있어야 한다.
+
 ### Pattern 거부 {#interior-pattern-refusal}
 
 숨은 scale, zero module, 끝나지 않는 subdivision, unsupported sampler, invalid coordinate와 budget을 넘는 expansion을 명시적 진단으로 거부해야 한다.

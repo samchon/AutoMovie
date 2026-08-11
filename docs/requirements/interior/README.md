@@ -14,6 +14,8 @@
 - [Surface Assembly](./surface-assemblies.md)
 - [재료와 물리 속성](./materials-and-physical-properties.md)
 - [Texture, Pattern과 변주](./textures-patterns-and-variation.md)
+- [허용오차와 의도된 불완전성](./tolerances-and-imperfections.md)
+- [마모, 오염과 노후화](./wear-soiling-and-aging.md)
 - [결, 이음과 연속성](./grain-seams-and-continuity.md)
 - [Joint, Edge와 Transition](./joints-edges-and-transitions.md)
 - [색, Style, Form과 Art](./color-style-form-and-art.md)

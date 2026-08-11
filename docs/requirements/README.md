@@ -19,8 +19,15 @@
 - [제품 계약](./product/README.md)
 - [에이전트 저작](./agent-authoring/README.md)
 - [자산 저작](./asset-authoring/README.md)
+- [이야기 저작](./story/README.md)
+- [Production Design](./production-design/README.md)
+- [Actor](./actors/README.md)
+- [동작](./motion/README.md)
+- [Formation](./formations/README.md)
+- [장면 연출](./staging/README.md)
+- [Camera](./camera/README.md)
 - [맵과 세계](./map/README.md)
 - [건물 외관](./building-exterior/README.md)
 - [실내 공간](./interior/README.md)
 
-배우, 동작, 연출, 카메라, 조명, 음향, 타임라인, 렌더, 증거, 진단, 외부 입력과 repaint는 각각 독립 주제 폴더로 이어서 정의한다.
+조명, 음향, 타임라인, 렌더, 전달, 접근성, 증거, 진단, 외부 입력과 repaint는 각각 독립 주제 폴더로 이어서 정의한다.

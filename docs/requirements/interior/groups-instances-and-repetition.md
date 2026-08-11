@@ -16,6 +16,10 @@ Group은 다른 group과 외부 또는 native asset을 포함할 수 있고 grou
 
 각 instance는 identity, transform, visibility, material, state, damage, seed와 explicit override를 가질 수 있고 최종 값이 prototype, group와 local override 중 어디서 왔는지 추적할 수 있어야 한다.
 
+### Group Seed와 상관성 {#interior-group-seed-correlation}
+
+Group은 member seed를 독립 random 값으로만 만들지 않고 공통 lot, row, cluster와 installation bias를 표현하는 seed hierarchy와 correlation rule을 가질 수 있어야 한다.
+
 ### Bounded Expansion {#interior-group-bounded-expansion}
 
 Expanded object, triangle, material, collider, light와 simulation count의 최대값을 선언하고 report하여 반복 저작이 숨은 무제한 작업이 되지 않아야 한다.
