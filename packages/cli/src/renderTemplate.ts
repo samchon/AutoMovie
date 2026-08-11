@@ -5,6 +5,8 @@
  * of a broken scaffold shipped to a user, the same discipline the reference
  * scaffolder uses.
  *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps every generated token value explicit and reproducible in a new checkout.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Treats template variables as declared derivation inputs and rejects undeclared placeholders.
  * @author Samchon
  */
 export const renderTemplate = (

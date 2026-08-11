@@ -1,6 +1,7 @@
 import type {
   AutoMovieProductionFrameCapture,
   IAutoMovieRenderSpec,
+  IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import path from "node:path";
 import type { Page } from "playwright";
@@ -323,12 +324,36 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
   await previous;
   const captureStarted = process.hrtime.bigint();
   try {
+    let renderEvidence: Pick<
+      Awaited<ReturnType<AutoMovieProductionFrameCapture>>,
+      "maskSidecar" | "observation"
+    >;
     try {
       ++captureMetrics.seeks;
       await resident.page.evaluate(
         ({ time, pass }) => window.__automovieCapture!.seek(time, pass),
         { time: input.time, pass: input.pass ?? "beauty" },
       );
+      renderEvidence = await resident.page.evaluate(() => {
+        const hook = window.__automovieCapture!;
+        const observation = hook.observe();
+        const maskSidecar = hook.sidecar();
+        const reason =
+          "the selected capture page stages no compiled shot, so it has no shot render observation or semantic mask palette";
+        return {
+          observation:
+            observation === null
+              ? { status: "not-run" as const, reason }
+              : { status: "available" as const, value: observation.observed },
+          maskSidecar:
+            maskSidecar === null
+              ? { status: "not-run" as const, reason }
+              : {
+                  status: "available" as const,
+                  value: JSON.parse(maskSidecar) as IAutoMovieSemanticMask,
+                },
+        };
+      });
     } catch (error) {
       throw new Error(
         `${
@@ -347,6 +372,7 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
       runtimeIdentity: { ...session.runtime, graphics: resident.graphics },
       width: input.width!,
       height: input.height!,
+      ...renderEvidence,
     };
   } catch (error) {
     const key = capturePageKey(input);

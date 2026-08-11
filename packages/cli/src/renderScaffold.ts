@@ -14,9 +14,19 @@ const RENAME: Record<string, string> = {
   npmrc: ".npmrc",
 };
 
-/** The values interpolated into the starter's `{{...}}` tokens. */
+/**
+ * Project-owned values interpolated into the starter's `{{...}}` tokens.
+ *
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps the generated project's portable identity in explicit source input.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Carries that portable identity into deterministic scaffold derivation.
+ */
 export interface IAutoMovieScaffoldProps {
-  /** The created project's package name (replaces `{{name}}`). */
+  /**
+   * The created project's package name (replaces `{{name}}`).
+   *
+   * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Restricts the name to a portable project identity rather than a host-private path.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the project identity an explicit source input to scaffold derivation.
+   */
   name: string;
 }
 
@@ -73,6 +83,9 @@ const listFiles = (root: string): string[] => {
  * Absolute path to the bundled starter assets, resolved relative to this module
  * so it works both from `src` (ttsx, in development) and the published `lib`
  * (the `scaffold/` folder ships alongside).
+ *
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Locates the starter whose examples teach reusable authoring techniques instead of supplying finished production content.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the capability-oriented starter as the input to deterministic scaffold rendering.
  */
 export const scaffoldAssetDirectory = (): string => {
   const directory = path.resolve(__dirname, "..", "scaffold");
@@ -91,6 +104,8 @@ export const scaffoldAssetDirectory = (): string => {
  * so the same output can be asserted in a test, written by the CLI, or handed
  * to another consumer without disk I/O in the middle.
  *
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Delivers the starter examples that explain one reusable technique, its controls, and its verification path.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits examples as reusable authoring guidance while leaving each production's content in project-owned source.
  * @author Samchon
  */
 export const renderScaffold = (

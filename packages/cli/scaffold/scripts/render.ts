@@ -6,6 +6,7 @@ import {
   renderProductionSound,
 } from "@automovie/engine";
 import type {
+  AutoMovieCaptureObservation,
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureFrame,
@@ -17,6 +18,7 @@ import type {
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionTtsReceipt,
+  IAutoMovieRenderReport,
   IAutoMovieRenderSpec,
   IAutoMovieRepaintReceipt,
   IAutoMovieReviewTarget,
@@ -139,6 +141,13 @@ import {
   preserveRenderLivenessLease,
 } from "./renderLiveness";
 import {
+  type IProductionMaskSidecarPublication,
+  type IProductionRenderObservationAudit,
+  auditProductionRenderCapture,
+  publishProductionMaskSidecar,
+  summarizeProductionRenderObservations,
+} from "./renderObservationAudit";
+import {
   captureExistingRenderPlan,
   publishRenderPlan,
 } from "./renderPlanSnapshot";
@@ -217,6 +226,17 @@ const KOKORO_MODEL_REVISION =
 const KOKORO_DEVICE = "cpu" as const;
 const KOKORO_VOICE = "af_heart";
 const RENDER_LOCK_JSON_MAX_BYTES = 64 * 1024;
+const renderObservationAudits: IProductionRenderObservationAudit[] = [];
+const renderMaskSidecars: Array<
+  {
+    globalFrame: number;
+    pass: AutoMovieGuidePass;
+    shot: string;
+  } & (
+    | ({ status: "available" } & IProductionMaskSidecarPublication)
+    | { status: "not-run"; reason: string }
+  )
+> = [];
 
 interface IRenderChunkLockOwner {
   chunk: AutoMovieContentDigest;
@@ -303,7 +323,8 @@ const main = async (): Promise<void> => {
       return;
     }
     const current = await currentPlan();
-    const budget = enforceRenderBudget(current);
+    const enforcedBudget = enforceRenderBudget(current);
+    const budget = enforcedBudget.summary;
     if (action === "plan") {
       output({
         ...current,
@@ -330,7 +351,8 @@ const main = async (): Promise<void> => {
         adapters: {
           current: (chunk) => currentReceipt(current, chunk),
           acquire: acquireChunk,
-          render: (chunk) => renderChunk(current, chunk),
+          render: (chunk) =>
+            renderChunk(current, chunk, enforcedBudget.reports),
           fail: failChunk,
           release: releaseChunk,
         },
@@ -344,6 +366,15 @@ const main = async (): Promise<void> => {
         budget,
         deliveryTone,
         capture: productionFrameCaptureMetrics(),
+        observation: {
+          ...summarizeProductionRenderObservations(renderObservationAudits),
+          maskSidecars: [...renderMaskSidecars].sort(
+            (left, right) =>
+              left.globalFrame - right.globalFrame ||
+              compareCodeUnits(left.pass, right.pass) ||
+              compareCodeUnits(left.shot, right.shot),
+          ),
+        },
         result,
         chunks: await renderStatus(current),
       });
@@ -562,19 +593,37 @@ const enforceRenderBudget = (plan: IAutoMovieProductionRenderJobPlan) => {
       `${refusal} Raise the limit for tier "${evidence.tier}" deliberately or reduce the named owners, then replan. The evidence is at ${relative}.`,
     );
   return {
-    tier: evidence.tier,
-    status: evidence.status,
-    budgeted: evidence.budgeted,
-    declaredTiers: evidence.declaredTiers,
-    digest: evidence.digest,
-    evidence: relative,
-    shots: evidence.shots.map((shot) => ({
-      shot: shot.shot,
-      status: shot.status,
-      reason: shot.reason,
-      report: shot.report?.digest ?? null,
-      target: shot.target?.digest ?? null,
-    })),
+    summary: {
+      tier: evidence.tier,
+      status: evidence.status,
+      budgeted: evidence.budgeted,
+      declaredTiers: evidence.declaredTiers,
+      digest: evidence.digest,
+      evidence: relative,
+      shots: evidence.shots.map((shot) => ({
+        shot: shot.shot,
+        status: shot.status,
+        reason: shot.reason,
+        report: shot.report?.digest ?? null,
+        target: shot.target?.digest ?? null,
+      })),
+    },
+    reports: new Map<
+      string,
+      AutoMovieCaptureObservation<IAutoMovieRenderReport>
+    >(
+      evidence.shots.map((shot) => [
+        shot.shot,
+        shot.report === null
+          ? {
+              status: "not-run",
+              reason:
+                shot.reason ??
+                "render budget preflight produced no report for this shot",
+            }
+          : { status: "available", value: shot.report },
+      ]),
+    ),
   };
 };
 
@@ -1052,6 +1101,10 @@ const acquireChunk = async (
 const renderChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
+  reports: ReadonlyMap<
+    string,
+    AutoMovieCaptureObservation<IAutoMovieRenderReport>
+  >,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
   const pointer = captureCurrentChunkPointer(chunk);
   const existing = await currentChunk(plan, chunk, pointer);
@@ -1108,6 +1161,48 @@ const renderChunk = async (
       )
         throw new Error(
           `Capture runtime changed while rendering "${chunk.slot}". Replan before mixing renderer identities.`,
+        );
+      const report: AutoMovieCaptureObservation<IAutoMovieRenderReport> =
+        reports.get(layer.shot) ?? {
+          status: "not-run",
+          reason: `render budget preflight published no assessment for shot "${layer.shot}"`,
+        };
+      renderObservationAudits.push(
+        auditProductionRenderCapture({
+          globalFrame: sample.globalFrame,
+          observation: captured.observation,
+          pass: chunk.pass,
+          report,
+          shot: layer.shot,
+        }),
+      );
+      const maskSidecar = publishProductionMaskSidecar({
+        chunk: chunk.id,
+        shot: layer.shot,
+        sidecar: captured.maskSidecar,
+        stateRoot,
+      });
+      renderMaskSidecars.push(
+        maskSidecar.status === "available"
+          ? {
+              globalFrame: sample.globalFrame,
+              pass: chunk.pass,
+              shot: layer.shot,
+              status: "available",
+              ...maskSidecar.value,
+              path: normalizeSlash(path.relative(root, maskSidecar.value.path)),
+            }
+          : {
+              globalFrame: sample.globalFrame,
+              pass: chunk.pass,
+              shot: layer.shot,
+              status: "not-run",
+              reason: maskSidecar.reason,
+            },
+      );
+      if (chunk.pass === "mask" && maskSidecar.status === "not-run")
+        throw new Error(
+          `Semantic mask sidecar was not produced for shot "${layer.shot}" at frame ${sample.globalFrame}: ${maskSidecar.reason}`,
         );
       const image = PNG.sync.read(Buffer.from(captured.bytes));
       if (

@@ -56,6 +56,130 @@ const projectNameOf = (targetDir: string): string =>
  * the target directory. Returns the process exit code (0 success, 1 on a usage
  * or scaffold error) rather than exiting, so the logic stays unit-testable.
  *
+ * @evidenceExclude requirements/agent-authoring/README.md#에이전트-저작-요구사항 The README heading indexes the whole authoring topic; this entry point owns project creation, not every authoring capability.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Creates the starter whose examples teach reusable techniques and verification paths.
+ * @evidenceExclude requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery The generated project's documentation performs topic routing; argv dispatch only publishes that project.
+ * @evidenceExclude requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Capability choice discovery belongs to the generated MCP and documentation, not argv dispatch.
+ * @evidenceExclude requirements/agent-authoring/capability-discovery.md#agent-diagnostic-discovery Authoring diagnostic discovery belongs to generated project tools, not the CLI dispatcher.
+ * @evidenceExclude requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Capability-gap classification belongs to generated project tools, not project creation dispatch.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-editable-source-authority Creates ordinary editable source as the generated project's authority.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Separates the reusable scaffold capability from the created project's facts.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-bytes Writes the selected scaffold bytes into the user-owned target.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Emits a project reproducible from documented dependencies in a new checkout.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability Leaves generated source and commands usable without hidden CLI state.
+ * @evidence requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal Refuses unsafe target paths and ambiguous overwrite authority.
+ * @evidenceExclude requirements/product/README.md#제품-계약-요구사항 The README heading indexes the whole product contract; project creation owns only the capability-content boundary below.
+ * @evidence requirements/product/capability-and-content.md#product-era-independent-composition Publishes reusable composition techniques rather than one era-specific production.
+ * @evidence requirements/product/capability-and-content.md#product-unplanted-subject-authoring Leaves subject facts in editable generated-project source.
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Writes production content into the created project rather than package-private state.
+ * @evidence requirements/product/capability-and-content.md#product-catalogue-refusal Ships technique examples without presenting a finished-content catalogue.
+ * @evidence requirements/product/capability-and-content.md#product-example-role Uses scaffold examples to teach controls and verification paths.
+ * @evidenceExclude specifications/authoring-and-authority/README.md#저작과-권한-시스템-명세 This topic index spans all authoring authorities; project creation implements the capability and source contracts cited below.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-system-project-responsibility Creates the boundary between bundled capability and project-owned facts.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-state Publishes the starter as an available, documented authoring capability.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-not-content-invariant Keeps generated examples reusable instead of substituting finished production content.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Turns explicit project identity into a deterministic capability-oriented starter.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap Refuses invalid creation input rather than inventing replacement facts.
+ * @evidenceExclude specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Capability extension compatibility is owned by generated project contracts, not argv dispatch.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Emits editable source and generated configuration as explicit project state.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Treats the target name and pinned template versions as explicit derivation inputs.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Compiler outputs and lineage are produced after creation by generated project tools.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Source impact analysis belongs to generated project validation, not creation dispatch.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Refuses invalid target ownership and unsafe paths.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Leaves all authoring state in portable generated-project files.
+ * @evidenceExclude requirements/operations-and-recovery/README.md#운영과-복구-요구사항 The README heading indexes all operations contracts; this entry point dispatches render and migration subsets.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness Dispatches render verification against complete checkpoint records.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-acknowledged-completion-boundary Exposes status and verify actions that recognize only durable completion.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resume-eligibility Routes resume through the generated render state checks.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits Keeps retries inside the generated render job lifecycle.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-changed-input-restart Routes changed inputs through plan and verification before execution.
+ * @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-resumed-result-validation Exposes verify and finalize as separate post-resume gates.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-reference-aware-retention Dispatches cleanup through the generated reference-aware collector.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-target-preview Exposes render status before the explicit gc action.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-concurrency-safety Delegates gc to the generated render ownership and lock checks.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-deletion-record Returns the generated gc process outcome to the caller.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-sensitive-data-minimization Limits render cleanup to generated project state.
+ * @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-cleanup-failure-visibility Preserves the generated gc exit status.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation Dispatches actions into the generated job and attempt state machine.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Routes render options as explicit job inputs.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Separates the requested action from work selected by the generated plan.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary Exposes plan, run, status, verify, finalize, and gc lifecycle actions.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-transition-history Delegates state transitions to the generated render record.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Returns the generated process exit status without converting failure to success.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-deterministic-reexecution-identity Routes reexecution through the same project-owned render script and inputs.
+ * @evidenceExclude requirements/rendering/README.md#rendering-요구사항 The README heading indexes all rendering contracts; this entry point owns lifecycle dispatch.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Dispatches render only after generated-project compilation responsibilities.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Separates plan from run and materialized verification.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-product-scope Routes explicit render action and options into the project script.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-deterministic-lane Uses the project-pinned tsx runtime and script.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Delegates changed input checks to the generated render lifecycle.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact Exposes status and verify before finalization.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Preserves refusal from the generated render process.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Dispatches deterministic render planning and bounded chunks.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Exposes resumable execution through the run and all actions.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication Keeps finalize separate from chunk execution.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work Delegates concurrent ownership to the generated render job.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery Preserves failed process status for recovery.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity Reuses the project script and explicit action inputs on retry.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Dispatches verify and finalize after chunk execution.
+ * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Preserves unsafe-resume refusal from the generated script.
+ * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications This topic index spans editorial and delivery too; the CLI entry point owns render lifecycle dispatch.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Dispatches explicit plan, run, status, verify, and finalize phases.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Routes partition, resume, publication, and recovery through one generated render lifecycle.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Dispatches render planning through the generated worst-case budget gate.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Routes materialization, verification, and finalization through content-addressed frame state.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Delegates exact frame scheduling and direct seek to the generated render script.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Delegates frame, view, and pass isolation to the generated render script.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Runs the project-pinned headless capture script and preserves its exit status.
+ * @evidenceExclude specifications/execution-and-recovery/README.md#실행과-복구-시스템-계약 This topic index spans all execution domains; the CLI entry point owns render and migration dispatch.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-checkpoint-closure Dispatches render work against complete generated checkpoints.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-durable-completion-boundary Exposes verification before durable completion is finalized.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resume-eligibility Routes resume through generated identity and integrity checks.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-changed-input-restart Delegates input-change invalidation to the generated planner.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-resumed-result-validation Exposes verify and finalize after resumed execution.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-authority-boundary Keeps cache decisions inside the generated project script.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-cache-identity-invalidation Delegates cache identity checks to the render job.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-corrupt-cache-quarantine Preserves generated-script refusal and exit status for corrupt state.
+ * @evidence specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md#execution-dependency-availability-loss Preserves missing-dependency failure from the project script.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-retention-classes Dispatches gc against generated render-state classes.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-reference-aware-retention Leaves reference checks to the generated collector.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-plan-preview Exposes status before explicit cleanup.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-concurrency-safety Keeps cleanup inside the generated ownership protocol.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-deletion-outcome-tombstone Preserves the collector's deletion outcome.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-sensitive-retention-minimization Limits cleanup dispatch to project-owned render state.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-failure-capacity Preserves cleanup failure status for operators.
+ * @evidence specifications/execution-and-recovery/retention-cleanup-and-quarantine.md#execution-cleanup-quarantine-boundary Delegates quarantined-state handling to the generated collector.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Routes render actions into one generated logical job identity.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-attempt-identity-lineage Keeps retry attempts inside generated project state.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-deterministic-output-identity Uses explicit project script and action inputs for output identity.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-record-input-output Delegates requested and effective work recording to the render job.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation Returns operational exit status without rewriting rendered-domain results.
+ * @evidenceExclude requirements/external-inputs/README.md#외부-입력-요구사항 This topic index spans every intake channel; the CLI entry point owns local legacy migration.
+ * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-channel-parity This CLI supports the local legacy-project channel; API and repository acquisition channels are separate surfaces.
+ * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-provider-neutrality The local legacy importer selects no external provider.
+ * @evidenceExclude requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-transfer-authority Migration performs no outbound transfer.
+ * @evidence requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-authority-boundary Treats legacy bytes as migration input rather than project authority until apply succeeds.
+ * @evidence requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-acquisition-failure Returns importer failure without silently substituting source.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-resume-compatibility-classification Routes legacy state through an explicit migration plan.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-nondestructive-migration Applies the importer without replacing the original legacy record.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-semantic-change-new-identity Emits importer-owned migrated identities instead of rewriting legacy meaning in place.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-mixed-version-concurrency Delegates concurrent-state checks to the importer.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-downgrade-rollback-compatibility Exposes rollback only for a still-untouched applied migration.
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-migration-validation Returns plan, apply, and rollback outcomes for inspection.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-resume-compatibility Produces an explicit compatibility plan before mutation.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-nondestructive-migration Preserves original legacy state while applying a new migrated record.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-semantic-change-identity Keeps migration identity separate from legacy identity.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-mixed-version-concurrency Delegates versioned writer conflict checks to the importer.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-downgrade-rollback-compatibility Exposes the importer's guarded rollback path.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-migration-validation Emits the importer's validation outcome.
+ * @evidenceExclude specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-cross-platform-portability Cross-platform durable-record portability is owned by the importer, not argv dispatch.
+ * @evidenceExclude specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-runtime-compatibility-evidence Runtime renderer compatibility is outside local legacy migration dispatch.
+ * @evidenceExclude specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 This topic index spans every interchange channel; the CLI entry point owns local legacy migration.
+ * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-channel-independent-revision This dispatcher supports only the local legacy-project channel.
+ * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-provider-neutral-dispatch No external provider participates in local legacy migration.
+ * @evidenceExclude specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-outbound-transfer-authorization Migration dispatch performs no outbound transfer.
+ * @evidence specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-source-authority-separation Keeps legacy source untrusted until importer validation and apply.
+ * @evidence specifications/interchange-and-adoption/intake-authority-and-routing.md#interchange-acquisition-failure-envelope Preserves local read and validation failure as importer output.
  * @author Samchon
  */
 export const run = (argv: readonly string[]): number => {

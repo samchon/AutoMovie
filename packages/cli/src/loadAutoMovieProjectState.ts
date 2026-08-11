@@ -23,17 +23,42 @@ import {
 import path from "node:path";
 import typia from "typia";
 
-/** Input for loading one active production from an initialized project. */
+/**
+ * Input for loading one active production from an initialized project.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Keeps the selected project and production as explicit input facts.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Carries the exact input revision boundary into diagnostic inspection.
+ */
 export interface IAutoMovieProjectStateInput {
-  /** Project root containing the tracked `.automovie` state directory. */
+  /**
+   * Project root containing the tracked `.automovie` state directory.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Identifies the exact project whose state is inspected.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Makes the inspected source boundary explicit.
+   */
   root: string;
-  /** Registered production id, or the project default when omitted. */
+  /**
+   * Registered production id, or the project default when omitted.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Identifies the production scope attached to every finding.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Preserves the selected production revision boundary.
+   */
   productionId?: string;
 }
 
-/** One reason loaded compiler-owned state cannot be treated as current. */
+/**
+ * One reason loaded compiler-owned state cannot be treated as current.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Separates a loader result finding from the project input facts.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Classifies the exact derived-state failure boundary.
+ */
 export interface IAutoMovieProjectStateProblem {
-  /** Stable machine-readable failure class. */
+  /**
+   * Stable machine-readable failure class.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-classification-independence Keeps failure classification separate from its prose and path.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-classification-orthogonality Preserves an independent machine-readable result class.
+   */
   code:
     | "compile-status-unavailable"
     | "current-compile-invalid"
@@ -47,77 +72,225 @@ export interface IAutoMovieProjectStateProblem {
     | "compile-fingerprint-stale"
     | "generated-state-incomplete"
     | "project-state-changed";
-  /** Generated-root-relative path when one file caused the problem. */
+  /**
+   * Generated-root-relative path when one file caused the problem.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Locates the derived artifact that produced the finding.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Identifies the failed result boundary without rewriting input facts.
+   */
   path: string | null;
-  /** Human-readable evidence and correction direction. */
+  /**
+   * Human-readable evidence and correction direction.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Reports observed evidence and a correction for the derived failure.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Explains which result stage failed and how to correct it.
+   */
   message: string;
 }
 
-/** Compiler identity and freshness attached to one loaded state snapshot. */
+/**
+ * Compiler identity and freshness attached to one loaded state snapshot.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Computes current state from source, dependency, and compiler identities.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Exposes the dependency-based freshness decision with its evidence.
+ */
 export interface IAutoMovieProjectStateFreshness {
   /**
    * `current` is safe to query, `stale` preserves last generated evidence but
    * requires a compile, and `missing` means no generated manifest exists.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Distinguishes current generated evidence from stale or absent dependencies.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Reports whether the dependencies required for a current query match.
    */
   status: "current" | "stale" | "missing";
-  /** Fingerprint of the loaded compiler-owned output, or null when absent. */
+  /**
+   * Fingerprint of the loaded compiler-owned output, or null when absent.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Records the identity of the generated side of the freshness comparison.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Supplies the observed output dependency identity.
+   */
   compileFingerprint: AutoMovieContentDigest | null;
-  /** Fingerprint recomputed from current design, source, and declared content. */
+  /**
+   * Fingerprint recomputed from current design, source, and declared content.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change Recomputes authority after source or dependency replacement.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reapproval-after-change Provides the new identity required for reapproval.
+   */
   currentFingerprint: AutoMovieContentDigest | null;
-  /** Current read-only source-lint diagnostics. */
+  /**
+   * Current read-only source-lint diagnostics.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Preserves current source findings separately from generated-state problems.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Reports findings against the exact current source revision.
+   */
   diagnostics: readonly IAutoMovieDiagnostic[];
-  /** Reader-level integrity and race evidence. */
+  /**
+   * Reader-level integrity and race evidence.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Preserves loader and artifact findings independently of source diagnostics.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Classifies failures introduced while deriving the state snapshot.
+   */
   problems: readonly IAutoMovieProjectStateProblem[];
 }
 
-/** Compiler-owned artifacts loaded and typed from digest-verified JSON bytes. */
+/**
+ * Compiler-owned artifacts loaded and typed from digest-verified JSON bytes.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Keeps incomplete generated evidence visible instead of promoting it to current.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Exposes every available generated component without overstating completeness.
+ */
 export interface IAutoMovieGeneratedProjectState {
-  /** Ownership manifest that authenticated the loaded files. */
+  /**
+   * Ownership manifest that authenticated the loaded files.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Supplies the declared component and digest closure required for current use.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Carries the inventory consumed by the fail-closed gate.
+   */
   manifest: IAutoMovieGeneratedManifest | null;
-  /** Compiler registry of runtime assets, shots, and film. */
+  /**
+   * Compiler registry of runtime assets, shots, and film.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Preserves the registry independently when other generated components fail.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Retains the exact generated coverage available to the caller.
+   */
   registry: IAutoMovieProductionRegistryManifest | null;
-  /** Design contracts copied into the generated snapshot at compile time. */
+  /**
+   * Design contracts copied into the generated snapshot at compile time.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reproduction-boundary Separates compiled design evidence from the current editable design.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reproduction-verification-boundary Preserves the exact compiled inputs available for deterministic reinspection.
+   */
   design: IAutoMovieProductionDesignGraph;
-  /** Compiler-materialized runtime models keyed by recipe id. */
+  /**
+   * Compiler-materialized runtime models keyed by recipe id.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Retains each verified model even when the overall snapshot is stale.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Preserves component coverage without claiming total completeness.
+   */
   models: ReadonlyMap<string, IAutoMovieModel>;
-  /** Compiler-materialized shots keyed by shot id. */
+  /**
+   * Compiler-materialized shots keyed by shot id.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Retains each verified shot while reporting missing siblings separately.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Carries exact per-shot coverage into the aggregate result.
+   */
   shots: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
-  /** Compiler-materialized film timeline, when the compile produced one. */
+  /**
+   * Compiler-materialized film timeline, when the compile produced one.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Represents an absent film independently from verified model and shot evidence.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Preserves the film component's exact availability in the aggregate.
+   */
   film: IAutoMovieFilmTimeline | null;
 }
 
-/** One transport-free, read-only project-state snapshot for ordinary scripts. */
+/**
+ * One transport-free, read-only project-state snapshot for ordinary scripts.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Returns observed current and generated evidence without concealing gaps.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Keeps the available component set observable.
+ */
 export interface IAutoMovieProjectState {
-  /** Absolute physical project root selected by the reader. */
+  /**
+   * Absolute physical project root selected by the reader.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Identifies the exact input scope of every returned finding.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Binds findings to the selected project root.
+   */
   root: string;
-  /** Exact active production namespace. */
+  /**
+   * Exact active production namespace.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Preserves the production input selected for inspection.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Binds the result to one explicit production scope.
+   */
   productionId: string;
-  /** Project revision observed at the beginning of the read. */
+  /**
+   * Project revision observed at the beginning of the read.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Supplies the source revision used by the current-state decision.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Binds freshness to the observed project revision.
+   */
   revision: number;
-  /** Freshness and byte-integrity gate for the generated state. */
+  /**
+   * Freshness and byte-integrity gate for the generated state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Exposes the dependency and integrity decision before consumption.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Carries the computed freshness result and its evidence.
+   */
   freshness: IAutoMovieProjectStateFreshness;
-  /** Current tracked design, which may be newer than generated state. */
+  /**
+   * Current tracked design, which may be newer than generated state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reapproval-after-change Keeps replacement source visible before generated results are reapproved.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reapproval-after-change Exposes the changed source independently from the prior output.
+   */
   design: IAutoMovieProductionDesignGraph;
-  /** Last compiler-owned state, loaded independently from current design. */
+  /**
+   * Last compiler-owned state, loaded independently from current design.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reproduction-boundary Preserves prior deterministic output separately from current editable input.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reproduction-verification-boundary Keeps reproducible generated evidence available for verification without granting it current status.
+   */
   generated: IAutoMovieGeneratedProjectState;
 }
 
 /**
  * Generated state whose ownership, registry, and required contracts are
  * current.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Narrows only after all required generated evidence is current.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Exposes a non-null state only after the fail-closed gate passes.
  */
 export interface IAutoMovieCurrentGeneratedProjectState extends IAutoMovieGeneratedProjectState {
+  /**
+   * Verified ownership manifest for the current generated state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Requires authenticated generated inventory before current use.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Narrows the manifest only after the evidence gate passes.
+   */
   manifest: IAutoMovieGeneratedManifest;
+  /**
+   * Verified runtime registry for the current generated state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Refuses current use when the runtime registry is absent or inconsistent.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Narrows the registry only after closure validation.
+   */
   registry: IAutoMovieProductionRegistryManifest;
+  /**
+   * Verified production and world contracts for the current generated state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Requires both contracts before exposing current generated truth.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Narrows required contracts only after completeness succeeds.
+   */
   design: IAutoMovieProductionDesignGraph & {
+    /** Required production contract from the verified generated snapshot. */
     production: IAutoMovieProductionDesign;
+    /** Required world contract from the verified generated snapshot. */
     world: IAutoMovieWorldDesign;
   };
 }
 
-/** Project state narrowed by {@link requireCurrentAutoMovieProjectState}. */
+/**
+ * Project state narrowed by {@link requireCurrentAutoMovieProjectState}.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Represents only a snapshot that passed the current-state refusal boundary.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Makes the successful evidence gate explicit in the type.
+ */
 export interface IAutoMovieCurrentProjectState extends IAutoMovieProjectState {
+  /**
+   * Freshness narrowed to the successfully verified current state.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Prevents stale or missing output from reaching current-only consumers.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Encodes the passed gate in the returned status.
+   */
   freshness: IAutoMovieProjectStateFreshness & { status: "current" };
+  /**
+   * Generated state whose required components passed the current-state gate.
+   *
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Refuses nullable required components after narrowing.
+   * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Carries only gate-approved generated evidence.
+   */
   generated: IAutoMovieCurrentGeneratedProjectState;
 }
 
@@ -129,6 +302,23 @@ export interface IAutoMovieCurrentProjectState extends IAutoMovieProjectState {
  * function: compilation runs those functions in a deterministic no-I/O VM. The
  * loader verifies every consumed generated byte against its ownership manifest
  * and recomputes the current compiler fingerprint without writing.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Recomputes current identity and verifies every consumed generated dependency.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Produces a read-only dependency-based freshness decision.
+ * @evidenceExclude requirements/diagnostics/README.md#진단-요구사항 This topic index spans every diagnostic domain; the loader owns project-state inspection.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-missing-state Reports a missing generated manifest without manufacturing current output.
+ * @evidenceExclude requirements/diagnostics/input-and-result-classification.md#diagnostics-unknown-state The loader computes current, stale, or missing from local evidence and exposes no unknown state.
+ * @evidenceExclude requirements/diagnostics/input-and-result-classification.md#diagnostics-unsupported-state Project-state loading has no supported-but-unimplemented result class.
+ * @evidenceExclude requirements/diagnostics/input-and-result-classification.md#diagnostics-failed-not-run The loader performs every local inspection synchronously and exposes failures as problems rather than a not-run state.
+ * @evidenceExclude requirements/evidence-and-provenance/README.md#증거와-출처-계보-요구사항 The README heading indexes provenance across the product; this loader owns generated-state freshness.
+ * @evidenceExclude requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run The local loader has no unsupported or intentionally skipped branch.
+ * @evidenceExclude specifications/evidence-and-provenance/README.md#증거와-출처-계보-시스템-명세 This topic index spans the whole evidence system; the loader owns generated-state freshness.
+ * @evidenceExclude specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-outcome-classification-lattice The loader exposes current, stale, and missing instead of the full cross-domain outcome lattice.
+ * @evidenceExclude specifications/validation-and-diagnostics/README.md#validation과-diagnostics-시스템-명세 This topic index spans all validation domains; the loader owns project-state inspection.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-missing-state Emits missing only when the required generated manifest is absent.
+ * @evidenceExclude specifications/validation-and-diagnostics/classification-and-causality.md#validation-unknown-state All loader branches end in current, stale, or missing from observed local evidence.
+ * @evidenceExclude specifications/validation-and-diagnostics/classification-and-causality.md#validation-unsupported-state Project-state inspection has no unsupported capability branch.
+ * @evidenceExclude specifications/validation-and-diagnostics/classification-and-causality.md#validation-failed-not-run-states The loader executes every local check and records failures rather than not-run.
  */
 export const loadAutoMovieProjectState = (
   input: IAutoMovieProjectStateInput,
@@ -457,7 +647,12 @@ export const loadAutoMovieProjectState = (
   };
 };
 
-/** Refuse missing or stale output and narrow a loaded state for engine queries. */
+/**
+ * Refuse missing or stale output and narrow a loaded state for engine queries.
+ *
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Refuses current-only queries when required evidence is missing or stale.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Narrows state only after the current evidence gate succeeds.
+ */
 export const requireCurrentAutoMovieProjectState = (
   state: IAutoMovieProjectState,
 ): IAutoMovieCurrentProjectState => {
