@@ -3,6 +3,8 @@ import {
   validateProfileCapabilities,
 } from "@automovie/engine";
 import {
+  AUTOMOVIE_DIAGNOSTIC_CODES,
+  AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceScenario,
   IAutoMovieDiagnostic,
   IAutoMovieFormationDesign,
@@ -25,50 +27,169 @@ import {
   IAutoMovieModelArchetype,
 } from "./productionArchetypes";
 
-/** In-memory design graph used for cross-reference validation. */
+const AUTOMOVIE_DIAGNOSTIC_CODE_SET = new Set<string>(
+  AUTOMOVIE_DIAGNOSTIC_CODES,
+);
+
+/**
+ * In-memory canonical design graph used for cross-reference validation.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps validation anchored to tracked production design facts.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Defines the tracked-source graph boundary represented here without claiming authority-conflict resolution.
+ * @author Samchon
+ */
 export interface IAutoMovieProductionDesignGraph {
-  /** Active production design. */
+  /**
+   * Active production design.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Identifies the production-owned canonical record.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the production slice inside the tracked design graph.
+   */
   production: IAutoMovieProductionDesign | null;
-  /** Model recipes keyed by id. */
+  /**
+   * Model recipes keyed by id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Preserves authored model recipes as design-owned facts.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the model slice in the tracked-source design graph.
+   */
   models: ReadonlyMap<string, IAutoMovieModelRecipe>;
-  /** Project-shared world design. */
+  /**
+   * Project-shared world design.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Carries the tracked world record without runtime invention.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Includes the world slice in the tracked-source design graph.
+   */
   world: IAutoMovieWorldDesign | null;
-  /** Formations keyed by id. */
+  /**
+   * Formations keyed by id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Preserves authored formation design as source-owned input.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the formation slice in the tracked-source design graph.
+   */
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
-  /** Shot contracts keyed by id. */
+  /**
+   * Shot contracts keyed by id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps shot contracts in tracked design source.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Represents the shot slice without granting runtime authority.
+   */
   shots: ReadonlyMap<string, IAutoMovieShotContract>;
-  /** Acceptance scenarios keyed by id. */
+  /**
+   * Acceptance scenarios keyed by id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps acceptance intent in the production-owned design record.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Includes the acceptance slice without turning validation into approval authority.
+   */
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
 }
 
-/** Maximum exact production raster accepted by design and frame review. */
+/**
+ * Maximum exact production raster accepted by design and frame review.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Bounds the exact per-frame raster admitted before capture.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-raster-admission-bound Applies the exact raster admission ceiling without claiming full render validation.
+ * @author Samchon
+ */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
-/** Maximum live billboards reserved by one effect recipe. */
+/**
+ * Maximum live billboards reserved by one effect recipe.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Makes particle admission finite before simulation.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Materializes the effect-budget preflight ceiling.
+ * @author Samchon
+ */
 export const AUTOMOVIE_MAX_EFFECT_PARTICLES = 4_096;
-/** Maximum aggregate live billboards across declared effect zones. */
+/**
+ * Maximum aggregate live billboards across declared effect zones.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Caps aggregate admitted particle work.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Implements aggregate effect-budget admission.
+ * @author Samchon
+ */
 export const AUTOMOVIE_EFFECT_PARTICLE_BUDGET = 16_384;
-/** Maximum declared effect recipes and placed zones in one world. */
+/**
+ * Maximum declared effect recipes and placed zones in one world.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Bounds declared effect work before runtime.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Enforces finite declaration admission.
+ * @author Samchon
+ */
 export const AUTOMOVIE_EFFECT_DECLARATION_LIMIT = 256;
-/** Largest supported absolute metric coordinate in deterministic runtimes. */
+/**
+ * Largest supported absolute metric coordinate in deterministic runtimes.
+ *
+ * @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound Bounds authored and derived coordinates in the deterministic runtime range.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-coordinate-magnitude-admission Applies the inclusive coordinate magnitude admission contract.
+ * @author Samchon
+ */
 export const AUTOMOVIE_WORLD_COORDINATE_LIMIT = 1_000_000_000;
 
-/** Maximum compact formation slots in one production. */
+/**
+ * Maximum compact formation slots in one production.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds worst-case formation membership.
+ * @evidence requirements/formations/budgets-and-validation.md#formation-budget-policy-selection Materializes the selected formation count and memory policy as explicit constants.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Materializes the formation worst-case budget.
+ * @author Samchon
+ */
 export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 100_000;
-/** Named rigged exceptions remain explicit nodes and source performances. */
+/**
+ * Named rigged exceptions remain explicit nodes and source performances.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds exceptional rigged formation actors.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Accounts for hero exceptions in the worst-case budget.
+ * @author Samchon
+ */
 export const AUTOMOVIE_MAX_FORMATION_HEROES = 256;
-/** One 4x4 transform plus one deterministic phase scalar per LOD instance. */
+/**
+ * One 4x4 transform plus one deterministic phase scalar per LOD instance.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Makes per-member memory cost explicit.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Defines the deterministic instance-cost term.
+ * @author Samchon
+ */
 export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
   16 * Float32Array.BYTES_PER_ELEMENT + Float32Array.BYTES_PER_ELEMENT;
-/** Maximum aggregate anonymous instance storage across all declared LOD tiers. */
+/**
+ * Maximum aggregate anonymous instance storage across all declared LOD tiers.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Caps anonymous formation storage.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Enforces the aggregate instance-buffer budget.
+ * @author Samchon
+ */
 export const AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES = 8 * 1024 * 1024;
-/** Conservative generated compact-runtime envelope. */
+/**
+ * Conservative generated compact-runtime envelope.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds generated compact-runtime state.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Reserves a finite runtime envelope.
+ * @author Samchon
+ */
 export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
-/** Maximum general instances retained as compact deterministic world data. */
+/**
+ * Maximum general instances retained as compact deterministic world data.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds generalized instance populations.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Applies the same worst-case admission discipline to general instances.
+ * @author Samchon
+ */
 export const AUTOMOVIE_MAX_GENERAL_INSTANCES = 250_000;
-/** Maximum per-instance matrix, color, and declared trait storage. */
+/**
+ * Maximum per-instance matrix, color, and declared trait storage.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Caps generalized instance-buffer storage.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Enforces a finite byte budget for deterministic instances.
+ * @author Samchon
+ */
 export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 
-/** Validate graph-level production invariants after structural validation. */
+/**
+ * Validate graph-level production invariants after structural validation.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism Collects deterministic graph diagnostics without hiding later independent failures.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism Implements deterministic complete validation results.
+ * @author Samchon
+ */
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
   productionId: string = graph.production?.id ?? "unbound-production",
@@ -233,6 +354,162 @@ export const validateAutoMovieProductionGraph = (
         file,
         'visualDelivery "repainted" requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.',
       );
+    const adoptionIds = new Set<string>();
+    const adoptionClips = new Set<string>();
+    for (const adoption of graph.production.externalMotions ?? []) {
+      unique(
+        diagnostics,
+        adoptionIds,
+        adoption.id,
+        target,
+        file,
+        "externalMotions",
+      );
+      unique(
+        diagnostics,
+        adoptionClips,
+        adoption.clip,
+        target,
+        file,
+        "externalMotions.clip",
+      );
+      for (const [field, value] of [
+        ["asset", adoption.asset],
+        ["take", adoption.take],
+        ["shot", adoption.shot],
+        ["actor", adoption.actor],
+        ["clip", adoption.clip],
+        ["sourceRig.id", adoption.sourceRig.id],
+      ] as const)
+        text(
+          diagnostics,
+          value,
+          target,
+          file,
+          `externalMotions.${adoption.id}.${field}`,
+        );
+      const shot = graph.shots.get(adoption.shot);
+      if (shot === undefined)
+        missing(
+          diagnostics,
+          target,
+          file,
+          `shot "${adoption.shot}"`,
+          `create that shot or correct external motion adoption "${adoption.id}"`,
+        );
+      else if (
+        shot.participants.some(
+          (participant) =>
+            participant.kind === "actor" && participant.id === adoption.actor,
+        ) === false
+      )
+        invalid(
+          diagnostics,
+          "design-reference-missing",
+          target,
+          file,
+          `External motion adoption "${adoption.id}" targets actor "${adoption.actor}" outside shot "${adoption.shot}" participants. Add that actor participant or correct the adoption.`,
+        );
+      const sourceBones = new Set(
+        adoption.sourceRig.bones.map((bone) => bone.bone),
+      );
+      const mappedSources = new Set<string>();
+      const mappedTargets = new Set<string>();
+      if (adoption.mapping.length === 0)
+        invalid(
+          diagnostics,
+          "design-collection-empty",
+          target,
+          file,
+          `External motion adoption "${adoption.id}" has no explicit source-node mapping. Declare every adopted channel mapping; the compiler will not infer one.`,
+        );
+      for (const mapping of adoption.mapping) {
+        if (
+          mapping.source.trim().length === 0 ||
+          mappedSources.has(mapping.source) ||
+          mappedTargets.has(mapping.target) ||
+          sourceBones.has(mapping.target) === false
+        )
+          invalid(
+            diagnostics,
+            "design-reference-invalid",
+            target,
+            file,
+            `External motion adoption "${adoption.id}" has a blank, duplicate, or source-rig-incompatible mapping ${JSON.stringify(mapping)}. Keep a one-to-one explicit mapping to declared source-rig bones.`,
+          );
+        mappedSources.add(mapping.source);
+        mappedTargets.add(mapping.target);
+      }
+      if (
+        adoption.mode.kind === "humanoid-retarget" &&
+        (Number.isFinite(adoption.mode.translationScale) === false ||
+          adoption.mode.translationScale <= 0)
+      )
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `External motion adoption "${adoption.id}" translationScale must be finite and positive. Correct the explicit retarget scale.`,
+        );
+    }
+    const captionIds = new Set<string>();
+    const captionLanguages = new Set<string>();
+    for (const profile of graph.production.captionReadabilityProfiles ?? []) {
+      unique(
+        diagnostics,
+        captionIds,
+        profile.id,
+        target,
+        file,
+        "captionReadabilityProfiles",
+      );
+      unique(
+        diagnostics,
+        captionLanguages,
+        profile.language,
+        target,
+        file,
+        "captionReadabilityProfiles.language",
+      );
+      text(
+        diagnostics,
+        profile.segmentation.algorithm,
+        target,
+        file,
+        `captionReadabilityProfiles.${profile.id}.segmentation.algorithm`,
+      );
+      text(
+        diagnostics,
+        profile.segmentation.version,
+        target,
+        file,
+        `captionReadabilityProfiles.${profile.id}.segmentation.version`,
+      );
+      if (!Number.isSafeInteger(profile.version) || profile.version <= 0)
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Caption readability profile "${profile.id}" version must be a positive safe integer.`,
+        );
+      for (const [field, boundary] of Object.entries({
+        maxGraphemesPerSecond: profile.maxGraphemesPerSecond,
+        maxLinesPerCue: profile.maxLinesPerCue,
+        maxGraphemesPerLine: profile.maxGraphemesPerLine,
+        minDurationFrames: profile.minDurationFrames,
+        minGapFrames: profile.minGapFrames,
+      }))
+        if (Number.isFinite(boundary.value) === false || boundary.value < 0)
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            target,
+            file,
+            `Caption readability profile "${profile.id}" ${field}.value must be finite and non-negative.`,
+          );
+    }
   }
 
   for (const [id, model] of graph.models) {
@@ -1738,8 +2015,20 @@ const validateModelParameters = (
         file,
         `Required parameter "${key}" is missing for ${model.archetype}. Add it in the tracked model recipe record.`,
       );
-  for (const refusal of plan.refusals)
-    invalid(diagnostics, refusal.code, target, file, refusal.message);
+  for (const refusal of plan.refusals) {
+    const registered = AUTOMOVIE_DIAGNOSTIC_CODE_SET.has(refusal.code);
+    invalid(
+      diagnostics,
+      registered
+        ? (refusal.code as AutoMovieDiagnosticCode)
+        : "model-parameter-invalid",
+      target,
+      file,
+      registered
+        ? refusal.message
+        : `Archetype returned unregistered diagnostic code "${refusal.code}". Register a closed AutoMovie diagnostic identity or correct the archetype plan. ${refusal.message}`,
+    );
+  }
   const accepted = plan.accepted === null ? null : new Set(plan.accepted);
   for (const [key, value] of Object.entries(model.parameters)) {
     const rule = archetype.parameters[key];
@@ -2667,7 +2956,7 @@ const validateInstanceHorizontalExtent = (
 
 const invalid = (
   diagnostics: IAutoMovieDiagnostic[],
-  code: string,
+  code: AutoMovieDiagnosticCode,
   target: string,
   path: string,
   message: string,
@@ -2841,7 +3130,13 @@ const validatePredicates = (
   }
 };
 
-/** Whether a time is numerically equivalent to one integer production frame. */
+/**
+ * Whether a time is numerically equivalent to one integer production frame.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-frame-grid Tests authored time against the declared integer frame grid.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-frame-grid-predicate Implements only the integer production frame-grid predicate.
+ * @author Samchon
+ */
 export const isProductionFrameTime = (time: number, fps: number): boolean => {
   const frame = time * fps;
   const tolerance =
