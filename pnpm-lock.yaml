@@ -150,9 +150,6 @@ importers:
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
-      ttsc:
-        specifier: catalog:typescript
-        version: 0.26.1
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
