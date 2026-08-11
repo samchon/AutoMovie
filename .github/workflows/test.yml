@@ -2,11 +2,9 @@ name: test
 on:
   pull_request:
     paths:
-      # BOTH workflow definitions, in both files. The suite reads and asserts
-      # on these two YAMLs (`test_workspace_ci_triggers`), so each is an input
-      # to the job that runs the suite, not only to the job it defines: a pull
-      # request editing build.yml alone must still run this suite, and one
-      # editing this file alone must still build (#1397).
+      # Keep both required checks present when either workflow contract
+      # changes. A path-filtered required workflow can otherwise remain
+      # pending instead of reporting a result for the pull request (#1397).
       - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
       - '.github/license-policy.json'
@@ -21,9 +19,8 @@ on:
       - 'packages/*/*.cts'
       - 'packages/*/*.cjs'
       - 'packages/*/*.html'
-      # A package's own entry document. `test_workspace_public_contracts`
-      # reads three of them and asserts on their text, so they are suite
-      # inputs the same way `src` is (#1397).
+      # Package entry documents are part of the published package surface and
+      # therefore travel through the packaged test boundary (#1397).
       - 'packages/*/*.md'
       - 'packages/*/build/**'
       - 'packages/*/prompts/**'
@@ -34,9 +31,8 @@ on:
       - 'test/**'
       # Root tooling configuration, by shape (#1335). This list is deliberately
       # identical to build.yml's, now with no exception at all, since #1397
-      # put both workflow filenames in both files. The two have drifted once
-      # each, and keeping them identical is what makes the next drift visible
-      # in review; `test_workspace_ci_triggers` now fails on it outright.
+      # put both workflow filenames in both files. Keeping the visible policy
+      # symmetric makes a future drift reviewable.
       # GitHub cannot share a `paths:` block between workflow files, so the
       # alternative is one workflow with two jobs, which would rename both
       # required checks; not worth doing while a rename cannot be confirmed
@@ -47,13 +43,10 @@ on:
       - '*.yml'
       - '.prettier*'
       - '.gitattributes'
-      # The root entry document, read by `test_workspace_public_contracts`
-      # like the package ones above. Named rather than globbed as `*.md`
-      # because `AGENTS.md` and `CLAUDE.md` are agent instructions no job
-      # reads, and neither is `.gitignore`: none of the three belongs here.
-      # #1386 and #1387 are the failure this line closes, and it is the
-      # opposite one: a pull request whose whole diff was markdown, and
-      # neither job ran at all.
+      # The root public entry document is named rather than globbing all
+      # Markdown because agent instructions are not test inputs. #1386 and
+      # #1387 showed that a public-document-only change still needs a reported
+      # check.
       - 'README.md'
 jobs:
   Ubuntu:
