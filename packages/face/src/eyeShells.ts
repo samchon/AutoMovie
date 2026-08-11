@@ -1,12 +1,27 @@
 import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
 import { IForgeMeshPart } from "./hairShell";
 
-/** One eyeball: its mesh plus the fit the renderer colors the iris from. */
+/**
+ * One eyeball: its mesh plus the fit the renderer colors the iris from.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export interface IForgeEyeShell extends IForgeMeshPart {
-  /** Eyeball center (xyz, meters). */
+  /**
+   * Eyeball center (xyz, meters).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   center: [number, number, number];
 
-  /** Eyeball radius (meters). */
+  /**
+   * Eyeball radius (meters).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   radius: number;
 }
 
@@ -62,6 +77,8 @@ const fitEye = (face: number[], ring: number[]): IForgeEyeShell => {
  * by angular distance from it.
  *
  * @author Samchon
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export const buildEyeShells = (
   face: number[] = CANONICAL_FACE_POSITIONS,

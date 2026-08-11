@@ -36,6 +36,8 @@ const LIPS = [
  * (or an `IAutoMovieFaceTemplate.targets`) as-is.
  *
  * @author Samchon
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export const buildFaceMorphs = (
   positions: number[] = CANONICAL_FACE_POSITIONS,

@@ -1,21 +1,56 @@
-/** One scanline of a figure silhouette: the y row and its pixel runs. */
+/**
+ * One scanline of a figure silhouette: the y row and its pixel runs.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export interface IForgeSilhouetteRow {
-  /** Row coordinate (image y). */
+  /**
+   * Row coordinate (image y).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   y: number;
 
-  /** Figure runs on the row as `[start, end]` pixel intervals, left to right. */
+  /**
+   * Figure runs on the row as `[start, end]` pixel intervals, left to right.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   runs: [number, number][];
 }
 
-/** One scanline of a tracked band: the run chosen as the subject's body. */
+/**
+ * One scanline of a tracked band: the run chosen as the subject's body.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export interface IForgeSilhouetteBand {
-  /** Row coordinate (image y). */
+  /**
+   * Row coordinate (image y).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   y: number;
 
-  /** Left edge of the tracked run. */
+  /**
+   * Left edge of the tracked run.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   min: number;
 
-  /** Right edge of the tracked run. */
+  /**
+   * Right edge of the tracked run.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   max: number;
 }
 
@@ -31,6 +66,8 @@ export interface IForgeSilhouetteBand {
  *
  * @author Samchon
  * @throws When the first row has no runs (there is nothing to start from)
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export const trackSilhouetteBands = (
   rows: IForgeSilhouetteRow[],
@@ -58,31 +95,55 @@ export const trackSilhouetteBands = (
   return out;
 };
 
-/** Options of {@link cleanSilhouetteBands}. */
+/**
+ * Options of {@link cleanSilhouetteBands}.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export interface IForgeBandCleaning {
   /**
    * Clamp the min side monotonically non-decreasing after its extremum row (the
    * skull's widest point): spurs can shrink the band but never widen it again
    * below the head.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
    */
   monoMin?: boolean;
 
-  /** The max-side twin of `monoMin`. */
+  /**
+   * The max-side twin of `monoMin`.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   monoMax?: boolean;
 
   /**
    * Rows at or above this y are the only candidates for each side's extremum
    * anchor, so low spurs (ribbons at mouth level) cannot claim it. Default:
    * every row competes.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
    */
   extremumAbove?: number;
 
-  /** Median prefilter radius in rows; `0` disables. Default `3`. */
+  /**
+   * Median prefilter radius in rows; `0` disables. Default `3`.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   medianRadius?: number;
 
   /**
    * Triangular smoothing radius in rows, applied twice; `0` disables. Default
    * `12`, because clay shading exposes every per-row jiggle a texture hides.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
    */
   smoothRadius?: number;
 }
@@ -96,6 +157,8 @@ export interface IForgeBandCleaning {
  * stay free to bulge outward.
  *
  * @author Samchon
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export const cleanSilhouetteBands = (
   bands: IForgeSilhouetteBand[],

@@ -1,4 +1,9 @@
-/** One sparse vertex delta of a morph: `[localIndex, dx, dy, dz]`. */
+/**
+ * One sparse vertex delta of a morph: `[localIndex, dx, dy, dz]`.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export type ForgeHeadDelta = [number, number, number, number];
 
 /**
@@ -9,12 +14,24 @@ export type ForgeHeadDelta = [number, number, number, number];
  * separately authored shapes, so each direction carries its own deltas.
  *
  * @author Samchon
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export interface IForgeHeadMorph {
-  /** Sparse vertex deltas applied when the parameter value is positive. */
+  /**
+   * Sparse vertex deltas applied when the parameter value is positive.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   plus: ForgeHeadDelta[];
 
-  /** Sparse vertex deltas applied when the parameter value is negative. */
+  /**
+   * Sparse vertex deltas applied when the parameter value is negative.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   */
   minus: ForgeHeadDelta[];
 }
 
@@ -34,6 +51,8 @@ export interface IForgeHeadMorph {
  * any geometry source so it can be unit-tested in isolation.
  *
  * @author Samchon
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
  */
 export const morphHead = (
   base: number[],

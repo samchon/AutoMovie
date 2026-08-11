@@ -218,10 +218,29 @@ const CANONICAL_FACE_POSITIONS_RAW: number[] = [
  * the upper lids, both drooping the eyes into a sleepy/monster look). The raw
  * canonical reads as a plain but natural face; any beauty corrective must be
  * verified by render before it lands here.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidenceExclude requirements/product/README.md#제품-계약-요구사항 This frozen compatibility leaf does not implement the whole product contract map.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-content-catalogue-exclusion Retained face geometry is not a completed content catalogue and does not own catalogue policy.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion These deterministic legacy helpers neither adopt nor govern probabilistic completion.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-editor-export-exclusion This package exposes legacy geometry helpers, not an interactive editor or generic export path.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-exclusion-reopening A retained API has no authority or mechanism to reopen a product exclusion.
+ * @evidenceExclude specifications/authoring-and-authority/README.md#spec-authoring-authority-index A documentation topic index is not implemented by face runtime declarations.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity These legacy value helpers carry no source snapshot, digest, runtime version, clock, or seed identity contract.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Face geometry does not produce the film-wide structural prototype output.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant This frozen API owns no authorized quality-tier or seeded-variation choice contract.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output This package creates no downstream rendition identity, receipt, digest, or review state.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility The retained helpers expose no additive fidelity lane or compatibility migration mechanism.
  */
 export const CANONICAL_FACE_POSITIONS: number[] = CANONICAL_FACE_POSITIONS_RAW;
 
-/** Texture coordinates (uv pairs, top-left origin), aligned to positions. */
+/**
+ * Texture coordinates (uv pairs, top-left origin), aligned to positions.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export const CANONICAL_FACE_UVS: number[] = [
   0.499977, 0.652534, 0.500026, 0.547487, 0.499974, 0.602372, 0.482113,
   0.471979, 0.500151, 0.527156, 0.49991, 0.498253, 0.499523, 0.401062, 0.289712,
@@ -348,7 +367,12 @@ export const CANONICAL_FACE_UVS: number[] = [
   0.710288, 0.368253, 0.72333, 0.363373,
 ];
 
-/** Triangle vertex indices, 898 triangles. */
+/**
+ * Triangle vertex indices, 898 triangles.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ */
 export const CANONICAL_FACE_INDICES: number[] = [
   173, 155, 133, 246, 33, 7, 382, 398, 362, 263, 466, 249, 308, 415, 324, 78,
   95, 191, 356, 389, 264, 127, 34, 162, 368, 264, 389, 139, 162, 34, 267, 0,
