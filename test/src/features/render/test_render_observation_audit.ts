@@ -90,6 +90,8 @@ const observation = (
  *    instead of inventing a bound.
  * 4. Metrics the live scene observation does not expose do not masquerade as
  *    runtime checks.
+ * 5. Duplicate, non-finite, and negative report or renderer values stay
+ *    unchecked instead of passing or manufacturing a breach.
  */
 export const test_render_observation_audit = (): void => {
   TestValidator.equals(
@@ -134,4 +136,44 @@ export const test_render_observation_audit = (): void => {
     }).unchecked,
     [],
   );
+
+  const base = report();
+  TestValidator.equals(
+    "duplicate report metrics are ambiguous",
+    auditAutoMovieRenderObservation({
+      report: {
+        ...base,
+        findings: [...base.findings, base.findings[0]!],
+      },
+      observed: observation(),
+    }).unchecked,
+    ["triangles"],
+  );
+
+  for (const [title, bound] of [
+    ["non-finite report bounds", Number.NaN],
+    ["negative report bounds", -1],
+  ] as const)
+    TestValidator.equals(
+      title,
+      auditAutoMovieRenderObservation({
+        report: report({ triangles: bound }),
+        observed: observation(),
+      }).unchecked,
+      ["triangles"],
+    );
+
+  for (const [title, triangles] of [
+    ["null renderer observations", null],
+    ["non-finite renderer observations", Number.NaN],
+    ["negative renderer observations", -1],
+  ] as const)
+    TestValidator.equals(
+      title,
+      auditAutoMovieRenderObservation({
+        report: report(),
+        observed: observation({ triangles }),
+      }).unchecked,
+      ["triangles"],
+    );
 };

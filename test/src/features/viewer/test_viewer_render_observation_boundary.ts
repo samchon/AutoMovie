@@ -48,6 +48,25 @@ export const test_viewer_render_observation_boundary = (): void => {
     },
   });
   TestValidator.equals("renderer reset policy is restored", info.autoReset, true);
+  let refused = false;
+  try {
+    observeAutoMovieRendererFrame(renderer, () => {
+      throw new Error("draw failed");
+    });
+  } catch {
+    refused = true;
+  }
+  TestValidator.equals(
+    "draw failures restore the reset policy",
+    {
+      refused,
+      autoReset: info.autoReset,
+    },
+    {
+      refused: true,
+      autoReset: true,
+    },
+  );
 
   const report: IAutoMovieRenderReport = {
     version: 1,
