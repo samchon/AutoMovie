@@ -58,14 +58,6 @@ import type {
  */
 export const EXAMPLE_RENDER_TEXTURE = "public/assets/panel-basecolor.png";
 
-/**
- * Carry unanswered render costs in the subject instead of measuring them as
- * zero.
- *
- * The water body has no priced solver and the bound texture has no supplied
- * dimensions, so the report must answer `unsupported` and `not-run` rather than
- * granting a false pass to work nobody measured.
- */
 export const exampleRenderSubject = (
   props: {
     /** Asset path the panel's finish binds; deliberately left unmeasured. */

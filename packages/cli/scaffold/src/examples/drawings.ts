@@ -151,12 +151,7 @@ export const exampleFloorPlanView = (
   };
 };
 
-/**
- * Derive the plan from the same building and view its other readings consume.
- *
- * Keeping linework, regions, opening marks, dimensions, and notes behind this
- * derivation prevents the plan from becoming a second authored geometry copy.
- */
+/** The plan itself: linework, regions, opening marks, dimensions, notes. */
 export const exampleFloorPlan = (): IAutoMovieDrawing =>
   deriveAutoMovieDrawing({
     environment: new ExampleBuilding().design(),

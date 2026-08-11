@@ -28,12 +28,7 @@ export const onlookerScatter = (
   },
 });
 
-/**
- * Keep non-formation planting as a seeded scatter rather than expanded nodes.
- *
- * The count, placement law, and bounded variation describe the whole planting,
- * so adding members does not add scene records or platform-dependent choices.
- */
+/** Non-formation planting with 1,000 reproducibly varied tree proxies. */
 export const treeScatter = (
   modelRecipe: string,
 ): IAutoMovieInstanceSetDesign => ({
