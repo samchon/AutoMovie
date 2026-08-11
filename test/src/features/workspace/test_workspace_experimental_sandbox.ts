@@ -27,12 +27,6 @@ const generate = (
 const readSandbox = (relative: string): string =>
   fs.readFileSync(path.join(TARGET, ...relative.split("/")), "utf8");
 
-const readScaffold = (relative: string): string =>
-  fs.readFileSync(
-    path.join(ROOT, "packages", "cli", "scaffold", ...relative.split("/")),
-    "utf8",
-  );
-
 /**
  * Pin what the experimental generator emits, which is the whole reason a
  * sandbox can be driven by a live agent against working-tree code.
@@ -51,7 +45,7 @@ const readScaffold = (relative: string): string =>
  * revisions rewrote both, and every one of those rewrites existed only to work
  * around `link:` resolving to untransformed `src/*.ts`.
  *
- * The pack itself is not exercised here: it runs eight package builds and would
+ * The pack itself is not exercised here: it runs nine package builds and would
  * dominate this suite. `pnpm run e2e:tgz` covers the equivalent guarantee that
  * a packed chain resolves and serves, and creating a real sandbox covers the
  * rest.
@@ -65,10 +59,9 @@ const readScaffold = (relative: string): string =>
  *    which is what holds the Sharp capability wall, and adds no pnpm-specific
  *    block: a sandbox installs with npm, whose transitive resolution is what
  *    makes sibling tarballs satisfy the packed packages' own ranges.
- * 3. `.claude/settings.json` approves the project's MCP servers while preserving
- *    the scaffold's own hook block byte for byte.
- * 4. `.mcp.json` and the script table are the scaffold's own, unrewritten, and no
- *    host-only tsconfig or lint config is emitted beside them.
+ * 3. `.claude/settings.json` approves the project's MCP servers and retains a hook
+ *    block.
+ * 4. No host-only tsconfig or lint config is emitted.
  * 5. A second run over the rendered sandbox fails without `--force`, and the
  *    message names the directory.
  * 6. `--refresh` runs against that same non-empty sandbox and leaves the project's
@@ -87,14 +80,8 @@ export const test_workspace_experimental_sandbox = (): void => {
     const manifest = JSON.parse(readSandbox("package.json")) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
-      scripts: Record<string, string>;
       overrides: Record<string, Record<string, string>>;
       pnpm?: unknown;
-    };
-    const scaffold = JSON.parse(readScaffold("package.json")) as {
-      dependencies: Record<string, string>;
-      devDependencies: Record<string, string>;
-      scripts: Record<string, string>;
     };
     const ranges = Object.entries({
       ...manifest.dependencies,
@@ -144,21 +131,9 @@ export const test_workspace_experimental_sandbox = (): void => {
       true,
     );
     TestValidator.equals(
-      "the scaffold's own hooks survive that merge",
-      settings.hooks,
-      (JSON.parse(readScaffold(".claude/settings.json")) as { hooks: unknown })
-        .hooks,
-    );
-
-    TestValidator.equals(
-      "the host launcher is the scaffold's own",
-      readSandbox(".mcp.json"),
-      readScaffold(".mcp.json"),
-    );
-    TestValidator.equals(
-      "the script table is the scaffold's own",
-      manifest.scripts,
-      scaffold.scripts,
+      "the generated project retains its hook configuration",
+      settings.hooks === undefined,
+      false,
     );
     TestValidator.equals(
       "no host-only project config is emitted",

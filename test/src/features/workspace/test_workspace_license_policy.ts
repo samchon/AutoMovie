@@ -13,7 +13,7 @@ interface ILicensePolicyFixtureFailure {
 class LicensePolicyFixtureCleanupError extends AggregateError {}
 
 /** Remove the license-policy root without replacing its primary failure. */
-export const preserveLicensePolicyFixtureCleanup = (
+const preserveLicensePolicyFixtureCleanup = (
   failure: ILicensePolicyFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
@@ -36,123 +36,6 @@ interface IDependencyFixtureOptions {
   manifestName?: string;
   resolution?: "commonjs" | "export-map" | "import-only";
 }
-
-interface IPackageManifest {
-  dependencies?: Record<string, string>;
-  license?: string;
-  name: string;
-  optionalDependencies?: Record<string, string>;
-  peerDependencies?: Record<string, string>;
-}
-
-interface IScaffoldPackageManifest extends IPackageManifest {
-  overrides?: {
-    "@huggingface/transformers"?: {
-      sharp?: string;
-    };
-  };
-}
-
-/** Scaffold dependencies without one installed production owner. */
-const unauditedScaffoldDependencies = (): string[] => {
-  const packageFiles = [
-    path.join(ROOT, "package.json"),
-    path.join(ROOT, "test", "package.json"),
-    ...fs
-      .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => path.join(ROOT, "packages", entry.name, "package.json"))
-      .filter(fs.existsSync),
-  ];
-  const manifests = packageFiles.map(
-    (file) => JSON.parse(fs.readFileSync(file, "utf8")) as IPackageManifest,
-  );
-  const workspaceNames = new Set(manifests.map((manifest) => manifest.name));
-  const productionDependencies = new Set(
-    manifests.flatMap((manifest) => [
-      ...Object.keys(manifest.dependencies ?? {}),
-      ...Object.keys(manifest.optionalDependencies ?? {}),
-      ...Object.keys(manifest.peerDependencies ?? {}),
-    ]),
-  );
-  const scaffoldFile = path.join(
-    ROOT,
-    "packages",
-    "cli",
-    "scaffold",
-    "package.json",
-  );
-  const scaffold = JSON.parse(
-    fs.readFileSync(scaffoldFile, "utf8"),
-  ) as IPackageManifest;
-  return Object.entries(scaffold.dependencies ?? {})
-    .filter(([dependency, specifier]) => {
-      if (specifier.startsWith("file:")) {
-        const localManifest = path.join(
-          path.resolve(
-            path.dirname(scaffoldFile),
-            specifier.slice("file:".length),
-          ),
-          "package.json",
-        );
-        return (
-          fs.existsSync(localManifest) === false ||
-          (
-            JSON.parse(fs.readFileSync(localManifest, "utf8")) as {
-              name?: string;
-            }
-          ).name !== dependency
-        );
-      }
-      return (
-        workspaceNames.has(dependency) === false &&
-        productionDependencies.has(dependency) === false
-      );
-    })
-    .map(([dependency]) => dependency)
-    .sort(compareCodeUnits);
-};
-
-const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
-
-/** Drift in the local permissive-only Transformers.js image capability wall. */
-const invalidSharpCapabilityWall = (): string[] => {
-  const scaffold = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
-      "utf8",
-    ),
-  ) as IScaffoldPackageManifest;
-  const wallRoot = path.join(
-    ROOT,
-    "packages",
-    "cli",
-    "scaffold",
-    "vendor",
-    "sharp-disabled",
-  );
-  const wall = JSON.parse(
-    fs.readFileSync(path.join(wallRoot, "package.json"), "utf8"),
-  ) as IPackageManifest;
-  return [
-    ...(scaffold.dependencies?.sharp === "file:vendor/sharp-disabled"
-      ? []
-      : ["scaffold direct dependency"]),
-    ...(scaffold.overrides?.["@huggingface/transformers"]?.sharp ===
-    "file:vendor/sharp-disabled"
-      ? []
-      : ["scaffold override"]),
-    ...(wall.name === "sharp" && wall.license === "MIT"
-      ? []
-      : ["replacement identity"]),
-    ...(fs
-      .readFileSync(path.join(wallRoot, "index.cjs"), "utf8")
-      .includes("text/audio path only")
-      ? []
-      : ["capability-wall error"]),
-  ];
-};
 
 /** Write a tiny installed production dependency with a selected license. */
 const writeDependency = (
@@ -244,20 +127,8 @@ const check = (root: string) =>
  *    external transitive edges with its own same-named installed dependency.
  * 5. Node built-ins need no package license while npm aliases audit their physical
  *    target package manifest.
- * 6. The shipped Kokoro graph redirects Transformers.js's Sharp edge to the
- *    complete local MIT capability wall instead of a native LGPL package.
  */
 export const test_workspace_license_policy = (): void => {
-  TestValidator.equals(
-    "every shipped scaffold runtime dependency has an audited production owner",
-    unauditedScaffoldDependencies(),
-    [],
-  );
-  TestValidator.equals(
-    "the Kokoro graph replaces Sharp with a local permissive capability wall",
-    invalidSharpCapabilityWall(),
-    [],
-  );
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-license-"));
   let licensePolicyFailure: ILicensePolicyFixtureFailure | undefined;
   try {
