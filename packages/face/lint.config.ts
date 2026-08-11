@@ -25,6 +25,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/actors/README.md",
           "requirements/actors/representation-tiers-and-fidelity-boundary.md",
         ],
         symbol: ["h2", "h3"],
@@ -51,6 +52,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
         ],
         symbol: ["h2", "h3"],
@@ -64,7 +66,10 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/actors/skeleton-rig-and-retargeting.md"],
+        files: [
+          "requirements/actors/README.md",
+          "requirements/actors/skeleton-rig-and-retargeting.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
@@ -77,6 +82,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/asset-and-representation/README.md",
           "specifications/asset-and-representation/rig-deformation-and-state.md",
         ],
         symbol: ["h2", "h3"],
