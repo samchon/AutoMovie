@@ -1,5 +1,7 @@
 import { AutoMovieGuidePass, IAutoMovieRenderSpec } from "../cinematics";
 import { IAutoMovieVector3 } from "../geometry";
+import { IAutoMovieRenderObservation } from "../render/IAutoMovieRenderObservation";
+import { IAutoMovieSemanticMask } from "../render/IAutoMovieSemanticMask";
 import {
   AutoMovieFilmTime,
   IAutoMovieDiagnostic,
@@ -375,6 +377,49 @@ export interface IAutoMovieRenderBundleManifest {
   }>;
 }
 
+/**
+ * Availability of one host-produced capture observation.
+ *
+ * The host records absence instead of manufacturing an observation. This type
+ * carries the host's result; it does not decide whether absence is acceptable.
+ *
+ * @evidence requirements/rendering/validation.md#rendering-validation-status Distinguishes available evidence from an explicitly unperformed observation.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves whether the selected host could produce the requested capture observation.
+ */
+export type AutoMovieCaptureObservation<T> =
+  | {
+      /**
+       * The host produced the observation.
+       *
+       * @evidence requirements/rendering/validation.md#rendering-validation-status Records a positive observation state.
+       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Carries a host-produced observation without changing it.
+       */
+      status: "available";
+      /**
+       * Host-produced observation value.
+       *
+       * @evidence requirements/rendering/validation.md#rendering-validation-status Carries the evidence associated with the available state.
+       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves the observation returned by the selected capture host.
+       */
+      value: T;
+    }
+  | {
+      /**
+       * The host did not perform the observation.
+       *
+       * @evidence requirements/rendering/validation.md#rendering-validation-status Records non-execution instead of treating it as a pass.
+       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves an unavailable host observation as an explicit state.
+       */
+      status: "not-run";
+      /**
+       * Non-blank reason the observation was not performed.
+       *
+       * @evidence requirements/rendering/validation.md#rendering-validation-status Makes the absent observation auditable.
+       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Carries the host boundary that prevented observation.
+       */
+      reason: string;
+    };
+
 /** Host-owned adapter that captures a current compiled production frame. */
 export type AutoMovieProductionFrameCapture = (
   input: IAutoMoviePreviewFrameInput & {
@@ -394,4 +439,20 @@ export type AutoMovieProductionFrameCapture = (
   width: number;
   /** Pixel height. */
   height: number;
+  /**
+   * Counts observed from the same drawn shot frame, or an explicit reason the
+   * selected capture path could not obtain them.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Carries actual-frame cost evidence alongside the captured pixels.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the observation used to audit the planned render report.
+   */
+  observation: AutoMovieCaptureObservation<IAutoMovieRenderObservation>;
+  /**
+   * Semantic mask palette sidecar for the same shot capture, or an explicit
+   * reason it was not produced.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Carries the identity map beside the frame whose colors it explains.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Joins the mask product with its semantic sidecar.
+   */
+  maskSidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMask>;
 }>;
