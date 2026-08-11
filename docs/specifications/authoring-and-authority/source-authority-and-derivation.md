@@ -2,15 +2,15 @@
 
 ## 작품 사실의 정본 경계 {#spec-authoring-source-authority-boundary}
 
+### Source와 파생 상태 {#spec-authoring-source-derivation-state}
+
+<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link 이 상태가 각 결과를 정확한 source revision과 input bytes에 연결한다. -->
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-project-owned-facts 이 경계가 작품의 script, 자산과 저작 helper를 사용자 project의 정본으로 둔다. -->
 <!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-owned-loop 이 계약이 source 편집에서 검증과 delivery까지의 반복을 정본 중심으로 정의한다. -->
 
 사용자가 읽고 수정할 수 있는 project source와 명시적으로 채택한 bytes가 작품 사실의 정본이다. Compile, render, 분석, review와 delivery artifact는 정본을 소비하는 파생 결과이며 독립적으로 작품 사실을 변경할 수 없다.
 
-### Source와 파생 상태 {#spec-authoring-source-derivation-state}
-
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-editable-source-authority 이 상태가 editable source보다 cache나 remote state에 높은 권위를 부여하지 못하게 한다. -->
-<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link 이 상태가 각 결과를 정확한 source revision과 input bytes에 연결한다. -->
 
 Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파생 결과는 `current`, `stale`, `missing`, `refused` 중 하나이며, 결과가 참조한 snapshot과 현재 snapshot이 동일하고 자체 검증이 성공한 경우에만 `current`다.
 

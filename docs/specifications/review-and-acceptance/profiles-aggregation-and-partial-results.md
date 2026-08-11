@@ -2,11 +2,11 @@
 
 ## Acceptance Profile 레코드 {#acceptance-system-profile-record}
 
+### Blocking Profile {#acceptance-system-blocking-profile}
+
 <!-- @evidence requirements/acceptance/profiles-and-aggregation.md#acceptance-profile-identity Defines purpose, version, target types, criteria, thresholds, evidence, authority and aggregation as one identity. -->
 
 Profile은 목적, version, applicable target kinds, required와 optional criteria, threshold, evidence tier, authority roles, aggregation rule과 nonwaivable policy를 하나의 immutable identity로 묶는다. 이름이 같아도 이 계약 중 하나가 다르면 별도 profile version이다.
-
-### Blocking Profile {#acceptance-system-blocking-profile}
 
 <!-- @evidence requirements/acceptance/profiles-and-aggregation.md#acceptance-blocking-profile Keeps blocking-pass acceptance focused on readable structure, staging, motion, timing and continuity. -->
 
@@ -38,11 +38,11 @@ Project-defined profile은 제품이 표현하고 관찰할 수 있는 범위에
 
 ## Criterion 집계 {#acceptance-system-criterion-aggregation}
 
+### Required와 Severity {#acceptance-system-required-severity}
+
 <!-- @evidence requirements/acceptance/profiles-and-aggregation.md#acceptance-criterion-aggregation Preserves every child criterion's requirement, severity, scope and verdict in aggregate output. -->
 
 Aggregate result는 child criterion identity, required 여부, severity, scope, verdict와 rationale을 보존하고 profile의 deterministic aggregation rule로 계산된다. Summary status는 fail, indeterminate, unsupported와 stale child를 숨기지 않는다.
-
-### Required와 Severity {#acceptance-system-required-severity}
 
 <!-- @evidence requirements/acceptance/profiles-and-aggregation.md#acceptance-required-severity Defines required, optional, blocking and advisory behavior including invalid-profile refusal. -->
 
@@ -69,12 +69,12 @@ Aggregate accepted는 모든 required criterion이 current한 pass 또는 fail�
 
 ## 불확실성과 부분 성공 {#acceptance-system-uncertainty-partial}
 
+### 수치 불확실성 {#acceptance-system-numeric-uncertainty}
+
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-uncertainty-expression Requires the cause, magnitude or range and verdict impact of uncertainty. -->
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-partial-success Defines partial as explicitly scoped success with remaining incomplete work. -->
 
 Uncertainty record는 measurement, alignment, transform, observer, external source 또는 sampling 원인과 크기 또는 가능한 범위, affected observable과 verdict impact를 가진다. Partial aggregate는 pass한 scope와 criterion, 남은 scope, risk, allowed use와 prohibited use를 함께 제공한다.
-
-### 수치 불확실성 {#acceptance-system-numeric-uncertainty}
 
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-numeric-uncertainty Defines pass, fail and indeterminate from an uncertainty interval around the boundary. -->
 

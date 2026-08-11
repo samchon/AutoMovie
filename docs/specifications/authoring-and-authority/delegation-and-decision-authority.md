@@ -2,14 +2,14 @@
 
 ## 역할별 결정 경계 {#spec-authoring-role-decision-boundary}
 
+### 결정 권한 상태 {#spec-authoring-decision-authority-state}
+
+<!-- @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision 이 상태가 직접 선택, 위임과 보류를 구분한다. -->
 <!-- @evidence requirements/agent-authoring/roles-and-authorities.md#agent-separated-authorities 이 계약이 사용자, 코딩 에이전트, host와 결정론적 실행기의 권한을 분리한다. -->
 <!-- @evidence requirements/product/choice-and-external-services.md#product-user-controlled-choice 이 경계가 작품별 선택의 최종 통제권을 사용자에게 둔다. -->
 
 사용자는 작품 의도, source와 결과 채택의 최종 권한을 가진다. 코딩 에이전트는 명시적으로 위임된 저작 결정을 수행하고, host는 공개 지식과 실제 evidence를 전달하며, 결정론적 실행기는 구조적 유효성만 판단한다.
 
-### 결정 권한 상태 {#spec-authoring-decision-authority-state}
-
-<!-- @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision 이 상태가 직접 선택, 위임과 보류를 구분한다. -->
 <!-- @evidence requirements/agent-authoring/roles-and-authorities.md#agent-user-delegation-authority 이 상태가 사용자가 정한 위임 범위와 회수 가능한 권한을 표현한다. -->
 
 각 미해결 선택은 `reserved`, `delegated`, `decided`, `deferred` 중 하나의 상태를 가진다. 상태에는 target, 허용 선택지, 제약, acceptance 조건, 결정 주체와 기준 source revision이 포함되어야 하며, `delegated`는 사용자 소유권 이전을 뜻하지 않는다. 사용자는 위임을 회수하거나 범위를 바꿀 수 있고 위임된 결정의 origin은 이후 검토에서 수정하거나 거부할 수 있게 남아야 한다.

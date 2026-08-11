@@ -2,12 +2,12 @@
 
 ## Character Identity 경계 {#narrative-intent-character-identity-boundary}
 
+### 목표, Tactic과 Outcome {#narrative-intent-character-goal-state}
+
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-dramatic-characters 인물의 이름, 역할, 관점, knowledge와 arc를 story identity로 보존한다. -->
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-character-actor-binding story character와 actor representation을 분리한다. -->
 
 Character 입력은 stable identity, 이름과 alias, 역할, 관점, knowledge, desire, fear, constraint와 arc이고 actor, model, performer와 visual representation은 별도 binding이다. 외형, disguise, title, 나이대 또는 performer 변경은 identity를 바꾸지 않으며 쌍둥이, double과 imagined figure는 외형 유사성으로 병합되지 않는다.
-
-### 목표, Tactic과 Outcome {#narrative-intent-character-goal-state}
 
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-character-goals-obstacles scene과 beat의 active goal, tactic, obstacle, cost와 outcome을 연결한다. -->
 
@@ -22,11 +22,11 @@ Choice, consequence와 presentation 정보에는 각각 acting subject, affected
 
 ## Relation 상태 모델 {#narrative-intent-relation-state-model}
 
+### 등장과 부재 State {#narrative-intent-character-presence-state}
+
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-character-relations 방향별 관계, 권한과 믿음을 시간에 따라 보존한다. -->
 
 Relation은 stable identity, source와 target, relation kind, direction, 공개 여부, 유효 시간, 실제 상태와 관점별 믿음을 가진다. 동맹, 대립, 권한, 친밀, 신뢰, 의존, 정보 비대칭, spatial relation과 조직 소속을 하나의 대칭 점수로 축약하지 않는다.
-
-### 등장과 부재 State {#narrative-intent-character-presence-state}
 
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-character-presence-absence on-screen, off-screen, heard-only, referenced, imagined와 absent를 구분한다. -->
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scene-participant-modes scene 참여 방식과 cast 언급을 분리한다. -->
@@ -47,12 +47,12 @@ Arc는 작품에 필요한 milestone identity, 이전 state, pressure 또는 cho
 
 ## State Ledger와 전이 {#narrative-intent-story-state-ledger}
 
+### Scene Entry와 Exit {#narrative-intent-scene-entry-exit-state}
+
 <!-- @evidence requirements/story/story-clock-and-state.md#story-state-ledger 위치, knowledge, 소유, damage와 unresolved action을 경계마다 인계한다. -->
 <!-- @evidence requirements/story/story-clock-and-state.md#story-state-transition-causes state change의 단일, 복합과 미정 원인을 구분한다. -->
 
 Ledger entry는 subject, state key, value, 유효 time 또는 phase, source authority, confidence와 cause를 가진다. 전이는 하나 이상의 cause event, declared initial condition 또는 authored discontinuity를 요구하고 복합 원인과 여러 후보 중 unknown인 원인을 구분한다.
-
-### Scene Entry와 Exit {#narrative-intent-scene-entry-exit-state}
 
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scene-entry-exit-state scene 시작과 종료 상태를 관찰 가능한 변화로 만든다. -->
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scene-place-time 장소와 시간 조건을 안정 location 및 temporal state에 연결한다. -->

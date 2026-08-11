@@ -2,12 +2,12 @@
 
 ## Scale과 Frame 계약 {#narrative-intent-scale-frame-contract}
 
+### Silhouette와 Detail Frequency {#narrative-intent-silhouette-detail-contract}
+
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-scale-proportion subject와 location의 측정값 및 관계를 정한다. -->
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-units-coordinate-frame unit, axis, frame과 origin을 명시한다. -->
 
 Dimension은 subject 또는 location, length, angle, area 또는 volume unit, value 또는 range, coordinate frame, origin, source, basis, tolerance, confidence와 variant를 가진다. External source의 unit와 axis는 adopted design frame으로 가는 명시적 transform을 가지며 composition 편의를 위한 숨은 scale은 거절된다.
-
-### Silhouette와 Detail Frequency {#narrative-intent-silhouette-detail-contract}
 
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-silhouette-identity critical view에서 subject identity를 구분하는 mass와 negative space를 정한다. -->
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-detail-frequency delivery tier에서 살아야 할 form frequency를 정한다. -->
@@ -38,11 +38,11 @@ Proxy, standard, hero, imported와 repainted representation은 world extent, lan
 
 ## Palette와 Material 상태 {#narrative-intent-palette-material-state}
 
+### Palette Role과 Distinction {#narrative-intent-palette-role-distinction}
+
 <!-- @evidence requirements/production-design/palette-material-and-state.md#production-design-palette-material-state surface와 color state를 location, faction, character와 phase에 연결한다. -->
 
 Palette와 material decision은 stable identity, 적용 surface 또는 subject, base state, variant, source, story location 또는 faction, time phase, viewing condition과 purpose를 가진다. Render의 우연한 색과 appearance는 승인 palette나 material source로 역승격되지 않는다.
-
-### Palette Role과 Distinction {#narrative-intent-palette-role-distinction}
 
 <!-- @evidence requirements/production-design/palette-material-and-state.md#production-design-palette-roles dominant, supporting, accent, warning, identity와 transformation 역할을 정한다. -->
 

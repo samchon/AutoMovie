@@ -2,11 +2,11 @@
 
 ## Versioned 상태 기계 {#execution-versioned-state-machine}
 
+### Job State와 Attempt State {#execution-job-attempt-state}
+
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-state-vocabulary 긴 작업의 planned부터 terminal까지 구분 가능한 상태 vocabulary를 시스템 전이로 구체화한다. -->
 
 상태 기계 version은 state 의미와 allowed transitions를 함께 식별해야 한다. Current attempt는 한 시점에 하나의 상태만 가지며 job state는 current attempt, retry eligibility와 remaining work에서 파생되고, 알 수 없는 version이나 state는 blocked 상태로 격리하여 mutation을 거부해야 한다.
-
-### Job State와 Attempt State {#execution-job-attempt-state}
 
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-attempt-separation 실패한 attempt와 계속 유효한 logical job의 상태를 분리한다. -->
 

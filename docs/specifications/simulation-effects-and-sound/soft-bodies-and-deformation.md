@@ -1,12 +1,14 @@
 # Soft Bodies and Deformation
 
 ## Soft domain identity와 state {#soft-domain-identity-and-state}
+
+### Static와 moving anchor {#soft-static-moving-anchor-input}
+
 <!-- @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-body-deformation 이 절은 anchor와 constraint를 가진 유한 soft domain을 정의한다. -->
 <!-- @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-discretization-identity 이 절은 lattice와 solver 설정을 결과 identity에 포함한다. -->
 
 Soft domain 입력은 stable identity, rest topology, ordered particles, constraints, fixed step, iteration cap, seed, units와 basis다. State는 absolute tick, 모든 particle의 positionㆍprevious position 또는 velocity, constraint revision, active anchors와 digest를 포함한다. Topology나 solver parameter가 바뀌면 새 domain revision이며 이전 checkpoint와 external bake는 호환되지 않는다.
 
-### Static와 moving anchor {#soft-static-moving-anchor-input}
 <!-- @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors 이 절은 anchor의 소유 frame과 시간 평가를 명시하게 한다. -->
 <!-- @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary 이 절은 moving primary boundary를 soft anchor 입력으로 고정한다. -->
 

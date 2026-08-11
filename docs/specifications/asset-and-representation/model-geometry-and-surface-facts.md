@@ -2,11 +2,11 @@
 
 ## 모델 저작 경계 {#asset-spec-model-authoring-boundary}
 
+### 시대와 양식 입력 {#asset-spec-era-style-inputs}
+
 <!-- @evidence requirements/asset-authoring/geometry.md#asset-general-geometry 한정된 catalogue가 아니라 새 대상의 기하와 표면을 저작할 수 있어야 한다. -->
 
 시스템은 모델을 이름 붙은 부품, 부품 사이 관계, 기하, 표면 영역, 재료 결합과 선택적 변형 결합의 검증 가능한 사실 집합으로 취급한다. 특정 시대, 양식, 대상 종류나 완제품 목록은 모델의 필수 분류가 아니며, 사용자가 준 측정과 관계가 구조의 권위이다.
-
-### 시대와 양식 입력 {#asset-spec-era-style-inputs}
 
 <!-- @evidence requirements/asset-authoring/era-and-style.md#asset-era-independent-expression 시대에 고정되지 않은 일반 저작 능력을 유지해야 한다. -->
 <!-- @evidence requirements/asset-authoring/era-and-style.md#asset-style-as-input 양식을 catalogue 선택이 아니라 사용자가 준 관계와 제약으로 받아야 한다. -->

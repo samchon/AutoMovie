@@ -2,12 +2,12 @@
 
 ## 같은 Logical Work의 반복 {#execution-retry-idempotency-contract}
 
-<!-- @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotency-side-effects 중복 요청과 응답 유실 뒤 반복이 durable state와 외부 side effect를 늘리지 않게 한다. -->
+### Duplicate Submission {#execution-duplicate-submission}
+
 <!-- @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-retry-lineage-and-limits Retry를 같은 job의 새 attempt로 기록하고 한계 없이 반복하지 않게 한다. -->
+<!-- @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotency-side-effects 중복 요청과 응답 유실 뒤 반복이 durable state와 외부 side effect를 늘리지 않게 한다. -->
 
 Retry input은 logical job identity, failed or interrupted attempt, failure classification, retry policy와 authority를 포함한다. Retry output은 new attempt identity, eligibility decision, earliest start, remaining limits와 reused completion set이며 job contract와 deterministic output identity를 변경하지 않는다.
-
-### Duplicate Submission {#execution-duplicate-submission}
 
 <!-- @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission 동시 또는 지연된 같은 요청을 하나의 logical job과 연결하거나 명시적으로 거부한다. -->
 

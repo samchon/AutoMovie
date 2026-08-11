@@ -2,12 +2,12 @@
 
 ## Verdict Evidence 집합 {#acceptance-system-evidence-set}
 
+### 수치 Evidence {#acceptance-system-numeric-evidence}
+
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-sufficiency Requires evidence kind and scope to match each criterion obligation. -->
 <!-- @evidence requirements/review/records-and-completeness.md#review-records-completeness Connects planned scope, observed target, findings, verdict and incomplete reasons. -->
 
 각 criterion verdict는 required evidence specification과 actual evidence set을 가지며 evidence identity, subject, scope, context, observation, producer와 freshness를 보존한다. Evidence가 존재한다는 사실과 criterion을 판정하기에 충분하다는 사실을 분리한다.
-
-### 수치 Evidence {#acceptance-system-numeric-evidence}
 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-numeric-evidence Requires measured values, units, samples, aggregation, tolerance and comparison result. -->
 
@@ -33,11 +33,11 @@
 
 ## Evidence Freshness {#acceptance-system-evidence-freshness}
 
+### Current와 Historical Evidence {#acceptance-system-current-historical-evidence}
+
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness Binds evidence to target, version, profile, time range and actual artifact identity. -->
 
 Evidence freshness는 target, source와 dependency identity, criterion version, profile, sample scope, context와 actual artifact relation에서 계산한다. Filename, 설명, 생성 시각 또는 비슷한 frame만 같다는 이유로 current 상태를 부여하지 않는다.
-
-### Current와 Historical Evidence {#acceptance-system-current-historical-evidence}
 
 <!-- @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Separates evidence usable for current verdicts from evidence usable only for comparison and provenance. -->
 
@@ -57,11 +57,11 @@ Evidence record는 observation에서 파생된 경로, transform과 compression 
 
 ## 계획과 실제 Coverage {#review-system-planned-actual-coverage}
 
+### 실행 상태 {#review-system-execution-status}
+
 <!-- @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Separates required review coverage from what was actually observed. -->
 
 Review coverage는 required targets, frames, intervals, surfaces, criteria와 assigned authority를 포함하는 plan과 실제 observation 집합을 대조한다. Missing, excluded와 failed observation은 각 scope와 reason을 가진다.
-
-### 실행 상태 {#review-system-execution-status}
 
 <!-- @evidence requirements/review/records-and-completeness.md#review-execution-status Defines not-started, in-review, reviewed, blocked, not-run, unsupported and stale states. -->
 

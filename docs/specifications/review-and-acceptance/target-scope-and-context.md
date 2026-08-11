@@ -2,12 +2,12 @@
 
 ## 검토 대상 레코드 {#review-system-target-record}
 
+### 범위 선택 {#review-system-scope-selection}
+
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-target-identity Defines a stable target identity across versions, variants and profiles. -->
 <!-- @evidence requirements/review/reproducible-context.md#review-reproducible-context Defines the complete context required to reopen the same review basis. -->
 
 검토 대상 레코드는 대상 종류, 안정된 identity, revision 또는 content identity, variant, 적용 profile과 판정 시점을 가진다. 같은 표시 이름을 가진 서로 다른 내용은 별도 대상이며, 대상 레코드는 그것을 설명하는 review record와 독립된 identity를 유지한다.
-
-### 범위 선택 {#review-system-scope-selection}
 
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion Makes included and excluded ranges explicit rather than treating silence as success. -->
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit Supports independently requestable criteria, targets, intervals, profiles and change sets. -->

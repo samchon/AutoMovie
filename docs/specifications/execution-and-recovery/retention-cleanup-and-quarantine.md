@@ -2,11 +2,10 @@
 
 ## Lifecycle Retention Contract {#execution-retention-contract}
 
-<!-- @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-retention-cleanup Source, checkpoint, cache, artifact, receipt, diagnostic와 audit의 서로 다른 보존 정책을 시스템 lifecycle로 정의한다. -->
+### Retention Classes {#execution-retention-classes}
+
 
 Retention policy는 artifact class, scope, minimum and maximum duration, expiry basis, required references, legal or audit hold, responsible role, deletion authority와 recoverability class를 가진다. Record와 payload는 자신에게 적용된 policy version과 evaluated expiry를 보존하고 다른 class의 짧은 policy를 상속하지 않는다.
-
-### Retention Classes {#execution-retention-classes}
 
 <!-- @evidence requirements/operations-and-recovery/retention-and-cleanup.md#operations-retention-cleanup 서로 다른 lifecycle 대상의 보존 기간, 삭제 조건, 복구 가능성과 책임자를 구분한다. -->
 

@@ -1,18 +1,15 @@
 # Review와 Acceptance 시스템 명세
 
+<!-- @evidence requirements/acceptance/README.md#acceptance-요구사항 acceptance 기준, 관찰, 증거, 판정과 승인 약속을 시스템 계약으로 정밀화한다. -->
+<!-- @evidence requirements/review/README.md#검토-요구사항 review 범위, 권한, finding과 최종 판단 약속을 시스템 계약으로 정밀화한다. -->
+
 ## 시스템 경계 {#review-acceptance-system-boundary}
 
-<!-- @evidence requirements/acceptance/README.md#acceptance-topic-scope Makes the observable acceptance topic precise as target, criterion, evidence, verdict and authority state. -->
-<!-- @evidence requirements/acceptance/README.md#acceptance-observable-contract Defines the system records through which a user can inspect the basis and scope of acceptance. -->
-<!-- @evidence requirements/review/scope-and-authority.md#review-scope-authority Defines the identity and authority boundary of every review decision. -->
-<!-- @evidence requirements/review/scope-and-authority.md#review-human-final-authority Preserves a human as the final authority above automated observations and findings. -->
 
 이 주제는 검토 대상과 context, 표본, criterion, observation, finding, defect, verdict, approval과 재판정을 하나의 추적 가능한 상태 체계로 정의한다. 시스템은 결정 가능한 구조와 수치 사실을 계산할 수 있지만 작품의 미학, 서사와 최종 채택을 사람 대신 결정하지 않는다.
 
 ## 문서 지도 {#review-acceptance-document-map}
 
-<!-- @evidence requirements/acceptance/README.md#acceptance-document-map Maps every acceptance concern to a package-independent system contract. -->
-<!-- @evidence requirements/acceptance/README.md#acceptance-core-contract Preserves the core determinism, human-judgment, case-matrix and scope invariants across this document set. -->
 
 - [대상, 범위와 재현 Context](./target-scope-and-context.md)
 - [검토 표면과 Sampling](./surfaces-and-sampling.md)

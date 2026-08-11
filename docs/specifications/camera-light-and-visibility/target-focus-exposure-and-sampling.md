@@ -2,6 +2,8 @@
 
 ## Target와 Focus State {#clv-target-focus-state}
 
+### Focus Intent와 Appearance 경계 {#clv-focus-intent-appearance-boundary}
+
 <!-- @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-focus-depth Camera가 주의를 두는 target의 identity와 용도를 정규화한다. -->
 <!-- @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-sampling Target과 performance를 같은 film-time sample에서 resolve한다. -->
 <!-- @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-loss-policy Target loss에 대한 project-owned 결과를 상태 전이로 정의한다. -->
@@ -9,8 +11,6 @@
 Target state는 actor landmark, object surface, group extent, spatial mark, event 또는 authored world point의 stable identity, framing·orientation·focus 용도, valid interval, resolver와 source revision을 가진다. Moving target은 camera, performance, formation, object와 scene geometry가 읽는 같은 rational film sample에서 world position과 validity를 resolve한다.
 
 Target이 occluded, detached, destroyed, merged 또는 frame 밖으로 나가는 interval은 `hold`, `transfer`, `world-point`, `continue-authored-motion` 또는 `refuse` 중 선언된 transition을 수행한다. 마지막 valid position을 숨은 cache로 계속 쓰는 상태는 허용하지 않는다.
-
-### Focus Intent와 Appearance 경계 {#clv-focus-intent-appearance-boundary}
 
 <!-- @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Focus target과 distance를 optical metadata로 보존한다. -->
 <!-- @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-pulls Focus pull의 event anchor, interpolation과 error를 정밀화한다. -->
@@ -30,13 +30,13 @@ Focus diagnostic은 take, target, camera state, sample, requested appearance, su
 
 ## Rational Frame Clock {#clv-rational-frame-clock}
 
+### Frame와 Shutter Sample Set {#clv-frame-shutter-sample-set}
+
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-shutter-exposure-sampling Camera의 frame time, shutter와 exposure metadata를 하나의 clock context로 정규화한다. -->
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-rational-timebase Frame rate, origin과 index mapping을 exact rational relation으로 만든다. -->
 <!-- @evidence requirements/staging/events-and-timing.md#staging-event-timebase-interval Event interval과 camera sample이 같은 endpoint rule을 읽게 한다. -->
 
 Film clock은 정수 numerator와 denominator로 된 frame rate, time origin, first frame index, valid index range, frame interval의 시작·끝 포함 규칙과 exact timestamp mapping을 가진다. Frame identity는 decimal 누적이 아니라 정수 index와 rational expression으로 계산하며 camera, light, motion, effect와 event가 같은 origin을 사용한다.
-
-### Frame와 Shutter Sample Set {#clv-frame-shutter-sample-set}
 
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-frame-sampling Frame start, center, end와 component sampling 기준을 고정한다. -->
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-shutter-interval-sampling Shutter open·close, ordered samples와 weights를 재현 가능하게 만든다. -->
@@ -48,6 +48,8 @@ Film clock은 정수 numerator와 denominator로 된 frame rate, time origin, fi
 
 ## Exposure Ownership {#clv-exposure-ownership}
 
+### Determinism과 Sampling Refusal {#clv-sampling-determinism-refusal}
+
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-exposure-lighting-distinction Camera exposure가 scene light intensity를 변경하지 않게 한다. -->
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-exposure-basis Brightness에 참여하는 exposure basis, unit과 precedence를 명시한다. -->
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-camera-exposure Lighting state와 camera presentation state 사이의 경계를 공유한다. -->
@@ -55,8 +57,6 @@ Film clock은 정수 numerator와 denominator로 된 frame rate, time origin, fi
 Exposure state는 camera 또는 shot presentation identity, compensation 또는 artistic gain, 지원되는 aperture·shutter·sensitivity-like metadata, 실제 brightness 계산에 참여하는 subset, unit, valid range와 적용 순서를 가진다. Scene light, material emission, camera exposure, display transform과 grade는 별도 provenance를 유지한다.
 
 한 output에는 정확히 하나의 effective exposure owner가 있고 inherited default와 shot override의 선택 근거를 receipt에 기록한다. Exposure 변경은 source light analysis를 통과시키거나 잘못된 lighting design을 수정한 것으로 간주하지 않는다.
-
-### Determinism과 Sampling Refusal {#clv-sampling-determinism-refusal}
 
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-temporal-reproducibility 같은 source와 clock이 playback history와 무관한 결과를 내게 한다. -->
 <!-- @evidence requirements/camera/shutter-exposure-and-sampling.md#camera-sampling-refusal Invalid clock, shutter와 exposure를 명시적으로 거부한다. -->

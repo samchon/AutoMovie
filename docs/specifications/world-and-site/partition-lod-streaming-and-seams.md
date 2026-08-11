@@ -2,12 +2,12 @@
 
 ## bounded representation 상태 {#world-site-bounded-representation-state}
 
+### LOD 선택과 불변식 {#world-site-lod-selection-invariant}
+
 <!-- @evidence requirements/map/scale-and-populations.md#map-bounded-populations Requires every generated or imported population to have deterministic bounds. -->
 <!-- @evidence requirements/map/scale-and-populations.md#map-scale-representation Requires representation to be selected by declared scale and purpose. -->
 
 시스템은 넓은 세계를 spatial partition, representation tier와 bounded population으로 표현하되 모든 tier와 tile이 하나의 canonical spatial state를 투영하게 한다. 개체 수, tile 수, 메모리·geometry 비용과 stream 범위는 선언된 상한 안에 있어야 하며, 시대나 장소별 완성 콘텐츠를 채우는 방법으로 사용하지 않는다.
-
-### LOD 선택과 불변식 {#world-site-lod-selection-invariant}
 
 <!-- @evidence requirements/map/scale-and-populations.md#map-level-of-detail Requires ordered LOD criteria and stable semantic identity. -->
 <!-- @evidence requirements/building-exterior/representations-lod-and-fidelity.md#building-exterior-lod-invariants Preserves shared placement, silhouette and openings across building tiers. -->

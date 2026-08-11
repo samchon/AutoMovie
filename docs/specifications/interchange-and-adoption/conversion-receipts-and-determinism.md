@@ -2,11 +2,11 @@
 
 ## Deterministic Interpretation Boundary {#interchange-deterministic-interpretation}
 
+### Receipt Input Basis {#interchange-receipt-input-basis}
+
 <!-- @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-determinism 같은 pinned input과 declared interpretation이 같은 adopted identity를 만들게 한다. -->
 
 Interpretation과 conversion은 pinned closure, selection, adoption mode, ordered transforms, profile version, settings와 deterministic runtime identity의 pure function으로 정의된다. 지원되는 determinism scope에서 같은 input identity는 canonical output와 receipt digests를 재현하고 platform-dependent 결과는 scope, tolerance와 pinned result bytes를 별도 facts로 기록한다.
-
-### Receipt Input Basis {#interchange-receipt-input-basis}
 
 <!-- @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Receipt가 source closure, selection, units, mode, placement, tool와 budget을 결과에 결속한다. -->
 

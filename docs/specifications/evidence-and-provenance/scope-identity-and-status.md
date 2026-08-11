@@ -2,13 +2,13 @@
 
 ## Evidence record envelope {#evp-record-envelope}
 
+### Subject와 record identity 분리 {#evp-subject-record-identity-separation}
+
 <!-- @evidence requirements/evidence-and-provenance/scope-identity-and-status.md#evidence-record-identity 안정된 record identity와 판정 대상을 versioned envelope로 결속한다. -->
 
 Record 생성 입력은 schema version, record kind, subject identity와 revision, issuer identity, issued time, scope와 payload다. 출력 envelope는 입력의 canonical identity, immutable record id, 초기 logical validity와 physical availability를 포함하며, 같은 logical record를 다시 직렬화해도 record id가 달라지지 않아야 한다.
 
 Record kind와 schema version을 해석할 수 없거나 필수 subject, issuer, time 또는 scope가 없으면 시스템은 logical validity를 current로 등록하지 않고 invalid 또는 incomplete 결과와 누락 field를 반환해야 한다. Envelope bytes가 읽힌다는 사실은 이 logical 판정을 바꾸지 않으며, 새 field를 아는 writer와 모르는 reader가 교환할 때 모르는 field를 보존할 수는 있지만 pass, approval 또는 공개 허가로 해석해서는 안 된다.
-
-### Subject와 record identity 분리 {#evp-subject-record-identity-separation}
 
 <!-- @evidence requirements/evidence-and-provenance/scope-identity-and-status.md#evidence-subject-record-separation 대상과 그 대상을 설명하는 record의 identity 전이를 서로 독립된 규칙으로 만든다. -->
 

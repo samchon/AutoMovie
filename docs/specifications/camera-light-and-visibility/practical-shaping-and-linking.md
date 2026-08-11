@@ -2,13 +2,13 @@
 
 ## Practical Coupled State {#clv-practical-coupled-state}
 
+### Control와 On-screen Consistency {#clv-practical-control-consistency}
+
 <!-- @evidence requirements/lighting/practicals-and-local-lights.md#lighting-practicals-local Visible source, emission, emitted light와 control을 하나의 coupled state로 만든다. -->
 <!-- @evidence requirements/lighting/practicals-and-local-lights.md#lighting-practical-design-staging-trace Practical이 읽은 design, staging과 story event를 lineage에 고정한다. -->
 <!-- @evidence requirements/lighting/practicals-and-local-lights.md#lighting-practical-host Host attachment와 power 또는 fuel state를 정규화한다. -->
 
 Practical state는 fixture identity, production-design subject·material·revision, staging owner·placement·interaction, visible geometry, emissive appearance, emitted-source identity, host attachment, local transform, power 또는 fuel source, control state와 valid interval을 가진다. Fixture geometry와 emitted source가 다르면 그 relation, approximation과 각 revision을 함께 기록한다.
-
-### Control와 On-screen Consistency {#clv-practical-control-consistency}
 
 <!-- @evidence requirements/lighting/practicals-and-local-lights.md#lighting-practical-control-state Switch, circuit, dimmer와 affected practical의 상태 전이를 정한다. -->
 <!-- @evidence requirements/lighting/practicals-and-local-lights.md#lighting-practical-consistency Visible source와 emitted light의 on·off 관계를 판정한다. -->
@@ -28,12 +28,12 @@ On·off, failure, replacement fixture와 off-screen motivated source는 독립 b
 
 ## Shaping Control State {#clv-shaping-control-state}
 
+### Light Linking과 Membership Resolution {#clv-light-link-resolution}
+
 <!-- @evidence requirements/lighting/shape-filters-and-linking.md#lighting-shape-filters-linking Shaping device를 source-local geometry와 effect domain으로 정규화한다. -->
 <!-- @evidence requirements/lighting/shape-filters-and-linking.md#lighting-control-coordinate-space Control의 coordinate space, transform order와 revision을 고정한다. -->
 
 Barn door, gobo, blocker, portal, reflector, gel, diffuser와 project-defined control은 stable identity, source, geometry 또는 texture, source-local·host-local·world coordinate, unit, transform order, orientation, effect domain, geometry revision와 valid interval을 가진다.
-
-### Light Linking과 Membership Resolution {#clv-light-link-resolution}
 
 <!-- @evidence requirements/lighting/shape-filters-and-linking.md#lighting-linking Source가 포함하거나 제외하는 subject, surface와 reflection consumer를 명시한다. -->
 <!-- @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Group membership, instance exception과 precedence를 결정적으로 resolve한다. -->

@@ -1,12 +1,14 @@
 # Validation, Evidence, and Compatibility
 
 ## Effect evidence identity와 freshness {#effect-evidence-identity-and-freshness}
+
+### Hand math와 negative twins {#effect-hand-math-and-negative-twins}
+
 <!-- @evidence requirements/effects-and-simulation/validation-and-evidence.md#effects-validation-evidence 이 절은 effect state와 관찰 결과를 함께 검증한다. -->
 <!-- @evidence requirements/effects-and-simulation/validation-and-evidence.md#effects-evidence-identity-freshness 이 절은 evidence를 정확한 productionㆍshotㆍrevisionㆍtime에 묶는다. -->
 
 Effect evidence identity는 production, shot, effect instance/domain, tier, inputㆍworldㆍsolver revision, clock range, compatibility class와 artifact digest를 포함한다. Evidence는 상태 receipt와 필요시 관찰 artifact를 분리해 보관한다. 어느 dependency라도 달라지면 stale이며 이전 결과를 현 revision의 성공으로 표시할 수 없다.
 
-### Hand math와 negative twins {#effect-hand-math-and-negative-twins}
 <!-- @evidence requirements/effects-and-simulation/validation-and-evidence.md#effects-hand-math-boundary 이 절은 간단한 경계 사례를 독립 산식과 비교하게 한다. -->
 <!-- @evidence requirements/effects-and-simulation/validation-and-evidence.md#effects-negative-twins 이 절은 한 위반만 바꾼 실패 쌍으로 validator를 검증한다. -->
 
@@ -25,13 +27,15 @@ Fixed-step mapping, spawn ordinal, ballistic sample, volume accounting, budget c
 각 effect evidence row는 결과 상태 `authored`, `approximate`, `solved`, `failed`, `unsupported`, `not-run` 중 하나와 검증 verdict `passed`, `failed`, `not-run`, `stale` 중 하나를 따로 가진다. Reason, measured/expected 값과 artifact links를 함께 기록하며 numeric verdict와 visual verdict도 합치지 않는다. External result evidence는 source snapshot digest, neutral settings, tool/model revision, output digest, units/basis/clock과 adoption receipt를 포함한다. `not-run`, `unsupported`, `stale`은 성공 집계에 들어가지 않는다.
 
 ## Sound evidence와 numeric verification {#sound-evidence-and-numeric-verification}
+
+### Audio budget와 audible review {#sound-budget-and-audible-review}
+
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-validation-delivery 이 절은 source에서 final stream까지 단계별 증거 사슬을 요구한다. -->
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-evidence-identity-freshness 이 절은 sound evidence를 sourceㆍtimelineㆍmixㆍdelivery revision에 묶는다. -->
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification 이 절은 duration, sync, peak, loudness와 channel facts를 수치로 판정한다. -->
 
 Sound evidence identity는 source digests, decode facts, timeline/conform revision, sample rate/range, spatial/acoustic dependency, mix graph, delivery profile와 final bytes digest를 포함한다. Numeric checks는 decoded sample count, cue/event offset, dialogue mark bounds, seam discontinuity, peak/clipping, loudness, channel layout와 A/V duration을 expected rule과 tolerance에 대해 판정한다.
 
-### Audio budget와 audible review {#sound-budget-and-audible-review}
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-budget-evidence 이 절은 decode, voices, processing, mix와 retained artifact의 실제량을 상한과 비교한다. -->
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-audible-review 이 절은 수치 검증과 별도로 청취 판단의 범위와 identity를 기록한다. -->
 
@@ -43,7 +47,10 @@ Budget evidence는 dimension별 estimate, admitted limit, observed maximum과 st
 
 Source, decode, timing, spatial/acoustic, mix, probe와 A/V join은 진행 상태 `planned`, `rendered`, `probed`, `reviewed`와 verdict `passed`, `failed`, `not-run`, `unsupported`, `stale`를 별도 축으로 기록한다. 단계는 앞선 상태를 건너뛸 수 없고 downstream은 required upstream verdict가 `passed`일 때만 통과하며 failure reason과 identity를 전달한다. Partial stem이나 임시 mix는 `probed` 또는 `reviewed` final delivery evidence로 승격하지 않는다.
 
-## Compatibility와 복구 규칙 {#simulation-sound-compatibility-and-recovery}
+## Compatibility와 복구 규칙 {#simulation-sound-compatibility-and-recovery-group}
+
+### Compatibility와 복구 규칙 {#simulation-sound-compatibility-and-recovery}
+
 <!-- @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-cache-identity 이 절은 compatibility가 전체 입력 identity equality에서만 성립하게 한다. -->
 <!-- @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-conform-invalidation 이 절은 timeline 변경 뒤 재사용 가능한 결과의 범위를 제한한다. -->
 

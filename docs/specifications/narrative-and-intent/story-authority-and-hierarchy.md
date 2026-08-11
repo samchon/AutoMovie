@@ -2,12 +2,12 @@
 
 ## 이야기 정본 경계 {#narrative-intent-story-authority-boundary}
 
+### 사실 Authority와 Provenance {#narrative-intent-story-fact-authority}
+
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-source-of-truth 승인된 screenplay source만 이야기 사실의 정본으로 채택한다. -->
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-source-authority source 종류별 사실 소유권과 충돌 규칙을 정밀화한다. -->
 
 입력은 source identity, revision, author 또는 approver, 적용 범위, 상태와 source 종류이고 출력은 fact마다 owning source와 authority를 가진 이야기 snapshot이다. Chat 기억, filename, 생성 응답, render 또는 더 하류의 실현 결과는 명시적 승격 결정 없이 이야기 사실을 만들 수 없다.
-
-### 사실 Authority와 Provenance {#narrative-intent-story-fact-authority}
 
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-fact-fiction-provenance 사실, 인용, 해석과 창작을 분리하는 입력 계약을 정한다. -->
 <!-- @evidence requirements/story/dramatic-characters-goals-and-relations.md#story-character-information-provenance 인물 자료의 출처와 각색 경계를 같은 권위 모델에 포함한다. -->
@@ -24,12 +24,12 @@ Premise, logline, sequence, beat, scene, character, relation, utterance와 seman
 
 ## 이야기 사다리 불변식 {#narrative-intent-story-ladder-invariants}
 
+### Logline과 Premise 입력 {#narrative-intent-logline-premise-input}
+
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-progressive-refinement 각 단계가 바로 위 약속을 더 구체화하는 관계를 정한다. -->
 <!-- @evidence requirements/story/treatment-and-sequences.md#story-treatment-sequences treatment가 작품의 상태 변화를 전개하는 수준임을 보존한다. -->
 
 사다리는 premise와 logline에서 treatment와 sequence, beat, scene으로 내려가며 각 하류 단위는 바로 위 단위, 구체화한 약속과 남겨 둔 미정을 가리킨다. 하류는 상위의 문장 복제나 camera 지시가 아니고 상위 약속을 바꾸려면 새 상위 revision이 먼저 필요하다.
-
-### Logline과 Premise 입력 {#narrative-intent-logline-premise-input}
 
 <!-- @evidence requirements/story/logline-and-premise.md#story-logline-premise 작품의 압축된 약속이 보존해야 할 핵심 요소를 정한다. -->
 <!-- @evidence requirements/story/logline-and-premise.md#story-premise-question premise의 가정, 질문과 금지된 해결을 구분한다. -->
@@ -64,12 +64,12 @@ Authoritative prose는 heading, 행동과 dialogue를 소유하고 index는 stab
 
 ## 형식과 Content 경계 {#narrative-intent-story-form-content-boundary}
 
+### Unknown과 Review 상태 {#narrative-intent-story-unknown-review-state}
+
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-open-form 하나의 장르 구조를 모든 작품에 강제하지 않는다. -->
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-capability-content-boundary 저작 capability를 완성 content 제공 약속과 분리한다. -->
 
 시스템은 극영화, 다큐멘터리형, 광고, 뮤직 비디오, 교육, 실험, 무성 또는 project-defined 형식의 단위와 관계를 보존하지만 protagonist, dialogue, 3막, plot, character 또는 ending을 기본 content로 생성하지 않는다. 예시는 identity, citation과 observable refinement 기법만 가르치며 새 작품의 정본이 아니다.
-
-### Unknown과 Review 상태 {#narrative-intent-story-unknown-review-state}
 
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-unknown-preservation 미정 의도에 owner와 영향 범위를 부여한다. -->
 <!-- @evidence requirements/story/logline-and-premise.md#story-premise-review-status premise의 draft와 승인 상태를 구분한다. -->

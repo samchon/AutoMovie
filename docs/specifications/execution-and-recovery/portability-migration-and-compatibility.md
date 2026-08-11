@@ -2,11 +2,11 @@
 
 ## Durable Record Compatibility {#execution-record-compatibility}
 
+### Cross-platform Record Portability {#execution-cross-platform-portability}
+
 <!-- @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-migration-compatibility Job, checkpoint, artifact, receipt, policy와 audit record를 환경 변화 뒤에도 해석 가능하게 한다. -->
 
 모든 durable execution record는 schema version, semantic protocol identity, producer compatibility profile, canonical encoding과 integrity를 가진다. Consumer는 supported version range와 feature set을 선언하고 unknown required field, state 또는 semantic version을 success, absent 또는 default로 해석하지 않는다.
-
-### Cross-platform Record Portability {#execution-cross-platform-portability}
 
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-cross-platform-paths Windows와 POSIX 차이가 identity, naming과 dependency discovery를 바꾸지 않게 한다. -->
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-locale-time-determinism Locale, timezone와 wall clock을 결과의 hidden input에서 제외한다. -->

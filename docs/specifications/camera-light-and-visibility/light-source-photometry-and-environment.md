@@ -2,6 +2,8 @@
 
 ## Scene-referred Light State {#clv-scene-light-state}
 
+### Authored Source, Branch와 Missing State {#clv-light-authority-branches}
+
 <!-- @evidence requirements/lighting/scope-and-identity.md#lighting-scope-identity Light identity, source, transform, intensity, color, shadow와 time state를 정규화한다. -->
 <!-- @evidence requirements/lighting/scope-and-identity.md#lighting-story-design-binding Light가 답하는 story, location, event와 readability 목적을 보존한다. -->
 <!-- @evidence requirements/lighting/scope-and-identity.md#lighting-upstream-source-trace Story, design, staging와 camera delivery source를 lineage로 고정한다. -->
@@ -10,8 +12,6 @@
 Light state는 stable identity, source kind, emitting geometry 또는 direction, transform, scene-referred intensity quantity, color 또는 spectrum, distribution, range, shadow intent, owning environment·subject, valid interval과 design revision을 가진다. Effective state는 story scene·event, production-design location·palette·material·phase, staging mark·practical·cue와 camera delivery를 직접 가리킨다.
 
 Source, filter, portal, caster, receiver, reflective·transmissive surface와 analysis point는 같은 coordinate convention, length unit, resolved geometry revision와 rational film sample을 읽는다. 다른 revision에서 계산된 enclosure, opening, link나 visibility를 current light state에 결합하지 않는다.
-
-### Authored Source, Branch와 Missing State {#clv-light-authority-branches}
 
 <!-- @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Sun direction, placement, intensity와 color를 project-owned 입력으로 유지한다. -->
 <!-- @evidence requirements/lighting/scope-and-identity.md#lighting-appearance-distinction Scene light와 emission, exposure, display와 repaint를 분리한다. -->
@@ -24,6 +24,8 @@ Base setup, production phase, shot override와 alternative는 독립 branch iden
 
 ## Photometric Source Model {#clv-photometric-source-model}
 
+### Distribution, Falloff와 Color {#clv-source-distribution-color}
+
 <!-- @evidence requirements/lighting/sources-and-photometry.md#lighting-sources-photometry Source kind를 geometry, direction, range와 supported quantity에 연결한다. -->
 <!-- @evidence requirements/lighting/sources-and-photometry.md#lighting-emitting-geometry Emitting shape, side, origin과 visible geometry relation을 정밀화한다. -->
 <!-- @evidence requirements/lighting/sources-and-photometry.md#lighting-intensity-basis Radiometric, photometric와 artistic scalar의 basis를 구분한다. -->
@@ -32,8 +34,6 @@ Base setup, production phase, shot override와 alternative는 독립 branch iden
 지원되는 source kind는 point, line, area, surface, directional, cone, dome 또는 project-defined model처럼 emitting domain과 direction law를 선언한다. Point가 아닌 source는 size, shape, emitting side, origin, orientation과 transform을 가지며 visible fixture geometry와 emitting geometry가 다르면 mapping, approximation과 revision을 기록한다.
 
 각 intensity 값은 radiant 또는 luminous flux, radiant 또는 luminous intensity, radiance·luminance, illuminance-like result 또는 artistic scalar 중 quantity, unit, reference area·solid angle과 normalization을 가진다. Quantity conversion은 source assumptions, spectrum 또는 efficacy basis, geometry와 formula를 receipt에 남기며 서로 다른 quantity를 숫자만으로 비교하지 않는다.
-
-### Distribution, Falloff와 Color {#clv-source-distribution-color}
 
 <!-- @evidence requirements/lighting/sources-and-photometry.md#lighting-distance-falloff Distance response, cutoff와 near-source behavior를 source model에 고정한다. -->
 <!-- @evidence requirements/lighting/sources-and-photometry.md#lighting-source-distribution Angular 또는 textured distribution의 orientation과 normalization을 정한다. -->
@@ -55,13 +55,13 @@ Negative intensity, invalid emitting geometry, zero direction, invalid cone, non
 
 ## Environment State {#clv-environment-light-state}
 
+### Image, Background와 Spatial Variation {#clv-environment-image-spatial-variation}
+
 <!-- @evidence requirements/lighting/sun-sky-and-environment.md#lighting-sun-sky-environment Sun, sky, image, horizon과 attenuation을 world state로 정규화한다. -->
 <!-- @evidence requirements/lighting/sun-sky-and-environment.md#lighting-environment-geometry-trace Environment contribution을 horizon, opening과 fog revision에 묶는다. -->
 <!-- @evidence requirements/lighting/sun-sky-and-environment.md#lighting-declared-sun Sun 입력과 채택된 외부 계산의 provenance를 구분한다. -->
 
 Environment state는 world 또는 region identity, sun direction과 quantity, sky 또는 environment source, horizon, cloud·fog attenuation, story-time mapping, valid film interval과 resolved exterior·interior geometry revision을 가진다. 제품이 장소나 기후 content를 내장한다고 가정하지 않으며 채택한 외부 계산은 입력, assumptions, version과 digest를 보존한다.
-
-### Image, Background와 Spatial Variation {#clv-environment-image-spatial-variation}
 
 <!-- @evidence requirements/lighting/sun-sky-and-environment.md#lighting-image-based-environment Environment image의 projection, rotation, scale와 consumer를 추적한다. -->
 <!-- @evidence requirements/lighting/sun-sky-and-environment.md#lighting-environment-background-illumination Background, reflection과 diffuse illumination의 source를 분리한다. -->

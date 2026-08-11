@@ -2,11 +2,11 @@
 
 ## 외부 3D 자산 채택 {#building-envelope-external-asset-adoption}
 
+### Direct, Native와 Group 입력 {#building-envelope-external-adoption-input}
+
 <!-- @evidence requirements/building-exterior/external-assets-and-placement.md#building-exterior-external-assets 건물 외피용 glTF·GLB의 direct placement, native conversion과 group composition을 사용자 선택으로 규정한다. -->
 
 외부 자산 revision은 exact source bytes, dependency closure, digest, format·feature interpretation, unit·axis·origin, license와 adoption receipt를 가진다. 건물은 그 revision을 direct representation, native result 또는 mixed group의 구성원으로 채택하며 특정 provider나 asset catalogue를 전제하지 않는다.
-
-### Direct, Native와 Group 입력 {#building-envelope-external-adoption-input}
 
 <!-- @evidence requirements/building-exterior/external-assets-and-placement.md#building-exterior-external-adoption-choice 사용자가 선택한 채택 방식을 보존하고 시스템이 다른 방식을 몰래 선택하지 않게 한다. -->
 
@@ -26,11 +26,11 @@ Missing dependency, path escape, digest mismatch, non-finite transform, unit·ax
 
 ## Pattern과 Instance Resolution {#building-envelope-pattern-instance-resolution}
 
+### Pattern 입력과 Occurrence 출력 {#building-envelope-pattern-input-output}
+
 <!-- @evidence requirements/building-exterior/patterns-and-instances.md#building-exterior-patterns-instances facade bay, cladding, roof module, rail, 반복층과 건물군을 prototype·pattern·instance로 해결한다. -->
 
 Pattern은 host-local coordinate, prototype, module, joint, orientation, bounded region, exclusion, border, transition, seed, variation과 explicit exception을 가진다. Instance는 stable identity, prototype relation, composed transform, material·state override, phase와 provenance를 유지한다.
-
-### Pattern 입력과 Occurrence 출력 {#building-envelope-pattern-input-output}
 
 <!-- @evidence requirements/building-exterior/patterns-and-instances.md#building-exterior-pattern-continuity opening, corner, zone과 tile boundary를 가로지르는 pattern continuity를 재현 가능하게 한다. -->
 

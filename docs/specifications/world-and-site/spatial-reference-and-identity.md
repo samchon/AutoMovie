@@ -2,12 +2,12 @@
 
 ## 공간 기준 상태 {#world-site-spatial-reference-state}
 
+### 좌표축과 단위 입력 {#world-site-coordinate-axis-unit-input}
+
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-spatial-source-of-truth Establishes the resolved spatial record as the sole source used downstream. -->
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-spatial-feature-identity Carries stable feature identity and lineage across revisions. -->
 
 시스템은 하나의 세계·사이트 정본 안에 자료 원본 identity, 안정된 feature identity, 제작 좌표계, 원본별 좌표 기준, 단위, 변환 계보, 공간 범위와 revision을 보관한다. 모든 geometry, 네트워크, 구역, 환경 상태와 파생 산출물은 이 정본의 feature와 revision을 참조하며, 화면상 이름이나 배열 순서를 identity로 대신하지 않는다.
-
-### 좌표축과 단위 입력 {#world-site-coordinate-axis-unit-input}
 
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-coordinate-unit Requires explicit axes, handedness, vertical direction and units. -->
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-units-coordinate-frame Keeps production scale and coordinate interpretation explicit. -->

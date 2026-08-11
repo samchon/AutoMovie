@@ -2,11 +2,11 @@
 
 ## Quarantine State Machine {#interchange-quarantine-state-machine}
 
+### Declared와 Observed Fact Comparison {#interchange-declared-observed-comparison}
+
 <!-- @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-quarantine 검증 전 외부 bytes를 production input과 분리된 quarantine 상태에 둔다. -->
 
 Acquisition이 완료된 source revision은 항상 quarantine namespace와 identity를 얻고 validation transaction이 성공하기 전에는 executable input, agent context, scene, timeline, build와 publication graph에서 참조할 수 없다. Preview와 inspection은 bounded read-only view를 사용하며 state transition은 원본 revision과 findings digest를 함께 봉인한다.
-
-### Declared와 Observed Fact Comparison {#interchange-declared-observed-comparison}
 
 <!-- @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-content-facts Filename, media declaration, signature와 parser facts를 교차 검증한다. -->
 

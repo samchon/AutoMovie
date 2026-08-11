@@ -1,18 +1,21 @@
 # Budget Admission and Bounded Work
 
 ## Budget identity와 차원 {#effect-budget-identity-and-dimensions}
+
+### Frame, shot, sequence composition {#budget-frame-shot-sequence-composition}
+
 <!-- @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budgets-bounded-work 이 절은 모든 비싼 effect 경로에 유한 상한을 요구한다. -->
 <!-- @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-identity 이 절은 budget을 production과 tier revision에 묶는다. -->
 
 Budget 입력은 productionㆍshotㆍtierㆍdomain revision과 workload 선언이다. 차원은 최소 active instance, spawned population, cellㆍparticleㆍbody 수, solver stepㆍiteration, contact pair, cache bytes, decoded audio samples, mix operation, retained evidence bytes를 포함하며 단위와 시간 범위를 갖는다. 출력은 dimension별 estimate, limit, estimation kind와 identity digest다.
 
-### Frame, shot, sequence composition {#budget-frame-shot-sequence-composition}
 <!-- @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget 이 절은 순간 상한과 누적 상한을 함께 판정한다. -->
 <!-- @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-composition 이 절은 겹치는 population을 합성된 workload로 계산한다. -->
 
 Per-frame budget은 한 presentation frame에서 활성인 상태와 평가 작업의 최대치를 제한하고 per-shot budget은 전체 step, spawn, contact, sample과 artifact 합계를 제한한다. Sequence budget은 동시 shot이나 overlap을 포함한다. 합성은 동일 자원을 중복 세지 않는다고 증명된 경우에만 공유를 빼며, 그 외에는 보수적으로 더한다.
 
 ### 실행 전 admission {#effect-budget-preflight-admission}
+
 <!-- @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission 이 절은 첫 비싼 할당 전에 수용 여부를 결정하게 한다. -->
 
 Estimate는 `exact`, `conservative`, `unknown` 중 하나다. 모든 강제 차원의 estimate가 limit 이하이면 `admitted`, 하나라도 초과하면 `refused`, 상한을 증명할 수 없으면 `not-run`이다. Admission receipt는 입력 digest, 산식 revision, estimate와 headroom을 남긴다. 실행 중 실제량이 estimate를 넘으면 그 지점에서 `partial`로 실패하고 초과 dimensionㆍtick, 마지막 complete state/checkpoint와 분리된 partial artifact를 반환하며 partial을 downstream 입력이나 complete 결과로 사용하지 않는다.

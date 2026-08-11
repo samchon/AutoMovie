@@ -1,12 +1,14 @@
 # Particles, Fire, and Atmosphere
 
 ## Emitter와 spawn 입력 {#particle-emitter-and-spawn-input}
+
+### 결정적 spawn과 interval {#deterministic-particle-spawn-interval}
+
 <!-- @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particles-emission 이 절은 compact rule에서 유한 particle population을 파생한다. -->
 <!-- @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-emitter-geometry 이 절은 emitter의 frame과 geometry를 명시한다. -->
 
 Emitter 입력은 stable identity, world 또는 moving-local frame, pointㆍsurfaceㆍvolume shape, 활성 구간, rate 또는 명시 spawn schedule, seed, initial-state distribution과 최대 population이다. 출력 spawn은 emitter identity, spawn ordinal, birth tick, position, velocity, traits를 가진다. Shape 밖 sample, 해결되지 않은 frame, 비유한 parameter는 첫 spawn 전에 거절한다.
 
-### 결정적 spawn과 interval {#deterministic-particle-spawn-interval}
 <!-- @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn 이 절은 spawn을 seed와 ordinal의 순수 함수로 고정한다. -->
 <!-- @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-spawn-interval-boundary 이 절은 chunk와 seek가 같은 birth를 소유하도록 구간 규칙을 고정한다. -->
 

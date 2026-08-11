@@ -2,12 +2,12 @@
 
 ## canonical 시간 상태 {#world-site-canonical-temporal-state}
 
+### 기존, 변경과 철거 {#world-site-existing-change-demolition}
+
 <!-- @evidence requirements/map/temporal-change.md#map-temporal-change Defines change as lineage over one canonical spatial identity. -->
 <!-- @evidence requirements/map/temporal-change.md#map-state-validity-phase-order Requires non-overlapping validity and ordered phases. -->
 
 시스템은 spatial feature identity와 geometry를 무조건 복제하지 않고, valid time, transaction revision, phase, event와 alternative가 적용된 canonical site state를 해석한다. phase 순서와 유효 구간은 명시적이고 cycle이나 모순된 canonical 상태가 없어야 하며, 모든 질의와 산출물은 사용한 상태 identity와 시각을 기록한다.
-
-### 기존, 변경과 철거 {#world-site-existing-change-demolition}
 
 <!-- @evidence requirements/map/temporal-change.md#map-existing-change-demolition Requires existing, retained, modified, removed and new states to preserve lineage. -->
 

@@ -1,9 +1,10 @@
 # 저작과 권한 시스템 명세
 
+<!-- @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 에이전트의 역할, 권한과 source-owned 저작 경계를 시스템 계약으로 정밀화한다. -->
+<!-- @evidence requirements/product/README.md#제품-계약-요구사항 제품의 prototype, determinism, capability 경계를 저작 권한 계약에 적용한다. -->
+
 ## 경계와 문서 지도 {#spec-authoring-authority-index}
 
-<!-- @evidence requirements/product/charter.md#product-author-owned-film 이 폴더가 사용자 소유 작품 사실과 시스템 제공 능력의 경계를 정밀화한다. -->
-<!-- @evidence requirements/agent-authoring/roles-and-authorities.md#agent-separated-authorities 이 색인이 분리된 판단 권한을 각각의 시스템 계약으로 연결한다. -->
 
 이 폴더는 작품별 사실, 사용자 결정, 위임받은 저작, source 정본, 외부 실행, 부분 target, 지식·증거 도구와 prototype 산출물 사이의 시스템 경계를 정의한다.
 

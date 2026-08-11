@@ -2,11 +2,11 @@
 
 ## Support 상태 모델 {#interchange-support-state-model}
 
+### Format과 Feature Matrix {#interchange-format-feature-support-matrix}
+
 <!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-degradation Supported, degraded, unsupported, invalid, unavailable, quarantined와 not-run을 구분한다. -->
 
 Support result는 selected format, version, feature, element, dependency와 intended consumer 각각에 `supported`, `degraded`, `unsupported`, `invalid`, `unavailable`, `quarantined` 또는 `not-run`을 부여하고 overall adoption state의 derivation을 제공한다. Visible output나 parser success는 child results를 supported로 승격하지 않는다.
-
-### Format과 Feature Matrix {#interchange-format-feature-support-matrix}
 
 <!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Container 지원과 내부 feature 및 consumer 목적의 지원을 분리한다. -->
 

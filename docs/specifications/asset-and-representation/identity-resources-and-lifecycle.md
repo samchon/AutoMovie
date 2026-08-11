@@ -2,11 +2,11 @@
 
 ## 식별자 경계 {#asset-spec-identity-boundary}
 
+### 입력 식별자와 명명 공간 {#asset-spec-identity-inputs}
+
 <!-- @evidence requirements/asset-authoring/identity-and-instances.md#asset-stable-identity 모델, 구성 요소, 재료 영역, 리그, 변형, 프로토타입과 인스턴스를 안정적으로 참조할 수 있게 한다. -->
 
 시스템은 작품 속 같은 대상을 가리키는 자산 식별자를 파일 위치, 표시 이름, 모델 표현, 자원 digest, 장면 배치와 분리한다. 자산 식별자는 표현이나 원본 bytes가 교체되어도 의미가 유지되는 동안 존속하며, 서로 다른 의미를 합치거나 하나의 의미를 암묵적으로 둘로 나누지 않는다.
-
-### 입력 식별자와 명명 공간 {#asset-spec-identity-inputs}
 
 <!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-collision-ambiguity 외부 element와 내부 식별자의 충돌을 모호하지 않게 해석해야 한다. -->
 

@@ -2,11 +2,11 @@
 
 ## 외부 생성 경계 {#asset-spec-generation-boundary}
 
+### 사용자와 제공자 선택 입력 {#asset-spec-generation-provider-choice}
+
 <!-- @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption 생성된 geometry, model, motion, image, texture와 audio를 작품 자산으로 명시적으로 채택할 수 있어야 한다. -->
 
 시스템은 외부 생성 실행을 자산 저작의 선택 가능한 source activity로 취급하고, 결과가 생성되었다는 이유만으로 작품 자산이나 current revision으로 승격하지 않는다. 생성 후보는 다른 외부 입력과 같은 격리, 검증, 권리 확인, 채택 방식 선택과 고정된 bytes의 해석을 통과해야 한다.
-
-### 사용자와 제공자 선택 입력 {#asset-spec-generation-provider-choice}
 
 <!-- @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence 제공자, model, API와 호출 방식에 종속되지 않은 생성 요청을 지원해야 한다. -->
 <!-- @evidence requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-provider-neutrality 시스템이 특정 제공자를 우선하거나 자동 선택하지 않아야 한다. -->
@@ -52,12 +52,12 @@ request는 변하지 않는 의도와 입력의 identity이고, attempt는 한 �
 
 ## 재도색 인계 경계 {#asset-spec-repaint-handoff-boundary}
 
+### 인계 자격과 source 잠금 {#asset-spec-repaint-eligibility-source-lock}
+
 <!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-scope-user-choice 재도색은 사용자가 선택하는 별도의 선택적 rendition이어야 한다. -->
 <!-- @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-repaint-boundary 재도색은 결정론적 구조 pass를 대체하지 않는 appearance handoff여야 한다. -->
 
 재도색은 승인된 결정론적 장면의 구조를 source로 삼아 appearance만 새로 해석하는 독립 rendition이다. 시스템은 재도색을 렌더 경로의 자동 단계나 source 구조 오류의 우회로로 사용하지 않으며, 원본 장면과 재도색 결과를 각각 보존하고 사용자가 delivery별 포함 여부를 선택하게 한다.
-
-### 인계 자격과 source 잠금 {#asset-spec-repaint-eligibility-source-lock}
 
 <!-- @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-prerequisites current deterministic source와 구조 review 이후에만 재도색할 수 있어야 한다. -->
 <!-- @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-source-reference-lock production, shot, 시간, frame, camera와 pass identity를 고정해야 한다. -->

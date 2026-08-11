@@ -2,12 +2,12 @@
 
 ## 관찰에서 판정까지의 기록 사슬 {#review-system-observation-finding-chain}
 
+### 위치가 있는 Annotation {#review-system-located-annotation}
+
 <!-- @evidence requirements/review/annotations-findings-and-verdicts.md#review-annotations-findings-verdicts Separates located observation, applied criterion, interpretation and verdict. -->
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-observations-and-claims Keeps observations, claims, automated findings and human judgments distinct. -->
 
 Review record는 observation, finding, defect classification, judgment와 final verdict를 서로 다른 identity로 보존하고 각 파생 기록이 의존한 앞선 기록을 가리킨다. 뒷단의 해석은 앞단의 실제 관찰값을 바꾸지 않는다.
-
-### 위치가 있는 Annotation {#review-system-located-annotation}
 
 <!-- @evidence requirements/review/annotations-findings-and-verdicts.md#review-located-annotations Locates annotations on frames, intervals, subjects, sound events, cues or the whole work. -->
 
@@ -33,11 +33,11 @@ Annotation, reply, finding과 judgment의 수정은 새 revision이나 supersedi
 
 ## Defect 분류 레코드 {#review-system-defect-record}
 
+### 작품 관점 Category {#review-system-defect-categories}
+
 <!-- @evidence requirements/review/defect-classification.md#review-defect-classification Defines impact category, severity, priority and reproduction as independent dimensions. -->
 
 Defect record는 관련 finding, affected scope, category set, severity, priority, reproduction state와 frequency를 가진다. 분류는 검색과 집계를 위한 정규 identity를 사용하고 표시 문구 변경에 따라 의미가 바뀌지 않는다.
-
-### 작품 관점 Category {#review-system-defect-categories}
 
 <!-- @evidence requirements/review/defect-classification.md#review-defect-categories Preserves every affected story, staging, audiovisual, rendering and delivery viewpoint. -->
 

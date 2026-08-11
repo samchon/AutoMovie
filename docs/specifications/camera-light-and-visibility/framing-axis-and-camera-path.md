@@ -2,6 +2,8 @@
 
 ## Framing Delivery State {#clv-framing-delivery-state}
 
+### Landmark, 여백과 Multi-subject 관계 {#clv-framing-landmark-relations}
+
 <!-- @evidence requirements/camera/framing-and-shot-size.md#camera-framing-shot-size Shot size를 subject landmark, occupancy와 story purpose의 상태로 정밀화한다. -->
 <!-- @evidence requirements/camera/framing-and-shot-size.md#camera-framing-source-trace Framing이 읽은 story, staging, design과 raster source를 명시한다. -->
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-silhouette-acceptance 실제 camera와 delivery 조건의 silhouette acceptance를 연결한다. -->
@@ -9,8 +11,6 @@
 Framing 입력은 take와 delivery identity, required subject와 priority, story event, staging delivery, production-design landmark와 silhouette, resolved subject geometry, acquisition gate, delivery mapping, valid film interval과 acceptance profile이다. 출력은 subject별 projected extent, landmark position, frame occupancy, screen region, edge distance, overlap, environment context와 pass·fail·unsupported 상태다.
 
 Shot-size label은 계산 결과를 설명하는 intent이며 단독 수치 기준이 아니다. Acceptance는 해당 subject와 action에 필요한 landmark, extent, relation과 duration을 선언하고 실제 delivery raster에서 평가한다.
-
-### Landmark, 여백과 Multi-subject 관계 {#clv-framing-landmark-relations}
 
 <!-- @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing Generic origin 대신 shot에 필요한 landmark를 관찰 대상으로 만든다. -->
 <!-- @evidence requirements/camera/framing-and-shot-size.md#camera-headroom-lead-room Headroom, look room과 travel room을 subject motion에 연결한다. -->
@@ -31,13 +31,13 @@ Framing range는 start, end, semantic event, local extrema, threshold crossing�
 
 ## Screen Grammar State {#clv-screen-grammar-state}
 
+### Line, Eyeline와 Travel 판정 {#clv-line-eyeline-travel-evaluation}
+
 <!-- @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-axis-eyeline-screen-direction Interaction axis와 screen relation을 scene-local 상태로 정밀화한다. -->
 <!-- @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-axis-source-trace Axis가 읽은 participant, mark, path, gaze와 phase를 lineage에 고정한다. -->
 <!-- @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations Staging의 facing, eyeline, concealment와 reveal 관계를 camera grammar가 소비한다. -->
 
 Grammar state는 active interaction 또는 action line, participant roles, camera side, subject screen side, gaze target, entry·exit edge, travel vector, relation phase와 valid interval을 가진다. World axis를 shot마다 새로 정의하지 않고 staging relation과 semantic event가 axis 생성·교체·reset을 소유한다.
-
-### Line, Eyeline와 Travel 판정 {#clv-line-eyeline-travel-evaluation}
 
 <!-- @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-180-line Cut 양쪽 camera side와 active line의 관계를 판정한다. -->
 <!-- @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-eyeline-match Gaze vector와 target의 image-space 위치를 연결한다. -->
@@ -57,13 +57,13 @@ Unmotivated line cross, reversed eyeline, travel flip와 ambiguous orientation�
 
 ## Camera Path State {#clv-camera-path-state}
 
+### Bounded Curve와 Direct Sampling {#clv-camera-path-direct-sampling}
+
 <!-- @evidence requirements/camera/position-and-movement.md#camera-position-movement Camera movement를 actual transform과 film-time path로 정밀화한다. -->
 <!-- @evidence requirements/camera/position-and-movement.md#camera-rig-local-frame Rig-local movement와 host transform을 같은 clock에서 합성한다. -->
 <!-- @evidence requirements/camera/position-and-movement.md#camera-movement-intent Path를 subject, event와 dramatic purpose에 연결한다. -->
 
 Path state는 camera 또는 rig identity, parent relation, local transform curve, host world transform, target relation, movement intent, valid interval과 interpolation model을 가진다. 각 sample의 world transform은 parent hierarchy를 고정된 순서로 합성한 절대 상태이며 이전 frame 적분 결과가 아니다.
-
-### Bounded Curve와 Direct Sampling {#clv-camera-path-direct-sampling}
 
 <!-- @evidence requirements/camera/position-and-movement.md#camera-path-time-sampling Path, target, lens와 stabilization을 rational film time에서 직접 평가한다. -->
 <!-- @evidence requirements/camera/position-and-movement.md#camera-speed-easing Duration, velocity, acceleration와 easing을 bounded curve로 선언한다. -->

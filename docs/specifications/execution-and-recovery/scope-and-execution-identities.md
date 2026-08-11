@@ -2,12 +2,12 @@
 
 ## 공통 실행 경계 {#execution-scope-boundary}
 
+### Logical Job Identity {#execution-logical-job-identity}
+
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-scope-job-identity Compile부터 publication까지 중단 이후 추적되어야 하는 작업의 공통 경계를 구체화한다. -->
 <!-- @evidence requirements/product/charter.md#product-deterministic-prototype 결정론적 실행기가 제작 선언을 검증 가능한 결과로 만든다는 제품 경계를 보존한다. -->
 
 실행 경계의 입력은 production identity와 revision, 작업 종류, target scope, requested parameters, effective parameters, dependency closure, compatibility profile, budget policy, priority와 요청 authority다. 출력은 canonical job identity, admission decision, 상태 및 transition history, attempt lineage, artifact와 checkpoint reference, diagnostics, resource accounting와 terminal outcome이며 어떤 실행 환경도 이 계약 밖의 hidden input으로 결과를 바꾸어서는 안 된다.
-
-### Logical Job Identity {#execution-logical-job-identity}
 
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs 결과에 영향을 주는 production, scope, 설정, dependency와 compatibility를 job identity에 닫는다. -->
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work 요청값과 실제 확정값을 함께 보존하는 입력 계약을 정규화한다. -->

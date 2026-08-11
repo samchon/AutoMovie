@@ -2,12 +2,11 @@
 
 ## Criterion Verdict 상태 기계 {#acceptance-system-verdict-state-machine}
 
+### 자동 검사 경계 {#review-system-automated-check-boundary}
+
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Defines pass, fail, indeterminate, not-run, unsupported and stale as distinct states. -->
-<!-- @evidence requirements/acceptance/README.md#acceptance-honest-outcome Preserves honest criterion, aggregate and approval states without promotion. -->
 
 Criterion verdict는 pass, fail, indeterminate, not-run, unsupported 또는 stale 중 하나이며 criterion version, target scope, evidence set, context, actor 또는 deterministic evaluator와 reason을 가진다. Invalid criterion은 target verdict가 아니라 criterion definition error다.
-
-### 자동 검사 경계 {#review-system-automated-check-boundary}
 
 <!-- @evidence requirements/review/scope-and-authority.md#review-validation-decision-boundary Limits automated measurements and comparisons to facts and candidate defects. -->
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Separates automated results from their explanation and human judgment. -->
@@ -23,11 +22,11 @@ Perceptual, semantic, aesthetic와 final adoption verdict는 식별된 사람 �
 
 ## Authority 역할 분리 {#acceptance-system-authority-roles}
 
+### Criterion Owner 권한 {#acceptance-system-criterion-owner}
+
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-authority-separation Separates requester, evidence producer, evaluator, risk owner and final approver. -->
 
 Authority model은 criterion requester, criterion owner, evidence producer, observer 또는 evaluator, reviewer, deviation risk owner, approver와 publication authority의 role과 scope를 분리한다. 한 사람이 여러 role을 맡더라도 각 decision에는 사용한 role이 기록된다.
-
-### Criterion Owner 권한 {#acceptance-system-criterion-owner}
 
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-criterion-owner-authority Gives the criterion owner control of expectations, comparison, tolerance, evidence and severity. -->
 
@@ -47,13 +46,13 @@ Publication authority는 하위 approval, deviation, profile, stale state, parti
 
 ## 이견과 권한 충돌 {#review-system-dissent-conflict}
 
+### 판정 근거와 Receipt {#review-system-verdict-rationale-receipt}
+
 <!-- @evidence requirements/review/annotations-findings-and-verdicts.md#review-verdict-rationale-disagreement Preserves conflicting reviewer verdicts until final resolution. -->
 <!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-authority-conflict Defines indeterminate and pending-authority states for conflict or absence. -->
 <!-- @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-perceptual-uncertainty Prevents observer disagreement from being hidden by averaging. -->
 
 상충하는 observation, finding과 judgment는 모두 보존하고 authority priority, consensus, majority 또는 final-authority rule이 profile에 있을 때만 그 규칙으로 해결한다. 해결 규칙이 없으면 criterion은 indeterminate이고 필수 approver가 없으면 approval은 pending-authority다.
-
-### 판정 근거와 Receipt {#review-system-verdict-rationale-receipt}
 
 <!-- @evidence requirements/review/records-and-completeness.md#review-verdict-receipt Defines a final record over target, context, coverage, findings, decision, actor and time. -->
 

@@ -2,11 +2,11 @@
 
 ## Mass와 면적 정본 {#building-envelope-massing-area-canonical-state}
 
+### Massing 입력과 면적 Basis {#building-envelope-massing-area-input-basis}
+
 <!-- @evidence requirements/building-exterior/massing-area-and-height.md#building-massing-area-height 건물 massing, footprint, 면적 basis와 총높이를 하나의 치수 정본으로 해결한다. -->
 
 Resolved building mass는 서로 겹치지 않는 계산 영역 또는 명시된 합성 관계, ground footprint, 지붕까지의 outer extent, 높이 기준과 void를 가진다. 직교 상자만을 전제로 하지 않으며 courtyard, setback, overhang, tower, dome, 경사와 자유형 외곽을 project가 선택한 정확도 수준으로 표현한다.
-
-### Massing 입력과 면적 Basis {#building-envelope-massing-area-input-basis}
 
 <!-- @evidence requirements/building-exterior/massing-area-and-height.md#building-area-basis gross, net, footprint와 계산 제외 범위를 단위 및 source와 함께 구분한다. -->
 
@@ -26,11 +26,11 @@ Footprint, outer extent, datum, area rule 또는 void가 바뀌면 dependent sto
 
 ## 층, Level과 높이 State {#building-envelope-storey-level-height-state}
 
+### 층 입력과 해석 {#building-envelope-storey-input-resolution}
+
 <!-- @evidence requirements/building-exterior/storeys-levels-and-heights.md#building-storeys-levels 반복층, 가변층, mezzanine, void와 roof deck의 elevation 및 높이를 독립 상태로 다룬다. -->
 
 Storey는 building root 아래의 stable spatial identity이며 순번과 동일시하지 않는다. 각 storey는 base elevation, top elevation, floor-to-floor height, slab zone, occupied 또는 exterior role과 연결된 공간·요소를 가지며 split level, mezzanine, duplex, attic, void와 roof deck을 허용한다.
-
-### 층 입력과 해석 {#building-envelope-storey-input-resolution}
 
 <!-- @evidence requirements/building-exterior/storeys-levels-and-heights.md#building-variable-levels 층마다 다른 elevation, 높이와 불연속 level을 동일 규칙으로 해결한다. -->
 

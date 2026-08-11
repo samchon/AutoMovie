@@ -2,11 +2,11 @@
 
 ## delivery와 acceptance 경계 {#world-site-delivery-validation-boundary}
 
+### delivery manifest {#world-site-delivery-manifest}
+
 <!-- @evidence requirements/map/deliverables-and-validation.md#map-deliverables-validation Defines delivery as a closed, validated projection of canonical site state. -->
 
 시스템은 사용자가 요청한 범위, 시각·phase·alternative, 좌표 기준, representation tier와 지원 수준에 맞는 source-resolved data, 시각 표현, tile·교환 자료, quantity와 검증 report를 하나의 delivery로 묶는다. delivery는 canonical state를 대체하지 않고 그 revision의 재현 가능한 투영이며, 특정 파일 형식이나 renderer 구현을 시스템 계약으로 고정하지 않는다.
-
-### delivery manifest {#world-site-delivery-manifest}
 
 <!-- @evidence requirements/map/deliverables-and-validation.md#map-delivery-manifest Requires every artifact, scope, digest, dependency and status to be enumerated. -->
 

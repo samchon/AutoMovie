@@ -42,7 +42,9 @@ Acceptance는 수치값, 구간, 집합과 관계, 순서와 상태 전이, 존�
 
 서사 criterion은 전달되어야 할 정보, 사건, 인물 상태, 인과, 정서적 전환 또는 audience inference를 가리키고 이를 드러내는 장면과 시간 범위를 지정해야 한다. 주관적 판정에는 판단 authority와 실제 관찰문이 필요하다.
 
-## 전제 조건과 소비 조건 {#acceptance-preconditions-consumers}
+## 전제 조건과 소비 조건 {#acceptance-preconditions-consumers-group}
+
+### 전제 조건과 소비 조건 {#acceptance-preconditions-consumers}
 
 Criterion은 판정 전에 충족되어야 할 입력, 의존 대상, representation tier, display 또는 playback 조건과 필요한 하류 사용 목적을 밝혀야 한다.
 

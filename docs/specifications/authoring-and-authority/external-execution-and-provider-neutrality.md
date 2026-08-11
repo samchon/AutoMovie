@@ -2,12 +2,12 @@
 
 ## 제공자 중립 외부 실행 경계 {#spec-authoring-provider-neutral-boundary}
 
+### 선택 입력 {#spec-authoring-external-selection-input}
+
 <!-- @evidence requirements/product/choice-and-external-services.md#product-provider-neutral-capability 이 경계가 외부 능력을 특정 provider가 아니라 input, output, provenance와 failure로 정의한다. -->
 <!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-provider-neutrality 이 경계가 안내 surface에서 provider, model, account와 catalogue를 기본 경로로 고정하지 않게 한다. -->
 
 외부 생성, 분석, 저장, 변환과 전달은 선택 가능한 execution boundary다. 시스템 contract는 provider별 API가 아니라 요청 identity, 전달 input, 반환 bytes, provenance, 한계와 failure를 정의해야 한다.
-
-### 선택 입력 {#spec-authoring-external-selection-input}
 
 <!-- @evidence requirements/product/choice-and-external-services.md#product-user-controlled-choice 이 입력이 provider, 외부 input, 품질 lane과 비용 한도를 사용자 또는 위임받은 agent가 선택하게 한다. -->
 <!-- @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery 이 입력이 local, external, 품질 tier와 부분 경로의 선행 조건을 비교 가능하게 한다. -->
@@ -16,8 +16,8 @@
 
 ### 외부 실행 상태 {#spec-authoring-external-execution-state}
 
-<!-- @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision 이 상태가 직접 선택, 위임과 보류를 service 가용성과 분리한다. -->
 <!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects 이 상태가 명시 요청 전 upload와 외부 generation을 금지한다. -->
+<!-- @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision 이 상태가 직접 선택, 위임과 보류를 service 가용성과 분리한다. -->
 
 외부 실행은 `unselected`, `authorized`, `running`, `refused`, `returned`, `adopted`, `superseded` 상태를 가진다. `authorized` 전에는 input 전송과 비용 발생이 없어야 하며, `returned` 결과는 사용자 또는 해당 선택을 위임받은 코딩 에이전트가 채택하기 전까지 작품 source나 current rendition이 아니다.
 

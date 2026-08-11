@@ -2,13 +2,12 @@
 
 ## 변형 계약 경계 {#asset-spec-rig-boundary}
 
+### 기준 pose와 rig 입력 {#asset-spec-rig-inputs}
+
 <!-- @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-state 일반 물체와 performer가 관절, 제약, 변형과 상태를 가질 수 있어야 한다. -->
 
 시스템은 리그를 특정 생물 종류에 고정된 부가 기능이 아니라 모델 부품과 표면을 시간에 따라 움직이는 이름 있는 관계 집합으로 취급한다. 정적 모델은 리그가 없어도 유효하지만, 움직임이나 변형 능력을 주장하는 모델은 그 능력을 실제로 운반하는 결합을 가져야 한다.
 
-### 기준 pose와 rig 입력 {#asset-spec-rig-inputs}
-
-<!-- @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation rest pose, bind pose, skeleton과 변형 관계를 분리해 보존해야 한다. -->
 <!-- @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls 리그 기준과 control identity를 명시해야 한다. -->
 
 리그 입력은 root, 관절·node 식별자와 parent 관계, rest transform, bind transform, 회전·이동 축과 단위, control identity, 허용 범위, constraint, driver 의존성, 표면 결합을 포함한다. 기준 pose나 축 해석이 둘 이상 가능하면 시스템은 추측한 pose를 저장하지 않고 모호한 channel을 반환한다.

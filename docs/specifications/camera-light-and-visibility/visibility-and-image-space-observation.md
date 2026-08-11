@@ -2,6 +2,8 @@
 
 ## Visibility Evaluation Context {#clv-visibility-evaluation-context}
 
+### Clipping와 Camera Clearance {#clv-clipping-clearance-evaluation}
+
 <!-- @evidence requirements/staging/visibility-and-readability.md#staging-visibility-readability 필수 subject와 event를 camera·light가 함께 만드는 image-space delivery로 정밀화한다. -->
 <!-- @evidence requirements/staging/visibility-and-readability.md#staging-readability-acceptance Landmark, screen extent, occlusion, contrast와 duration criterion을 구조화한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-occlusion-spatial Camera와 resolved geometry의 실제 관계를 판정 경계로 만든다. -->
@@ -10,8 +12,6 @@
 Visibility context는 production과 take, story·staging delivery, camera state, light·environment state, material·opacity state, resolved scene geometry revision, delivery gate, pass, rational sample plan과 acceptance profile을 가진다. Required subject, landmark, contact, gesture, prop, reveal와 state change마다 minimum projected extent, screen relation, maximum occlusion, contrast context, readable duration와 failure condition 중 필요한 criterion을 선언한다.
 
 Visibility는 source가 존재하거나 frustum과 교차한다는 사실, image-space에서 일부 pixel이 남는 사실, 관객이 의미를 읽을 수 있다는 acceptance를 서로 다른 observation level로 구분한다.
-
-### Clipping와 Camera Clearance {#clv-clipping-clearance-evaluation}
 
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Near·far의 ordered distance와 required depth 범위를 검증한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Camera body와 path가 wall, terrain, vehicle와 subject를 침범하는지 판정한다. -->
@@ -55,14 +55,14 @@ Alternative take는 독립 sample results, worst interval과 acceptance를 가�
 
 ## Observation Output와 Status {#clv-observation-output-status}
 
+### Computable Geometry와 Measurable Result {#clv-computable-geometry-results}
+
 <!-- @evidence requirements/camera/validation.md#camera-validation Camera geometry와 current pixel observation을 별도 결과로 함께 검증한다. -->
 <!-- @evidence requirements/camera/validation.md#camera-validation-manifest Camera, source, revision, raster, samples와 tolerance를 manifest에 고정한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-visual-validation Source, analysis, pixels, structural pass와 readability를 함께 구분한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-contract Analysis question, operands, domain, samples, solver와 tolerance를 정규화한다. -->
 
 Observation output은 context identity, question, subject·surface·camera·source identities, quantity와 unit, sampling domain, method 또는 approximation, tolerance, measured values, image-space regions, current artifact identity, finding set와 status를 가진다. Numeric geometry, supported light analysis, beauty frame와 structural pass는 서로 다른 method이며 하나의 성공이 다른 method의 실행을 뜻하지 않는다.
-
-### Computable Geometry와 Measurable Result {#clv-computable-geometry-results}
 
 <!-- @evidence requirements/camera/validation.md#camera-hand-computable-geometry FOV, depth, projected bounds와 clipping을 독립 계산값과 대조한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-measurable-results 지원 metric의 unit, grid, time와 exclusion을 report한다. -->

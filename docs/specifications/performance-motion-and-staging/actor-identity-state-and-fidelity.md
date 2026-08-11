@@ -2,6 +2,8 @@
 
 ## 공연 주체의 정체성과 선택 {#performance-actor-identity-selection-boundary}
 
+### Story 수행과 시간 상태 {#performance-actor-story-performance-state}
+
 <!-- @evidence requirements/actors/scope-and-identity.md#actor-scope-identity story상의 존재와 실제 공연 표현을 안정된 identity로 연결하는 경계를 정의한다. -->
 <!-- @evidence requirements/actors/scope-and-identity.md#actor-character-distinction character 사실과 actor 표현의 수명을 분리한다. -->
 <!-- @evidence requirements/actors/scope-and-identity.md#actor-open-performer-kind human에 고정하지 않는 performer kind 입력을 허용한다. -->
@@ -18,8 +20,6 @@
 시스템은 story character identity, production actor identity, representation identity를 서로 다른 stable identity로 유지한다. 입력은 performer kind, story binding, 선택한 appearance·rig·motion·voice binding, 선택 시점의 revision과 사용자가 승인한 대안이며, 출력은 선택된 binding 집합과 각 source identity, normalization 상태, 적용 범위, 교체 lineage를 가진 actor record다. 같은 character를 다른 actor 또는 representation으로 교체해도 story 사실과 이미 승인된 state history는 자동으로 바뀌지 않으며, 한 actor가 여러 shot에 나타나도 placement나 clip instance가 actor identity를 새로 만들지 않는다.
 
 선택은 구성 요소별로 독립적이어야 하고 시스템은 임의의 통합 preset을 만들지 않는다. 외부 입력은 byte digest, format, unit·axis·rest 기준, 지원 capability, license·provenance, compatibility finding을 제공해야 하며, 사용자는 그대로 채택, 정규화 후 채택, 의미 proxy와 결합, 대안 선택, 보류를 결정할 수 있다. 필수 binding이 없거나 두 binding이 동일 authority를 주장하거나 선택된 표현이 요구 capability를 제공하지 않으면 `missing-binding`, `authority-conflict`, `capability-gap`으로 거부하고 대체를 몰래 선택하지 않는다.
-
-### Story 수행과 시간 상태 {#performance-actor-story-performance-state}
 
 <!-- @evidence requirements/actors/performance-and-story-binding.md#actor-performance-story-binding story goal을 관찰 가능한 actor performance로 연결한다. -->
 <!-- @evidence requirements/actors/performance-and-story-binding.md#actor-performance-precedence 겹치는 performance intent의 authority와 우선순위를 명시한다. -->

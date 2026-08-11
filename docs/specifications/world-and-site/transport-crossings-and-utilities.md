@@ -2,13 +2,13 @@
 
 ## 네트워크와 시설의 공통 상태 {#world-site-network-facility-state}
 
+### 도로 reference와 선형 입력 {#world-site-road-reference-alignment-input}
+
 <!-- @evidence requirements/map/roads-and-paths.md#map-roads-paths Defines roads and paths as attributed networks rather than visual strips. -->
 <!-- @evidence requirements/map/rail-and-transport.md#map-rail-transport Defines rail and transport facilities as connected operational state. -->
 <!-- @evidence requirements/map/infrastructure-and-utilities.md#map-infrastructure-utilities Defines utility systems as typed networks with dependencies. -->
 
 시스템은 도로·보행로·철도·수상·사용자 정의 교통망, 교량·터널과 공공 설비망을 stable node, edge, corridor, facility와 교차 관계로 표현한다. 시대별 형식과 외관은 열린 속성이며 시스템은 차량, 궤도, 교량 형식이나 설비 catalog를 공급하지 않는다. 모든 network geometry와 운영 상태는 지형, 토지, 시간과 하나의 좌표 정본을 참조한다.
-
-### 도로 reference와 선형 입력 {#world-site-road-reference-alignment-input}
 
 <!-- @evidence requirements/map/roads-and-paths.md#map-road-route-reference Requires stable route identity, direction and linear referencing. -->
 <!-- @evidence requirements/map/roads-and-paths.md#map-road-alignment-section Requires horizontal, vertical and cross-section facts to travel together. -->

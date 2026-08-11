@@ -1,6 +1,8 @@
 # 디자인 권위와 시각 언어 {#narrative-intent-design-authority-document}
 
-## Production Design 정본 경계 {#narrative-intent-design-authority-boundary}
+## Production Design 정본 경계 {#narrative-intent-design-authority-boundary-group}
+
+### Production Design 정본 경계 {#narrative-intent-design-authority-boundary}
 
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-scope 작품에 필요한 디자인 범위를 story use와 연결한다. -->
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership tracked design source와 입력 또는 evidence를 분리한다. -->
@@ -29,7 +31,9 @@ Design unit은 subject identity, 필요한 representation과 state, 사용 scene
 
 Design unit은 proposed, under-review, approved, rejected 또는 superseded 상태와 적용 variant를 가진다. Unknown은 owner, affected subject와 scene, 선택지, 필요한 자료, budget consequence와 blocking 여부를 출력하고 unsupported fidelity나 missing source를 placeholder detail로 감추지 않는다.
 
-## Capability와 Content 경계 {#narrative-intent-design-capability-boundary}
+## Capability와 Content 경계 {#narrative-intent-design-capability-boundary-group}
+
+### Capability와 Content 경계 {#narrative-intent-design-capability-boundary}
 
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-capability-content 일반 저작 capability와 완성 style catalogue를 분리한다. -->
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-capability-content-boundary 예시를 새 작품의 정본 content로 사용하지 않는다. -->
@@ -38,12 +42,12 @@ Design unit은 proposed, under-review, approved, rejected 또는 superseded 상�
 
 ## Visual Language 상태 {#narrative-intent-visual-language-state}
 
+### 공유 언어와 Variation {#narrative-intent-visual-language-variation}
+
 <!-- @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction 반복 가능한 시각 원칙의 적용 범위와 결과를 정한다. -->
 <!-- @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-reasoned-choice 각 원칙을 story, era, environment 또는 constraint에 연결한다. -->
 
 Visual rule은 stable identity, shape, proportion, palette, material character, contrast, density, aging, graphics 또는 composition 축, 적용 subject와 location, priority, 허용 variation, exception condition, reason과 observable outcome을 가진다. 단어와 adjective만 있고 design 선택이나 관찰 결과를 구분하지 못하면 invalid-rule이다.
-
-### 공유 언어와 Variation {#narrative-intent-visual-language-variation}
 
 <!-- @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation shared language와 faction, place 및 phase 차이를 함께 정의한다. -->
 <!-- @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-phase-visual-language base identity와 시간 또는 story phase override를 분리한다. -->

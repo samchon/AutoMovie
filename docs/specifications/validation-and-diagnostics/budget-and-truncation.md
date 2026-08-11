@@ -2,13 +2,13 @@
 
 ## Budget 입력과 Accounting {#validation-budget-contract}
 
+### Budget-exceeded 결과 {#validation-budget-exceeded-result}
+
 <!-- @evidence requirements/diagnostics/budgets-and-limits.md#diagnostics-explicit-budgets 진단 수집의 적용 한계와 default 및 실제 사용 범위를 결과에 남긴다. -->
 
 Validation budget은 time, work unit, occurrence count, serialized bytes, memory, external request, quota와 monetary cost 중 적용되는 dimension마다 warning limit, hard limit, scope와 accounting rule을 가진다. Request가 생략한 default도 effective budget에 materialize하여 session identity와 result가 같은 값을 공유한다.
 
 Accounting은 planned, consumed, reserved와 remaining amount를 구분하고 unit과 measurement precision을 명시한다. 여러 scope가 budget을 공유하면 charge owner와 allocation을 기록하고, wall-clock과 deterministic work unit을 같은 dimension으로 섞지 않는다.
-
-### Budget-exceeded 결과 {#validation-budget-exceeded-result}
 
 <!-- @evidence requirements/diagnostics/budgets-and-limits.md#diagnostics-budget-exceeded 입력 오류나 unsupported와 다른 예산 초과 상태 및 중단 범위를 정의한다. -->
 

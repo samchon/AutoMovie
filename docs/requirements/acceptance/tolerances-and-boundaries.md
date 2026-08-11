@@ -34,7 +34,9 @@ Frame, audio sample, event 또는 상태 전이처럼 이산적인 대상은 시
 
 시각·청각 허용오차는 기준 reference, 비교 조건, target raster 또는 playback 조건과 허용 가능한 차이의 관찰 언어를 가져야 한다. “눈에 띄지 않음”은 관찰자와 조건이 정의되지 않으면 허용오차가 될 수 없어야 한다.
 
-## Profile이 소유하는 수치 {#acceptance-profile-owned-thresholds}
+## Profile이 소유하는 수치 {#acceptance-profile-owned-thresholds-group}
+
+### Profile이 소유하는 수치 {#acceptance-profile-owned-thresholds}
 
 해상도, frame rate, loudness, 색, caption timing, 접근성 치수와 품질 threshold처럼 목적에 따라 달라지는 값은 적용 profile이 소유해야 한다.
 

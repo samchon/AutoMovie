@@ -2,12 +2,13 @@
 
 ## Group motion과 re-form state {#performance-formation-group-motion-reform-state}
 
+### Sparse member exception과 command event {#performance-formation-member-exception-command-event}
+
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-group-motion 시간에 따라 변하는 집단 shape를 explicit state transition으로 정의한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-group-motion-model-selection kinematic cue, procedural rule과 외부 motion model을 사용자가 선택하게 한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-local-blend layout 사이 member local position을 unit frame에서 보간한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response turn, speed와 member response의 결합을 명시한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-slot-assignment reform 중 stable member와 target slot assignment를 정의한다. -->
-<!-- @evidence requirements/formations/reform-and-group-motion.md#formation-command-response-events command issue, response와 settle event를 기록한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-interior-state endpoint뿐 아니라 reform interior state를 결정론적으로 평가한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-refusal ground, overlap, capacity와 timing 실패를 거부한다. -->
 
@@ -16,8 +17,6 @@ Group motion cue는 stable cue identity, formation과 command identity, shot-loc
 Re-form은 두 layout parameter를 섞는 것이 아니라 각 stable member의 source slot과 target slot을 unit-local frame에서 연결하는 state transition이다. Assignment policy와 tie-break, interpolation curve, turn·translation composition, response latency·phase, removed·hero exception을 먼저 결정하고 world transform과 terrain을 나중에 적용한다. Turn과 이동 중 shared gait cadence는 unit가 실제로 이동한 ground distance와 chosen gait에 따라 계산하고, 제자리 회전은 각 member의 arc distance를 반영한다.
 
 Output은 sample time별 group transform, active layout과 blend progress, slot correspondence, member local·world state, group and response events, shared gait state와 continuity handoff다. Target layout capacity 부족, assignment ambiguity, overlapping cues, route·ground 이탈, temporal overlap, excessive turn·speed response, interior collision은 실패하며 valid한 두 endpoint만으로 성공하지 않는다.
-
-### Sparse member exception과 command event {#performance-formation-member-exception-command-event}
 
 <!-- @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state group state와 개별 member exception을 별도 channel로 유지한다. -->
 <!-- @evidence requirements/formations/reform-and-group-motion.md#formation-command-response-events 명령과 member 반응의 semantic event를 동일 clock에 둔다. -->
@@ -29,12 +28,13 @@ Command event는 issue, acknowledged, motion-start, contact·break, settled 같�
 
 ## Logical identity와 display resolution {#performance-formation-logical-display-resolution}
 
+### Bounds, framing과 culling failures {#performance-formation-bounds-framing-culling-failures}
+
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-culling-evidence logical formation과 표시 해상도를 분리한다. -->
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection LOD, culling과 proxy policy를 사용자가 선택 가능하게 한다. -->
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-semantic-minimum 거리별 semantic minimum을 명시한다. -->
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-transition hysteresis를 가진 stable resolution 전환을 요구한다. -->
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity 실제 group quantity와 visible·culled quantity를 함께 증명한다. -->
-<!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-culling-refusal narrative identity를 없애거나 evidence를 속이는 culling을 거부한다. -->
 <!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-selection current camera와 purpose로 representation을 선택한다. -->
 <!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability LOD 전환이 temporal flicker를 만들지 않게 한다. -->
 
@@ -44,8 +44,6 @@ Semantic minimum은 far tier에서도 subject kind, group silhouette·edge·inte
 
 LOD transition은 stable member identity, scale, palette·variation, root state, shared gait phase와 event를 보존하고 threshold 주변 hysteresis로 왕복 flicker를 막는다. Evidence는 designed count, active count, visible count, culled count, promoted heroes, selected tier와 measured group extent를 구분한다. Centroid point 하나나 drawn instance 수만으로 실제 group quantity를 대체하지 않는다.
 
-### Bounds, framing과 culling failures {#performance-formation-bounds-framing-culling-failures}
-
 <!-- @evidence requirements/staging/visibility-and-readability.md#staging-multi-subject-priority 여러 subject와 formation의 readability priority를 보존한다. -->
 <!-- @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-subject-deliveries shot delivery가 요구하는 formation extent를 current time에서 측정한다. -->
 <!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-culling-refusal required subject를 사라지게 하는 resolution policy를 실패로 반환한다. -->
@@ -54,7 +52,9 @@ Formation bounds는 designed layout와 member proxy뿐 아니라 current group c
 
 Required subject가 전부 culled되거나 selected tier가 semantic minimum을 충족하지 못하거나 visible quantity가 evidence와 다르거나 bounds가 stale한 경우 resolution failure다. 시스템은 culling을 끄거나 far proxy를 hero로 몰래 승격하지 않고 policy, budget, camera, representation 중 선택 가능한 변경을 반환한다.
 
-## Formation budget와 worst-case cost {#performance-formation-budget-worst-case-cost}
+## Formation budget와 worst-case cost {#performance-formation-budget-worst-case-cost-group}
+
+### Formation budget와 worst-case cost {#performance-formation-budget-worst-case-cost}
 
 <!-- @evidence requirements/formations/budgets-and-validation.md#formation-budgets-validation 집단 규모와 runtime 비용을 명시적 bound로 제한한다. -->
 <!-- @evidence requirements/formations/budgets-and-validation.md#formation-budget-policy-selection count, memory, draw, hero와 motion budget policy를 선택하게 한다. -->

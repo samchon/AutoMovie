@@ -2,11 +2,11 @@
 
 ## 연결 State와 공유 Identity {#building-envelope-linked-interior-state}
 
+### Link 입력과 Coordination 출력 {#building-envelope-linked-interior-input-output}
+
 <!-- @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-linked-interior interior가 존재할 때 건물 외피와 내부의 공유 identity, 권위와 revision을 명시한다. -->
 
 건물은 `exterior-only` 또는 `linked-interior` 상태 중 하나를 가지며 linked 상태는 exterior revision, interior revision, shared-fact set, authority rule과 coordination receipt를 결속한다. 공유 사실은 양쪽이 같은 identity를 참조하고 한 시점의 resolved value를 읽어야 하며 이름이나 좌표 유사성으로 묶지 않는다.
-
-### Link 입력과 Coordination 출력 {#building-envelope-linked-interior-input-output}
 
 <!-- @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-interior-shared-validation massing, 면적, 층, 외피, 개구부, 구조, 설비와 좌표를 한 coordination 실행에서 비교한다. -->
 
@@ -20,6 +20,8 @@ Exterior가 shared fact를 바꾸면 interior와 그 산출물이 stale가 되�
 
 ## 공유 사실 실패 Matrix {#building-envelope-linked-interior-failure-matrix}
 
+### Matrix 판정 규칙 {#building-envelope-linked-interior-matrix-rules}
+
 <!-- @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-interior-shared-validation 외피와 내부가 공유하는 여덟 사실군의 비교, stale 전파와 실패 결과를 고정한다. -->
 
 | 공유 사실 | Authority와 비교 기준 | Exterior 변경 시 stale | Interior 변경 시 stale | 실패 결과 |
@@ -32,8 +34,6 @@ Exterior가 shared fact를 바꾸면 interior와 그 산출물이 stale가 되�
 | Structure | Shared member, core, shaft, slab identity와 support relation | Interior host, penetration, ceiling·floor zone | Exterior support, mass, attachment | `structure-conflict` |
 | Service | Shared port, medium, unit, direction와 penetration | Interior network, terminal, capacity result | Exterior equipment, route, seal, map port | `service-interface-conflict` |
 | Coordinate | Frame identity, transform chain, control point와 tolerance | 모든 interior placement와 capture | 모든 exterior·site placement와 capture | `coordinate-conflict` |
-
-### Matrix 판정 규칙 {#building-envelope-linked-interior-matrix-rules}
 
 <!-- @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-validation-outcomes passed, failed, unknown, unsupported와 stale를 항목별로 구분하여 전체 성공을 과장하지 않는다. -->
 

@@ -2,13 +2,13 @@
 
 ## Third-party source ledger {#evp-third-party-source-ledger}
 
+### Rights evaluation {#evp-third-party-rights-evaluation}
+
 <!-- @evidence requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md#third-party-source-record 채택한 외부 자료의 제공자, creator claim, 취득 시점, fixed bytes와 consumer를 source ledger로 정밀화한다. -->
 
 Source record 입력은 source kind, authoritative 또는 claimed locator, provider, creator와 publisher claim, acquisition time, original member identities, fixed snapshot 또는 bytes digest, media facts와 adopting consumer identity다. 출력은 source revision과 acquisition activity를 연결하고 original, mirror, generated와 transformed source를 구분해야 한다.
 
 Locator, creator 또는 publisher를 알 수 없으면 unknown으로 보존하고 fabricated value를 넣지 않아야 한다. 같은 content를 다른 권리 또는 acquisition으로 얻으면 content digest를 공유하더라도 source revision을 별도로 유지해야 한다.
-
-### Rights evaluation {#evp-third-party-rights-evaluation}
 
 <!-- @evidence requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md#third-party-rights-and-terms license, permission, attribution과 이용 제한을 source revision과 사용 목적에 대해 평가한다. -->
 

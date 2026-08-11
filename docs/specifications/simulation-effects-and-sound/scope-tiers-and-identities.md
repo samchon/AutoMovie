@@ -1,12 +1,14 @@
 # Scope, Tiers, and Identities
 
 ## 시스템 경계 {#simulation-effects-sound-system-boundary}
+
+### 공통 불변식 {#simulation-effects-sound-common-invariants}
+
 <!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authored-solved 이 절은 authored와 solved effect의 책임을 구분한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-story-world-binding 이 절은 sound가 story event와 world source를 잃지 않게 한다. -->
 
 시스템 입력은 production revision, shot 또는 sequence identity, 유리 film-time 구간, world snapshot, authored effect와 sound 선언, 채택된 외부 artifact이다. 출력은 시간에 따라 평가 가능한 effect state, emission에서 presentation까지 추적되는 sound state, 진단과 증거 receipt이다. 시스템은 저작되지 않은 의미를 추측하거나 누락된 source를 침묵으로 바꾸지 않으며, rendererㆍeditorㆍdelivery는 이 상태를 소비할 뿐 소유권을 다시 결정하지 않는다.
 
-### 공통 불변식 {#simulation-effects-sound-common-invariants}
 <!-- @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-clock-seek-determinism 이 절은 모든 effect state가 같은 clockㆍseedㆍorder 불변식을 지키게 한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-scope-identity 이 절은 모든 sound 단계가 sourceㆍtimeㆍownerㆍprovenance를 잃지 않게 한다. -->
 
@@ -39,6 +41,7 @@ Effect identity는 production, shot, instance, causal event, tier, parameter rev
 
 ### Prototype fidelity ceiling {#simulation-effects-sound-prototype-fidelity-ceiling}
 <!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-scope-refusal 이 절은 무상한 물리나 미지원 효과를 성공으로 낮추지 않는다. -->
+<!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-prototype-fidelity-boundary blocking prototype이 final physical fidelity를 주장하지 못하게 한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-prototype-fidelity-boundary 이 절은 추적 가능성과 perceptual fidelity를 구분한다. -->
 
 호환 가능한 출력은 staging, timing, causal state, coarse interaction과 반복 가능성을 판단할 수 있는 blocking prototype이다. 지원하지 않는 난류ㆍ파괴ㆍ연성ㆍ음향ㆍmix fidelity는 `unsupported` 또는 더 낮은 명시 tier로 남기며 시각ㆍ청각적으로 그럴듯하다는 이유로 물리적 정확성이나 final quality를 주장하지 않는다.

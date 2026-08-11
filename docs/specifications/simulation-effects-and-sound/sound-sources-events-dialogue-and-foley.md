@@ -1,13 +1,15 @@
 # Sound Sources, Events, Dialogue, and Foley
 
 ## Immutable source adoption {#sound-immutable-source-adoption}
+
+### Decode와 derived-source closure {#sound-decode-and-derived-source-closure}
+
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-sources-external-assets 이 절은 project가 실제로 채택한 audio bytes를 source authority로 삼는다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption 이 절은 source 변경을 새 revision으로 만든다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-provenance 이 절은 origin, license와 receipt를 source에 결합한다. -->
 
 Source 입력은 stable asset identity, immutable bytes, byte digest, media facts, semantic use, origin, license, adoption receipt다. 출력은 source revision과 decode request이며 파일명, URL, provider job, 임시 cache는 identity가 아니다. Bytes 또는 해석 metadata가 바뀌면 새 source revision이고 기존 dialogue timing, cue analysis와 mix cache는 stale이다.
 
-### Decode와 derived-source closure {#sound-decode-and-derived-source-closure}
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract 이 절은 허용 media, sample format, channel과 bounds를 명시하게 한다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-derived-source-closure 이 절은 resampleㆍtrimㆍsynthesis 결과도 독립 source로 추적한다. -->
 
@@ -21,6 +23,9 @@ Decode input은 source bytes와 declared/observed media facts이고 output은 �
 Author는 source identity 또는 명시된 candidate set과 selection rule을 선언한다. Provider adapter는 결과를 내려받아 검증하고 receipt를 쓰는 데서 끝나며 evaluation은 adopted bytes만 읽는다. Secret은 artifact에 기록하지 않고 remote failure는 missing adopted source로 보고한다. Source를 못 찾았다고 임의 대체하거나 network fetch를 presentation 중 수행하지 않는다.
 
 ## Cue identity와 세 시간 {#sound-cue-identity-and-three-times}
+
+### One-shot, sustained, event timing {#sound-cue-kind-and-event-timing}
+
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-event-cues-timing 이 절은 cue를 의미 사건에서 파생한다. -->
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-cue-identity-deduplication 이 절은 동일 사건에서 중복 cue가 생기지 않도록 stable identity를 정한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-emission-presentation 이 절은 emission과 presentation을 서로 다른 시간으로 보존한다. -->
@@ -30,7 +35,6 @@ Cue identity는 production, event identity, cue role, emitter identity와 stable
 
 Cue 상태는 emission time, propagation으로 얻은 arrival time, edit/mix가 배치한 presentation time과 duration을 가진다. Deduplication은 cue와 presentation instance의 각 identity equality로만 수행하며 이름, 같은 source bytes 또는 가까운 시간이라는 이유로 다른 occurrence를 합치지 않는다.
 
-### One-shot, sustained, event timing {#sound-cue-kind-and-event-timing}
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-one-shot-sustained 이 절은 순간 cue와 lifecycle source의 상태를 분리한다. -->
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-event-derived-timing 이 절은 cue emission을 semantic event authority에 묶는다. -->
 
@@ -48,13 +52,15 @@ Emission과 presentation film-time은 fixed audio clock의 정수 sample index�
 Missing event, 중복 cue 또는 presentation source instance identity, unbounded sustained source, 음수 duration, unresolved emitter, 범위 밖 sample, arrival before emission, source 없는 cue는 거절한다. 실패한 cue를 silence나 zero-length clip으로 만들어 complete mix에 넣지 않는다.
 
 ## Dialogue bytes와 timing authority {#dialogue-bytes-and-timing-authority}
+
+### Voice consistency와 phoneme state {#dialogue-voice-consistency-and-phoneme-state}
+
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-voice-visemes 이 절은 발화 audio와 lip timing을 하나의 performance record로 연결한다. -->
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-voice-source-adoption 이 절은 합성ㆍ녹음 voice도 immutable source로 채택한다. -->
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority 이 절은 최종 채택 bytes에서 timing을 파생하게 한다. -->
 
 Dialogue performance 입력은 actor, line identity, language, text/script revision, adopted voice source와 take choice다. Output은 decoded samples, presentation range, word/phoneme marks, viseme intervals와 provenance다. Marks와 visemes는 최종 bytes 또는 그 exact derived source에서 다시 분석한 결과여야 하며 합성 전 예상 duration이나 다른 take의 timing을 사용할 수 없다.
 
-### Voice consistency와 phoneme state {#dialogue-voice-consistency-and-phoneme-state}
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-voice-consistency 이 절은 actor voice 선택과 의도된 변경을 revision으로 추적한다. -->
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-word-phoneme-timing 이 절은 word와 phoneme 구간을 sample clock에 정렬한다. -->
 
@@ -72,6 +78,9 @@ Lip-sync input은 final dialogue presentation sample, shared film/audio transfor
 Missing take, actor/source mismatch, stale mark digest, phoneme range 역전, source 밖 timing, 지원하지 않는 rate transform, dialogue와 viseme의 다른 conform revision은 line identity를 지목한 실패다. 임시 timing이나 예상 duration은 final 상태로 승격할 수 없다.
 
 ## Foley와 resolved contact {#foley-and-resolved-contact-binding}
+
+### Variation, layering, procedural bound {#foley-variation-layering-and-bound}
+
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-foley-effects 이 절은 물체와 접촉의 audible consequence를 추적한다. -->
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-foley-material-surface 이 절은 source 선택을 contact material과 surface trait에 묶는다. -->
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-foley-resolved-contact 이 절은 실제로 해결된 contact만 foley를 방출하게 한다. -->
@@ -79,7 +88,6 @@ Missing take, actor/source mismatch, stale mark digest, phoneme range 역전, so
 
 Foley input은 resolved contact identity, tick, participants, material/surface traits, point, normal, relative speed/impulse proxy와 cue mapping이다. Output은 causal cue, emitter path, chosen variation과 layer set이다. Authored-only foley는 별도 semantic event를 원인으로 가질 수 있지만 존재하지 않은 simulated contact를 주장하지 않는다.
 
-### Variation, layering, procedural bound {#foley-variation-layering-and-bound}
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-foley-variation 이 절은 반복 변형을 stable seed와 ordinal에 묶는다. -->
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-layered-effects 이 절은 여러 layer를 하나의 causal cue 아래 추적한다. -->
 <!-- @evidence requirements/sound/foley-and-sound-effects.md#sound-procedural-foley-bound 이 절은 procedural 생성의 sampleㆍvoiceㆍwork 상한을 요구한다. -->

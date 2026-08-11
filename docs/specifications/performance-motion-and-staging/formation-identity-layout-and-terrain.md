@@ -2,6 +2,8 @@
 
 ## 집단, unit과 member identity {#performance-formation-group-unit-member-identity}
 
+### Hierarchy, membership와 command propagation {#performance-formation-hierarchy-membership-command}
+
 <!-- @evidence requirements/formations/scope-and-identity.md#formation-scope-identity bounded 집단을 하나의 저작 단위로 정의한다. -->
 <!-- @evidence requirements/formations/scope-and-identity.md#formation-all-repeated-subjects 사람뿐 아니라 모든 반복 subject를 같은 compact 원칙으로 다룬다. -->
 <!-- @evidence requirements/formations/scope-and-identity.md#formation-open-kinds 집단 종류와 member profile을 열린 vocabulary로 둔다. -->
@@ -16,8 +18,6 @@ Formation record는 stable group identity, member prototype 또는 selectable pr
 `all repeated subjects`는 인간 군중에 한정되지 않고 동물, 차량, 나무, 소품, 기계와 새로운 member profile을 허용한다. 다만 formation은 함께 배치·이동하고 group state를 공유하는 반복 주체를 위한 것이며, 독립 story state와 자유 motion이 필요한 모든 member를 compact formation으로 숨기지 않는다. 사용자가 authoring mode, count, prototype, seed와 override를 선택하고, 시스템은 규모만 보고 anonymous crowd로 자동 전환하지 않는다.
 
 입력에 bounded count·layout·prototype·seed가 없거나 story가 개별 인물을 요구하는데 stable member identity가 없거나 explicit nodes가 declared budget을 넘으면 scope failure다. Output은 선택 mode, identity law, exact count, anonymous·named 분할, source provenance와 user decision을 포함한다.
-
-### Hierarchy, membership와 command propagation {#performance-formation-hierarchy-membership-command}
 
 <!-- @evidence requirements/formations/hierarchies-and-units.md#formation-hierarchies-units 여러 scale의 formation을 nested unit으로 구성한다. -->
 <!-- @evidence requirements/formations/hierarchies-and-units.md#formation-membership containment와 membership을 stable identity 관계로 표현한다. -->
@@ -49,6 +49,8 @@ Dressing은 exact slot에서 벗어날 수 있는 lateral·depth·facing toleran
 
 ## Terrain support와 route envelope {#performance-formation-terrain-route-envelope}
 
+### Spacing, overlap와 bounded avoidance {#performance-formation-spacing-overlap-avoidance}
+
 <!-- @evidence requirements/formations/terrain-and-routes.md#formation-terrain-routes formation을 실제 surface와 route 위에 배치한다. -->
 <!-- @evidence requirements/formations/terrain-and-routes.md#formation-terrain-support-profile member prototype의 ground·slope·step capability를 선언한다. -->
 <!-- @evidence requirements/formations/terrain-and-routes.md#formation-group-path group anchor가 따를 named path와 timing을 정의한다. -->
@@ -63,8 +65,6 @@ Terrain input은 stable surface identity, footprint, single-valued height rule �
 각 sample에서 unit-local slot을 group transform과 현재 layout deformation으로 옮긴 뒤 그 XZ 위치의 authoritative surface height와 normal을 구한다. Relief adaptation은 member vertical placement와 허용 orientation을 바꾸지만 stable slot identity와 group path progress를 바꾸지 않는다. Route gate는 centroid가 아니라 member footprint가 확장한 전체 moving envelope를 route width, turn radius, terrain support와 obstacle에 비교한다.
 
 Endpoint가 모두 valid해도 path 또는 reform interior에서 바닥 밖, 과도한 slope, clearance 부족, route overflow가 발생하면 실패다. Ground가 다가값인 위치는 어느 space를 사용하는지 명시하지 않으면 unsupported이며 가장 위 surface로 몰래 snap하지 않는다. Output은 time, slot·unit, surface·route segment, required와 available envelope, height·slope residual과 변경 선택지를 제공한다.
-
-### Spacing, overlap와 bounded avoidance {#performance-formation-spacing-overlap-avoidance}
 
 <!-- @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-spacing-overlap-avoidance member가 차지하는 실제 공간을 spacing 판단에 사용한다. -->
 <!-- @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing 정적 layout의 body clearance를 측정한다. -->

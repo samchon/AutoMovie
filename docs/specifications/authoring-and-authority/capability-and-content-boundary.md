@@ -2,12 +2,12 @@
 
 ## 보편 능력의 시스템 경계 {#spec-authoring-general-capability-boundary}
 
+### 시스템 책임과 project 책임 {#spec-authoring-system-project-responsibility}
+
 <!-- @evidence requirements/product/capability-and-content.md#product-general-capability 이 계약이 작품별 완성 콘텐츠와 반복 사용 가능한 보편 능력을 시스템 경계로 분리한다. -->
 <!-- @evidence requirements/product/scope-and-exclusions.md#product-all-objects-motion 이 경계가 모든 객체와 동작을 향한 장기 확장을 닫힌 콘텐츠 목록이 아닌 표현 능력으로 정의한다. -->
 
 시스템은 project가 선언한 작품 사실을 받아 구조화·검증·재생하는 보편 능력을 제공한다. 작품의 인물, 장소, 양식과 자산 identity는 입력이며 시스템이 미리 선택해 제공하는 결과가 아니다.
-
-### 시스템 책임과 project 책임 {#spec-authoring-system-project-responsibility}
 
 <!-- @evidence requirements/product/charter.md#product-author-owned-film 이 분리가 작품 선택은 project에, 보편 표현과 검증은 시스템에 남긴다. -->
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary 이 절이 공유 능력과 작품 고유 사실의 책임선을 시스템 용어로 고정한다. -->

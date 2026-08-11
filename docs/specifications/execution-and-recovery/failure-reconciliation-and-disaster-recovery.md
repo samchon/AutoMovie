@@ -2,11 +2,11 @@
 
 ## Failure Envelope {#execution-failure-envelope}
 
+### Process Crash와 Power Loss {#execution-process-crash-power-loss}
+
 <!-- @evidence requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-failure-modes-recovery 장애 뒤에도 job, attempt, work unit, artifact와 side effect의 상태를 보존한다. -->
 
 Failure envelope는 failure identity와 class, detecting boundary, job and attempt, affected units, confirmed facts, unknown facts, last durable state, partial artifacts, external outcomes, retry eligibility와 permitted recovery actions를 가진다. Root cause가 확인되지 않으면 unknown을 보존하고 input error, not-run 또는 success로 재분류하지 않는다.
-
-### Process Crash와 Power Loss {#execution-process-crash-power-loss}
 
 <!-- @evidence requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-process-crash-power-loss Process, host와 power failure 뒤 마지막 영속 recovery point까지만 완료로 인정한다. -->
 

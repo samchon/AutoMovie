@@ -1,9 +1,10 @@
 # Editorial, render와 delivery system specifications
 
+<!-- @evidence requirements/editorial/README.md#편집-요구사항 편집 시간, 순서, 전이와 동기 약속을 시스템 계약으로 정밀화한다. -->
+<!-- @evidence requirements/rendering/README.md#rendering-요구사항 결정론적 render schedule, 산출물과 검증 약속을 시스템 계약으로 정밀화한다. -->
+<!-- @evidence requirements/delivery-and-accessibility/README.md#전달과-접근성-요구사항 전달 profile, 접근성, packaging과 publication 약속을 시스템 계약으로 정밀화한다. -->
+
 ## 문서 지도 {#spec-editorial-render-delivery-map}
-<!-- @evidence requirements/editorial/scope-and-identity.md#editorial-scope-identity 이 사양 묶음의 편집 경계는 선택된 film identity에서 시작한다. -->
-<!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-scope-artifact-identity 이 사양 묶음의 렌더 경계는 compiled truth의 산출물 identity를 정밀화한다. -->
-<!-- @evidence requirements/delivery-and-accessibility/scope-and-profiles.md#delivery-scope-profiles 이 사양 묶음의 전달 경계는 목적지 profile을 정밀화한다. -->
 
 이 디렉터리는 편집 결정을 exact film clock 위의 합성으로 확정하고, 그 결정을 숨은 상태 없이 frame과 media로 materialize하며, 실제 게시 bytes를 목적지별 전달·접근성 계약으로 검증하는 package 독립 system specification이다. 각 문서는 계획과 관찰 사실, current와 stale, complete와 partial을 분리하고 실패 뒤 재사용 가능한 범위를 사용자에게 드러내며, 이름이나 경로의 존재를 성공으로 간주하지 않는다.
 

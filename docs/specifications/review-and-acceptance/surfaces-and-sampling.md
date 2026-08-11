@@ -2,12 +2,12 @@
 
 ## 독립 검토 표면 {#review-system-independent-surfaces}
 
+### Asset 표면 {#review-system-asset-surface}
+
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces Defines asset, shot, sequence, film and delivery as independent acceptance surfaces. -->
 <!-- @evidence requirements/review/frame-range-and-whole-work.md#review-frame-range-whole-work Preserves frame, interval and whole-work reviews as distinct claims. -->
 
 각 검토 표면은 자신의 target identity, required criteria, sampling plan, evidence coverage와 verdict를 가진다. 하위 표면의 current pass는 상위 표면의 입력이 될 수 있지만 상위 표면의 독립 관찰과 판단을 대신하지 않는다.
-
-### Asset 표면 {#review-system-asset-surface}
 
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-asset-surface Defines asset acceptance across identity, silhouette, state, rig and intended use. -->
 
@@ -48,11 +48,11 @@ Delivery 표면은 실제 candidate 또는 published bytes의 stream, duration, 
 
 ## 시간 Sampling Plan {#review-system-temporal-sampling-plan}
 
+### 표본에서 구간으로의 일반화 {#review-system-sample-interval-generalization}
+
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-temporal-sampling Requires endpoints, events, transitions, state changes and high-risk intervals. -->
 
 시간 sampling plan은 대상 범위, 첫 표본과 마지막 표본, semantic event, transition boundary, state change, 알려진 고위험 구간, 표본 선택 규칙과 완전 재생 여부를 가진다. 같은 입력과 plan은 같은 표본 identity와 순서를 만든다.
-
-### 표본에서 구간으로의 일반화 {#review-system-sample-interval-generalization}
 
 <!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-sample-interval-claim Defines the conditions required to generalize samples to a continuous interval. -->
 <!-- @evidence requirements/review/frame-range-and-whole-work.md#review-sampling-full-coverage Separates sampled evidence from full playback and whole-work approval. -->

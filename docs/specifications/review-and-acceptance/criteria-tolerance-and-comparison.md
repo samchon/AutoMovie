@@ -2,12 +2,12 @@
 
 ## Criterion 레코드 {#acceptance-system-criterion-record}
 
+### 반증 가능성과 단일 책임 {#acceptance-system-falsifiable-single-responsibility}
+
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-criterion-completeness Defines every field required for a valid criterion. -->
 <!-- @evidence requirements/review/criteria-and-comparison.md#review-observable-criteria Makes review criteria observable, bounded and falsifiable. -->
 
 Criterion 레코드는 stable identity와 version, target과 scope, intent basis, precondition, observable, expected state, comparison rule, tolerance 또는 exact 선언, failure condition, required evidence, severity, profile과 authority를 가진다. 필수 field가 빠지면 criterion은 invalid이며 대상 verdict를 만들지 않는다.
-
-### 반증 가능성과 단일 책임 {#acceptance-system-falsifiable-single-responsibility}
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-falsifiable-statement Requires another observer to distinguish success from failure. -->
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-single-responsibility Separates criteria with different observations, authority, evidence or impact. -->
@@ -16,11 +16,11 @@ Criterion 문장은 동일 범위를 본 다른 관찰자가 pass와 fail을 구
 
 ## Observable 유형 {#acceptance-system-observable-types}
 
+### 수치 Observable {#acceptance-system-numeric-observable}
+
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-observable-kinds Defines numeric, structural, state, perceptual, semantic and comparison observations. -->
 
 Observable은 수치, 구간, 집합과 관계, 순서와 state transition, 존재와 부재, perceptual feature, semantic 전달 또는 정의된 comparison result 중 하나 이상의 명시된 유형을 가진다. 서로 다른 유형을 결합할 때 각 부분의 판정과 evidence를 잃지 않는다.
-
-### 수치 Observable {#acceptance-system-numeric-observable}
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-numeric-observable Defines units, coordinate or time basis, samples, aggregation and significant precision. -->
 
@@ -46,12 +46,12 @@ Observable은 수치, 구간, 집합과 관계, 순서와 state transition, 존�
 
 ## Baseline과 Reference 순서 {#review-system-baseline-reference-order}
 
+### 비교 가능성 {#review-system-comparability}
+
 <!-- @evidence requirements/review/criteria-and-comparison.md#review-criteria-comparison Requires every judgment to name its authored intent, criterion, baseline or reference. -->
 <!-- @evidence requirements/review/criteria-and-comparison.md#review-criteria-precedence Defines precedence when criteria or references conflict. -->
 
 Comparison context는 authored intent, criterion, accepted baseline, source, reference와 alternative candidate의 역할과 적용 순서를 명시한다. Reference와 과거 baseline은 현재 필수 criterion을 자동으로 대체하지 않으며 충돌한 근거는 숨기지 않는다.
-
-### 비교 가능성 {#review-system-comparability}
 
 <!-- @evidence requirements/review/criteria-and-comparison.md#review-comparable-subjects Requires common source, intent, semantic position and presentation for comparison. -->
 <!-- @evidence requirements/review/criteria-and-comparison.md#review-noncomparable-state Defines noncomparable as a first-class result rather than a forced ranking. -->
@@ -60,11 +60,11 @@ Comparison context는 authored intent, criterion, accepted baseline, source, ref
 
 ## Tolerance 레코드 {#acceptance-system-tolerance-record}
 
+### 절대, 상대와 방향 Tolerance {#acceptance-system-tolerance-kinds}
+
 <!-- @evidence requirements/acceptance/tolerances-and-boundaries.md#acceptance-tolerance-declaration Defines tolerance kind, value, unit, reference, direction and boundary inclusion. -->
 
 Tolerance는 종류, 값, 단위, 기준값, 적용 방향과 경계 포함 여부를 가진다. Exact 선언과 미정 tolerance를 구분하며 미정 상태는 0 tolerance가 아니라 invalid criterion이다.
-
-### 절대, 상대와 방향 Tolerance {#acceptance-system-tolerance-kinds}
 
 <!-- @evidence requirements/acceptance/tolerances-and-boundaries.md#acceptance-absolute-relative-tolerance Defines absolute and relative tolerance composition including zero denominators. -->
 <!-- @evidence requirements/acceptance/tolerances-and-boundaries.md#acceptance-asymmetric-directional-tolerance Defines independent upper and lower risk boundaries. -->
@@ -92,7 +92,9 @@ Tolerance는 종류, 값, 단위, 기준값, 적용 방향과 경계 포함 여�
 
 지각 tolerance는 기준 reference, 관찰자 또는 authority, target presentation과 허용 가능한 차이의 관찰 언어를 가진다. 해상도, rate, loudness, color, caption timing과 접근성 threshold는 목적별 profile이 소유하며 보편 기본값으로 승격하지 않는다.
 
-## 자동 판정과 사람 판정 {#acceptance-system-deterministic-subjective-verdict}
+## 자동 판정과 사람 판정 {#acceptance-system-deterministic-subjective-verdict-group}
+
+### 자동 판정과 사람 판정 {#acceptance-system-deterministic-subjective-verdict}
 
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-verdict-determinism Requires identical numeric and structural inputs to yield identical verdicts. -->
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary Keeps perceptual and semantic human judgment explicit. -->

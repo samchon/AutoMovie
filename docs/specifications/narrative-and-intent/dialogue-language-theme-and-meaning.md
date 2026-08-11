@@ -2,12 +2,12 @@
 
 ## Utterance 상태 계약 {#narrative-intent-utterance-state-contract}
 
+### Timing과 Action 관계 {#narrative-intent-utterance-timing-action}
+
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-language-silence speaker, audience, language, text, purpose와 scene 위치를 결속한다. -->
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-text-intent literal text와 dramatic intent를 구분한다. -->
 
 Utterance는 stable identity, occurrence, speaker, addressee 또는 audience, scene position, language, story purpose와 authored form을 가진다. Authored form은 exact wording, intent-only improvisation, placeholder, inaudible 또는 silence를 구분하고 placeholder를 녹음이나 subtitle 승인 문구로 승격하지 않는다.
-
-### Timing과 Action 관계 {#narrative-intent-utterance-timing-action}
 
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-timing-intent interruption, pause, overlap과 synchronization 의도를 보존한다. -->
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-action-interaction 발화가 촉발하거나 재해석하는 event와 state를 연결한다. -->
@@ -22,12 +22,12 @@ Utterance는 stable identity, occurrence, speaker, addressee 또는 audience, sc
 
 ## 언어와 전달 판본 {#narrative-intent-language-delivery-variants}
 
+### Dialogue Continuity {#narrative-intent-dialogue-continuity}
+
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-multilingual-dialogue 원문, 번역, subtitle와 dub의 identity 및 provenance를 분리한다. -->
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-variants-approval delivery별 wording과 line reading의 승인 상태를 격리한다. -->
 
 원문, pronunciation, translation, subtitle, dub, censored와 delivery-specific adaptation은 parent utterance를 공유하는 별도 variant다. 각 variant는 language, locale, script, register, dialect, code-switch, translator 또는 author, source revision, timing과 approval을 가지며 한 판본의 evidence는 다른 판본에 재사용되지 않는다.
-
-### Dialogue Continuity {#narrative-intent-dialogue-continuity}
 
 <!-- @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-continuity 발화 순서, 청취 knowledge와 presentation fragment를 분리한다. -->
 <!-- @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-reaction-information action, reaction, reveal와 audience knowledge의 presentation 순서를 검토한다. -->
@@ -49,12 +49,12 @@ Story state는 말의 내용, 화자와 dramatic intent를 소유하고 performa
 
 ## Theme와 Motif 상태 {#narrative-intent-theme-motif-state}
 
+### Motif Variation과 Coverage {#narrative-intent-motif-variation-coverage}
+
 <!-- @evidence requirements/story/themes-motifs-and-subtext.md#story-themes-motifs-subtext theme, motif, symbol과 subtext를 occurrence에 연결한다. -->
 <!-- @evidence requirements/story/themes-motifs-and-subtext.md#story-theme-interpretation-boundary 저자 의도와 관객 해석을 하나의 정답으로 합치지 않는다. -->
 
 Theme statement는 질문, 충돌 관점, 변화 방향 또는 authored ambiguity를 가지고 motif와 symbol은 stable identity와 scene, event, object, composition 또는 sound occurrence를 가진다. 저자 의도, 인물 믿음, reviewer 관찰, audience interpretation과 marketing statement는 별도 claim kind다.
-
-### Motif Variation과 Coverage {#narrative-intent-motif-variation-coverage}
 
 <!-- @evidence requirements/story/themes-motifs-and-subtext.md#story-motif-variation motif identity와 매체별 realization을 분리한다. -->
 <!-- @evidence requirements/story/themes-motifs-and-subtext.md#story-theme-coverage 이야기 근거 없는 장식과 실현 없는 theme를 gap으로 만든다. -->

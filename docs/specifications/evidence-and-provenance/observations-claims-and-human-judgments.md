@@ -2,13 +2,13 @@
 
 ## Record kind와 relation 경계 {#evp-observation-claim-judgment-boundary}
 
+### Observation input과 output {#evp-observation-record-contract}
+
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-observations-and-claims observation, claim, 자동 판정과 사람 judgment를 독립 record kind와 relation으로 구체화한다. -->
 
 System은 `observation`, `claim`, `automatedFinding`과 `humanJudgment`를 서로 다른 record kind로 받아야 한다. Claim과 judgment는 근거 record id를 명시적으로 참조하고, observation payload에 해석을 삽입하거나 judgment를 자동 측정값으로 직렬화하는 입력을 invalid로 거부해야 한다.
 
 Relation은 `supports`, `contradicts`, `interprets`, `evaluates`와 `supersedes`처럼 방향과 의미가 고정된 kind를 가져야 한다. 알 수 없는 relation kind는 graph를 끊지 않고 보존하되 current approval 계산에는 참여시키지 않아야 한다.
-
-### Observation input과 output {#evp-observation-record-contract}
 
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-observation-conditions 직접 관찰의 대상, 조건, 방법과 실제 결과를 재검토 가능한 record로 만든다. -->
 

@@ -2,11 +2,11 @@
 
 ## 구조와 외피 Graph {#building-envelope-structure-envelope-graph}
 
+### 구조 입력과 지지 출력 {#building-envelope-structural-support-input-output}
+
 <!-- @evidence requirements/building-exterior/structure-and-envelope.md#building-structure-envelope 구조적 지지와 비구조 외피, face·edge·junction 및 interior 연계를 분리된 관계 graph로 규정한다. -->
 
 구조 graph는 foundation, wall, column, beam, slab, truss와 project-defined member 사이의 support relation을 소유하고, envelope graph는 내부와 외부 또는 서로 다른 환경 zone을 나누는 face, edge, corner, opening과 junction을 소유한다. 한 visible element가 두 역할을 수행할 수 있으나 역할과 검증 결과는 구분한다.
-
-### 구조 입력과 지지 출력 {#building-envelope-structural-support-input-output}
 
 <!-- @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support element의 지지 대상, bearing relation과 미검증 구조 성능을 구분한다. -->
 
@@ -26,11 +26,11 @@ Linked interior는 structural member, core, shaft, slab와 load-bearing boundary
 
 ## 외피 재료 Assembly {#building-envelope-material-assembly-state}
 
+### 표면과 Layer 입력 {#building-envelope-material-layer-input}
+
 <!-- @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-materials-assemblies 열린 재료 범위, 표면 속성, layer 순서, joint와 수량 표현을 외피 assembly 상태로 정의한다. -->
 
 Surface appearance, physical substance와 ordered build-up은 별도 identity를 가진다. Assembly는 host face, 진행 axis와 sense, offset, layer role, solid·cavity·membrane 성격, thickness, exposed·concealed end와 opening wrap 규칙을 제공하며 특정 시대의 재료 catalogue를 전제하지 않는다.
-
-### 표면과 Layer 입력 {#building-envelope-material-layer-input}
 
 <!-- @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-surface-properties 색, 거칠기, 광학 속성과 물성의 측정 여부를 분리한다. -->
 

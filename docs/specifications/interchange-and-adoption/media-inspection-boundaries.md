@@ -2,11 +2,11 @@
 
 ## Family Dispatch와 Fact Envelope {#interchange-media-inspection-dispatch}
 
+### glTF와 GLB Scene Inspection {#interchange-gltf-glb-inspection}
+
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-family-contract Filename이 아니라 검증된 family와 해석 facts로 decoder boundary를 선택한다. -->
 
 Inspection은 declared media type, filename suffix, byte signature와 parser-confirmed container를 별도 observation으로 기록하고, 합의한 supported family에만 bounded inspector를 배정한다. 성공한 inspector는 container version, supported feature inventory, dependency edges, expanded resource estimates와 해석에 필요한 technical facts를 반환하며 서로 모순된 observation은 quarantine finding이 된다.
-
-### glTF와 GLB Scene Inspection {#interchange-gltf-glb-inspection}
 
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb glTF와 GLB의 scene graph 및 지원 feature를 element 단위로 검사한다. -->
 <!-- @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Direct placement가 보존할 scene graph inventory를 inspection 결과로 제공한다. -->

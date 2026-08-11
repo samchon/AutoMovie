@@ -2,6 +2,8 @@
 
 ## Root trajectory와 이동 authority {#performance-kinematics-root-trajectory-authority}
 
+### Procedural gait와 compact rule {#performance-kinematics-procedural-gait-rule}
+
 <!-- @evidence requirements/motion/root-motion-and-trajectories.md#motion-root-trajectories world path와 subject-local motion을 결합하는 root 계약을 정의한다. -->
 <!-- @evidence requirements/motion/root-motion-and-trajectories.md#motion-root-authority-mode clip, path, staging 중 root authority를 선택하게 한다. -->
 <!-- @evidence requirements/motion/root-motion-and-trajectories.md#motion-path-timing path distance와 shot-local timing을 함께 해석한다. -->
@@ -15,8 +17,6 @@ Root motion 입력은 subject identity, 시작 world transform, local root curve
 Resolved trajectory는 production frame마다 world root, velocity, facing, path progress, ground residual과 적용 warp를 반환한다. Facing은 travel과 같게 할 수도, gaze·formation·object target에 독립적으로 고정할 수도 있다. Motion warp는 semantic event order, contact phase, gait character와 authored extrema를 보존하는 bounded 변환이어야 하며, 필요한 scale·time·turn 보정이 선언된 한계를 넘으면 경로를 억지로 맞추지 않는다.
 
 Path가 traversable space 밖으로 나가거나 ground가 다가값이라 해석 불가하거나 clearance가 부족하거나 속도·가속이 non-finite이거나 root authority가 충돌하면 실패한다. 결과에는 실패 time, segment, 실제와 허용 residual, 영향받는 event·contact와 route·timing·motion 변경 선택지를 포함한다.
-
-### Procedural gait와 compact rule {#performance-kinematics-procedural-gait-rule}
 
 <!-- @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-gaits compact rule에서 재현 가능한 motion을 생성한다. -->
 <!-- @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection procedural rule의 선택과 소유권을 기록한다. -->
@@ -34,6 +34,8 @@ Procedural rule은 stable rule identity와 version, semantic capability, target 
 
 ## IK, constraint와 reachability {#performance-kinematics-ik-constraint-reachability}
 
+### Contact phase, weight와 support {#performance-contact-phase-weight-support}
+
 <!-- @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraints-ik target을 따르는 bounded solve를 정의한다. -->
 <!-- @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-range-of-motion target solve 뒤에도 rig ROM을 적용한다. -->
 <!-- @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space target의 local, parent, world space를 명시한다. -->
@@ -47,8 +49,6 @@ Constraint solve 입력은 target identity와 frame, owner chain, goal transform
 Reachability는 chain의 rest geometry와 current scale, enabled DOF, ROM, obstacle 또는 declared keep-out, required orientation을 함께 본다. Position만 닿는 것과 방향까지 맞는 것을 구분하고, analytical solve는 모든 valid branch 중 continuity와 pole policy로 결정하며 iterative solve는 fixed iteration과 deterministic tie-break을 사용한다. Coupled limit이나 corrective driver를 축별 clamp로 대체하지 않는다.
 
 Unreachable, singular, pole ambiguity, iteration exhaustion, ROM clamp 후 residual 초과, target frame 불명, dependency cycle은 구분된 failure다. Output은 requested target, resolved end effector, positional·angular residual, chosen branch, iterations, applied limits와 contact impact를 포함하며, 손을 target 근처에 두고 `contact`로 기록하지 않는다.
-
-### Contact phase, weight와 support {#performance-contact-phase-weight-support}
 
 <!-- @evidence requirements/motion/contact-weight-and-support.md#motion-contact-weight-support motion을 world support와 접촉 상태에 결합한다. -->
 <!-- @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases approach, touch, planted, release 같은 contact phase를 명시한다. -->

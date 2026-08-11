@@ -2,12 +2,12 @@
 
 ## 다차원 Resource Contract {#execution-resource-contract}
 
+### Admission Estimate {#execution-budget-admission-estimate}
+
 <!-- @evidence requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-resource-budgets-backpressure 긴 작업의 computation, memory, storage, network, 시간, quota, 비용과 concurrency 한계를 하나의 계약으로 닫는다. -->
 <!-- @evidence requirements/rendering/budgets.md#rendering-budgets Render domain의 worst-case cost를 공통 실행 admission이 소비할 수 있게 한다. -->
 
 Budget contract는 computation, accelerator, memory, storage, network, wall-clock duration, external quota, 비용과 concurrency의 resource dimension별 scope, unit, warning limit, hard limit, measurement source와 enforcement policy를 가진다. Peak와 cumulative usage, reserved와 measured usage, exact, conservative와 unknown estimate를 분리하고 여러 dimension을 하나의 평균 점수로 축약하지 않아야 한다.
-
-### Admission Estimate {#execution-budget-admission-estimate}
 
 <!-- @evidence requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate Peak, total, 여유와 불확실성을 시작 전에 평가하는 admission 출력을 구체화한다. -->
 

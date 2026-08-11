@@ -2,12 +2,12 @@
 
 ## Budget 상태 계약 {#narrative-intent-budget-state-contract}
 
+### Story Consequence와 Representation 선택 {#narrative-intent-budget-story-representation}
+
 <!-- @evidence requirements/production-design/budgets-and-feasibility.md#production-design-budgets-feasibility 대상 tier, unit, limit, basis, margin과 owner를 정한다. -->
 <!-- @evidence requirements/production-design/budgets-and-feasibility.md#production-design-resource-schedule-budget runtime cost와 제작 자원 및 일정 cost를 함께 표현한다. -->
 
 Budget entry는 stable identity와 revision, target deliverable 또는 tier, subject 또는 scope, metric, unit, inclusive limit, measurement basis, safety margin, owner와 status를 가진다. Runtime population과 memory뿐 아니라 unique asset, license, authoring, conversion, review, capture, render, storage와 revision effort를 표현하고 unknown cost를 zero로 만들지 않는다.
-
-### Story Consequence와 Representation 선택 {#narrative-intent-budget-story-representation}
 
 <!-- @evidence requirements/production-design/budgets-and-feasibility.md#production-design-story-budget budget 변경을 scene, event, hero와 acceptance consequence에 연결한다. -->
 <!-- @evidence requirements/production-design/budgets-and-feasibility.md#production-design-budget-representation proxy, LOD, reuse와 culling의 보존 및 손실을 비교한다. -->
@@ -38,12 +38,12 @@ Inclusive limit 초과는 metric, owner, exact scope와 candidate choices를 가
 
 ## Design Continuity Ledger {#narrative-intent-design-continuity-ledger}
 
+### 변경 영향과 비교 {#narrative-intent-design-change-impact-comparison}
+
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-continuity-ledger subject와 location state를 story time에 따라 추적한다. -->
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-continuity-deliverables 모든 derivation이 같은 design revision을 참조하게 한다. -->
 
 Continuity entry는 subject 또는 location, state key, value, story time 또는 phase interval, cause event, previous와 next state, source authority와 evidence를 가진다. Costume, prop, damage, dirt, opening, furniture, weather, light와 crowd state는 edit order가 아니라 story state로 이어지고 mutually exclusive current 값은 conflict다.
-
-### 변경 영향과 비교 {#narrative-intent-design-change-impact-comparison}
 
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact direct와 shared dependency의 consequence surface를 계산한다. -->
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-set-comparison revision, variant와 phase의 semantic difference를 보고한다. -->
@@ -52,12 +52,12 @@ Art direction, scale, location, subject, material, tier와 budget 변경은 scen
 
 ## Deliverable Inventory {#narrative-intent-design-deliverable-inventory}
 
+### Authority, Gap과 Freshness {#narrative-intent-deliverable-authority-gaps}
+
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-breakdown-deliverables breakdown, schedule, board와 budget 산출물의 consumer를 정한다. -->
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-bible-decisions owning source로 연결되는 navigable inventory를 요구한다. -->
 
 Deliverable item은 stable identity, purpose, consumer, required 또는 optional status, format 또는 human-readable view, source revision과 variant, completeness rule, acceptance와 current artifact를 가진다. Location, subject, asset, palette, material, state, budget, reference와 unresolved decision inventory는 owning source로 연결되고 별도 prose copy가 정본이 되지 않는다.
-
-### Authority, Gap과 Freshness {#narrative-intent-deliverable-authority-gaps}
 
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-source-authority hand-edited derived artifact의 역승격을 막는다. -->
 <!-- @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-gaps missing과 partial output의 exact gap을 보고한다. -->

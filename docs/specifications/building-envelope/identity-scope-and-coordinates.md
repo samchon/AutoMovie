@@ -2,11 +2,11 @@
 
 ## 건물 소유 경계 {#building-envelope-building-ownership-boundary}
 
+### 범위 입력과 정규화 {#building-envelope-scope-input-normalization}
+
 <!-- @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-scope 건물 외형의 소유 범위, identity, 외피 전용 세트와 운송 수단 제외를 하나의 경계 계약으로 고정한다. -->
 
 건물 work는 하나 이상의 building unit을 소유하며 각 unit은 stable building identity, revision, 단위, 좌표 root, element root와 논리 범위 root를 가진다. Facade, roof, balcony, exterior stair, ladder, rail, bridge와 건물에 고정된 설비는 건물에 속하고 terrain, road, 자연 수계, 하늘, 날씨와 주변 건물은 site context에 속한다.
-
-### 범위 입력과 정규화 {#building-envelope-scope-input-normalization}
 
 <!-- @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-identity 같은 이름이나 배열 순서가 아니라 stable identity와 revision으로 건물 및 부속 요소를 결속한다. -->
 
@@ -26,11 +26,11 @@
 
 ## 공유 좌표 Frame {#building-envelope-shared-coordinate-frame}
 
+### 좌표 입력과 출력 {#building-envelope-coordinate-input-output}
+
 <!-- @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-coordinate-shared-boundaries 건물 local 좌표와 interior·site 공유 경계의 변환 및 허용오차를 규정한다. -->
 
 각 building unit은 길이 단위, 축 방향, handedness, local origin과 building-to-world 변환을 선언하며 모든 child placement는 정해진 합성 순서로 그 root를 따른다. Site, interior와 외부 자산은 같은 숫자를 공유하는 것이 아니라 명시된 frame identity와 변환 receipt를 통해 연결된다.
-
-### 좌표 입력과 출력 {#building-envelope-coordinate-input-output}
 
 <!-- @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-coordinate-transform-chain source에서 building과 world까지의 변환 순서와 결과 좌표를 재현 가능하게 한다. -->
 

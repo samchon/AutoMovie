@@ -2,13 +2,13 @@
 
 ## Approval Decision 레코드 {#acceptance-system-approval-decision}
 
+### 승인 {#acceptance-system-approval}
+
 <!-- @evidence requirements/review/approval-rejection-and-waivers.md#review-approval-rejection-waivers Defines explicit pending, approved, conditional, rejected, waived and superseded review outcomes. -->
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-approval-decision Defines approval over target, version, profile, criterion verdicts, evidence, exceptions and authority. -->
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-approval-status Defines accepted, rejected, partial, accepted-with-deviation and pending-authority states. -->
 
 Approval decision은 target과 version, scope, profile, criterion verdict set, evidence identities, unresolved finding, deviation, approver authority, time와 status를 가진다. Criterion verdict와 approval status는 독립 기록이며 approval은 원래 verdict를 변경하지 않는다.
-
-### 승인 {#acceptance-system-approval}
 
 <!-- @evidence requirements/review/approval-rejection-and-waivers.md#review-approval Requires an explicit final-authority decision over satisfied required criteria. -->
 <!-- @evidence requirements/acceptance/profiles-and-aggregation.md#acceptance-aggregate-pass Defines the conditions for complete aggregate acceptance. -->
@@ -32,12 +32,12 @@ Rejected는 하나 이상의 비면제 blocking criterion이 fail일 때 성립�
 
 ## Waiver 레코드 {#acceptance-system-waiver-record}
 
+### 비면제 Criterion {#acceptance-system-nonwaivable-criterion}
+
 <!-- @evidence requirements/review/approval-rejection-and-waivers.md#review-waiver Requires an explicit human decision over known unmet conditions and accepted risk. -->
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-deviation-contract Defines the complete scope, rationale, risk and publication impact of a deviation. -->
 
 Waiver는 criterion fail을 유지한 채 deviation identity, observed violation, rationale, considered alternative, accepted impact와 risk, authority, scope, publication effect, expiry와 re-review trigger를 기록한다. Waiver는 pass가 아니며 aggregate status는 accepted-with-deviation이다.
-
-### 비면제 Criterion {#acceptance-system-nonwaivable-criterion}
 
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-nonwaivable-criteria Prevents authority from waiving declared integrity, safety, rights, credential or accessibility blockers. -->
 
@@ -52,12 +52,12 @@ Target, version, scope, profile, time 또는 risk condition이 waiver 결속을 
 
 ## Publication Decision {#acceptance-system-publication-decision}
 
+### 게시 원자성과 세대 {#acceptance-system-publication-atomicity}
+
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-publication-decision Binds publication to profile approval, actual delivery evidence, deviations and authority. -->
 <!-- @evidence requirements/delivery-and-accessibility/publication-and-retention.md#delivery-publication-preconditions Requires exact current approval and artifact identities immediately before publication. -->
 
 Publication decision은 exact delivery artifact와 profile, current validation, required approval, known deviation, partial 또는 unsupported scope, destination과 publication authority를 결속한다. Missing 또는 stale precondition은 publication을 거절하고 이전 published version을 변경하지 않는다.
-
-### 게시 원자성과 세대 {#acceptance-system-publication-atomicity}
 
 <!-- @evidence requirements/acceptance/approval-exceptions-and-publication.md#acceptance-publication-atomicity Prevents packages from mixing artifacts from different approved generations. -->
 

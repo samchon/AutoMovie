@@ -2,12 +2,12 @@
 
 ## 물 시스템의 경계와 상태 {#world-site-water-system-state}
 
+### 유역, 배수와 물 경계 입력 {#world-site-watershed-water-boundary-input}
+
 <!-- @evidence requirements/map/rivers-and-inland-water.md#map-inland-hydrology Defines inland water as connected, sourced spatial state. -->
 <!-- @evidence requirements/map/coasts-and-oceans.md#map-coast-ocean Defines coastal and ocean state without supplying a named sea. -->
 
 시스템은 유역, 배수망, 하천, 호수, 습지, 저수지, 해안선, 조석 수역, 해저와 지하수 경계를 stable identity로 표현한다. 물 geometry, 기준 수위, 유량 또는 변화 상태, 주변 지형·구조물과의 관계는 하나의 revision에 결속되며, 장식용 물 표면은 검증된 수문 상태로 승격되지 않는다.
-
-### 유역, 배수와 물 경계 입력 {#world-site-watershed-water-boundary-input}
 
 <!-- @evidence requirements/map/rivers-and-inland-water.md#map-watershed-drainage Requires directed watershed and drainage connectivity. -->
 <!-- @evidence requirements/map/rivers-and-inland-water.md#map-water-boundary-volume Requires bank, bed, free surface and water volume to remain distinguishable. -->

@@ -1,6 +1,8 @@
 # Acceptance 불확실성과 부분 성공
 
-## Criterion verdict 상태 {#acceptance-criterion-verdicts}
+## Criterion verdict 상태 {#acceptance-criterion-verdicts-group}
+
+### Criterion verdict 상태 {#acceptance-criterion-verdicts}
 
 각 criterion은 pass, fail, indeterminate, not-run, unsupported 또는 stale 중 현재 사실에 맞는 상태를 가져야 하며 상태의 원인과 적용 범위를 보여야 한다.
 
@@ -39,6 +41,8 @@ Partial 결과는 통과한 criterion과 범위, 통과하지 않은 criterion�
 
 수치 evidence만 있고 필수 visual review가 없거나 일부 시간과 view만 관찰했다면 관찰된 범위의 결과와 미관찰 범위를 분리해야 한다. Evidence 일부의 pass를 criterion 전체의 pass로 올리지 않아야 한다.
 
-## 상태 간 승격 금지 {#acceptance-status-no-promotion}
+## 상태 간 승격 금지 {#acceptance-status-no-promotion-group}
+
+### 상태 간 승격 금지 {#acceptance-status-no-promotion}
 
 Indeterminate, not-run, unsupported, stale와 partial을 경고가 있는 pass로 자동 변환하지 않아야 한다. 승격은 누락된 조건이 충족되고 current evidence로 다시 판정되었을 때만 가능해야 한다.

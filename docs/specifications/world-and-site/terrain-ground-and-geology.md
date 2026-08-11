@@ -2,12 +2,12 @@
 
 ## 지형과 지반의 해석 상태 {#world-site-terrain-ground-state}
 
+### 표고, 경사와 표면 입력 {#world-site-elevation-slope-surface-input}
+
 <!-- @evidence requirements/map/terrain-and-landforms.md#map-terrain-landforms Defines terrain as authored spatial evidence rather than a preset landscape. -->
 <!-- @evidence requirements/map/geology-and-ground-surfaces.md#map-geology-ground Keeps surface and subsurface facts related but distinct. -->
 
 시스템은 지표면 relief, 인공 지형 변경, 다층 지표, 지질 단위, 토양 profile과 ground cover를 stable spatial feature로 해석한다. 특정 지형 유형, 토양 분류나 지질 시대를 내장하지 않고 사용자가 제공한 명칭과 속성을 보존하며, 보이는 표면과 해석된 지하 체적을 같은 것으로 간주하지 않는다.
-
-### 표고, 경사와 표면 입력 {#world-site-elevation-slope-surface-input}
 
 <!-- @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Requires elevation, slope and aspect from one declared reference. -->
 <!-- @evidence requirements/map/terrain-and-landforms.md#map-terrain-surface-volume Separates surface representations from volumetric terrain. -->

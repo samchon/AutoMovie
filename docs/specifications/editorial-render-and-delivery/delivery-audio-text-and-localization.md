@@ -1,6 +1,9 @@
 # Delivery audio, text와 localization
 
-## Audio stream, channel과 loudness {#spec-delivery-audio-streams}
+## Audio stream, channel과 loudness {#spec-delivery-audio-streams-group}
+
+### Audio stream, channel과 loudness {#spec-delivery-audio-streams}
+
 <!-- @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-streams-channels Audible output identity를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-channel-layout Channel layout semantics를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/audio-streams-and-channels.md#delivery-audio-mix-versions Mix version identity를 정밀화한다. -->
@@ -19,6 +22,9 @@ Downmix, normalization, gain과 sample-rate conversion은 input digest, ordered 
 Probe와 audible review는 channel order, language, first sample, programme start, final event, intended tail, clipping, silence classification와 picture sync를 확인한다. Missing required channel, wrong order, rate mismatch, duration drift, clipping, prohibited silence, stale mix, wrong language와 undecodable stream은 거절한다. Independent valid mix는 보존하되 requested language·accessibility set 전체를 complete로 표시하지 않는다.
 
 ## Caption, subtitle와 selectable cue {#spec-delivery-caption-cues}
+
+### Caption readability profile {#spec-delivery-caption-readability-profile}
+
 <!-- @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-captions-subtitles-cues 시간과 화면 영역을 가진 text alternative를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-subtitle-distinction Caption과 subtitle role을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Text와 language integrity를 정밀화한다. -->
@@ -33,15 +39,16 @@ Cue는 stable identity, caption·subtitle·non-speech·speaker·song·chapter ro
 
 Validation은 target language의 text length, duration, reading pace-like profile, overlap, shot cut, speaker change, on-screen text collision과 safe region을 actual presentation에서 검사한다. Selectable embedded 또는 sidecar track은 player selection, user-visible label, role와 on·off 동작을, open presentation은 final decoded picture의 readability를 검증한다. Burn-in은 selectable 요구를 대신하지 않는다.
 
-### Caption readability profile {#spec-delivery-caption-readability-profile}
-
 <!-- @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Grapheme 기반 가독성 한계와 profile 부재 시 measure-only 경계를 정밀화한다. -->
 
 Readability profile은 identity와 version, language와 versioned grapheme segmentation rule, 초당 grapheme 상한, cue당 line 수와 line당 grapheme 상한, 최소 cue duration, cue 사이 최소 gap 및 각 경계의 inclusive 또는 exclusive 의미를 가진다. Validator는 markup을 제외한 displayed grapheme count와 exact film range에서 effective measurements를 출력하고 profile이 있을 때만 verdict를 계산한다. Profile이 없으면 같은 measurements와 `not-run` verdict reason을 반환하며 임의 default threshold로 pass 또는 fail을 만들지 않는다.
 
 Edit trim·retime·reorder, dialogue replacement와 language revision은 affected cues와 review를 stale로 만든다. Coverage는 required dialogue, meaningful non-speech와 speaker change를 covered, intentionally omitted 또는 unresolved로 보고한다. Reversed time, duplicate id, unreadable overlap, empty required text, unsupported glyph, stale mapping과 source mismatch는 거절하며 valid subset을 complete alternative로 publish하지 않는다.
 
-## Audio description, transcript와 navigation {#spec-delivery-description-alternatives}
+## Audio description, transcript와 navigation {#spec-delivery-description-alternatives-group}
+
+### Audio description, transcript와 navigation {#spec-delivery-description-alternatives}
+
 <!-- @evidence requirements/delivery-and-accessibility/audio-description-and-alternatives.md#delivery-audio-description-alternatives Visual information의 시간 기반 대체를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/audio-description-and-alternatives.md#delivery-description-gaps-priority Description gap와 priority를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/audio-description-and-alternatives.md#delivery-description-modes Standard와 extended mode를 정밀화한다. -->
@@ -59,7 +66,10 @@ Description mix는 narration bytes, source programme, gain relation, channel lay
 
 Coverage는 각 required visual event를 described, existing sound·dialogue로 conveyed, intentionally omitted 또는 unresolved로 분류한다. Picture edit, on-screen text, mix, language 또는 gap 변경은 script, recording, mix와 review를 stale로 만든다. Missing target, overlap conflict, wrong language, duration overflow, source mix mismatch와 unresolved required cue는 complete accessible delivery를 거절하고 completed cues만 partial asset으로 보존한다.
 
-## Localization과 language-version closure {#spec-delivery-localization}
+## Localization과 language-version closure {#spec-delivery-localization-group}
+
+### Localization과 language-version closure {#spec-delivery-localization}
+
 <!-- @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-localization-language-versions 언어별 film asset identity를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-original-translation Original과 translation lineage를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/localization-and-language-versions.md#delivery-language-selection Language tag와 selection role을 정밀화한다. -->

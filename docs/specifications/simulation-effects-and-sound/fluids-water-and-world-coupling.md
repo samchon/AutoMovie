@@ -1,6 +1,9 @@
 # Fluids, Water, and World Coupling
 
 ## Fluid domain과 보존 state {#fluid-domain-and-conservation-state}
+
+### Surface와 flow tier {#fluid-surface-and-flow-tier}
+
 <!-- @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluids-water 이 절은 액체를 유한 domain의 상태로 정의한다. -->
 <!-- @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-volume-boundary 이 절은 units, bounds, source, drain과 open boundary를 명시하게 한다. -->
 <!-- @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-conservation-account 이 절은 물질량 변화의 원인을 accounting하게 한다. -->
@@ -8,7 +11,6 @@
 
 Fluid input은 stable domain identity, world basis와 units, bounded grid 또는 authored surface, initial depth/velocity, fixed step, source, drain, wall/open edge와 budget이다. State는 [clock boundary identity](./clocks-ordering-seek-and-checkpoints.md#effect-and-audio-time-domains), ordered cell depthㆍvelocity, source added, drain removed, open-boundary loss, clamp correction과 digest를 포함한다. Boundary identity의 absolute effect tick은 이 state의 유일한 step 위치이고 film frame이나 근사 second를 별도 위치로 저장하지 않는다. 각 step의 volume delta는 이 accounting 항목의 합과 선언 tolerance 안에서 일치해야 한다.
 
-### Surface와 flow tier {#fluid-surface-and-flow-tier}
 <!-- @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier 이 절은 static, authored, solved water의 서로 다른 fidelity를 기록한다. -->
 
 Water presentation tier는 `static-surface`, `authored-flow`, `bounded-shallow-solve`, `adopted-result` 중 하나다. Static은 변형 없는 surface, authored는 명시된 loop와 events, bounded solve는 유한 grid의 coarse height/flow, adopted result는 immutable samples를 출력한다. Tier가 보장하지 않는 splash, turbulence, viscosity, volume truth를 추론하지 않는다.

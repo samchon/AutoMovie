@@ -2,11 +2,11 @@
 
 ## Durable Recovery Contract {#execution-durable-recovery-contract}
 
+### Checkpoint Closure {#execution-checkpoint-closure}
+
 <!-- @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoints-resume-retry Session 기억 없이 긴 작업을 안전하게 이어갈 recovery point를 시스템 record로 정의한다. -->
 
 Checkpoint publication의 입력은 current attempt와 owner generation, job identity, completed work set, resumable state, artifact references와 compatibility profile이다. 출력은 immutable checkpoint identity, durable acknowledgement와 maximum redo range이며 acknowledgement되지 않은 in-memory state는 checkpoint로 보고하지 않는다.
-
-### Checkpoint Closure {#execution-checkpoint-closure}
 
 <!-- @evidence requirements/operations-and-recovery/checkpoints-resume-and-retry.md#operations-checkpoint-completeness Job, input, 완료 및 미완료 범위, state, artifact, receipt, compatibility와 integrity를 하나의 closure로 묶는다. -->
 

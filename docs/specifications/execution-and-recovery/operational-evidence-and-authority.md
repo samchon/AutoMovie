@@ -2,11 +2,11 @@
 
 ## Attributable Operation Contract {#execution-operational-authority-contract}
 
+### Action-specific Authority {#execution-action-specific-authority}
+
 <!-- @evidence requirements/operations-and-recovery/audit-and-operator-authority.md#operations-audit-operator-authority Submit부터 restore와 override까지 모든 mutation을 인증된 actor와 당시 authority에 귀속한다. -->
 
 Mutation request는 authenticated actor, delegated actor가 있으면 그 chain, requested action, production and target scope, reason, authority grant identity, grant version과 expiration을 가진다. Decision은 allowed or denied, effective scope, applied policy와 decision event를 출력하고 authority가 확인되지 않으면 mutation을 실행하지 않는다.
-
-### Action-specific Authority {#execution-action-specific-authority}
 
 <!-- @evidence requirements/operations-and-recovery/audit-and-operator-authority.md#operations-action-specific-authority 조회, 실행, 중단, current 변경, 삭제, 복구와 권한 위임을 별도 capability로 제한한다. -->
 

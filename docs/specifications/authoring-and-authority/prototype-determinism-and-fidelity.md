@@ -2,12 +2,12 @@
 
 ## 구조적 prototype 경계 {#spec-authoring-prototype-boundary}
 
+### Deterministic 입력 identity {#spec-authoring-deterministic-input-identity}
+
 <!-- @evidence requirements/product/charter.md#product-deterministic-prototype 이 경계가 구조화된 작품 사실을 재현 가능한 film prototype으로 검증·렌더하게 한다. -->
 <!-- @evidence requirements/product/prototype-quality.md#product-blocking-pass 이 경계가 산출물의 품질 기준을 감독이 판단 가능한 blocking pass로 둔다. -->
 
 Primary output은 story, staging, motion, timing, camera, light와 sound를 판단할 수 있는 deterministic prototype이다. 표면 fidelity는 이 구조적 output의 성공 조건을 바꾸지 않으며 finished photoreal shot으로 오인되어서는 안 된다.
-
-### Deterministic 입력 identity {#spec-authoring-deterministic-input-identity}
 
 <!-- @evidence requirements/product/charter.md#product-reproducible-judgment 이 identity가 같은 선언과 실행 조건을 같은 정규 결과로 연결한다. -->
 <!-- @evidence requirements/product/prototype-quality.md#product-authored-variation-determinism 이 identity가 seed 기반 변이를 동일한 입력에서 재생 가능하게 한다. -->
