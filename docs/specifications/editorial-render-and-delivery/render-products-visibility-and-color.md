@@ -1,6 +1,8 @@
 # Render product, visibility와 color
 
-## Pass, channel과 multi-view product {#spec-render-pass-products}
+## Contract units {#spec-render-products-visibility-color-contract-units}
+
+### Pass, channel과 multi-view product {#spec-render-pass-products}
 <!-- @evidence requirements/rendering/passes-channels-and-products.md#rendering-passes-channels-products 여러 render product의 identity를 정밀화한다. -->
 <!-- @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Beauty와 structural pass 경계를 정밀화한다. -->
 <!-- @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Channel semantic을 정밀화한다. -->
@@ -17,7 +19,7 @@ Identity mapping은 source owner와 instance를 frame·chunk에 걸쳐 안정적
 
 Expected, completed, failed, unsupported와 not-run products 및 frame ranges를 구분한다. Unknown pass·channel, identity collision, invalid precision, incompatible transparency, unavailable runtime capability와 beauty effect leakage는 거절한다. 성공 beauty를 missing structural output으로 대체하지 않고, aligned control set이 불완전하면 optional rendition의 선행 조건도 complete로 만들지 않는다.
 
-## Geometry ownership, visibility와 culling {#spec-render-visibility-culling}
+### Geometry ownership, visibility와 culling {#spec-render-visibility-culling}
 <!-- @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-geometry-visibility-culling Frame 참여 geometry의 판정을 정밀화한다. -->
 <!-- @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Hierarchical transform 합성을 정밀화한다. -->
 <!-- @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-deformed-bounds Deformed bounds를 정밀화한다. -->
@@ -33,7 +35,7 @@ Visibility evaluation은 resolved geometry owner, parent transform chain, curren
 
 Decision trace는 source visibility에서 final participation까지 각 transform, bounds, plane·region test와 exclusion reason을 반환한다. Invalid bounds, non-finite transform, hierarchy cycle, unknown state와 budget 편의를 위한 required owner 제거는 거절한다. Conservative recovery는 더 많이 그리는 방향만 허용하고 partial frame은 missing owner와 affected pass를 명시하며 final-capable로 승인하지 않는다.
 
-## Material, lighting과 color pipeline {#spec-render-material-color}
+### Material, lighting과 color pipeline {#spec-render-material-color}
 <!-- @evidence requirements/rendering/materials-lighting-and-color.md#rendering-materials-lighting-color Material과 light의 working color 경계를 정밀화한다. -->
 <!-- @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Material binding precedence를 정밀화한다. -->
 <!-- @evidence requirements/rendering/materials-lighting-and-color.md#rendering-external-materials External material channel 보존을 정밀화한다. -->

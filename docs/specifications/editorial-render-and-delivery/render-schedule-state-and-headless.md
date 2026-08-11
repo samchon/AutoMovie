@@ -1,6 +1,8 @@
 # Render schedule, state와 headless 실행
 
-## Render phase와 공통 Artifact 축 {#spec-render-artifact-lifecycle}
+## Contract units {#spec-render-schedule-state-headless-contract-units}
+
+### Render phase와 공통 Artifact 축 {#spec-render-artifact-lifecycle}
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-scope-artifact-identity Render artifact의 complete identity를 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Compile과 render 책임을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized 계획과 materialization 상태를 정밀화한다. -->
@@ -22,7 +24,7 @@ Input 변경은 dependency relation에 따라 정확한 product와 downstream en
 
 Product 하나의 성공은 다른 pass, view, audio-related product나 encode의 성공으로 승격되지 않는다. Verified independent output은 expected identity, byte digest와 receipt가 일치할 때 자기 축 snapshot과 함께 보존한다. Missing identity, ambiguous scope, compile contradiction, stale cache와 zero-byte 또는 unverified output은 확인된 materialization과 completeness, integrity와 artifact-scoped validation, freshness와 compatibility, publication selection과 generation, availability와 quarantine 및 safe retry 범위를 각각 반환하고 materialization complete 또는 current publication을 주장하지 않는다.
 
-## Exact frame schedule과 direct seek {#spec-render-frame-schedule}
+### Exact frame schedule과 direct seek {#spec-render-frame-schedule}
 <!-- @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-schedule-sampling Rational timeline의 frame schedule을 정밀화한다. -->
 <!-- @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Frame boundary convention을 정밀화한다. -->
 <!-- @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Frame number와 time mapping을 정밀화한다. -->
@@ -38,7 +40,7 @@ Schedule은 selected start-inclusive, end-exclusive film range, exact rational f
 
 Direct seek, sequential execution, repeated seek, reordered pass, subrange와 chunk execution은 같은 global frame number에서 동일 state와 identity를 만들어야 한다. Invalid rate, empty required range, overflow, duplicate number, ambiguous origin, unrepresentable count와 component clock mismatch는 실행 전 거절한다. 유효 prefix는 partial plan으로 보일 수 있으나 complete schedule로 실행하거나 boundary를 임의로 줄이지 않는다.
 
-## Scene lowering과 state isolation {#spec-render-state-isolation}
+### Scene lowering과 state isolation {#spec-render-state-isolation}
 <!-- @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-scene-lowering-runtime Compiled source의 runtime lowering을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Runtime object ownership을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Dependency 기반 build order를 정밀화한다. -->
@@ -54,7 +56,7 @@ Lowering은 compiled model, instance, actor, rig, formation, camera, light, envi
 
 Lowering receipt는 source closure, runtime ownership graph, resource별 ready·missing·unsupported 관측과 lowering phase를 제공한다. Independent verified subtree는 source identity가 같은 retry에서 재사용할 수 있지만 required scene closure가 깨지면 renderable state는 partial이다. Unknown model, missing required material, hierarchy cycle, duplicate owner, non-finite state, incompatible capability와 cleanup failure는 거절하고 affected subtree와 safe retry 여부를 보고한다.
 
-## Headless와 supported platform determinism {#spec-render-headless-platform}
+### Headless와 supported platform determinism {#spec-render-headless-platform}
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-headless-platform-determinism Headless와 interactive 실행의 공통 계약을 정밀화한다. -->
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Runtime identity closure를 정밀화한다. -->
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-cross-platform-paths Cross-platform path 규칙을 정밀화한다. -->

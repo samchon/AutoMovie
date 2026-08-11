@@ -1,6 +1,8 @@
 # Rational timeline과 composition
 
-## Canonical film clock과 range algebra {#spec-editorial-rational-timeline}
+## Contract units {#spec-rational-timeline-composition-contract-units}
+
+### Canonical film clock과 range algebra {#spec-editorial-rational-timeline}
 <!-- @evidence requirements/editorial/rational-time-and-ranges.md#editorial-rational-time-ranges Film clock의 exact rational basis를 정밀화한다. -->
 <!-- @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Canonical time 표현과 비교 규칙을 정밀화한다. -->
 <!-- @evidence requirements/editorial/rational-time-and-ranges.md#editorial-time-ranges Range의 시작 포함과 끝 제외 계약을 정밀화한다. -->
@@ -16,7 +18,7 @@ Trim, offset, rate와 reverse는 source range에서 film range로 가는 명시�
 
 결과는 canonical timebase, normalized ordered ranges, transform lineage, exact duration과 grid mapping을 포함한다. Zero denominator, non-finite 또는 비정수 입력, overflow, reversed required range, non-invertible required transform, grid 밖 강제 snap과 모호한 origin은 계획 전에 거절한다. 일부 독립 range만 유효하면 invalid range와 downstream 영향 범위를 함께 반환하는 partial plan으로 남기고, 실패 항목을 삭제한 새 cut으로 자동 승격하지 않는다.
 
-## Track, stack과 nested composition {#spec-editorial-track-composition}
+### Track, stack과 nested composition {#spec-editorial-track-composition}
 <!-- @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-tracks-stacks-composition Track과 stack 합성의 system 경계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks 순차 track의 점유 불변식을 정밀화한다. -->
 <!-- @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-layered-stacks Layered stack의 합성 순서를 정밀화한다. -->
@@ -32,7 +34,7 @@ Composition은 stable identity를 가진 ordered track 집합이고, 각 track�
 
 Resolution 결과는 instant 또는 requested range별 활성 entry, provenance, composition order와 excluded reason을 관찰 가능하게 제공한다. Duplicate identity, hierarchy cycle, 모호한 order, incompatible role, undeclared overlap, missing selected alternative와 child range escape는 거절한다. 독립 track의 성공은 보존할 수 있지만 required track이 실패하면 전체 composition은 partial이고, 성공 track만 출력한 결과를 selected film으로 표기하지 않는다.
 
-## Clip source range, handle과 replacement {#spec-editorial-clip-boundaries}
+### Clip source range, handle과 replacement {#spec-editorial-clip-boundaries}
 <!-- @evidence requirements/editorial/clips-source-ranges-and-handles.md#editorial-clips-source-ranges-handles Clip이 source와 film range를 연결하는 계약을 정밀화한다. -->
 <!-- @evidence requirements/editorial/clips-source-ranges-and-handles.md#editorial-source-film-range Source와 film 범위 mapping을 정밀화한다. -->
 <!-- @evidence requirements/editorial/clips-source-ranges-and-handles.md#editorial-clip-handles Transition handle의 가용 범위를 정밀화한다. -->
@@ -48,7 +50,7 @@ Clip resolution은 film instant를 source instant와 sample selection으로 연�
 
 Boundary report는 requested·available·used source range, destination range, transform, handles, first·last selected sample와 out-of-range cause를 제공한다. Missing required source, insufficient handle, zero 또는 non-finite rate, unsupported reverse, duration mismatch와 ambiguous source origin은 거절한다. 이미 유효한 clip은 partial edit에서 유지할 수 있으나 missing clip의 film interval과 downstream 금지 목적을 명시한다.
 
-## Transition와 overlap evaluation {#spec-editorial-transition-overlap}
+### Transition와 overlap evaluation {#spec-editorial-transition-overlap}
 <!-- @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transitions-overlaps Transition과 overlap의 합성 경계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-handles Transition handle 소비를 정밀화한다. -->
 <!-- @evidence requirements/editorial/transitions-and-overlaps.md#editorial-picture-sound-transition Picture와 sound transition의 독립성을 정밀화한다. -->

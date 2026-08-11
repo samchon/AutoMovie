@@ -1,6 +1,8 @@
 # Delivery validation과 release status
 
-## Published bytes validation과 recovery {#spec-delivery-validation-release}
+## Contract units {#spec-delivery-validation-release-status-contract-units}
+
+### Published bytes validation과 recovery {#spec-delivery-validation-release}
 <!-- @evidence requirements/delivery-and-accessibility/validation.md#delivery-validation Actual published bytes의 재검증을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/validation.md#delivery-profile-conformance Profile conformance 판정을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/validation.md#delivery-package-closure-validation Package closure validation을 정밀화한다. -->

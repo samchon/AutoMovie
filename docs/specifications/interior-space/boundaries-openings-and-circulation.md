@@ -1,6 +1,8 @@
 # 경계, 개구부와 Circulation
 
-## Wall, partition과 양면 경계 {#interior-space-wall-partition-boundary}
+## Contract units {#spec-boundaries-openings-and-circulation-contract-units}
+
+### Wall, partition과 양면 경계 {#interior-space-wall-partition-boundary}
 
 <!-- @evidence requirements/interior/walls-partitions-and-linings.md#interior-walls-partitions-linings Requires walls, partitions, and linings to remain distinct authored roles. -->
 <!-- @evidence requirements/interior/walls-partitions-and-linings.md#interior-wall-two-sided-ownership Requires both sides to share one construction while carrying independent finishes. -->
@@ -10,7 +12,7 @@
 
 물리 경계 입력은 stable identity, 분리하는 한두 공간, host face 또는 volume, 구조·비구조 역할, 전체 두께, interior side와 exterior side, partial extent와 junction priority를 가져야 한다. 같은 wall construction의 양면은 서로 다른 lining·finish·wear를 가질 수 있지만 두 개의 겹친 wall로 복제하지 않으며, half-height partition, screen, curved·sloped·faceted wall과 open edge는 정확도 상태와 의도된 범위를 선언한다. Corner, T·X junction, reveal과 termination은 canonical rule과 허용오차로 풀고 resulting faces와 cut edges를 출력한다. 비의도 gap, self-intersection, overlap, inverted side, 음수 usable depth와 해소되지 않은 junction은 failure이며 기존 단면을 읽을 때 total thickness와 side meaning이 유지되지 않으면 migration이 필요하다.
 
-## Host opening과 가동 상태 {#interior-space-host-opening-operation}
+### Host opening과 가동 상태 {#interior-space-host-opening-operation}
 
 <!-- @evidence requirements/interior/doors-windows-and-openings.md#interior-doors-windows-openings Requires doors, windows, and open cuts to penetrate a real host. -->
 <!-- @evidence requirements/interior/doors-windows-and-openings.md#interior-opening-components Requires frames, fills, trim, seals, and hardware at declared detail. -->
@@ -21,7 +23,7 @@
 
 Opening 입력은 identity, host boundary, boundary-local profile, depth, clear aperture, fill, frame·trim·hardware와 named operation state를 분리한다. Swing, slide, fold, lift와 removal은 panel별 축·pivot·travel limit, current value와 swept volume으로 해석하고 access, view, light, sound, weather, drainage와 nearby furnishing clearance에 같은 상태를 적용해야 한다. Exterior-linked opening은 양쪽이 같은 cut, transform, clear aperture, frame depth와 operation state를 읽되 sill·flashing과 interior trim은 독립 region으로 상세화할 수 있다. Host 없는 profile, host 밖 cut, 겹친 cut, fill보다 작은 구멍, limit 밖 state, 막힌 필수 route와 내외부 불일치는 실패하며 shape가 없는 legacy opening은 relational-only 상태로 보존하고 측정값을 추정하지 않는다.
 
-## Connector와 route topology {#interior-space-connector-route-topology}
+### Connector와 route topology {#interior-space-connector-route-topology}
 
 <!-- @evidence requirements/interior/connections-and-circulation.md#interior-connections-circulation Requires explicit connections rather than inferred adjacency. -->
 <!-- @evidence requirements/interior/connections-and-circulation.md#interior-horizontal-vertical-routes Requires horizontal and vertical route geometry. -->

@@ -1,6 +1,8 @@
 # Pattern, 공차와 Aging
 
-## 물리적 module pattern {#interior-space-physical-module-pattern}
+## Contract units {#spec-patterns-tolerances-and-aging-contract-units}
+
+### 물리적 module pattern {#interior-space-physical-module-pattern}
 
 <!-- @evidence requirements/interior/textures-patterns-and-variation.md#interior-texture-pattern-variation Requires physical modules to remain distinct from texture repetition. -->
 <!-- @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source Requires a user-authored pattern source and frame. -->
@@ -15,7 +17,7 @@ Pattern receipt는 입력 rule과 algorithm revision, stream-key scheme, channel
 
 Sliver, unsupported piece, overlap, joint deviation, grain break, budget 초과, unresolved border, undeclared algorithm version, unstable stream key와 policy 밖 outlier는 failure이며 지원하지 않는 curved host는 faceted 또는 explicit degradation으로 선언되지 않으면 성공이 아니다.
 
-## Seed hierarchy와 correlated tolerance {#interior-space-seed-correlated-tolerance}
+### Seed hierarchy와 correlated tolerance {#interior-space-seed-correlated-tolerance}
 
 <!-- @evidence requirements/interior/tolerances-and-imperfections.md#interior-tolerances-imperfections Requires bounded authored imperfections rather than accidental noise. -->
 <!-- @evidence requirements/interior/tolerances-and-imperfections.md#interior-imperfection-authoring-choice Requires the user to choose whether imperfections exist. -->
@@ -34,7 +36,7 @@ Resolved tolerance receipt는 typed input values, algorithm revision, stream-key
 
 Non-finite·unbounded 값, unit 없는 tolerance, semantic kind 교환, seed 없는 무작위성, non-positive scale, opening·host·clearance 침범, negative joint와 선언되지 않은 composition order에 따른 결과 변화는 failure다. 새로운 channel을 추가해도 기존 channel의 stable stream key와 resolved deviation을 바꾸지 않는 호환성 규칙을 가져야 한다.
 
-## 사용자 저작 wear, soiling과 aging {#interior-space-user-authored-aging}
+### 사용자 저작 wear, soiling과 aging {#interior-space-user-authored-aging}
 
 <!-- @evidence requirements/interior/wear-soiling-and-aging.md#interior-wear-soiling-aging Requires wear, soiling, and aging as traceable authored state. -->
 <!-- @evidence requirements/interior/wear-soiling-and-aging.md#interior-aging-authoring-choice Requires explicit user choice instead of automatic realism. -->
