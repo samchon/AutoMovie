@@ -124,36 +124,6 @@ const graph: ITtscEvidenceGraphConfig = {
         symbol: ["h2", "h3"],
       },
     },
-    {
-      name: "gait archetypes implement formation motion requirements",
-      type: "typescript",
-      files: gaitFiles,
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "requirements/formations/README.md",
-          "requirements/formations/reform-and-group-motion.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
-    },
-    {
-      name: "gait archetypes implement formation motion specifications",
-      type: "typescript",
-      files: gaitFiles,
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "specifications/performance-motion-and-staging/README.md",
-          "specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
-    },
   ],
 };
 
