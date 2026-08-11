@@ -4,6 +4,8 @@
 
 Actor, occupant, wheelchair, mobility aid, carried object, camera rig와 maintenance equipment를 project-defined profile로 표현하고 이동, 사용, reach와 view에 필요한 공간을 실제 geometry에서 검토할 수 있어야 한다.
 
+Profile은 신장, 자세, 눈높이, 손 닿음, 무릎·발 공간, 회전 envelope와 필요한 보조기구의 unit, 출처, 적용 population 또는 사용자가 정한 치수와 불확실성을 가져야 한다. 하나의 평균 인체를 모든 사용자와 shot의 암묵 기준으로 사용하지 않아야 한다.
+
 ### 정적 Clearance와 이동 Volume {#interior-static-dynamic-clearance}
 
 Body envelope, standing·seated posture, turning, door sweep, drawer travel, chair pull-out, equipment service와 actor motion volume을 서로 다른 clearance로 선언할 수 있어야 한다.
@@ -20,6 +22,12 @@ Handle, switch, control, storage, fixture와 work surface의 height, reach depth
 
 법규 수치와 접근성 기준은 jurisdiction, facility type와 project profile이 소유해야 하며 특정 국가의 숫자를 모든 가상 세계와 시대에 적용하는 보편 상수로 박지 않아야 한다.
 
+### 시선과 Privacy {#interior-sightline-privacy}
+
+Seat, standing point, wheelchair position와 camera에서 window, mirror, screen, sign, artwork, fixture와 공간 초점으로 향하는 sightline을 opening, transparent boundary, furniture와 operable state에 대해 검토할 수 있어야 한다. 보임, 가림과 privacy 결과는 사용한 profile, eye point, target, obstruction과 시간 state를 함께 보여 주어야 한다.
+
 ### 검증 수준 {#interior-accessibility-validation-level}
 
 Geometric clearance, authored accessibility intent와 법규 적합성 검토를 구분하고 전문 검토를 수행하지 않았다면 compliance를 주장하지 않아야 한다.
+
+측정 결과는 대상 identity, profile, posture 또는 motion, 관찰값, 기준값, 최소 여유, 충돌 위치와 제외 범위를 제공해야 한다. 국소 reach 성공을 연속 route나 전체 시설 접근성 성공으로 확대하지 않아야 한다.

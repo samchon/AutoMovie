@@ -8,6 +8,12 @@ Element와 assembly는 필요할 때 fabrication unit, installation order, acces
 
 Panel, furniture, equipment, ceiling, service와 large object가 opening, route, lift와 workspace를 통해 설치·이동·분해될 수 있는지 bounded sequence로 검토할 수 있어야 한다.
 
+Sequence는 선행 조건, fastening, curing, temporary support, protection, removal direction과 작업 volume을 가질 수 있어야 한다. 닫힌 cavity 안의 체결, 먼저 설치된 layer를 파괴해야 하는 후속 작업과 opening을 통과하지 못하는 교체 부품을 완성 render에서 보이지 않는다는 이유로 통과시키지 않아야 한다.
+
+### 공차와 누적 {#interior-construction-tolerance-stack}
+
+Nominal dimension, fabrication tolerance, installation tolerance, survey uncertainty, numeric comparison tolerance와 authored imperfection을 별도 값으로 보존해야 한다. 기준면, 조립 순서와 worst-case·statistical 또는 project-defined combination을 밝힌 stack-up으로 joint, fit, clearance와 replacement 가능성을 검토하고 공차를 키워 충돌을 숨기지 않아야 한다.
+
 ### Maintenance Access {#interior-maintenance-access}
 
 Valve, filter, panel, luminaire, equipment, drain, ceiling hatch와 concealed service는 service zone, reach, removal volume와 shutdown state를 가져야 한다.

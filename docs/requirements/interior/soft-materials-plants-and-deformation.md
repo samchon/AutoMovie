@@ -4,6 +4,8 @@
 
 Curtain, blind, drape, upholstery, rug, bedding, cable, hanging element, indoor plant와 project-defined deformable object를 anchor, rest shape, material, state와 bounded motion으로 표현할 수 있어야 한다.
 
+Static authored fold, pose 또는 sag, keyed deformation와 physical simulation result를 구분하고 어떤 representation이 current canonical state인지 밝혀야 한다. Thickness, mass, stiffness, damping, sewing·attachment constraint와 external force 중 실제 사용한 input만 performance evidence로 취급해야 한다.
+
 ### Anchor와 Host {#interior-soft-anchor-host}
 
 Soft element는 wall, ceiling, floor, furniture, rail, actor 또는 다른 object의 named anchor에 연결되고 host가 움직일 때 같은 fixed clock에서 target을 읽어야 한다.
@@ -16,6 +18,10 @@ Floor, wall, furniture, actor와 opening의 supported collision proxy를 사용�
 
 Indoor planting은 pot, soil 또는 substrate, root extent, light, water, growth, health와 maintenance state를 가질 수 있으나 생태 simulation을 수행하지 않았다면 decorative authored population으로 구분해야 한다.
 
+Species catalogue에 제한하지 않고 project-authored form, external asset와 deterministic instance population을 사용할 수 있어야 한다. Growth stage, season, canopy·root extent와 individual variation은 stable identity와 seed에서 파생되고 pot, support, irrigation, drainage와 clearance를 함께 검토해야 한다.
+
 ### Bounded Simulation {#interior-soft-simulation-bound}
 
 Particle, constraint, collider, step와 sample count의 최대값을 선언하고 budget을 넘는 solve를 거부해야 하며 per-frame hand-authored fallback으로 성공을 가장하지 않아야 한다.
+
+Simulation result는 initial state, boundary and attachment condition, solver identity와 version, time step, precision, seed, termination와 saved-sample error를 보존해야 한다. Self-intersection, solid penetration, abnormal stretch와 non-convergence를 geometry가 보기 좋다는 이유로 통과시키지 않아야 한다.
