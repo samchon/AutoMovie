@@ -12,7 +12,7 @@ interface ILegacySceneFixtureFailure {
 class LegacySceneFixtureCleanupError extends AggregateError {}
 
 /** Remove the legacy-scene root without replacing its primary failure. */
-export const preserveLegacySceneFixtureCleanup = (
+const preserveLegacySceneFixtureCleanup = (
   failure: ILegacySceneFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

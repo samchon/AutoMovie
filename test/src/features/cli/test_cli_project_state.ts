@@ -34,7 +34,7 @@ interface IProjectStateFixtureFailure {
 class ProjectStateFixtureCleanupError extends AggregateError {}
 
 /** Dispose the project-state fixture without replacing its primary failure. */
-export const preserveProjectStateFixtureCleanup = (
+const preserveProjectStateFixtureCleanup = (
   failure: IProjectStateFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
@@ -57,7 +57,7 @@ interface IProjectStateHarnessCleanup {
 class ProjectStateHarnessCleanupError extends AggregateError {}
 
 /** Attempt every project-state harness restoration without hiding failure. */
-export const preserveProjectStateHarnessCleanup = (
+const preserveProjectStateHarnessCleanup = (
   failure: IProjectStateFixtureFailure | undefined,
   resources: readonly IProjectStateHarnessCleanup[],
 ): void => {

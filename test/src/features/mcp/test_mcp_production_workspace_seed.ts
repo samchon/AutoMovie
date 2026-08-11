@@ -13,7 +13,7 @@ interface IWorkspaceSeedFixtureFailure {
 class WorkspaceSeedFixtureCleanupError extends AggregateError {}
 
 /** Remove one seed fixture root without replacing its primary failure. */
-export const preserveWorkspaceSeedFixtureCleanup = (
+const preserveWorkspaceSeedFixtureCleanup = (
   failure: IWorkspaceSeedFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

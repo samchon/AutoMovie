@@ -18,7 +18,7 @@ interface ICreateAutoMovieFixtureCleanup {
 class CreateAutoMovieFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired fixture cleanup without replacing earlier failure. */
-export const preserveCreateAutoMovieFixtureCleanup = (
+const preserveCreateAutoMovieFixtureCleanup = (
   failure: ICreateAutoMovieFixtureFailure | undefined,
   resources: readonly ICreateAutoMovieFixtureCleanup[],
 ): void => {

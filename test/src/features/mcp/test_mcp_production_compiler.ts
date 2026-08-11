@@ -71,7 +71,7 @@ interface IProductionCompilerFixtureFailure {
 class ProductionCompilerFixtureCleanupError extends AggregateError {}
 
 /** Remove one compiler fixture without replacing its primary failure. */
-export const preserveProductionCompilerFixtureCleanup = (
+const preserveProductionCompilerFixtureCleanup = (
   failure: IProductionCompilerFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

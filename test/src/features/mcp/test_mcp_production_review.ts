@@ -285,7 +285,7 @@ interface IProductionReviewFixtureFailure {
 
 class ProductionReviewFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionReviewFixtureCleanup = (
+const preserveProductionReviewFixtureCleanup = (
   failure: IProductionReviewFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {
@@ -308,7 +308,7 @@ interface IProductionReviewHarnessCleanup {
 class ProductionReviewHarnessCleanupError extends AggregateError {}
 
 /** Attempt every review harness restoration without hiding failure. */
-export const preserveProductionReviewHarnessCleanup = (
+const preserveProductionReviewHarnessCleanup = (
   failure: IProductionReviewFixtureFailure | undefined,
   resources: readonly IProductionReviewHarnessCleanup[],
 ): void => {

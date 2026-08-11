@@ -13,7 +13,7 @@ interface ISceneArtifactFixtureFailure {
 class SceneArtifactFixtureCleanupError extends AggregateError {}
 
 /** Remove one scene-artifact root without replacing its primary failure. */
-export const preserveSceneArtifactFixtureCleanup = (
+const preserveSceneArtifactFixtureCleanup = (
   failure: ISceneArtifactFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

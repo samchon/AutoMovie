@@ -29,7 +29,7 @@ interface IProductionEffectFixtureFailure {
 class ProductionEffectFixtureCleanupError extends AggregateError {}
 
 /** Dispose the production-effect fixture without replacing its failure. */
-export const preserveProductionEffectFixtureCleanup = (
+const preserveProductionEffectFixtureCleanup = (
   failure: IProductionEffectFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

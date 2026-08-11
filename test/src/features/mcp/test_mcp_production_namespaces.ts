@@ -34,7 +34,7 @@ interface IProductionNamespaceFixtureFailure {
 
 class ProductionNamespaceFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionNamespaceFixtureCleanup = (
+const preserveProductionNamespaceFixtureCleanup = (
   failure: IProductionNamespaceFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {
@@ -57,7 +57,7 @@ interface IProductionNamespaceReplacementCleanup {
 class ProductionNamespaceReplacementCleanupError extends AggregateError {}
 
 /** Attempt every replacement-alias recovery without hiding failure. */
-export const preserveProductionNamespaceReplacementCleanup = (
+const preserveProductionNamespaceReplacementCleanup = (
   failure: IProductionNamespaceFixtureFailure | undefined,
   resources: readonly IProductionNamespaceReplacementCleanup[],
 ): void => {
@@ -94,7 +94,7 @@ interface INamespaceAuditFixtureCleanup {
 class NamespaceAuditFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired namespace-audit cleanup without hiding failure. */
-export const preserveNamespaceAuditFixtureCleanup = (
+const preserveNamespaceAuditFixtureCleanup = (
   failure: INamespaceAuditFixtureFailure | undefined,
   resources: readonly INamespaceAuditFixtureCleanup[],
 ): void => {

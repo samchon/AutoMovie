@@ -18,7 +18,7 @@ interface IServerIdentityConnectionCleanup {
 class ServerIdentityCleanupError extends AggregateError {}
 
 /** Close acquired identity resources without replacing an earlier failure. */
-export const preserveServerIdentityCleanup = async (
+const preserveServerIdentityCleanup = async (
   failure: IServerIdentityFailure | undefined,
   connections: readonly IServerIdentityConnectionCleanup[],
   fixtureCleanup: () => unknown,

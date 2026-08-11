@@ -21,7 +21,7 @@ interface IProductionReviewDesignFixtureFailure {
 
 class ProductionReviewDesignFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionReviewDesignFixtureCleanup = (
+const preserveProductionReviewDesignFixtureCleanup = (
   failure: IProductionReviewDesignFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

@@ -11,7 +11,7 @@ interface IFilmArtifactFixtureFailure {
 class FilmArtifactFixtureCleanupError extends AggregateError {}
 
 /** Remove one film-artifact root without replacing its primary failure. */
-export const preserveFilmArtifactFixtureCleanup = (
+const preserveFilmArtifactFixtureCleanup = (
   failure: IFilmArtifactFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
