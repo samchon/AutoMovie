@@ -66,6 +66,7 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "specifications/asset-and-representation/identity-resources-and-lifecycle.md",
+            "specifications/asset-and-representation/alternatives-instances-and-groups.md",
             "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
             "specifications/asset-and-representation/bounds-proxies-and-lod.md",
             "specifications/asset-and-representation/rig-deformation-and-state.md",
