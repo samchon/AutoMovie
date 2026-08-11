@@ -22,7 +22,6 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   mp4box: "^2.4.1",
   onnxruntimeNode: "1.21.0",
   mcpSdk: "^1.29.0",
-  threeVrm: "^3",
   playwright: "^1.60.0",
   pngjs: "^7.0.0",
   pngjsTypes: "^6.0.5",

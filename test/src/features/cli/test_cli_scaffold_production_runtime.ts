@@ -91,7 +91,6 @@ interface ShotRuntimeModule {
           expressionTargets?: readonly {
             setExpressionValue: (name: string, weight: number) => void;
           }[];
-          flushExpressionTargets?: () => void;
         };
         authored: {
           preset: "happy";
@@ -266,7 +265,6 @@ export const test_cli_scaffold_production_runtime = async (): Promise<void> => {
   );
 
   const writes: Array<readonly [string, number]> = [];
-  let flushes = 0;
   const authored = {
     preset: "happy" as const,
     intensity: 0.75,
@@ -284,9 +282,6 @@ export const test_cli_scaffold_production_runtime = async (): Promise<void> => {
               },
             },
           ],
-          flushExpressionTargets: (): void => {
-            ++flushes;
-          },
         },
         authored,
       },
@@ -311,7 +306,6 @@ export const test_cli_scaffold_production_runtime = async (): Promise<void> => {
       activeWrites,
       restWrites,
       repeated: writes,
-      flushes,
     },
     {
       authored,
@@ -332,7 +326,6 @@ export const test_cli_scaffold_production_runtime = async (): Promise<void> => {
         ["oh", 0],
       ],
       repeated: activeWrites,
-      flushes: 3,
     },
   );
   TestValidator.predicate(

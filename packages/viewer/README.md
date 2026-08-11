@@ -50,7 +50,7 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 - mesh part에 `skin`이 있고 `attachedBone`이 `null`이면 `THREE.SkinnedMesh`가 되며 skeleton bones에 bind된다.
 - `attachedBone`이 있으면 rigid attachment가 우선한다. skin payload가 있더라도 그 part는 해당 bone 아래에 통째로 붙는 prop으로 취급한다.
 
-VRM/glTF loader는 viewer가 소유하지 않는다. host가 `GLTFLoader`, `@pixiv/three-vrm`, 앱별 asset resolver로 파일을 로드한 뒤, `createImportedModelObject`에 root object, normalized bone map, expression target을 넘긴다. playground의 `vrmAdapter.ts`가 그 예시다.
+glTF loader는 viewer가 소유하지 않는다. host가 `GLTFLoader`와 앱별 asset resolver로 파일을 로드한 뒤, `createImportedModelObject`에 root object, normalized bone map, expression target을 넘긴다.
 
 ## 재생 규칙
 
@@ -66,6 +66,6 @@ VRM/glTF loader는 viewer가 소유하지 않는다. host가 `GLTFLoader`, `@pix
 
 ## Playground 경계
 
-`stickman.html`, `perform.html`, film/impact 계열 route는 motion-first viewer path다. 테스트와 캡처는 이 경로를 우선한다.
+`stickman.html`과 film/impact 계열 route는 motion-first viewer path다. 테스트와 캡처는 이 경로를 우선한다.
 
-`human.html`, `body.html`, `face.html`은 에셋·신체·얼굴 실험 표면이다. viewer runtime의 계약을 검증하는 곳이 아니라, 다음 모델 제작 실험을 위한 playground로 둔다.
+`body.html`, `face.html`은 신체·얼굴 실험 표면이다. viewer runtime의 계약을 검증하는 곳이 아니라, 다음 모델 제작 실험을 위한 playground로 둔다.

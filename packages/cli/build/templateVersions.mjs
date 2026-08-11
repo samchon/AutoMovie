@@ -92,7 +92,6 @@ export const resolveTemplateVersions = () => ({
   mp4box: catalogVersion("media", "mp4box"),
   onnxruntimeNode: exactCatalogVersion("media", "onnxruntime-node"),
   mcpSdk: catalogVersion("modelcontextprotocol", "@modelcontextprotocol/sdk"),
-  threeVrm: catalogVersion("three", "@pixiv/three-vrm"),
   playwright: catalogVersion("media", "playwright"),
   pngjs: catalogVersion("media", "pngjs"),
   pngjsTypes: catalogVersion("media", "@types/pngjs"),

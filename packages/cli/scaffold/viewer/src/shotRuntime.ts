@@ -36,15 +36,12 @@ import {
   buildPropArticulation,
   buildScene,
   buildSoftBodyObject,
+  type IAutoMovieModelObject,
 } from "@automovie/viewer";
 import * as THREE from "three";
 
 import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
-import {
-  type IAutoMovieCompiledModelObject,
-  createShotTextureCache,
-  loadCompiledModel,
-} from "./loadCompiledModel";
+import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
 const MOUTH_PRESETS: readonly AutoMovieExpressionPreset[] = [
   "aa",
@@ -57,7 +54,7 @@ const MOUTH_PRESETS: readonly AutoMovieExpressionPreset[] = [
 /** One actor expression sink beside the authored layer sampled this frame. */
 export interface IAutoMovieProductionDialogueActor {
   /** Built model object owning its mouth expression targets. */
-  object: IAutoMovieCompiledModelObject;
+  object: IAutoMovieModelObject;
   /** Authored expression retained beneath the derived mouth layer. */
   authored: IAutoMovieExpression | null;
 }
@@ -128,7 +125,6 @@ export const applyProductionDialogueMouth = (props: {
           layers.mouth.intensity,
         );
     }
-    target.object.flushExpressionTargets?.();
     applied.set(actor, layers);
   }
   return applied;

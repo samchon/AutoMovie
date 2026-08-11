@@ -1,8 +1,8 @@
-import type { AutoMovieGuidePass } from "@automovie/interface";
 import type {
+  AutoMovieGuidePass,
   IAutoMovieRenderObservation,
-  IAutoMovieSemanticMaskCoverage,
-} from "@automovie/viewer";
+} from "@automovie/interface";
+import type { IAutoMovieSemanticMaskCoverage } from "@automovie/viewer";
 
 export interface IAutoMovieCaptureHook {
   ready: boolean;

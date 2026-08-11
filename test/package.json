@@ -26,7 +26,6 @@
     "@automovie/viewer": "workspace:^",
     "@huggingface/transformers": "catalog:media",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
-    "@pixiv/three-vrm": "catalog:three",
     "h264-mp4-encoder": "catalog:media",
     "kokoro-js": "catalog:media",
     "libopus-wasm": "catalog:media",
