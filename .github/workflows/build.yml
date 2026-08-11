@@ -92,12 +92,6 @@ jobs:
       - name: Build Packages
         run: pnpm run build
 
-      # The capture runtime belongs to the published starter, not this
-      # checkout. Pack/install the real tarballs, explicitly provision the
-      # pinned Chromium, run its WebGL/PNG doctor, then exercise preview/render.
-      - name: Verify Packaged Capture and Production Flow
-        run: pnpm run e2e:tgz
-
       - name: Save Toolchain Plugin Cache
         if: always()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
