@@ -14,6 +14,7 @@
 - [외부 circulation과 부착 시설](./external-circulation-and-attached-elements.md)
 - [외장 재료와 적층](./materials-and-assemblies.md)
 - [외장 Pattern과 반복 요소](./patterns-and-instances.md)
+- [외부 3D 자산과 건물 구성](./external-assets-and-placement.md)
 - [외부 조명과 광학](./lighting-and-optics.md)
 - [날씨, 배수와 시간 상태](./weather-drainage-and-temporal-state.md)
 - [건물 결합 수공간](./building-integrated-water.md)

@@ -21,5 +21,6 @@
 - [자산 저작](./asset-authoring/README.md)
 - [맵과 세계](./map/README.md)
 - [건물 외관](./building-exterior/README.md)
+- [실내 공간](./interior/README.md)
 
-Interior, 배우, 동작, 연출, 카메라, 조명, 음향, 타임라인, 렌더, 증거, 진단, 외부 입력과 repaint는 각각 독립 주제 폴더로 이어서 정의한다.
+배우, 동작, 연출, 카메라, 조명, 음향, 타임라인, 렌더, 증거, 진단, 외부 입력과 repaint는 각각 독립 주제 폴더로 이어서 정의한다.

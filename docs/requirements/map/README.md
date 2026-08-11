@@ -18,5 +18,6 @@
 - [날씨와 계절](./weather-and-seasons.md)
 - [시간 변화와 상태](./temporal-change.md)
 - [축척과 반복 population](./scale-and-populations.md)
+- [외부 3D 자산과 맵 배치](./external-assets-and-placement.md)
 - [이동과 가시성](./movement-and-visibility.md)
 - [지도 산출물과 검증](./deliverables-and-validation.md)
