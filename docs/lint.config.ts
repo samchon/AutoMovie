@@ -5,11 +5,10 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * Product-contract evidence from package-independent specifications to
  * observable requirements.
  *
- * Every selected requirement section must receive positive specification
- * evidence. The package's structural validator separately requires every
- * specification host to cite a requirement, preserves stable document
- * identities, and guards the source-side triangle once source claims join the
- * graph.
+ * Every selected specification section owes at least one direct requirement
+ * citation, and every selected requirement section must receive positive
+ * specification evidence. README files participate through the same recursive
+ * population instead of a filename exception.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [

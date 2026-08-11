@@ -3,8 +3,8 @@
   "name": "@automovie/docs",
   "version": "0.1.0",
   "scripts": {
-    "build": "ttsc --noEmit -p tsconfig.json && node scripts/validate-contract-docs.mjs",
-    "lint": "ttsc --noEmit -p tsconfig.json && node scripts/validate-contract-docs.mjs"
+    "build": "ttsc --noEmit -p tsconfig.json",
+    "lint": "ttsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@ttsc/evidence": "catalog:typescript",
