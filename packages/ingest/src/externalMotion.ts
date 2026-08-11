@@ -11,6 +11,7 @@ import type { IAutoMovieExternalModelInspection } from "./inspectExternalModelBy
  * Manifest-owned identity of the exact external motion bytes selected by the
  * author.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt The record retains the selected byte identity instead of overwriting the source.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The receipt binds the selected source facts to the adopted take.
  */
@@ -41,6 +42,7 @@ export interface IAutoMovieExternalMotionSource {
 /**
  * Author-selected node-to-humanoid correspondence for one source rig.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The correspondence is supplied explicitly instead of inferred from names.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The selected mapping becomes part of the adoption record.
  */
@@ -74,6 +76,7 @@ export type AutoMovieExternalMotionAdoptionDecision =
 /**
  * Native use keeps the inspected node tracks and performs no rig inference.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Native use is an explicit choice that preserves source channels.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The native decision is retained as receipt input.
  */
@@ -112,6 +115,7 @@ export interface IAutoMovieExternalMotionNativeDecision {
  * Retarget use supplies the source rig, semantic mapping, and target identity
  * without guessing any of them inside ingest.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Retargeting proceeds only from the author's explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The decision records mapping, source rig, and target identity.
  */
@@ -149,6 +153,7 @@ export interface IAutoMovieExternalMotionRetargetDecision {
    *
    * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-proportion The author fixes root translation scale instead of delegating a guess to ingest.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure The handoff retains the chosen scale for downstream retarget diagnostics.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Supplies the explicit root scale consumed by the retarget scale stage.
    */
   translationScale: number;
   /**
@@ -156,6 +161,7 @@ export interface IAutoMovieExternalMotionRetargetDecision {
    *
    * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-mapping-selection The author chooses the target identity before the engine resolves it.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure The target identity is retained for field-located downstream failure.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Supplies the explicit target selected for the retarget scale stage.
    */
   target: string;
 }
@@ -165,6 +171,7 @@ export interface IAutoMovieExternalMotionRetargetDecision {
  * The compiler still decides whether interpolation and channel completeness can
  * be represented as clinical motion.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The handoff contains only validated explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff preserves the selected mapping and rig identities.
  */
@@ -197,6 +204,7 @@ export interface IAutoMovieExternalMotionNativeHandoff {
  * operation. Source conversion and source-target compatibility remain explicit
  * downstream validation boundaries.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The handoff contains only validated explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff preserves the selected mapping and rig identities.
  */
@@ -227,6 +235,7 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
    *
    * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-proportion Explicit scaling makes proportion correction reproducible.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure The retarget executor receives the exact requested scale.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Carries the validated scale into the downstream retarget stage.
    */
   translationScale: number;
   /**
@@ -234,6 +243,7 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
    *
    * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-mapping-selection The selected target is never replaced by an inferred rig.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure The downstream retargeter receives the exact target identity for diagnostics.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Carries the selected target into the downstream retarget stage.
    */
   target: string;
 }
@@ -242,6 +252,7 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
  * Non-destructive result connecting one byte-pinned take to native playback or
  * a later engine retarget pass.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt The result preserves byte, take, mode, mapping, and rig choices.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The result is the deterministic adoption receipt passed onward.
  */
@@ -284,19 +295,106 @@ export interface IAutoMovieExternalMotionAdoption {
  *
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Exposes external motion adoption as a reusable asset-pipeline capability.
  * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Applies the shared external-input boundary to selected motion bytes.
- * @evidence requirements/external-inputs/README.md#external-inputs-scope Accepts caller-owned facts without choosing a provider, source, or adoption mode.
- * @evidence requirements/external-inputs/README.md#external-inputs-lifecycle Connects inspected source facts to one explicit adoption decision.
  * @evidence requirements/motion/README.md#동작-요구사항 Makes imported node-track motion available to the production motion pipeline.
  * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Carries source and rig identities across the external-asset boundary.
- * @evidence specifications/asset-and-representation/README.md#asset-spec-readme-boundary Implements the motion subset of asset identity, representation, and validation.
  * @evidence specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 Implements an inspection-to-adoption handoff under the interchange contract.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-system-boundary Keeps acquisition outside ingest and consumes only resident inspected facts.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-adoption-lifecycle Materializes the explicit selection and adoption state transition.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-contract-surfaces Returns typed facts and explicit failures rather than hidden provider behavior.
  * @evidence specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Supplies selected motion facts to the downstream performance pipeline.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-gltf-scene This module selects animation takes and does not adopt a renderable 3D scene.
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs The handoff retains digest, byte length, take, mode, mapping, source rig, target, and translation scale.
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Canonically ordered node-to-bone entries preserve the explicit source-result correspondence.
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-source-revision Path, lowercase SHA-256 digest, and resident byte length identify the immutable selected revision.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-source-revision-content The adoption source keeps locator and content digest distinct and byte-pinned.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output The result exposes the selected motion mode, source, take, and explicit semantic-conversion handoff.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-source-revision-identity The handoff carries the caller-pinned source path, digest, and byte count without retrieval.
+ * @evidenceExclude requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies Ingest preserves imported tracks but does not define general control ownership, driver dependencies, additive channel registration, or driver evaluation.
+ * @evidenceExclude requirements/motion/channels-controls-and-drivers.md#motion-channel-control-ownership Ingest preserves imported tracks but does not define general control ownership, driver dependencies, additive channel registration, or driver evaluation.
+ * @evidenceExclude requirements/motion/channels-controls-and-drivers.md#motion-channel-extensibility Ingest preserves imported tracks but does not define general control ownership, driver dependencies, additive channel registration, or driver evaluation.
+ * @evidenceExclude requirements/motion/channels-controls-and-drivers.md#motion-channel-driver-refusal Ingest preserves imported tracks but does not define general control ownership, driver dependencies, additive channel registration, or driver evaluation.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-range-of-motion Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-coupled-range-drivers Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-failure Ingest does not execute ROM, target-space constraint, solve-order, coupled-driver, reachability, or bounded IK decisions.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-contact-phases Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-weight-cues Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-moving-support Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-support-load-transfer Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/contact-weight-and-support.md#motion-contact-refusal Ingest carries no contact phase, authority, weight cue, moving-support solve, load-transfer, or contact finding.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-transition-window Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-phase-alignment Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/layers-blends-and-transitions.md#motion-blend-refusal Ingest selects one source take and performs no layer ownership, masking, blending, phase alignment, event composition, or transition validation.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-object-state-transition Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-object-handoff Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-coupled-objects Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-multi-subject-interaction Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/object-motion-and-interaction.md#motion-interaction-refusal Ingest preserves generic node tracks but authors no object vocabulary, state transition, handoff, coupling, participant interaction, or interaction finding.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-procedural-variation Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-procedural-bound Ingest adopts fixed source samples and performs no procedural rule choice, gait generation, seeded variation, terrain adaptation, or solver budgeting.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-root-authority-mode Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-path-timing Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-path-fit-warp Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-facing-travel Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-root-ground-clearance Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidenceExclude requirements/motion/root-motion-and-trajectories.md#motion-trajectory-refusal Ingest preserves source translation tracks but chooses no root authority, trajectory, warp, facing, clearance, or path refusal policy.
+ * @evidence requirements/motion/scope-and-identity.md#motion-source-kinds The glTF motion profile and byte-pinned source distinguish an imported clip from authored or procedural motion.
+ * @evidence requirements/motion/scope-and-identity.md#motion-variant-selection The caller explicitly selects one immutable take and native or retarget decision without overwriting alternatives.
+ * @evidenceExclude requirements/motion/scope-and-identity.md#motion-meaning-technique Ingest exposes imported source facts but does not own the complete production motion identity, semantic action, performer state, or final-source resolution.
+ * @evidence requirements/motion/scope-and-identity.md#motion-missing-refusal Missing takes, targets, mappings, and source facts fail instead of producing a default clip.
+ * @evidenceExclude requirements/motion/secondary-motion.md#motion-secondary-author-solver Ingest performs no secondary-motion authoring, solver selection, moving-boundary sampling, compatibility execution, or simulation claim.
+ * @evidenceExclude requirements/motion/secondary-motion.md#motion-secondary-adoption-choice Ingest performs no secondary-motion authoring, solver selection, moving-boundary sampling, compatibility execution, or simulation claim.
+ * @evidenceExclude requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Ingest performs no secondary-motion authoring, solver selection, moving-boundary sampling, compatibility execution, or simulation claim.
+ * @evidenceExclude requirements/motion/secondary-motion.md#motion-secondary-static-compatibility Ingest performs no secondary-motion authoring, solver selection, moving-boundary sampling, compatibility execution, or simulation claim.
+ * @evidenceExclude requirements/motion/secondary-motion.md#motion-secondary-claim-boundary Ingest performs no secondary-motion authoring, solver selection, moving-boundary sampling, compatibility execution, or simulation claim.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-event-markers Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-event-identity-payload Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-story-film-time Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-retime-event-preservation Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude requirements/motion/timing-and-semantic-events.md#motion-timing-refusal Ingest preserves key times but owns no story/film clock mapping, semantic event identity, retiming, boundary event sampling, or timing finding.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-state-continuity-ledger Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-voice-utterance-expression Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-population-double-variation Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-validation-output-compatibility Ingest normalizes asset and motion facts but owns no actor story identity, continuity, appearance, voice, gaze, population, fidelity, or actor validation result.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-spacing-overlap-avoidance Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hero-variation-group-state Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-sounding-membership-handoff Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-bounds-framing-culling-failures Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Validates and carries the explicit source mapping, target identity, and translation scale consumed by the downstream retarget stage.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-determinism-compatibility Ingest does not execute gait, contact, gaze, interaction, secondary simulation, retarget solve, or deterministic kinematics validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-event-boundary-sampling-output Ingest emits no staging events, contract coverage, continuity assessment, replay result, or viewer evidence.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status Ingest emits no staging events, contract coverage, continuity assessment, replay result, or viewer evidence.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-take-continuity-edit-compatibility Ingest emits no staging events, contract coverage, continuity assessment, replay result, or viewer evidence.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Ingest emits no staging events, contract coverage, continuity assessment, replay result, or viewer evidence.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-viewer-evidence-prototype-ceiling Ingest emits no staging events, contract coverage, continuity assessment, replay result, or viewer evidence.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Ingest owns no stage mark, zone, surface, choreography, visibility, reveal, readability, or staging-state freshness decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Ingest owns no stage mark, zone, surface, choreography, visibility, reveal, readability, or staging-state freshness decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-visibility-reveal-readability Ingest owns no stage mark, zone, surface, choreography, visibility, reveal, readability, or staging-state freshness decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-compatibility-stale-state Ingest owns no stage mark, zone, surface, choreography, visibility, reveal, readability, or staging-state freshness decision.
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-adoption-mode The returned receipt preserves the caller's native or retarget choice.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation The motion handoff preserves tracks, not a model scene graph.
  * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-group-composition Group membership and placement belong to the production composition layer.
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-conversion-receipt The handoff records source identity, take, mode, mapping, rig, target, and scale.
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest The source receipt carries the manifest-pinned digest and byte length.
@@ -320,11 +418,11 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude requirements/motion/retargeting-and-scale.md#motion-retarget-non-humanoid The handoff deliberately supports normalized humanoid bone roles only.
  * @evidenceExclude requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Contact re-solving is performed by the downstream engine retargeter.
  * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-refusal Rejects ambiguous maps, absent hips, and unsupported scale or weight tracks.
- * @evidence requirements/motion/validation-and-determinism.md#motion-evaluation-receipt Carries immutable source and decision facts for the later evaluator receipt.
+ * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-evaluation-receipt This adoption receipt supplies evaluator inputs but does not issue a motion-evaluation receipt.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-scrambled-seek This pre-sampling handoff has no playback or seek state.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-fixed-step-baked-state Stateful solvers and baked caches are downstream engine responsibilities.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-interior-sample-validation Interior pose evaluation occurs after the clip is retargeted and sampled.
- * @evidence requirements/motion/validation-and-determinism.md#motion-numeric-stability Rejects non-finite or non-positive scale while preserving validated finite samples.
+ * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-numeric-stability Local input checks do not implement the downstream sampler's long-duration numeric-stability contract.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-visual-review This pure ingest handoff neither renders nor issues a visual-review verdict.
  * @evidenceExclude requirements/motion/validation-and-determinism.md#motion-validation-status Structured pipeline validation status is emitted by compiler and engine layers.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-variant-inheritance A selected motion take defines no asset variant inheritance.
@@ -346,22 +444,20 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Result digest sealing belongs to the compiler after retarget execution.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary No generator, seed, platform-dependent codec, or network operation is invoked.
  * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-freshness-diff Staleness comparison belongs to the production revision store.
- * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Model scene inspection is performed before this take-selection step.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection No raster or video input is accepted by this API.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection No audio input is accepted by this API.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Consumes normalized take, node, time, interpolation, and channel facts.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-spatial-data-inspection No map, survey, raster, or vector spatial data is accepted.
  * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection No text document or instruction-bearing metadata is interpreted.
- * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-extensible-media-profile The fixed glTF motion profile is extended at the inspector boundary, not here.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation The returned clip retains validated ordered samples and interpolation.
  * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition No layer, mask, blend, or transition is composed during adoption.
  * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event The glTF subset exposes no semantic event or story-clock mapping here.
  * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation Runtime sampling and validation receipts are emitted downstream.
- * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Motion adoption does not validate skin weights, bind matrices, or morph topology.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Requires an explicit one-to-one node-to-humanoid-bone map.
  * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph ROM and driver evaluation occur in the engine retarget pass.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Preserves source rig, target identity, semantic mapping, and root scale.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure Rejects incomplete local characterization before engine retargeting.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-credential-boundary Keeps provider credentials and network authority outside this pure adoption call.
  * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-compatibility-fidelity-ceiling This data handoff makes no visual-fidelity or deformation-quality claim.
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption The function selects only the author-named take from inspected bytes.
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-input-refusal Invalid source facts, mappings, rigs, and channels fail explicitly.

@@ -1,7 +1,7 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
+const publicSurface = ["src/*.ts", "!src/index.ts"];
 
 /**
  * The public ingest surface answers for stable contract populations.
@@ -22,11 +22,22 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "requirements/asset-authoring/**/README.md",
+            "requirements/external-inputs/**/README.md",
+            "requirements/motion/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
             "requirements/asset-authoring/**/*.md",
             "requirements/external-inputs/**/*.md",
             "requirements/motion/**/*.md",
+            "!requirements/**/README.md",
           ],
-          symbol: ["h1", "h2", "h3"],
+          symbol: ["h3"],
         },
       ],
     },
@@ -40,11 +51,22 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "specifications/asset-and-representation/**/README.md",
+            "specifications/interchange-and-adoption/**/README.md",
+            "specifications/performance-motion-and-staging/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
             "specifications/asset-and-representation/**/*.md",
             "specifications/interchange-and-adoption/**/*.md",
             "specifications/performance-motion-and-staging/**/*.md",
+            "!specifications/**/README.md",
           ],
-          symbol: ["h1", "h2", "h3"],
+          symbol: ["h3"],
         },
       ],
     },

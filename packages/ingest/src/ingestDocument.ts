@@ -16,6 +16,7 @@ type AutoMovieNodeTrackPath = "translation" | "rotation" | "scale" | "weights";
 /**
  * The automovie-core payload an imported glTF/GLB resolves to.
  *
+ * @author Samchon
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Preserves source nodes and animations as stable project-native identities.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Implements the native external-scene interpretation result.
  */
@@ -61,59 +62,23 @@ export interface IAutoMovieIngestResult {
  * @author Samchon
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Converts a selected external scene into project-native structural facts.
  * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Consumes a caller-selected parsed document without acquisition authority.
- * @evidence requirements/external-inputs/README.md#external-inputs-scope Performs deterministic normalization and no provider or source selection.
- * @evidence requirements/external-inputs/README.md#external-inputs-lifecycle Represents the normalization stage after inspection and before composition.
  * @evidence requirements/motion/README.md#동작-요구사항 Converts embedded glTF animations into general project motion clips.
  * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Emits project node and clip representations from external scene facts.
- * @evidence specifications/asset-and-representation/README.md#asset-spec-readme-boundary Implements the external scene-graph representation subset.
  * @evidence specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 Implements the parsed-document to native-representation boundary.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-system-boundary Operates only on a provided document and performs no acquisition.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-adoption-lifecycle Materializes normalized elements for a later explicit adoption record.
- * @evidence specifications/interchange-and-adoption/README.md#interchange-contract-surfaces Returns typed nodes and clips with explicit structural failures.
  * @evidence specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Supplies source-order clips to the general motion pipeline.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Stable node targets, property paths, interpolation, times, and typed value widths survive structural mapping.
+ * @evidence requirements/motion/scope-and-identity.md#motion-all-objects-all-motion Generic node translation, rotation, scale, and weight tracks preserve non-humanoid object motion.
+ * @evidence requirements/motion/scope-and-identity.md#motion-actor-object-scope Source nodes retain mesh, camera, skin, bone, and generic transform roles without forcing one actor model.
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-gltf-scene Maps a selected glTF scene's nodes, meshes, cameras, skins, and animations.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-adoption-mode This low-level mapper receives no user adoption-mode decision.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-group-composition Group membership and local placement are authored after normalization.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-conversion-receipt Manifest digests and conversion receipts are compiler responsibilities.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-provenance-digest A parsed Document does not carry the manifest byte digest.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-bounded-decoder Byte and container bounds are checked by the preceding inspector and loader.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-resource-closure Buffer and image closure is resolved before a Document reaches this mapper.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-semantic-enrichment This generic mapper does not assign semantic rig, role, or material meaning.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-replacement No replacement or dependent-revision ledger is created.
- * @evidenceExclude requirements/asset-authoring/external-assets.md#asset-external-secret-boundary This in-memory structural mapper receives no credentials or provider settings.
- * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-direct-placement The output is native data rather than immutable direct source placement.
  * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-native-reinterpretation Rewrites each selected source node and animation into project-native forms.
- * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-group-composition No group relation is created by document normalization.
- * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-selection-overrides The caller selects the document; this mapper accepts no subset or override record.
- * @evidenceExclude requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-intent-persistence Refresh and relink replay belong to the compiler-owned adoption record.
  * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times Carries source key-time arrays into each emitted track.
  * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Maps glTF LINEAR, STEP, and CUBICSPLINE modes explicitly.
- * @evidenceExclude requirements/motion/clips-keyframes-and-interpolation.md#motion-sparse-channel-default Missing-channel state is resolved by the playback engine, not import mapping.
- * @evidenceExclude requirements/motion/clips-keyframes-and-interpolation.md#motion-loop-trim No loop or trim decision is present in a glTF Animation object.
  * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal Rejects absent samplers, targets, arrays, and mismatched output arity.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-variant-inheritance No alternative inheritance graph is interpreted.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Source nodes remain nodes rather than becoming prototypes and instances.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-instance-override-resolution No instance override or merge precedence is resolved.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality No logical group composition is created.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-deterministic-instance-generation No seeded or procedural instance generation occurs.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-selection-output The mapper emits one normalized result and no compatibility-ranked alternatives.
- * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-failure-compatibility It reports structural mapping failures, not alternative compatibility status.
- * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-direct-placement-boundary Native node conversion is not direct source placement.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-native-reinterpretation-boundary Source-local nodes and tracks map to stable project-native identities.
- * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-group-composition-boundary No group relation graph is created.
- * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-selection-override-resolution This function receives a complete parsed document and no selection record.
- * @evidenceExclude specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-intent-replay Relink replay and conflict resolution are outside this pure mapper.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Raw digests, adoption mode, profile version, and settings are not present on Document.
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Stable index ids preserve source node and animation correspondence.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger This legacy mapper emits no loss or omission ledger.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result The compiler seals result identity after this structural mapping.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary No generator, seed, platform codec, or network operation is invoked.
- * @evidenceExclude specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-freshness-diff Staleness and conversion diffs belong to the production revision store.
- * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt This legacy mapper has no byte digest or adoption decision to receipt.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Emits source-order key times, values, targets, and interpolation modes.
- * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition No layer, mask, blend, or transition is composed.
- * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event No semantic event or story-clock mapping is present in the core glTF channels.
- * @evidenceExclude specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation Sampling and validation receipts are downstream engine concerns.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Preserves the selected glTF scene as a project-native external-adoption result.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Keeps skeletal and generic object nodes open to their own motion vocabularies.
  */
 export const ingestDocument = (doc: Document): IAutoMovieIngestResult => {
   const root = doc.getRoot();
