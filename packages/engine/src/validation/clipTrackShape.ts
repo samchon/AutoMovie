@@ -5,7 +5,12 @@ import {
   IAutoMovieConstraintViolation,
 } from "@automovie/interface";
 
-/** The node channel arm, and the property set {@link NODE_CHANNEL_PATHS} spans. */
+/**
+ * The node channel arm, and the property set {@link NODE_CHANNEL_PATHS} spans.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `IAutoMovieNodeChannel` narrows track admission to the node-channel arm whose target property playback can reproduce.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `IAutoMovieNodeChannel` preserves the node discriminator and property path declared by one typed clip channel.
+ */
 export type IAutoMovieNodeChannel = Extract<
   IAutoMovieChannel,
   { kind: "node" }
@@ -30,10 +35,17 @@ type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
  * the sampler prefixes the track's channel key and throws the first fault, the
  * gate appends every fault at `<track path>.<field>`.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `IAutoMovieClipShapeFault` carries one concrete reason an unreadable track must be refused before playback.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `IAutoMovieClipShapeFault` separates classification, track member, constraint text, and observation for one invalid clip condition.
  * @author Samchon
  */
 export interface IAutoMovieClipShapeFault {
-  /** Violation kind the artifact gate reports this fault as. */
+  /**
+   * Violation kind the artifact gate reports this fault as.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `kind` assigns the violation category used to refuse this malformed clip condition.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `kind` keeps the refusal class independent from the invalid track member and observation.
+   */
   kind: IAutoMovieConstraintViolation["kind"];
 
   /**
@@ -41,12 +53,18 @@ export interface IAutoMovieClipShapeFault {
    * {@link clipDurationFault} / {@link clipLoopFault}), e.g. `values`,
    * `times[2]`, `interpolation`. The gate joins it onto its own path; the
    * sampler ignores it, because its message already names the field.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `field` names the malformed member whose state makes the owning clip unreadable.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `field` supplies the relative track segment at which the key-time or payload contract failed.
    */
   field: string;
 
   /**
    * The fault as a sentence, with no subject: the sampler reads it after `track
    * "<channel key>"`, the gate reads it as a violation's `expected`.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `message` states the track-shape constraint that justifies refusing this clip.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `message` remains subject-free so sampler and artifact gate apply the same refusal rule.
    */
   message: string;
 
@@ -55,11 +73,19 @@ export interface IAutoMovieClipShapeFault {
    * payload's SHAPE reports the quantity that offends (a length, a stride)
    * rather than the payload: echoing hundreds of floats back spends the
    * client's context to repeat what it just sent (#1362).
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `value` retains the decisive observation that made this clip condition invalid.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `value` records the failing quantity without echoing an entire dense keyframe payload.
    */
   value: unknown;
 }
 
-/** The interpolation modes {@link sampleClip} implements. */
+/**
+ * The interpolation modes {@link sampleClip} implements.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation `TRACK_INTERPOLATIONS` enumerates the interpolation modes implemented by the clip sampler.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `TRACK_INTERPOLATIONS` keeps sampler support and track admission attached to the same interpolation identities.
+ */
 export const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
   "step",
   "linear",
@@ -70,6 +96,9 @@ export const TRACK_INTERPOLATIONS = new Set<AutoMovieInterpolation>([
  * The node properties a channel may address. `channelKey` refuses anything else
  * (it can build no key for it) and the artifact gate refuses it too, so a clip
  * cannot be committed naming a property the pipeline has no writer for.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `NODE_CHANNEL_PATHS` enumerates the node target properties admitted before an unsupported clip address reaches playback.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `NODE_CHANNEL_PATHS` ties track admission to the concrete properties that playback can write.
  */
 export const NODE_CHANNEL_PATHS = new Set<IAutoMovieNodeChannel["path"]>([
   "translation",
@@ -78,7 +107,12 @@ export const NODE_CHANNEL_PATHS = new Set<IAutoMovieNodeChannel["path"]>([
   "weights",
 ]);
 
-/** The pointer value types a channel may declare. */
+/**
+ * The pointer value types a channel may declare.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation `CHANNEL_VALUE_TYPES` names the typed pointer payloads whose interpolation semantics a track may declare.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `CHANNEL_VALUE_TYPES` bounds pointer-channel interpretation before its per-key value stride is checked.
+ */
 export const CHANNEL_VALUE_TYPES = new Set<AutoMovieChannelValueType>([
   "scalar",
   "vec2",
@@ -117,6 +151,9 @@ const CHANNEL_VALUE_WIDTHS: Partial<
  *
  * Total over `unknown`: the gate reads channels off stored JSON, where the
  * discriminator itself may be anything.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `channelValueWidth` derives the required component count used to refuse a mismatched track payload.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `channelValueWidth` returns only the per-key stride fixed by the declared node property or pointer type.
  */
 export const channelValueWidth = (channel: unknown): number | undefined => {
   if (typeof channel !== "object" || channel === null) return undefined;
@@ -130,7 +167,12 @@ export const channelValueWidth = (channel: unknown): number | undefined => {
   return undefined;
 };
 
-/** A clip's duration as the sampler requires it: finite and non-negative. */
+/**
+ * A clip's duration as the sampler requires it: finite and non-negative.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `clipDurationFault` refuses a clip whose duration is not a finite non-negative number.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `clipDurationFault` returns the observed duration with the time-domain constraint required by key sampling.
+ */
 export const clipDurationFault = (
   duration: unknown,
 ): IAutoMovieClipShapeFault | null => {
@@ -160,6 +202,9 @@ export const clipDurationFault = (
  * STRICTER duration rule than the sampler (a committed clip must last longer
  * than zero seconds, `validateClipArtifact`), and a gate stricter than the
  * sampler cannot let a throw escape. Only the looser direction is a defect.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-loop-trim `clipLoopFault` refuses a non-boolean loop declaration before truthiness can silently change boundary sampling.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `clipLoopFault` preserves the observed loop payload beside the explicit wrap-or-clamp contract.
  */
 export const clipLoopFault = (
   loop: unknown,
@@ -182,6 +227,9 @@ export const clipLoopFault = (
  * JSON it carries. A field of the wrong TYPE yields no fault here, because the
  * caller reading that JSON reports it separately and one mistake earns one
  * violation.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal `clipTrackShapeFaults` enumerates every malformed track condition that must prevent clip playback.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation `clipTrackShapeFaults` preserves sampler discovery order so the artifact gate refuses the same unreadable keyframe state.
  */
 export const clipTrackShapeFaults = (
   /**

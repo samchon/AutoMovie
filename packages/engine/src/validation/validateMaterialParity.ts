@@ -21,7 +21,12 @@
  */
 import { compareCodeUnits } from "../text/compareCodeUnits";
 
-/** Extension identities whose semantics an automovie material can restate. */
+/**
+ * Extension identities whose semantics an automovie material can restate.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-validation-gap `AUTO_MOVIE_SUPPORTED_MATERIAL_EXTENSIONS` enumerates the extension semantics automovie can restate instead of silently claiming unknown material parity.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-status-failures `AUTO_MOVIE_SUPPORTED_MATERIAL_EXTENSIONS` supplies the supported set used to classify an imported extension as representable or unsupported.
+ */
 export const AUTO_MOVIE_SUPPORTED_MATERIAL_EXTENSIONS: ReadonlySet<string> =
   new Set([
     "KHR_texture_transform",
@@ -43,6 +48,9 @@ export const AUTO_MOVIE_SUPPORTED_MATERIAL_EXTENSIONS: ReadonlySet<string> =
  * viewer installs no loader for, so an asset declaring it does not render at
  * all, and saying so beside the material extensions is more useful than staying
  * silent because the bytes are "only" compressed.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-validation-gap `isAutoMovieMaterialExtension` recognizes material or texture extension namespaces without treating unrelated imported features as parity gaps.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-status-failures `isAutoMovieMaterialExtension` bounds unsupported classification to extensions whose own identity declares surface semantics.
  */
 export const isAutoMovieMaterialExtension = (name: string): boolean =>
   name
@@ -65,6 +73,9 @@ const MATERIAL_SEGMENTS: ReadonlySet<string> = new Set([
  * licensed model for carrying a sheen lobe would be the engine deciding what
  * art a production may buy. The caller (the production compiler) turns this
  * into a warning diagnostic that names each one.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-validation-gap `unsupportedAutoMovieMaterialExtensions` returns every declared surface extension that cannot be restated instead of upgrading it to supported.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-status-failures `unsupportedAutoMovieMaterialExtensions` deduplicates and code-unit sorts unsupported identities so the same adoption gap is reported deterministically.
  */
 export const unsupportedAutoMovieMaterialExtensions = (
   extensions: readonly string[],

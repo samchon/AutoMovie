@@ -30,6 +30,8 @@ const WELD_GRID = 1e9;
  * the beneficiary is externally-sourced or hand-built mesh geometry validated
  * through `validateModel` or the MCP `validateModel` tool.
  *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `validateMeshTopology` reports non-manifold edges and inconsistent shared-edge winding at the standalone mesh root.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `validateMeshTopology` preserves each welded edge identity and observed incidence count or orientation beside the topology constraint.
  * @author Samchon
  */
 export const validateMeshTopology = (props: {
@@ -55,6 +57,9 @@ export const validateMeshTopology = (props: {
 /**
  * Append mesh-topology violations to a collector, the shared body behind the
  * standalone {@link validateMeshTopology} and `validateModel`'s mesh check.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `appendMeshTopology` appends welded-edge topology faults at the caller's exact mesh-part path.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `appendMeshTopology` shares one incidence-and-winding calculation between model validation and the public standalone result.
  */
 export const appendMeshTopology = (
   mesh: IAutoMovieMesh,

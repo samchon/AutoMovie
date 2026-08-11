@@ -21,6 +21,8 @@ import { ViolationCollector } from "./violation";
  * can aggregate per-keyframe violations under a clip-level path); otherwise
  * collects locally. Returns the collector so callers can chain.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validatePose` reports unknown or duplicate bones and anatomical rotation violations at the indexed pose-bone path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validatePose` preserves bone identity, observed rotation, effective ROM expectation, and structural collection position for each finding.
  * @author Samchon
  */
 export const validatePose = (props: {
@@ -78,7 +80,12 @@ export const validatePose = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoMovieValidation}. */
+/**
+ * Convenience wrapper returning a finished {@link IAutoMovieValidation}.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validatePoseResult` exposes every located pose-bone fault under the default pose input root.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validatePoseResult` converts the collector's unchanged anatomical and structural paths into the canonical outcome.
+ */
 export const validatePoseResult = (
   pose: IAutoMoviePose,
   skeleton: IAutoMovieSkeleton,

@@ -34,6 +34,8 @@ const MAX_ANGULAR_SPEED_DEG_PER_S = 900;
  * - Per-axis angular speed between adjacent keyframes stays under a sane bound
  *   (catches teleporting limbs that per-frame validation alone would miss).
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateMotion` locates duration, key-time, duplicate-bone, pose, and expression faults at the exact clip member or keyframe index.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateMotion` retains each track identity, temporal observation, expected ordering, and nested pose path within one motion-validation scope.
  * @author Samchon
  */
 export const validateMotion = (props: {

@@ -18,6 +18,8 @@ import { IAutoMovieSkeletonTopology, reachableBoneNames } from "../kinematics";
  * the missing lookup would crash. Gating on reachability reports the malformed
  * rig as a violation instead.
  *
+ * @evidence requirements/actors/validation.md#actor-input-binding-validation `fkReachableBones` identifies the rig bones whose parent chains actually participate in forward-kinematics binding.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `fkReachableBones` reuses the resolver's traversal set so detached bone references cannot masquerade as valid hierarchy members.
  * @author Samchon
  */
 export const fkReachableBones = (

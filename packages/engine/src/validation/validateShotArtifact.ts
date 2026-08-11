@@ -46,6 +46,8 @@ import { toValidation } from "./violation";
  * registry supplies the referenced clips, and how a project addresses its
  * files. Those are questions about a deployment, not about the artifact.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateShotArtifact` reports every malformed shot id, reference, performance, motion, event, intent, and coverage member at its artifact path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateShotArtifact` preserves shot-root identity, nested collection positions, observed values, and expected structural contracts across the complete commit gate.
  * @author Samchon
  */
 
@@ -263,6 +265,9 @@ const CAMERA_MOVES = new Set([
  * `sceneCameras` is the scene's camera-id set when the caller has a scene to
  * cross-reference (the submitted-artifact path) and `null` when it does not
  * (the stored-slice path, which reads one file with no scene beside it).
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `appendShotMetadataArtifact` locates invalid events, camera intent, and coverage entries under their owning shot metadata fields.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `appendShotMetadataArtifact` retains event index, time, subject references, camera identity, and coverage interval observations without widening them to the whole artifact.
  */
 export const appendShotMetadataArtifact = (
   /**
@@ -554,6 +559,9 @@ const appendShotCoverageArtifact = (
  * node-only. Which channel a track may ADDRESS is the shot FIELD's own rule,
  * because a field admits exactly what its applier writes, and that is what
  * `channelGate` carries.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateClipArtifact` locates invalid clip identity, duration, loop flag, track ids, channel addresses, key times, and value strides at their stored members.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateClipArtifact` preserves the caller's clip root and each relative track fault while applying the field-specific channel gate.
  */
 export const validateClipArtifact = (
   clip: unknown,
@@ -646,6 +654,9 @@ export const validateClipArtifact = (
  *
  * Exported because {@link validateClipArtifact} takes one: a parameter type a
  * declaration cannot name is not a contract a caller can meet.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `IAutoMovieClipChannelGate` receives the concrete channel member path and appends findings for the shot field that owns that clip.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `IAutoMovieClipChannelGate` makes channel-address scope an explicit parameter instead of applying one rule to unrelated clip consumers.
  */
 export type IAutoMovieClipChannelGate = (
   channel: Record<string, unknown>,
@@ -685,6 +696,9 @@ export type IAutoMovieClipChannelGate = (
  * it. Passing a gate of one's own opts out of this one entirely, and a shot
  * field that only meant to say "and it must be a node this shot staged" would
  * silently stop refusing pointer tracks and unknown node paths on the way.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateHonorableChannel` reports a transform track whose channel kind or node path has no playback writer at that channel field.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateHonorableChannel` retains the rejected channel discriminator and property address beside the transform-clip admission rule.
  */
 export const validateHonorableChannel: IAutoMovieClipChannelGate = (
   channel,
@@ -734,6 +748,9 @@ export const validateHonorableChannel: IAutoMovieClipChannelGate = (
  * does not (the stored-slice path, which reads one file with no scene beside
  * it). Without it the pointer grammar and value type are still gated; only the
  * "does this light exist, and does its kind carry this" pair defers.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `lightClipChannelGate` locates an unknown staged-light target, unsupported property, or mismatched value type at the light track's channel.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `lightClipChannelGate` derives admission from the same light-property table used by the applier and retains the rejected address.
  */
 export const lightClipChannelGate =
   (
@@ -835,6 +852,9 @@ const stagedLightKinds = (scene: unknown): ReadonlyMap<string, unknown> => {
  * And every keyframe value is held to the property's own bounds
  * ({@link appendLightValueBounds}), because the light a track drives has a
  * documented range that the scene gate already enforces on the staged value.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `appendLightMotionsArtifact` reports duplicate light-clip ids, duplicate target properties, malformed tracks, and invalid key values at their lightMotions paths.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `appendLightMotionsArtifact` preserves clip index, track index, staged-light identity, property address, and observed key value for each optional-field finding.
  */
 export const appendLightMotionsArtifact = (
   lightMotions: unknown,

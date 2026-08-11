@@ -46,6 +46,14 @@ const ALLOWED_PARENTS: Record<
  * The cross-edge semantics (feedback propagation up the refinement chain) are
  * consumed later; this validator only guarantees the graph is well-formed.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateScriptTree` reports duplicate node ids, invalid parent relations, cycles, and beat-reference mismatches at the responsible tree member.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateScriptTree` retains stable node or beat identity and collection position while distinguishing discovery path from the invalidated tree scope.
+ * @evidence requirements/story/beats-and-causality.md#story-beat-coverage-duplication `validateScriptTree` requires every flat screenplay beat to be claimed by exactly one beat node and rejects missing or duplicate claims.
+ * @evidence requirements/story/scope-and-source-of-truth.md#story-stable-unit-identity `validateScriptTree` enforces nonblank, globally unique identities for the screenplay tree nodes it validates.
+ * @evidence requirements/story/scope-and-source-of-truth.md#story-progressive-refinement `validateScriptTree` enforces one intent root, permitted intent, act, scene, group and beat parent kinds, an acyclic refinement tree, and resolved cross references.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose `validateScriptTree` validates the structural scene and beat index subset by joining node identity, parentage, temporal links, interactions, and flat beats without claiming prose-semantic authority.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unit-identity `validateScriptTree` materializes the stable unique-node and exactly-once beat-claim subset of the narrative unit hierarchy.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index `validateScriptTree` enforces the hierarchy and index-to-beat relation while leaving separate screenplay prose authority outside this structural validator.
  * @author Samchon
  */
 export const validateScriptTree = (props: {

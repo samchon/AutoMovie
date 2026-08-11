@@ -10,7 +10,12 @@ const TONE_MAPPINGS = new Set(["none", "acesFilmic"]);
 const SHADOW_TYPES = new Set(["pcf", "pcfSoft", "vsm"]);
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
-/** Validate image lighting and renderer policy without requiring a renderer. */
+/**
+ * Validate image lighting and renderer policy without requiring a renderer.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateSceneEnvironment` locates invalid image, color-space, intensity, exposure, rotation, and background values at their environment fields.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateSceneEnvironment` preserves each observed renderer-policy scalar or discriminator beside the constraint for that exact member.
+ */
 export const validateSceneEnvironment = (props: {
   environment: IAutoMovieSceneEnvironment;
 }): IAutoMovieValidation => {
