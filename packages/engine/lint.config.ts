@@ -38,6 +38,7 @@ const H2_CONTENT_FILES = new Set<string>([
   "specifications/interior-space/services-wet-and-fluid.md",
   "specifications/interior-space/space-level-zone-topology.md",
   "specifications/interior-space/surface-assemblies.md",
+  "specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md",
 ]);
 
 /**
