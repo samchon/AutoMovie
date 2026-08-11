@@ -4,7 +4,7 @@ import type { ITtscLintConfig } from "@ttsc/lint";
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "model serialization implements interchange requirements",
+      name: "model serialization implements bounded representation requirements",
       type: "typescript",
       files: ["src/exportModel.ts"],
       symbol: ["type", "function", "property"],
@@ -12,14 +12,16 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
-          "requirements/external-inputs/README.md",
-          "requirements/external-inputs/conversion-receipts-and-determinism.md",
+          "requirements/asset-authoring/README.md",
+          "requirements/asset-authoring/representations-bounds-and-lod.md",
+          "requirements/product/README.md",
+          "requirements/product/scope-and-exclusions.md",
         ],
         symbol: ["h2", "h3"],
       },
     },
     {
-      name: "model serialization implements interchange specifications",
+      name: "model serialization implements bounded representation specifications",
       type: "typescript",
       files: ["src/exportModel.ts"],
       symbol: ["type", "function", "property"],
@@ -27,8 +29,10 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
-          "specifications/interchange-and-adoption/README.md",
-          "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
+          "specifications/asset-and-representation/README.md",
+          "specifications/asset-and-representation/fidelity-and-validation.md",
+          "specifications/authoring-and-authority/README.md",
+          "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
         ],
         symbol: ["h2", "h3"],
       },
