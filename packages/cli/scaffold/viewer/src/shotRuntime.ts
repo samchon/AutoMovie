@@ -21,6 +21,7 @@ import type {
 } from "@automovie/interface";
 import {
   AutoMoviePlayer,
+  type IAutoMovieModelObject,
   applyLightMotion,
   applyObjectMotion,
   applyObjectMotions,
@@ -36,13 +37,10 @@ import {
   buildPropArticulation,
   buildScene,
   buildSoftBodyObject,
-  type IAutoMovieModelObject,
 } from "@automovie/viewer";
 import * as THREE from "three";
 
-import type {
-  IAutoMovieProductionDialogueRuntime,
-} from "../../scripts/productionRuntimeState";
+import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
 const MOUTH_PRESETS: readonly AutoMovieExpressionPreset[] = [
