@@ -16,6 +16,10 @@ Unicode text, language, writing direction, line break, emphasis-like semantic과
 
 Cue duration, text length, reading pace-like profile, overlap, shot cut, speaker change, rapid sequence와 on-screen text collision을 target language와 destination profile에서 검증해야 한다. 자동 timing 조정은 source event나 adjacent cue를 침범하면 별도 candidate revision이어야 한다.
 
+### 가독성 Profile과 Measure-only 상태 {#delivery-caption-readability-profile}
+
+Caption 가독성 profile은 versioned grapheme segmentation, 초당 grapheme 상한, cue당 line 수와 line당 길이 상한, 최소 cue duration과 cue 사이 최소 gap 및 경계값의 포함 여부를 target language별로 선언해야 한다. 적용할 profile이 없으면 실제 grapheme 수, reading rate, line, duration과 gap을 측정해 보고하되 pass 또는 fail verdict를 만들지 않아야 한다.
+
 ### Styling과 Safe Region {#delivery-caption-style-region}
 
 Text color, background, alignment, supported vertical writing, region과 safe area는 readability와 user override 가능성을 표현해야 한다. Beauty composition의 임의 위치에만 의존하거나 text를 picture에 burn-in하여 selectable track 요구를 대신해서는 안 된다.

@@ -1,0 +1,15 @@
+{
+  "private": true,
+  "name": "@automovie/docs",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "ttsc --noEmit -p tsconfig.json",
+    "lint": "ttsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@ttsc/evidence": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript",
+    "ttsc": "catalog:typescript",
+    "typescript": "catalog:typescript"
+  }
+}

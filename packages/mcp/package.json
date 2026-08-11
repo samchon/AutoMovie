@@ -14,7 +14,7 @@
     "prepare": "pnpm run build:prompt",
     "build:prompt": "node build/prompt.mjs",
     "build": "pnpm run build:prompt && rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../internals/config/assertBuild.js",
+    "postbuild": "node ../../config/assertBuild.js",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
   },

@@ -51,7 +51,8 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 - `packages/mcp` (`@automovie/mcp`): the five-tool coding-agent evidence boundary over the deterministic production engine.
   `AutoMovieApplication` serves guides, frame capture, optional repaint, and evidence-first review through `typia.llm.controller` + `@typia/mcp`; design/source authoring, compilation, inspection, migration, and rendering remain non-MCP package or CLI work, and the repository hosts no internal LLM.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
-- `internals/config`: shared base `tsconfig.json` and `assertBuild.js`.
+- `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json`, shared lint policy, and package-output assertion.
+- `docs/` (`@automovie/docs`): product requirements and package-independent system specifications, checked as an evidence graph during the workspace build.
 - `.wiki/` (gitignored): the working knowledge base (research, design, decisions, worklog). Local to a checkout and often empty; read what it holds at session start and write what it lacks.
 - `.references/` (gitignored): downloaded reference materials (specs, example models, motion datasets) used during reference study.
 
@@ -59,7 +60,7 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 
 ```bash
 pnpm install                              # workspace install (native TypeScript 7 / tsgo via ttsc)
-pnpm run build                            # recursive ttsc + assertBuild over packages
+pnpm run build                            # docs evidence lint plus recursive package builds
 pnpm run format                           # prettier write
 pnpm --filter @automovie/test start          # run the test suite (ttsx, no separate compile step)
 pnpm --filter @automovie/test coverage       # run the suite and report c8 coverage

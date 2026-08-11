@@ -5,7 +5,7 @@
   "description": "Coding-agent-native deterministic filmmaking: tracked authoring, compilation, rendering, review, and delivery.",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
-    "build": "pnpm --filter=./packages/** -r build",
+    "build": "pnpm --filter=./docs --filter=./packages/** -r build",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "e2e:tgz": "node internals/e2e-tgz.mjs",
     "experimental": "node internals/experimental.mjs",

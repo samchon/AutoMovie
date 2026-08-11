@@ -1,4 +1,6 @@
 ﻿packages:
+  - config
+  - docs
   - packages/*
   - test
 
@@ -51,4 +53,3 @@ useNodeVersion: 22.15.0
 
 onlyBuiltDependencies:
   - esbuild
-
