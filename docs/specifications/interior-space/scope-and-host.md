@@ -1,4 +1,4 @@
-# 범위, Host와 Shared Building
+# 범위, 호스트와 공유 건물
 
 ## 건물 interior 시스템 경계 {#interior-space-building-interior-boundary}
 
@@ -7,7 +7,7 @@
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-scope-refusal Requires host escape and unsupported exterior claims to fail explicitly. -->
 <!-- @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-transport-exclusion Excludes transport exteriors from the building authoring contract. -->
 
-시스템은 입력으로 하나의 interior work identity, 건물 identity, 좌표계, 실제 단위, 포함되는 building unit과 저작 범위를 받아야 한다. Current MCP 저작 범위는 건물의 점유 공간과 그 내부 구성에 한정되며, 선박 hull, 항공기 fuselage, 우주선 pressure shell이나 차량 body의 exterior를 이 계약으로 생성·검증했다고 표시해서는 안 된다. Resolved interior는 모든 공간, 경계, 요소, 개구부와 설비를 정확히 한 building ownership 또는 명시된 work-owned connector에 귀속해야 하며, host 밖 geometry, identity 없는 root, scope 밖 전문 성능 주장은 경로와 영향을 가진 failure가 되어야 한다. 새 건축 종류와 사용자 정의 `kind`는 같은 일반 계약으로 추가할 수 있지만 기존 identity와 범위 의미를 바꾸는 호환성 축소는 명시적 migration 없이는 허용하지 않는다.
+시스템은 입력으로 하나의 interior work identity, 건물 identity, 좌표계, 실제 단위, 포함되는 building unit과 저작 범위를 받아야 한다. Current MCP 저작 범위는 건물의 점유 공간과 그 내부 구성에 한정된다. 선박 cabin, 항공기 cabin, 우주선 habitable compartment와 그 밖의 비건물 host 내부는 일반 공간 원리를 참고할 수 있지만 이 계약으로 생성·검증 가능한 current MCP 지원 대상으로 표시해서는 안 된다. Transport exterior 제외는 건물 외피 계약이 별도로 소유한다. Resolved interior는 모든 공간, 경계, 요소, 개구부와 설비를 정확히 한 building ownership 또는 명시된 work-owned connector에 귀속해야 하며, host 밖 geometry, identity 없는 root, scope 밖 전문 성능 주장은 경로와 영향을 가진 failure가 되어야 한다. 새 건축 종류와 사용자 정의 `kind`는 같은 일반 계약으로 추가할 수 있지만 기존 identity와 범위 의미를 바꾸는 호환성 축소는 명시적 migration 없이는 허용하지 않는다.
 
 ## 독립 interior set의 상태 {#interior-space-independent-set-state}
 

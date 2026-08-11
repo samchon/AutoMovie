@@ -1,10 +1,10 @@
-# Interior Space System Contracts
+# 실내 공간 시스템 명세
 
 ## Interior space 명세 범위 {#interior-space-specification-scope}
 
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope Defines the building-interior product boundary indexed here. -->
 
-이 명세 묶음은 건물 interior를 저작·해석·검증하는 package-independent 시스템 경계를 정의한다. 입력 계약, current 상태, 불변식, 파생 출력, 진단 가능한 실패와 revision 호환성을 기준으로 나누며, 항공기·선박·우주선 exterior의 MCP 저작 능력으로 범위를 확장하지 않는다.
+이 명세 묶음은 건물 interior를 저작·해석·검증하는 package-independent 시스템 경계를 정의한다. 입력 계약, current 상태, 불변식, 파생 출력, 진단 가능한 실패와 revision 호환성을 기준으로 나눈다. 선박·항공기·우주선과 그 밖의 비건물 host 내부는 일반 공간 원리를 참고할 수 있지만 current MCP 지원 약속에는 포함하지 않는다.
 
 - [범위, host와 shared building](./scope-and-host.md)
 - [공간, level과 zone topology](./space-level-zone-topology.md)
