@@ -26,7 +26,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/actors/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: "h1",
         },
         {
           type: "markdown",
@@ -82,7 +82,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/actors/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: "h1",
         },
         {
           type: "markdown",
