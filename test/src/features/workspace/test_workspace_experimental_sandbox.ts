@@ -27,6 +27,14 @@ const generate = (
 const readSandbox = (relative: string): string =>
   fs.readFileSync(path.join(TARGET, ...relative.split("/")), "utf8");
 
+/** Ask git a question from inside the rendered sandbox. */
+const sandboxGit = (...args: readonly string[]): string => {
+  const child = spawnSync("git", [...args], { cwd: TARGET, encoding: "utf8" });
+  if (child.status !== 0)
+    throw new Error(`git ${args.join(" ")} failed: ${child.stderr.trim()}`);
+  return child.stdout.trim();
+};
+
 /**
  * Pin what the experimental generator emits, which is the whole reason a
  * sandbox can be driven by a live agent against working-tree code.
@@ -62,15 +70,28 @@ const readSandbox = (relative: string): string =>
  * 3. `.claude/settings.json` approves the project's MCP servers and retains a hook
  *    block.
  * 4. No host-only tsconfig or lint config is emitted.
- * 5. A second run over the rendered sandbox fails without `--force`, and the
+ * 5. The sandbox is its own repository root with the generated starter as its
+ *    only commit and a clean working tree. This one is load-bearing too: an
+ *    agent finds its project instructions by walking up from its working
+ *    directory to a repository root, and a sandbox without one leads that walk
+ *    into this repository's `AGENTS.md` and `.agents/skills/**`. Being
+ *    gitignored does not help, because that hides the sandbox from git and not
+ *    from a reader.
+ * 6. The packed tarballs are excluded through `.git/info/exclude` rather than
+ *    the scaffold's shipped `.gitignore`, which stays the file a real project
+ *    receives.
+ * 7. A second run over the rendered sandbox fails without `--force`, and the
  *    message names the directory.
- * 6. `--refresh` runs against that same non-empty sandbox and leaves the project's
+ * 8. `--refresh` runs against that same non-empty sandbox and leaves the project's
  *    own files alone, which is the whole reason it exists: a package fix has to
  *    reach a sandbox whose film is mid-production, and `--force` would write
  *    the starter back over it.
- * 7. `--force` renders over the same directory, and the work `--refresh` preserved
+ * 9. `--force` renders over the same directory, and the work `--refresh` preserved
  *    is gone, which is the contrast that makes the two modes distinct rather
  *    than a preference.
+ * 10. Neither mode restarts the sandbox's history. The commits a driven agent
+ *    made are the output of an experiment, and `--force` overwrites a working
+ *    tree rather than a record.
  */
 export const test_workspace_experimental_sandbox = (): void => {
   let failure: { error: unknown } | undefined = undefined;
@@ -143,6 +164,40 @@ export const test_workspace_experimental_sandbox = (): void => {
       false,
     );
 
+    TestValidator.equals(
+      "the sandbox is its own repository root, so an upward search for project instructions stops inside it",
+      sandboxGit("rev-parse", "--git-dir"),
+      ".git",
+    );
+    TestValidator.equals(
+      "the generated starter is committed and nothing is left uncommitted",
+      namedFacts([
+        [
+          "starterIsTheOnlyCommit",
+          () => sandboxGit("rev-list", "--count", "HEAD") === "1",
+        ],
+        ["worktreeIsClean", () => sandboxGit("status", "--porcelain") === ""],
+      ]),
+      { starterIsTheOnlyCommit: true, worktreeIsClean: true },
+    );
+    TestValidator.equals(
+      "the tarballs are excluded locally, leaving the shipped ignore file alone",
+      namedFacts([
+        [
+          "excludeNamesTheTarballs",
+          () => readSandbox(".git/info/exclude").includes(".tarballs/"),
+        ],
+        [
+          "shippedIgnoreStaysTheOneAProjectReceives",
+          () => readSandbox(".gitignore").includes(".tarballs") === false,
+        ],
+      ]),
+      {
+        excludeNamesTheTarballs: true,
+        shippedIgnoreStaysTheOneAProjectReceives: true,
+      },
+    );
+
     const repeated = generate();
     TestValidator.equals("a non-empty sandbox is refused", repeated.status, 1);
     TestValidator.equals(
@@ -178,6 +233,23 @@ export const test_workspace_experimental_sandbox = (): void => {
       "--force is the mode that writes the starter back over that work",
       fs.readFileSync(inProgress, "utf8").includes("SEQ-PRATZEN"),
       false,
+    );
+    TestValidator.equals(
+      "neither mode restarts the history the run is recorded in",
+      namedFacts([
+        [
+          "historyIsStillTheStarterCommit",
+          () => sandboxGit("rev-list", "--count", "HEAD") === "1",
+        ],
+        [
+          "repositoryRootIsStillTheSandbox",
+          () => sandboxGit("rev-parse", "--git-dir") === ".git",
+        ],
+      ]),
+      {
+        historyIsStillTheStarterCommit: true,
+        repositoryRootIsStillTheSandbox: true,
+      },
     );
   } catch (error) {
     failure = { error };

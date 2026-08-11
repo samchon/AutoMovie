@@ -41,6 +41,7 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 | The install runs `npm`, not `pnpm` | npm satisfies those transitive ranges from the directly installed siblings. pnpm does not, and its `overrides` do not reach a range from inside a packed tarball either — the same 404 just surfaces one package later |
 | A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, and `experimental/` is gitignored, so that lock would name a directory no other checkout has |
 | `.claude/settings.json` sets `enableAllProjectMcpServers` | A `.mcp.json` server starts unapproved, approval is interactive, and `--dangerously-skip-permissions` does not grant it, so a headless session would see no automovie tools at all |
+| The sandbox is its own git repository, with the generated starter as its first commit | An agent finds its project instructions by walking up from its working directory to a repository root. A sandbox rendered inside this checkout with only a gitignore between them leads that walk to automovie's own `AGENTS.md` and, through it, to `.agents/skills/**`, so the run measures what this repository tells its contributors instead of what the shipped guides afford. A customer's project is its own repository; this restores that boundary. The starter commit is the second reason: `git diff` inside the sandbox is then exactly what the driven agent produced |
 
 Linking the packages directly was tried first and is not viable. A `link:` resolves through `exports` to untransformed `src/*.ts`, and the measured MCP host then took **133 seconds** to answer `initialize` against a client timeout of **60**, which no environment variable moves. `MCP_TIMEOUT` governs a different phase and is applied; the request itself still fails with `-32001`. Warming that compile is impossible too: `ttsx` writes its emitted output to a **PID-scoped** directory under `node_modules/.cache/ttsc/ttsx/project/`, so no later process reuses it, and a `ttsc` build beforehand changes nothing.
 
@@ -60,6 +61,8 @@ claude
 Codex takes its MCP servers from its own configuration rather than `.mcp.json`. The generator prints the exact `codex mcp add` line for the sandbox it just created; use that, because it carries absolute paths Codex needs.
 
 Give the agent a brief and let it work. The agent drives the tools; you observe and record. Do not narrate the tool calls on its behalf or perform them yourself, since the point is to see what the surface affords a model that has only the guides and the schemas.
+
+Read what it produced with `git diff` and `git log` inside the sandbox, which holds the generated starter as its first commit and nothing else the driver put there.
 
 Drive the agent turn by turn when you need to play the user across a longer session: `claude -p "<brief>" --session-id <uuid>`, then `claude -p "<next turn>" --resume <uuid>`. Codex resumes with `codex exec resume --last "<next turn>"`.
 

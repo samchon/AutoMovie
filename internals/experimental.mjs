@@ -18,9 +18,10 @@
 // transform already applied, the host starts in seconds, and the sandbox
 // exercises the same resolution a real user's project does.
 //
-// `sandboxManifest` then pins every workspace package to its tarball, and
+// `sandboxManifest` then pins every workspace package to its tarball,
 // `claudeSettings` approves the project's own MCP server so a non-interactive
-// session can reach it.
+// session can reach it, and `initSandboxRepository` gives the sandbox a
+// repository root of its own so a driven agent cannot read its way out.
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -189,6 +190,79 @@ const sandboxManifest = (rendered, specifiers) => {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 };
 
+/**
+ * Run one git command inside the sandbox, failing loudly on a non-zero exit.
+ *
+ * A sandbox that quietly ends up without a repository root is worse than one
+ * that refuses to finish, because the missing root is invisible until an agent
+ * has already read past it.
+ */
+const git = (target, ...args) => {
+  // No shell. `npm` needs one on Windows because it is a `.cmd`, but git is a
+  // real executable, and a shell would split `user.name=AutoMovie Sandbox` at
+  // its space and commit under a garbled identity or not at all.
+  const child = spawnSync("git", args, { cwd: target, encoding: "utf8" });
+  if (child.status === 0) return;
+  const reason = (child.stderr ?? "").trim();
+  throw new Error(
+    `git ${args.join(" ")} failed in the sandbox: ${
+      reason.length === 0 ? `exit ${child.status}` : reason
+    }`,
+  );
+};
+
+/**
+ * Give the sandbox a repository root of its own, with the generated starter as
+ * its first commit.
+ *
+ * A sandbox is rendered inside this checkout, and `experimental/` being
+ * gitignored hides it from git rather than from an agent. Codex and Claude Code
+ * both discover their project instructions by walking up from the working
+ * directory to the repository root, so a sandbox with no root of its own leads
+ * that walk straight to automovie's `AGENTS.md` and, through its index, to
+ * `.agents/skills/**` -- the maintainer's instructions, the product's own
+ * out-of-scope list, and the experiment skill describing the measurement being
+ * taken. The driven agent then answers from what this repository tells its
+ * contributors instead of from the shipped guides, which is the one thing a
+ * sandbox exists to measure. It is not a hypothetical: a first Austerlitz run
+ * spent its whole opening turn reading five repository skills and not one
+ * shipped guide.
+ *
+ * A real customer's project is its own repository, so this restores the
+ * boundary rather than inventing one, and it costs a driver nothing to
+ * remember. The starter commit is the second reason to do it here: with the
+ * generated state committed, every later `git diff` inside the sandbox is
+ * exactly what the driven agent produced.
+ *
+ * A sandbox that already has a root keeps it, history and all. `--force`
+ * rewrites the working tree deliberately, but rewriting the author's commits
+ * along with it would destroy the record of the run that is the whole output of
+ * an experiment.
+ */
+const initSandboxRepository = (target) => {
+  if (fs.existsSync(path.join(target, ".git"))) return false;
+  git(target, "init", "--quiet");
+  // The packed tarballs are this sandbox's build input, not authored work, and
+  // the scaffold's own `.gitignore` has no reason to know they exist. Excluding
+  // them locally keeps that ignore file the one a real project ships.
+  const info = path.join(target, ".git", "info");
+  fs.mkdirSync(info, { recursive: true });
+  fs.writeFileSync(path.join(info, "exclude"), ".tarballs/\n", "utf8");
+  git(target, "add", "--all");
+  git(
+    target,
+    "-c",
+    "user.name=AutoMovie Sandbox",
+    "-c",
+    "user.email=sandbox@automovie.invalid",
+    "commit",
+    "--quiet",
+    "--message",
+    "chore: generated automovie starter",
+  );
+  return true;
+};
+
 const main = () => {
   const args = process.argv.slice(2);
   if (args.length === 0 || args.includes("-h") || args.includes("--help")) {
@@ -273,6 +347,16 @@ const main = () => {
           `npm install failed in experimental/${name}. Fix it there, then re-run with --force.`,
         );
     }
+
+    // After the install, so the first commit is the state the author actually
+    // starts from and `git status` is clean in the sandbox on turn one.
+    // `--refresh` never reaches here on a sandbox it did not create, which is
+    // what keeps a mid-flight film's own history from being restarted as a
+    // "starter" commit.
+    if (args.includes("--refresh") === false && initSandboxRepository(target))
+      process.stdout.write(
+        `Initialized experimental/${name} as its own git repository\n`,
+      );
 
     process.stdout.write(
       `\nDrive it with Claude Code:\n` +
