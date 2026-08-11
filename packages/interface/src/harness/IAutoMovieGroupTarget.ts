@@ -17,6 +17,12 @@
  * @author Samchon
  */
 export interface IAutoMovieGroupTarget {
+  /**
+   * Selects a multi-subject extent as the target representation.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-multi-subject-composition
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations
+   */
   kind: "group";
 
   /** The scene-node ids framed together. */

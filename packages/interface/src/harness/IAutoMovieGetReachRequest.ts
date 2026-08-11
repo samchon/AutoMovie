@@ -18,6 +18,12 @@ export type IAutoMovieReachTarget = Extract<
  * @author Samchon
  */
 export interface IAutoMovieGetReachRequest {
+  /**
+   * Selects the geometric reachability query.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-ik-constraint-reachability
+   */
   type: "getReach";
 
   /** The actor reaching. */

@@ -16,6 +16,12 @@ export type IAutoMovieDistanceTarget = Extract<
  * @author Samchon
  */
 export interface IAutoMovieMeasureDistanceRequest {
+  /**
+   * Selects the spatial distance query.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-spatial-validation
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-budget-safety-validation
+   */
   type: "measureDistance";
 
   /** One endpoint. */

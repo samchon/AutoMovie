@@ -8,6 +8,12 @@
  * @author Samchon
  */
 export interface IAutoMovieGetResolvedPoseRequest {
+  /**
+   * Selects the query that samples an engine-resolved actor pose.
+   *
+   * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-story-resolved-stage-boundary
+   */
   type: "getResolvedPose";
 
   /** The actor whose pose is resolved. */

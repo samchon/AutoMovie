@@ -7,6 +7,12 @@
  * @author Samchon
  */
 export interface IAutoMovieGetNotesRequest {
+  /**
+   * Selects the query that reads outstanding review findings.
+   *
+   * @evidence requirements/review/annotations-findings-and-verdicts.md#review-finding-lifecycle
+   * @evidence specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-finding-lifecycle
+   */
   type: "getNotes";
 
   /** Scope to one beat, or omit for all open notes. */

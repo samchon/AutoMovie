@@ -9,6 +9,12 @@
  * @author Samchon
  */
 export interface IAutoMovieGetBeatEndRequest {
+  /**
+   * Selects the query that reads a beat's resolved end state.
+   *
+   * @evidence requirements/staging/state-handoff-and-continuity.md#staging-state-lineage
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-shot-scene-state-handoff
+   */
   type: "getBeatEnd";
 
   /** Beat id whose end-state is pulled. */

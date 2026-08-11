@@ -161,8 +161,20 @@ export interface IAutoMovieActionBase {
  * so the schema's free string cannot drift from the runtime's actual set.
  */
 export interface IAutoMovieLocomoteAction extends IAutoMovieActionBase {
+  /**
+   * Selects locomotion as the action family.
+   *
+   * @evidence requirements/motion/root-motion-and-trajectories.md#motion-root-authority-mode
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-root-trajectory-authority
+   */
   verb: "locomote";
 
+  /**
+   * Name of the actor-provided gait used for the travel action.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule
+   */
   gait: string;
 
   /** Where to go (the engine sizes the gait cycles to cover the distance). */
@@ -178,8 +190,20 @@ export interface IAutoMovieLocomoteAction extends IAutoMovieActionBase {
  * not animation.
  */
 export interface IAutoMovieGestureAction extends IAutoMovieActionBase {
+  /**
+   * Selects a gesture as the action family.
+   *
+   * @evidence requirements/motion/scope-and-identity.md#motion-meaning-technique
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-identity-source-selection
+   */
   verb: "gesture";
 
+  /**
+   * Gesture family named by the authored action.
+   *
+   * @evidence requirements/motion/scope-and-identity.md#motion-meaning-technique
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-identity-source-selection
+   */
   kind: AutoMovieGestureKind;
 
   /**
@@ -198,17 +222,47 @@ export interface IAutoMovieGestureAction extends IAutoMovieActionBase {
  * `gesture` (`paw`) instead.
  */
 export interface IAutoMovieReachAction extends IAutoMovieActionBase {
+  /**
+   * Selects a reach as the action family.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-ik-constraint-reachability
+   */
   verb: "reach";
 
+  /**
+   * Side of the actor that reaches for the target.
+   *
+   * @evidence requirements/actors/body-scale-and-landmarks.md#actor-left-right-asymmetry
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping
+   */
   hand: "left" | "right";
 
+  /**
+   * Spatial target that the selected hand attempts to reach.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-ik-constraint-reachability
+   */
   to: IAutoMovieActionTarget;
 }
 
 /** Turn the head/eyes to track a target; engine: `aimRotation` look-at. */
 export interface IAutoMovieLookAtAction extends IAutoMovieActionBase {
+  /**
+   * Selects gaze tracking as the action family.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention
+   */
   verb: "lookAt";
 
+  /**
+   * Target to which the actor directs its gaze.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention
+   */
   to: IAutoMovieActionTarget;
 }
 
@@ -219,10 +273,28 @@ export interface IAutoMovieLookAtAction extends IAutoMovieActionBase {
  * repeated as an action every shot.)
  */
 export interface IAutoMovieAttachAction extends IAutoMovieActionBase {
+  /**
+   * Selects an attachment as the action family.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-handoff
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff
+   */
   verb: "attachTo";
 
+  /**
+   * Scene node that owns the attachment bone.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff
+   */
   parent: string;
 
+  /**
+   * Semantic bone on the parent to which the actor is attached.
+   *
+   * @evidence requirements/actors/appearance-costume-and-attachments.md#actor-attachment-contact
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff
+   */
   bone: AutoMovieHumanoidBone;
 }
 
@@ -235,6 +307,12 @@ export interface IAutoMovieAttachAction extends IAutoMovieActionBase {
  * horse" without knowing when the arrow lands).
  */
 export interface IAutoMovieLaunchAction extends IAutoMovieActionBase {
+  /**
+   * Selects a projectile launch as the action family.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-multi-subject-interaction
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role
+   */
   verb: "launch";
 
   /** What is thrown (a scene-node prop, or a named projectile). */
@@ -257,6 +335,12 @@ export interface IAutoMovieLaunchAction extends IAutoMovieActionBase {
  * a melee blow whose timing you control.
  */
 export interface IAutoMovieReactAction extends IAutoMovieActionBase {
+  /**
+   * Selects an impact reaction as the action family.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-multi-subject-interaction
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role
+   */
   verb: "react";
 
   /** Where the blow comes from. */
@@ -271,8 +355,20 @@ export interface IAutoMovieReactAction extends IAutoMovieActionBase {
 
 /** Play a facial expression; engine: blendshape/expression channels. */
 export interface IAutoMovieEmoteAction extends IAutoMovieActionBase {
+  /**
+   * Selects a facial expression as the action family.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state
+   */
   verb: "emote";
 
+  /**
+   * Named expression preset applied by the action.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state
+   */
   preset: AutoMovieExpressionPreset;
 
   /** Strength `[0,1]`. */
@@ -281,8 +377,20 @@ export interface IAutoMovieEmoteAction extends IAutoMovieActionBase {
 
 /** Hold the current pose (a beat of stillness) for the duration. */
 export interface IAutoMovieHoldAction extends IAutoMovieActionBase {
+  /**
+   * Selects a pose hold as the action family.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-story-film-time
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event
+   */
   verb: "hold";
 
+  /**
+   * Shot-local length of the held pose in seconds.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-story-film-time
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event
+   */
   duration: number;
 }
 
@@ -304,6 +412,12 @@ export interface IAutoMovieHoldAction extends IAutoMovieActionBase {
  * `enact` when you can compute the keyframes.
  */
 export interface IAutoMovieEnactAction extends IAutoMovieActionBase {
+  /**
+   * Selects caller-authored motion playback as the action family.
+   *
+   * @evidence requirements/motion/scope-and-identity.md#motion-source-kinds
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-identity-source-selection
+   */
   verb: "enact";
 
   /** Id of the caller-authored clip, resolved by the host's synthesizer. */
@@ -317,6 +431,12 @@ export interface IAutoMovieEnactAction extends IAutoMovieActionBase {
  * camera-node clip (`cameraMotion` on the shot).
  */
 export interface IAutoMovieCameraAction extends IAutoMovieActionBase {
+  /**
+   * Selects camera framing as the action family.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-framing-source-trace
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-delivery-state
+   */
   verb: "frame";
 
   /** How tight the framing is. */

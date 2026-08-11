@@ -35,7 +35,19 @@ export interface IAutoMovieCopyDriver {
   source: string;
   /** Which components to copy. */
   translation: boolean;
+  /**
+   * Whether the owner copies the source rotation.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-channel-control-driver-evaluation
+   */
   rotation: boolean;
+  /**
+   * Whether the owner copies the source scale.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-channel-control-driver-evaluation
+   */
   scale: boolean;
   /** Blend factor `[0, 1]` between the owner's prior value and the copied one. */
   influence: number;
@@ -101,7 +113,19 @@ export interface IAutoMovieParentDriver {
   parent: string;
   /** Which components of the parent frame are inherited. */
   translation: boolean;
+  /**
+   * Whether the owner inherits the parent rotation.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-channel-control-driver-evaluation
+   */
   rotation: boolean;
+  /**
+   * Whether the owner inherits the parent scale.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-channel-control-driver-evaluation
+   */
   scale: boolean;
 }
 
