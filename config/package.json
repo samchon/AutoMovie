@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "name": "@automovie/config",
+  "version": "0.1.0",
+  "devDependencies": {
+    "@ttsc/evidence": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript",
+    "typescript": "catalog:typescript"
+  }
+}

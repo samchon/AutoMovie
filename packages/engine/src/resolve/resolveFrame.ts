@@ -146,6 +146,7 @@ export interface IAutoMovieResolveOutput {
  * are the one thing still surfaced in `deferredDrivers`.
  *
  * @author Samchon
+ * @evidence specifications/runtime/engine.md#deterministic-execution Resolves declared clips, limits, drivers, and springs through one explicit scene clock and operation order.
  */
 export const resolveFrame = (
   input: IAutoMovieResolveInput,

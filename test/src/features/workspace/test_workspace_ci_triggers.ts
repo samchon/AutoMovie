@@ -191,6 +191,11 @@ const SUITE_INPUTS = [
   "packages/interface/src/validation/IAutoMovieConstraintViolation.ts",
   "packages/render/gltfTransformCore.cjs",
   "packages/render/gltfTransformCore.d.cts",
+  // test_workspace_evidence_partition and docs lint
+  "config/lint.config.ts",
+  "docs/lint.config.ts",
+  "docs/requirements/00-charter.md",
+  "docs/specifications/runtime/engine.md",
   // test_workspace_pnpm_policy
   "package.json",
   "pnpm-workspace.yaml",

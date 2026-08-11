@@ -1,1 +1,1 @@
-export { default } from "../internals/config/lint.config";
+export { default } from "../config/lint.config";

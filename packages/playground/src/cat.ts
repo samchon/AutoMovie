@@ -153,6 +153,7 @@ const rod = (
  * cat-tuned ROM) from a set of proportions.
  *
  * @author Samchon
+ * @evidence specifications/inspection/playground.md#human-directed-inspection Supplies a representative deterministic subject for local human inspection without shipping content.
  */
 export const buildCat = (
   p: ICatParams,

@@ -30,6 +30,8 @@ on:
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
+      - 'config/**'
+      - 'docs/**'
       - 'internals/config/**'
       - 'internals/*.mjs'
       - 'test/**'
@@ -91,6 +93,9 @@ jobs:
       # had to revert the churn to keep its diff on topic.
       - name: Check Formatting
         run: pnpm run format:check
+
+      - name: Verify Product Documentation Graph
+        run: pnpm run lint:docs
 
       - name: Build Packages
         run: pnpm run build

@@ -46,6 +46,7 @@
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",
+    "@ttsc/evidence": "catalog:typescript",
     "@ttsc/lint": "catalog:typescript"
   }
 }

@@ -73,6 +73,8 @@ export interface IAutoMovieFormationLodSelection {
  * The compiler and ordinary measurement scripts share this pure derivation so a
  * slot queried from loaded project state is exactly the slot materialized into
  * the compiled formation. No filesystem or project state is consulted.
+ *
+ * @evidence specifications/runtime/engine.md#bounded-ensemble-execution Regenerates one member from compact authored identity without expanding the formation population.
  */
 export const formationSlot = (
   formation: IAutoMovieFormationDesign & IAutoMovieFormationGrounding,

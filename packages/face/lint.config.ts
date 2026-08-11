@@ -1,1 +1,3 @@
-export { default } from "../../internals/config/lint.config";
+import { automoviePackageLintConfig } from "../../config/lint.config";
+
+export default automoviePackageLintConfig(["face"]);

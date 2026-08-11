@@ -1,9 +1,10 @@
+import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
 /**
- * Shared `@ttsc/lint` configuration for the automovie workspace. Each package's
- * `lint.config.ts` re-exports this default; `ttsc` (and `ttsc --noEmit`)
- * discovers it per package and applies the rules during the type-aware build.
+ * Shared `@ttsc/lint` configuration for the automovie workspace. Every ttsc
+ * project extends this file so the correctness policy and evidence contributor
+ * resolve from one workspace package.
  *
  * Formatting stays owned by prettier (`pnpm run format`), so `format.severity`
  * is `off` here: the block only documents the house style the sort/format would
@@ -31,7 +32,13 @@ const config = {
     },
     jsDoc: true,
   },
+  plugins: {
+    evidence,
+  },
   rules: {
+    // A written TODO is an unpaid obligation. Package graphs own claims; the
+    // documented and singular rules stay off because this graph proves both.
+    "evidence/todo": "error",
     // ESLint core: runtime correctness and low-noise modern JavaScript.
     "default-param-last": "error",
     eqeqeq: "error",
@@ -189,5 +196,44 @@ const config = {
     "unicorn/prefer-node-protocol": "error",
   },
 } satisfies ITtscLintConfig;
+
+/**
+ * Build one package-owned specification graph over the active ttsc project.
+ *
+ * A specification section has one implementation owner inside this package.
+ * Exclusion is not an implementation, so every selected section requires a
+ * positive source citation and no other source symbol may claim it again.
+ */
+export const automoviePackageLintConfig = (
+  specificationFolders: readonly string[],
+): ITtscLintConfig => {
+  const graph: ITtscEvidenceGraphConfig = {
+    claims: [
+      {
+        type: "typescript",
+        files: ["src/**"],
+        reference: {
+          type: "markdown",
+          root: "../../docs",
+          files: specificationFolders.map(
+            (folder) => `specifications/${folder}/**/*.md`,
+          ),
+          symbol: ["h2", "h3"],
+          noEvidenceExclude: true,
+          uniqueEvidence: true,
+        },
+      },
+    ],
+  };
+  return {
+    extends: "../../config/lint.config.ts",
+    plugins: {
+      evidence,
+    },
+    rules: {
+      "evidence/graph": ["error", graph],
+    },
+  } satisfies ITtscLintConfig;
+};
 
 export default config;

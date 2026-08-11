@@ -43,7 +43,12 @@ import {
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
 
-/** A stable production diagnostic returned by compiler, lint and MCP. */
+/**
+ * A stable production diagnostic returned by compiler, lint and MCP.
+ *
+ * @author Samchon
+ * @evidence specifications/contracts/interface.md#stable-diagnostic-identity Carries one refusal identity and correction unchanged across every production consumer.
+ */
 export interface IAutoMovieDiagnostic {
   /** Machine-readable diagnostic code. */
   code: string;
@@ -62,7 +67,12 @@ export interface IAutoMovieDiagnostic {
   message: string;
 }
 
-/** The tracked manifest for a coding-agent production repository. */
+/**
+ * The tracked manifest for a coding-agent production repository.
+ *
+ * @author Samchon
+ * @evidence specifications/contracts/interface.md#additive-contract-surface Roots versioned source and content ownership in a serializable public contract.
+ */
 export interface IAutoMovieProductionManifest {
   /** Production format version. */
   formatVersion: 2;
@@ -452,7 +462,12 @@ export interface IAutoMovieFilmOmission {
   reason: string;
 }
 
-/** Coding-agent-authored finished-film edit before frame normalization. */
+/**
+ * Coding-agent-authored finished-film edit before frame normalization.
+ *
+ * @author Samchon
+ * @evidence specifications/contracts/interface.md#incremental-film-records Accounts for every source shot through an edit placement or an explicit omission.
+ */
 export interface IAutoMovieFilmEdit {
   /** Stable film id, equal to production id. */
   id: string;

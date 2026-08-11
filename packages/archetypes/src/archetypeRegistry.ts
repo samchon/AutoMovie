@@ -18,6 +18,8 @@ export type AutoMovieModelArchetypeRegistry = ReadonlyMap<
  * Registration is where a duplicate or blank id has to fail, because after it
  * the map answers one definition per id and nobody can tell which of two
  * builders a recipe reached.
+ *
+ * @evidence specifications/subjects/archetypes.md#fixed-registered-archetypes Registers the fixed builders and refuses ambiguous identities at the host boundary.
  */
 export const createAutoMovieArchetypeRegistry = (
   archetypes: Iterable<IAutoMovieModelArchetype>,

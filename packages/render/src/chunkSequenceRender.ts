@@ -192,6 +192,8 @@ export interface IAutoMovieRenderChunkPlan {
  * any chunk is built.
  *
  * @author Samchon
+ * @evidence specifications/delivery/render.md#prototype-sequence-delivery Preserves the blocking pass frame schedule and exact chunk reassembly as a deterministic delivery manifest.
+ * @evidence specifications/delivery/render.md#repaint-artifact-handoff Plans named beauty and guide-pass frames whose ordering remains tied to the compiled sequence.
  */
 export const planChunkedSequenceRender = (props: {
   /** The whole-sequence render manifest to split. */

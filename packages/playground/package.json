@@ -46,6 +46,7 @@
     "pngjs": "catalog:media",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",
+    "@ttsc/evidence": "catalog:typescript",
     "vite": "catalog:vite",
     "@ttsc/lint": "catalog:typescript"
   }

@@ -33,6 +33,7 @@ import { IAutoMovieModelObject, applyTransform } from "./buildModel";
  * intentional gap instead of both silently not articulating.
  *
  * @author Samchon
+ * @evidence specifications/presentation/viewer.md#clocked-visible-performance Projects one engine-resolved performance pose onto visible bones without taking ownership of animation time or kinematics.
  */
 export const applyPose = (
   target: IAutoMovieModelObject,

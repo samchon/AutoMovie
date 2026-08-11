@@ -133,7 +133,12 @@ export interface IAutoMovieProductionDialogueLine {
   endFrame: number;
 }
 
-/** Complete deterministic sound input derived from one compiled film edit. */
+/**
+ * Complete deterministic sound input derived from one compiled film edit.
+ *
+ * @author Samchon
+ * @evidence specifications/contracts/interface.md#audible-world-records Places named sound and dialogue facts on the same canonical film clock.
+ */
 export interface IAutoMovieProductionSoundPlan {
   /** Sound-plan schema. */
   version: 1;

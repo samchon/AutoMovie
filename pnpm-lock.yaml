@@ -145,6 +145,33 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  config:
+    devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.26.1
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
+  docs:
+    devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.26.1
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.26.1
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/archetypes:
     dependencies:
       '@automovie/engine':
@@ -154,6 +181,9 @@ importers:
         specifier: workspace:^
         version: link:../interface
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -182,6 +212,9 @@ importers:
         specifier: catalog:samchon
         version: 13.2.0(@types/node@22.19.20)(ttsc@0.26.1)
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -204,6 +237,9 @@ importers:
         specifier: workspace:^
         version: link:../cli
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -226,6 +262,9 @@ importers:
         specifier: workspace:^
         version: link:../interface
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -245,6 +284,9 @@ importers:
         specifier: workspace:^
         version: link:../interface
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -267,6 +309,9 @@ importers:
         specifier: catalog:gltf
         version: 4.4.0
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -282,6 +327,9 @@ importers:
 
   packages/interface:
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -331,6 +379,9 @@ importers:
         specifier: catalog:samchon
         version: 13.2.0(@types/node@22.19.20)(ttsc@0.26.1)
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -380,6 +431,9 @@ importers:
       '@gltf-transform/core':
         specifier: catalog:gltf
         version: 4.4.0
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -432,6 +486,9 @@ importers:
         specifier: catalog:gltf
         version: 4.4.0
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -457,6 +514,9 @@ importers:
         specifier: catalog:three
         version: 0.169.0
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1
@@ -539,6 +599,9 @@ importers:
         specifier: catalog:three
         version: 0.169.0
     devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
       '@ttsc/lint':
         specifier: catalog:typescript
         version: 0.26.1

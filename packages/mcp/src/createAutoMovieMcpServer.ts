@@ -20,6 +20,12 @@ const MCP_PACKAGE_VERSION = (
  * identity and injects optional pixel/repaint adapters; tool payloads cannot
  * switch roots. Strict equality rejects excess properties and text fallback
  * keeps structured results available to ordinary MCP clients.
+ *
+ * @evidence specifications/orchestration/mcp.md#authorability-refusal Exposes only operations whose inputs and refusals direct the client back to authorable repository facts.
+ * @evidence specifications/orchestration/mcp.md#separated-production-authorities Fixes host-owned capture, repaint, workspace, and archetype authorities before any tool call can supply payloads.
+ * @evidence specifications/orchestration/mcp.md#evidence-first-review-service Publishes review operations through the same project-fixed application that binds current evidence and fingerprints.
+ * @evidence specifications/orchestration/mcp.md#five-tool-surface Builds the complete closed five-tool controller instead of a second authoring or compilation API.
+ * @evidence specifications/orchestration/mcp.md#diagnostic-guidance Preserves structured refusals and guide content for clients that consume either structured or text MCP responses.
  */
 export const createAutoMovieMcpServer = (props?: {
   /** Host-owned actual PNG capture. */

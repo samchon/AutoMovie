@@ -6,9 +6,21 @@ import path from "node:path";
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
-const SHARED_CONFIG =
-  'export { default } from "../../internals/config/lint.config";';
-const KNOWN_TTSC_PACKAGES = ["create-automovie"];
+const PACKAGE_CONFIG =
+  /^import \{ automoviePackageLintConfig \} from "\.\.\/\.\.\/config\/lint\.config";\r?\n\r?\nexport default automoviePackageLintConfig\(\["[a-z][a-z0-9-]*"\]\);\r?\n?$/u;
+const KNOWN_TTSC_PACKAGES = [
+  "archetypes",
+  "cli",
+  "create-automovie",
+  "engine",
+  "face",
+  "ingest",
+  "interface",
+  "mcp",
+  "playground",
+  "render",
+  "viewer",
+];
 
 /** Does a shell build script invoke `ttsc` as a command? */
 const invokesTtsc = (script: string): boolean =>
@@ -16,9 +28,9 @@ const invokesTtsc = (script: string): boolean =>
 
 /**
  * Every direct workspace package built through `ttsc` must load the shared lint
- * policy from its own package root, which is where `@ttsc/lint` starts config
- * discovery. Discovering packages from their build behavior keeps a newly added
- * compiler package from silently bypassing this gate.
+ * policy and name its package-owned specification folder. Discovering packages
+ * from build behavior keeps a new compiler package from silently bypassing the
+ * graph, while the known set detects a renamed package that no longer builds.
  */
 export const test_workspace_lint_configs = (): void => {
   const packageRoot = path.join(ROOT, "packages");
@@ -37,17 +49,29 @@ export const test_workspace_lint_configs = (): void => {
     .sort(compareCodeUnits);
 
   TestValidator.equals(
-    "known ttsc package roots participate in lint config discovery",
+    "every known package participates in ttsc config discovery",
     KNOWN_TTSC_PACKAGES.filter((name) => ttscPackages.includes(name)),
     KNOWN_TTSC_PACKAGES,
   );
   TestValidator.equals(
-    "ttsc workspace packages load the shared lint policy",
+    "ttsc packages load the shared policy and one specification slice",
     ttscPackages.filter((name) => {
       const configPath = path.join(packageRoot, name, "lint.config.ts");
       return (
         fs.existsSync(configPath) === false ||
-        fs.readFileSync(configPath, "utf8").trim() !== SHARED_CONFIG
+        PACKAGE_CONFIG.test(fs.readFileSync(configPath, "utf8")) === false
+      );
+    }),
+    [],
+  );
+  TestValidator.equals(
+    "ttsc packages resolve the evidence contributor from their manifest",
+    ttscPackages.filter((name) => {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(packageRoot, name, "package.json"), "utf8"),
+      ) as { devDependencies?: Record<string, string> };
+      return (
+        manifest.devDependencies?.["@ttsc/evidence"] !== "catalog:typescript"
       );
     }),
     [],

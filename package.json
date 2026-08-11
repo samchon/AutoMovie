@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",
+    "lint:docs": "pnpm --filter @automovie/docs run lint",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "e2e:tgz": "node internals/e2e-tgz.mjs",
     "experimental": "node internals/experimental.mjs",

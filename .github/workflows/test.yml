@@ -29,6 +29,8 @@ on:
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
+      - 'config/**'
+      - 'docs/**'
       - 'internals/config/**'
       - 'internals/*.mjs'
       - 'test/**'

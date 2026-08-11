@@ -44,6 +44,7 @@ export interface IAutoMovieIngestResult {
  * cross-references (a child's `parent`, a channel's target) use the same key.
  *
  * @author Samchon
+ * @evidence specifications/external/ingest.md#deterministic-asset-decoding Maps supported glTF structures into stable interface identities without format-specific inference downstream.
  */
 export const ingestDocument = (doc: Document): IAutoMovieIngestResult => {
   const root = doc.getRoot();

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { run } from "@automovie/cli";
 
-/** Delegate the package-manager creator convention to the canonical CLI. */
+/**
+ * Delegate the package-manager creator convention to the canonical CLI.
+ *
+ * @evidence specifications/bootstrap/create-automovie.md#source-project-bootstrap Starts the source-owned workflow through the versioned canonical scaffold.
+ */
 export const runCreateAutoMovie = (
   argv: readonly string[] = process.argv,
 ): number =>

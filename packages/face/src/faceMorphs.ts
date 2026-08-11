@@ -36,6 +36,7 @@ const LIPS = [
  * (or an `IAutoMovieFaceTemplate.targets`) as-is.
  *
  * @author Samchon
+ * @evidence specifications/face/geometry.md#parameterized-fixed-topology Derives bounded controls over the fixed canonical topology without reconstructing identity.
  */
 export const buildFaceMorphs = (
   positions: number[] = CANONICAL_FACE_POSITIONS,
