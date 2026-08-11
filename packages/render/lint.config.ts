@@ -70,7 +70,6 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "specifications/asset-and-representation/README.md",
-        "specifications/asset-and-representation/fidelity-and-validation.md",
         "specifications/authoring-and-authority/README.md",
         "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
       ]),
@@ -83,16 +82,8 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "requirements/delivery-and-accessibility/README.md",
         "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
-        "requirements/editorial/README.md",
-        "requirements/editorial/markers-effects-and-metadata.md",
         "requirements/story/README.md",
-        "requirements/story/beats-and-causality.md",
-        "requirements/story/dialogue-language-and-silence.md",
-        "requirements/story/logline-and-premise.md",
         "requirements/story/scenes-and-observable-action.md",
-        "requirements/story/scope-and-source-of-truth.md",
-        "requirements/story/themes-motifs-and-subtext.md",
-        "requirements/story/treatment-and-sequences.md",
       ]),
     },
     {
@@ -103,10 +94,7 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
         "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
-        "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
         "specifications/narrative-and-intent/README.md",
-        "specifications/narrative-and-intent/dialogue-language-theme-and-meaning.md",
-        "specifications/narrative-and-intent/events-causality-and-time.md",
         "specifications/narrative-and-intent/story-authority-and-hierarchy.md",
       ]),
     },
@@ -118,7 +106,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "requirements/delivery-and-accessibility/README.md",
         "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
-        "requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md",
         "requirements/rendering/README.md",
         "requirements/rendering/chunks-resume-and-recovery.md",
         "requirements/rendering/frame-schedules-and-sampling.md",
@@ -132,7 +119,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
         "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
-        "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
         "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
         "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
       ]),
@@ -143,10 +129,6 @@ const graph: ITtscEvidenceGraphConfig = {
       files: ["src/poseKeypoint*.ts"],
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
-        "requirements/camera/README.md",
-        "requirements/camera/validation.md",
-        "requirements/lighting/README.md",
-        "requirements/lighting/analysis-and-visual-validation.md",
         "requirements/rendering/README.md",
         "requirements/rendering/passes-channels-and-products.md",
         "requirements/repaint/README.md",
@@ -159,8 +141,6 @@ const graph: ITtscEvidenceGraphConfig = {
       files: ["src/poseKeypoint*.ts"],
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
-        "specifications/camera-light-and-visibility/README.md",
-        "specifications/camera-light-and-visibility/visibility-and-image-space-observation.md",
         "specifications/editorial-render-and-delivery/README.md",
         "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
       ]),
@@ -207,7 +187,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/rendering/encoding-and-multiplexing.md",
         "requirements/rendering/frame-schedules-and-sampling.md",
         "requirements/rendering/scope-and-artifact-identity.md",
-        "requirements/rendering/validation.md",
       ]),
     },
     {
@@ -232,9 +211,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "requirements/rendering/README.md",
-        "requirements/rendering/budgets.md",
         "requirements/rendering/chunks-resume-and-recovery.md",
-        "requirements/rendering/passes-channels-and-products.md",
       ]),
     },
     {
@@ -245,7 +222,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
         "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
-        "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
       ]),
     },
     {
@@ -267,7 +243,6 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
-        "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
         "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
         "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
       ]),
@@ -280,9 +255,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "requirements/rendering/README.md",
         "requirements/rendering/budgets.md",
-        "requirements/rendering/frame-identity-and-content-addressing.md",
-        "requirements/rendering/passes-channels-and-products.md",
-        "requirements/rendering/validation.md",
       ]),
     },
     {
@@ -293,8 +265,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
         "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
-        "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
-        "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
       ]),
     },
   ],
