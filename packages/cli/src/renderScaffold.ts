@@ -17,9 +17,9 @@ const RENAME: Record<string, string> = {
 /**
  * Project-owned values interpolated into the starter's `{{...}}` tokens.
  *
- * @author Samchon
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps the generated project's portable identity in explicit source input.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Carries that portable identity into deterministic scaffold derivation.
+ * @author Samchon
  */
 export interface IAutoMovieScaffoldProps {
   /**
@@ -105,7 +105,6 @@ export const scaffoldAssetDirectory = (): string => {
  * so the same output can be asserted in a test, written by the CLI, or handed
  * to another consumer without disk I/O in the middle.
  *
- * @author Samchon
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Delivers the starter examples that explain one reusable technique, its controls, and its verification path.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Materializes the generated project's routed documentation corpus and its guide entry points.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Publishes the starter's documented authoring choices and declared capability limits together.
@@ -114,6 +113,7 @@ export const scaffoldAssetDirectory = (): string => {
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits examples as reusable authoring guidance while leaving each production's content in project-owned source.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Materializes an editable starter whose capability additions remain separate from project-owned content.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits starter bytes but does not execute the generated compiler that records output lineage.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change or emit its impact report.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change.
  * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable starter whose documentation and examples expose reusable authoring capabilities.
  * @evidence requirements/product/README.md#제품-계약-요구사항 Materializes reusable AutoMovie capability while leaving production facts in project-owned source.
@@ -198,6 +198,7 @@ export const scaffoldAssetDirectory = (): string => {
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Scaffold materialization does not implement the spec authoring fidelity failure choice system responsibility; it only derives the portable editable starter.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Scaffold materialization does not implement the spec authoring prototype exclusion compatibility system responsibility; it only derives the portable editable starter.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Scaffold materialization does not implement the spec authoring structural output invariant system responsibility; it only derives the portable editable starter.
+ * @author Samchon
  */
 export const renderScaffold = (
   props: IAutoMovieScaffoldProps,
