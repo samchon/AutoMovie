@@ -61,7 +61,9 @@ const EDGES = ["xMin", "xMax", "zMin", "zMax"] as const;
  * basin whose author was told nothing and whose frames changed anyway.
  *
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-refusal Refuses invalid lattice, stability, boundary, and flow declarations explicitly.
+ * @evidence requirements/map/rivers-and-inland-water.md#map-water-refusal `validateFluidDomain` rejects malformed basin geometry, unstable solver parameters, impossible depths, and sources placed in solid cells before any map water solve runs.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#world-coupling-invalidation-and-refusal Produces addressed failures before a fluid domain joins the world solve.
+ * @evidence specifications/world-and-site/hydrology-coast-and-groundwater.md#world-site-hydrology-refusal-limit The validator reports each unsupported or unstable bounded-domain input rather than clamping it into a misleading successful hydrology result.
  * @author Samchon
  */
 export const validateFluidDomain = (props: {

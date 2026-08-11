@@ -158,6 +158,8 @@ export const AUTOMOVIE_FLOW_BYTES = 8;
  * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-light-budget-selection Accounts for lights and their downstream shadow passes as distinct bounded cost dimensions.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-measurement-worst-case Produces the one-frame conservative render-cost observation and explicit analysis-gap subset of worst-case budget measurement.
  * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-budget-admission-estimate Implements the render-domain estimate subset without claiming queue, concurrency, or runtime enforcement ownership.
+ * @evidence requirements/map/scale-and-populations.md#map-population-bound `measureAutoMovieRenderInventory` counts the realized subject population and attributes its conservative one-frame cost to stable semantic owners before rendering.
+ * @evidence specifications/world-and-site/partition-lod-streaming-and-seams.md#world-site-population-bound-determinism The inventory supplies the deterministic realized-population and dominant-owner measurement subset without claiming world streaming or partition lifecycle.
  * @author Samchon
  */
 export const measureAutoMovieRenderInventory = (props: {

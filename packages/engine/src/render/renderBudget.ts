@@ -63,6 +63,8 @@ export const AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS = 8;
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-feasibility-verdict Implements the render-preflight subset of feasibility by withholding a ready verdict from over, unsupported, or not-run required metrics.
  * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-budget-admission-estimate Converts exact or conservative render metrics and unknown gaps into the bounded preflight decision without scheduling the work.
  * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-domain-budget-refusal Returns the render-domain over-limit or incomplete verdict unchanged instead of selecting a cheaper quality profile or starting degraded work.
+ * @evidence requirements/map/scale-and-populations.md#map-population-budget-refusal `evaluateAutoMovieRenderBudget` returns an over or incomplete population verdict with the measured count, declared limit, dominant owner, and recovery before rendering.
+ * @evidence specifications/world-and-site/partition-lod-streaming-and-seams.md#world-site-population-budget-refusal The preflight report refuses an over-limit or unmeasured realized population without silently reducing the declared world population.
  * @author Samchon
  */
 export const evaluateAutoMovieRenderBudget = (props: {

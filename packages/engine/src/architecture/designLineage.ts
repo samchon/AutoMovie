@@ -65,6 +65,10 @@ const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
  * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-transformation-mapping-and-loss The lineage stamp preserves transformation inputs, normalized configuration identity, and result identity, but does not claim element-level mapping or loss accounting.
  * @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-phase-coordination `validateDesignLineage` rejects prerequisite cycles, impossible lifecycle order, unresolved phase references, and derived outputs stamped against a different phase or dependency state.
  * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-phase-change-failures The lineage validator implements the shared phase-graph and stale-derived failure subset; exterior-to-interior and map-specific relations remain with their owning graphs.
+ * @evidence requirements/map/temporal-change.md#map-alternative-canonical `validateDesignLineage` requires each selected alternative to resolve against one declared base revision and one option in its explicit decision set.
+ * @evidence specifications/world-and-site/temporal-state-and-staleness.md#world-site-alternative-canonical-selection The validator enforces the common-base and selected-option identity subset needed for a canonical world alternative.
+ * @evidence requirements/map/temporal-change.md#map-change-provenance The validator binds derived world artifacts to declared source revisions, variants, phases, configurations, imported digests, and output digests.
+ * @evidence specifications/world-and-site/temporal-state-and-staleness.md#world-site-change-provenance-staleness A mismatching revision or dependency stamp is reported as stale rather than accepted as current world state.
  */
 export const validateDesignLineage = (props: {
   lineage: IAutoMovieDesignLineage;
@@ -581,6 +585,8 @@ export const validateDesignLineageBinding = (props: {
  *
  * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineagePhaseOrder` orders the construction plan deterministically. This ensures revision changes expose every affected design consumer.
  * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineagePhaseOrder` topologically orders construction phases with stable id ordering for simultaneously ready phases.
+ * @evidence requirements/map/temporal-change.md#map-state-validity-phase-order `designLineagePhaseOrder` returns a deterministic prerequisite order for every declared phase and refuses a lineage whose phase graph cannot be resolved.
+ * @evidence specifications/world-and-site/temporal-state-and-staleness.md#world-site-existing-change-demolition The stable topological order supplies the phase sequence used to distinguish existing, installed, and removed world identities.
  */
 export const designLineagePhaseOrder = (
   lineage: IAutoMovieDesignLineage,
@@ -627,6 +633,8 @@ export const designLineagePhaseOrder = (
  * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-phase-alternative-graph The snapshot implements phase-ordered lifecycle presence for tracked interior identities without claiming interior-specific support, access, or collision state.
  * @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-construction-phases `designLineagePhaseSnapshot` evaluates install and remove lifecycle events over the declared prerequisite graph rather than assuming a fixed linear phase order.
  * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-phase-input-output The function consumes the lineage phase graph and lifecycle roles and returns a deterministic identity-by-identity presence snapshot.
+ * @evidence requirements/map/temporal-change.md#map-existing-change-demolition `designLineagePhaseSnapshot` resolves every tracked world identity to pending, present, or removed after the selected prerequisite-ordered phase.
+ * @evidence specifications/world-and-site/temporal-state-and-staleness.md#world-site-existing-change-demolition The snapshot materializes existing, installed, and demolished presence from explicit lifecycle events rather than source-array position.
  */
 export const designLineagePhaseSnapshot = (
   lineage: IAutoMovieDesignLineage,
@@ -839,6 +847,10 @@ export const designLineageDecisionComparisons = (
  * @evidence specifications/interchange-and-adoption/revision-refresh-and-offline-cache.md#interchange-refresh-staleness-propagation The impact result implements dependency-based staleness propagation inside Engine lineage while leaving refresh acquisition and adoption transactions upstream.
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-replacement `designLineageImpact` reports the exact direct and transitive derived consumers invalidated when an external asset identity is replaced, together with the unaffected complement.
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility The reverse dependency walk implements the replacement-impact subset by refusing unknown identities and naming affected consumers without claiming adoption authority.
+ * @evidence requirements/map/temporal-change.md#map-change-impact-staleness `designLineageImpact` walks direct and transitive world dependencies to return the derived artifacts invalidated by a changed identity and the unaffected complement.
+ * @evidence specifications/world-and-site/temporal-state-and-staleness.md#world-site-change-provenance-staleness The stable impact result exposes exactly which declared world outputs become stale after a source or dependency change.
+ * @evidence requirements/map/external-assets-and-placement.md#map-external-source-replacement A replaced external source identity is propagated through every declared derived consumer while unrelated world artifacts remain explicitly unaffected.
+ * @evidence specifications/world-and-site/spatial-imports-and-placement.md#world-site-source-state-replacement The reverse dependency traversal implements the replacement-impact subset without claiming acquisition, conversion, or adoption authority.
  */
 export const designLineageImpact = (
   lineage: IAutoMovieDesignLineage,

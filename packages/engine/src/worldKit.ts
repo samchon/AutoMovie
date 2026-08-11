@@ -139,7 +139,9 @@ export const worldBlock = (input: {
  * Build one flat terrain primitive from an explicit world-XZ footprint.
  *
  * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Preserves an authored XZ footprint, constant elevation, and traversal state as one terrain surface.
+ * @evidence requirements/map/movement-and-visibility.md#map-traversable-surfaces `worldTerrain` preserves the caller's explicit walkable state on the same stable terrain identity and footprint used by world queries.
  * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Emits a constant-height surface whose footprint and elevation remain explicit deterministic inputs.
+ * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-traversable-surface-input The emitted surface carries its exact world footprint, height, and traversability flag without inferring a route or cost model.
  */
 export const worldTerrain = (input: {
   id: string;
@@ -224,7 +226,9 @@ export const worldRamp = (input: {
  * design, which is the one way this can produce different frames elsewhere.
  *
  * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Samples an authored elevation rule on a declared XZ lattice and stores the resulting terrain heights.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-resolution-uncertainty `worldHeightfield` makes sample origin, spacing, row and column counts, and every finite height explicit so callers can retain the terrain's actual resolution.
  * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Fixes footprint, origin, spacing, sample order, and finite elevations in the emitted heightfield record.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-resolution-gap The heightfield record exposes the finite lattice resolution rather than presenting unsampled terrain as continuous measured detail.
  */
 export const worldHeightfield = (input: {
   id: string;
@@ -345,7 +349,11 @@ export const worldAlongRoute = (
  * surface or within its declared radius of a route.
  *
  * @evidence requirements/map/deliverables-and-validation.md#map-environment-relation-validation Rejects overlapping or unsupported blocks, obstructed routes, and landmarks unreachable from declared terrain.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-contact-boundary `assertWorldPlacements` rejects a block whose base does not contact the selected declared terrain height and rejects routes whose footprints intersect placed blocks.
+ * @evidence requirements/map/deliverables-and-validation.md#map-geometry-topology-validation The validator checks block overlap, terrain support, route clearance, and landmark reachability on the canonical world geometry before shot construction.
  * @evidence specifications/world-and-site/delivery-and-validation.md#world-site-environment-relation-validation Checks support, contact, clearance, and traversal relationships against the same canonical world records.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-modification-contact The placement gate compares each block base with the actual supporting surface height and preserves touching boundaries as valid contact.
+ * @evidence specifications/world-and-site/delivery-and-validation.md#world-site-geometry-topology-validation The gate returns only after all declared placement, support, clearance, and reachability relations are geometrically consistent.
  */
 export const assertWorldPlacements = (input: {
   blocks: readonly IAutoMovieWorldBlock[];
@@ -455,7 +463,9 @@ export const worldGroundSurface = (
  * Height of the world terrain under an XZ point, or `null` over nothing.
  *
  * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Returns the declared terrain elevation below an XZ point while preserving the absence of ground as `null`.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-gap `worldGroundHeight` returns `null` when no declared surface contains the point, keeping missing terrain distinct from an invented zero elevation.
  * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Joins footprint selection and the shared height rule so placement and terrain queries read one surface record.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-resolution-gap The ground query exposes an explicit gap outside every declared footprint instead of extrapolating the nearest heightfield.
  */
 export const worldGroundHeight = (
   surfaces: readonly IAutoMovieWorldSurface[],
