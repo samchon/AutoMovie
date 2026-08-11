@@ -1,7 +1,3 @@
-import {
-  AUTOMOVIE_PRIMITIVE_ARCHETYPES,
-  createAutoMovieArchetypeRegistry,
-} from "@automovie/archetypes";
 import type {
   IAutoMovieDefinedShotContract,
   IAutoMovieDesignMutationOutput,
@@ -25,6 +21,7 @@ import {
 import { chorusFar, chorusHero, chorusNear } from "../src/units/chorusHero";
 import { soloist } from "../src/units/soloist";
 import { plaza } from "../src/world/plaza";
+import { productionArchetypes } from "./archetypes";
 
 /**
  * Emit the tracked design records the compiler reads from the typed sources
@@ -46,7 +43,7 @@ import { plaza } from "../src/world/plaza";
 const project = AutoMovieProductionProject.open(
   findAutoMovieProjectRoot(process.cwd()),
   config.productionId,
-  createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES),
+  productionArchetypes,
 );
 
 /**
