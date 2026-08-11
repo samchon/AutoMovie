@@ -153,23 +153,20 @@ const groups: IEvidenceGroup[] = [
     ],
   },
   {
-    name: "actor pose and face compatibility",
+    name: "frozen face compatibility boundary",
     sources: [
       "src/face/**/*.ts",
       "src/validation/validateFace.ts",
       "src/validation/validateExpression.ts",
     ],
     requirements: [
-      "requirements/actors/README.md",
-      "requirements/actors/pose-expression-and-gaze.md",
-      "requirements/actors/representation-tiers-and-fidelity-boundary.md",
-      "requirements/actors/validation.md",
+      "requirements/product/README.md",
+      "requirements/product/extensibility-and-compatibility.md",
+      "requirements/product/scope-and-exclusions.md",
     ],
     specifications: [
-      "specifications/asset-and-representation/README.md",
-      "specifications/asset-and-representation/fidelity-and-validation.md",
-      "specifications/performance-motion-and-staging/README.md",
-      "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
+      "specifications/authoring-and-authority/README.md",
+      "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
     ],
   },
   {
