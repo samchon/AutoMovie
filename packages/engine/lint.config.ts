@@ -546,32 +546,45 @@ const groups: IEvidenceGroup[] = [
 ];
 
 const graph: ITtscEvidenceGraphConfig = {
-  claims: groups.flatMap((group) => [
-    {
-      name: `${group.name} exports implement requirements`,
-      type: "typescript" as const,
-      files: group.sources,
-      symbol: SYMBOLS,
-      reference: {
-        type: "markdown" as const,
-        root: "../../docs",
-        files: group.requirements,
-        symbol: ["h2", "h3"],
-      },
-    },
-    {
-      name: `${group.name} exports implement specifications`,
-      type: "typescript" as const,
-      files: group.sources,
-      symbol: SYMBOLS,
-      reference: {
-        type: "markdown" as const,
-        root: "../../docs",
-        files: group.specifications,
-        symbol: ["h2", "h3"],
-      },
-    },
-  ]),
+  claims: groups.flatMap((group) => {
+    const claims = (
+      family: "requirements" | "specifications",
+      files: string[],
+    ) => {
+      const readmes = files.filter((file) => file.endsWith("/README.md"));
+      const content = files.filter((file) => !file.endsWith("/README.md"));
+      return [
+        {
+          name: `${group.name} exports implement ${family} topic maps`,
+          type: "typescript" as const,
+          files: group.sources,
+          symbol: SYMBOLS,
+          reference: {
+            type: "markdown" as const,
+            root: "../../docs",
+            files: readmes,
+            symbol: ["h1", "h2", "h3"] as Array<"h1" | "h2" | "h3">,
+          },
+        },
+        {
+          name: `${group.name} exports implement ${family} contracts`,
+          type: "typescript" as const,
+          files: group.sources,
+          symbol: SYMBOLS,
+          reference: {
+            type: "markdown" as const,
+            root: "../../docs",
+            files: content,
+            symbol: ["h3"] as Array<"h3">,
+          },
+        },
+      ];
+    };
+    return [
+      ...claims("requirements", group.requirements),
+      ...claims("specifications", group.specifications),
+    ];
+  }),
 };
 
 export default {
