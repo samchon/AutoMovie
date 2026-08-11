@@ -91,6 +91,22 @@ export type IAutoMovieAssetConsumer =
     }
   | {
       /**
+       * Buffer, image, or another sidecar owned by one external-motion asset.
+       *
+       * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Requires every motion-container dependency to be explicit project bytes.
+       * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Gives every extracted motion dependency an owning principal asset.
+       */
+      kind: "motion-resource";
+      /**
+       * Exact manifest path of the owning external-motion asset.
+       *
+       * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-location-boundary Resolves sidecars only relative to the authorized owning asset.
+       * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-locator-redirect-fence Prevents sidecar authorization from escaping the owning motion closure.
+       */
+      id: string;
+    }
+  | {
+      /**
        * Explicit external-motion adoption that consumes this source asset.
        *
        * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Registers motion bytes only after the production names their downstream adoption.
@@ -109,6 +125,7 @@ export type IAutoMovieAssetConsumer =
 /**
  * One inspected animation take addressable inside an external motion asset.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes exact takes so the user or authoring agent can choose one without filename inference.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Carries inspected media facts without selecting a take.
  */
@@ -149,6 +166,7 @@ export interface IAutoMovieExternalMotionTake {
  * This is an inventory, not a take or retarget decision. Those choices remain
  * in {@link IAutoMovieExternalMotionAdoption}.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Makes external motion bytes declarable and digest-bound.
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Records the deterministic ingest identity and inspected take set.
  */
@@ -175,6 +193,7 @@ export interface IAutoMovieExternalMotionProvenance {
  * The engine validates and applies this record. It does not select the asset,
  * take, target actor, adoption mode, or retarget mapping.
  *
+ * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes native use and retargeting explicit user choices.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Carries the selected source member, target, and composition mode.
  */

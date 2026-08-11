@@ -6,6 +6,7 @@ import { AutoMovieRenderMetric } from "./AutoMovieRenderMetric";
  * This record carries measurements only. It does not choose a budget, infer a
  * renderer, or decide whether a production passes.
  *
+ * @author Samchon
  * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Carries the current-frame observations that can be compared with a declared budget.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Represents the observed side of the planned-versus-rendered budget audit.
  */
@@ -71,6 +72,7 @@ export interface IAutoMovieRenderObservation {
 /**
  * One observed metric that exceeds its preflight inventory bound.
  *
+ * @author Samchon
  * @evidence requirements/rendering/budgets.md#rendering-budget-refusal Names the exact observed metric and boundary involved in a refusal.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries a deterministic comparison result without selecting the budget.
  */

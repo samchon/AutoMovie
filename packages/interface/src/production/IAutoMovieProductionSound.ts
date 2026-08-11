@@ -10,6 +10,7 @@ import {
  * AutoMovie supplies the calculation, not atmospheric content. Every physical
  * scalar and the cut-boundary decision are declared by the production.
  *
+ * @author Samchon
  * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Makes sound speed, distance gain, and spectral absorption one declared model.
  * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Defines the deterministic direct-path inputs without inferring climate or provider state.
  */

@@ -340,6 +340,7 @@ export namespace IAutoMovieSoftCollider {
   /**
    * Shared capsule following one actor's evaluated humanoid pose.
    *
+   * @author Samchon
    * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Reuses the body capsule representation for soft contact.
    * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Resolves moving capsule geometry before ordered collision projection.
    */

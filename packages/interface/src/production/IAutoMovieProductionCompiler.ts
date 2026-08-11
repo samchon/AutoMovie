@@ -339,6 +339,7 @@ export type AutoMovieDiagnosticCode =
 /**
  * Exactly one stable, versioned behavioral explanation for a diagnostic code.
  *
+ * @author Samchon
  * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Makes every emitted code resolve to one versioned user-facing reference.
  * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Separates stable catalog identity from the concrete anchored knowledge path.
  */
@@ -759,6 +760,7 @@ export interface IAutoMovieCaptionCue {
 /**
  * Effective readability measurements for one compiled caption cue.
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports grapheme, line, duration, and gap facts even when no profile can judge them.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries measurements separately from the optional verdict.
  */
@@ -930,6 +932,7 @@ export type IAutoMovieCaptionReadabilityOutcome =
 /**
  * Readability report kept outside the byte-stable compiled edit.
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports metrics without modifying legacy caption output when no profile exists.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to its evaluated or not-run outcome.
  */

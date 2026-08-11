@@ -83,6 +83,7 @@ export interface IAutoMovieShotStoryTime {
  * language, segmentation revision, and every boundary; omission means metrics
  * may be reported but no readability verdict may be inferred.
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes readability thresholds a production-owned, opt-in decision.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries the versioned segmentation and numeric boundaries used by validation.
  */
@@ -170,6 +171,7 @@ export interface IAutoMovieCaptionReadabilityProfile {
 /**
  * One production-owned numeric caption boundary.
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes equality behavior part of the declared threshold.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries each numeric value with inclusive or exclusive semantics.
  */

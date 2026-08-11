@@ -6,6 +6,7 @@ import type { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
  * The record is actor-local geometry only. A consumer supplies the actor and
  * evaluated pose whose bone segment places it in world space.
  *
+ * @author Samchon
  * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Reuses one capsule representation instead of inventing a soft-only body proxy.
  * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Defines the bounded capsule consumed at the fixed-step collision boundary.
  */
