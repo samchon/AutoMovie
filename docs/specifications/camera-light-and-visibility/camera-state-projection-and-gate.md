@@ -6,6 +6,7 @@
 
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-scope-identity 이 상태가 camera identity, projection, transform, time과 take의 필수 필드를 정규화한다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-shot-distinction Camera identity와 shot·edit identity를 별도 key와 relation으로 보존한다. -->
+<!-- @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Camera source의 projection과 transform을 deterministic frame geometry의 정본으로 유지한다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-story-design-staging-trace Camera intent가 읽은 story, staging, design과 geometry revision을 상태 lineage에 고정한다. -->
 
 입력은 stable camera identity, owning shot과 take, supported projection kind, optical state, world 또는 rig-local transform, target 또는 intent, valid film interval, upstream story·staging·design identity와 resolved geometry revision이다. 정규화 결과는 camera identity와 edit identity를 분리하고, 한 take 안에서 각 film-time sample이 정확히 하나의 effective camera state를 가리키게 한다.
