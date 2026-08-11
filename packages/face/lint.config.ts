@@ -1,114 +1,60 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/** Dormant face modules answer only for the actor contracts they implement. */
+/** The retained face surface is a frozen compatibility boundary. */
+const faceFiles: string[] = [
+  "src/canonicalFace.ts",
+  "src/eyeShells.ts",
+  "src/faceMorphs.ts",
+  "src/hairShell.ts",
+  "src/hairTails.ts",
+  "src/headMorph.ts",
+  "src/parameters.ts",
+  "src/profileAmplitude.ts",
+  "src/silhouetteBands.ts",
+  "src/similarity2.ts",
+  "src/taubinSmooth.ts",
+];
+
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "face proxy modules implement actor representation requirements",
+      name: "frozen face exports preserve the likeness exclusion",
       type: "typescript",
-      files: [
-        "src/canonicalFace.ts",
-        "src/eyeShells.ts",
-        "src/faceMorphs.ts",
-        "src/hairShell.ts",
-        "src/hairTails.ts",
-        "src/headMorph.ts",
-        "src/parameters.ts",
-        "src/profileAmplitude.ts",
-        "src/silhouetteBands.ts",
-        "src/similarity2.ts",
-        "src/taubinSmooth.ts",
-      ],
+      files: faceFiles,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["requirements/actors/README.md"],
+          files: ["requirements/product/README.md"],
           symbol: "h1",
         },
         {
           type: "markdown",
           root: "../../docs",
-          files: [
-            "requirements/actors/representation-tiers-and-fidelity-boundary.md",
-          ],
+          files: ["requirements/product/scope-and-exclusions.md"],
           symbol: "h3",
         },
       ],
     },
     {
-      name: "face proxy modules implement actor representation specifications",
+      name: "frozen face exports preserve the fidelity failure boundary",
       type: "typescript",
-      files: [
-        "src/canonicalFace.ts",
-        "src/eyeShells.ts",
-        "src/faceMorphs.ts",
-        "src/hairShell.ts",
-        "src/hairTails.ts",
-        "src/headMorph.ts",
-        "src/parameters.ts",
-        "src/profileAmplitude.ts",
-        "src/silhouetteBands.ts",
-        "src/similarity2.ts",
-        "src/taubinSmooth.ts",
-      ],
+      files: faceFiles,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/performance-motion-and-staging/README.md"],
+          files: ["specifications/authoring-and-authority/README.md"],
           symbol: ["h2", "h3"],
         },
         {
           type: "markdown",
           root: "../../docs",
           files: [
-            "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
-          ],
-          symbol: "h3",
-        },
-      ],
-    },
-    {
-      name: "face morph modules implement deformation requirements",
-      type: "typescript",
-      files: ["src/faceMorphs.ts", "src/headMorph.ts"],
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: ["requirements/actors/README.md"],
-          symbol: "h1",
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: ["requirements/actors/skeleton-rig-and-retargeting.md"],
-          symbol: "h3",
-        },
-      ],
-    },
-    {
-      name: "face morph modules implement deformation specifications",
-      type: "typescript",
-      files: ["src/faceMorphs.ts", "src/headMorph.ts"],
-      symbol: ["type", "function", "property"],
-      reference: [
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: ["specifications/asset-and-representation/README.md"],
-          symbol: ["h2", "h3"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/asset-and-representation/rig-deformation-and-state.md",
+            "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
           ],
           symbol: "h3",
         },
