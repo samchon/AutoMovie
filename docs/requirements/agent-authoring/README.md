@@ -1,0 +1,10 @@
+# 에이전트 저작 요구사항
+
+에이전트 저작은 사람, Codex 계열 저자 에이전트, MCP host, compiler, engine과 CI가 서로의 권한을 침범하지 않고 source-owned film을 반복 개선하는 계약을 정의한다.
+
+- [역할과 권한](./roles-and-authorities.md)
+- [Source 저작 반복](./source-owned-loop.md)
+- [MCP 지식과 증거 경계](./mcp-boundary.md)
+- [능력 발견과 예시](./capability-discovery.md)
+- [부분 작업과 원자적 결과](./partial-work.md)
+- [프로젝트 소유권](./project-ownership.md)
