@@ -1,4 +1,5 @@
 import {
+  AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceScenario,
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
@@ -808,17 +809,19 @@ export const test_mcp_production_design_validation = (): void => {
         "designIdentityMismatch",
         () =>
           diagnostics.length > 50 &&
-          [
-            "design-identity-mismatch",
-            "design-range-invalid",
-            "design-enum-invalid",
-            "design-duplicate-id",
-            "design-collection-empty",
-            "design-text-empty",
-            "design-reference-missing",
-            "model-parameter-unsupported",
-            "model-parameter-invalid",
-          ].every((code) => codes.has(code)),
+          (
+            [
+              "design-identity-mismatch",
+              "design-range-invalid",
+              "design-enum-invalid",
+              "design-duplicate-id",
+              "design-collection-empty",
+              "design-text-empty",
+              "design-reference-missing",
+              "model-parameter-unsupported",
+              "model-parameter-invalid",
+            ] satisfies AutoMovieDiagnosticCode[]
+          ).every((code) => codes.has(code)),
       ],
     ]),
     { diagnosticsLength: true, designIdentityMismatch: true },
@@ -1207,15 +1210,17 @@ export const test_mcp_production_design_validation = (): void => {
   );
   TestValidator.predicate(
     "model recipes require complete parameters, material palette, usable LOD order and shape-specific primitive dimensions",
-    [
-      "model-parameter-missing",
-      "model-parameter-invalid",
-      "model-parameter-unsupported",
-      "model-lod-order-invalid",
-      "design-attachment-unsupported",
-      "design-collection-empty",
-      "design-collection-cardinality-invalid",
-    ].every((code) => modelContractCodes.has(code)),
+    (
+      [
+        "model-parameter-missing",
+        "model-parameter-invalid",
+        "model-parameter-unsupported",
+        "model-lod-order-invalid",
+        "design-attachment-unsupported",
+        "design-collection-empty",
+        "design-collection-cardinality-invalid",
+      ] satisfies AutoMovieDiagnosticCode[]
+    ).every((code) => modelContractCodes.has(code)),
   );
   TestValidator.predicate(
     "primitive props cannot silently claim an unimplemented rig",

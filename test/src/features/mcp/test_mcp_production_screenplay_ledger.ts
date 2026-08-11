@@ -1,4 +1,7 @@
-import { IAutoMovieScreenplayIndex } from "@automovie/interface";
+import {
+  AutoMovieDiagnosticCode,
+  IAutoMovieScreenplayIndex,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -115,7 +118,7 @@ export const test_mcp_production_screenplay_ledger = (): void => {
 
     const codesFor = (
       mutate: (index: IAutoMovieScreenplayIndex) => void,
-    ): Set<string> => {
+    ): Set<AutoMovieDiagnosticCode> => {
       const index = JSON.parse(original) as IAutoMovieScreenplayIndex;
       mutate(index);
       const written = `${JSON.stringify(index, null, 2)}\n`;
@@ -129,7 +132,7 @@ export const test_mcp_production_screenplay_ledger = (): void => {
       );
     };
     const fires = (
-      code: string,
+      code: AutoMovieDiagnosticCode,
       mutate: (index: IAutoMovieScreenplayIndex) => void,
     ): (() => boolean) => {
       return () => codesFor(mutate).has(code);
@@ -152,7 +155,10 @@ export const test_mcp_production_screenplay_ledger = (): void => {
     );
 
     const cases: ReadonlyArray<
-      readonly [string, (index: IAutoMovieScreenplayIndex) => void]
+      readonly [
+        AutoMovieDiagnosticCode,
+        (index: IAutoMovieScreenplayIndex) => void,
+      ]
     > = [
       // Treatment.
       [

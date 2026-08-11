@@ -7,6 +7,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieAssetManifest,
+  IAutoMovieAssetProvenance,
   IAutoMovieCompiledShotSource,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
@@ -594,7 +595,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           },
         },
       },
-    };
+    } satisfies IAutoMovieAssetProvenance;
     const validModelManifest = {
       ...assetManifest,
       assets: [...assetManifest.assets, modelAsset],
