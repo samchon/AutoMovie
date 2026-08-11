@@ -47,8 +47,10 @@ import {
  * 3. A bound domain measures fluid cells and particles exactly; a body with
  *    neither a domain nor a proved count is still `unsupported`, never zero; a
  *    hand-supplied count is still honoured.
- * 4. Over-limit twins name the simulated owner and the source to edit, for
- *    triangles, draw calls, instance slots and fluid cells alike.
+ * 4. Over-limit twins name the dominant owner and its source. Instance slots
+ *    and fluid cells are resident and still name the drawable to edit;
+ *    triangles and draw calls are submitted once per pass, so the pass
+ *    outweighs every drawable and leads those two instead.
  * 5. A one-particle-wide panel and a one-cell-wide pond draw nothing at all, and
  *    cost no draw call for the mesh they never submit.
  * 6. A cluster stating no prototype cost leaves geometry `not-run` while draw
