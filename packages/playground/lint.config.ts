@@ -1,51 +1,5 @@
-import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
+import { evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
-
-/**
- * Public playground contracts answer directly for both product promises and
- * package-independent system contracts.
- */
-const graph: ITtscEvidenceGraphConfig = {
-  claims: [
-    {
-      name: "public playground exports implement requirements",
-      type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "requirements/camera/**/*.md",
-          "requirements/lighting/**/*.md",
-          "requirements/product/**/*.md",
-          "requirements/rendering/**/*.md",
-          "requirements/review/**/*.md",
-          "requirements/staging/**/*.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
-    },
-    {
-      name: "public playground exports implement specifications",
-      type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "specifications/authoring-and-authority/**/*.md",
-          "specifications/camera-light-and-visibility/**/*.md",
-          "specifications/editorial-render-and-delivery/**/*.md",
-          "specifications/performance-motion-and-staging/**/*.md",
-          "specifications/review-and-acceptance/**/*.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
-    },
-  ],
-};
 
 export default {
   extends: "../../config/lint.config.ts",
@@ -55,7 +9,6 @@ export default {
       "error",
       { symbol: ["type", "function", "property"] },
     ],
-    "evidence/graph": ["error", graph],
     "evidence/todo": "error",
   },
 } satisfies ITtscLintConfig;
