@@ -1,14 +1,14 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
+const publicSurface = ["src/bin.ts"];
 
 /**
  * The public create-automovie surface answers for stable contract populations.
  *
- * Contract documents are selected by domain or by the complete layer, never by
- * individual Markdown filename. New documents therefore enter the graph
- * automatically and non-applicable units remain explicit source exclusions.
+ * Contract documents are selected by domain and role, never by an individual
+ * content filename. README topic identities participate as H1 units while
+ * durable content contracts participate as H3 units.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
@@ -22,10 +22,20 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "requirements/agent-authoring/**/README.md",
+            "requirements/product/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
             "requirements/agent-authoring/**/*.md",
             "requirements/product/**/*.md",
+            "!requirements/**/README.md",
           ],
-          symbol: ["h1", "h2", "h3"],
+          symbol: ["h3"],
         },
       ],
     },
@@ -38,8 +48,17 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/authoring-and-authority/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: ["specifications/authoring-and-authority/**/README.md"],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/authoring-and-authority/**/*.md",
+            "!specifications/**/README.md",
+          ],
+          symbol: ["h3"],
         },
       ],
     },
