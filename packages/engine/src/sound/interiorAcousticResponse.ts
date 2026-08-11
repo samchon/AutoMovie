@@ -163,7 +163,8 @@ export const deriveAutoMovieInteriorAcousticResponse = (props: {
 };
 
 /**
- * Apply the shared bounded room-path result to interleaved PCM.
+ * Apply the shared bounded room-path result to finite, non-empty interleaved
+ * PCM.
  *
  * Outdoor input is copied exactly. Different-room input applies only the
  * declared transmission gain. Same-room input adds deterministic diffuse taps
@@ -191,6 +192,10 @@ export const applyAutoMovieInteriorAcousticResponse = (props: {
     throw new Error("acoustic response sample rate must be a positive integer");
   if (props.samples.length % props.channels !== 0)
     throw new Error("acoustic response PCM must contain complete frames");
+  if (props.samples.length === 0)
+    throw new Error("acoustic response PCM must not be empty");
+  if (props.samples.some((sample) => !Number.isFinite(sample)))
+    throw new Error("acoustic response PCM samples must be finite");
   if (props.response.status !== "available")
     throw new Error(
       `cannot mix ${props.response.status} room response: ${props.response.reason}`,

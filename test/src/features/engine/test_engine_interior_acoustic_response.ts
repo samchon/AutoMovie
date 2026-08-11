@@ -441,6 +441,46 @@ export const test_engine_interior_acoustic_response = (): void => {
           }),
         "complete frames",
       ),
+      emptyPcm: throwsError(
+        () =>
+          applyAutoMovieInteriorAcousticResponse({
+            samples: new Float32Array(),
+            channels: 1,
+            sampleRate: 100,
+            response: availableSame,
+          }),
+        "must not be empty",
+      ),
+      nanSample: throwsError(
+        () =>
+          applyAutoMovieInteriorAcousticResponse({
+            samples: Float32Array.from([Number.NaN]),
+            channels: 1,
+            sampleRate: 100,
+            response: availableSame,
+          }),
+        "samples must be finite",
+      ),
+      positiveInfinitySample: throwsError(
+        () =>
+          applyAutoMovieInteriorAcousticResponse({
+            samples: Float32Array.from([Number.POSITIVE_INFINITY]),
+            channels: 1,
+            sampleRate: 100,
+            response: availableSame,
+          }),
+        "samples must be finite",
+      ),
+      negativeInfinitySample: throwsError(
+        () =>
+          applyAutoMovieInteriorAcousticResponse({
+            samples: Float32Array.from([Number.NEGATIVE_INFINITY]),
+            channels: 1,
+            sampleRate: 100,
+            response: availableSame,
+          }),
+        "samples must be finite",
+      ),
       nullTransmission: throwsError(
         () =>
           applyAutoMovieInteriorAcousticResponse({
@@ -521,6 +561,10 @@ export const test_engine_interior_acoustic_response = (): void => {
       fractionalRate: true,
       zeroRate: true,
       incompleteFrame: true,
+      emptyPcm: true,
+      nanSample: true,
+      positiveInfinitySample: true,
+      negativeInfinitySample: true,
       nullTransmission: true,
       negativeTransmission: true,
       excessTransmission: true,
