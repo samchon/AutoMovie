@@ -2,12 +2,12 @@
 
 ## Location Binding 상태 {#narrative-intent-location-binding-state}
 
+### Location Scope와 Context {#narrative-intent-location-scope-context}
+
 <!-- @evidence requirements/production-design/locations-and-world-context.md#production-design-locations-context story, physical과 design identity를 분리한다. -->
 <!-- @evidence requirements/production-design/locations-and-world-context.md#production-design-place-identity-reuse redress와 geometry reuse의 공유 및 격리 범위를 정한다. -->
 
 Location binding은 story location identity, physical place 또는 bounded stage identity, design variant, scene와 time, weather, access, surrounding context와 current state를 가진다. 같은 이름, 공유 geometry 또는 redress만으로 다른 극중 장소의 damage, dressing와 weather를 합치지 않는다.
-
-### Location Scope와 Context {#narrative-intent-location-scope-context}
 
 <!-- @evidence requirements/production-design/locations-and-world-context.md#production-design-location-scope visible, interaction, camera, light, shadow와 sound 범위를 분리한다. -->
 <!-- @evidence requirements/production-design/locations-and-world-context.md#production-design-location-environment terrain, building, interior와 environment 관계의 source 경계를 유지한다. -->
@@ -37,12 +37,12 @@ Review는 plan, eye-level, action view와 required camera view별로 scale, rout
 
 ## Subject Breakdown Graph {#narrative-intent-subject-breakdown-graph}
 
+### Identity, Prototype와 Representation Role {#narrative-intent-subject-prototype-role}
+
 <!-- @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-subject-breakdown scene와 semantic event에서 required subject를 도출한다. -->
 <!-- @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-breakdown-completeness required use와 plan item의 양방향 closure를 판정한다. -->
 
 Breakdown edge는 scene 또는 event requirement, subject identity, category, owner, purpose, required state, viewing condition, interaction, continuity phase, consumer와 acceptance를 가진다. Mention-only entity와 제작 또는 등록 대상, valid-empty category와 not-analyzed category를 구분한다.
-
-### Identity, Prototype와 Representation Role {#narrative-intent-subject-prototype-role}
 
 <!-- @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-subject-prototype-instance 고유 subject, prototype, instance, variant와 hero exception을 구분한다. -->
 <!-- @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-hero-background hero, interactive, population, proxy와 context tier를 나눈다. -->

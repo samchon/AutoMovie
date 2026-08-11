@@ -2,6 +2,8 @@
 
 ## Story 사실에서 resolved stage까지 {#performance-staging-story-resolved-stage-boundary}
 
+### Mark, surface와 zone membership {#performance-staging-mark-surface-zone-membership}
+
 <!-- @evidence requirements/staging/scope-and-source-of-truth.md#staging-scope-source scene을 수행 가능한 공간 사건으로 변환하는 경계를 정의한다. -->
 <!-- @evidence requirements/staging/scope-and-source-of-truth.md#staging-story-distinction story 사실과 촬영을 위한 staging 선택을 분리한다. -->
 <!-- @evidence requirements/staging/scope-and-source-of-truth.md#staging-authored-blocking 배치와 행동 관계를 명시적으로 저작한다. -->
@@ -17,8 +19,6 @@ Staging plan은 stable plan identity와 revision, scene·beat evidence, story en
 Resolved scene state는 production frame의 time마다 subject·object transform, active pose·motion·attachment, formation state, mark·zone membership, contact·event, camera visibility와 light·effect context를 하나의 current input fingerprint에서 계산한다. Style은 사용자 또는 author가 선택한 framing, spacing, choreography와 exception으로 열려 있지만, 선택은 explicit plan variant와 rationale로 기록한다. 여러 alternative는 동시에 active state로 병합하지 않으며 선택 변경은 downstream shot·review evidence를 stale로 만든다.
 
 필수 story fact를 공간과 시간으로 실현할 수 없거나 source trace가 끊기거나 plan이 story에 없는 사건을 성공 조건으로 추가하면 gap 또는 refusal이다. 시스템은 빈 장면을 generic blocking으로 채우거나 누락 object를 자동 생성하지 않고 story 수정, asset·capability 추가, 다른 staging, 보류 선택지를 반환한다.
-
-### Mark, surface와 zone membership {#performance-staging-mark-surface-zone-membership}
 
 <!-- @evidence requirements/staging/marks-zones-and-blocking.md#staging-marks-zones-blocking 공간에 고정되는 의미 anchor를 stable record로 둔다. -->
 <!-- @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-reference-frame mark의 frame, unit와 revision을 명시한다. -->
@@ -37,6 +37,8 @@ Reference revision mismatch, missing surface, non-finite transform, mark below·
 
 ## Subject와 object placement {#performance-staging-subject-object-placement}
 
+### Interaction choreography와 participant role {#performance-staging-interaction-choreography-role}
+
 <!-- @evidence requirements/staging/subjects-and-object-staging.md#staging-subject-object-placement scene 시작의 실제 배치를 명시한다. -->
 <!-- @evidence requirements/staging/subjects-and-object-staging.md#staging-placement-design-geometry-trace placement가 design identity와 current geometry proxy를 추적하게 한다. -->
 <!-- @evidence requirements/staging/subjects-and-object-staging.md#staging-rest-active-placement rest placement와 active motion state를 구분한다. -->
@@ -53,8 +55,6 @@ Placement record는 scene-node identity, actor·object·formation·environment d
 Story prop은 event·contact·continuity identity를 가지며 background dressing은 bounded population 또는 set identity와 visual purpose를 가진다. Dressing을 story participant로 자동 승격하거나 story prop을 anonymous instance로 cull하지 않는다. Placement alternative는 mark, orientation, support, representation과 predicted visibility·cost를 비교하고 사용자 또는 authorized author가 하나를 선택한다.
 
 출력은 normalized transform, support·contact result, occupied and keep-out extent, relation resolution, representation and source receipt다. Missing design, duplicate node, unsupported scale, floating·penetrating support, forbidden overlap, dangling parent, external digest mismatch와 relation contradiction은 실패이며 geometry를 origin에 놓거나 collision을 끄는 fallback을 금지한다.
-
-### Interaction choreography와 participant role {#performance-staging-interaction-choreography-role}
 
 <!-- @evidence requirements/staging/interactions-and-choreography.md#staging-interactions-choreography 여러 subject가 공유하는 action을 하나의 choreography로 정의한다. -->
 <!-- @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-roles initiator, receiver, object, support와 observer 역할을 명시한다. -->
@@ -92,6 +92,8 @@ Output은 sampled extent projection, visibility·occlusion observation, readable
 
 ## Shot·scene state handoff {#performance-staging-shot-scene-state-handoff}
 
+### Staging compatibility와 stale state {#performance-staging-compatibility-stale-state}
+
 <!-- @evidence requirements/staging/state-handoff-and-continuity.md#staging-state-handoff-continuity shot과 scene 경계의 state 인계를 명시한다. -->
 <!-- @evidence requirements/staging/state-handoff-and-continuity.md#staging-state-lineage state 값의 source, cause와 revision lineage를 보존한다. -->
 <!-- @evidence requirements/staging/state-handoff-and-continuity.md#staging-edit-boundary-state outgoing과 incoming boundary를 같은 측정 사실로 비교한다. -->
@@ -107,8 +109,6 @@ Handoff state는 boundary identity와 exact film·shot·story time mapping, acto
 Untrimmed continuous cut에서는 outgoing closing과 incoming opening이 동일한 measured fact와 compatible tolerance를 선언해야 한다. Trimmed boundary는 source edge를 재측정할 수 있을 때만 continuity를 주장하고, 새 시간·장소의 scene break는 carry fact를 비워 둘 수 있다. Off-screen change, time jump와 intentional discontinuity는 story or staging cause를 기록하며 unknown gap을 자동 변화로 합리화하지 않는다.
 
 Coverage take와 alternative plan은 같은 opening state에서 독립적으로 수행될 수 있지만 각자 closing state와 evidence branch를 가지며 선택 전에는 canonical timeline을 바꾸지 않는다. Finding은 domain, identity, outgoing·incoming values, time mapping, tolerance, severity와 recovery를 포함한다.
-
-### Staging compatibility와 stale state {#performance-staging-compatibility-stale-state}
 
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-deletion-invalidation upstream scene 또는 participant 삭제가 staging을 stale하게 한다. -->
 <!-- @evidence requirements/staging/scope-and-source-of-truth.md#staging-upstream-source-trace staging revision과 상위 source freshness를 비교한다. -->

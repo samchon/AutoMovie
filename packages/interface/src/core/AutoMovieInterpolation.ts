@@ -8,6 +8,8 @@
  *   keyframe (in-tangent, value, out-tangent), tangents scaled by segment
  *   duration, per the glTF convention.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Exposes `AutoMovieInterpolation` as the portable data boundary for the motion interpolation requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `AutoMovieInterpolation` for the performance motion clip keytime interpolation system contract.
  * @author Samchon
  */
 export type AutoMovieInterpolation = "linear" | "step" | "cubicspline";

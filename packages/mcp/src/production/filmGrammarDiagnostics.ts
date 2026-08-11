@@ -50,6 +50,16 @@ type IAutoMovieFilmSegment = IAutoMovieFilmTimeline["segments"][number];
  * with a positive edited range. That is exactly what the compiler's own film
  * checks establish, which is why it reads the grammar only from an edit that
  * carries no error-level finding.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding Emits deterministic observations and recovery targets without turning film grammar into permission authority.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-match-on-action Measures action continuity at the actual edited cut boundary.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar Measures axis, eyeline, screen-direction, and re-establishment relationships.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-state-continuity Compares current placed-shot subject state across the selected edit.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-reaction-information Reports current reaction and information relationships without inventing missing evidence.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation Preserves declared exceptions while reporting undeclared mechanical violations.
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-incomplete Leaves unobservable or incomplete relationships explicit instead of guessing a pass.
+ * @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-sequence-surface Evaluates grammar on the assembled edited sequence rather than isolated source shots.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar Measures the selected edit's current cut relationships and preserves declared exceptions as explicit context.
  */
 export const filmGrammarDiagnostics = (props: {
   /** Frame-normalized placements, in edited order. */

@@ -1,21 +1,93 @@
-/** One scanline of a figure silhouette: the y row and its pixel runs. */
+/**
+ * One scanline of a figure silhouette: the y row and its pixel runs.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
+ */
 export interface IForgeSilhouetteRow {
-  /** Row coordinate (image y). */
+  /**
+   * Row coordinate (image y).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   y: number;
 
-  /** Figure runs on the row as `[start, end]` pixel intervals, left to right. */
+  /**
+   * Figure runs on the row as `[start, end]` pixel intervals, left to right.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   runs: [number, number][];
 }
 
-/** One scanline of a tracked band: the run chosen as the subject's body. */
+/**
+ * One scanline of a tracked band: the run chosen as the subject's body.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
+ */
 export interface IForgeSilhouetteBand {
-  /** Row coordinate (image y). */
+  /**
+   * Row coordinate (image y).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   y: number;
 
-  /** Left edge of the tracked run. */
+  /**
+   * Left edge of the tracked run.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   min: number;
 
-  /** Right edge of the tracked run. */
+  /**
+   * Right edge of the tracked run.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   max: number;
 }
 
@@ -29,8 +101,17 @@ export interface IForgeSilhouetteBand {
  * the previous run (or that has no runs at all) keeps the previous band so a
  * one-row gap cannot derail the track.
  *
- * @author Samchon
  * @throws When the first row has no runs (there is nothing to start from)
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Refuses an initial silhouette row without any surface interval instead of inventing a band.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Reports the row whose structural silhouette input cannot seed a bounded track.
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
  */
 export const trackSilhouetteBands = (
   rows: IForgeSilhouetteRow[],
@@ -58,31 +139,86 @@ export const trackSilhouetteBands = (
   return out;
 };
 
-/** Options of {@link cleanSilhouetteBands}. */
+/**
+ * Options of {@link cleanSilhouetteBands}.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
+ */
 export interface IForgeBandCleaning {
   /**
    * Clamp the min side monotonically non-decreasing after its extremum row (the
    * skull's widest point): spurs can shrink the band but never widen it again
    * below the head.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
    */
   monoMin?: boolean;
 
-  /** The max-side twin of `monoMin`. */
+  /**
+   * The max-side twin of `monoMin`.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   monoMax?: boolean;
 
   /**
    * Rows at or above this y are the only candidates for each side's extremum
    * anchor, so low spurs (ribbons at mouth level) cannot claim it. Default:
    * every row competes.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
    */
   extremumAbove?: number;
 
-  /** Median prefilter radius in rows; `0` disables. Default `3`. */
+  /**
+   * Median prefilter radius in rows; `0` disables. Default `3`.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+   */
   medianRadius?: number;
 
   /**
    * Triangular smoothing radius in rows, applied twice; `0` disables. Default
    * `12`, because clay shading exposes every per-row jiggle a texture hides.
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
    */
   smoothRadius?: number;
 }
@@ -95,6 +231,13 @@ export interface IForgeBandCleaning {
  * Each side's clamp starts only AT its own extremum row: above it the head must
  * stay free to bulge outward.
  *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
  * @author Samchon
  */
 export const cleanSilhouetteBands = (

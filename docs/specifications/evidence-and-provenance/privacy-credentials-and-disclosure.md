@@ -2,13 +2,13 @@
 
 ## Data classification과 disclosure profile {#evp-data-classification-disclosure}
 
+### Credential exclusion gate {#evp-credential-exclusion-gate}
+
 <!-- @evidence requirements/evidence-and-provenance/privacy-credentials-and-disclosure.md#privacy-data-minimization evidence와 provenance가 목적에 필요한 최소 정보만 수집하도록 classification과 disclosure 경계를 정의한다. -->
 
 Record field와 attached artifact는 public, restricted, confidential 또는 secret classification, collection purpose, retention class와 permitted actor roles를 가져야 한다. Disclosure 요청은 destination profile과 requester authority를 입력받아 허용 field, redacted field와 refused field를 출력하고 목적에 필요하지 않은 값은 처음부터 수집하지 않아야 한다.
 
 알 수 없는 field와 새 schema field는 가장 제한적인 적용 가능한 class로 처리해야 한다. Classification이나 purpose가 없으면 public export를 거부하고 누락을 diagnostic으로 반환해야 한다.
-
-### Credential exclusion gate {#evp-credential-exclusion-gate}
 
 <!-- @evidence requirements/evidence-and-provenance/privacy-credentials-and-disclosure.md#privacy-credential-omission credential과 secret이 source, prompt, log, receipt, metadata와 exported evidence에 들어가지 못하게 한다. -->
 

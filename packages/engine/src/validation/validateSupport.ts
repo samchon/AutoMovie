@@ -20,16 +20,38 @@ const DEFAULT_MARGIN = 0.02;
  * axis) and the horizontal direction it falls, when its center of mass
  * overhangs the support.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `IAutoMovieToppling` identifies the support edge, fall direction, and overhang associated with one unstable subject.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `IAutoMovieToppling` bounds the suggested correction to the pivot geometry and measured excess discovered by the support check.
  * @author Samchon
  */
 export interface IAutoMovieToppling {
-  /** One end of the pivot edge (the nearest support hull edge). */
+  /**
+   * One end of the pivot edge (the nearest support hull edge).
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `tipEdgeStart` records one endpoint of the nearest support-hull edge selected as the topple pivot.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `tipEdgeStart` preserves the first world-space point of the affected support relation.
+   */
   tipEdgeStart: IAutoMovieVector3;
-  /** The other end of the pivot edge. */
+  /**
+   * The other end of the pivot edge.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `tipEdgeEnd` records the other endpoint that completes the unstable subject's pivot axis.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `tipEdgeEnd` preserves the second world-space point needed to reconstruct the chosen hull edge.
+   */
   tipEdgeEnd: IAutoMovieVector3;
-  /** Unit horizontal direction (XZ, y=0) the object falls toward. */
+  /**
+   * Unit horizontal direction (XZ, y=0) the object falls toward.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `fallDirection` identifies the horizontal unit direction from the support edge toward the overhanging center of mass.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `fallDirection` carries the XZ correction direction without inventing a vertical component.
+   */
   fallDirection: IAutoMovieVector3;
-  /** How far past the margin the COM overhangs, in meters. */
+  /**
+   * How far past the margin the COM overhangs, in meters.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `overshoot` measures in meters how far the center of mass exceeds the permitted support margin.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `overshoot` retains the correction magnitude separately from the hull points and direction.
+   */
   overshoot: number;
 }
 
@@ -38,14 +60,31 @@ export interface IAutoMovieToppling {
  * interaction event(s), and a suggested topple (or `null` when stably
  * supported).
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `IAutoMovieSupportResult` keeps the support diagnostic, fall event, and topple suggestion attached to one center-and-contact evaluation.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `IAutoMovieSupportResult` separates validation outcome, downstream event scope, and optional physical advice for the subject.
  * @author Samchon
  */
 export interface IAutoMovieSupportResult {
-  /** Warning-severity feedback (or an error for bad input). */
+  /**
+   * Warning-severity feedback (or an error for bad input).
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validation` locates invalid margin or support inputs and the overhang warning at the caller's support root.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validation` preserves severity, expected hull margin, observed distance, and excess for the support decision.
+   */
   validation: IAutoMovieValidation;
-  /** Fall events on the shot clock: "one calculation, two consumers". */
+  /**
+   * Fall events on the shot clock: "one calculation, two consumers".
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `events` names the unsupported node in the fall event produced by the same support calculation.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `events` retains subject scope even when physics intent suppresses warnings and topple advice.
+   */
   events: IAutoMovieInteractionEvent[];
-  /** Suggested topple, or `null` when supported. */
+  /**
+   * Suggested topple, or `null` when supported.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `toppling` identifies the suggested pivot and direction only for an unsuppressed overhang.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `toppling` remains null for stable or intentionally unphysical support, limiting advice to the invalid relation.
+   */
   toppling: IAutoMovieToppling | null;
 }
 
@@ -62,6 +101,8 @@ export interface IAutoMovieSupportResult {
  * rests on. Deriving them from real surface geometry is deferred to #605; full
  * fall-motion synthesis into the shot is deferred to #620.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `detectSupportToppling` reports an unstable center against the supplied support root while naming the affected node in its event.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `detectSupportToppling` derives warning, fall event, pivot edge, direction, and overshoot from one convex-hull observation.
  * @author Samchon
  */
 export const detectSupportToppling = (props: {

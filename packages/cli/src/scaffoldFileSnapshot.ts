@@ -1,9 +1,33 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+/**
+ * Captured physical identity of one ordinary scaffold directory generation.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Keeps repeated scaffold writes bound to the same verified directory generation.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Reuses a write target only while its captured physical identity still matches.
+ */
 export interface IScaffoldPhysicalDirectory {
+  /**
+   * Device-and-inode identity of the captured directory.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Prevents a repeated write from silently adopting a replaced directory.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Requires the physical identity to match before reusing the target.
+   */
   identity: string;
+  /**
+   * Absolute lexical path selected for the directory.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Keeps every repeated write addressed to the same explicit target.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Carries the stable target into every reuse check.
+   */
   path: string;
+  /**
+   * Native real path used to reject linked escapes.
+   *
+   * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Prevents path aliasing from changing a repeated write's destination.
+   * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Reuses only a target with the same resolved physical boundary.
+   */
   real: string;
 }
 
@@ -22,6 +46,9 @@ class ScaffoldDescriptorCleanupError extends AggregateError {}
 /**
  * Create or capture one ordinary scaffold base without following a linked
  * parent.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Refuses an existing non-directory or linked target instead of silently changing duplicate-write scope.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Resolves repeated creation against one captured physical base.
  */
 export const ensureScaffoldBaseDirectory = (
   directory: string,
@@ -54,6 +81,9 @@ export const ensureScaffoldBaseDirectory = (
 /**
  * Capture one ordinary physical directory without accepting symlinks or
  * junctions.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Captures the stable target identity required by repeated deterministic writes.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Makes physical identity a precondition of target reuse.
  */
 export const captureScaffoldPhysicalDirectory = (
   directory: string,
@@ -71,7 +101,12 @@ export const captureScaffoldPhysicalDirectory = (
   };
 };
 
-/** Revalidate one captured scaffold directory generation. */
+/**
+ * Revalidate one captured scaffold directory generation.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Rejects replacement between repeated write steps.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Requires the resident generation to match the captured reuse identity.
+ */
 export const assertScaffoldPhysicalDirectory = (
   ownership: IScaffoldPhysicalDirectory,
 ): void => {
@@ -107,7 +142,12 @@ const captureEmptyScaffoldPhysicalDirectory = (
   return ownership;
 };
 
-/** Resolve and retain every physical descendant directory needed by one file. */
+/**
+ * Resolve and retain every physical descendant directory needed by one file.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Reuses only descendants proven to remain inside the same scaffold base.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Validates cached directory identities before every reuse.
+ */
 export const ensureScaffoldFileDirectory = (props: {
   base: IScaffoldPhysicalDirectory;
   cache: Map<string, IScaffoldPhysicalDirectory>;
@@ -154,6 +194,9 @@ export const ensureScaffoldFileDirectory = (props: {
 /**
  * Create or explicitly overwrite one exact final file through its bound
  * descriptor.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission Refuses an existing file unless the caller explicitly authorizes exact-target replacement.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-duplicate-submission Resolves a repeated file write without creating a second logical target.
  */
 export const writeScaffoldFile = (props: {
   base: IScaffoldPhysicalDirectory;

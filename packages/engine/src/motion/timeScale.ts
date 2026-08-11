@@ -10,6 +10,8 @@ import { IAutoMovieMotion } from "@automovie/interface";
  * callers share it, {@link locomoteMotion} compressing a sub-stride step and
  * {@link makeActorSynthesizer} fitting a walk onto an author's declared span.
  *
+ * @evidence requirements/motion/timing-and-semantic-events.md#motion-retime-event-preservation Scales every key time and gait-phase quantity by the same positive clock factor.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Preserves the clip's temporal ordering and cyclic phase under retiming.
  * @author Samchon
  */
 export const timeScaleMotion = (

@@ -17,6 +17,8 @@ export type { IAutoMovieFaceTemplate };
  * asset, so they throw: a present trait without a matching target, or a target
  * whose delta length disagrees with the template.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-deformable-surface Applies named, bounded morph controls while preserving the template's base geometry identity.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-skin-morph-facts Evaluates each named morph difference against the template positions in a deterministic order.
  * @author Samchon
  */
 export const morphFace = (props: {

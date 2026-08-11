@@ -2,12 +2,12 @@
 
 ## Geometry-dependent Light Result {#clv-geometry-light-result}
 
+### Shadow State와 Sampling {#clv-shadow-state-sampling}
+
 <!-- @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadows-reflections-transmission Light result가 source, geometry, material, environment와 mode의 같은 state를 읽게 한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-geometry-trace Analysis가 실제 opening, caster, receiver와 surface revision을 보고하게 한다. -->
 
 Geometry-dependent result context는 source, resolved geometry와 material revision, camera, environment, film sample, render 또는 analysis profile과 supported approximation tier를 가진다. Shadow, reflection, transmission, opacity와 refraction-like result는 이 context의 immutable identity를 공유하고 다른 camera나 geometry revision의 결과를 상속하지 않는다.
-
-### Shadow State와 Sampling {#clv-shadow-state-sampling}
 
 <!-- @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Shadow source, caster, receiver, softness와 tolerance를 식별한다. -->
 <!-- @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-time-sampling Moving geometry와 source를 같은 sample에서 평가한다. -->
@@ -36,13 +36,13 @@ Light leak, detached shadow, wrong-side illumination, missing reflection, black 
 
 ## Scene Color Pipeline {#clv-scene-color-pipeline}
 
+### Adaptation, Display와 Single Ownership {#clv-color-effective-ownership}
+
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-color-exposure-display Scene light, material, exposure, working space와 display를 별도 상태로 정규화한다. -->
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-color-provenance 각 color value의 source, encoding, transform chain과 revision을 추적한다. -->
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-working-color-space Scene-linear 계산과 display-encoded RGB를 분리한다. -->
 
 Color pipeline은 light, environment, emission, texture와 material input의 source color role, scene-linear working space, camera exposure, adaptation 또는 white balance, display transform, view와 grade의 ordered stages를 가진다. 각 stage는 input·output encoding, transform identity, revision, numeric domain과 effective owner를 기록한다.
-
-### Adaptation, Display와 Single Ownership {#clv-color-effective-ownership}
 
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-white-balance-adaptation Adaptation과 artistic tint의 적용 domain과 순서를 정한다. -->
 <!-- @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-display-transform Delivery view와 tone-mapping provenance를 분리한다. -->
@@ -63,6 +63,8 @@ Unknown color space, missing transform, double transform, stale view, non-finite
 
 ## Lighting Budget State {#clv-lighting-budget-state}
 
+### Quality Floor, Culling와 Deterministic Selection {#clv-light-budget-selection}
+
 <!-- @evidence requirements/lighting/budgets-and-representation.md#lighting-budgets-representation Light, shadow, probe, filter, sample와 pass population의 worst-case bound를 정한다. -->
 <!-- @evidence requirements/lighting/budgets-and-representation.md#lighting-budget-cost-model Source와 downstream contribution의 cost dimension을 구분한다. -->
 <!-- @evidence requirements/lighting/budgets-and-representation.md#lighting-prototype-instances Repeated practical의 prototype과 exception을 보존한다. -->
@@ -71,8 +73,6 @@ Unknown color space, missing transform, double transform, stale view, non-finite
 Budget profile은 scene·shot·take와 delivery tier별 authored source, active source, shadow caster, probe, reflection update, transmission, filter, link target, temporal sample, output pass, memory-like resource와 work-like resource의 inclusive limit와 counting scope를 가진다. Estimate, conservative upper bound와 observed actual을 구분한다.
 
 Repeated practical은 prototype identity와 instance transform·state·variation을 공유하되 story-relevant exception을 별도 identity로 보존한다. Distant emission, local unshadowed source, shadowed hero source, authored field와 full supported source 같은 tier는 preserved behavior, loss, transition condition과 review obligation을 선언한다.
-
-### Quality Floor, Culling와 Deterministic Selection {#clv-light-budget-selection}
 
 <!-- @evidence requirements/lighting/budgets-and-representation.md#lighting-budget-quality-floor Budget 아래에서도 보존할 subject readability와 story optical cue를 고정한다. -->
 <!-- @evidence requirements/lighting/budgets-and-representation.md#lighting-culling-influence Off-screen shadow, reflection과 story source를 visibility만으로 제거하지 않게 한다. -->

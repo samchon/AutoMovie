@@ -2,12 +2,12 @@
 
 ## 생태와 환경 시간의 상태 {#world-site-ecology-weather-state}
 
+### 식생 층과 형태 입력 {#world-site-vegetation-layer-form-input}
+
 <!-- @evidence requirements/map/vegetation-and-ecology.md#map-vegetation-ecology Defines ecology from authored evidence rather than a shipped species catalogue. -->
 <!-- @evidence requirements/map/weather-and-seasons.md#map-weather-seasons Defines weather and season as time-scoped site state. -->
 
 시스템은 식생 구조, habitat 관계, 환경 조건, 달력과 날씨를 canonical site state의 서로 연결된 층으로 표현한다. 종, 군집, 기후대와 계절 명칭은 열린 사용자 어휘이며, 시스템은 특정 장소의 식생 목록이나 기후 자료를 내장하지 않는다. 파생된 모습과 분석은 동일한 시각, 공간 범위, 출처와 revision을 공유한다.
-
-### 식생 층과 형태 입력 {#world-site-vegetation-layer-form-input}
 
 <!-- @evidence requirements/map/vegetation-and-ecology.md#map-vegetation-layers-form Requires canopy, understory and ground layers with explicit form. -->
 <!-- @evidence requirements/map/vegetation-and-ecology.md#map-vegetation-individual-cluster Requires stable individuals and deterministic bounded populations. -->

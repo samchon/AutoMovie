@@ -2,13 +2,13 @@
 
 ## Versioned retention policy {#evp-versioned-retention-policy}
 
+### Invalidation과 deletion state {#evp-invalidation-deletion-state}
+
 <!-- @evidence requirements/evidence-and-provenance/retention-invalidation-and-disposal.md#retention-explicit-lifecycle source, artifact, evidence, review와 publication record의 종류별 수명주기를 versioned policy로 정의한다. -->
 
 Retention policy 입력은 policy identity와 version, record 또는 artifact class, purpose, retention start event, duration 또는 condition, archive rule, access class, owner와 disposal rule이다. 평가 출력은 logical validity나 physical availability와 구분된 retention disposition으로 retain, archive, eligible-for-disposal, held, expired 또는 unresolved와 next review time을 포함해야 한다.
 
 Policy 변경은 기존 item에 적용한 policy revision을 보존하고 새 평가 activity를 만든다. 적용 policy를 찾을 수 없거나 여러 policy가 충돌하면 disposal과 indefinite retention을 모두 자동 선택하지 않고 unresolved로 반환해야 한다.
-
-### Invalidation과 deletion state {#evp-invalidation-deletion-state}
 
 <!-- @evidence requirements/evidence-and-provenance/retention-invalidation-and-disposal.md#retention-invalidation-versus-deletion stale, superseded, revoked와 invalid 상태를 bytes 보존 또는 삭제와 분리한다. -->
 <!-- @evidence requirements/evidence-and-provenance/scope-identity-and-status.md#evidence-explicit-status logical validity와 physical unavailable 상태를 동시에 잃지 않고 표현한다. -->

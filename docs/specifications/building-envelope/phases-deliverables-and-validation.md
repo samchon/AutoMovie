@@ -2,11 +2,11 @@
 
 ## Existing, Phase와 Alternative {#building-envelope-phase-alternative-state}
 
+### Phase 입력과 Snapshot 출력 {#building-envelope-phase-input-output}
+
 <!-- @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-existing-phases existing·retained·demolished·new·temporary 요소, phase graph와 alternative를 stable identity 위에 정의한다. -->
 
 Phase와 alternative는 building을 복제하지 않고 기존 identity에 lifecycle 및 차이 state를 적용한다. Existing survey fact, authored assumption, proposed work와 as-built confirmation은 source·confidence를 구분하며 retained, demolished, new와 temporary 역할은 전체 work의 분류이고 특정 phase의 존재 여부는 별도 snapshot이다.
-
-### Phase 입력과 Snapshot 출력 {#building-envelope-phase-input-output}
 
 <!-- @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-construction-phases phase prerequisite, 설치·제거 event와 요소 존재 상태를 결정론적으로 해결한다. -->
 
@@ -26,11 +26,11 @@ Alternative는 공통 base, explicit difference, cost·consequence와 decision s
 
 ## 건물 산출물 {#building-envelope-deliverable-contract}
 
+### 산출물 입력과 Manifest {#building-envelope-deliverable-input-manifest}
+
 <!-- @evidence requirements/building-exterior/deliverables.md#building-exterior-deliverables drawing, schedule, quantity, render와 evidence를 같은 resolved building에서 파생한다. -->
 
 건물 산출물은 정본의 편집 가능한 복제가 아니라 resolved state에 대한 projection이다. Plan, elevation, section, roof·facade view, opening·element schedule, quantity, validation report와 capture는 source building identity 및 exact revision을 공유한다.
-
-### 산출물 입력과 Manifest {#building-envelope-deliverable-input-manifest}
 
 <!-- @evidence requirements/building-exterior/deliverables.md#building-exterior-drawing-views view의 plane, direction, extent, scale, filter와 annotation basis를 재현 가능하게 한다. -->
 
@@ -50,11 +50,11 @@ Exterior-only capture는 camera와 declared fidelity range, visible backing, omi
 
 ## 통합 검증과 결과 {#building-envelope-integrated-validation}
 
+### Finding 출력 {#building-envelope-validation-finding-output}
+
 <!-- @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-validation geometry, 치수, interior·map 공유 경계, representation과 시각 evidence를 같은 검증 결과로 집계한다. -->
 
 검증 실행은 building identity, exact input manifest, selected scope, phase·alternative·time, rule set revision, tolerance, representation와 sample 또는 camera set을 가진다. Geometry, mass·area·height, shared interior, site seam, instance, service·water, quantity와 visual review는 서로 다른 check로 남고 전체 상태는 required check의 결과에서 파생된다.
-
-### Finding 출력 {#building-envelope-validation-finding-output}
 
 <!-- @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-geometry-validation geometry와 topology 결함을 addressable identity, 위치, 값과 tolerance로 보고한다. -->
 

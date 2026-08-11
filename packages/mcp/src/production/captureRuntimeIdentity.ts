@@ -3,11 +3,21 @@ import typia from "typia";
 
 import { canonicalizeAutoMovieJson } from "./contentIdentity";
 
-/** Current structured capture-runtime identity protocol. */
+/**
+ * Current structured capture-runtime identity protocol.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Versions the runtime closure recorded with captured pixels.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity Makes the capture environment identity protocol explicit.
+ */
 export const AUTOMOVIE_CAPTURE_RUNTIME_IDENTITY_PROTOCOL =
   "automovie.capture-runtime.v1";
 
-/** Validate and canonically encode one capture runtime identity. */
+/**
+ * Validate and canonically encode one capture runtime identity.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Requires complete browser, platform, graphics, and capture-mode identity.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity Canonicalizes supported runtime facts without claiming cross-platform byte equality.
+ */
 export const canonicalAutoMovieCaptureRuntimeIdentity = (
   identity: IAutoMovieCaptureRuntimeIdentity,
 ): string => {
@@ -76,7 +86,12 @@ export const canonicalAutoMovieCaptureRuntimeIdentity = (
   return canonicalizeAutoMovieJson(validation.data);
 };
 
-/** Parse one exact canonical identity embedded in a v3 render manifest. */
+/**
+ * Parse one exact canonical identity embedded in a v3 render manifest.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Refuses incomplete or noncanonical runtime evidence.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity Recovers only the validated environment identity carried by a render artifact.
+ */
 export const parseAutoMovieCaptureRuntimeIdentity = (
   encoded: string,
 ): IAutoMovieCaptureRuntimeIdentity => {

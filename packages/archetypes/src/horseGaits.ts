@@ -35,6 +35,8 @@ const pairedLower = (
  * vocabulary, plus a compact rear beat, expressed as profile data. The arm
  * bones are front legs and the leg bones are hind legs on this quadruped rig.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Owns the horse periods, phases, duties, amplitudes, and style parameters as declared gait data.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Supplies compact deterministic quadruped rules for engine sampling.
  * @author Samchon
  */
 export const HORSE_GAITS: Record<
@@ -145,6 +147,8 @@ export const HORSE_GAITS: Record<
  * vocabulary so a host can bind it onto horse-like skeletons without importing
  * playground TypeScript clips.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection Packages the named gait table as a host-selectable horse profile.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Keeps reusable gait choice in profile data rather than a hard-coded engine list.
  * @author Samchon
  */
 export const HORSE_PROFILE: IAutoMovieProfile = {

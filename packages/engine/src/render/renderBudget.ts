@@ -23,6 +23,9 @@ import { AUTOMOVIE_RENDER_METRICS } from "./renderInventory";
  * production is the same size as one over a single room. An unbounded list
  * would be a second copy of the inventory wearing a verdict, and the one
  * artifact that has to be read at a glance would become the one nobody reads.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Caps the owner expansion of every finding while retaining the omitted total.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Implements the bounded dominant-owner report instead of copying the full inventory.
  */
 export const AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS = 8;
 
@@ -49,6 +52,19 @@ export const AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS = 8;
  * A budget limit that is negative, fractional or non-finite is an authoring
  * mistake and throws, rather than becoming a budget that can never be met.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision Produces the per-metric within, over, unbudgeted, unsupported, and not-run decisions required for an actionable render budget.
+ * @evidence requirements/rendering/budgets.md#rendering-budget-tiers Evaluates the exact limits supplied by the caller's declared tier without treating a cheaper profile as equivalent clearance.
+ * @evidence requirements/rendering/budgets.md#rendering-budget-refusal Returns over and incomplete preflight results before rendering when a declared limit is exceeded or a required metric is unavailable.
+ * @evidence requirements/lighting/budgets-and-representation.md#lighting-budget-refusal Reports an over or incomplete lighting metric with its declared limit, dominant owner, and explicit recovery instead of silently dropping a source or shadow.
+ * @evidence requirements/production-design/budgets-and-feasibility.md#production-design-budget-refusal Refuses an over-limit or unmeasured render metric with its dominant semantic owner before runtime degradation can hide the excess.
+ * @evidence requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate Compares the pre-render resource estimate with declared limits and distinguishes ready, over-limit, and incomplete admission outcomes.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Compares the complete worst-case inventory with declared limits and reports bounded dominant owners and recovery.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-light-budget-report-refusal Applies the pre-render refusal report to light and shadow-map metrics without mutating the requested render profile.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-feasibility-verdict Implements the render-preflight subset of feasibility by withholding a ready verdict from over, unsupported, or not-run required metrics.
+ * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-budget-admission-estimate Converts exact or conservative render metrics and unknown gaps into the bounded preflight decision without scheduling the work.
+ * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-domain-budget-refusal Returns the render-domain over-limit or incomplete verdict unchanged instead of selecting a cheaper quality profile or starting degraded work.
+ * @evidence requirements/map/scale-and-populations.md#map-population-budget-refusal `evaluateAutoMovieRenderBudget` returns an over or incomplete population verdict with the measured count, declared limit, dominant owner, and recovery before rendering.
+ * @evidence specifications/world-and-site/partition-lod-streaming-and-seams.md#world-site-population-budget-refusal The preflight report refuses an over-limit or unmeasured realized population without silently reducing the declared world population.
  * @author Samchon
  */
 export const evaluateAutoMovieRenderBudget = (props: {

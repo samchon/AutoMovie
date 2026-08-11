@@ -31,18 +31,35 @@ const CAMERA_MOVES = new Set<IAutoMovieBlockingCamera["move"]>([
  * A validated blocking: the beat's shot plan, coherent with the script and the
  * staged world, ready to steer the performance stage.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations IAutoMovieBlockedBeat makes authored blocking mechanically validatable: A validated blocking: the beat's shot plan, coherent with the script and the staged world, ready to steer the performance stage.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat realizes staged spatial-relation validation: A validated blocking: the beat's shot plan, coherent with the script and the staged world, ready to steer the performance stage.
  * @author Samchon
  */
 export type IAutoMovieBlockedBeat =
   | IAutoMovieBlockedBeat.ISuccess
   | IAutoMovieBlockedBeat.IFailure;
 export namespace IAutoMovieBlockedBeat {
-  /** The plan holds together; performance can align to it. */
+  /**
+   * The plan holds together; performance can align to it.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations IAutoMovieBlockedBeat.ISuccess makes authored blocking mechanically validatable: The plan holds together; performance can align to it.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.ISuccess realizes staged spatial-relation validation: The plan holds together; performance can align to it.
+   */
   export interface ISuccess {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations The true discriminator admits the validated beat plan to performance compilation.
+     * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.ISuccess.success admits a spatially coherent beat plan to performance compilation.
+     */
     success: true;
 
-    /** The validated plan, verbatim. */
+    /**
+     * The validated plan, verbatim.
+     *
+     * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations IAutoMovieBlockedBeat.ISuccess.blocking makes authored blocking mechanically validatable: The validated plan, verbatim.
+     * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.ISuccess.blocking realizes staged spatial-relation validation: The validated plan, verbatim.
+     */
     blocking: IAutoMovieBlocking;
 
     /**
@@ -50,16 +67,34 @@ export namespace IAutoMovieBlockedBeat {
      * first beat (or when none was supplied). Surfaced so the performance stage
      * seeds each actor's start position, facing, articulation, gait phase,
      * velocity, plants, and mount from where the previous beat actually ended.
+     *
+     * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity Carries the prior beat's measured placement, facing, motion, plant, and mount state as this beat's explicit opening condition.
+     * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IAutoMovieBlockedBeat.ISuccess.previous preserves the authored state handoff instead of resetting the world at the cut.
      */
     previous: IAutoMovieBeatEndState | null;
   }
 
-  /** The plan contradicted the script, the stage, or its own timeline. */
+  /**
+   * The plan contradicted the script, the stage, or its own timeline.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations IAutoMovieBlockedBeat.IFailure makes authored blocking mechanically validatable: The plan contradicted the script, the stage, or its own timeline.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.IFailure realizes staged spatial-relation validation: The plan contradicted the script, the stage, or its own timeline.
+   */
   export interface IFailure {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations The false discriminator keeps a contradictory beat plan outside performance compilation.
+     * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.IFailure.success marks contradictory blocking as non-playable.
+     */
     success: false;
 
-    /** Every contradiction found, for the correction round. */
+    /**
+     * Every contradiction found, for the correction round.
+     *
+     * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations Returns addressed beat, stage, camera, timing, and boundary-state contradictions for the next blocking attempt.
+     * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat.IFailure.violations realizes staged spatial-relation validation: Every contradiction found, for the correction round.
+     */
     violations: IAutoMovieConstraintViolation[];
   }
 }
@@ -81,6 +116,14 @@ export namespace IAutoMovieBlockedBeat {
  * actor must be a staged scene node, exactly once) and the validated state is
  * surfaced on the success so downstream stages resume from it rather than
  * resetting the world at the cut.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations Validates beat identity, staged subjects, camera targets, causal timing, and prior boundary state before performance compilation.
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-authored-blocking Returns the submitted actor, camera, coverage, and ordered-anchor plan unchanged only after its explicit relations pass the blocking gates.
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-upstream-source-trace Resolves `blocking.beat` against `script.beats` and every actor, camera, coverage target, and carried actor against identities in the staged scene.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-subject-dependencies Resolves the beat's actor intents, hero and coverage camera targets, and carried actor states against the concrete subjects already placed in the scene.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-unfilmable-scene-refusal Refuses a beat whose actor, camera, coverage, or carried-state dependency is absent or duplicated instead of substituting a placeholder subject.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Gates authored beat relations against the script and resolved placement tables before admitting the blocking to performance.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-scene-dependency-refusal Reports unresolved concrete actor and camera dependencies before the beat can become a filmable performance plan.
  */
 export const blockBeat = (
   script: IAutoMovieScript,

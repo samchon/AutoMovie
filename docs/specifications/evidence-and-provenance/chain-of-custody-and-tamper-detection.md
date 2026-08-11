@@ -2,13 +2,13 @@
 
 ## Custody ledger boundary {#evp-custody-ledger-boundary}
 
+### Boundary integrity receipt {#evp-custody-boundary-receipt}
+
 <!-- @evidence requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-chain-traceability 검증, 승인 또는 게시에 쓰인 artifact의 생성과 인계를 append-only custody ledger로 구체화한다. -->
 
 Custody event 입력은 artifact identity와 revision, event kind, sender와 receiver 또는 operator role, source와 destination boundary, event time, purpose와 pre-transfer verification이다. 출력 event는 post-transfer identity와 verification result를 포함하고 previous event를 참조하며, copy와 ownership transfer를 같은 의미로 기록하지 않아야 한다.
 
 Ledger는 artifact별 ordered event chain과 각 chain head의 immutable identity를 제공해야 한다. Verifier는 이전에 받아들인 terminal head 또는 독립적으로 보관된 최신 checkpoint를 expected identity로 받아야 하며, expected identity가 없는 chain은 제시된 범위의 내부 연속성만 증명하고 마지막 event 뒤의 삭제 여부를 verified로 판정하지 않아야 한다. Actor, boundary, time 또는 digest가 없는 event는 incomplete이며 verified custody 계산에 참여할 수 없다.
-
-### Boundary integrity receipt {#evp-custody-boundary-receipt}
 
 <!-- @evidence requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-boundary-integrity-check 반입, 전달, 복원과 publication 경계마다 expected identity와 actual bytes를 비교한다. -->
 

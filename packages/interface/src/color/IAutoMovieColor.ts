@@ -8,30 +8,48 @@
  * display; when both are present the engine treats the linear triple as
  * authoritative and `hex` as a derived label.
  *
- * Keeping color as a numeric triple (rather than a free string) is what lets an
- * LLM reason about adjusting it ("one tone darker", "warmer") and lets the
- * engine range-check it; components are documented to `[0, 1]` and validated
- * there.
+ * Keeping color as a numeric triple (rather than a free string) lets an
+ * authoring agent adjust it numerically and lets the engine range-check it.
  *
  * Reference: glTF 2.0 `pbrMetallicRoughness.baseColorFactor` (linear), CSS
  * Color Module Level 4.
  *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Defines the portable linear scene-color boundary used by material and light contracts.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types the linear material-color state required by the rendering contract.
  * @author Samchon
  */
 export interface IAutoMovieColor {
-  /** Linear red, `[0, 1]`. */
+  /**
+   * Linear red, `[0, 1]`.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `r` as the portable data boundary for the rendering scene display color requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `r` for the spec render material color system contract.
+   */
   r: number;
 
-  /** Linear green, `[0, 1]`. */
+  /**
+   * Linear green, `[0, 1]`.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `g` as the portable data boundary for the rendering scene display color requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `g` for the spec render material color system contract.
+   */
   g: number;
 
-  /** Linear blue, `[0, 1]`. */
+  /**
+   * Linear blue, `[0, 1]`.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `b` as the portable data boundary for the rendering scene display color requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `b` for the spec render material color system contract.
+   */
   b: number;
 
   /**
    * Linear alpha, `[0, 1]`. `1` = fully opaque. Null when the color is used in
    * an opacity-irrelevant slot (e.g. light color, emissive), distinct from `0`
    * (fully transparent).
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `a` as the portable data boundary for the rendering scene display color requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `a` for the spec render material color system contract.
    */
   a: number | null;
 
@@ -39,6 +57,9 @@ export interface IAutoMovieColor {
    * Optional sRGB `#RRGGBB` convenience form for human / LLM readability and
    * viewer swatches. Derived from the linear triple; the linear components are
    * authoritative when both are present.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `hex` as the portable data boundary for the rendering scene display color requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `hex` for the spec render material color system contract.
    */
   hex: string | null;
 }

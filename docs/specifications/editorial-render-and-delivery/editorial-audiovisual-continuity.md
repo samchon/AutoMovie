@@ -1,6 +1,8 @@
 # Editorial audiovisual continuity
 
-## Picture와 sound의 독립 edit {#spec-editorial-picture-sound}
+## Contract units {#spec-editorial-audiovisual-continuity-contract-units}
+
+### Picture와 sound의 독립 edit {#spec-editorial-picture-sound}
 <!-- @evidence requirements/editorial/picture-and-sound-edits.md#editorial-picture-sound-edits Picture와 sound edit의 독립 clock을 정밀화한다. -->
 <!-- @evidence requirements/editorial/picture-and-sound-edits.md#editorial-sound-emission-presentation Sound emission과 presentation time을 정밀화한다. -->
 <!-- @evidence requirements/editorial/picture-and-sound-edits.md#editorial-dialogue-edits Dialogue trim과 overlap을 정밀화한다. -->
@@ -18,7 +20,7 @@ J-cut, L-cut, prelap과 tail은 film range와 clip ownership을 보존하며, pi
 
 Truncated utterance, missing handle, duplicate exclusive cue, stale alignment, incompatible channel, film 밖 required tail과 undeclared silence는 거절한다. 독립 stem이나 interval은 보존할 수 있지만 required sound가 없는 film range는 partial audiovisual edit이며, picture-only result를 sound-complete로 승인하지 않는다. Picture, cue source, timing 또는 mix revision 변경은 정확히 영향받는 mix, caption, encode와 audible review를 stale로 만든다.
 
-## Marker, effect와 metadata ordering {#spec-editorial-marker-effect-metadata}
+### Marker, effect와 metadata ordering {#spec-editorial-marker-effect-metadata}
 <!-- @evidence requirements/editorial/markers-effects-and-metadata.md#editorial-markers-effects-metadata Marker, effect와 metadata 계약을 정밀화한다. -->
 <!-- @evidence requirements/editorial/markers-effects-and-metadata.md#editorial-marker-event-distinction Marker와 semantic event 구분을 정밀화한다. -->
 <!-- @evidence requirements/editorial/markers-effects-and-metadata.md#editorial-marker-scope Marker scope를 정밀화한다. -->
@@ -34,7 +36,7 @@ Marker는 stable identity, label, exact film instant 또는 range, scope와 sour
 
 Unknown scope, duplicate identity, out-of-film required marker, cyclic effect order, non-finite parameter, incompatible media domain과 provenance 없는 required metadata는 거절한다. Optional marker의 실패는 독립 결과로 남길 수 있지만 effect가 실패한 picture나 sound interval은 원본으로 몰래 대체하지 않고 candidate 또는 partial로 표시한다.
 
-## Cut continuity와 film grammar {#spec-editorial-continuity-grammar}
+### Cut continuity와 film grammar {#spec-editorial-continuity-grammar}
 <!-- @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-film-grammar Cut continuity와 grammar 검토 경계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-match-on-action Action match의 시간 관계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar Screen direction과 eyeline 관계를 정밀화한다. -->
@@ -51,7 +53,7 @@ Continuity evaluation은 각 cut의 outgoing과 incoming sample window, event ph
 
 필수 sample이나 state가 missing, stale 또는 unsupported이면 finding은 incomplete이며 pass가 아니다. Mismatch가 source 결함이면 source를, edit pairing 결함이면 cut을 수정 대상으로 가리키고 수정 뒤 affected cut과 sequence review를 stale로 만든다. 독립적으로 검증된 cut은 보존하되 sequence 전체 coverage가 닫히지 않으면 partial verdict만 허용한다.
 
-## Pacing과 audiovisual rhythm {#spec-editorial-pacing-rhythm}
+### Pacing과 audiovisual rhythm {#spec-editorial-pacing-rhythm}
 <!-- @evidence requirements/editorial/pacing-and-rhythm.md#editorial-pacing-rhythm Pacing과 rhythm 분석 경계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/pacing-and-rhythm.md#editorial-narrative-priority Narrative priority를 정밀화한다. -->
 <!-- @evidence requirements/editorial/pacing-and-rhythm.md#editorial-duration-pattern Duration pattern을 정밀화한다. -->

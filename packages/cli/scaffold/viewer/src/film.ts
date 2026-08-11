@@ -14,16 +14,20 @@ import {
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,
-  observeAutoMovieSceneRender,
+  observeAutoMovieRendererFrame,
   renderCrossDissolveFrames,
 } from "@automovie/viewer";
 import type { WebGLRenderer } from "three";
 
+import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
 import {
   type IAutoMovieCompiledShotRuntime,
   createCompiledShotRuntime,
 } from "./shotRuntime";
-import { viewerDocument } from "./viewerDocument";
+import {
+  type IAutoMovieShotObservation,
+  viewerDocument,
+} from "./viewerDocument";
 
 interface IFilmLayer {
   shot: string;
@@ -52,6 +56,15 @@ if (timelineResponse.ok === false)
     `Compiled film is unavailable (${timelineResponse.status}). Run npm run compile.`,
   );
 const timeline = (await timelineResponse.json()) as IAutoMovieFilmTimeline;
+const productionRuntimeResponse = await fetch(
+  "/__automovie/production-runtime.json",
+);
+if (productionRuntimeResponse.ok === false)
+  throw new Error(
+    `Production runtime is unavailable (${productionRuntimeResponse.status}).`,
+  );
+const productionRuntime =
+  (await productionRuntimeResponse.json()) as IAutoMovieProductionViewerRuntime;
 const runtimes = new Map<string, IFilmShot>();
 for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
   const response = await fetch(
@@ -62,7 +75,10 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
       `Compiled film shot "${shot}" is unavailable (${response.status}).`,
     );
   const compiled = (await response.json()) as IAutoMovieCompiledShotSource;
-  const runtime = await createCompiledShotRuntime(compiled, deliveryTone);
+  const runtime = await createCompiledShotRuntime(compiled, deliveryTone, {
+    dialogue: productionRuntime.dialogue,
+    liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
+  });
   // Each cut carries its own palette, because a colour is derived from the
   // entities of the shot that draws it; one film-wide palette would have to
   // repaint every shot whenever any other shot gained an entity.
@@ -87,6 +103,7 @@ if (first === undefined) throw new Error("Compiled film has no playable shot.");
 // cut, and evidence read off a scene this frame never drew would be evidence
 // about a different frame.
 let drawnShot = first;
+let lastObservation: IAutoMovieShotObservation;
 let frozen = false;
 const viewerRendererRef = {
   current: undefined as WebGLRenderer | undefined,
@@ -109,7 +126,11 @@ const mounted = mountViewer(
 viewerRendererRef.current = mounted.renderer;
 viewerRendererRef.current.setClearColor(0x11151b, 1);
 
-const renderLayer = (layer: IFilmLayer, pass: AutoMovieGuidePass): string => {
+const renderLayer = (
+  layer: IFilmLayer,
+  pass: AutoMovieGuidePass,
+  globalFrame: number,
+): string => {
   const shot = runtimes.get(layer.shot);
   if (shot === undefined)
     throw new Error(`Film layer references unavailable shot "${layer.shot}".`);
@@ -118,7 +139,12 @@ const renderLayer = (layer: IFilmLayer, pass: AutoMovieGuidePass): string => {
   drawnShot = shot;
   shot.runtime.camera.aspect = canvas.width / canvas.height;
   shot.runtime.camera.updateProjectionMatrix();
-  return shot.runtime.render(renderer, layer.sourceFrame / timeline.fps, pass);
+  return shot.runtime.render(
+    renderer,
+    layer.sourceFrame / timeline.fps,
+    pass,
+    globalFrame,
+  );
 };
 
 function renderFilm(time: number, pass: AutoMovieGuidePass): void {
@@ -129,23 +155,29 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
     Math.floor(time * timeline.fps),
   );
   const layers = sampleFilmFrame(timeline, frame);
-  if (pass !== "beauty" || layers.length === 1) {
-    const dominant = layers.reduce((selected, candidate) =>
-      candidate.weight >= selected.weight ? candidate : selected,
-    );
-    renderLayer(dominant, pass);
-  } else {
-    const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
-    const renderer = viewerRendererRef.current;
-    if (renderer === undefined)
-      throw new Error("Film renderer is not mounted.");
-    renderCrossDissolveFrames(
-      renderer,
-      () => void renderLayer(outgoing, pass),
-      () => void renderLayer(incoming, pass),
-      incoming.weight,
-    );
-  }
+  const renderer = viewerRendererRef.current;
+  if (renderer === undefined) throw new Error("Film renderer is not mounted.");
+  const measured = observeAutoMovieRendererFrame(renderer, () => {
+    if (pass !== "beauty" || layers.length === 1) {
+      const dominant = layers.reduce((selected, candidate) =>
+        candidate.weight >= selected.weight ? candidate : selected,
+      );
+      renderLayer(dominant, pass, frame);
+    } else {
+      const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
+      renderCrossDissolveFrames(
+        renderer,
+        () => void renderLayer(outgoing, pass, frame),
+        () => void renderLayer(incoming, pass, frame),
+        incoming.weight,
+      );
+    }
+  });
+  lastObservation = {
+    shot: drawnShot.runtime.id,
+    observed: measured.observed,
+    coverage: drawnShot.coverage,
+  };
   status.textContent =
     `${timeline.id}  frame=${frame}/${timeline.totalFrames - 1}  ${pass}` +
     (drawnShot.coverage.unresolved.length === 0
@@ -162,11 +194,7 @@ window.__automovieCapture = {
     frozen = true;
     renderFilm(time, pass);
   },
-  observe: () => ({
-    shot: drawnShot.runtime.id,
-    observed: observeAutoMovieSceneRender(drawnShot.runtime.scene),
-    coverage: drawnShot.coverage,
-  }),
+  observe: () => lastObservation,
   sidecar: () => renderAutoMovieSemanticMaskSidecar(drawnShot.mask),
 };
 renderFilm(0, "beauty");

@@ -2,11 +2,11 @@
 
 ## Identity 계층과 참조 {#interchange-identity-hierarchy}
 
+### Immutable Source Revision {#interchange-source-revision-identity}
+
 <!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-import-identity Path와 label에 독립적인 source, revision, interpretation과 consumer identity를 분리한다. -->
 
 Identity graph는 logical source, immutable source revision, source-local element, interpretation, adoption, derived result와 consumer reference를 별도 node kinds로 유지한다. Path, URL, response name와 display label은 locator 또는 alias이며 digest와 interpretation identity를 대신하지 않고 relink는 identity graph의 edge만 갱신한다.
-
-### Immutable Source Revision {#interchange-source-revision-identity}
 
 <!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-source-revision Mutable source의 취득 결과를 덮어쓰지 않는 revision identity로 만든다. -->
 

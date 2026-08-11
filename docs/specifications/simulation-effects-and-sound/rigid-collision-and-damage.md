@@ -1,12 +1,14 @@
 # Rigid Motion, Collision, and Damage
 
 ## Rigid body state와 authority {#rigid-body-state-and-motion-authority}
+
+### Authored, analytic, solved trajectory {#rigid-trajectory-tier-contract}
+
 <!-- @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-ballistics-collision 이 절은 object 물리 관계를 bounded domain으로 정의한다. -->
 <!-- @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state 이 절은 linear와 angular 상태의 최소 완전 집합을 정한다. -->
 
 Rigid state는 stable body identity, tick, position, orientation, linearㆍangular velocity, mass/inertia proxy, motion authority와 asleep/active status를 가진다. Input body는 authored transform, analytic ballistic parameters 또는 bounded solve initial state 중 하나만 소유한다. Output은 다음 tick의 완전 상태와 state digest이며 비유한 값, 비양수 mass proxy, 중복 authority는 거절한다.
 
-### Authored, analytic, solved trajectory {#rigid-trajectory-tier-contract}
 <!-- @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory 이 절은 trajectory tier와 authority 전환을 명시하게 한다. -->
 
 Authored trajectory는 key 또는 motion channel이 전체 시간 범위를 소유하고 analytic trajectory는 선언된 가속도와 초기 조건의 닫힌 함수다. Bounded solved trajectory는 fixed tick과 admitted contact domain만 사용한다. Authority transition은 정확한 tick, 이전 final state, 다음 initial state와 continuity rule을 가지며 두 tier가 같은 tick을 동시에 쓰지 않는다.

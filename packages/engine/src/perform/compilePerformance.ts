@@ -30,6 +30,8 @@ import { bodyRegionBones } from "./bodyRegionBones";
  * coding agent authors {@link IAutoMovieActionCall}s, this seam fattens each
  * into a clip, and {@link compilePerformance} composes them into the shot.
  *
+ * @evidence requirements/actors/performance-and-story-binding.md#actor-performance-capability-plan Exposes the capability-specific seam that turns one authored action into actor motion.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Implements the action-to-performance binding while leaving clip content to the adopted capability.
  * @author Samchon
  */
 export type IAutoMovieActionSynthesizer = (
@@ -64,22 +66,42 @@ const BOUNDARY_EPSILON = 1e-6;
  * Emitted only when something was actually dropped; a clip entirely inside its
  * region produces no record at all.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Records exactly which authored channels an explicit region mask removed.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Carries the loss receipt required when mask composition discards content.
  * @author Samchon
  */
 export interface IAutoMovieMaskedContent {
-  /** Index into the action list {@link compilePerformance} was given. */
+  /**
+   * Index into the action list {@link compilePerformance} was given.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Identifies the authored action whose mask caused this loss.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Keeps each mask-loss receipt tied to its composition input.
+   */
   action: number;
 
-  /** The actor whose clip lost the content (an action may fan to several). */
+  /**
+   * The actor whose clip lost the content (an action may fan to several).
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Names the actor whose layer mask removed authored channels.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Preserves actor ownership on the composition-loss record.
+   */
   actor: string;
 
-  /** The region whose bone set masked it: the action's own, or its default. */
+  /**
+   * The region whose bone set masked it: the action's own, or its default.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Reports the precise named mask responsible for the loss.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Carries the resolved region-mask identity through composition diagnostics.
+   */
   region: AutoMovieBodyRegion;
 
   /**
    * The bones the region excludes, sorted by {@link compareCodeUnits} and
    * deduplicated across keyframes. Empty when only the root or the expression
    * was dropped.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Enumerates the bone channels that fell outside the selected layer owner.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Makes bone-channel loss observable after mask composition.
    */
   bones: AutoMovieHumanoidBone[];
 
@@ -87,10 +109,18 @@ export interface IAutoMovieMaskedContent {
    * Whether a keyframe's root displacement was dropped, which happens when a
    * non-locomotion region layers beside another (only the root-bearing region
    * strides).
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Reports when root authority caused a non-owning layer's displacement to be removed.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Exposes the root-channel consequence of composition ownership.
    */
   root: boolean;
 
-  /** Whether a keyframe's expression was dropped (every region but `face`). */
+  /**
+   * Whether a keyframe's expression was dropped (every region but `face`).
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Reports when the face owner excludes an expression from another region.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Exposes expression-channel loss caused by disjoint layer ownership.
+   */
   expression: boolean;
 }
 
@@ -98,16 +128,26 @@ export interface IAutoMovieMaskedContent {
  * What {@link compilePerformance} produced: the per-actor clips, and the
  * authored content its region masks discarded.
  *
+ * @evidence requirements/actors/performance-and-story-binding.md#actor-performance-local-clock Carries the resolved per-actor motions on their shot-local performance clock.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Defines the public receipt for a compiled actor performance.
  * @author Samchon
  */
 export interface IAutoMovieCompiledPerformance {
-  /** Per-actor performance motion, keyed by actor node id. */
+  /**
+   * Per-actor performance motion, keyed by actor node id.
+   *
+   * @evidence requirements/actors/performance-and-story-binding.md#actor-performance-local-clock Binds every compiled actor motion to its resolved shot-local timeline.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Emits the per-actor resolved performance state.
+   */
   performances: Record<string, IAutoMovieMotion>;
 
   /**
    * Every piece of authored content a region mask dropped, ordered by action
    * index then actor. Empty when every clip fell inside its own region, which
    * is the ordinary case.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Preserves every non-empty mask loss beside the compiled performance.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Makes layer-composition omissions part of the public result rather than a silent drop.
    */
   masked: IAutoMovieMaskedContent[];
 }
@@ -326,11 +366,13 @@ const padRestLeadIn = (motion: IAutoMovieMotion): IAutoMovieMotion => {
  * success envelope can refuse or report it instead of returning a clip that
  * silently omits half of what the author asked for.
  *
- * @author Samchon
  * @param actions The shot's action calls (any order; arranged by `start`).
  * @param synthesize The content seam: one action → one base clip (or null).
  * @returns Per-actor performance motion keyed by actor node id, plus every
  *   piece of authored content the region mask discarded.
+ * @evidence requirements/actors/performance-and-story-binding.md#actor-performance-local-clock Compiles authored action calls into actor-keyed shot motion on the declared local clock.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Schedules each actor action on its shot-local performance timeline.
+ * @author Samchon
  */
 export const compilePerformance = (
   actions: IAutoMovieActionCall[],

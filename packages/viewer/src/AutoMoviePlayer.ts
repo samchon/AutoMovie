@@ -23,10 +23,26 @@ import { IAutoMovieModelObject } from "./buildModel";
 /**
  * Secondary-motion config: the joints that should lag/overshoot the animated
  * target (a tail, ears) and the spring that drives them.
+ *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Exposes the bounded joint, stiffness, and damping controls owned by this secondary-motion solver.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Implements the live deterministic spring choice at the sampled moving boundary.
+ * @author Samchon
  */
 export interface IAutoMovieSpringConfig {
+  /**
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Declares the joints governed by the bounded secondary-motion solver.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Keeps the live spring choice explicit at the moving boundary.
+   */
   joints: AutoMovieHumanoidBone[];
+  /**
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Declares the spring stiffness owned by the bounded secondary-motion solver.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Keeps the live spring choice explicit at the moving boundary.
+   */
   stiffness: number;
+  /**
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Declares the spring damping owned by the bounded secondary-motion solver.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Keeps the live spring choice explicit at the moving boundary.
+   */
   damping: number;
 }
 
@@ -48,6 +64,8 @@ interface IAxisSprings {
  * Expression output is sampled on the same frame clock and applied to morph
  * targets or imported-runtime expression sinks when the target provides them.
  *
+ * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Samples this public playback surface on the exact motion boundary.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Implements that boundary on the shared motion clock.
  * @author Samchon
  */
 export class AutoMoviePlayer {
@@ -82,12 +100,22 @@ export class AutoMoviePlayer {
     >,
   ) {}
 
-  /** Swap the clip being played (e.g. transition to a new motion). */
+  /**
+   * Swap the clip being played (e.g. transition to a new motion).
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Samples this public playback surface on the exact motion boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Implements that boundary on the shared motion clock.
+   */
   public setMotion(motion: IAutoMovieMotion): void {
     this.motion = motion;
   }
 
-  /** Sample the clip at `seconds` and apply the pose to the model. */
+  /**
+   * Sample the clip at `seconds` and apply the pose to the model.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Samples this public playback surface on the exact motion boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Implements that boundary on the shared motion clock.
+   */
   public update(seconds: number): void {
     const deltaSeconds =
       this.lastUpdateSeconds === null

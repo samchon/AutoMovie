@@ -356,6 +356,8 @@ export const combo = (sk: string): IAutoMovieMotion =>
  */
 export const stroll = (sk: string): IAutoMovieMotion =>
   travelMotion("stroll", walk(sk), 6, { x: 0, y: 0, z: 0.62 });
+
+/** Repeats the run cycle while advancing the figure along its forward axis. */
 export const sprint = (sk: string): IAutoMovieMotion =>
   travelMotion("sprint", run(sk), 9, { x: 0, y: 0, z: 2.0 });
 
@@ -383,6 +385,10 @@ const GUARD: IAutoMovieJointPose[] = [
   j("rightLowerLeg", { flexion: 22 }),
 ];
 
+/**
+ * Assemble a deterministic kickboxing round from guarded strikes, defensive
+ * beats, footwork, and kicks, returning to guard between techniques.
+ */
 export const shadowbox = (sk: string): IAutoMovieMotion => {
   const merge = (over: IAutoMovieJointPose[]): IAutoMoviePose => {
     const m = new Map(GUARD.map((x) => [x.bone, x] as const));

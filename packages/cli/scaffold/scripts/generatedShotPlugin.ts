@@ -3,6 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 
+import config from "../automovie.config";
+import { currentProductionDialogueRuntime } from "./productionRuntimeState";
+
 /**
  * Serve bounded compiler-owned viewer JSON and registered model bytes.
  *
@@ -18,6 +21,19 @@ export const generatedShotPlugin = (
   name: "automovie-generated-shot",
   configureServer: (server) => {
     server.middlewares.use((request, response, next) => {
+      if (
+        request.url?.split("?", 1)[0] === "/__automovie/production-runtime.json"
+      ) {
+        const runtime = {
+          dialogue: currentProductionDialogueRuntime(),
+          liveWearableSoftBodies: [...config.simulation.liveWearableSoftBodies],
+        };
+        response.statusCode = 200;
+        response.setHeader("Content-Type", "application/json; charset=utf-8");
+        response.setHeader("Cache-Control", "no-store");
+        response.end(Buffer.from(`${JSON.stringify(runtime)}\n`, "utf8"));
+        return;
+      }
       let asset: string | null;
       try {
         asset = viewerAssetRoute(request.url);

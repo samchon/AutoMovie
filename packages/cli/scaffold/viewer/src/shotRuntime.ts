@@ -1,14 +1,27 @@
 import {
+  type IAutoMovieDialogueExpressionLayers,
+  type IAutoMovieDialogueVisemeTimeline,
+  type IAutoMovieResolvedBone,
+  type IAutoMovieWearableSoftFrame,
   lowerPlantingInstallation,
   lowerSoftFurnishing,
   lowerWaterFeature,
+  sampleAutoMovieDialogueExpression,
+  sampleMotion,
+  simulateAutoMovieWearableSoftBody,
+  softBodyStepAt,
+  softBodySurfaceGeometry,
 } from "@automovie/engine";
 import type {
+  AutoMovieExpressionPreset,
   AutoMovieGuidePass,
   IAutoMovieCompiledShotSource,
+  IAutoMovieExpression,
+  IAutoMovieSoftBodyDomain,
 } from "@automovie/interface";
 import {
   AutoMoviePlayer,
+  type IAutoMovieModelObject,
   applyLightMotion,
   applyObjectMotion,
   applyObjectMotions,
@@ -25,9 +38,136 @@ import {
   buildScene,
   buildSoftBodyObject,
 } from "@automovie/viewer";
-import type * as THREE from "three";
+import * as THREE from "three";
 
+import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
+
+const MOUTH_PRESETS: readonly AutoMovieExpressionPreset[] = [
+  "aa",
+  "ih",
+  "ou",
+  "ee",
+  "oh",
+];
+
+/** One actor expression sink beside the authored layer sampled this frame. */
+export interface IAutoMovieProductionDialogueActor {
+  /** Built model object owning its mouth expression targets. */
+  object: IAutoMovieModelObject;
+  /** Authored expression retained beneath the derived mouth layer. */
+  authored: IAutoMovieExpression | null;
+}
+
+/**
+ * Apply the final-byte mouth layer without replacing authored emotion.
+ *
+ * Every actor participating in a dialogue timeline has the five viseme targets
+ * cleared at each exact film frame. An active range then raises its one target;
+ * receipt gaps and time outside the line remain an explicit closed mouth.
+ */
+export const applyProductionDialogueMouth = (props: {
+  runtime: IAutoMovieProductionDialogueRuntime | null;
+  frame: number | null;
+  actors: ReadonlyMap<string, IAutoMovieProductionDialogueActor>;
+}): ReadonlyMap<string, IAutoMovieDialogueExpressionLayers> => {
+  const applied = new Map<string, IAutoMovieDialogueExpressionLayers>();
+  if (props.runtime === null || props.frame === null) return applied;
+  const frame = props.frame;
+  if (Number.isSafeInteger(frame) === false || frame < 0)
+    throw new Error("Dialogue runtime frame must be a non-negative integer.");
+  const byActor = new Map<string, IAutoMovieDialogueVisemeTimeline[]>();
+  for (const timeline of props.runtime.timelines) {
+    const timelines = byActor.get(timeline.actor) ?? [];
+    timelines.push(timeline);
+    byActor.set(timeline.actor, timelines);
+  }
+  for (const [actor, timelines] of byActor) {
+    const active = timelines.filter((timeline) =>
+      timeline.ranges.some(
+        (range) => frame >= range.startFrame && frame < range.endFrame,
+      ),
+    );
+    if (active.length > 1)
+      throw new Error(
+        `Dialogue runtime overlaps ${active.length} mouth timelines on actor "${actor}".`,
+      );
+    const target = props.actors.get(actor);
+    if (target === undefined) {
+      if (active.length !== 0)
+        throw new Error(
+          `Dialogue line "${active[0]!.line}" targets absent actor "${actor}" in this shot.`,
+        );
+      continue;
+    }
+    const layers =
+      active.length === 0
+        ? {
+            authored: target.authored,
+            mouth: { preset: "neutral" as const, intensity: 0 },
+          }
+        : sampleAutoMovieDialogueExpression({
+            timeline: active[0]!,
+            frame,
+            authored: target.authored,
+          });
+    const expressionTargets = target.object.expressionTargets ?? [];
+    if (active.length !== 0 && expressionTargets.length === 0)
+      throw new Error(
+        `Dialogue line "${active[0]!.line}" targets actor "${actor}" without a mouth expression sink.`,
+      );
+    for (const expressionTarget of expressionTargets) {
+      for (const preset of MOUTH_PRESETS)
+        expressionTarget.setExpressionValue(preset, 0);
+      if (layers.mouth.intensity !== 0)
+        expressionTarget.setExpressionValue(
+          layers.mouth.preset,
+          layers.mouth.intensity,
+        );
+    }
+    applied.set(actor, layers);
+  }
+  return applied;
+};
+
+/** Explicit live-soft admission, preserving authored order and nothing else. */
+export interface IAutoMovieProductionWearableSoftSelection {
+  /** Selected moving-boundary domain. */
+  domain: IAutoMovieSoftBodyDomain;
+  /** Zero-based authored budget slot. */
+  subjectIndex: number;
+  /** Exact selected subject ceiling. */
+  maxSubjects: number;
+}
+
+/** Resolve only the wearable domain ids the production explicitly selected. */
+export const selectProductionWearableSoftBodies = (
+  domains: readonly IAutoMovieSoftBodyDomain[],
+  selected: readonly string[],
+): IAutoMovieProductionWearableSoftSelection[] => {
+  const available = new Map<string, IAutoMovieSoftBodyDomain>();
+  for (const domain of domains) {
+    if (domain.id.trim().length === 0 || available.has(domain.id))
+      throw new Error(
+        "Compiled soft-body domain ids must be non-blank and unique.",
+      );
+    available.set(domain.id, domain);
+  }
+  const seen = new Set<string>();
+  return selected.map((id, subjectIndex) => {
+    if (id.trim().length === 0 || seen.has(id))
+      throw new Error(
+        "Live wearable soft-body ids must be non-blank and unique.",
+      );
+    seen.add(id);
+    const domain = available.get(id);
+    if (domain === undefined)
+      throw new Error(
+        `Live wearable soft body "${id}" is absent from this compiled shot.`,
+      );
+    return { domain, subjectIndex, maxSubjects: selected.length };
+  });
+};
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -37,6 +177,7 @@ export interface IAutoMovieCompiledShotRuntime {
     renderer: THREE.WebGLRenderer,
     time: number,
     pass: AutoMovieGuidePass,
+    globalFrame?: number | null,
   ) => string;
   /** Release every texture this shot decoded, exactly once. */
   dispose: () => Promise<void>;
@@ -52,6 +193,12 @@ export const createCompiledShotRuntime = async (
    * describes it rather than guessing a curve nobody asked for.
    */
   delivery?: "none" | "acesFilmic",
+  runtime?: {
+    /** Final-byte dialogue timelines installed before capture. */
+    dialogue?: IAutoMovieProductionDialogueRuntime | null;
+    /** Explicitly admitted live moving soft-body domain ids. */
+    liveWearableSoftBodies?: readonly string[];
+  },
 ): Promise<IAutoMovieCompiledShotRuntime> => {
   const models = new Map(compiled.models.map((model) => [model.id, model]));
   const textures = createShotTextureCache();
@@ -162,6 +309,13 @@ export const createCompiledShotRuntime = async (
       (domain) => [domain.id, domain] as const,
     ),
   );
+  const liveSoftSelections = selectProductionWearableSoftBodies(
+    [...softBodyDomains.values()],
+    runtime?.liveWearableSoftBodies ?? [],
+  );
+  const liveSoftIds = new Set(
+    liveSoftSelections.map((selection) => selection.domain.id),
+  );
   const plantingDomains = new Map(
     (compiled.plantingDomains ?? []).map(
       (domain) => [domain.id, domain] as const,
@@ -202,6 +356,7 @@ export const createCompiledShotRuntime = async (
       throw new Error(
         `Soft furnishing "${furnishing.id}" hangs soft body "${furnishing.domain}", which this shot does not carry.`,
       );
+    if (liveSoftIds.has(domain.id)) return [];
     const lowered = lowerSoftFurnishing({ furnishing, domain, time: 0 });
     // A panel the engine refused to solve has no surface to draw. The refusal
     // is already on the analysis it returned, so drawing a still rectangle
@@ -266,7 +421,7 @@ export const createCompiledShotRuntime = async (
       performance,
     ]),
   );
-  const players = compiled.scene.nodes.flatMap((node) => {
+  const animations = compiled.scene.nodes.flatMap((node) => {
     const performance = performanceByNode.get(node.id);
     const motionId =
       performance === undefined ? node.motion : performance.motion;
@@ -280,10 +435,119 @@ export const createCompiledShotRuntime = async (
       throw new Error(`Animated model "${target.model.id}" has no skeleton.`);
     return [
       {
+        node: node.id,
+        target,
+        motion,
+        skeleton,
         startOffset: performance?.startOffset ?? 0,
         player: new AutoMoviePlayer(target.object, skeleton, motion),
       },
     ];
+  });
+
+  /** Reset and evaluate primary motion before any secondary domain reads it. */
+  const applyPrimaryState = (
+    time: number,
+    flushImportedRuntime: boolean,
+  ): void => {
+    for (const [id, transform] of stagedNodeTransforms) {
+      const object = nodeObjects.get(id)!;
+      object.position.copy(transform.position);
+      object.quaternion.copy(transform.quaternion);
+      object.scale.copy(transform.scale);
+    }
+    for (const item of built)
+      if (item.node.pose !== null && item.model.skeleton !== null)
+        applyPose(item.object, item.node.pose, item.model.skeleton);
+    for (const item of animations) {
+      const seconds = Math.max(0, time - item.startOffset);
+      if (flushImportedRuntime) item.player.update(seconds);
+      else
+        applyPose(
+          item.target.object,
+          sampleMotion(item.motion, seconds).pose,
+          item.skeleton,
+        );
+    }
+    articulation.restore();
+    applyObjectMotions(
+      compiled.shot.objectMotions,
+      time,
+      (node) => nodeObjects.get(node) ?? articulation.joints.get(node),
+    );
+    scene.scene.updateMatrixWorld(true);
+  };
+
+  /** Read one immutable moving-boundary snapshot from the evaluated scene. */
+  const wearableFrame = (step: number): IAutoMovieWearableSoftFrame => ({
+    step,
+    nodes: [...nodeObjects].map(([node, object]) => {
+      const worldPosition = object.getWorldPosition(new THREE.Vector3());
+      const worldRotation = object.getWorldQuaternion(new THREE.Quaternion());
+      return {
+        node,
+        worldPosition: vectorRecord(worldPosition),
+        worldRotation: quaternionRecord(worldRotation),
+      };
+    }),
+    actors: built.flatMap((item) => {
+      if (item.model.skeleton === null) return [];
+      const bones: IAutoMovieResolvedBone[] = [...item.object.bones].map(
+        ([bone, object]) => {
+          const worldPosition = object.getWorldPosition(new THREE.Vector3());
+          const worldRotation = object.getWorldQuaternion(
+            new THREE.Quaternion(),
+          );
+          return {
+            bone,
+            localRotation: quaternionRecord(object.quaternion),
+            worldPosition: vectorRecord(worldPosition),
+            worldRotation: quaternionRecord(worldRotation),
+          };
+        },
+      );
+      return [{ actor: item.node.id, bones }];
+    }),
+  });
+
+  /** Solve one selected wearable from absolute primary-motion samples. */
+  const solveLiveSoft = (
+    selection: IAutoMovieProductionWearableSoftSelection,
+    time: number,
+  ) => {
+    const step = softBodyStepAt(selection.domain, time);
+    if (step === null)
+      throw new Error(
+        `Live wearable soft body "${selection.domain.id}" cannot be sampled at a non-finite time.`,
+      );
+    const frames: IAutoMovieWearableSoftFrame[] = [];
+    for (let index = 0; index <= step; ++index) {
+      applyPrimaryState(
+        index * selection.domain.solver.fixedStepSeconds,
+        false,
+      );
+      frames.push(wearableFrame(index));
+    }
+    return simulateAutoMovieWearableSoftBody({
+      domain: selection.domain,
+      step,
+      frames,
+      subjectIndex: selection.subjectIndex,
+      maxSubjects: selection.maxSubjects,
+    });
+  };
+
+  const liveSoftObjects = liveSoftSelections.map((selection) => {
+    const solved = solveLiveSoft(selection, 0);
+    const object = buildSoftBodyObject({
+      surface: softBodySurfaceGeometry({
+        domain: selection.domain,
+        state: solved.state,
+      }),
+      status: "solved",
+    });
+    scene.scene.add(object.object);
+    return { selection, object, budget: solved.budget };
   });
 
   const cameraIndex = compiled.scene.cameras.findIndex(
@@ -300,27 +564,41 @@ export const createCompiledShotRuntime = async (
     renderer: THREE.WebGLRenderer,
     time: number,
     pass: AutoMovieGuidePass,
+    globalFrame: number | null = null,
   ): string => {
-    for (const [id, transform] of stagedNodeTransforms) {
-      const object = nodeObjects.get(id)!;
-      object.position.copy(transform.position);
-      object.quaternion.copy(transform.quaternion);
-      object.scale.copy(transform.scale);
-    }
+    const liveResults = liveSoftObjects.map((item) => ({
+      item,
+      solved: solveLiveSoft(item.selection, time),
+    }));
+    applyPrimaryState(time, true);
     camera.position.copy(stagedCamera.position);
     camera.quaternion.copy(stagedCamera.quaternion);
     camera.scale.copy(stagedCamera.scale);
-    for (const item of built)
-      if (item.node.pose !== null && item.model.skeleton !== null)
-        applyPose(item.object, item.node.pose, item.model.skeleton);
-    for (const item of players)
-      item.player.update(Math.max(0, time - item.startOffset));
-    articulation.restore();
-    applyObjectMotions(
-      compiled.shot.objectMotions,
-      time,
-      (node) => nodeObjects.get(node) ?? articulation.joints.get(node),
-    );
+    for (const result of liveResults) {
+      result.item.object.update({
+        surface: softBodySurfaceGeometry({
+          domain: result.item.selection.domain,
+          state: result.solved.state,
+        }),
+        status: "solved",
+      });
+      result.item.budget = result.solved.budget;
+    }
+    applyProductionDialogueMouth({
+      runtime: runtime?.dialogue ?? null,
+      frame: globalFrame,
+      actors: new Map(
+        built.map((item) => [
+          item.node.id,
+          {
+            object: item.object,
+            authored:
+              animations.find((animation) => animation.node === item.node.id)
+                ?.player.lastExpression ?? null,
+          },
+        ]),
+      ),
+    });
     // A flowing feature and a hung panel are solved at the second being drawn,
     // so a seek backwards shows what that second held rather than what the last
     // draw happened to leave behind.
@@ -462,7 +740,20 @@ export const createCompiledShotRuntime = async (
           `I${stats.visible.hero + stats.visible.near + stats.visible.far}/C${stats.culled}`,
       )
       .join(" ");
-    const runtimeStatus = [formationStatus, instanceStatus, effectStatus]
+    const liveSoftStatus = liveSoftObjects
+      .map(
+        ({ selection, budget }) =>
+          `S${selection.subjectIndex + 1}/${budget.maxSubjects}` +
+          ` A${budget.anchorsPerStep}/C${budget.capsulesPerStep}` +
+          ` B${budget.boundaryRecords}`,
+      )
+      .join(" ");
+    const runtimeStatus = [
+      formationStatus,
+      instanceStatus,
+      effectStatus,
+      liveSoftStatus,
+    ]
       .filter((value) => value.length !== 0)
       .join(" ");
     return (
@@ -482,8 +773,22 @@ export const createCompiledShotRuntime = async (
         water.spray.dispose();
       }
       for (const soft of softObjects) soft.object.dispose();
+      for (const soft of liveSoftObjects) soft.object.dispose();
       for (const planting of plantingObjects) planting.dispose();
       await textures.dispose();
     },
   };
 };
+
+const vectorRecord = (value: THREE.Vector3) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+});
+
+const quaternionRecord = (value: THREE.Quaternion) => ({
+  x: value.x,
+  y: value.y,
+  z: value.z,
+  w: value.w,
+});

@@ -16,6 +16,9 @@ export { rotationBetween } from "../math/rotationBetween";
  * subtree recompose walk, and the small quaternion/vector blends every solver
  * lowers its result through. One home so the analytic and iterative solvers
  * cannot drift apart on the basics.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Reads the exact world matrix on which ordered driver transforms operate.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Enforces the resolved-world lookup used throughout the transform chain.
  */
 export const readWorld = (
   world: Map<string, number[]>,
@@ -28,6 +31,12 @@ export const readWorld = (
   return matrix;
 };
 
+/**
+ * Read a required node-local transform or fail with its node identity.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Keeps each descendant's local transform explicit when rebuilding a world chain.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Supplies the required local step of the ordered transform lineage.
+ */
 export const readLocal = (
   localById: Map<string, IAutoMovieTransform>,
   id: string,
@@ -40,7 +49,12 @@ export const readLocal = (
   return local;
 };
 
-/** Recompute every descendant's world matrix from a node's updated world. */
+/**
+ * Recompute every descendant's world matrix from a node's updated world.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Reapplies parent-to-child matrix products after a driver changes an ancestor.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Preserves the ordered transform lineage through the complete descendant subtree.
+ */
 export const recompose = (
   id: string,
   world: Map<string, number[]>,
@@ -56,6 +70,12 @@ export const recompose = (
   }
 };
 
+/**
+ * Linearly interpolate two vectors by influence `t`.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Applies a driver's declared influence to a vector-valued transform result.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Implements deterministic influence blending for world-space driver output.
+ */
 export const blendVec = (
   a: IAutoMovieVector3,
   b: IAutoMovieVector3,
@@ -63,6 +83,12 @@ export const blendVec = (
 ): IAutoMovieVector3 =>
   Vector3.add(a, Vector3.scale(Vector3.subtract(b, a), t));
 
+/**
+ * Require a finite solver influence within the closed unit interval.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Rejects driver influence values that cannot define a bounded deterministic blend.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Enforces the legal influence domain of world-space driver evaluation.
+ */
 export const validateInfluence = (label: string, influence: number): void => {
   if (!Number.isFinite(influence))
     throw new Error(

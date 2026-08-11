@@ -48,6 +48,8 @@ const assertFiniteQuaternion = (q: IAutoMovieQuaternion): void => {
  * of `jointToQuaternion`'s `frame` map, so `jointToQuaternion(decompose(q,
  * axes, f), axes, f)` still round-trips.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Recovers the rig-basis semantic controls encoded by a solved quaternion.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Converts a solved quaternion back into the semantic controls consumed by the ROM graph.
  * @author Samchon
  */
 export const decomposeJointRotation = (

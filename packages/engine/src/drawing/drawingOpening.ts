@@ -10,6 +10,7 @@ import {
   polygonBounds,
   polygonDoubleArea,
 } from "../architecture/planarGeometry";
+import { autoMoviePlanarRegionFailure } from "../geometry/planarRegion";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import {
@@ -25,6 +26,9 @@ import {
  * fixed one: a constant density means the same arc yields the same chords on
  * every machine and every run, and a drawing's digest stays a property of the
  * design rather than of how large the arc happened to be.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Fixes every bulged opening arc to the same angular sampling density so repeated drawing derivations yield identical chords.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Sets the deterministic `PI / 16` subdivision used to convert profile arcs into canonical outline segments.
  */
 export const AUTOMOVIE_DRAWING_ARC_STEP = Math.PI / 16;
 
@@ -45,6 +49,8 @@ const BULGE_EPSILON = 1e-12;
  * bounding hull instead, so the size a schedule prints is the size the wall
  * kernel cuts.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Produces the ordered opening boundary used to draft the void and measure its scheduled size from the same authored profile.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Expands each nonzero bulge through the fixed arc step while preserving straight segments and a single copy of every shared vertex.
  * @author Samchon
  */
 export const autoMovieOpeningOutlinePoints = (
@@ -81,6 +87,8 @@ export const autoMovieOpeningOutlinePoints = (
  * void inside its face by the same hull, so a schedule that measured the arc
  * more finely would print a width no hole in the building has.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Reports the opening void's rounded nominal width and height from the same outline cut into its host face.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Reduces the canonical profile outline to its planar bounds and rounds both spans onto the drawing output grid.
  * @author Samchon
  */
 export const autoMovieOpeningExtent = (
@@ -104,6 +112,8 @@ export const autoMovieOpeningExtent = (
  * segment, which is a closed form and not a sampling of the chords the drawing
  * happens to draft.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Measures the true void area of a straight or arced opening for the quantity report rather than substituting its bounding box.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Combines the profile's signed shoelace area with each bulge's closed-form circular-segment area, then rounds the absolute result.
  * @author Samchon
  */
 export const autoMovieOpeningArea = (
@@ -130,6 +140,9 @@ export const autoMovieOpeningArea = (
  * described by this as a wide, thin opening, which is exactly what its own
  * bounding extents say about it — and why a size taken this way is labelled as
  * the leaf's rather than the hole's everywhere it is reported.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Supplies a filling element's rounded width and height when the opening itself has no measurable profile for its schedule row.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Measures width as the larger horizontal model span and height as the vertical span of the transformed fill corners.
  */
 export const autoMovieOpeningFillExtent = (
   corners: readonly IAutoMovieVector3[],
@@ -143,7 +156,12 @@ export const autoMovieOpeningFillExtent = (
   };
 };
 
-/** Whether any edge of a profile actually bulges. */
+/**
+ * Whether any edge of a profile actually bulges.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Detects when an opening drawing contains faceted arc linework that must be disclosed as an explicit drawing gap.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Classifies a profile as curved exactly when any edge carries a bulge outside the numerical zero tolerance.
+ */
 export const autoMovieOpeningHasArc = (
   profile: IAutoMovieOpeningProfile,
 ): boolean =>
@@ -156,6 +174,9 @@ export const autoMovieOpeningHasArc = (
  * sloping soffit resolves exactly here rather than being flattened to a
  * heading. `depth` walks along the face's own outward normal, which is how the
  * near and far faces of a separation of stated thickness are reached.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Places boundary-local drawing coordinates on the actual sloped or rotated face instead of flattening them into an assumed world plane.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Rotates a planar point through the face frame, advances it by the requested local depth, and translates it to the face origin.
  */
 export const autoMovieBoundaryFacePoint = (
   face: IAutoMovieBoundaryFace,
@@ -185,6 +206,8 @@ export const autoMovieBoundaryFacePoint = (
  * fan from one corner of an L-shaped soffit puts triangles outside the soffit,
  * and a cut through those would draw walls nobody built.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Turns a declared boundary face and thickness into the closed solid whose sections and silhouettes appear on architectural drawings.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Builds outward-wound side faces and ear-clipped near and far caps from the face outline at its two depth planes.
  * @author Samchon
  */
 export const autoMovieBoundaryShellTriangles = (
@@ -228,6 +251,8 @@ export const autoMovieBoundaryShellTriangles = (
  * is always the best one — so the loop always makes progress and there is no
  * unreachable branch pretending to handle an impossible polygon.
  *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Refuses a non-finite, degenerate, self-intersecting, or otherwise malformed planar polygon before it can create false drawing faces.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Applies the shared planar-region validity check, then deterministically ear-clips the accepted simple polygon into index triples.
  * @author Samchon
  */
 export const triangulateAutoMoviePolygon = (
@@ -241,6 +266,8 @@ export const triangulateAutoMoviePolygon = (
     throw new Error(
       `a polygon needs at least 3 corners to triangulate, but had ${polygon.length}`,
     );
+  const failure = autoMoviePlanarRegionFailure({ outer: polygon });
+  if (failure !== null) throw new Error(failure);
   const ring = polygon.map((_, index) => index);
   const triangles: Array<[number, number, number]> = [];
   while (ring.length > 3) {

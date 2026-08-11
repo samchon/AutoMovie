@@ -2,11 +2,11 @@
 
 ## 외피 Service Interface {#building-envelope-service-interface}
 
+### Service 입력과 연결 출력 {#building-envelope-service-input-output}
+
 <!-- @evidence requirements/building-exterior/services-and-envelope-interfaces.md#building-exterior-services-interfaces building, interior와 map utility 사이의 service port, route, penetration과 equipment를 규정한다. -->
 
 외피 service interface는 system identity, medium, unit, flow direction, building-side port, 상대 영역 port, route 또는 segment, boundary penetration과 phase state를 가진다. Building은 자기 envelope 안과 표면의 장비·route를 소유하고 interior와 map은 각자 경계 밖 network를 소유한다.
-
-### Service 입력과 연결 출력 {#building-envelope-service-input-output}
 
 <!-- @evidence requirements/building-exterior/services-and-envelope-interfaces.md#building-service-interior-interface interior shaft, riser, intake, exhaust와 exterior equipment를 같은 port identity로 연결한다. -->
 
@@ -26,11 +26,11 @@ Unmatched port, incompatible medium·unit·direction, duplicate connection, open
 
 ## 날씨, 표면 상태와 배수 {#building-envelope-weather-drainage-state}
 
+### Rainwater Path 입력과 출력 {#building-envelope-rainwater-path-input-output}
+
 <!-- @evidence requirements/building-exterior/weather-drainage-and-temporal-state.md#building-weather-drainage-state 비, 눈, 젖음, 오염, 손상과 배수 경로를 시간·phase 상태로 결속한다. -->
 
 Weather는 site-owned scenario이고 building은 그 scenario가 외피 surface, joint, opening, roof, balcony, equipment와 drain에 만드는 resolved state를 소유한다. Wetness, snow, dirt, corrosion, impact와 repair는 원래 material·element identity를 잃지 않는 temporal layer이며 appearance와 geometry change를 구분한다.
-
-### Rainwater Path 입력과 출력 {#building-envelope-rainwater-path-input-output}
 
 <!-- @evidence requirements/building-exterior/weather-drainage-and-temporal-state.md#building-rainwater-path roof, facade, balcony와 site receiving boundary를 잇는 rainwater path를 추적한다. -->
 
@@ -44,11 +44,11 @@ Weather는 site-owned scenario이고 building은 그 scenario가 외피 surface,
 
 ## 건물 통합 Water {#building-envelope-integrated-water-state}
 
+### Water 입력과 Map 접점 {#building-envelope-water-input-map-interface}
+
 <!-- @evidence requirements/building-exterior/building-integrated-water.md#building-integrated-water fountain, pool, channel, water wall과 지붕·외피에 결합된 물의 경계, state와 검증을 규정한다. -->
 
 건물 통합 water feature는 basin 또는 retaining boundary, building host space 또는 surface, water identity, static·flowing·simulated mode, level·depth 범위, inlet·outlet과 surface material을 가진다. 물의 solver나 자연 수계는 building이 소유하지 않고 별도 domain 또는 map water identity를 참조한다.
-
-### Water 입력과 Map 접점 {#building-envelope-water-input-map-interface}
 
 <!-- @evidence requirements/building-exterior/building-integrated-water.md#building-water-map-boundary building의 drain·overflow·intake가 map water와 shared port 및 datum으로 연결되게 한다. -->
 
@@ -62,11 +62,11 @@ Open retaining boundary, water below bed, negative depth, incompatible datum, so
 
 ## Site 배치와 Seam {#building-envelope-site-placement-seam}
 
+### Site 입력과 접합 출력 {#building-envelope-site-input-seam-output}
+
 <!-- @evidence requirements/building-exterior/site-placement-and-orientation.md#building-site-placement 건물의 boundary, setback, ground contact, access, 주변 context와 map seam을 site-owned 배치에 결속한다. -->
 
 Site placement는 building root transform, parcel 또는 authored extent, setback rule, ground-contact surface, access port, north 또는 project orientation, terrain·road·utility·water relation과 read-only context revision을 가진다. Building shape와 site placement는 별도 권한이지만 같은 world result를 생성한다.
-
-### Site 입력과 접합 출력 {#building-envelope-site-input-seam-output}
 
 <!-- @evidence requirements/building-exterior/site-placement-and-orientation.md#building-site-map-seams terrain, pad, foundation, access와 utility가 만나는 seam의 우선관계와 허용오차를 출력한다. -->
 

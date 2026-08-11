@@ -1,12 +1,43 @@
 import { CANONICAL_FACE_POSITIONS } from "./canonicalFace";
 import { IForgeMeshPart } from "./hairShell";
 
-/** One eyeball: its mesh plus the fit the renderer colors the iris from. */
+/**
+ * One eyeball: its mesh plus the fit the renderer colors the iris from.
+ *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
+ */
 export interface IForgeEyeShell extends IForgeMeshPart {
-  /** Eyeball center (xyz, meters). */
+  /**
+   * Eyeball center (xyz, meters).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+   */
   center: [number, number, number];
 
-  /** Eyeball radius (meters). */
+  /**
+   * Eyeball radius (meters).
+   *
+   * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+   * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+   */
   radius: number;
 }
 
@@ -61,6 +92,13 @@ const fitEye = (face: number[], ring: number[]): IForgeEyeShell => {
  * does. The returned `center` is the FRONT pole: the renderer colors iris/pupil
  * by angular distance from it.
  *
+ * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry, controls, or bounded derivation facts without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
  * @author Samchon
  */
 export const buildEyeShells = (

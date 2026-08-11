@@ -9,9 +9,26 @@ import { Vector3 } from "../math/Vector3";
 import { channelKey } from "../resolve/channel";
 import { sampleClip } from "../resolve/sampleClip";
 
-/** A camera's resolved world placement (position + rotation). */
+/**
+ * A camera's resolved world placement (position + rotation).
+ *
+ * @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding Carries the world position and rotation resolved for one addressed camera at one sample time as a single projection input.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding IAutoMovieResolvedCamera realizes explicit camera spatial binding: A camera's resolved world placement (position + rotation).
+ */
 export interface IAutoMovieResolvedCamera {
+  /**
+   * Camera origin in world space.
+   *
+   * @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding Stores the addressed camera's sampled world origin used by view-space projection and frustum tests.
+   * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding IAutoMovieResolvedCamera.position realizes explicit camera spatial binding: Camera origin in world space.
+   */
   position: IAutoMovieVector3;
+  /**
+   * Camera orientation in world space.
+   *
+   * @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding Stores the same addressed camera's sampled world orientation that defines its local viewing basis.
+   * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding IAutoMovieResolvedCamera.rotation realizes explicit camera spatial binding: Camera orientation in world space.
+   */
   rotation: IAutoMovieQuaternion;
 }
 
@@ -19,6 +36,12 @@ export interface IAutoMovieResolvedCamera {
  * The camera's world placement at `time`: static (its base transform), or
  * sampled from its `cameraMotion` clip. A move missing a track falls back to
  * the static component.
+ *
+ * @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding Resolves position and rotation tracks for the named camera at the requested time and falls back component-wise to that camera's staged transform when a track is absent.
+ * @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Resolves the addressed camera's actual world transform at the sample time from its motion tracks and staged fallback, independent of framing intent metadata.
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-sampling Samples the addressed camera-motion clip at the caller's film time, providing camera translation and rotation for the same instant used by moving-target consumers.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding resolveCameraAt realizes explicit camera spatial binding: The camera's world placement at `time`: static (its base transform), or sampled from its `cameraMotion` clip. A move missing a track falls back to the static component.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Provides the camera half of the same-time state pair by sampling translation and rotation at the addressed film instant.
  */
 export const resolveCameraAt = (
   base: { translation: IAutoMovieVector3; rotation: IAutoMovieQuaternion },
@@ -59,6 +82,13 @@ export const resolveCameraAt = (
  * widened by `aspect`. Behind the camera (`depth ≤ 0`) the NDC is unbounded:
  * the caller reads `depth` (and the near/far/rectangle bounds) to decide, this
  * never clamps.
+ *
+ * @evidence requirements/camera/validation.md#camera-hand-computable-geometry Converts a world point to normalized device coordinates and positive camera depth from explicit FOV and aspect inputs.
+ * @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Computes image position and depth from the resolved world camera transform and world point rather than from shot labels or intended framing.
+ * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-conventions Applies an inverse-quaternion view transform, local negative-Z depth, vertical half-FOV, and width-to-height aspect before returning unclamped NDC coordinates.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-computable-geometry-results projectToNdc realizes independently computable image geometry: Project a world point into the camera's normalized device coordinates. The camera looks down its local −Z (glTF), so `depth = −localZ` is positive in front of the lens; NDC is `local / (depth · tan(fovY/2))`, horizontally widened by `aspect`. Behind the camera (`depth ≤ 0`) the NDC is unbounded: the caller reads `depth` (and the near/far/rectangle bounds) to decide, this never clamps.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-lens-basis-consistency Fixes perspective projection to the engine's inverse-quaternion, negative-Z-forward, vertical-FOV, and width-to-height aspect convention.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Uses the resolved camera origin and orientation as the sole spatial authority for this point projection.
  */
 export const projectToNdc = (
   camera: IAutoMovieResolvedCamera,
@@ -89,6 +119,17 @@ export const projectToNdc = (
  * **neither end** of the subject is on screen while its middle fills the frame.
  * Testing chosen points — the base, the top, the midpoint — reports such a
  * subject absent; clipping finds it.
+ *
+ * @evidence requirements/camera/validation.md#camera-hand-computable-geometry intersectsPerspectiveFrustumSegment reduces segment visibility to explicit perspective-plane clipping that can be checked independently.
+ * @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Clips the world segment against half-spaces derived from the resolved camera transform and current lens geometry, not an authored composition claim.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-frustum-boundaries Treats equality with every near, far, and side half-space as visible, so a segment touching a closed frustum boundary intersects.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Uses the declared near and far planes in the exact segment clip instead of sampling selected points or ignoring depth.
+ * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-conventions Builds six closed camera-local half-spaces from inverse-quaternion rotation, negative-Z depth, vertical half-FOV, and width-to-height aspect.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-computable-geometry-results intersectsPerspectiveFrustumSegment realizes independently computable image geometry: Whether a world-space segment intersects an exact perspective-camera frustum. The frustum is the intersection of six half-spaces, so it is convex and the segment can be clipped against them one plane at a time in its own parameter. Each plane is linear in camera-local coordinates, which makes every crossing exact rather than sampled. That exactness is the reason this exists: a close shot frames the band between roughly 0.71 and 0.99 of a subject's height, so **neither end** of the subject is on screen while its middle fills the frame. Testing chosen points — the base, the top, the midpoint — reports such a subject absent; clipping finds it.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Clips the complete segment against all six closed frustum half-spaces, preserving boundary contact as visible geometry.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Evaluates only this segment against the current near, far, and side planes; it does not claim camera-body clearance or swept-motion safety.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-lens-basis-consistency Uses the declared perspective basis for every segment-plane crossing and preserves equality with a near, far, or image-edge plane.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Derives every segment-frustum plane test from the supplied resolved camera state and current geometric bounds.
  */
 export const intersectsPerspectiveFrustumSegment = (props: {
   camera: IAutoMovieResolvedCamera;
@@ -232,6 +273,17 @@ const segmentMeetsBox = (
  * whenever the frame holds its flank instead of its middle, and present
  * whenever that one point is on screen no matter where the rest of the unit
  * stands.
+ *
+ * @evidence requirements/camera/validation.md#camera-hand-computable-geometry intersectsPerspectiveFrustumBox tests all transformed box corners against explicit frustum planes, yielding a reproducible geometry result.
+ * @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Tests the current world box and frustum as two resolved geometric bodies, without substituting subject labels or framing intent.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-frustum-boundaries Preserves a box or frustum edge that merely touches the other's closed planes or slabs as an intersection.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Applies the current near and far distances while clipping both box edges and frustum edges, covering containment in either direction.
+ * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-conventions Constructs negative-Z near and far corners from vertical half-FOV and aspect, rotates them by the camera quaternion, and clips both closed bodies in one convention.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-computable-geometry-results intersectsPerspectiveFrustumBox realizes independently computable image geometry: Whether a world-space axis-aligned box intersects an exact perspective-camera frustum. Both bodies are convex, and two convex polyhedra meet exactly when an edge of one meets the other: every vertex of the intersection is a vertex of one body lying inside the other, or a crossing of one body's edge with the other's face, and each of those puts some edge of one body inside the other. So the twelve box edges are clipped against the frustum's six half-spaces, and the twelve frustum edges against the box's three slabs. Neither half alone is the answer: a box small enough to sit inside the frame is found only by the first, and a frustum that pierces a mass far wider than itself — a camera standing inside a crowd, or above one — only by the second. This is what a required subject with a real extent is judged against. A segment through one point cannot answer for a mass: it reports a crowd absent whenever the frame holds its flank instead of its middle, and present whenever that one point is on screen no matter where the rest of the unit stands.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Tests both convex bodies' closed edges, preventing containment and tangent contact from being culled as invisible.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Evaluates only the current world box against the current frustum and clipping range; it does not evaluate clearance or a swept interval.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-lens-basis-consistency Carries the same optical axis, quaternion order, FOV, aspect, and closed boundary convention through frustum-box intersection.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Builds the frustum body from the supplied resolved camera state before testing both box and frustum edges.
  */
 export const intersectsPerspectiveFrustumBox = (props: {
   camera: IAutoMovieResolvedCamera;
@@ -271,6 +323,17 @@ export const intersectsPerspectiveFrustumBox = (props: {
  * Whether a world-space sphere intersects an exact perspective-camera frustum.
  * Side-plane distances include plane normalization, so callers must not
  * approximate the radius by padding projected NDC coordinates.
+ *
+ * @evidence requirements/camera/validation.md#camera-hand-computable-geometry intersectsPerspectiveFrustumSphere keeps camera geometry hand-computable: Whether a world-space sphere intersects an exact perspective-camera frustum. Side-plane distances include plane normalization, so callers must not approximate the radius by padding projected NDC coordinates.
+ * @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Measures the current world-space sphere against planes derived from the resolved camera origin and orientation, independent of authored intent.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-frustum-boundaries Keeps a sphere tangent to a near, far, or normalized side plane visible by rejecting only strict separation from the closed frustum.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Tests the sphere's radius-adjusted depth against the declared near and far distances before its side-plane bounds.
+ * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-conventions Transforms the sphere center by the inverse camera quaternion, reads positive depth along negative Z, and tests normalized FOV-and-aspect side planes as closed boundaries.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-computable-geometry-results intersectsPerspectiveFrustumSphere realizes independently computable image geometry: Whether a world-space sphere intersects an exact perspective-camera frustum. Side-plane distances include plane normalization, so callers must not approximate the radius by padding projected NDC coordinates.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Uses normalized plane distances and strict outside tests so exact sphere-boundary contact remains render-visible.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Evaluates only the current sphere bound against the current frustum and clipping range; it does not claim clearance or swept-motion coverage.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-lens-basis-consistency Applies the same optical axis, transform order, vertical FOV, aspect, depth, and closed-boundary convention to spherical bounds.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Transforms the sphere through the supplied resolved camera state before applying current depth and side-plane bounds.
  */
 export const intersectsPerspectiveFrustumSphere = (props: {
   camera: IAutoMovieResolvedCamera;

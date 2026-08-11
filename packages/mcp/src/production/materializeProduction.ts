@@ -37,33 +37,88 @@ import {
   AutoMovieModelArchetypeRegistry,
 } from "./productionArchetypes";
 
-/** Slots per independently regenerated and culled runtime chunk. */
+/**
+ * Slots per independently regenerated and culled runtime chunk.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the formation regeneration batch size to ordinary typed compilers and renderer hosts.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Pins formation chunking as deterministic code policy rather than an MCP authoring choice.
+ */
 export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
 
-/** Slots per independently regenerated general-instance chunk. */
+/**
+ * Slots per independently regenerated general-instance chunk.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the general-instance chunk bound available to typed source planning and allocation code.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes instance regeneration granularity in the deterministic compiler, outside the MCP tool contract.
+ */
 export const AUTOMOVIE_INSTANCE_CHUNK_SIZE = 1_024;
 
-/** Matrix bytes reserved by one slot in one LOD instance buffer. */
+/**
+ * Matrix bytes reserved by one slot in one LOD instance buffer.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary typed budget code account for one slot's matrix storage at every LOD.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives byte estimates from deterministic buffer layout instead of MCP-side approximation.
+ */
 export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
   16 * Float32Array.BYTES_PER_ELEMENT;
 
 export { productionRuntimeModelId, productionRuntimeSkeletonId };
 
-/** Compiler-resolved external appearance and deterministic proxy semantics. */
+/**
+ * Compiler-resolved external appearance and deterministic proxy semantics.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary production source a typed binding between an imported appearance and its proved runtime proxies.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries compiler-sealed external-model semantics as deterministic data rather than MCP-authored asset state.
+ */
 export interface IAutoMovieExternalModelRuntimeBinding {
-  /** Manifest-owned final render asset. */
+  /**
+   * Manifest-owned final render asset.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the manifest-owned render asset path to typed model materialization code.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Uses the compiler's final asset identity instead of allowing MCP to select an appearance file.
+   */
   asset: string;
-  /** Fixed normalization profile proved by ingest. */
+  /**
+   * Fixed normalization profile proved by ingest.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary consumers retain the ingest-proved normalization profile in typed source.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Preserves deterministic ingest normalization without exposing profile authoring through MCP.
+   */
   profile: NonNullable<IAutoMovieModel["imported"]>["profile"];
-  /** Exact model LOD identities retained for host selection. */
+  /**
+   * Exact model LOD identities retained for host selection.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes exact imported-model LOD identities available to typed host selection logic.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Leaves deterministic LOD selection to renderer code rather than MCP asset negotiation.
+   */
   lod: NonNullable<IAutoMovieModel["imported"]>["lod"];
-  /** Compiler-sealed model, sidecar and proxy digest closure. */
+  /**
+   * Compiler-sealed model, sidecar and proxy digest closure.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Provides ordinary source consumers the sealed digest ledger for model, sidecar, and proxy bytes.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps asset closure tied to deterministic compiler evidence, not MCP session attachments.
+   */
   assets: NonNullable<IAutoMovieModel["imported"]>["assets"];
-  /** Ingest/VRM-owned normalized bone mapping. */
+  /**
+   * Ingest/VRM-owned normalized bone mapping.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Carries the normalized humanoid-bone map into ordinary typed runtime assembly.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Accepts ingest-owned rig mapping as deterministic input instead of an MCP-authored remap.
+   */
   humanoidBones: NonNullable<IAutoMovieModel["imported"]>["humanoidBones"];
-  /** Exact collision primitive used by engine geometry and mass queries. */
+  /**
+   * Exact collision primitive used by engine geometry and mass queries.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the exact collision proxy to typed engine geometry and mass-query code.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Binds physics semantics to compiler-proved deterministic geometry rather than MCP appearance data.
+   */
   collision: IAutoMovieGeneratedCollisionProxy;
-  /** Exact measurement envelope used by projection and distance queries. */
+  /**
+   * Exact measurement envelope used by projection and distance queries.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Supplies ordinary projection and distance code with the imported model's measured envelope.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Uses an ingest-proved deterministic measurement proxy instead of MCP visual inference.
+   */
   measurement: IAutoMovieGeneratedMeasurementProxy;
 }
 
@@ -74,6 +129,9 @@ export interface IAutoMovieExternalModelRuntimeBinding {
  * drop unproved semantic profiles, replace visible primitive parts with the
  * registered collision proxy for engine semantics, and bind the final
  * manifest-owned mesh plus its closed byte ledger.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Materializes authored model recipes into typed runtime models ordinary production code can inspect and execute.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs proxy replacement and asset-ledger binding deterministically in compilation, not through MCP authoring.
  */
 export const materializeProductionModels = (
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
@@ -101,11 +159,19 @@ export const materializeProductionModels = (
  * The grounding is optional, so an ordinary design is already one of these and
  * places every member at its anchor's height, which is what a formation with no
  * declared terrain under it has always done.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary TypeScript pair a compact formation design with its optional grounding terrain.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encodes grounding as deterministic compiler input rather than an MCP placement operation.
  */
 export type IAutoMovieGroundedFormationDesign = IAutoMovieFormationDesign &
   IAutoMovieFormationGrounding;
 
-/** Materialize one compact formation into ordered world-space slots. */
+/**
+ * Materialize one compact formation into ordered world-space slots.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Expands a typed compact formation into ordered world-space slots for direct source inspection.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Computes the full slot sequence deterministically outside the MCP tool surface.
+ */
 export const materializeFormationSlots = (
   formation: IAutoMovieGroundedFormationDesign,
 ): IAutoMovieFormationSlot[] =>
@@ -113,13 +179,23 @@ export const materializeFormationSlots = (
     materializeFormationSlot(formation, slot),
   );
 
-/** Regenerate one exact formation slot in constant memory. */
+/**
+ * Regenerate one exact formation slot in constant memory.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows ordinary renderer code to regenerate one addressed formation member without storing every node.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives a slot from formation data and index deterministically, with no MCP-maintained member state.
+ */
 export const materializeFormationSlot = (
   formation: IAutoMovieGroundedFormationDesign,
   slot: number,
 ): IAutoMovieFormationSlot => formationSlot(formation, slot);
 
-/** Compiler-owned formation inventory passed to deterministic shot source. */
+/**
+ * Compiler-owned formation inventory passed to deterministic shot source.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives typed shot compilation an ordered inventory of materialized formation slots.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Builds formation inventory through deterministic source compilation rather than MCP scene assembly.
+ */
 export const materializeFormationInventory = (
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
   surfaces: IAutoMovieWorldDesign["surfaces"] = [],
@@ -135,7 +211,12 @@ export const materializeFormationInventory = (
       ]),
   );
 
-/** Compile every formation into bounded chunks rather than anonymous nodes. */
+/**
+ * Compile every formation into bounded chunks rather than anonymous nodes.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary pipeline code compile all authored formations into typed bounded-chunk descriptors.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Preserves compact deterministic formation regeneration instead of exposing anonymous-node creation through MCP.
+ */
 export const materializeCompiledFormationInventory = (
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
@@ -161,7 +242,12 @@ export const materializeCompiledFormationInventory = (
       ]),
   );
 
-/** Compile one formation into independently regenerable chunk metadata. */
+/**
+ * Compile one formation into independently regenerable chunk metadata.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Produces typed chunk metadata for one ordinary source-authored formation without expanding its members.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Seals bounds, byte costs, and regeneration identity in deterministic compiler output outside MCP.
+ */
 export const materializeCompiledFormation = (
   formation: IAutoMovieFormationDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
@@ -265,7 +351,12 @@ export const materializeCompiledFormation = (
   };
 };
 
-/** Regenerate one exact non-formation instance in constant memory. */
+/**
+ * Regenerate one exact non-formation instance in constant memory.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary renderer code regenerate one exact member of a typed general instance set.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Computes indexed instance transforms deterministically without storing or editing them through MCP.
+ */
 export const materializeInstanceSlot = (
   instanceSet: IAutoMovieInstanceSetDesign,
   world: Pick<IAutoMovieWorldDesign, "routes">,
@@ -452,7 +543,12 @@ const seededInstanceRotation = (
       });
 };
 
-/** Materialize one general instance set for direct inspection. */
+/**
+ * Materialize one general instance set for direct inspection.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Expands one typed instance-set design into ordered slots for ordinary inspection and validation.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs direct materialization as deterministic package computation, not an MCP scene-authoring feature.
+ */
 export const materializeInstanceSlots = (
   instanceSet: IAutoMovieInstanceSetDesign,
   world: Pick<IAutoMovieWorldDesign, "routes">,
@@ -461,7 +557,12 @@ export const materializeInstanceSlots = (
     materializeInstanceSlot(instanceSet, world, slot),
   );
 
-/** Compile every world instance set into bounded regenerable chunks. */
+/**
+ * Compile every world instance set into bounded regenerable chunks.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Compiles every typed world instance set into a source-visible bounded inventory.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Creates deterministic chunk plans for world instances without widening MCP into object authoring.
+ */
 export const materializeCompiledInstanceSetInventory = (
   world: IAutoMovieWorldDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
@@ -486,7 +587,12 @@ export const materializeCompiledInstanceSetInventory = (
       ]),
   );
 
-/** Compile one world instance set without expanding its full slot inventory. */
+/**
+ * Compile one world instance set without expanding its full slot inventory.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Produces the typed regenerable chunk contract for one ordinary source-authored instance set.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Calculates instance bounds and storage budgets deterministically before MCP review or capture.
+ */
 export const materializeCompiledInstanceSet = (
   instanceSet: IAutoMovieInstanceSetDesign,
   world: IAutoMovieWorldDesign,
@@ -614,6 +720,9 @@ export const materializeCompiledInstanceSet = (
  *
  * Anonymous identities remain derived from formation id and slot index and
  * never become a large scene-node array.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Assembles authored models, hero nodes, and compact populations into the typed compiled shot ordinary code executes.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives anonymous identities and choreography deterministically in compilation rather than through MCP scene mutation.
  */
 export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;
@@ -756,7 +865,12 @@ export const materializeCompiledShot = (props: {
   };
 };
 
-/** Materialize shot-local cues into compiler-owned deterministic streams. */
+/**
+ * Materialize shot-local cues into compiler-owned deterministic streams.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Converts shot-local authored cues into typed effect streams ordinary engine code can sample.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Materializes effect timing and payloads deterministically before MCP exposes review evidence.
+ */
 export const materializeCompiledEffects = (props: {
   contract: IAutoMovieShotContract;
   world?: IAutoMovieWorldDesign;

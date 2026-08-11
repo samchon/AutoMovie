@@ -2,13 +2,13 @@
 
 ## Derivation activity boundary {#evp-derivation-activity-boundary}
 
+### Generated output receipt {#evp-generated-output-receipt}
+
 <!-- @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-generation-transformation-history 생성, 변환, 선택, 결합과 게시 단계를 독립 activity와 output identity로 정밀화한다. -->
 
 각 생성, 변환, 선택, composition과 publication은 하나의 attempt identity, ordered input set, effective settings, actor roles와 output set을 가져야 한다. 한 activity의 output은 그 activity completion에만 연결되고 여러 단계를 한 receipt로 압축하여 중간 parent와 loss를 숨겨서는 안 된다.
 
 Activity graph는 downstream entity에서 모든 contributing input까지 역방향으로 탐색 가능해야 한다. Unknown activity type이나 missing parent를 만나면 graph를 보존하되 complete derivation 판정을 중단해야 한다.
-
-### Generated output receipt {#evp-generated-output-receipt}
 
 <!-- @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-generated-output-record 규칙 기반 또는 생성형 output의 provider, model, 입력, control, terms와 digest를 결속한다. -->
 

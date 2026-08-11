@@ -33,13 +33,33 @@ import {
 const MAGNUS_A = 17.62;
 const MAGNUS_B = 243.12;
 
-/** One homogeneous layer of an envelope assembly. */
+/**
+ * One homogeneous layer of an envelope assembly.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieEnvelopeLayer` declares one material thickness and conductivity used to calculate envelope thermal resistance.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The layer record contributes one explicit `thickness / conductivity` resistance to a resolved assembly load path.
+ */
 export interface IAutoMovieEnvelopeLayer {
-  /** Stable layer identity within the assembly. */
+  /**
+   * Stable layer identity within the assembly.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment The layer `id` keeps each authored material stratum separately traceable in the envelope build-up.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This stable key makes duplicate layers a deterministic validation error within their assembly.
+   */
   id: string;
-  /** Thickness in metres; strictly positive. */
+  /**
+   * Thickness in metres; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `thickness` states the material depth through which the envelope heat load passes.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The positive metre value is divided by conductivity to obtain this layer's thermal resistance.
+   */
   thickness: number;
-  /** Thermal conductivity in W/(m*K); strictly positive. */
+  /**
+   * Thermal conductivity in W/(m*K); strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `conductivity` declares how readily this authored layer transmits heat instead of selecting a hidden material table.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The positive W/(m*K) operand closes the steady one-dimensional resistance calculation for the layer.
+   */
   conductivity: number;
 }
 
@@ -50,63 +70,191 @@ export interface IAutoMovieEnvelopeLayer {
  * table of conductivities would be content this product does not sell; the
  * one-dimensional steady-state resistance network that turns them into a
  * transmittance is the capability it does.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieEnvelopeAssembly` binds one boundary area to its films, ordered layers, and overlay position for thermal-load evidence.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The assembly supplies the complete series-resistance path and area multiplier used by the resolved environmental calculation.
  */
 export interface IAutoMovieEnvelopeAssembly {
-  /** Stable assembly identity within the request. */
+  /**
+   * Stable assembly identity within the request.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment The assembly `id` identifies which envelope build-up contributes each reported U-value and sample.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This key also resolves linear bridges to their owning resistance path and rejects ambiguous duplicates.
+   */
   id: string;
-  /** Building boundary this assembly realizes. */
+  /**
+   * Building boundary this assembly realizes.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `boundary` names the building enclosure element whose environmental performance this assembly realizes.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The boundary label keeps the calculated load attributable to the resolved architectural path rather than only to a solver id.
+   */
   boundary: string;
-  /** Layers from the interior face outward; at least one. */
+  /**
+   * Layers from the interior face outward; at least one.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `layers` explicitly declare the material sequence whose combined resistance limits heat flow.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The nonempty ordered list is validated and reduced to the conductive portion of total assembly resistance.
+   */
   layers: readonly IAutoMovieEnvelopeLayer[];
-  /** Interior surface film resistance in m^2*K/W; strictly positive. */
+  /**
+   * Interior surface film resistance in m^2*K/W; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `interiorFilm` declares the room-side surface resistance used in both heat flow and condensation risk.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This positive boundary resistance enters the U-value denominator and the interior-surface temperature calculation.
+   */
   interiorFilm: number;
-  /** Exterior surface film resistance in m^2*K/W; strictly positive. */
+  /**
+   * Exterior surface film resistance in m^2*K/W; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `exteriorFilm` states the outside surface resistance completing the declared envelope path.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The exterior boundary term is summed with layer and interior resistances before transmittance is inverted.
+   */
   exteriorFilm: number;
-  /** Area in m^2; strictly positive. */
+  /**
+   * Area in m^2; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Assembly `area` declares how much enclosure participates in the fabric heat load.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The square-metre operand scales U-value and temperature difference into this assembly's watt contribution.
+   */
   area: number;
-  /** Representative world point on the interior face, for the field overlay. */
+  /**
+   * Representative world point on the interior face, for the field overlay.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Assembly `position` locates the calculated interior-surface result for a deterministic field overlay.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The representative world point becomes the sample coordinate paired with this assembly's surface temperature.
+   */
   position: IAutoMovieVector3;
 }
 
-/** One linear thermal bridge along an assembly. */
+/**
+ * One linear thermal bridge along an assembly.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieEnvelopeBridge` declares one linear bypass whose extra heat load must not disappear into planar U-values.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The bridge links a length and linear transmittance to a resolved assembly before its watt contribution is added.
+ */
 export interface IAutoMovieEnvelopeBridge {
-  /** Stable bridge identity within the request. */
+  /**
+   * Stable bridge identity within the request.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment The bridge `id` keeps each linear thermal path individually attributable in validation and settings evidence.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This identity makes duplicate bridge declarations explicit before their loads are summed.
+   */
   id: string;
-  /** Assembly the bridge runs along. */
+  /**
+   * Assembly the bridge runs along.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `assembly` names the envelope build-up along which this extra thermal path runs.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The foreign key is resolved against declared assembly ids so an orphaned bridge cannot enter the load total.
+   */
   assembly: string;
-  /** Linear thermal transmittance in W/(m*K); at or above zero. */
+  /**
+   * Linear thermal transmittance in W/(m*K); at or above zero.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `linearTransmittance` declares the bridge's additional heat-flow rate per metre and kelvin.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The nonnegative psi-value is multiplied by bridge length and temperature difference for its bounded load.
+   */
   linearTransmittance: number;
-  /** Length in metres; strictly positive. */
+  /**
+   * Length in metres; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Bridge `length` states how far the declared linear heat path extends.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The positive metre measure scales psi into a conductance before exterior-interior temperature difference is applied.
+   */
   length: number;
 }
 
-/** The indoor air an envelope is analysed against. */
+/**
+ * The indoor air an envelope is analysed against.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieIndoorCondition` declares the room temperature and moisture state against which envelope performance is judged.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The condition supplies the indoor side of heat-flow, dew-point, and surface-condensation calculations.
+ */
 export interface IAutoMovieIndoorCondition {
-  /** Dry-bulb air temperature in degrees Celsius. */
+  /**
+   * Dry-bulb air temperature in degrees Celsius.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `airTemperature` states the authored indoor dry-bulb condition rather than inferring comfort from geometry.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The Celsius input forms the warm boundary for fabric loss, surface temperature, and Magnus dew-point evaluation.
+   */
   airTemperature: number;
-  /** Relative humidity as a `[0, 1]` fraction. */
+  /**
+   * Relative humidity as a `[0, 1]` fraction.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `relativeHumidity` declares the indoor moisture fraction used to test condensation risk.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The bounded fraction combines with air temperature in the Magnus equation to produce the comparison dew point.
+   */
   relativeHumidity: number;
 }
 
-/** Everything one envelope study is configured with. */
+/**
+ * Everything one envelope study is configured with.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieEnvelopeRequest` binds one revision's indoor and outdoor conditions to explicit assemblies, bridges, and performance targets.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The request closes the input network used to produce paired thermal and moisture runs from the same envelope state.
+ */
 export interface IAutoMovieEnvelopeRequest {
-  /** Stable study identity; each produced run suffixes its own domain. */
+  /**
+   * Stable study identity; each produced run suffixes its own domain.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment The envelope request `id` identifies the shared study from which its thermal and moisture runs are derived.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This base key is deterministically suffixed by domain so paired environmental outcomes stay related but distinct.
+   */
   id: string;
-  /** Logical space the envelope encloses. */
+  /**
+   * Logical space the envelope encloses.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `subject` names the logical interior whose enclosure load and condensation evidence are reported.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The label is preserved across both domain runs so their resolved outcomes remain attributable to one space.
+   */
   subject: string;
-  /** Design revision being read. */
+  /**
+   * Design revision being read.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `inputRevision` records the exact design state whose envelope capacity was calculated.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The revision enters both sealed records so a later rollup can reject superseded environmental evidence.
+   */
   inputRevision: string;
-  /** Read-only external world. */
+  /**
+   * Read-only external world.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `context` supplies the validated external temperature state used as the envelope's outdoor boundary.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The read-only environment is resolved by instant and contributes no undeclared climate assumptions to the load network.
+   */
   context: IAutoMovieEnvironmentContext;
-  /** Instant supplying the exterior boundary condition, or null. */
+  /**
+   * Instant supplying the exterior boundary condition, or null.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `instant` selects the declared exterior condition, while null leaves the unavailable boundary explicit.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The nullable key controls context lookup and makes both domain runs `not-run` when no outside temperature is resolved.
+   */
   instant: string | null;
-  /** Indoor air. */
+  /**
+   * Indoor air.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `indoor` contributes the explicitly authored temperature and humidity against which the enclosure is tested.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This condition feeds both the thermal gradient and the dew-point comparison in the resolved scenario.
+   */
   indoor: IAutoMovieIndoorCondition;
-  /** Envelope build-ups; at least one. */
+  /**
+   * Envelope build-ups; at least one.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `assemblies` enumerate every planar envelope path included in fabric loss and surface-risk results.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The nonempty collection is validated, solved individually, sampled spatially, and summed into environmental capacity metrics.
+   */
   assemblies: readonly IAutoMovieEnvelopeAssembly[];
-  /** Linear thermal bridges. */
+  /**
+   * Linear thermal bridges.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `bridges` list the authored linear losses added outside the planar assembly calculation.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract Each bridge is resolved to an assembly and contributes `psi * length * deltaT` to the total heat load.
+   */
   bridges: readonly IAutoMovieEnvelopeBridge[];
-  /** Targets the production declares for this study. */
+  /**
+   * Targets the production declares for this study.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Envelope `targets` declare the thermal and moisture thresholds the authored design is expected to meet.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The shared target list is validated once and resolved against metrics in each of the two domain runs.
+   */
   targets: readonly IAutoMovieAnalysisTarget[];
 }
 
@@ -141,6 +289,8 @@ export interface IAutoMovieEnvelopeRequest {
  * runs come back `not-run` naming the missing input rather than assuming a
  * temperature nobody declared.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `analyzeAutoMovieEnvelope` computes steady fabric and bridge loads plus surface condensation risk, and names transient, vapour, and solar claims it does not solve.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The solver validates the resolved envelope network, evaluates resistance and Magnus equations, and seals separate thermal and moisture results over identical settings.
  * @author Samchon
  */
 export const analyzeAutoMovieEnvelope = (props: {
@@ -441,25 +591,75 @@ export const analyzeAutoMovieEnvelope = (props: {
   };
 };
 
-/** Everything one ventilation study is configured with. */
+/**
+ * Everything one ventilation study is configured with.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `IAutoMovieSpaceAirRequest` declares one zone's volume, outdoor-air supply, occupancy, carbon-dioxide sources, and targets without implying a flow field.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The request closes the scalar ventilation network used for air-change, per-person flow, and well-mixed concentration outcomes.
+ */
 export interface IAutoMovieSpaceAirRequest {
-  /** Stable run identity. */
+  /**
+   * Stable run identity.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment The air request `id` gives one ventilation calculation a stable run identity.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract This key anchors the sealed air-domain result and its deterministic diagnostics.
+   */
   id: string;
-  /** Logical space being ventilated. */
+  /**
+   * Logical space being ventilated.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Air-study `subject` names the logical space whose supply and contaminant capacity are evaluated.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The space label is copied into the run so ventilation evidence remains attributable to its resolved zone.
+   */
   subject: string;
-  /** Design revision being read. */
+  /**
+   * Design revision being read.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Air-study `inputRevision` records which design state supplied the volume, occupancy, and ventilation flow.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The revision is sealed with the outcome so superseded service-capacity evidence is classified as stale.
+   */
   inputRevision: string;
-  /** Space volume in m^3; strictly positive. */
+  /**
+   * Space volume in m^3; strictly positive.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Space `volume` states the air capacity across which the declared supply is distributed.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The positive cubic-metre operand converts supply flow into the room's hourly air-change rate.
+   */
   volume: number;
-  /** Mechanical outdoor-air supply in m^3/s, or null when none is declared. */
+  /**
+   * Mechanical outdoor-air supply in m^3/s, or null when none is declared.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `supplyFlow` declares mechanical outdoor-air capacity, with null preserving the absence of a specified service.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract A positive flow enables the three scalar ventilation equations; null or zero yields named gaps instead of inferred air movement.
+   */
   supplyFlow: number | null;
-  /** Occupants the space is designed for; a whole number at or above zero. */
+  /**
+   * Occupants the space is designed for; a whole number at or above zero.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `occupants` states the design population against which ventilation capacity and contaminant load are judged.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The whole-number count determines whether per-person flow is defined and multiplies individual carbon-dioxide generation.
+   */
   occupants: number;
-  /** Carbon dioxide one occupant generates, in m^3/s; at or above zero. */
+  /**
+   * Carbon dioxide one occupant generates, in m^3/s; at or above zero.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `occupantCarbonDioxide` declares the contaminant generation assigned to each design occupant.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The per-person m3/s rate is multiplied by occupancy in the well-mixed steady-state concentration balance.
+   */
   occupantCarbonDioxide: number;
-  /** Outdoor carbon dioxide concentration in ppm; at or above zero. */
+  /**
+   * Outdoor carbon dioxide concentration in ppm; at or above zero.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `outdoorCarbonDioxide` states the incoming baseline concentration instead of assuming ambient air quality.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The ppm baseline is the additive boundary condition in the resolved zone concentration equation.
+   */
   outdoorCarbonDioxide: number;
-  /** Targets the production declares for this study. */
+  /**
+   * Targets the production declares for this study.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment Air-study `targets` declare the service-capacity thresholds applied to computed ventilation and concentration values.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The list is validated and matched by key and unit as each supported zone metric is constructed.
+   */
   targets: readonly IAutoMovieAnalysisTarget[];
 }
 
@@ -478,6 +678,8 @@ export interface IAutoMovieSpaceAirRequest {
  * still" is that this host does not know, and a number invented here would be
  * indistinguishable from one that was computed.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `analyzeAutoMovieSpaceAir` computes bounded zone ventilation and carbon-dioxide capacity while explicitly refusing stagnation and velocity-field claims.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The solver validates the declared zone state, evaluates its three closed forms, records unsupported flow outcomes, and seals one air-domain run.
  * @author Samchon
  */
 export const analyzeAutoMovieSpaceAir = (props: {
@@ -615,6 +817,9 @@ export const analyzeAutoMovieSpaceAir = (props: {
  * `gamma = ln(RH) + a*T/(b+T)`, `Td = b*gamma/(a - gamma)`. Exported because it
  * is the one place this project turns humidity into a temperature, and a second
  * copy would be a second answer.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-capacity-environment `autoMovieDewPoint` turns declared air temperature and relative humidity into the comparison temperature used for condensation evidence.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract The function evaluates the single Magnus-form moisture boundary shared by envelope risk calculations.
  */
 export const autoMovieDewPoint = (
   temperature: number,

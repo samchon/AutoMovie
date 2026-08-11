@@ -10,6 +10,8 @@ import { IAutoMovieVector3 } from "@automovie/interface";
  * counter-clockwise order, so callers never have to assume the input points
  * were given convex or correctly ordered.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Builds the ordered support polygon used to evaluate whether a subject remains carried by its contacts.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Builds the ordered support polygon used to evaluate whether a subject remains carried by its contacts.
  * @author Samchon
  */
 export const convexHull2D = (
@@ -48,6 +50,9 @@ export const convexHull2D = (
  * Is `point` inside (or on the boundary of) a counter-clockwise hull? Always
  * `false` for a degenerate hull of fewer than three vertices (a point or a
  * segment cannot enclose area).
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Tests whether the projected load point lies inside the current support polygon.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Tests whether the projected load point lies inside the current support polygon.
  */
 export const pointInHull = (
   point: IAutoMovieVector3,
@@ -64,6 +69,9 @@ export const pointInHull = (
  * Distance from `point` to a convex hull on the XZ plane: `0` when inside,
  * otherwise the distance to the nearest boundary. Degenerate hulls fall back to
  * the distance to their single vertex (size 1) or segment (size 2).
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Measures the load point's residual to the support boundary, including degenerate support sets.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Measures the load point's residual to the support boundary, including degenerate support sets.
  */
 export const pointHullDistance = (
   point: IAutoMovieVector3,
@@ -75,10 +83,33 @@ export const pointHullDistance = (
   return nearestHullEdge(point, hull).distance;
 };
 
-/** One hull boundary edge and the point's distance to it. */
+/**
+ * One hull boundary edge and the point's distance to it.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Carries the nearest support edge and residual used to explain an unstable placement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Defines the edge witness returned by support-polygon contact measurements.
+ */
 export interface IAutoMovieHullEdge {
+  /**
+   * First endpoint of the hull edge.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the first endpoint of the support edge that bounds the stability result.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Identifies the first endpoint of the support edge that bounds the stability result.
+   */
   start: IAutoMovieVector3;
+  /**
+   * Second endpoint of the hull edge.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the second endpoint of the support edge that bounds the stability result.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Identifies the second endpoint of the support edge that bounds the stability result.
+   */
   end: IAutoMovieVector3;
+  /**
+   * Shortest planar distance from the query point to this edge.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Records the measured residual from the query point to the support boundary.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Records the measured residual from the query point to the support boundary.
+   */
   distance: number;
 }
 
@@ -86,6 +117,9 @@ export interface IAutoMovieHullEdge {
  * The hull boundary edge nearest to `point`, the tip-over axis when an object
  * topples over that edge. A single-vertex hull degenerates to a zero-length
  * edge at that vertex.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Selects the support edge about which an unstable body would tip.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Selects the support edge about which an unstable body would tip.
  */
 export const nearestHullEdge = (
   point: IAutoMovieVector3,
@@ -115,7 +149,12 @@ export const nearestHullEdge = (
   return best;
 };
 
-/** Closest point to `point` on segment `start`–`end`, on the XZ plane (y=0). */
+/**
+ * Closest point to `point` on segment `start`–`end`, on the XZ plane (y=0).
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Projects a load point onto one support edge in the ground plane.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Projects a load point onto one support edge in the ground plane.
+ */
 export const closestPointOnSegmentXZ = (
   point: IAutoMovieVector3,
   start: IAutoMovieVector3,

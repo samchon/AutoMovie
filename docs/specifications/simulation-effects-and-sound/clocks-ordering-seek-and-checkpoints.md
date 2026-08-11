@@ -1,6 +1,9 @@
 # Clocks, Ordering, Seek, and Checkpoints
 
 ## 시간 도메인과 정수 tick {#effect-and-audio-time-domains}
+
+### Film-time mapping과 경계 {#effect-film-time-step-boundary}
+
 <!-- @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-clock-seek-determinism 이 절은 effect 평가를 고정 step으로 제한한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-fixed-audio-clock 이 절은 sound presentation을 고정 sample clock으로 제한한다. -->
 <!-- @evidence requirements/editorial/rational-time-and-ranges.md#editorial-mixed-timebases 이 절은 film, frame, solver와 audio clock을 정확한 유리 시간으로 결합한다. -->
@@ -8,7 +11,6 @@
 
 Film time은 정규화된 유리수이고 effect domain은 stable time-domain identity, 유리수 origin과 양의 유리수 fixed step을 선언하며 audio domain은 별도 time-domain identity와 양의 정수 sample rate를 선언한다. 변환은 부동소수 누적이 아니라 정수의 유리수 나눗셈과 명시된 floor 규칙으로 수행한다. Effect clock boundary 출력은 time-domain identity, 정확한 유리수 film instant, domain origin과 step, 음이 아닌 절대 effect tick, endpoint sampling law를 하나의 identity로 묶고, audio 변환은 같은 film instant에 대한 절대 sample index를 별도로 반환한다. 어느 timebase의 값인지 정의되지 않은 tick 이름은 사용하지 않는다. NaN, 무한대, zero 또는 음수 rate와 step, 범위 밖 tickㆍsample index, 정규화할 수 없는 유리수는 평가 전에 거절한다.
 
-### Film-time mapping과 경계 {#effect-film-time-step-boundary}
 <!-- @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping 이 절은 film time에서 solver step으로의 단일 변환을 정한다. -->
 <!-- @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-step-boundary 이 절은 정확한 step 경계의 소유 구간을 정한다. -->
 

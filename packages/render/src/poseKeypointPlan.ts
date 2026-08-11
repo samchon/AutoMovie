@@ -43,6 +43,8 @@ import {
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *
+ * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-control-alignment `planPoseKeypointSidecar` preserves frame-aligned structural guidance as a separate render product.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products `planPoseKeypointSidecar` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const planPoseKeypointSidecar = (props: {

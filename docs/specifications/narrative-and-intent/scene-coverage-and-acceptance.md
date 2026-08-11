@@ -2,12 +2,12 @@
 
 ## 촬영 가능한 Scene 입력 {#narrative-intent-filmable-scene-input}
 
+### Subject Dependency와 Refusal {#narrative-intent-scene-dependency-refusal}
+
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scenes-observable-action scene의 장소, 시간, 참여자, action과 state 변화를 필수 입력으로 정한다. -->
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scene-observability 내면 상태를 관찰 가능한 행동, 대사, sound 또는 consequence로 외화한다. -->
 
 Scene은 stable identity, location, time condition, participants와 mode, entry state, present-tense observable action, semantic event, exit state와 포함 beat를 입력으로 받는다. 내부 생각이나 mood만 있고 행동, dialogue, sound, visible condition 또는 consequence가 없으면 core change는 not-observable이다.
-
-### Subject Dependency와 Refusal {#narrative-intent-scene-dependency-refusal}
 
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-scene-subject-dependencies scene이 요구하는 character, prop, location, language와 environment를 식별한다. -->
 <!-- @evidence requirements/story/scenes-and-observable-action.md#story-unfilmable-scene-refusal 불완전하거나 상충하는 scene을 named finding으로 거절한다. -->
@@ -16,12 +16,12 @@ Scene은 stable identity, location, time condition, participants와 mode, entry 
 
 ## Coverage Graph {#narrative-intent-story-coverage-graph}
 
+### Orphan, Gap과 Empty Scope {#narrative-intent-coverage-gap-status}
+
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-coverage-acceptance logline에서 scene event까지 promise edge를 요구한다. -->
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-coverage-roles-duplication coverage role과 중복 소유를 구분한다. -->
 
 Coverage edge는 source promise, target unit, setup, development, complication, payoff 또는 resolution 역할, covered condition과 남은 gap을 가진다. 파일 존재나 같은 citation 복사는 coverage가 아니며 한 scene이 모든 약속을 답한다면 역할과 state 차이가 없는 부분을 overcrowded claim으로 출력한다.
-
-### Orphan, Gap과 Empty Scope {#narrative-intent-coverage-gap-status}
 
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-orphan-gap orphan과 missing, partial, conflicting, excluded 및 unsupported gap을 분류한다. -->
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-empty-unsupported 빈 대상과 not-run 또는 unsupported 검사를 pass로 만들지 않는다. -->
@@ -39,12 +39,18 @@ Scene surface는 participant, entry와 exit state, event와 cue를, sequence sur
 
 ## Criterion과 Evidence {#narrative-intent-story-criterion-evidence}
 
+### Story-sync criterion {#narrative-intent-story-sync-criterion}
+
+<!-- @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance Cross-shot event criterion을 exact authored events와 current realizations에 결합하게 한다. -->
+
+Story-sync helper는 authored cross-shot criterion만 선택하고 current realized event times를 declared tolerance로 측정한다. 다른 sequence나 film review surface를 대신하지 않으며 optional failure도 deterministic finding으로 보존한다.
+
+### Positive, Negative와 Boundary {#narrative-intent-story-criterion-cases}
+
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance story criterion에 대상, 시간, observable state와 실패 조건을 요구한다. -->
 <!-- @evidence requirements/acceptance/criteria-and-observables.md#acceptance-semantic-observable 서사 전달과 audience inference의 관찰 범위를 정한다. -->
 
 Criterion은 stable identity와 version, story target와 revision, 전제 조건, event 또는 time scope, observable state, 비교 규칙, 실패 조건, tolerance 또는 qualitative boundary, required evidence, profile, severity와 authority를 가진다. 필수 요소가 없으면 대상 fail이 아니라 invalid-criterion이다.
-
-### Positive, Negative와 Boundary {#narrative-intent-story-criterion-cases}
 
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-negative-twin 누락, 순서, 인물, 장소, 정보와 continuity 반례를 요구한다. -->
 <!-- @evidence requirements/acceptance/case-matrix-and-counterexamples.md#acceptance-case-triad 같은 criterion의 positive, negative와 boundary case를 유지한다. -->

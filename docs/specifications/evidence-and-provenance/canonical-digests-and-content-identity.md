@@ -2,13 +2,13 @@
 
 ## Versioned content identity protocol {#evp-versioned-content-identity-protocol}
 
+### Structured canonicalization {#evp-structured-canonicalization}
+
 <!-- @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-canonical-content-identity 같은 허용 입력이 반복 계산에서 같은 identity를 내는 versioned digest protocol을 정의한다. -->
 
 Identity 계산 입력은 protocol id와 version, digest algorithm, canonicalization version, domain role, payload와 dependency closure다. 출력 identity는 algorithm과 digest를 함께 표현하고 같은 입력 집합과 protocol에서 platform, locale, traversal order와 wall clock에 관계없이 byte-identical해야 한다.
 
 Protocol, algorithm 또는 closure를 알 수 없으면 digest string만 재사용해 verified로 판정하지 않아야 한다. 지원되는 이전 protocol은 원 identity를 보존해 검증하고 새 protocol로 다시 계산할 때 migration relation을 별도로 출력해야 한다.
-
-### Structured canonicalization {#evp-structured-canonicalization}
 
 <!-- @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization 구조화된 record의 property, 문자, 수치, path와 omitted 값 표현을 하나로 정규화한다. -->
 

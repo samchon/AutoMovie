@@ -18,6 +18,8 @@
  * Closed union so an invalid pass name is structurally impossible at the LLM
  * surface; the render/viewer packages carry the matching runtime list.
  *
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-180-line Exposes `AutoMovieGuidePass` as the portable data boundary for the camera 180 line requirement.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-line-eyeline-travel-evaluation Types `AutoMovieGuidePass` for the clv line eyeline travel evaluation system contract.
  * @author Samchon
  */
 export type AutoMovieGuidePass =

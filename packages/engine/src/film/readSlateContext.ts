@@ -15,11 +15,23 @@ type AutoMovieStoredContextType =
   | "getNotes"
   | "getBeatEnd";
 
+/**
+ * A context request answerable from state already stored on the slate.
+ *
+ * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit IAutoMovieStoredContextRequest keeps the requested review unit explicit: A context request answerable from state already stored on the slate.
+ * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection IAutoMovieStoredContextRequest realizes explicit review-scope selection: A context request answerable from state already stored on the slate.
+ */
 export type IAutoMovieStoredContextRequest = Extract<
   IAutoMovieContextRequest,
   { type: AutoMovieStoredContextType }
 >;
 
+/**
+ * Value returned for a stored-context request, or `null` when absent.
+ *
+ * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit IAutoMovieStoredContext keeps the requested review unit explicit: Value returned for a stored-context request, or `null` when absent.
+ * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection IAutoMovieStoredContext realizes explicit review-scope selection: Value returned for a stored-context request, or `null` when absent.
+ */
 export type IAutoMovieStoredContext =
   | IAutoMovieScript
   | IAutoMovieScene
@@ -53,6 +65,9 @@ const findUniqueOrNull = <T>(props: {
  * engine queries (`getReach`, `getResolvedPose`, `measureDistance`) need their
  * own resolver inputs, so this helper intentionally covers only state already
  * present on {@link IAutoMovieSlate}.
+ *
+ * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit readSlateContext keeps the requested review unit explicit: Answer stored-context requests from the production slate. Geometry-dependent engine queries (`getReach`, `getResolvedPose`, `measureDistance`) need their own resolver inputs, so this helper intentionally covers only state already present on {@link IAutoMovieSlate}.
+ * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-scope-selection readSlateContext realizes explicit review-scope selection: Answer stored-context requests from the production slate. Geometry-dependent engine queries (`getReach`, `getResolvedPose`, `measureDistance`) need their own resolver inputs, so this helper intentionally covers only state already present on {@link IAutoMovieSlate}.
  */
 export const readSlateContext = (
   slate: IAutoMovieSlate,

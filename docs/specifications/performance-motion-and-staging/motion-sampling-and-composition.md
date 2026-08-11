@@ -2,6 +2,8 @@
 
 ## Motion identity, source와 선택 {#performance-motion-identity-source-selection}
 
+### 외부 motion 채택과 비파괴 receipt {#performance-motion-external-adoption-receipt}
+
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-scope-identity motion을 시간에 따른 명시적 state 변화로 정의한다. -->
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-all-objects-all-motion actor뿐 아니라 모든 object와 열린 동작 vocabulary를 수용한다. -->
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-source-kinds authored, procedural, captured, imported source kind를 구분한다. -->
@@ -13,8 +15,6 @@
 Motion record는 stable motion identity와 revision, 수행 주체 또는 대상 kind, semantic action, source kind와 source identity, local duration, channel set, event set, 시작·종료 state contract를 가진다. 의미는 `걷는다`, `문이 열린다`, `천이 흔들린다` 같은 관찰 가능한 변화이며 clip, procedural rule, solver, captured data는 그 의미를 실현하는 선택 가능한 technique다. 같은 의미에 여러 variant가 있으면 사용자는 style, speed, contact policy, rig compatibility, cost와 provenance를 보고 하나를 선택하고 그 decision을 receipt로 남긴다.
 
 `all objects/all motion`은 모든 가능한 동사를 미리 열거하거나 어떤 입력도 무조건 재생한다는 뜻이 아니다. 모든 시간 변화가 typed channel과 profile·affordance·constraint로 추가될 수 있고, 새 motion source와 driver가 additive하게 등록될 수 있다는 확장성 계약이다. 요구 의미를 지원하는 channel, capability 또는 source가 없으면 `missing-motion`으로 남기고 비슷한 기본 clip, rest state, 무작위 움직임을 자동 적용하지 않는다.
-
-### 외부 motion 채택과 비파괴 receipt {#performance-motion-external-adoption-receipt}
 
 <!-- @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption 사용자가 선택한 외부 motion을 provenance와 함께 채택한다. -->
 <!-- @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode source를 그대로, retarget, trim, layer 중 어떤 방식으로 채택했는지 명시한다. -->
@@ -30,6 +30,8 @@ Compatibility finding은 source와 target의 차이에 대한 시스템 판단�
 
 ## Channel, control과 driver 평가 {#performance-motion-channel-control-driver-evaluation}
 
+### Clip, key time과 interpolation {#performance-motion-clip-keytime-interpolation}
+
 <!-- @evidence requirements/motion/channels-controls-and-drivers.md#motion-channels-controls-drivers 모든 object motion을 addressable channel 변화로 표현한다. -->
 <!-- @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract channel address, value type, unit와 retention을 정의한다. -->
 <!-- @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies driver dependency와 평가 순서를 명시한다. -->
@@ -42,8 +44,6 @@ Channel contract는 stable address, owner identity, property path 또는 semanti
 Track sampling, authored controls, driver computation, constraints, solver correction, layer composition의 평가 단계를 고정하고 각 channel에 단계별 writer를 기록한다. Driver graph는 dependency order가 유일하게 결정되어야 하며, 여러 writer가 있으면 mask·weight·blend mode·precedence 또는 explicit conflict policy가 필요하다. Unknown channel, width·unit 불일치, quaternion 규칙 위반, cycle, dangling input, non-finite output, unbounded iterative state는 실패로 반환한다.
 
 새 profile이나 property는 channel shape, applier, validator, deterministic sampler와 omission compatibility를 함께 제공할 때 추가할 수 있다. 새 optional channel을 쓰지 않는 기존 clip은 byte-equivalent한 resolved state를 유지하며, default나 retention 의미를 바꾸는 변경은 versioned migration이다.
-
-### Clip, key time과 interpolation {#performance-motion-clip-keytime-interpolation}
 
 <!-- @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clips-keyframes 재현 가능한 clip을 ordered key와 duration으로 정의한다. -->
 <!-- @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times key time의 범위와 strict ordering을 규정한다. -->

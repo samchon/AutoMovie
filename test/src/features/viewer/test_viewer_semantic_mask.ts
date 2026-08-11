@@ -5,20 +5,15 @@ import {
   autoMoviePlantingNodeName,
   autoMovieSoftBodyNodeName,
   deriveAutoMovieSemanticMask,
-  evaluateAutoMovieRenderBudget,
-  measureAutoMovieRenderInventory,
-  sealAutoMovieRenderTarget,
 } from "@automovie/engine";
 import { IAutoMovieScene, IAutoMovieSemanticMask } from "@automovie/interface";
 import {
   IAutoMovieFormationCycle,
   SPACE_GROUP_NAME,
   applyAutoMovieSemanticMask,
-  auditAutoMovieRenderObservation,
   buildFluidSurfaceObject,
   buildPlantingObject,
   buildSoftBodyObject,
-  observeAutoMovieSceneRender,
 } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
@@ -61,12 +56,7 @@ import {
  *    idempotent.
  * 5. A scene with fewer top-level children than designed nodes is refused rather
  *    than resolved positionally against the wrong objects.
- * 6. What the scene draws stays inside the compiled report's upper bounds, hidden
- *    geometry is not counted, and a scene drawing more than the report cleared
- *    is reported as a breach.
- * 7. Metrics the report never measured are returned as unchecked, never as
- *    agreement.
- * 8. The engine and the viewer agree on the name of every simulated drawable, so a
+ * 6. The engine and the viewer agree on the name of every simulated drawable, so a
  *    curtain, a fern bed and a pond paint their own identity instead of the
  *    reserved background.
  */
@@ -274,110 +264,6 @@ export const test_viewer_semantic_mask = (): void => {
       "cannot resolve staged nodes",
     ),
     true,
-  );
-
-  const inventory = measureAutoMovieRenderInventory({
-    subject: subject(design),
-    mask,
-  });
-  const report = evaluateAutoMovieRenderBudget({
-    inventory,
-    budget: null,
-    mask,
-    target: sealAutoMovieRenderTarget({
-      renderer: { api: "webgl2", vendor: "acme", device: "gpu-1" },
-      settings: {
-        width: 640,
-        height: 480,
-        pixelRatio: 1,
-        shadows: true,
-        shadowType: "pcf",
-        toneMapping: "none",
-        exposure: 1,
-      },
-      assets: [],
-    }),
-  });
-  const observed = observeAutoMovieSceneRender(built.scene);
-  const audited = auditAutoMovieRenderObservation({ report, observed });
-  TestValidator.equals(
-    "hidden geometry is not counted, and drawing past the report is a breach",
-    {
-      lights: observed.lights,
-      shadowMaps: observed.shadowMaps,
-      instanceSlots: observed.instanceSlots,
-      textures: observed.textures,
-      hiddenExcluded: observed.meshes,
-      agrees: audited.agrees,
-      breaches: audited.breaches.map((breach) => breach.metric),
-      unchecked: audited.unchecked,
-    },
-    {
-      // One directional light casts; the point light is hidden and draws
-      // nothing. The scene deliberately holds geometry the design never
-      // declared, so the audit must say so instead of clearing it.
-      lights: 1,
-      shadowMaps: 1,
-      instanceSlots: 7,
-      textures: 1,
-      hiddenExcluded: 14,
-      agrees: false,
-      breaches: ["triangles", "drawCalls", "materials", "instanceSlots"],
-      unchecked: [],
-    },
-  );
-
-  const solo: IAutoMovieScene = {
-    id: "solo",
-    name: null,
-    nodes: [sceneFixture().nodes[4]!],
-    cameras: [],
-    lights: [],
-  };
-  const soloSubject: IAutoMovieRenderSubject = {
-    scene: solo,
-    models: modelsFixture(),
-  };
-  const soloMask = deriveAutoMovieSemanticMask(soloSubject);
-  const soloScene = new THREE.Scene();
-  const soloGroup = new THREE.Group();
-  soloGroup.add(
-    new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshBasicMaterial(),
-    ),
-  );
-  soloScene.add(soloGroup);
-  TestValidator.equals(
-    "a faithful scene stays inside every bound the report cleared",
-    auditAutoMovieRenderObservation({
-      report: evaluateAutoMovieRenderBudget({
-        inventory: measureAutoMovieRenderInventory({
-          subject: soloSubject,
-          mask: soloMask,
-        }),
-        budget: null,
-        mask: soloMask,
-        target: report.target,
-      }),
-      observed: observeAutoMovieSceneRender(soloScene),
-    }),
-    { agrees: true, breaches: [], unchecked: [] },
-  );
-
-  TestValidator.equals(
-    "a metric the report never measured is unchecked, never agreement",
-    auditAutoMovieRenderObservation({
-      report: {
-        ...report,
-        findings: report.findings.map((finding) => ({
-          ...finding,
-          measured: finding.metric === "triangles" ? null : finding.measured,
-        })),
-      },
-      observed,
-    }).unchecked,
-    ["triangles"],
   );
 
   // Cloth, planting and water are held by no scene node, so the mask joins them

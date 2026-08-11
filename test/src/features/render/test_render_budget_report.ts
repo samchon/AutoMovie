@@ -9,6 +9,8 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieRenderMetric,
+  IAutoMovieCompiledEffect,
+  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieModel,
   IAutoMovieRenderBudget,
@@ -110,7 +112,7 @@ export const test_render_budget_report = (): void => {
     "the inventory matches hand arithmetic on every metric",
     inventory.totals,
     {
-      triangles: 5 * BOX_TRIANGLES + 12 * BOX_TRIANGLES,
+      triangles: 2 * (5 * BOX_TRIANGLES + 12 * BOX_TRIANGLES),
       vertices: 5 * BOX_VERTICES + 12 * BOX_VERTICES,
       drawCalls: (5 + 3) * 2,
       materials: 2,
@@ -836,9 +838,9 @@ export const test_render_budget_report = (): void => {
       )?.source,
     },
     {
-      triangles: 2,
+      triangles: 4,
       vertices: 4,
-      drawCalls: 1,
+      drawCalls: 2,
       geometryBytes: 4 * 24 + 6 * 4,
       nodes: 1,
       owner: "scene.space.surfaces",
@@ -866,6 +868,60 @@ export const test_render_budget_report = (): void => {
         cost: BOX_TRIANGLES,
       },
     ],
+  );
+
+  const formation = {
+    id: "crowd",
+    anonymousCount: 10,
+    chunks: [{}, {}],
+    lod: [{ tier: "near", model: "window-model" }],
+  } as unknown as IAutoMovieCompiledFormation;
+  const effect = {
+    id: "haze",
+    recipe: { budget: { maxParticles: 5 } },
+  } as unknown as IAutoMovieCompiledEffect;
+  const compact = measure({
+    scene: { ...sceneFixture(), nodes: [], lights: [] },
+    models: modelsFixture(),
+    formations: [formation],
+    effects: [effect],
+  });
+  TestValidator.equals(
+    "compact formations, effects, and the largest frame pass are bounded",
+    compact.totals,
+    {
+      triangles: 2 * (10 * BOX_TRIANGLES + 5 * 2),
+      vertices: 10 * BOX_VERTICES + 5 * 4,
+      drawCalls: 2 * (2 + 1),
+      materials: 2,
+      textures: 1,
+      textureBytes: null,
+      geometryBytes:
+        BOX_GEOMETRY_BYTES +
+        4 * (12 + 12 + 8) +
+        6 * 4,
+      lights: 0,
+      shadowMaps: 0,
+      nodes: 2,
+      instanceSets: 0,
+      instanceSlots: 15,
+      instanceChunks: 2,
+      fluidCells: 0,
+      fluidParticles: 0,
+    },
+  );
+  TestValidator.equals(
+    "a formation without a representation is not priced as zero",
+    throwsError(
+      () =>
+        measure({
+          scene: { ...sceneFixture(), nodes: [], lights: [] },
+          models: modelsFixture(),
+          formations: [{ ...formation, lod: [] }],
+        }),
+      "declares no level of detail",
+    ),
+    true,
   );
 
   TestValidator.equals(

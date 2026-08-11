@@ -64,24 +64,52 @@ const bakedFollowVelocity = (
   );
 };
 
-/** Inputs shared by the beat-end and beat-opening snapshots. */
+/**
+ * Inputs shared by the beat-end and beat-opening snapshots.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps preserves measured beat-boundary continuity: Inputs shared by the beat-end and beat-opening snapshots.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps realizes explicit temporal state handoff: Inputs shared by the beat-end and beat-opening snapshots.
+ */
 export interface IResolveBeatProps {
-  /** Beat id the shot realizes. */
+  /**
+   * Beat id the shot realizes.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.beat preserves measured beat-boundary continuity: Beat id the shot realizes.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.beat realizes explicit temporal state handoff: Beat id the shot realizes.
+   */
   beat: string;
 
-  /** Staged scene the shot played over. */
+  /**
+   * Staged scene the shot played over.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.scene preserves measured beat-boundary continuity: Staged scene the shot played over.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.scene realizes explicit temporal state handoff: Staged scene the shot played over.
+   */
   scene: IAutoMovieScene;
 
-  /** Compiled shot for the beat. */
+  /**
+   * Compiled shot for the beat.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.shot preserves measured beat-boundary continuity: Compiled shot for the beat.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.shot realizes explicit temporal state handoff: Compiled shot for the beat.
+   */
   shot: IAutoMovieShot;
 
-  /** Motion clips referenced by scene nodes and shot performances. */
+  /**
+   * Motion clips referenced by scene nodes and shot performances.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.motions preserves measured beat-boundary continuity: Motion clips referenced by scene nodes and shot performances.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.motions realizes explicit temporal state handoff: Motion clips referenced by scene nodes and shot performances.
+   */
   motions: IAutoMovieMotion[];
 
   /**
    * Persistent mount couplings from staging (`IAutoMovieStagedSet.mounts`),
    * carried to each rider's end state so the next beat re-couples without
    * re-declaring. Omit when nothing is mounted.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.mounts preserves measured beat-boundary continuity: Persistent mount couplings from staging (`IAutoMovieStagedSet.mounts`), carried to each rider's end state so the next beat re-couples without re-declaring. Omit when nothing is mounted.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.mounts realizes explicit temporal state handoff: Persistent mount couplings from staging (`IAutoMovieStagedSet.mounts`), carried to each rider's end state so the next beat re-couples without re-declaring. Omit when nothing is mounted.
    */
   mounts?: readonly IAutoMovieStagedSet.IMount[];
 
@@ -89,6 +117,9 @@ export interface IResolveBeatProps {
    * Ground-IK plant data per performed node (the `plants` of the engine's
    * plant-stance-feet pass), carried so the next beat keeps planted feet where
    * this beat left them. Omit when no pass ran.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity IResolveBeatProps.plants preserves measured beat-boundary continuity: Ground-IK plant data per performed node (the `plants` of the engine's plant-stance-feet pass), carried so the next beat keeps planted feet where this beat left them. Omit when no pass ran.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IResolveBeatProps.plants realizes explicit temporal state handoff: Ground-IK plant data per performed node (the `plants` of the engine's plant-stance-feet pass), carried so the next beat keeps planted feet where this beat left them. Omit when no pass ran.
    */
   plants?: ReadonlyArray<{
     /** Scene node the plants belong to. */
@@ -111,6 +142,14 @@ export interface IResolveBeatProps {
  * persistent mount coupling (absorbing the staged `mounts` the film pipeline
  * previously never consumed). This is the seam that keeps an hours-long
  * timeline continuous across beat boundaries.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity resolveBeatEnd snapshots every actor, plant, velocity, and mount at the compiled shot boundary so later blocking starts from measured prior state.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-entry-exit-state Emits the scene's closing physical actor transforms, articulation, gait phase, velocity, contacts, and mounts from the compiled end instant.
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Bounds the reviewed actor-state facts to the compiled shot's closing instant; it does not claim sequence or film chronology validation.
+ * @evidence requirements/actors/state-and-continuity.md#actor-scene-state-handoff Emits the outgoing actor transform, pose phase, velocity, planted contacts, and mount state that a later chronological boundary can consume.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Produces the measured closing snapshot that the next chronological beat receives instead of resetting actor state.
+ * @evidence specifications/narrative-and-intent/characters-relations-and-state.md#narrative-intent-scene-entry-exit-state Resolves the physical actor exit state at the shot end without extending it into a full story-state ledger.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-state-continuity-ledger Produces the measured closing-side actor state used by the continuity ledger rather than resetting the next boundary to defaults.
  */
 export const resolveBeatEnd = (
   props: IResolveBeatProps,
@@ -128,6 +167,14 @@ export const resolveBeatEnd = (
  * are the resumable-state fields at the opening instant. The direct shot
  * compiler seeds all of them, together with transform, facing, pose, and mount,
  * when a verified previous snapshot is supplied.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity Samples every actor's opening placement, facing, coupling, and pose for comparison with the previous beat's closing state.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-entry-exit-state Emits the scene's opening physical actor transforms, articulation, gait phase, velocity, contacts, and mounts from shot-local zero.
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Bounds the reviewed actor-state facts to shot-local zero before any motion plays; it does not claim sequence or film chronology validation.
+ * @evidence requirements/actors/state-and-continuity.md#actor-shot-continuity Produces the opening-side actor placement, orientation, pose phase, attachment, and contact state compared across the edit boundary.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Produces the measured opening snapshot used to verify that the prior beat's state was resumed rather than replaced by defaults.
+ * @evidence specifications/narrative-and-intent/characters-relations-and-state.md#narrative-intent-scene-entry-exit-state Resolves the physical actor entry state at shot-local zero without extending it into a full story-state ledger.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-state-continuity-ledger Supplies the measured incoming actor state against which the prior closing snapshot is checked.
  */
 export const resolveBeatOpening = (
   props: IResolveBeatProps,

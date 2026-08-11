@@ -2,13 +2,13 @@
 
 ## 부분 target 작업 경계 {#spec-authoring-partial-target-boundary}
 
+### Target 선언 입력 {#spec-authoring-partial-target-input}
+
+<!-- @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission 이 입력이 omission의 범위, 이유, 영향 대상과 다음 단계를 명시하게 한다. -->
 <!-- @evidence requirements/agent-authoring/partial-work.md#agent-honest-partial-work 이 경계가 전체 film이 미완성이어도 선언된 부분 target을 검증 가능하게 한다. -->
 
 작업과 검증의 원자성은 전체 production이 아니라 요청된 target과 그 dependency closure에 적용된다. Target 밖의 명시 omission은 부분 target의 성공을 막지 않으며 그 성공은 더 넓은 범위로 확장되지 않는다.
 
-### Target 선언 입력 {#spec-authoring-partial-target-input}
-
-<!-- @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission 이 입력이 omission의 범위, 이유, 영향 대상과 다음 단계를 명시하게 한다. -->
 
 Target 입력은 stable identity, 포함 범위, dependency identity, expected output, source snapshot과 제외된 범위를 가진다. Omission은 대상 또는 interval, 이유, 영향, provisional representation과 다음 저작 단계를 별도 record로 선언해야 한다.
 

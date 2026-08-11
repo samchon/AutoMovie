@@ -18,19 +18,34 @@ import { IAutoMovieBlendshapeChannel } from "./IAutoMovieBlendshapeChannel";
  * allowing the full 52-channel vector when needed, and both are validated the
  * same way (closed names, `[0, 1]` weights).
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `IAutoMovieExpression` as the portable data boundary for the actor expression channels requirement.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `IAutoMovieExpression` for the performance actor pose gaze expression state system contract.
  * @author Samchon
  */
 export interface IAutoMovieExpression {
-  /** Coarse emotion / viseme intent. */
+  /**
+   * Coarse emotion / viseme intent.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `preset` as the portable data boundary for the actor expression channels requirement.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `preset` for the performance actor pose gaze expression state system contract.
+   */
   preset: AutoMovieExpressionPreset;
 
-  /** How strongly to apply `preset`, `[0, 1]`. */
+  /**
+   * How strongly to apply `preset`, `[0, 1]`.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `intensity` as the portable data boundary for the actor expression channels requirement.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `intensity` for the performance actor pose gaze expression state system contract.
+   */
   intensity: number;
 
   /**
    * Optional fine-grained ARKit channel overrides layered on top of `preset`.
    * `null` when the preset alone suffices. Each channel should appear at most
    * once.
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `blendshapes` as the portable data boundary for the actor expression channels requirement.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `blendshapes` for the performance actor pose gaze expression state system contract.
    */
   blendshapes: IAutoMovieBlendshapeChannel[] | null;
 }

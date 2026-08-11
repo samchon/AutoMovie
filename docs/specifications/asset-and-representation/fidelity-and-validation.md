@@ -2,12 +2,12 @@
 
 ## 충실도 계약 경계 {#asset-spec-fidelity-boundary}
 
+### 목적별 capability 입력 {#asset-spec-validation-purpose-inputs}
+
 <!-- @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling 직접 저작 actor의 충실도 ceiling을 정직하게 고지해야 한다. -->
 <!-- @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-blocking-pass 결정론적 결과는 staging, motion과 timing을 검토하는 blocking pass이다. -->
 
 시스템이 직접 저작하는 결과의 계약은 실제 치수, 식별자, 구조, pose, motion, contact, timing과 반복 가능한 blocking 표현이다. 세밀한 인물 likeness, 사실적인 피부·머리카락·의상 변형과 완성 photoreal shot은 직접 저작의 보장 범위가 아니며, 외부 고충실도 외형을 채택해도 시스템이 이해하거나 제어하는 의미와 능력이 자동으로 늘어나지 않는다.
-
-### 목적별 capability 입력 {#asset-spec-validation-purpose-inputs}
 
 <!-- @evidence requirements/asset-authoring/validation.md#asset-validation 모든 자산을 사용 전에 목적과 현재 revision에 맞게 검증해야 한다. -->
 <!-- @evidence requirements/asset-authoring/validation.md#asset-purpose-validation hero close-up, background, collision, motion과 blocking 등 사용 목적별 적합성을 검증해야 한다. -->

@@ -17,6 +17,8 @@ import { IAutoMovieJointAxes } from "./jointToQuaternion";
  * Opt in by passing this to {@link resolvePose} / `applyPose`; a bone absent
  * from the table uses {@link DEFAULT_JOINT_AXES}.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Declares the canonical humanoid's semantic controls in each bone's local basis.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Maps the canonical semantic controls onto the T-pose arm basis.
  * @author Samchon
  */
 export const HUMANOID_JOINT_AXES: Partial<

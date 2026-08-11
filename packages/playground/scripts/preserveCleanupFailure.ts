@@ -1,5 +1,10 @@
-/** Failure retained while a resource is being released. */
+/**
+ * Failure retained while a resource is being released.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundOperationFailure {
+  /** Original operation error that cleanup must not replace. */
   error: unknown;
 }
 

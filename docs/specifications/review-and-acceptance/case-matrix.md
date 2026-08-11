@@ -2,11 +2,11 @@
 
 ## Criterion별 Case Matrix {#acceptance-system-case-matrix}
 
+### Positive Case {#acceptance-system-positive-case}
+
 <!-- @evidence requirements/acceptance/case-matrix-and-counterexamples.md#acceptance-case-triad Requires positive, negative and boundary cases for every required criterion. -->
 
 각 required criterion version은 positive, negative와 boundary case identity를 가지며 세 case는 같은 target model, observable, comparison rule과 tolerance를 사용한다. Matrix의 case는 실행 결과와 독립된 계약 fixture이며 실제 판정 때 적용한 criterion version을 명시한다.
-
-### Positive Case {#acceptance-system-positive-case}
 
 <!-- @evidence requirements/acceptance/case-matrix-and-counterexamples.md#acceptance-positive-case Defines the simplest representative success with all prerequisites and evidence. -->
 

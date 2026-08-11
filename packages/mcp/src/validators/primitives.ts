@@ -46,6 +46,12 @@ export const appendValidation = (
   if (validation.success === false) violations.push(...validation.violations);
 };
 
+/**
+ * Append one path-located finding when a value is not non-empty text.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope Preserves the caller's exact field path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope Keeps the primitive refusal addressable.
+ */
 export const validateNonEmptyText = (
   text: unknown,
   path: string,
@@ -66,6 +72,12 @@ export const validateNonEmptyText = (
     );
 };
 
+/**
+ * Append deterministic structural and range findings for one transform.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-stable-order Emits component findings in a stable axis order.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-canonical-diagnostic-order Keeps transform validation reproducible.
+ */
 export const validateTransformArtifact = (
   transform: unknown,
   path: string,
@@ -137,6 +149,12 @@ const validateQuaternionArtifact = (
     );
 };
 
+/**
+ * Append path-located range findings for one RGBA color artifact.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-cause-observed-expected Retains the offending channel value in its finding.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-cause-values Preserves the observed value and exact channel path.
+ */
 export const validateColorArtifact = (
   color: unknown,
   path: string,

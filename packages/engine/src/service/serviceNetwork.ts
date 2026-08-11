@@ -15,37 +15,107 @@ import {
 import { builtSpaceStatesVolume } from "../architecture/builtEnvironment";
 import { propBoundsOverlap } from "../film/propPlacement";
 
-/** One clashing pair of runs, in the order the network declares them. */
+/**
+ * One clashing pair of runs, in the order the network declares them.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `IAutoMovieServiceClash` identifies the two routed runs that occupy the same physical volume and therefore cannot coexist as authored.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `IAutoMovieServiceClash` carries one deterministically ordered segment pair emitted by service-network interference analysis.
+ */
 export interface IAutoMovieServiceClash {
-  /** Id of the earlier-declared segment. */
+  /**
+   * Id of the earlier-declared segment.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `left` names the earlier-declared run in an obstructing service pair so the author can locate the first route to move.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `left` preserves the lower declaration index of the two overlapping segment volumes.
+   */
   left: string;
-  /** Id of the later-declared segment. */
+  /**
+   * Id of the later-declared segment.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `right` names the later-declared run in an obstructing service pair so the conflicting route is unambiguous.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `right` preserves the higher declaration index of the two overlapping segment volumes.
+   */
   right: string;
 }
 
-/** One node in a plan schematic, projected onto the horizontal plane. */
+/**
+ * One node in a plan schematic, projected onto the horizontal plane.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `IAutoMovieServiceSchematicNode` exposes one routed fitting or terminal at a stable plan position for inspection of the service layout.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `IAutoMovieServiceSchematicNode` projects a typed network node from world space onto the schematic's horizontal plane.
+ */
 export interface IAutoMovieServiceSchematicNode {
-  /** Stable node identity. */
+  /**
+   * Stable node identity.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `id` keeps a schematic node traceable to the authored fitting, terminal, or junction it depicts.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `id` retains the source service-node identifier through plan projection.
+   */
   id: string;
-  /** Computational family the node was declared with. */
+  /**
+   * Computational family the node was declared with.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `kind` tells the schematic reader whether the routed node is equipment, a terminal, a fitting, or another declared computational family.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `kind` preserves the closed service-node discriminator used by network checks.
+   */
   kind: AutoMovieServiceNodeKind;
-  /** World `x` in metres. */
+  /**
+   * World `x` in metres.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `x` places the service node at its metre-valued east-west world coordinate on the plan.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `x` copies the network node's world `x` without geometric reinterpretation.
+   */
   x: number;
-  /** World `z` in metres, the schematic's vertical axis. */
+  /**
+   * World `z` in metres, the schematic's vertical axis.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `y` places the service node at its metre-valued north-south world coordinate on the plan.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `y` maps the network node's world `z` onto the schematic vertical axis.
+   */
   y: number;
 }
 
-/** One run in a plan schematic, projected onto the horizontal plane. */
+/**
+ * One run in a plan schematic, projected onto the horizontal plane.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `IAutoMovieServiceSchematicEdge` presents one installed run with its endpoints, plan path, and real developed length.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `IAutoMovieServiceSchematicEdge` is the deterministic planar projection of one typed service segment.
+ */
 export interface IAutoMovieServiceSchematicEdge {
-  /** Stable segment identity. */
+  /**
+   * Stable segment identity.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `id` lets a schematic run be traced back to the exact authored segment that must be inspected or revised.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `id` preserves the segment identifier while its geometry is projected.
+   */
   id: string;
-  /** Node the run leaves. */
+  /**
+   * Node the run leaves.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `from` identifies the node from which the depicted run leaves, preserving the readable direction of service flow.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `from` resolves the segment's source port to its owning service node.
+   */
   from: string;
-  /** Node the run enters. */
+  /**
+   * Node the run enters.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `to` identifies the node entered by the depicted run, completing the connection shown to the reader.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `to` resolves the segment's destination port to its owning service node.
+   */
   to: string;
-  /** Projected centre line, in declaration order. */
+  /**
+   * Projected centre line, in declaration order.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `points` shows every authored turn of the run in declaration order on the plan.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `points` projects each route point's world `x` and `z` into schematic coordinates.
+   */
   points: Array<{ x: number; y: number }>;
-  /** Developed length of the **unprojected** centre line, in metres. */
+  /**
+   * Developed length of the **unprojected** centre line, in metres.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `length` reports how many metres of routed service the segment actually develops through three-dimensional space.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `length` retains the unprojected centre-line length even when risers collapse to points on the plan.
+   */
   length: number;
 }
 
@@ -55,41 +125,112 @@ export interface IAutoMovieServiceSchematicEdge {
  * The schematic is derived, never authored: it is the evidence that the graph
  * the validator accepted is the graph the production meant, at a size a report
  * can carry.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `IAutoMovieServiceSchematic` gives an operator one readable projection of a system's topology, routing extent, declared load, and disconnected nodes.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `IAutoMovieServiceSchematic` is the derived typed summary of one validated service system rather than a second authored network.
  */
 export interface IAutoMovieServiceSchematic {
-  /** Identity of the system this schematic projects. */
+  /**
+   * Identity of the system this schematic projects.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `system` identifies which authored distribution system the schematic explains.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `system` carries the exact system id used to select schematic nodes and segments.
+   */
   system: string;
-  /** Discipline the system declared. */
+  /**
+   * Discipline the system declared.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `discipline` labels the schematic as plumbing, drainage, electrical, data, HVAC, fire, or control work for review.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `discipline` repeats the selected system's closed discipline discriminator unchanged.
+   */
   discipline: AutoMovieServiceDiscipline;
-  /** Medium the system declared. */
+  /**
+   * Medium the system declared.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `medium` states the water, air, power, or signal actually conveyed by the shown route.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `medium` preserves the selected system's compatible-port medium for schematic interpretation.
+   */
   medium: AutoMovieServiceMedium;
-  /** Unit every demand below is stated in. */
+  /**
+   * Unit every demand below is stated in.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `unit` tells the reader whether the displayed demand is flow, power, current, data rate, or a dimensionless quantity.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `unit` carries the system unit against which all contributing port demands were validated.
+   */
   unit: AutoMovieServiceUnit;
-  /** Node the system is rooted at. */
+  /**
+   * Node the system is rooted at.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `root` marks the supply, collection, or ring origin from which the shown network's reachability is judged.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `root` retains the system's resolved root-node identifier in the derived record.
+   */
   root: string;
-  /** Every node carrying a port on the system, in declaration order. */
+  /**
+   * Every node carrying a port on the system, in declaration order.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `nodes` lists every fitting and terminal that carries a port on the selected service, in stable drawing order.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `nodes` filters the network's declaration-ordered nodes by membership in the selected system.
+   */
   nodes: IAutoMovieServiceSchematicNode[];
-  /** Every run on the system, in declaration order. */
+  /**
+   * Every run on the system, in declaration order.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `edges` lists every run belonging to the selected service so its connection path can be read end to end.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `edges` projects only segments whose system id matches the schematic while retaining declaration order.
+   */
   edges: IAutoMovieServiceSchematicEdge[];
-  /** Sum of every edge's developed length, in metres. */
+  /**
+   * Sum of every edge's developed length, in metres.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `totalLength` reports the complete installed run length in metres without losing vertical risers in the plan projection.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `totalLength` sums the three-dimensional developed length of every selected segment.
+   */
   totalLength: number;
-  /** Declared load of the system in {@link unit}; see {@link serviceSystemLoad}. */
+  /**
+   * Declared load of the system in {@link unit}; see {@link serviceSystemLoad}.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `totalDemand` exposes the load that the selected service has been authored to carry in its declared unit.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `totalDemand` aggregates only the terminal-facing port demands selected by the system's flow direction.
+   */
   totalDemand: number;
-  /** Nodes on the system the root does not reach, in declaration order. */
+  /**
+   * Nodes on the system the root does not reach, in declaration order.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `unreachable` names the service nodes disconnected from the system root so drawn but non-working branches remain visible.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `unreachable` subtracts direction-aware root reachability from declaration-ordered system nodes.
+   */
   unreachable: string[];
 }
 
-/** What an analysis of this network can and cannot answer today. */
+/**
+ * What an analysis of this network can and cannot answer today.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `IAutoMovieServiceCheckReport` distinguishes checks the engine truly performs from quantitative service analyses it cannot claim have passed.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `IAutoMovieServiceCheckReport` carries one named capability decision with an explicit support state and rationale.
+ */
 export interface IAutoMovieServiceCheckReport {
-  /** Stable rule identity. */
+  /**
+   * Stable rule identity.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `check` gives each connectivity, clearance, waterproofing, or discipline-performance claim a stable name in the report.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `check` is the deterministic rule identity to which the support decision applies.
+   */
   check: string;
   /**
    * `supported` when the engine really performs the check on this input;
    * `unsupported` when nothing here can perform it. A supported check that was
    * simply not executed is never reported as either.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `status` prevents an unavailable pressure, head, voltage-drop, or throw solver from being presented as a successful check.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `status` closes every reported capability to the honest `supported` or `unsupported` outcome.
    */
   status: "supported" | "unsupported";
-  /** Why it is or is not answerable, naming what is missing when it is not. */
+  /**
+   * Why it is or is not answerable, naming what is missing when it is not.
+   *
+   * @evidence requirements/interior/services-and-environment.md#interior-service-routing `reason` tells the author which geometry, reference, or solver makes the named service check answerable or unavailable.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `reason` records the input-specific basis for the paired support state instead of implying a silent pass.
+   */
   reason: string;
 }
 
@@ -107,6 +248,8 @@ export interface IAutoMovieServiceCheckReport {
  * A route with fewer than two points has no span and yields nothing to compare;
  * the validator refuses that route on its own path.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentSpanBounds` gives every straight route leg its own radius-expanded occupied volume for precise interference checks.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentSpanBounds` derives one conservative axis-aligned box per adjacent centre-line point pair and none for a spanless route.
  * @author Samchon
  */
 export const serviceSegmentSpanBounds = (
@@ -140,6 +283,8 @@ export const serviceSegmentSpanBounds = (
  * a caller can index, cull or draw a bounding volume from without walking every
  * leg. Interference is decided on the spans, never on this.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentBounds` provides the single world box containing an entire service run for drawing, indexing, and broad-phase lookup.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentBounds` envelopes all route coordinates plus the declared radius and rejects a route with no point to bound.
  * @author Samchon
  */
 export const serviceSegmentBounds = (
@@ -178,6 +323,10 @@ export const serviceSegmentBounds = (
  * it is opened in; a world box authored beside a world position would let the
  * two drift apart with no way to tell which one was meant.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceMaintenanceBounds` locates the world-space keep-out volume that must remain open around serviceable equipment.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceMaintenanceBounds` translates a node-local maintenance box by the node position and returns `null` when none was declared.
+ * @evidence requirements/interior/construction-maintenance-and-safety.md#interior-maintenance-access `serviceMaintenanceBounds` materializes the declared equipment-maintenance clearance as an exact world-space access envelope.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-installation-maintenance-safety The world maintenance box supplies the measurable access envelope consumed by obstruction and safety checks.
  * @author Samchon
  */
 export const serviceMaintenanceBounds = (
@@ -216,6 +365,8 @@ export const serviceMaintenanceBounds = (
  * A system whose root does not resolve reaches nothing rather than reaching a
  * name; the validator owns reporting the dangling root itself.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSystemReach` reveals which declared nodes are actually connected to a system root, optionally showing the isolation caused by closed valves.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSystemReach` traverses segment ownership according to `from-root`, `to-root`, or bidirectional flow and returns reached nodes in declaration order.
  * @author Samchon
  */
 export const serviceSystemReach = (props: {
@@ -285,6 +436,8 @@ export const serviceSystemReach = (props: {
  * and no head loss enter it; `serviceAnalysisSupport` names the solver that
  * would as `unsupported`.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSystemLoad` reports the demand a supply or collection system is declared to carry without pretending to solve hydraulic or electrical performance.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSystemLoad` sums matching-system `in` demands for flow from the root and `out` demands for flow toward it.
  * @author Samchon
  */
 export const serviceSystemLoad = (props: {
@@ -314,6 +467,8 @@ export const serviceSystemLoad = (props: {
  * whether or not the two belong to the same discipline, because a duct and a
  * cable tray cannot share a cubic metre any more than two ducts can.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentClashes` names every pair of routed runs whose occupied volumes interfere outside a shared fitting.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentClashes` compares radius-expanded span boxes, exempts segments sharing an endpoint node, and preserves pair declaration order.
  * @author Samchon
  */
 export const serviceSegmentClashes = (
@@ -357,6 +512,10 @@ export const serviceSegmentClashes = (
  * longer be serviced. Contact alone is not intrusion, so a cabinet standing
  * exactly on the edge of an access zone is left alone.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceEnvelopeObstructions` identifies equipment whose required maintenance access is intruded on by a prop or another routed object.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceEnvelopeObstructions` intersects one world occupancy box with every non-null node maintenance envelope and returns the obstructed node ids.
+ * @evidence requirements/interior/construction-maintenance-and-safety.md#interior-maintenance-access `serviceEnvelopeObstructions` returns the exact stable node identities whose declared maintenance access volume is blocked by the supplied occupancy box.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-installation-maintenance-safety The obstruction query measures whether the declared installation and maintenance envelope remains accessible.
  * @author Samchon
  */
 export const serviceEnvelopeObstructions = (props: {
@@ -379,6 +538,9 @@ export const serviceEnvelopeObstructions = (props: {
  * {@link serviceSystemLoad}, so a drainage stack reports what it carries rather
  * than the zero a supply-shaped reading would give it.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceNetworkSchematic` produces the reviewable plan, topology, installed length, declared demand, and disconnection list for one service system.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceNetworkSchematic` resolves port owners, projects world routes onto `x`/`z`, and derives totals and root reachability from the selected system.
+ * @evidence requirements/interior/services-and-environment.md#interior-service-terminals-controls `serviceNetworkSchematic` preserves the selected system's node, terminal, equipment, port, flow direction, demand, and valve-controlled reachability in one deterministic diagram.
  * @author Samchon
  */
 export const serviceNetworkSchematic = (props: {
@@ -439,6 +601,8 @@ export const serviceNetworkSchematic = (props: {
  * before faces existed cannot be asked where its holes are. Saying `supported`
  * in either case would be the dressing-up this report exists to prevent.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceAnalysisSupport` tells the author which structural service checks ran and which discipline-performance questions remain unsolved.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceAnalysisSupport` derives support from located spaces, faced boundaries, and available validators while marking each declared discipline solver unavailable.
  * @author Samchon
  */
 export const serviceAnalysisSupport = (props: {
@@ -536,7 +700,12 @@ export const serviceAnalysisSupport = (props: {
   ];
 };
 
-/** Developed length of a run's authored centre line, in metres. */
+/**
+ * Developed length of a run's authored centre line, in metres.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `routeLength` measures the installed metre length of an authored run through all horizontal, vertical, and diagonal legs.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `routeLength` sums the Euclidean distance between each adjacent pair of three-dimensional route points.
+ */
 export const routeLength = (segment: IAutoMovieServiceSegment): number => {
   let total = 0;
   for (let index = 0; index + 1 < segment.route.length; ++index) {
@@ -547,7 +716,12 @@ export const routeLength = (segment: IAutoMovieServiceSegment): number => {
   return total;
 };
 
-/** Map every port id to the node that declares it, first declaration winning. */
+/**
+ * Map every port id to the node that declares it, first declaration winning.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `portOwners` resolves each route endpoint to the fitting or terminal that physically owns that service connection.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `portOwners` builds a first-declaration-wins map from every port id to its containing network node.
+ */
 export const portOwners = (
   network: IAutoMovieServiceNetwork,
 ): Map<string, IAutoMovieServiceNode> => {
@@ -558,7 +732,12 @@ export const portOwners = (
   return owners;
 };
 
-/** Map every port id to the port record itself, first declaration winning. */
+/**
+ * Map every port id to the port record itself, first declaration winning.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `portRecords` exposes the medium, direction, demand, and system declaration behind every route endpoint id.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `portRecords` indexes the first declared typed port record for each identifier across all network nodes.
+ */
 export const portRecords = (
   network: IAutoMovieServiceNetwork,
 ): Map<string, IAutoMovieServicePort> => {
@@ -575,6 +754,9 @@ export const portRecords = (
  * Squared because every caller compares it against a squared radius, and taking
  * the root first would only add a rounding step to a comparison that does not
  * need one.
+ *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `routeDistanceSquared` measures how closely a sleeve or other routed point lies to the service centre line without losing precision to a square root.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `routeDistanceSquared` returns the minimum clamped point-to-segment squared distance over every adjacent route-point pair.
  */
 export const routeDistanceSquared = (
   segment: IAutoMovieServiceSegment,

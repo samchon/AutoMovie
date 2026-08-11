@@ -22,6 +22,8 @@ import { IAutoMovieRecoilPush, impactRecoil } from "../physics/impactRecoil";
  * whose ROM excludes numeric 0 does not receive invented articulation at either
  * edge.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Converts an impact-derived recoil into a bounded, ROM-safe flinch and recovery clip.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Applies a deterministic compact procedural rule to the requested reaction.
  * @author Samchon
  */
 export const reactMotion = (

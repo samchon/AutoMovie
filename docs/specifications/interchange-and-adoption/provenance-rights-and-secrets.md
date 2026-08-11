@@ -2,11 +2,11 @@
 
 ## Provenance Ledger Boundary {#interchange-provenance-ledger}
 
+### Secret Reference Boundary {#interchange-secret-reference-boundary}
+
 <!-- @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-rights-contract 외부 입력의 source, rights와 derivation을 추적하되 진실과 법률을 자동 보증하지 않는다. -->
 
 Provenance ledger는 source entity, acquisition 또는 generation activity, raw·derived entities, responsible actor claim, rights snapshot과 consumer relation을 immutable ids와 digests로 연결한다. Ledger validation은 기록의 완전성과 결속을 판정하지만 creator claim, source 내용과 legal entitlement의 진실을 판정했다는 status를 만들지 않는다.
-
-### Secret Reference Boundary {#interchange-secret-reference-boundary}
 
 <!-- @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-credential-separation Credential을 source, receipt, log, cache와 evidence에서 분리한다. -->
 <!-- @evidence requirements/repaint/providers-models-and-credentials.md#repaint-credential-separation External execution receipt에서도 account secret을 배제한다. -->

@@ -34,7 +34,9 @@ Current evidence는 현재 판정에 사용할 수 있고 historical evidence는
 
 사용자는 evidence가 어떤 대상과 관찰에서 파생되었는지, 변환 또는 압축으로 무엇이 달라졌는지, bytes와 metadata가 판정 이후 바뀌지 않았는지 확인할 수 있어야 한다.
 
-## Evidence 충돌 {#acceptance-evidence-conflict}
+## Evidence 충돌 {#acceptance-evidence-conflict-group}
+
+### Evidence 충돌 {#acceptance-evidence-conflict}
 
 수치, 구조와 지각 evidence가 서로 다른 결론을 가리키면 충돌을 숨기지 않고 criterion별로 드러내야 한다.
 

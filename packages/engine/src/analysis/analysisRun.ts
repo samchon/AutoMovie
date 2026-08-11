@@ -21,6 +21,9 @@ import { ViolationCollector } from "../validation/violation";
  *
  * One table, so a domain added here appears in every rollup at once instead of
  * being remembered in some of the places that enumerate domains.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `AUTOMOVIE_ANALYSIS_DOMAINS` fixes the complete domain vocabulary and the order in which analysis outcomes roll up.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The single ordered table gives validation and summaries the same deterministic domain traversal.
  */
 export const AUTOMOVIE_ANALYSIS_DOMAINS = [
   "daylight",
@@ -38,6 +41,9 @@ export const AUTOMOVIE_ANALYSIS_DOMAINS = [
  * a truncation: a request for a grid past the bound is an authoring mistake and
  * says so, instead of quietly drawing a heatmap of a coarser study than the one
  * that was asked for.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `AUTOMOVIE_ANALYSIS_MAX_SAMPLES` makes an oversized spatial field fail visibly instead of silently truncating evidence.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The 4096-sample ceiling supplies the validator's deterministic refusal boundary for complete overlays.
  */
 export const AUTOMOVIE_ANALYSIS_MAX_SAMPLES = 4096;
 
@@ -47,13 +53,23 @@ export const AUTOMOVIE_ANALYSIS_MAX_SAMPLES = 4096;
  * The report has to be readable at a glance to be read at all, so it names the
  * first gaps in run order and counts the remainder. The count is always stated:
  * a bound nobody can see is indistinguishable from a clean sheet.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `AUTOMOVIE_ANALYSIS_REPORT_MAX_GAPS` bounds the named gap list while preserving a count of every omitted finding.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The sixteen-entry display limit makes report size stable without misclassifying truncated diagnostics as complete.
+ * @evidence requirements/diagnostics/budgets-and-limits.md#diagnostics-truncation-and-omission `AUTOMOVIE_ANALYSIS_REPORT_MAX_GAPS` exposes the omitted-gap count beside the bounded visible list, so truncation cannot read as completeness.
+ * @evidence specifications/validation-and-diagnostics/budget-and-truncation.md#validation-truncation-result The report limit preserves total omitted findings while returning a deterministic prefix of concrete gaps.
  */
 export const AUTOMOVIE_ANALYSIS_REPORT_MAX_GAPS = 16;
 
 /** A plain SHA-256 content digest as this project writes it. */
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
-/** Test whether a value names a rollable analysis domain. */
+/**
+ * Test whether a value names a rollable analysis domain.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `isAutoMovieAnalysisDomain` rejects unknown domain labels before they can disappear from a fixed-order rollup.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The predicate checks runtime values against the canonical domain table used by collection and summary.
+ */
 export const isAutoMovieAnalysisDomain = (
   value: unknown,
 ): value is AutoMovieAnalysisDomain =>
@@ -67,6 +83,9 @@ export const isAutoMovieAnalysisDomain = (
  * blank key, a blank unit, a non-finite value, an unknown direction, or two
  * targets fighting over the same key are all authoring mistakes with no sane
  * interpretation.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `assertAutoMovieAnalysisTargets` fails before solving when a target is blank, non-finite, directionless, or duplicated by key.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The assertion validates target identity, unit, threshold, comparison direction, and uniqueness in declaration order.
  */
 export const assertAutoMovieAnalysisTargets = (
   targets: readonly IAutoMovieAnalysisTarget[],
@@ -108,6 +127,15 @@ export const assertAutoMovieAnalysisTargets = (
  * A metric with no value must say why. Passing a value and a gap together, or
  * neither, throws: those are the two shapes that let an absent measurement
  * masquerade as a result.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `autoMovieAnalysisMetric` keeps absent measurements explicit and refuses contradictory value-gap combinations.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The builder resolves a same-unit target, derives its verdict, reports unit mismatches, and requires one reason for every missing value.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-unsupported-state `autoMovieAnalysisMetric` records an unavailable solver capability as `unsupported` with a required gap reason instead of fabricating a measured value.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-unsupported-state The metric builder preserves `unsupported` as an explicit no-value outcome with its own reason and remedy.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-classification-independence `autoMovieAnalysisMetric` keeps measurement availability, threshold verdict, and warning severity in separate fields rather than collapsing them into one status.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-classification-orthogonality The metric record independently represents solver availability, target comparison, and declaration warnings for the same check.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary `autoMovieAnalysisMetric` labels a solver-produced value or explicit gap as an automated metric result, never as a human approval.
+ * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-automated-finding-result The metric builder records value, unit, target verdict, or non-execution reason as machine output without manufacturing a judgment record.
  */
 export const autoMovieAnalysisMetric = (props: {
   /** Open metric key. */
@@ -213,6 +241,9 @@ const satisfied = (
  * `keys` is the whole set the study reports, which for a solver that emits more
  * than one run is the union across them: a moisture target is not unmatched
  * merely because the thermal run has no such metric.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `warnAutoMovieAnalysisTargetKeys` exposes declared thresholds that no reported metric actually checks.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The pass compares target keys with the union of emitted metric keys and appends stable unmatched-target warnings.
  */
 export const warnAutoMovieAnalysisTargetKeys = (props: {
   /** Targets the production declared, already checked. */
@@ -241,6 +272,8 @@ export const warnAutoMovieAnalysisTargetKeys = (props: {
  * to hold, so the seal runs the same validator a deserialized run faces and
  * throws on the first violation rather than shipping it.
  *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `sealAutoMovieAnalysisRun` refuses to emit incomplete evidence and binds accepted settings and outcomes to reproducible digests.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The sealing operation hashes settings, canonicalizes the record, computes its digest, and validates the finished run before return.
  * @author Samchon
  */
 export const sealAutoMovieAnalysisRun = (props: {
@@ -298,6 +331,17 @@ export const sealAutoMovieAnalysisRun = (props: {
  * Passing `revision` additionally asks whether the run is still about the
  * current design. A run that read an older revision is reported as stale: it
  * was a real measurement of a building that no longer exists.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `validateAutoMovieAnalysisRun` reports every structural, completeness, verdict, sample, digest, and staleness defect in stable order.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The validator traverses the sealed run deterministically and distinguishes invalid evidence from a valid result for an obsolete revision.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding `validateAutoMovieAnalysisRun` diagnoses contradictions inside the sealed solver outcome after input acceptance, including invalid metrics, samples, verdicts, and digests.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding The validator locates defects in computed run evidence separately from authoring-input checks performed before sealing.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-failed-not-run `validateAutoMovieAnalysisRun` requires failed and not-run outcomes to retain distinct statuses with non-empty reasons and remedies.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-failed-not-run-states The sealed-run validator rejects an outcome that erases the difference between execution failure and deliberate non-execution.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run `validateAutoMovieAnalysisRun` verifies that unsupported and not-run evidence stays explicit and carries an actionable explanation.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-outcome-classification-lattice The validator enforces the analysis run's solved, failed, unsupported, and not-run record shapes without treating absence as success.
+ * @evidence requirements/evidence-and-provenance/scope-identity-and-status.md#evidence-portable-inspection `validateAutoMovieAnalysisRun` rechecks a deserialized run from its self-contained protocol, subject, revision, solver, settings digest, outcome, and content digest.
+ * @evidence specifications/evidence-and-provenance/scope-identity-and-status.md#evp-portable-inspection-view The public validator supplies a portable inspection boundary for one complete analysis-run record without depending on hidden process state.
  */
 export const validateAutoMovieAnalysisRun = (props: {
   /** Run to check. */
@@ -602,6 +646,15 @@ const validateMetric = (
  * Declaring at least one required domain is mandatory, which is what removes
  * the last way to pass: a report over nothing would otherwise clear
  * everything.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `summarizeAutoMovieAnalysis` prevents a clean verdict when a required domain, current revision, measured value, or declared target remains unanswered.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The rollup validates ordered runs, classifies missing and stale coverage, bounds visible gaps, and computes the aggregate status.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation `summarizeAutoMovieAnalysis` retains per-domain solved, unsupported, not-run, stale, measured, and missed counts while deriving the bounded aggregate verdict.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation The summary carries partial domain results and omitted-gap counts forward instead of allowing available measurements to conceal missing evidence.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-validation-scope-freshness `summarizeAutoMovieAnalysis` compares every run's input revision with the requested current revision and separates stale or missing required domains from current solved evidence.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-validation-status `summarizeAutoMovieAnalysis` retains solved, unsupported, not-run, stale, measured, and missed counts instead of collapsing partial execution into success.
+ * @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-validation-outcomes `summarizeAutoMovieAnalysis` derives a bounded aggregate from current, stale, unsupported, not-run, measured, and missed outcomes while preserving domain gaps.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-validation-state-compatibility The summary implements current solved, stale, unsupported, not-run, missing, and failed-target state separation without claiming schema migration or suppression policy.
  */
 export const summarizeAutoMovieAnalysis = (props: {
   /** Runs to roll up; each is validated before it is counted. */
@@ -790,6 +843,9 @@ export const summarizeAutoMovieAnalysis = (props: {
  * Exported because a run that arrived as JSON has to be checkable by the same
  * rule that produced it, and because a second implementation of the canonical
  * form would be a second answer to what a run says.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `autoMovieAnalysisRunDigest` gives the complete run record one repeatable integrity identity that changes with its evidence.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The function serializes the canonical run payload and applies the shared SHA-256 content digest used during sealing and validation.
  */
 export const autoMovieAnalysisRunDigest = (
   run: Omit<IAutoMovieAnalysisRun, "digest">,

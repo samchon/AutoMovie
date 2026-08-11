@@ -32,6 +32,9 @@ import { autoMovieSemanticMaskNodeIndex } from "./semanticMask";
  * carries all of them, which is what makes its length independent of the
  * production and what stops an unmeasured cost from disappearing instead of
  * being reported as unmeasured.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Enumerates every geometry, memory, light, instance, and simulation metric that a render budget must account for.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Fixes the complete metric order used by the worst-case preflight inventory and report.
  */
 export const AUTOMOVIE_RENDER_METRICS: Readonly<AutoMovieRenderMetricOrder> = [
   "triangles",
@@ -51,25 +54,53 @@ export const AUTOMOVIE_RENDER_METRICS: Readonly<AutoMovieRenderMetricOrder> = [
   "fluidParticles",
 ];
 
-/** Device bytes of one vertex position: three 32-bit floats. */
+/**
+ * Device bytes of one vertex position: three 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the position-buffer component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed position stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_POSITION_BYTES = 12;
 
-/** Device bytes of one vertex normal: three 32-bit floats. */
+/**
+ * Device bytes of one vertex normal: three 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the normal-buffer component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed normal stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_NORMAL_BYTES = 12;
 
-/** Device bytes of one texture coordinate pair: two 32-bit floats. */
+/**
+ * Device bytes of one texture coordinate pair: two 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the texture-coordinate component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed UV stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_UV_BYTES = 8;
 
-/** Device bytes of one triangle index: one 32-bit unsigned integer. */
+/**
+ * Device bytes of one triangle index: one 32-bit unsigned integer.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for indexed-triangle storage in geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed index stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_INDEX_BYTES = 4;
 
 /**
  * Device bytes of one vertex's skin binding: four 16-bit joint indices and four
  * 32-bit weights, the glTF four-influence convention the mesh type documents.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Includes joint and weight attributes in skinned-geometry memory rather than counting only positions.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the declared four-influence stride for conservative geometry accounting.
  */
 export const AUTOMOVIE_SKIN_BYTES = 24;
 
-/** Device bytes of one RGBA8 texel. */
+/**
+ * Device bytes of one RGBA8 texel.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Converts decoded RGBA8 dimensions into the texture-memory budget.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the texel stride used by texture closure accounting.
+ */
 export const AUTOMOVIE_TEXEL_BYTES = 4;
 
 /**
@@ -78,6 +109,9 @@ export const AUTOMOVIE_TEXEL_BYTES = 4;
  * A drawn water surface carries this attribute beside position, normal and
  * texture coordinate, and a ripple shader scrolls along it. Leaving it out
  * would understate the one buffer a pond has that a wall does not.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Includes the water-only flow attribute in geometry memory instead of undercounting simulated surfaces.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the explicit free-surface flow stride for worst-case preflight accounting.
  */
 export const AUTOMOVIE_FLOW_BYTES = 8;
 
@@ -112,6 +146,20 @@ export const AUTOMOVIE_FLOW_BYTES = 8;
  * in the mask name the same thing. Shared resources that draw no pixels of
  * their own carry a `material:`, `texture:` or `light:` identity instead.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Measures geometry, decoded texture memory, lights, instances, fluids, and simulated drawables into one complete inventory.
+ * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Reports the conservative one-frame peak per metric and its semantic owner without substituting an average or whole-film total.
+ * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Charges each enabled shadow map and its opaque depth passes to the stable id of the light that casts them.
+ * @evidence requirements/lighting/budgets-and-representation.md#lighting-budget-cost-model Separates light population, shadow-map allocation, and the additional opaque draws induced by each shadow source.
+ * @evidence requirements/production-design/budgets-and-feasibility.md#production-design-worst-case-budget Computes conservative one-frame geometry, population, simulation, memory, light, shadow, and draw costs instead of averaging them over the film.
+ * @evidence requirements/production-design/budgets-and-feasibility.md#production-design-budget-measurement-status Separates exact or conservative totals from explicit unsupported and not-run gaps rather than counting an unmeasured cost as zero.
+ * @evidence requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate Produces the exact or conservative one-frame resource totals, dominant semantic owners, and explicit unmeasured gaps needed before render admission.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Produces exact counts or stated conservative upper bounds and explicit unsupported or not-run gaps for preflight.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-shadow-state-sampling Preserves the casting source identity in the staged branch of shadow-cost accounting.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-light-budget-selection Accounts for lights and their downstream shadow passes as distinct bounded cost dimensions.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-measurement-worst-case Produces the one-frame conservative render-cost observation and explicit analysis-gap subset of worst-case budget measurement.
+ * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-budget-admission-estimate Implements the render-domain estimate subset without claiming queue, concurrency, or runtime enforcement ownership.
+ * @evidence requirements/map/scale-and-populations.md#map-population-bound `measureAutoMovieRenderInventory` counts the realized subject population and attributes its conservative one-frame cost to stable semantic owners before rendering.
+ * @evidence specifications/world-and-site/partition-lod-streaming-and-seams.md#world-site-population-bound-determinism The inventory supplies the deterministic realized-population and dominant-owner measurement subset without claiming world streaming or partition lifecycle.
  * @author Samchon
  */
 export const measureAutoMovieRenderInventory = (props: {
@@ -299,6 +347,87 @@ export const measureAutoMovieRenderInventory = (props: {
     add(owner, source, "instanceSets", 1);
   }
 
+  let simulatedNodes = 0;
+  let simulatedBytes = 0;
+
+  // --- compact formations --------------------------------------------------
+  // Promoted heroes are ordinary scene nodes above. Every other member is one
+  // instance in exactly one camera-selected LOD batch, so the most expensive
+  // tier times the anonymous population is the safe frame bound. A chunk can
+  // select only one tier, which makes its draw bound the largest part count,
+  // not the sum of every mutually-exclusive representation.
+  for (const formation of subject.formations ?? []) {
+    let worstTriangles = 0;
+    let worstVertices = 0;
+    let worstParts = 0;
+    if (formation.lod.length === 0)
+      throw new Error(
+        `render inventory cannot measure formation "${formation.id}": it declares no level of detail`,
+      );
+    for (const lod of formation.lod) {
+      const cost = measure(
+        model(lod.model, `formation "${formation.id}" LOD "${lod.tier}"`),
+        costs,
+        lod.tier,
+      );
+      drawnModels.add(cost.model);
+      worstTriangles = Math.max(worstTriangles, cost.triangles);
+      worstVertices = Math.max(worstVertices, cost.vertices);
+      worstParts = Math.max(worstParts, cost.parts);
+    }
+    const owner = `formation:${formation.id}`;
+    const source = `formations["${formation.id}"]`;
+    const formationTriangles = formation.anonymousCount * worstTriangles;
+    const formationVertices = formation.anonymousCount * worstVertices;
+    const formationDraws = formation.chunks.length * worstParts;
+    triangles += formationTriangles;
+    vertices += formationVertices;
+    drawCalls += formationDraws;
+    instanceSlots += formation.anonymousCount;
+    instanceChunks += formation.chunks.length;
+    add(owner, source, "triangles", formationTriangles);
+    add(owner, source, "vertices", formationVertices);
+    add(owner, source, "drawCalls", formationDraws);
+    add(owner, source, "instanceSlots", formation.anonymousCount);
+    add(owner, source, "instanceChunks", formation.chunks.length);
+    add(owner, source, "nodes", 1);
+    ++simulatedNodes;
+  }
+
+  // --- bounded billboard effects ------------------------------------------
+  // The viewer uploads one four-vertex plane and instances it up to the
+  // compiler-owned cap. Time sampling may draw fewer (including zero), but a
+  // preflight bound must hold at the cue's peak rather than at frame zero.
+  for (const effect of subject.effects ?? []) {
+    const cap = effect.recipe.budget.maxParticles;
+    if (!Number.isSafeInteger(cap) || cap <= 0)
+      throw new Error(
+        `render inventory cannot measure effect "${effect.id}": maxParticles must be a positive safe integer, but was ${cap}`,
+      );
+    const owner = `effect:${effect.id}`;
+    const source = `effects["${effect.id}"]`;
+    const effectTriangles = cap * 2;
+    const effectVertices = cap * 4;
+    const effectDraws = 1;
+    triangles += effectTriangles;
+    vertices += effectVertices;
+    drawCalls += effectDraws;
+    instanceSlots += cap;
+    simulatedBytes +=
+      4 *
+        (AUTOMOVIE_POSITION_BYTES +
+          AUTOMOVIE_NORMAL_BYTES +
+          AUTOMOVIE_UV_BYTES) +
+      6 * AUTOMOVIE_INDEX_BYTES;
+    ++simulatedNodes;
+    add(owner, source, "triangles", effectTriangles);
+    add(owner, source, "vertices", effectVertices);
+    add(owner, source, "drawCalls", effectDraws);
+    add(owner, source, "instanceSlots", cap);
+    add(owner, source, "nodes", 1);
+    cite(null, owner, source, `effect "${effect.id}"`);
+  }
+
   // --- simulated drawables --------------------------------------------------
   // Cloth, planting and water are drawn by the same renderer as everything
   // above and are held by no scene node, so a subject that measured only nodes,
@@ -306,8 +435,6 @@ export const measureAutoMovieRenderInventory = (props: {
   // curtain, the fern bed and the pond are missing from. Every count here is
   // derived from the domain record alone: no solve has to run, which is the
   // whole point of refusing a production before the first step is integrated.
-  let simulatedNodes = 0;
-  let simulatedBytes = 0;
   let fluidCells = 0;
   let fluidParticles = 0;
   const unmeasured: string[] = [];
@@ -577,19 +704,43 @@ export const measureAutoMovieRenderInventory = (props: {
   // counted, and the environment background costs one full-screen draw.
   const shadowMaps = casters.length;
   const opaqueDraws = drawCalls;
+  const opaqueTriangles = triangles;
   for (const caster of casters) {
     drawCalls += opaqueDraws;
+    triangles += opaqueTriangles;
     add(
       `light:${caster}`,
       `scene.lights["${caster}"]`,
       "drawCalls",
       opaqueDraws,
     );
+    add(
+      `light:${caster}`,
+      `scene.lights["${caster}"]`,
+      "triangles",
+      opaqueTriangles,
+    );
+  }
+  // Outline is another complete geometry pass. With no shadow caster it is
+  // the frame-wide peak; with one it ties the beauty shadow pass, and with
+  // several the shadow pass is already the larger conservative bound.
+  if (casters.length === 0) {
+    drawCalls += opaqueDraws;
+    triangles += opaqueTriangles;
+    add("render-pass:outline", "render.pass.outline", "drawCalls", opaqueDraws);
+    add(
+      "render-pass:outline",
+      "render.pass.outline",
+      "triangles",
+      opaqueTriangles,
+    );
   }
   const image = subject.scene.environment?.image ?? null;
   if (image !== null) {
     drawCalls += 1;
+    triangles += 2;
     add(`texture:${image}`, "scene.environment.image", "drawCalls", 1);
+    add(`texture:${image}`, "scene.environment.image", "triangles", 2);
   }
 
   const nodes =

@@ -2,13 +2,13 @@
 
 ## 정규 의미와 Display Message {#validation-message-semantics}
 
+### 기계 판독 Result Envelope {#validation-machine-result-envelope}
+
 <!-- @evidence requirements/diagnostics/localization-and-machine-results.md#diagnostics-message-semantic-separation 번역 가능한 설명과 자동 판정의 정규 의미를 분리한다. -->
 
 Diagnostic의 정규 identity, classification, severity, location, scope, cause parameter, correction action과 outcome은 locale-neutral data다. Display message는 이 data와 message template identity에서 파생되며 자동화가 message text, 어순이나 punctuation을 parsing하여 판정하지 않는다.
 
 Template 변경은 diagnostic 의미를 바꾸지 않지만 cause나 correction 의미의 변경은 diagnostic 또는 compatibility version을 바꾼다. 결과는 사용한 template 및 locale identity를 남겨 같은 정규 레코드의 서로 다른 표시를 구분한다.
-
-### 기계 판독 Result Envelope {#validation-machine-result-envelope}
 
 <!-- @evidence requirements/diagnostics/localization-and-machine-results.md#diagnostics-machine-readable-result identity, 분류, 위치, 원인, 교정과 완전성을 자유 문구 없이 소비하게 한다. -->
 

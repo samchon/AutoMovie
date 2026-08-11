@@ -1,6 +1,8 @@
 # Render encoding과 validation
 
-## Encode, multiplex와 output probe {#spec-render-encode-probe}
+## Contract units {#spec-render-encoding-validation-contract-units}
+
+### Encode, multiplex와 output probe {#spec-render-encode-probe}
 <!-- @evidence requirements/rendering/encoding-and-multiplexing.md#rendering-encoding-multiplexing Frame과 audio의 media 조립을 정밀화한다. -->
 <!-- @evidence requirements/rendering/encoding-and-multiplexing.md#rendering-encode-input-closure Encode input closure를 정밀화한다. -->
 <!-- @evidence requirements/rendering/encoding-and-multiplexing.md#rendering-encode-timestamps Stream timestamp와 sync를 정밀화한다. -->
@@ -16,7 +18,7 @@ Frame, audio sample, cue와 metadata timestamp는 common exact presentation orig
 
 Output은 isolated destination에서 process success, nonzero size, stream probe, timestamps, duration, dimensions, color·audio facts와 digest를 actual bytes에서 확인한 뒤 원자적으로 current가 된다. Missing frame, numbering gap, sync drift, unsupported codec-container 조합, failed process, stale input, zero bytes와 probe mismatch는 variant별 실패로 남는다. Independent variant는 보존할 수 있지만 failed required stream이나 metadata가 있는 encode를 전체 성공으로 승격하지 않는다.
 
-## Render validation과 review boundary {#spec-render-validation}
+### Render validation과 review boundary {#spec-render-validation}
 <!-- @evidence requirements/rendering/validation.md#rendering-validation Planned output에서 current pixel까지의 검증을 정밀화한다. -->
 <!-- @evidence requirements/rendering/validation.md#rendering-schedule-set-validation Schedule와 set closure 검증을 정밀화한다. -->
 <!-- @evidence requirements/rendering/validation.md#rendering-nonblank-expected-content Expected pixel content 검증을 정밀화한다. -->

@@ -29,6 +29,13 @@ const DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
  * required and the accepted keys to the ones that shape actually consumes. A
  * dimension the selected shape ignores is refused rather than stored, because a
  * stored value nothing reads is a claim the render never honours.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Implements the primitive half of the open geometry contract with six parameterized blocking shapes.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Builds every supported shape from explicit bounded metric dimensions.
+ * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Refuses an unsupported shape discriminator instead of substituting a catalogue default.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Maps each shape to exactly the dimensions it consumes.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Reports an unsupported shape before model output is built.
+ * @author Samchon
  */
 export const PRIMITIVE_PROP_ARCHETYPE: IAutoMovieModelArchetype = {
   id: "primitive-prop",

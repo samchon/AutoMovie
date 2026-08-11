@@ -1,6 +1,8 @@
 # Delivery package, provenance와 publication
 
-## Safe package와 manifest closure {#spec-delivery-package-safety}
+## Contract units {#spec-delivery-package-provenance-publication-contract-units}
+
+### Safe package와 manifest closure {#spec-delivery-package-safety}
 <!-- @evidence requirements/delivery-and-accessibility/packages-manifests-and-dependencies.md#delivery-packages-manifests-dependencies Delivery package dependency closure를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/packages-manifests-and-dependencies.md#delivery-manifest-identity Canonical manifest identity를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/packages-manifests-and-dependencies.md#delivery-safe-relative-paths Relative path safety를 정밀화한다. -->
@@ -16,7 +18,7 @@ Path validation은 absolute path, parent traversal, empty·reserved·invalid seg
 
 Assembly는 isolated destination에서 canonical inventory를 쓰고 모든 bytes를 다시 읽어 digest와 dependency closure를 확인한다. Failure 때 expected, verified, missing, invalid와 reusable items 및 temporary state를 보고하고 stale manifest를 재사용하지 않는다. Duplicate·escaping path, digest mismatch, missing required artifact, undeclared dependency, expansion 초과와 unsupported entry는 complete 또는 safe 상태를 거절한다.
 
-## Provenance, integrity와 disclosure {#spec-delivery-provenance-integrity}
+### Provenance, integrity와 disclosure {#spec-delivery-provenance-integrity}
 <!-- @evidence requirements/delivery-and-accessibility/integrity-provenance-and-authenticity.md#delivery-integrity-provenance-authenticity Source에서 delivery까지 derivation을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/integrity-provenance-and-authenticity.md#delivery-provenance-entities-activities Entity, activity와 responsibility를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/integrity-provenance-and-authenticity.md#delivery-canonical-digest Canonical digest 의미를 정밀화한다. -->
@@ -35,7 +37,7 @@ Structured record는 canonical serialization identity를, binary는 byte digest�
 
 Public record는 credential, secret, private locator, absolute host path와 불필요한 personal data를 제외하되 required derivation edge와 verification 결과를 모호하게 만들지 않는다. Digest와 signature는 bytes와 declared history의 결속만 증명하고 품질, 권리, 사실성 또는 승인 권한을 자동 증명하지 않는다. Missing ancestor, digest mismatch, invalid signature, mutable source와 contradictory activity order는 verified 상태를 거절하며 known graph와 missing edge는 partial lineage로 보존한다.
 
-## Atomic publication, readback와 retention {#spec-delivery-publication-retention}
+### Atomic publication, readback와 retention {#spec-delivery-publication-retention}
 <!-- @evidence requirements/delivery-and-accessibility/publication-and-retention.md#delivery-publication-retention 검증 뒤 atomic publication을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/publication-and-retention.md#delivery-candidate-published Candidate와 published 상태를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/publication-and-retention.md#delivery-publication-preconditions Publication precondition 재검사를 정밀화한다. -->

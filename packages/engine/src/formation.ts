@@ -26,44 +26,112 @@ import { worldGroundHeight } from "./worldKit";
  * describe the same unit standing in different places. `progress` is the cue's
  * own eased progress, so a re-form bends on the curve its author declared and
  * not on a second one.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Carries the target layout and eased progress needed to reproduce an interior reform sample.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Makes reform state an explicit deterministic result instead of hidden sampler history.
  */
 export interface IAutoMovieFormationReform {
-  /** The arrangement the unit is in when the cue ends. */
+  /**
+   * The arrangement the unit is in when the cue ends.
+   *
+   * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Exposes the target arrangement whose capacity, ground, and motion interior must be checked.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Carries the reform layout into the temporal validation surface.
+   */
   layout: IAutoMovieFormationDesign["layout"];
-  /** Eased fraction of the way there, 0 at the cue's start and 1 at its end. */
+  /**
+   * Eased fraction of the way there, 0 at the cue's start and 1 at its end.
+   *
+   * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Identifies the exact interior state at which reform geometry is evaluated.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Lets validation inspect cue interiors rather than endpoints alone.
+   */
   progress: number;
 }
 
-/** One sampled unit state, with the arrangement it is travelling toward. */
+/**
+ * One sampled unit state, with the arrangement it is travelling toward.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Represents a complete repeatable motion answer at one requested film time.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Keeps translation, facing, spacing, and reform state independent of seek order.
+ */
 export interface IAutoMovieSampledFormationMotion extends IAutoMovieFormationMotionState {
   /**
    * The re-form under way, or null when the unit keeps its designed
    * arrangement. Null rather than an identity re-form, because "no target" and
    * "a target identical to the design" are different statements and only the
    * first is what a unit with no cue is doing.
+   *
+   * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Preserves whether a deterministic sample is actively reforming instead of collapsing absence into an identity target.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Makes the sampled arrangement state explicit for replay and compatibility checks.
    */
   reform: IAutoMovieFormationReform | null;
 }
 
-/** Inputs to the deterministic automatic formation LOD selector. */
+/**
+ * Inputs to the deterministic automatic formation LOD selector.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Carries the ordered tiers, image contribution, previous choice, and deadband that prevent formation LOD flicker.
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Exposes the compiled tiers and explicit selection operands instead of letting rendering choose an undeclared representation.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Defines the complete input boundary for stable representation transitions.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-bounds-framing-culling-failures Carries the distance, projected contribution, prior tier, and hysteresis used for an inspectable formation-resolution decision.
+ */
 export interface IAutoMovieFormationLodInput {
-  /** Ordered compiled anonymous representations. */
+  /**
+   * Ordered compiled anonymous representations.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Supplies the fixed near-to-far candidates between which the formation may transition.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Keeps transition choice within compiled compatible representations.
+   */
   lod: readonly IAutoMovieCompiledFormationLod[];
-  /** Camera-to-chunk-centroid distance in meters. */
+  /**
+   * Camera-to-chunk-centroid distance in meters.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Provides the spatial contribution used on both sides of an LOD boundary.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Makes distance an explicit transition operand instead of renderer-local state.
+   */
   distance: number;
-  /** Projected representative-member diameter in physical pixels. */
+  /**
+   * Projected representative-member diameter in physical pixels.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Stabilizes formation detail by accounting for actual screen contribution as well as distance.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Exposes the image-space operand that participates in the transition metric.
+   */
   projectedPixels: number;
-  /** Tier retained from the previous frame, or null on first selection. */
+  /**
+   * Tier retained from the previous frame, or null on first selection.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Carries temporal state needed to retain a tier inside the boundary deadband.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Prevents adjacent frames from making independent threshold decisions.
+   */
   previous: IAutoMovieCompiledFormationLod["tier"] | null;
-  /** Fractional boundary deadband; 0.1 by default. */
+  /**
+   * Fractional boundary deadband; 0.1 by default.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability States the hysteresis width that suppresses repeated LOD flipping near a threshold.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Makes transition stability a declared parameter rather than a hidden renderer constant.
+   */
   hysteresis?: number;
 }
 
-/** One automatic LOD decision with its combined selection metric. */
+/**
+ * One automatic LOD decision with its combined selection metric.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Reports both the retained or selected tier and the metric that crossed its hysteresis boundary.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Makes an automatic transition inspectable instead of returning an unexplained representation.
+ */
 export interface IAutoMovieFormationLodSelection {
-  /** Selected compiled tier. */
+  /**
+   * Selected compiled tier.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Identifies the representation retained or entered after hysteresis is applied.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Exposes the concrete transition outcome consumed by the renderer.
+   */
   lod: IAutoMovieCompiledFormationLod;
-  /** Distance enlarged as projected contribution shrinks. */
+  /**
+   * Distance enlarged as projected contribution shrinks.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Records the combined distance and pixel-contribution metric used at transition boundaries.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Makes the basis of the selected tier available for stability review.
+   */
   effectiveDistance: number;
 }
 
@@ -73,6 +141,25 @@ export interface IAutoMovieFormationLodSelection {
  * The compiler and ordinary measurement scripts share this pure derivation so a
  * slot queried from loaded project state is exactly the slot materialized into
  * the compiled formation. No filesystem or project state is consulted.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-deterministic-population Regenerates stable anonymous identities, promoted heroes, positions, facing, and motion phase from formation identity, seed, and slot.
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Derives the anonymous node key from formation identity and the logical slot instead of enumeration order.
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-stable-background-identity Recreates a background member with the same slot-derived node and seeded motion phase across repeated materialization.
+ * @evidence requirements/actors/populations-and-doubles.md#actor-prototype-variation Reuses the declared model recipe while deriving each member's motion phase from the stable formation seed and slot.
+ * @evidence requirements/formations/scope-and-identity.md#formation-authoring-mode-selection Materializes one reviewable member from the compact prototype, layout, hero-override, and slot contract on demand.
+ * @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-subject-prototype-instance Keeps the shared model recipe distinct from the slot-derived member identity and the optional named hero actor.
+ * @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-hero-background Distinguishes a seeded anonymous background member from a hero override occupying the same logical slot.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Reuses one declared model recipe while assigning each logical slot its own stable node, transform, motion phase, and optional hero identity.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-compression-individuality Regenerates a compact member by stable slot without erasing its independently addressable node identity or hero exception.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-pattern-local-stability Derives identity and seeded variation from the formation id and logical slot so an unrelated population change does not renumber an existing member.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Keeps logical slot identity explicit in the compact placement result.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hero-variation-group-state Applies hero override and deterministic background variation without per-member stored nodes.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-population-double-variation Combines one shared prototype with a stable member identity, seeded phase, and optional named-actor promotion.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Regenerates the same compact member record without storing or independently re-deriving anonymous nodes.
+ * @evidence specifications/narrative-and-intent/locations-subjects-and-assets.md#narrative-intent-subject-prototype-role Materializes the prototype, stable slot occurrence, seeded background variation, and optional hero identity as separate fields.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Keeps the shared model recipe separate from the slot-owned identity, placement, seeded phase, and hero override.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Keeps each regenerated group member independently addressable by its slot-derived node and optional actor identity.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-deterministic-instance-generation Derives the same member identity and seeded variation from the stable formation and slot inputs without storing expanded nodes.
  */
 export const formationSlot = (
   formation: IAutoMovieFormationDesign & IAutoMovieFormationGrounding,
@@ -102,6 +189,9 @@ export const formationSlot = (
  * defect this exists to remove. The compiled formation snapshots exactly these
  * surfaces, so the compiler, the gate, the viewer and an offline measurement
  * script all place from one record and cannot answer differently.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation Retains the authoritative ground snapshot used to check every slot's placement and bounds.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Gives compiler, renderer, and validation one shared terrain input for formation layout.
  */
 export interface IAutoMovieFormationGrounding {
   /**
@@ -112,11 +202,19 @@ export interface IAutoMovieFormationGrounding {
    * means no terrain was declared under the unit, and every member then stands
    * at the anchor's own height, which is what a formation did before ground was
    * sampled at all.
+   *
+   * @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation Supplies the exact surfaces against which slot ground placement is evaluated.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Distinguishes a declared terrain snapshot from the intentional no-terrain placement case.
    */
   readonly ground?: readonly IAutoMovieWorldSurface[];
 }
 
-/** What a formation needs to say where one of its slots stands. */
+/**
+ * What a formation needs to say where one of its slots stands.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-local-frame Collects identity, layout, anchor, facing, seed, and ground needed to derive a slot from the unit-local frame.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Defines the compact placement input shared by every slot derivation.
+ */
 export type IAutoMovieFormationPlacement = Pick<
   IAutoMovieFormationDesign,
   "id" | "count" | "layout" | "anchor" | "facingDeg" | "seed"
@@ -137,6 +235,12 @@ export type IAutoMovieFormationPlacement = Pick<
  *
  * Height comes from {@link formationGroundRelief}: the ground under the member,
  * not the ground under the group. A crowd on a rise stands on the rise.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-local-frame Derives the slot in unit-local coordinates before applying formation facing, anchor, and world terrain relief.
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-reform-local-blend Interpolates source and target slot points in formation-local axes before applying heading and terrain.
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-reform-slot-assignment Resolves both layouts with the same stable slot number throughout the reform.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Implements compact line, column, wedge, arc, and scatter slot placement without expanded member nodes.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Produces the bounded local reform state for the assigned member before world-frame composition.
  */
 export const formationSlotPosition = (
   formation: IAutoMovieFormationPlacement,
@@ -195,6 +299,10 @@ export const formationSlotPosition = (
  * ground, and without that datum there is no rise to state. Those are the three
  * ways a unit keeps the single height it used to have, and each is a fact about
  * what was authored rather than a fallback that guesses.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation Computes the member-to-anchor terrain residual used to validate grounded slot placement and bounds.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Gives all formation consumers the same ground result, including explicit zero when the terrain datum is absent.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-layout-ground-validation Supplies the resolved terrain offset that layout validation compares with the member's grounded slot in the same placement snapshot.
  */
 export const formationGroundRelief = (
   formation: IAutoMovieFormationGrounding & {
@@ -242,6 +350,16 @@ const formationGroundDatumCache = new WeakMap<
  *
  * Twenty-four projected pixels are neutral. A prior tier retains a 10% boundary
  * deadband so camera jitter cannot thrash instance buffers.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability Selects formation tiers from distance and projected size while retaining the previous tier inside an explicit hysteresis band.
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-transition Retains the prior compiled tier inside the declared deadband before crossing to the distance-and-projection-selected tier.
+ * @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-tier-transition Changes only to a declared compiled tier after the distance-and-projection threshold clears the previous tier's hysteresis band.
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-selection Selects only among caller-declared formation tiers using distance, projected contribution, prior tier, and explicit hysteresis.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-transition-invariants Implements a stable automatic representation transition with an inspectable effective-distance result.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-bounds-framing-culling-failures Returns the chosen tier and its effective-distance basis while suppressing threshold flicker.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-fidelity-tier-transition Implements the compiled-tier selection and hysteresis subset of a representation transition without treating the automatic choice as fidelity approval.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-lod-selection-policy Applies the declared ordered thresholds and projected-size correction while retaining the previous tier inside the hysteresis band.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-selection-output Returns the selected compiled tier together with the effective-distance and projected-size basis used by this automatic formation subset.
  */
 export const selectFormationLod = (
   input: IAutoMovieFormationLodInput,
@@ -272,7 +390,12 @@ export const selectFormationLod = (
   return { lod: input.lod[desiredIndex]!, effectiveDistance };
 };
 
-/** Sample one formation's compact source-authored cue sequence. */
+/**
+ * Sample one formation's compact source-authored cue sequence.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Resolves the same translation, facing, spacing, and retained reform state for any direct seek to the same time.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Orders overlapping cue candidates stably and reconstructs state without a playback cursor.
+ */
 export const sampleFormationMotion = (
   motions: readonly IAutoMovieFormationMotion[],
   formation: string,
@@ -346,7 +469,12 @@ export const sampleFormationMotion = (
   return retained;
 };
 
-/** Apply a sampled formation state to one designed world-space point. */
+/**
+ * Apply a sampled formation state to one designed world-space point.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Applies spacing in the unit frame, then facing and translation, so repeated motion samples produce the same member position.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Provides the shared point transform used by oracle, compiler, and renderer formation paths.
+ */
 export const transformFormationPoint = (
   point: IAutoMovieVector3,
   anchor: IAutoMovieVector3,
@@ -383,6 +511,11 @@ export const transformFormationPoint = (
  * caller. Two consumers ask where a unit is: the oracle reports it and the
  * compiler refuses a unit standing off the ground its shot staged, and a
  * private copy in one of them is how the two come to disagree.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Recomputes conservative world bounds from every transformed corner for the current cue state.
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds Keeps the declared local box separate from the measured world-axis box derived after the cue transform and facing rotation.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Supplies the same motion-aware bounds to framing reports and ground validation.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-bounds-inputs Derives the current world-space bound from the declared formation box, anchor, cue state, and facing without overwriting the input bound.
  */
 export const transformFormationBounds = (
   bounds: IAutoMovieFormationBounds,
@@ -419,6 +552,9 @@ export const transformFormationBounds = (
  * compiler-owned hero slot. Rotation applies the current formation facing
  * before the authored rotation relative to that slot, while scale remains
  * source-owned.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-hero-overrides Preserves a promoted actor's authored translation, rotation, and scale while inheriting formation placement and motion.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hero-variation-group-state Implements the named-hero exception without returning the actor to the anonymous instance batch.
  */
 export const composeFormationHeroTransform = (
   base: IAutoMovieTransform,
@@ -516,7 +652,12 @@ const localFormationPoint = (
   };
 };
 
-/** Interpolate one scalar the one way every automovie cue interpolates. */
+/**
+ * Interpolate one scalar the one way every automovie cue interpolates.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Gives translation, spacing, facing, and reform channels one identical linear interpolation rule.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Prevents channel-specific arithmetic from producing divergent formation samples.
+ */
 export const lerp = (from: number, to: number, progress: number): number =>
   from * (1 - progress) + to * progress;
 
@@ -527,6 +668,9 @@ export const lerp = (from: number, to: number, progress: number): number =>
  * same `easing` names and must bend them identically. Two spellings of one
  * curve is how a member and the unit it stands in come to disagree about where
  * they are halfway through the same second.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-determinism Evaluates every declared formation easing curve as a pure function of normalized progress.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Shares one curve implementation between unit motion and per-member channels.
  */
 export const easingProgress = (
   easing: IAutoMovieFormationMotion["easing"],
@@ -562,6 +706,9 @@ export const easingProgress = (
  * bakes a table per declared gait, and the compiler refuses a cue calling for a
  * gait that is not among them. Two spellings of "what can this figure do" is
  * how a production compiles clean and then fails to draw.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Exposes the recipe-ordered gait repertoire used to reject unsupported formation motion cues.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Gives validation and runtime baking the same model capability list.
  */
 export const autoMovieModelGaits = (
   model: Pick<IAutoMovieModel, "profiles">,

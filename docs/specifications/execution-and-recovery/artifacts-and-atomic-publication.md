@@ -2,8 +2,9 @@
 
 ## 독립 Artifact 상태 축 계약 {#execution-artifact-lifecycle-contract}
 
+### Artifact Ownership과 Completeness {#execution-artifact-ownership-completeness}
+
 <!-- @evidence requirements/operations-and-recovery/partial-artifacts-and-publication.md#operations-partial-artifacts-publication 작성 중 bytes, candidate와 current를 구분하여 기존 정상 결과를 보호한다. -->
-<!-- @evidence requirements/operations-and-recovery/partial-artifacts-and-publication.md#operations-artifact-state-ownership 완전성, 무결성과 validation을 서로 덮어쓰지 않는 artifact 출력으로 분리한다. -->
 <!-- @evidence requirements/diagnostics/partial-artifacts-and-recovery.md#diagnostics-artifact-completeness Absent, partial, complete, stale, corrupt와 quarantined를 손실 없는 독립 관측값으로 표현한다. -->
 <!-- @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-resume-compatibility-classification 과거 결과의 compatibility를 materialization과 별개로 판정하게 한다. -->
 <!-- @evidence requirements/diagnostics/external-input-and-security.md#diagnostics-quarantine-and-adoption Quarantine이 bytes 존재, 완전성 또는 과거 validation evidence를 덮어쓰지 않게 한다. -->
@@ -19,8 +20,6 @@ Artifact snapshot은 artifact identity, exact physical or remote generation, pro
 | Availability와 quarantine | Availability의 unknown, available, unavailable, missing 또는 deleted와 확인한 location generation, quarantine의 unknown, clear, quarantined 또는 released와 reason, policy, authority 및 event evidence |
 
 모든 snapshot은 contract version과 observation identity를 가지며 모르는 값은 unknown으로 보존한다. 한 축의 새 관측은 다른 축의 값을 초기화하지 않고, 과거 materialization, integrity와 validation 성공 receipt는 이후 stale, incompatible, superseded, unavailable 또는 quarantined 관측과 함께 남는다. Domain validation verdict와 execution phase는 공통 artifact 축 밖의 별도 결과이며 current selection, path 존재와 prior success는 어느 축의 통과도 대신하지 않는다.
-
-### Artifact Ownership과 Completeness {#execution-artifact-ownership-completeness}
 
 <!-- @evidence requirements/operations-and-recovery/partial-artifacts-and-publication.md#operations-artifact-state-ownership Artifact의 producer, input, role, complete 또는 partial, integrity와 validation 상태를 추적한다. -->
 

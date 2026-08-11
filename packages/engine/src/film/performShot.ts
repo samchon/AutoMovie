@@ -168,24 +168,51 @@ const orderEvents = (
  * because the shot references them by id, the host registers them wherever its
  * clip store lives.
  *
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot supports reproducible staging and performance: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot realizes deterministic staging replay and validation: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
  * @author Samchon
  */
 export type IAutoMoviePerformedShot =
   | IAutoMoviePerformedShot.ISuccess
   | IAutoMoviePerformedShot.IFailure;
 export namespace IAutoMoviePerformedShot {
-  /** The performance compiled and every clip passed validation. */
+  /**
+   * The performance compiled and every clip passed validation.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot.ISuccess supports reproducible staging and performance: The performance compiled and every clip passed validation.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.ISuccess realizes deterministic staging replay and validation: The performance compiled and every clip passed validation.
+   */
   export interface ISuccess {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay The success discriminator keeps successful and failed performed-shot replay outcomes structurally distinct.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.ISuccess.success admits the compiled shot and validated motion bundle to editing.
+     */
     success: true;
 
-    /** The shot, ready for the cut. */
+    /**
+     * The shot, ready for the cut.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot.ISuccess.shot supports reproducible staging and performance: The shot, ready for the cut.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.ISuccess.shot realizes deterministic staging replay and validation: The shot, ready for the cut.
+     */
     shot: IAutoMovieShot;
 
-    /** The synthesised per-actor clips, keyed by scene-node id. */
+    /**
+     * The synthesised per-actor clips, keyed by scene-node id.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot.ISuccess.motions supports reproducible staging and performance: The synthesised per-actor clips, keyed by scene-node id.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.ISuccess.motions realizes deterministic staging replay and validation: The synthesised per-actor clips, keyed by scene-node id.
+     */
     motions: Record<string, IAutoMovieMotion>;
 
-    /** Ground-IK stance runs produced for gait or resumed opening plants. */
+    /**
+     * Ground-IK stance runs produced for gait or resumed opening plants.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot.ISuccess.plants supports reproducible staging and performance: Ground-IK stance runs produced for gait or resumed opening plants.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.ISuccess.plants realizes deterministic staging replay and validation: Ground-IK stance runs produced for gait or resumed opening plants.
+     */
     plants: Array<{
       /** Scene node owning these world-space plant runs. */
       node: string;
@@ -194,12 +221,27 @@ export namespace IAutoMoviePerformedShot {
     }>;
   }
 
-  /** The action list contradicted the stage, or a compiled clip broke ROM. */
+  /**
+   * The action list contradicted the stage, or a compiled clip broke ROM.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Withholds the performed shot when an action contradicts the staged world or a synthesized clip fails its motion gate, preserving an actionable failure branch.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.IFailure realizes deterministic staging replay and validation: The action list contradicted the stage, or a compiled clip broke ROM.
+   */
   export interface IFailure {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status The success discriminator keeps successful and failed performance failure outcomes structurally distinct.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.IFailure.success prevents failed synthesis from yielding a playable shot.
+     */
     success: false;
 
-    /** Every violation found, for the correction round. */
+    /**
+     * Every violation found, for the correction round.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Returns addressed action-reference, synthesis, range-of-motion, and plant failures instead of a partial performed shot.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot.IFailure.violations realizes deterministic staging replay and validation: Every violation found, for the correction round.
+     */
     violations: IAutoMovieConstraintViolation[];
   }
 }
@@ -305,6 +347,35 @@ export namespace IAutoMoviePerformedShot {
  * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
  *   the same frame table the renderer/player uses so ground planting and
  *   `attachTo` objectMotions read the visible pose, not raw rig-space FK.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Validates staged action references and synthesized motions before producing one deterministic performed-shot result.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-spatial-validation Resolves every action actor, target, projectile, attachment parent, and camera against the staged scene before compiling its spatial result; this host does not claim route or clearance validation.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-temporal-validation Refuses non-finite, non-positive, overlapping, or out-of-shot action spans before sampling motion and interaction results on the shot clock.
+ * @evidence requirements/staging/events-and-timing.md#staging-fixed-film-clock Uses the performed beat duration and shot-local seconds as the shared clock for actor clips, object clips, camera motion, and emitted interaction events.
+ * @evidence requirements/staging/events-and-timing.md#staging-simultaneous-events Orders equal-time interaction events by an explicit semantic kind priority and then stable event id, independent of action traversal order.
+ * @evidence requirements/staging/interactions-and-choreography.md#staging-choreography-phases Converts authored launch, reaction, grab, attach, detach, and release actions into timed motion plus their contact and ownership consequences.
+ * @evidence requirements/staging/interactions-and-choreography.md#staging-choreography-time-sampling Places generated contact, hit, coupling, and reaction results on the same shot-local clock used to sample the motions that caused them.
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Resolves targets from the staged scene placements and samples actor or object motion at the addressed shot time instead of mixing a nominal blocking point with a live result.
+ * @evidence requirements/staging/subjects-and-object-staging.md#staging-rest-active-placement Starts each subject from its staged rest transform, then gives active actor, launch, attachment, or mounted motion explicit shot-local authority without duplicating the subject.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-subject-dependencies Requires every performed actor, camera, frame or focus target, projectile, and attachment parent to resolve through the authored script and staged scene before compiling the shot.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-unfilmable-scene-refusal Returns addressed violations when required actor, camera, target, projectile, or carried-object dependencies are absent or contradictory instead of fabricating a filmable substitute.
+ * @evidence requirements/camera/position-and-movement.md#camera-path-refusal Refuses invalid or non-finite camera timing and transforms, unresolved frame targets, rival live cameras, and overlapping frame moves; it does not claim path-clearance validation.
+ * @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-refusal Refuses non-finite or non-positive focal length and a framing camera field of view outside the finite open interval `(0, 180)`.
+ * @evidence requirements/camera/scope-and-identity.md#camera-shot-distinction Elects one stable `shot.camera` identity and carries coverage cameras as separate take records instead of treating an edit or shot id as the camera.
+ * @evidence requirements/camera/scope-and-identity.md#camera-authored-intent Validates and preserves the authored framing, move, focus target, and focal-length metadata without inferring dramatic intent from the resulting picture.
+ * @evidence requirements/camera/scope-and-identity.md#camera-missing-refusal Refuses an absent or invalid framing camera and unresolved frame targets rather than fabricating a default camera at the world origin.
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Resolves the authored focus target to a world point and preserves it with focal-length metadata; it does not calculate a numeric depth-of-field result.
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Keeps focus and focal length as declarative camera intent while FOV alone drives geometric framing, making no rendered blur claim.
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-refusal Refuses missing or unresolvable frame, focus, and coverage targets before camera motion is compiled.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result performShot realizes deterministic staging replay and validation: The PERFORMANCE consumer, fold one beat's action calls into an {@link IAutoMovieShot} through {@link compilePerformance}, gating both sides of the seam: the calls must reference the staged world (a beat the script planned, actors the stage placed), and the clips the synthesizer fattened them into must survive `validateMotion` against each actor's skeleton. The revise pass wins by construction: `revise.final ?? draft` is the list that performs. A camera the shot compiles a move FROM is itself gated: its vertical field of view must lie within (0, 180)° and its placement must be finite, the same bounds staging applies, because an explicit staged set never passes through staging and the framing solve divides by `tan(fovY / 2)`. Ungated, a zero field of view baked an infinite distance into every keyframe and the shot came back successful with a clip its own artifact validator refuses. Only the elected camera and the coverage cameras are checked; an unused degenerate camera never fails a shot that does not frame through it. Camera `frame` actions elect the live camera and author its move: the first one names the shot's camera (staging aimed it already), rival `frame` calls on a second camera are a violation, one take, one live camera, and the elected camera's frame actions compile into `cameraMotion` through {@link compileCameraMove}'s framing grammar. Frame subjects must resolve to a point (node/point/group), and same-camera moves must not overlap in time. A shot with no `frame` call falls back to the scene's first camera, locked off (`cameraMotion: null`); a scene with no cameras at all cannot be framed and fails. A group subject is measured as the BOX its members occupy, not as a point with a figure's height: each staged member contributes its placement raised by its own measured extent, and each formation the group names contributes its whole transformed footprint under the cue playing at that instant. The solve then fits that box both ways, so a mass wider than it is tall is framed from the distance its width demands. This is the only subject that may name a formation, and it must name one this shot compiled: a formation is a mass a camera frames, never one body an actor can aim at, so the same group named on a `lookAt`, `reach`, gesture aim or `launch` aim is refused rather than silently aimed at the middle of a crowd. The blocking's `coverage` intents (#1187) are the plural half of that rule. They never join the election; each compiles into its own alternate take on `shot.coverage` through {@link compileCameraCoverage}, playing its single intent across the whole beat so a render host can cut to the angle at any instant. A coverage camera must be staged, must not be the elected live camera or a sibling coverage camera, must state a real framing/move, and must favour something that resolves to a point. Positional targets (`lookAt`, `reach`, a `point`/`strike` gesture aim, a `launch` aim, a frame subject or focus, a coverage subject) resolve against every staged placement, {@link scenePlacements}, **cameras included**: an actor may be directed to look down the lens, which is ordinary film grammar (#1294). That does not loosen the camera-as-actor rule, a camera still performs nothing but `frame`; it only makes a camera a place one can point at. A target that does not resolve names the id (or the relative kind) that failed, never the discriminator of a kind that was legal all along. `launch` actions are compiled through {@link compileLaunch}: the projectile (a staged scene node) gets its baked flight as a shot `objectMotion`, and, for a node aim carrying `onHit`, the struck actor's recoil is folded into the action list at the **engine-computed** contact, so it rides the same synthesis and ROM gate as an authored `react`. The projectile must be staged, the aim must resolve to a point, and the shot must reach the target at the given speed, each an input violation otherwise. An `onHit` aim must also name a staged scene NODE: a camera is a place to shoot at, but nothing recoils it, and the injected react would otherwise name a camera as its actor behind the back of the gate that refuses exactly that. `attachTo` actions are compiled through {@link compileAttach} once the parent pose is known: the coupled child (a prop, not a rig) gets a shot `objectMotion` that rides the parent's bone in scene space each frame. The parent must be a staged, rigged node carrying the named bone, each an input violation otherwise. Staged `mounts` (the persistent couplings staging declared, #674) descend through the SAME {@link compileAttach} baker, spanning the whole shot, so a rider rides every beat without re-issuing `attachTo`. An explicit `attachTo` for the same child this beat overrides its mount; a mount emits no grab/attach/detach/release events (it is standing scene state, not a per-shot pickup). A mount onto a rig-less parent or an absent bone is a violation. Locomotion and gait-bearing actor motions pass through {@link plantStanceFeet} before ROM and artifact validation. A first stride therefore emits the world-space plant facts a later beat can resume; an existing opening plant is converted into model space for the solve and back into scene world space exactly once at this boundary. When staging supplies a scene space, its world surface height is transformed into the actor's model frame for contact and pinning; otherwise the legacy model-space y=0 plane remains. Static non-gait clips keep their authored key grid. This conversion reads the unit-scale, yaw-only actor transform {@link stageScene} emits; `staged` is that validated stage result, not an arbitrary fabricated scene graph.   that has no skeleton (its clip skips ROM).   keeps a missing context distinct from a present context with no rig.   the same axes the renderer/player uses so ground planting and attachment   baking read the rig through one basis.   the same frame table the renderer/player uses so ground planting and   `attachTo` objectMotions read the visible pose, not raw rig-space FK.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-event-boundary-sampling-output Carries all performed-shot outputs on shot-local seconds and makes equal-time interaction ordering explicit through semantic kind priority plus stable identity.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Reads staged placements and current motion samples as the spatial authority for targets and emitted transforms; it does not claim mark, surface, or zone membership.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Compiles action participants into timed contact, reaction, attachment, and release consequences while preserving one active transform authority per subject.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-scene-dependency-refusal Gates the concrete actor, camera, target, projectile, and attachment dependencies this shot consumes and fails on an unresolved required binding.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-constraints-refusal performShot rejects only malformed, non-finite, unresolved, rival, or overlapping authored camera paths here; camera-body clearance and swept-geometry penetration remain outside this gate.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-projection-sampling-refusal performShot rejects impossible framing FOV and focal-length inputs before projection or camera-motion compilation can create non-finite artifacts.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Keeps the elected shot camera and each coverage camera explicit, preserves only validated authored intent, and fails when the required camera cannot be resolved.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Preserves the resolved focus point and focal length as intent metadata distinct from geometric FOV and from any rendered depth-of-field appearance.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-diagnostics-refusal Emits addressed failures for missing frame, focus, and coverage targets instead of continuing from an inferred or cached point.
  */
 export const performShot = (props: {
   script: IAutoMovieScript;

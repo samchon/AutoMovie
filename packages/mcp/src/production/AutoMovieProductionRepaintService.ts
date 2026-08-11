@@ -1,5 +1,6 @@
 import {
   AutoMovieContentDigest,
+  AutoMovieDiagnosticCode,
   AutoMovieProductionShotRepaint,
   IAutoMovieAssetManifest,
   IAutoMovieDiagnostic,
@@ -41,7 +42,10 @@ export class AutoMovieProductionRepaintService {
     services: IAutoMovieProductionServices,
     input: IAutoMovieRepaintShot.IProps,
   ): Promise<IAutoMovieRepaintShot> {
-    const failure = (code: string, message: string): IAutoMovieRepaintShot => ({
+    const failure = (
+      code: AutoMovieDiagnosticCode,
+      message: string,
+    ): IAutoMovieRepaintShot => ({
       repainted: false,
       productionId: services.project.productionId,
       shot: input.shot,
@@ -119,7 +123,7 @@ export class AutoMovieProductionRepaintService {
     )
       return failure(
         "repaint-source-review-incomplete",
-        `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect and approve the current source frames, then retry.`,
+        `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect the current source frames, record the delegated review worksheet as complete, then retry.`,
       );
     const sourceReviewFingerprint = sourceReview.fingerprint;
     const attemptId = randomUUID();
@@ -532,7 +536,7 @@ const physicalFiles = (root: string): string[] => {
 };
 
 const diagnostic = (
-  code: string,
+  code: AutoMovieDiagnosticCode,
   target: string,
   message: string,
 ): IAutoMovieDiagnostic => ({

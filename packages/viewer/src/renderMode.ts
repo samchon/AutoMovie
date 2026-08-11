@@ -24,9 +24,20 @@ import {
  * otherwise leak tens of thousands of WebGL materials. Borrowed originals are
  * never disposed; they belong to the scene. Restoring twice is safe: the second
  * call is a no-op, so nothing double-disposes.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-state-isolation Restores every temporary pass mutation before another pass or frame can observe it.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements reversible pass-local scene and renderer state.
+ * @author Samchon
  */
 export interface IAutoMovieRenderModeHandle {
-  /** The pass this override draws. */
+  /**
+   * The pass this override draws.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+   */
   mode: AutoMovieGuidePass;
 
   /**
@@ -37,6 +48,9 @@ export interface IAutoMovieRenderModeHandle {
    * out. These are the same three counts {@link IAutoMovieSemanticMaskHandle}
    * carries, surfaced here so the caller that asked for the pass can read them
    * without reaching past the handle it was given.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
    */
   semantic: {
     /** Meshes painted a semantic colour. */
@@ -47,7 +61,12 @@ export interface IAutoMovieRenderModeHandle {
     unresolved: string[];
   } | null;
 
-  /** Undo the override completely. Idempotent. */
+  /**
+   * Undo the override completely. Idempotent.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+   */
   restore: () => void;
 }
 
@@ -135,6 +154,8 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  * clamp to black past that range in the bundled capture. Override via a direct
  * call, not the hook.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
  * @author Samchon
  */
 export const applyRenderMode = (
@@ -268,6 +289,9 @@ const suspendEnvironment = (scene: THREE.Scene): (() => void) => {
  * The deterministic flat color of mask index `i`: golden-angle hue stepping,
  * full saturation, mid lightness. Adjacent nodes land far apart on the hue
  * wheel, and the same scene always gets the same colors.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
  */
 export const maskColor = (index: number): THREE.Color =>
   new THREE.Color().setHSL(((index * 137.508) % 360) / 360, 1, 0.5);
@@ -278,6 +302,9 @@ export const maskColor = (index: number): THREE.Color =>
  * at `range` and beyond) and deliberately decoupled from the camera's near/far
  * clip planes, so the same world depth maps to the same gray across shots,
  * cuts, and chunks (per-camera clip planes vary; this range does not).
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
  */
 export const DEPTH_NORMALIZATION_RANGE = 20;
 
@@ -343,10 +370,18 @@ const applyDepthMode = (
  * Metric silhouette edge width (meters) of the outline pass (#1166): the
  * inverted-hull shell's normal offset. Metric (not a scale factor) so a thin
  * limb and a broad torso draw the same line weight.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
  */
 export const EDGE_WIDTH = 0.02;
 
-/** Name of the transient shell group the outline pass adds to the scene. */
+/**
+ * Name of the transient shell group the outline pass adds to the scene.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+ */
 export const EDGE_SHELL_NAME = "__automovie_edge_shells";
 
 /**
@@ -557,7 +592,12 @@ const applySemanticMaskMode = (
   };
 };
 
-/** Name of the transient overlay group the pose pass adds to the scene. */
+/**
+ * Name of the transient overlay group the pose pass adds to the scene.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+ */
 export const POSE_OVERLAY_NAME = "__automovie_pose_overlay";
 
 /** Hide meshes and draw bone→child-bone segments over a black background. */

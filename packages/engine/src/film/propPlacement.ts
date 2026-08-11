@@ -37,17 +37,42 @@ import { forgeProp } from "./forgeProp";
 /** Tolerance for containment and fit comparisons, in metres. */
 const PLACEMENT_EPSILON = 1e-9;
 
-/** One passage a staged volume intrudes on. */
+/**
+ * One passage a staged volume intrudes on.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance IAutoMoviePassageBlockage keeps object-use circulation checkable: One passage a staged volume intrudes on.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePassageBlockage realizes furnishing placement clearance: One passage a staged volume intrudes on.
+ */
 export interface IAutoMoviePassageBlockage {
-  /** Which passage family the blocked id belongs to. */
+  /**
+   * Which passage family the blocked id belongs to.
+   *
+   * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance IAutoMoviePassageBlockage.kind keeps object-use circulation checkable: Which passage family the blocked id belongs to.
+   * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePassageBlockage.kind realizes furnishing placement clearance: Which passage family the blocked id belongs to.
+   */
   kind: "opening" | "connector";
-  /** Stable opening or connector id inside the environment. */
+  /**
+   * Stable opening or connector id inside the environment.
+   *
+   * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance IAutoMoviePassageBlockage.id keeps object-use circulation checkable: Stable opening or connector id inside the environment.
+   * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePassageBlockage.id realizes furnishing placement clearance: Stable opening or connector id inside the environment.
+   */
   id: string;
 }
 
-/** One transformed keep-out volume, still carrying the id that declared it. */
+/**
+ * One transformed keep-out volume, still carrying the id that declared it.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance IAutoMoviePropClearanceBounds keeps object-use circulation checkable: One transformed keep-out volume, still carrying the id that declared it.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropClearanceBounds realizes furnishing placement clearance: One transformed keep-out volume, still carrying the id that declared it.
+ */
 export interface IAutoMoviePropClearanceBounds extends IAutoMoviePropBox {
-  /** The clearance id this world volume came from. */
+  /**
+   * The clearance id this world volume came from.
+   *
+   * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance IAutoMoviePropClearanceBounds.id keeps object-use circulation checkable: The clearance id this world volume came from.
+   * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropClearanceBounds.id realizes furnishing placement clearance: The clearance id this world volume came from.
+   */
   id: string;
 }
 
@@ -72,6 +97,9 @@ export interface IAutoMoviePropClearanceBounds extends IAutoMoviePropBox {
  *
  * A prop whose parts carry no vertices at all collapses to the staged origin
  * rather than to an empty bound, so a caller never has to special-case it.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance propOccupancyBounds transforms the prop body into the world volume used to test occupied circulation space.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propOccupancyBounds realizes furnishing placement clearance: The world-axis-aligned volume one staged prop occupies. A declared `footprint` wins because it is the prop's own statement of what it takes up; otherwise the bound is derived from the prop's own parts, which is the only honest answer a prop that says nothing can be given. Either way all eight corners travel through the piece's full TRS (translation, unit quaternion, per-axis scale) before the world bound is taken, so a rotated prop widens rather than being silently re-fitted to its local box. Those parts are the prop's geometry, not necessarily what a viewer draws. A prop citing an external appearance (`IAutoMoviePropSpec.modelRef`) keeps its parts as the deterministic proxy the compiler registered, and that proxy is what is measured here, because it is the only volume anybody stated: the imported bytes are a file the engine never opens. So an author whose proxy is cruder than the mesh it stands for declares a `footprint` for exactly the reason a generated prop does, to state a use volume the geometry does not show. A prop whose parts carry no vertices at all collapses to the staged origin rather than to an empty bound, so a caller never has to special-case it.
  */
 export const propOccupancyBounds = (props: {
   prop: IAutoMoviePropSpec;
@@ -89,6 +117,9 @@ export const propOccupancyBounds = (props: {
  * Every declared box is transformed, including one whose bounds the validator
  * rejects: filtering here would hide a malformed volume from a source-side
  * search instead of letting the validator name it.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance propClearanceBounds transforms each declared use envelope into a world keep-out volume for placement validation.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propClearanceBounds realizes furnishing placement clearance: The world-axis-aligned keep-out volumes one staged prop declares. Every declared box is transformed, including one whose bounds the validator rejects: filtering here would hide a malformed volume from a source-side search instead of letting the validator name it.
  */
 export const propClearanceBounds = (props: {
   prop: IAutoMoviePropSpec;
@@ -107,6 +138,9 @@ export const propClearanceBounds = (props: {
  * Contact is not occupancy: two boxes that meet exactly on a face do not
  * overlap, which is what lets a lamp stand on a table top without the table
  * reporting that the lamp is inside it.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance propBoundsOverlap detects positive-volume intrusion between occupancy and clearance bounds without treating mere contact as blockage.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propBoundsOverlap realizes furnishing placement clearance: Whether two axis-aligned volumes share interior space. Contact is not occupancy: two boxes that meet exactly on a face do not overlap, which is what lets a lamp stand on a table top without the table reporting that the lamp is inside it.
  */
 export const propBoundsOverlap = (
   left: IAutoMoviePropBox,
@@ -127,6 +161,9 @@ export const propBoundsOverlap = (
  * wing") is a name, not a boundary, and refusing props inside it would invent a
  * geometric claim the author never made. Throws when the space is not declared,
  * exactly as {@link builtEnvironmentContainsPoint} does.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance propSpaceContainsBounds checks that the entire staged use volume remains within the addressed logical-space subtree.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propSpaceContainsBounds realizes furnishing placement clearance: Whether a world volume lies inside a logical space or any space below it. A space whose subtree states no volume at all locates nothing, so it excludes nothing and the answer is `true`: a purely semantic container ("the west wing") is a name, not a boundary, and refusing props inside it would invent a geometric claim the author never made. Throws when the space is not declared, exactly as {@link builtEnvironmentContainsPoint} does.
  */
 export const propSpaceContainsBounds = (props: {
   environment: IAutoMovieBuiltEnvironment;
@@ -155,6 +192,9 @@ export const propSpaceContainsBounds = (props: {
  * segment widens by half the usable width horizontally and rises by the clear
  * height, which is the volume a body traversing it needs. A connector that
  * declares no section at all is skipped for the same reason as an open cut.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-use-clearance propBlockedPassages names the exact openings and connectors whose circulation volume a staged prop obstructs.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propBlockedPassages realizes furnishing placement clearance: Every opening and connector a world volume intrudes on. An opening is only measurable through the element that fills it, so an open cut (`fill: null`) and a fill whose model lives outside the record are reported by neither this predicate nor the validator: a passage nothing describes cannot be proven blocked, and guessing where the hole is would be worse than saying nothing. A connector is swept from its own route: each segment widens by half the usable width horizontally and rises by the clear height, which is the volume a body traversing it needs. A connector that declares no section at all is skipped for the same reason as an open cut.
  */
 export const propBlockedPassages = (props: {
   environment: IAutoMovieBuiltEnvironment;
@@ -187,6 +227,9 @@ export const propBlockedPassages = (props: {
  * staged TRS, the same transform {@link propOccupancyBounds} measures the
  * resting prop through, so a scaled or turned host's top and the geometry that
  * shows it stay one surface rather than drifting apart.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support IAutoMoviePropSupportFace carries the resolved support surface and its world transform as one measurable anchoring result.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropSupportFace realizes furnishing placement clearance: The world face a prop rests on, as one record both kinds of support answer. A building support patch and another prop's `stack-top` state their face in different terms and are read here in one: a convex footprint on the ground plan, and a rule saying how high the face stands over that footprint. The patch already carries both. The affordance carries an extent in its host's model frame, which becomes a face by travelling through the host's full staged TRS, the same transform {@link propOccupancyBounds} measures the resting prop through, so a scaled or turned host's top and the geometry that shows it stay one surface rather than drifting apart.
  */
 export interface IAutoMoviePropSupportFace {
   /**
@@ -197,10 +240,18 @@ export interface IAutoMoviePropSupportFace {
    * void, and the gap query then measures the prop against ground that is not
    * there. A prop affordance's own top is a quad and is still one convex ring;
    * a support patch is whatever region its rings describe.
+   *
+   * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support IAutoMoviePropSupportFace.polygon bounds the exact world-XZ bearing region used to decide whether the prop stands over its support.
+   * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropSupportFace.polygon realizes furnishing placement clearance: The face's plan region in world XZ, holes and all. This carried the footprint's convex hull until #1868, which is why a crate could be reported resting on the middle of an atrium: the hull floors the void, and the gap query then measures the prop against ground that is not there. A prop affordance's own top is a quad and is still one convex ring; a support patch is whatever region its rings describe.
    */
   polygon: IAutoMovieFootprint;
 
-  /** How high the face stands, in the spelling {@link surfaceHeightAt} reads. */
+  /**
+   * How high the face stands, in the spelling {@link surfaceHeightAt} reads.
+   *
+   * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support IAutoMoviePropSupportFace.height preserves declared support and anchoring: How high the face stands, in the spelling {@link surfaceHeightAt} reads.
+   * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropSupportFace.height realizes furnishing placement clearance: How high the face stands, in the spelling {@link surfaceHeightAt} reads.
+   */
   height: IAutoMovieHeightSurface;
 }
 
@@ -220,6 +271,9 @@ export interface IAutoMoviePropSupportFace {
  * Lookups take the first record of a given id, exactly as
  * {@link propAnchorFrame} does and for the same reason: contradicting ids are
  * {@link validatePropPlacements}'s own refusal, by name.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support propSupportFace resolves an authored support relation to one measurable bearing face and refuses absent support geometry with null.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propSupportFace realizes furnishing placement clearance: The face one `on-support` relation resolves to, or `null` when the record states none. Nothing is guessed. A citation that does not resolve, a contact of a kind that carries no face at all (`handle`, `socket`, `hook`), a `stack-top` missing its extent, a patch whose polygon encloses no area, and a top staged edge-on to the ground each answer `null`, because a face nobody can measure is not a face a prop can be proven off. The vertical top is the interesting one of those: its height over the ground plan is not a function, so there is no rule to read it by, and inventing one would refuse or excuse a prop for a number the author never wrote. Lookups take the first record of a given id, exactly as {@link propAnchorFrame} does and for the same reason: contradicting ids are {@link validatePropPlacements}'s own refusal, by name.
  */
 export const propSupportFace = (props: {
   /** The `on-support` relation's target: a patch, or another prop's contact. */
@@ -304,6 +358,9 @@ export const propSupportFace = (props: {
  * {@link supportContactsFor} decides a scene's supports by. Relief between the
  * probes is not read: a support that rises and falls between them is answered
  * where they stand.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support propSupportGap measures penetration, contact, or flotation only where the prop footprint actually overlaps the declared support face.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propSupportGap realizes furnishing placement clearance: How far a staged prop's underside stands above the face it rests on: negative where it sinks into the support, zero where it touches it, positive where it floats. `null` when no probe of the prop's footprint lies over the face at all, which is the answer for a prop that does not stand over its support rather than one standing at the wrong height on it. Contact is probed from both sides: at the footprint's four corners and its centre where those land on the face, and at the face's own corners where those land under the footprint. One side alone would be wrong in one direction each. A prop standing on a patch smaller than itself covers none of its own probes with the patch, and a patch wider than the prop is never reached at its corners, so a bench on a plinth and a chair on a floor are the same question asked from whichever side can answer it. The deepest of those probes answers, which is what lets a box resting along one edge of a ramp still be resting on it while a box whose near corner has gone through the ramp is not, and it is the same footprint sampling {@link supportContactsFor} decides a scene's supports by. Relief between the probes is not read: a support that rises and falls between them is answered where they stand.
  */
 export const propSupportGap = (props: {
   /** The face the prop claims to rest on. */
@@ -345,6 +402,9 @@ export const propSupportGap = (props: {
  * Lookups take the first record of a given id. Two buildings sharing one id is
  * a contradiction {@link validatePropPlacements} refuses by name, so resolving
  * it a second time here would report the same defect in a worse place.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support propAnchorFrame resolves the explicit world frame against which an authored placement relation is evaluated.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement propAnchorFrame realizes furnishing placement clearance: The world frame a placement relation anchors to, or `null` when it has none. This is the relative-transform half of placement: a source that wants twelve chairs around a table asks for the table's `stack-top` frame once and offsets from it in a loop, instead of typing twelve world positions that stop being right the moment the table moves. Regions have no frame, so a `space` target answers `null`; a `boundary` answers with its first realizing element and an `opening` with its filling element, because those are the only members of those records that carry a transform. Lookups take the first record of a given id. Two buildings sharing one id is a contradiction {@link validatePropPlacements} refuses by name, so resolving it a second time here would report the same defect in a worse place.
  */
 export const propAnchorFrame = (props: {
   target: IAutoMoviePropRelationTarget;
@@ -495,6 +555,9 @@ const requiredAffordance = (
  * and the affordances its own spec declares. That is the point of admitting the
  * reference at all: an imported chair that lost its seat face and its keep-out
  * volume would be a picture, and a picture cannot be sat on.
+ *
+ * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-placement-refusal validatePropPlacements refuses ambiguous joins, cyclic support, missing anchors, invalid bearing, and clearance intrusion with addressed corrections.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement validatePropPlacements reports unsupported, colliding, blocked, or otherwise unusable placements with addressed correction data.
  */
 export const validatePropPlacements = (props: {
   props: readonly IAutoMoviePropSpec[];

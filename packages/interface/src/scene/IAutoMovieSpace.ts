@@ -14,19 +14,34 @@ import { IAutoMovieSurface } from "./IAutoMovieSurface";
  * while the higher-level owner answers where the region begins and how it is
  * connected.
  *
+ * @evidence requirements/interior/spaces-and-occupancy.md#interior-space-visibility-culling Exposes `IAutoMovieSpace` as the portable data boundary for the interior space visibility culling requirement.
+ * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-occupancy-activity-visibility Types `IAutoMovieSpace` for the interior space occupancy activity visibility system contract.
  * @author Samchon
  */
 export interface IAutoMovieSpace {
-  /** Stable id. */
+  /**
+   * Stable id.
+   *
+   * @evidence requirements/interior/spaces-and-occupancy.md#interior-space-visibility-culling Exposes `id` as the portable data boundary for the interior space visibility culling requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-occupancy-activity-visibility Types `id` for the interior space occupancy activity visibility system contract.
+   */
   id: string;
 
-  /** The standable surface patches. */
+  /**
+   * The standable surface patches.
+   *
+   * @evidence requirements/interior/spaces-and-occupancy.md#interior-space-visibility-culling Exposes `surfaces` as the portable data boundary for the interior space visibility culling requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-occupancy-activity-visibility Types `surfaces` for the interior space occupancy activity visibility system contract.
+   */
   surfaces: IAutoMovieSurface[];
 
   /**
    * Ids of the surfaces an actor may walk on. A surface not listed is a
    * standable-but-forbidden top (a table an actor should not climb): objects
    * may still rest on it, but locomotion treats it as no-go.
+   *
+   * @evidence requirements/interior/spaces-and-occupancy.md#interior-space-visibility-culling Exposes `walkable` as the portable data boundary for the interior space visibility culling requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-occupancy-activity-visibility Types `walkable` for the interior space occupancy activity visibility system contract.
    */
   walkable: string[];
 }

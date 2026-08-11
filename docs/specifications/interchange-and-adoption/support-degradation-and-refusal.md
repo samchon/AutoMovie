@@ -2,11 +2,11 @@
 
 ## Support 상태 모델 {#interchange-support-state-model}
 
+### Format과 Feature Matrix {#interchange-format-feature-support-matrix}
+
 <!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-degradation Supported, degraded, unsupported, invalid, unavailable, quarantined와 not-run을 구분한다. -->
 
 Support result는 selected format, version, feature, element, dependency와 intended consumer 각각에 `supported`, `degraded`, `unsupported`, `invalid`, `unavailable`, `quarantined` 또는 `not-run`을 부여하고 overall adoption state의 derivation을 제공한다. Visible output나 parser success는 child results를 supported로 승격하지 않는다.
-
-### Format과 Feature Matrix {#interchange-format-feature-support-matrix}
 
 <!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Container 지원과 내부 feature 및 consumer 목적의 지원을 분리한다. -->
 
@@ -18,6 +18,12 @@ Media profile은 container version과 feature identifiers를 consumer capability
 <!-- @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-refusal Unknown version, terms, leaked credential와 undeclared upload를 external result refusal에 포함한다. -->
 
 Required closure 누락, digest mismatch, identity ambiguity, invalid coordinate·clock, unsafe active content, credential exposure, rights conflict, non-finite value와 resource budget exceed가 selected result의 truth를 깨면 hard refusal이 된다. Refusal은 blocked revision과 consumers를 반환하고 origin object, generic mesh, black frame, silence, empty metadata 또는 alternate provider result를 생성하지 않는다.
+
+### External input hard refusal {#interchange-external-hard-refusal}
+
+<!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure 신뢰, 안전 또는 identity를 깨는 external input을 대체 결과 없이 거절하게 한다. -->
+
+Inspector와 decoder는 거절한 exact source와 지원 경계를 반환하고, unknown container나 invalid payload를 placeholder, silence 또는 다른 provider 결과로 치환하지 않는다.
 
 ### Explicit Degradation Policy {#interchange-explicit-degradation-policy}
 

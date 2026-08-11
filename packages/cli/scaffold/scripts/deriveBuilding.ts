@@ -19,9 +19,9 @@ import path from "node:path";
 import config from "../automovie.config";
 import {
   type IAutoMovieBuildingGap,
-  type IAutoMovieBuildingStudies,
   deriveAutoMovieBuildingReport,
 } from "./buildingReport";
+import { productionBuildingStudies } from "./productionStudies";
 
 /**
  * Derive the construction documents and performance studies of every building
@@ -149,17 +149,6 @@ const waterFeatures: IAutoMovieWaterFeature[] = staged(
  * the gap names the missing site rather than a run solved against a sun nobody
  * placed and an outdoor air nobody stated.
  */
-const studies: IAutoMovieBuildingStudies = {
-  daylight: [],
-  envelope: [],
-  acoustic: [],
-  air: [],
-  // One required domain, because a report over nothing would clear everything.
-  // Widen it as the production takes on obligations; every required domain
-  // nobody answered forces the report to `incomplete`.
-  required: ["daylight"],
-};
-
 const reportRoot = path.join(state.root, "reports");
 
 /**
@@ -221,7 +210,7 @@ for (const environment of environments) {
     fluidDomains,
     waterFeatures,
     context: state.generated.design.production.environmentContext ?? null,
-    studies,
+    studies: productionBuildingStudies,
   });
   const directory = path.join(
     reportRoot,

@@ -25,11 +25,13 @@ import {
  * elsewhere, not here. This is the geometry primitive the harness's reach /
  * distance queries and the locomote traveller share.
  *
- * @author Samchon
  * @param formations World points for the formations a group may name. A caller
  *   that holds no formation geometry omits it, and a group naming one resolves
  *   from its nodes alone — never from a formation whose place this caller could
  *   not know.
+ * @evidence requirements/staging/interactions-and-choreography.md#staging-spatial-synchronization Resolves every positional participant target in the same staged world frame.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Implements the shared spatial target resolution used by interaction choreography.
+ * @author Samchon
  */
 export const resolveTargetPoint = (
   target: IAutoMovieActionTarget,

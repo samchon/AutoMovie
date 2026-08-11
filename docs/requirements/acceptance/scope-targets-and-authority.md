@@ -32,7 +32,9 @@ Reviewer는 관찰과 판정을 소유하고 approver는 그 판정을 승인 �
 
 작품 또는 delivery의 최종 게시 authority는 하위 승인, 남은 예외, profile 적합성, stale 상태와 부분 성공을 모두 볼 수 있어야 한다. 게시 선택은 기술적 pass와 별도 결정으로 남아야 한다.
 
-## 권한 충돌과 부재 {#acceptance-authority-conflict}
+## 권한 충돌과 부재 {#acceptance-authority-conflict-group}
+
+### 권한 충돌과 부재 {#acceptance-authority-conflict}
 
 서로 다른 authority가 같은 범위에 상충하는 판정을 내리면 우선순위나 합의 규칙이 명시되지 않은 한 결과는 indeterminate이어야 한다.
 

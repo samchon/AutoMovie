@@ -7,11 +7,13 @@ import {
   defineShot,
   formationSlotPosition,
   heightAt,
+  importedNodeClipToAutoMovieMotion,
   inheritProductionLighting,
   makeActorSynthesizer,
   placeFormationSlot,
   readAutoMovieImageFacts,
   realizeShotContract,
+  retargetHumanoidMotion,
   sampleFormationMotion,
   sampleFormationSlotMotion,
   unsupportedAutoMovieMaterialExtensions,
@@ -33,9 +35,14 @@ import {
   validateWaterFeatures,
   validateWetZones,
 } from "@automovie/engine";
-import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
+import {
+  type IAutoMovieExternalMotionAdoption as IAutoMovieIngestExternalMotionAdoption,
+  adoptAutoMovieExternalMotion,
+  inspectAutoMovieExternalModelBytes,
+} from "@automovie/ingest";
 import {
   AutoMovieContentDigest,
+  AutoMovieDiagnosticCode,
   AutoMovieHumanoidBone,
   IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
@@ -52,6 +59,12 @@ import {
   IAutoMovieDesignLineage,
   IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
+  IAutoMovieExternalMotionBasis,
+  IAutoMovieExternalMotionConversionReceipt,
+  IAutoMovieExternalMotionLossEntry,
+  IAutoMovieExternalMotionReceiptCharacterization,
+  IAutoMovieExternalMotionTake,
+  IAutoMovieExternalMotionTransformActivity,
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
@@ -65,7 +78,9 @@ import {
   IAutoMovieModel,
   IAutoMovieModelProxyAsset,
   IAutoMovieModelRecipe,
+  IAutoMovieMotion,
   IAutoMovieProductionDesign,
+  IAutoMovieExternalMotionAdoption as IAutoMovieProductionExternalMotionAdoption,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -77,6 +92,7 @@ import {
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
+  IAutoMovieSkeleton,
   IAutoMovieSpace,
   IAutoMovieValidation,
   IAutoMovieVector3,
@@ -152,30 +168,68 @@ import {
  * compiled formation, because a cycle's period is now measured from the baked
  * motion rather than written down beside it -- so a v7 reader would look for
  * that one where it is no longer written.
+ *
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-semantic-change-new-identity Changes in generated semantics require a new compiler identity.
+ * @evidence requirements/product/extensibility-and-compatibility.md#product-explicit-protocol-change Exposes the protocol revision whenever canonical compiler semantics change.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-semantic-change-identity Makes the protocol revision the portable semantic-change boundary.
+ * @author Samchon
  */
 export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v8";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
 
-/** Compiler package version. */
+/**
+ * Compiler package version used in generated identity.
+ *
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-semantic-change-new-identity Separates generated results when compiler semantics change.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-semantic-change-identity Carries the implementation revision into the portable compiler identity.
+ * @author Samchon
+ */
 export const AUTOMOVIE_PRODUCTION_COMPILER_VERSION = (
   require(path.join(__dirname, "..", "..", "package.json")) as {
     version: string;
   }
 ).version;
 
-/** Current review queue provider shared with the review service. */
+/**
+ * Current compiler snapshot supplied to the review queue.
+ *
+ * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Separates current compiler inputs and outputs from historical review evidence.
+ * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Defines the snapshot used to establish current review evidence.
+ * @author Samchon
+ */
 export interface IAutoMovieReviewQueueSnapshot {
-  /** Exact content inventory already used by the compiler fingerprint. */
+  /**
+   * Exact content inventory already used by the compiler fingerprint.
+   *
+   * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Keeps review inputs tied to the current content inventory.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Supplies the content side of current evidence identity.
+   */
   renderContentInputs: IAutoMovieProductionContentInput[];
-  /** Prospective compiler ownership manifest used by this compile. */
+  /**
+   * Prospective compiler ownership manifest used by this compile.
+   *
+   * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Identifies the generated manifest whose freshness is reviewed.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Keeps manifest evidence attached to the current compile snapshot.
+   */
   generatedManifest: IAutoMovieGeneratedManifest;
-  /** Prospective compiler-owned bytes keyed by generated-root-relative path. */
+  /**
+   * Prospective compiler-owned bytes keyed by generated-root-relative path.
+   *
+   * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Preserves the exact current generated bytes under review.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Completes the current snapshot with its generated byte evidence.
+   */
   generatedFiles: ReadonlyMap<string, Uint8Array>;
 }
 
-/** Current review queue provider shared with the review service. */
+/**
+ * Provider that joins one compile result to its current review snapshot.
+ *
+ * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Requires review evidence to be evaluated as current or historical.
+ * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Supplies the current compiler snapshot without assigning verdict authority.
+ * @author Samchon
+ */
 export type AutoMovieReviewQueueProvider = (
   compileStatus: IAutoMovieCompileProjectOutput,
   snapshot?: IAutoMovieReviewQueueSnapshot,
@@ -189,6 +243,10 @@ export type AutoMovieReviewQueueProvider = (
  * runtime imports, wall clock, random source, process, network or filesystem.
  * The resulting scene, shot, models and sparse motions are validated by the
  * same engine consumers use and then materialized atomically as derived data.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Runs ordinary tracked TypeScript through the compiler-owned authoring loop.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps compilation a deterministic tool boundary rather than hidden content authority.
+ * @author Samchon
  */
 export class AutoMovieProductionCompiler {
   public constructor(
@@ -198,7 +256,27 @@ export class AutoMovieProductionCompiler {
     }),
   ) {}
 
-  /** Compile the active design and source through the requested gate. */
+  /**
+   * Compile the active design and source through the requested gate.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Executes the tracked source as ordinary code under explicit inputs.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies the compiler's deterministic tool invariant to materialization.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Verifies the authored source rig against the hierarchy and local rest basis inspected from resident bytes.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Applies only the named take, shot, actor, clip, mapping, and native or retarget decision.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Keeps native structural compatibility and retarget characterization distinct from the authored decision.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Materializes one deterministic conversion receipt for every successfully enacted adoption.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-input-refusal Refuses stale bases, unmapped channels, incompatible native rigs, absent actors, and unused or cross-actor clips.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals source, decision, compatibility, converted motion, and output identity in an inventoried compiler file.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Preserves retarget findings and user-selected scale beside the result rather than erasing them after conversion.
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Pins the primary bytes, authorized closure, selected take, source basis, and target basis digest.
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Records ordered channel conversion, retarget, and translation-scale activities.
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Separates compatibility findings and authorized losses from successful materialization.
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Binds the converted motion digest and exact generated shot bytes without a cyclic receipt digest.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Types the byte-grounded closure and source/target interpretation consumed by conversion.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Preserves source-to-result channel and rig transformations in deterministic order.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Retains every conversion warning with its affected source, consequence, and honest unaccepted status.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Inventories a canonical receipt beside the exact output file it identifies.
+   */
   public compile(
     input: IAutoMovieCompileProjectInput,
   ): IAutoMovieCompileProjectOutput {
@@ -210,6 +288,9 @@ export class AutoMovieProductionCompiler {
    *
    * Project linters use this entry point so a read-only check can never repair
    * the ownership or freshness failure it is supposed to report.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Checks the same tracked source without replacing its author-owned facts.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps linting read-only at the tool boundary.
    */
   public lint(
     input: IAutoMovieCompileProjectInput,
@@ -253,6 +334,7 @@ export class AutoMovieProductionCompiler {
       string,
       IAutoMovieExternalModelRuntimeBinding
     >();
+    let externalMotions = new Map<string, ICompilerExternalMotionAdoption>();
     if (input.scope !== "design")
       try {
         contentInputs = this.project.contentInputs();
@@ -268,6 +350,7 @@ export class AutoMovieProductionCompiler {
         declaredAssets = assetInventory.assets;
         assetRecords = assetInventory.records;
         externalModels = assetInventory.externalModels;
+        externalMotions = assetInventory.externalMotions;
       } catch (error) {
         diagnostics.push({
           code: "content-input-unsafe",
@@ -284,6 +367,10 @@ export class AutoMovieProductionCompiler {
         });
       }
     const compiled = new Map<string, IAutoMovieCompiledShotSource>();
+    const externalMotionConversions = new Map<
+      string,
+      ICompilerExternalMotionConversionDraft
+    >();
     const realizations = new Map<
       string,
       IAutoMovieCompiledContractRealization
@@ -434,6 +521,9 @@ export class AutoMovieProductionCompiler {
               runtimeModels: Object.fromEntries(runtimeModels),
               formationRuntime,
               instanceSetRuntime,
+              externalMotions: [...externalMotions.values()].filter(
+                (adoption) => adoption.declaration.shot === entry.id,
+              ),
               frameFormat: graph.production!.frameFormat,
             },
             previous,
@@ -466,6 +556,8 @@ export class AutoMovieProductionCompiler {
             ];
             diagnostics.push(...postDiagnostics);
             compiled.set(entry.id, materialized.value);
+            for (const conversion of result.conversions)
+              externalMotionConversions.set(conversion.adoption, conversion);
             realizations.set(entry.id, realized.realization);
             if (
               postDiagnostics.every(
@@ -542,6 +634,7 @@ export class AutoMovieProductionCompiler {
             graph,
             runtimeModels,
             compiled,
+            externalMotionConversions,
             realizations,
             filmArtifacts,
             inputFingerprint,
@@ -1017,6 +1110,23 @@ export class AutoMovieProductionCompiler {
   }
 }
 
+interface ICompilerExternalMotionAdoption {
+  declaration: IAutoMovieProductionExternalMotionAdoption;
+  receipt: IAutoMovieIngestExternalMotionAdoption;
+  sourceClosure: IAutoMovieExternalMotionConversionReceipt["source"]["closure"];
+  sourceBasis: IAutoMovieExternalMotionBasis;
+  sourceTake: IAutoMovieExternalMotionTake;
+  sourceMotion: IAutoMovieMotion;
+}
+
+/** Receipt facts whose result path and bytes are sealed during materialization. */
+interface ICompilerExternalMotionConversionDraft extends Omit<
+  IAutoMovieExternalMotionConversionReceipt,
+  "result"
+> {
+  motion: IAutoMovieMotion;
+}
+
 interface ICompileShotSourceProps {
   id: string;
   path: string;
@@ -1033,6 +1143,7 @@ interface ICompileShotSourceProps {
     runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
     formationRuntime: IAutoMovieShotBuildContext["formationRuntime"];
     instanceSetRuntime: IAutoMovieShotBuildContext["instanceSetRuntime"];
+    externalMotions: readonly ICompilerExternalMotionAdoption[];
     frameFormat: Pick<
       IAutoMovieProductionDesign["frameFormat"],
       "width" | "height"
@@ -1046,6 +1157,7 @@ interface ICompileShotSourceResult {
   value: IAutoMovieShotSourceOutput | null;
   /** Closing state available to the next full hard-cut shot, on success. */
   closing: IAutoMovieBeatEndState | null;
+  conversions: ICompilerExternalMotionConversionDraft[];
   diagnostics: IAutoMovieDiagnostic[];
 }
 
@@ -2058,6 +2170,7 @@ const compileShotSource = (
     return {
       value: null,
       closing: null,
+      conversions: [],
       diagnostics: program.diagnostics,
     };
 
@@ -2067,32 +2180,48 @@ const compileShotSource = (
     target: `shot:${props.id}`,
     sourcePath: props.path,
   });
+  const adoptedMotions = resolveExternalMotionClips({
+    adoptions: props.context.externalMotions,
+    program: program.value,
+    runtimeModels: sourceRuntime.runtimeModels,
+    target: `shot:${props.id}`,
+    sourcePath: props.path,
+  });
+  const shotProgram: IAutoMovieProductionShotProgram = {
+    ...program.value,
+    clips: [...(program.value.clips ?? []), ...adoptedMotions.clips],
+  };
   const runtime = actorRuntimeOf(
-    program.value,
+    shotProgram,
     sourceRuntime.runtimeModels,
     `shot:${props.id}`,
     props.path,
   );
   if (
     sourceRuntime.diagnostics.length !== 0 ||
+    adoptedMotions.diagnostics.some(
+      (diagnostic) => diagnostic.category === "error",
+    ) ||
     runtime.diagnostics.length !== 0
   )
     return {
       value: null,
       closing: null,
+      conversions: [],
       diagnostics: [
         ...program.diagnostics,
         ...sourceRuntime.diagnostics,
+        ...adoptedMotions.diagnostics,
         ...runtime.diagnostics,
       ],
     };
   const shot = defineShot(props.id, {
     scene: program.registrationScene!,
     contract: contractOfRegistration(props.context.contract),
-    build: () => program.value!,
+    build: () => shotProgram,
   });
   const clipById = new Map(
-    (program.value.clips ?? []).map((clip) => [clip.id, clip]),
+    (shotProgram.clips ?? []).map((clip) => [clip.id, clip]),
   );
   const referenceSynthesizer = makeActorSynthesizer(
     runtime.actors,
@@ -2116,17 +2245,17 @@ const compileShotSource = (
       // The unit cues the source authored, handed to the performance boundary
       // rather than only attached to the artifact below: a camera framing a
       // formation has to measure it where its cue has moved it.
-      formationMotions: program.value.formationMotions ?? [],
+      formationMotions: shotProgram.formationMotions ?? [],
       // The shot's own light statement, left undefined when the source made
       // none so its compiled artifact keeps the exact bytes it had before this
       // channel existed.
-      lightMotions: program.value.lightMotions,
+      lightMotions: shotProgram.lightMotions,
       // The shot's own turning things: a building panel on its opening, a
       // prop's leaf on its hinge. Without them the performance boundary has
       // nothing to gate, so a source could author a door swing, pass every
       // validator, and be dropped here without a word.
-      objectMotions: program.value.objectMotions,
-      props: program.value.props,
+      objectMotions: shotProgram.objectMotions,
+      props: shotProgram.props,
       models: Object.values(sourceRuntime.runtimeModels),
       previous: props.previous ?? undefined,
     },
@@ -2135,8 +2264,10 @@ const compileShotSource = (
     return {
       value: null,
       closing: null,
+      conversions: [],
       diagnostics: [
         ...program.diagnostics,
+        ...adoptedMotions.diagnostics,
         ...compiled.diagnostics.map(
           (diagnostic): IAutoMovieDiagnostic => ({
             code: diagnostic.code,
@@ -2175,8 +2306,8 @@ const compileShotSource = (
     value: {
       ...compiled.source,
       authoredModels: structuredClone(sourceRuntime.authoredModels),
-      props: structuredClone(program.value.props ?? []),
-      builtEnvironments: structuredClone(program.value.builtEnvironments ?? []),
+      props: structuredClone(shotProgram.props ?? []),
+      builtEnvironments: structuredClone(shotProgram.builtEnvironments ?? []),
       // Every fold a building binds travels with the artifact, because the
       // renderer reads the artifact and nothing else. A record validated at
       // compile and dropped here is a pond the compiler approved and the frame
@@ -2185,16 +2316,411 @@ const compileShotSource = (
       // A fold nobody declared stays absent rather than arriving as an empty
       // array: the artifact is content-addressed, and eleven empty keys would
       // rewrite the digest of every production that has never heard of water.
-      ...boundFolds(program.value),
+      ...boundFolds(shotProgram),
       scene: { ...scene, lights: inherited },
-      formationMotions: structuredClone(program.value.formationMotions ?? []),
+      formationMotions: structuredClone(shotProgram.formationMotions ?? []),
       formationSlotMotions: structuredClone(
-        program.value.formationSlotMotions ?? [],
+        shotProgram.formationSlotMotions ?? [],
       ),
-      effectCues: structuredClone(program.value.effectCues ?? []),
+      effectCues: structuredClone(shotProgram.effectCues ?? []),
     },
     closing: compiled.continuity.closing,
-    diagnostics: program.diagnostics,
+    conversions: adoptedMotions.conversions,
+    diagnostics: [...program.diagnostics, ...adoptedMotions.diagnostics],
+  };
+};
+
+const resolveExternalMotionClips = (props: {
+  adoptions: readonly ICompilerExternalMotionAdoption[];
+  program: IAutoMovieProductionShotProgram;
+  runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
+  target: string;
+  sourcePath: string;
+}): {
+  clips: IAutoMovieMotion[];
+  conversions: ICompilerExternalMotionConversionDraft[];
+  diagnostics: IAutoMovieDiagnostic[];
+} => {
+  const clips: IAutoMovieMotion[] = [];
+  const conversions: ICompilerExternalMotionConversionDraft[] = [];
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const authoredClipIds = new Set(
+    (props.program.clips ?? []).map((clip) => clip.id),
+  );
+  for (const adoption of props.adoptions) {
+    const declaration = adoption.declaration;
+    if (authoredClipIds.has(declaration.clip)) {
+      diagnostics.push({
+        code: "source-motion-adoption-invalid",
+        category: "error",
+        phase: "source",
+        target: props.target,
+        path: props.sourcePath,
+        message: `External motion adoption "${declaration.id}" targets clip id "${declaration.clip}", but the shot source already declares that clip. Choose a distinct adoption clip id instead of replacing source-authored motion by map insertion order.`,
+      });
+      continue;
+    }
+    const actor = props.program.actors.find(
+      (candidate) => candidate.node === declaration.actor,
+    );
+    const targetModel =
+      actor === undefined ? undefined : props.runtimeModels[actor.model];
+    const targetSkeleton = targetModel?.skeleton ?? null;
+    if (actor === undefined || targetSkeleton === null) {
+      diagnostics.push({
+        code: "source-motion-adoption-invalid",
+        category: "error",
+        phase: "source",
+        target: props.target,
+        path: props.sourcePath,
+        message: `External motion adoption "${declaration.id}" targets actor "${declaration.actor}", but that actor is absent or has no resolved articulated runtime model in this shot. Correct the explicit actor or model binding.`,
+      });
+      continue;
+    }
+    const actions =
+      props.program.performance.revise.final ?? props.program.performance.draft;
+    const consumers = actions.filter(
+      (action) => action.verb === "enact" && action.clip === declaration.clip,
+    );
+    if (consumers.length === 0) {
+      diagnostics.push({
+        code: "source-motion-adoption-invalid",
+        category: "error",
+        phase: "source",
+        target: props.target,
+        path: props.sourcePath,
+        message: `External motion adoption "${declaration.id}" exposes clip "${declaration.clip}" for actor "${declaration.actor}", but the final performance never enacts it. Remove the unused adoption or enact that exact clip with the declared actor.`,
+      });
+      continue;
+    }
+    const wrongConsumer = consumers.find((action) => {
+      const actors = Array.isArray(action.actor)
+        ? action.actor
+        : [action.actor];
+      return actors.length !== 1 || actors[0] !== declaration.actor;
+    });
+    if (wrongConsumer !== undefined) {
+      const actors = Array.isArray(wrongConsumer.actor)
+        ? wrongConsumer.actor
+        : [wrongConsumer.actor];
+      diagnostics.push({
+        code: "source-motion-adoption-invalid",
+        category: "error",
+        phase: "source",
+        target: props.target,
+        path: props.sourcePath,
+        message: `External motion adoption "${declaration.id}" belongs only to actor "${declaration.actor}", but final enact clip "${declaration.clip}" names actor set [${actors.map((value) => `"${value}"`).join(", ")}]. Use the declared actor alone; same-rig or mixed actors do not inherit this adoption.`,
+      });
+      continue;
+    }
+    if (adoption.receipt.handoff.mode === "native") {
+      if (
+        adoption.sourceMotion.skeleton !== targetSkeleton.id ||
+        nativeExternalMotionRigCompatible(
+          adoption.receipt.handoff.sourceRig,
+          adoption.receipt.handoff.mapping.map((entry) => entry.bone),
+          targetSkeleton,
+        ) === false
+      ) {
+        diagnostics.push({
+          code: "source-motion-adoption-invalid",
+          category: "error",
+          phase: "source",
+          target: props.target,
+          path: props.sourcePath,
+          message: `Native external motion adoption "${declaration.id}" was authored for source rig "${adoption.sourceMotion.skeleton}" but actor "${declaration.actor}" does not resolve the same mapped hierarchy, rest transforms, constraints, and rig identity in "${targetSkeleton.id}". Choose retarget mode or bind a byte-compatible native rig.`,
+        });
+        continue;
+      }
+      clips.push(adoption.sourceMotion);
+      conversions.push(
+        externalMotionConversionDraft({
+          adoption,
+          shot: declaration.shot,
+          targetModel: actor.model,
+          targetSkeleton,
+          motion: adoption.sourceMotion,
+          characterization: { status: "compatible", findings: [] },
+          losses: [],
+        }),
+      );
+      continue;
+    }
+    const retargeted = retargetHumanoidMotion({
+      motion: adoption.sourceMotion,
+      source: adoption.receipt.handoff.sourceRig,
+      target: targetSkeleton,
+      rootScale: adoption.receipt.handoff.translationScale,
+      id: declaration.clip,
+    });
+    const findings =
+      retargeted.validation.success === false
+        ? retargeted.validation.violations
+        : (retargeted.validation.warnings ?? []);
+    diagnostics.push(
+      ...findings.map(
+        (finding): IAutoMovieDiagnostic => ({
+          code: "source-motion-retarget-invalid",
+          category: finding.severity === "error" ? "error" : "warning",
+          phase: "source",
+          target: props.target,
+          path: props.sourcePath,
+          message: `External motion adoption "${declaration.id}" retarget ${finding.path}: ${finding.expected}. Correct the declared source rig, target actor, mapping, or translation scale.`,
+        }),
+      ),
+    );
+    if (retargeted.motion !== null) {
+      clips.push(retargeted.motion);
+      const characterization: IAutoMovieExternalMotionReceiptCharacterization =
+        findings.length === 0
+          ? { status: "compatible", findings: [] }
+          : {
+              status: "override-required",
+              findings: findings.map(
+                (finding) => `${finding.path}: ${finding.expected}`,
+              ),
+            };
+      const losses: IAutoMovieExternalMotionLossEntry[] = findings.map(
+        (finding) => ({
+          kind: "semantic-loss",
+          source: [finding.path],
+          consequence: finding.expected,
+          authorized: false,
+        }),
+      );
+      conversions.push(
+        externalMotionConversionDraft({
+          adoption,
+          shot: declaration.shot,
+          targetModel: actor.model,
+          targetSkeleton,
+          motion: retargeted.motion,
+          characterization,
+          losses,
+        }),
+      );
+    }
+  }
+  return { clips, conversions, diagnostics };
+};
+
+/** Build the deterministic receipt facts available before output bytes exist. */
+const externalMotionConversionDraft = (props: {
+  adoption: ICompilerExternalMotionAdoption;
+  shot: string;
+  targetModel: string;
+  targetSkeleton: IAutoMovieSkeleton;
+  motion: IAutoMovieMotion;
+  characterization: IAutoMovieExternalMotionReceiptCharacterization;
+  losses: IAutoMovieExternalMotionLossEntry[];
+}): ICompilerExternalMotionConversionDraft => {
+  const declaration = props.adoption.declaration;
+  const mapping = declaration.mapping
+    .map((entry) => ({ ...entry }))
+    .sort(
+      (left, right) =>
+        compareCodeUnits(left.source, right.source) ||
+        compareCodeUnits(left.target, right.target),
+    );
+  const channelSources = props.adoption.receipt.take.tracks.map((track) =>
+    track.channel.kind === "node"
+      ? `${track.channel.node}:${track.channel.path}`
+      : `${track.channel.pointer}:${track.channel.valueType}`,
+  );
+  const boneByNode = new Map(
+    mapping.map((entry) => [entry.source, entry.target] as const),
+  );
+  const channelTargets = props.adoption.receipt.take.tracks.map((track) =>
+    track.channel.kind === "node"
+      ? `${boneByNode.get(track.channel.node)!}:${track.channel.path}`
+      : track.channel.pointer,
+  );
+  const transforms: IAutoMovieExternalMotionTransformActivity[] = [
+    {
+      kind: "channel-conversion",
+      source: channelSources,
+      target: channelTargets,
+      parameters: {
+        take: declaration.take,
+        sourceTracks: channelSources.length,
+        resultChannels: channelTargets.length,
+      },
+    },
+  ];
+  if (declaration.mode.kind === "humanoid-retarget") {
+    transforms.push({
+      kind: "retarget",
+      source: mapping.map((entry) => entry.source),
+      target: mapping.map((entry) => entry.target),
+      parameters: {
+        sourceRig: declaration.sourceRig.id,
+        targetRig: props.targetSkeleton.id,
+      },
+    });
+    transforms.push({
+      kind: "translation-scale",
+      source: ["hips:translation"],
+      target: ["hips:translation"],
+      parameters: { scale: declaration.mode.translationScale },
+    });
+  }
+  return {
+    version: 1,
+    compiler: {
+      packageVersion: AUTOMOVIE_PRODUCTION_COMPILER_VERSION,
+      protocolVersion: AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
+    },
+    adoption: declaration.id,
+    source: {
+      asset: {
+        path: props.adoption.receipt.source.path,
+        digest: props.adoption.receipt.source.digest,
+      },
+      closure: props.adoption.sourceClosure.map((entry) => ({ ...entry })),
+      take: { ...props.adoption.sourceTake },
+      basis: structuredClone(props.adoption.sourceBasis),
+      basisDigest: digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes(props.adoption.sourceBasis),
+      ),
+    },
+    decision: {
+      shot: props.shot,
+      actor: declaration.actor,
+      clip: declaration.clip,
+      mode: declaration.mode.kind,
+      mapping,
+      translationScale:
+        declaration.mode.kind === "humanoid-retarget"
+          ? declaration.mode.translationScale
+          : null,
+    },
+    target: {
+      model: props.targetModel,
+      skeleton: props.targetSkeleton.id,
+      basisDigest: digestAutoMovieBytes(
+        canonicalAutoMovieJsonBytes(props.targetSkeleton),
+      ),
+    },
+    transforms,
+    losses: props.losses.map((entry) => ({
+      ...entry,
+      source: [...entry.source],
+    })),
+    characterization: {
+      status: props.characterization.status,
+      findings: [...props.characterization.findings],
+    },
+    motion: structuredClone(props.motion),
+  };
+};
+
+/** Whether every mapped native source bone is byte-compatible with its target. */
+const nativeExternalMotionRigCompatible = (
+  source: IAutoMovieSkeleton,
+  mapped: readonly AutoMovieHumanoidBone[],
+  target: IAutoMovieSkeleton,
+): boolean => {
+  if (source.id !== target.id) return false;
+  const sourceBones = new Map(source.bones.map((bone) => [bone.bone, bone]));
+  const targetBones = new Map(target.bones.map((bone) => [bone.bone, bone]));
+  const mappedBones = new Set(mapped);
+  for (const bone of mappedBones) {
+    const from = sourceBones.get(bone);
+    const to = projectedNativeBone(targetBones, mappedBones, bone);
+    if (
+      from === undefined ||
+      to === null ||
+      Buffer.from(canonicalAutoMovieJsonBytes(from)).equals(
+        Buffer.from(canonicalAutoMovieJsonBytes(to)),
+      ) === false
+    )
+      return false;
+  }
+  return true;
+};
+
+/**
+ * Collapse unmapped target helpers exactly as byte-grounded source mapping
+ * does.
+ */
+const projectedNativeBone = (
+  bones: ReadonlyMap<
+    AutoMovieHumanoidBone,
+    IAutoMovieSkeleton["bones"][number]
+  >,
+  mapped: ReadonlySet<AutoMovieHumanoidBone>,
+  bone: AutoMovieHumanoidBone,
+): IAutoMovieSkeleton["bones"][number] | null => {
+  const terminal = bones.get(bone);
+  if (terminal === undefined) return null;
+  const chain: IAutoMovieSkeleton["bones"][number][] = [terminal];
+  let parent = terminal.parent;
+  while (parent !== null && mapped.has(parent) === false) {
+    const helper = bones.get(parent);
+    if (helper === undefined) return null;
+    chain.push(helper);
+    parent = helper.parent;
+  }
+  let rest: IAutoMovieSkeleton["bones"][number]["rest"] = {
+    translation: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0, w: 1 },
+    scale: { x: 1, y: 1, z: 1 },
+  };
+  for (const member of chain.reverse())
+    rest = composeNativeRest(rest, member.rest);
+  return {
+    bone,
+    parent,
+    rest,
+    constraint: structuredClone(terminal.constraint),
+  };
+};
+
+/** Compose two parent-local TRS values without introducing matrix ambiguity. */
+const composeNativeRest = (
+  parent: IAutoMovieSkeleton["bones"][number]["rest"],
+  local: IAutoMovieSkeleton["bones"][number]["rest"],
+): IAutoMovieSkeleton["bones"][number]["rest"] => {
+  const scaled = {
+    x: local.translation.x * parent.scale.x,
+    y: local.translation.y * parent.scale.y,
+    z: local.translation.z * parent.scale.z,
+  };
+  const q = parent.rotation;
+  const uv = {
+    x: q.y * scaled.z - q.z * scaled.y,
+    y: q.z * scaled.x - q.x * scaled.z,
+    z: q.x * scaled.y - q.y * scaled.x,
+  };
+  const uuv = {
+    x: q.y * uv.z - q.z * uv.y,
+    y: q.z * uv.x - q.x * uv.z,
+    z: q.x * uv.y - q.y * uv.x,
+  };
+  const rotated = {
+    x: scaled.x + 2 * (q.w * uv.x + uuv.x),
+    y: scaled.y + 2 * (q.w * uv.y + uuv.y),
+    z: scaled.z + 2 * (q.w * uv.z + uuv.z),
+  };
+  const a = parent.rotation;
+  const b = local.rotation;
+  return {
+    translation: {
+      x: parent.translation.x + rotated.x,
+      y: parent.translation.y + rotated.y,
+      z: parent.translation.z + rotated.z,
+    },
+    rotation: {
+      x: a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+      y: a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+      z: a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+      w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+    },
+    scale: {
+      x: parent.scale.x * local.scale.x,
+      y: parent.scale.y * local.scale.y,
+      z: parent.scale.z * local.scale.z,
+    },
   };
 };
 
@@ -3302,7 +3828,7 @@ const compileFilmSource = (
 };
 
 const filmDiagnostic = (
-  code: string,
+  code: AutoMovieDiagnosticCode,
   message: string,
 ): IAutoMovieDiagnostic => ({
   code,
@@ -3758,7 +4284,7 @@ const inspectSource = (
       path: sourcePath,
       message: `Template sentinel "${TEMPLATE_SENTINEL}" remains in ${sourcePath}. The placeholder says this scaffold section has no implementation, so compile and review cannot treat it as resident work. Implement the marked section and remove the exact sentinel.`,
     });
-  const report = (code: string, capability: string): void => {
+  const report = (code: AutoMovieDiagnosticCode, capability: string): void => {
     const key = `${code}:${capability}`;
     if (found.has(key)) return;
     found.add(key);
@@ -4281,6 +4807,10 @@ const formationGroundEscape = (
  * removed is not measured at all while it is absent: refusing a shot because
  * something nobody can see stands over a void is exactly the false refusal this
  * gate is built never to make.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation Validates every measured formation position against authored ground.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-layout-ground-validation Defines the resolved-layout ground validation pass without claiming motion or resolution validation.
+ * @author Samchon
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -4498,13 +5028,32 @@ const FORMATION_OVERLAP_SAMPLE_LIMIT = 16;
  * shape a crowd holds. What one member's own performance does to one of its
  * parts is not read here, in either direction: a gate that tried to would be
  * measuring a solver's output rather than a design's arrangement.
+ *
+ * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Supplies conservative body columns for static spacing checks.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Defines the model-derived clearance used by static overlap validation.
+ * @author Samchon
  */
 export interface IAutoMovieModelColumn {
-  /** Radius of the disc the model fills, in metres. */
+  /**
+   * Radius of the disc the model fills, in metres.
+   *
+   * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Provides the horizontal body clearance operand.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Measures static clearance from model-derived radii.
+   */
   radius: number;
-  /** Bottom of the column, in metres above where the model stands. */
+  /**
+   * Bottom of the column, in metres above where the model stands.
+   *
+   * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Bounds the vertical interval used by spacing checks.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Avoids false static overlap for bodies at disjoint heights.
+   */
   bottom: number;
-  /** Top of the column, in metres above where the model stands. */
+  /**
+   * Top of the column, in metres above where the model stands.
+   *
+   * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Completes the model-derived vertical clearance interval.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Makes vertical intersection part of deterministic static clearance measurement.
+   */
   top: number;
 }
 
@@ -4524,6 +5073,10 @@ export interface IAutoMovieModelColumn {
  * does. A part turned about anything but the vertical is left out for the same
  * reason, its column no longer being vertical, and so is a scaled one, whose
  * real dimensions are no longer the ones its shape states.
+ *
+ * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Derives spacing operands from the actual runtime model.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Produces deterministic columns for static clearance validation.
+ * @author Samchon
  */
 export const autoMovieModelColumns = (
   model: Pick<IAutoMovieModel, "parts" | "skeleton">,
@@ -4854,6 +5407,10 @@ const formationOverlapClearance = (
  *
  * A member the shot has taken out is not measured, because nothing can stand
  * inside a body that is not there.
+ *
+ * @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing Refuses formation members whose model-derived bodies overlap.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Defines deterministic model-derived static clearance and bounded sampling.
+ * @author Samchon
  */
 export const validateAutoMovieFormationOverlap = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -5005,7 +5562,13 @@ export const validateAutoMovieFormationOverlap = (
   );
 };
 
-/** Validate bounded source-authored formation cues against one compiled shot. */
+/**
+ * Validate bounded source-authored formation cues against one compiled shot.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Checks authored formation motion over its declared shot interval.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-motion-validation Applies the authored formation motion validation contract.
+ * @author Samchon
+ */
 export const validateAutoMovieFormationMotions = (
   contract: IAutoMovieShotContract,
   value: IAutoMovieCompiledShotSource,
@@ -5177,6 +5740,10 @@ const FORMATION_SLOT_EXCEPTION_LIMIT = 1_024;
  * Narrowed to what it reads, like the ground gate beside it: the unit's own
  * count and hero inventory decide which slots exist and which already belong to
  * an actor, and nothing else about a compiled shot bears on the question.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Validates sparse per-member motion under the formation budget.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-motion-validation Checks slot-level motion without expanding the whole formation.
+ * @author Samchon
  */
 export const validateAutoMovieFormationSlotMotions = (
   contract: Pick<
@@ -5322,7 +5889,13 @@ export const validateAutoMovieFormationSlotMotions = (
   return diagnostics;
 };
 
-/** Validate shot-local effect cues against compiler-owned streams and events. */
+/**
+ * Validate shot-local effect cues against compiler-owned streams and events.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Refuses effect work outside declared bounded resources.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Applies admission before expensive effect work.
+ * @author Samchon
+ */
 export const validateAutoMovieEffects = (
   contract: IAutoMovieShotContract,
   value: IAutoMovieCompiledShotSource,
@@ -5527,6 +6100,7 @@ const compilerAssetInventory = (
   assets: string[];
   records: IAutoMovieAssetProvenance[];
   externalModels: Map<string, IAutoMovieExternalModelRuntimeBinding>;
+  externalMotions: Map<string, ICompilerExternalMotionAdoption>;
   diagnostics: IAutoMovieDiagnostic[];
 } => {
   if (manifestPath === undefined)
@@ -5534,10 +6108,15 @@ const compilerAssetInventory = (
       assets: [],
       records: [],
       externalModels: new Map(),
+      externalMotions: new Map(),
       diagnostics: [],
     };
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const diagnostic = (code: string, target: string, message: string): void => {
+  const diagnostic = (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ): void => {
     diagnostics.push({
       code,
       category: "error",
@@ -5555,7 +6134,11 @@ const compilerAssetInventory = (
    * a licensed model because it carries a material lobe this engine has no
    * field for would be the compiler deciding what art a production may buy.
    */
-  const warning = (code: string, target: string, message: string): void => {
+  const warning = (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ): void => {
     diagnostics.push({
       code,
       category: "warning",
@@ -5576,6 +6159,7 @@ const compilerAssetInventory = (
       assets: [],
       records: [],
       externalModels: new Map(),
+      externalMotions: new Map(),
       diagnostics,
     };
   }
@@ -5593,6 +6177,7 @@ const compilerAssetInventory = (
       assets: [],
       records: [],
       externalModels: new Map(),
+      externalMotions: new Map(),
       diagnostics,
     };
   }
@@ -5609,6 +6194,7 @@ const compilerAssetInventory = (
       assets: [],
       records: [],
       externalModels: new Map(),
+      externalMotions: new Map(),
       diagnostics,
     };
   }
@@ -5634,10 +6220,110 @@ const compilerAssetInventory = (
     );
   const activeConsumerAssets = new Map<string, string>();
   const consumedModelResources = new Set<string>();
+  const consumedMotionResources = new Set<string>();
+  const motionInspections = new Map<
+    string,
+    ReturnType<typeof inspectAutoMovieExternalModelBytes>
+  >();
+  const motionClosures = new Map<
+    string,
+    IAutoMovieExternalMotionConversionReceipt["source"]["closure"]
+  >();
   const externalByAsset = new Map<
     string,
     Omit<IAutoMovieExternalModelRuntimeBinding, "asset" | "lod">
   >();
+  for (const asset of validation.data.assets) {
+    if (asset.motion === undefined) continue;
+    const resident = content.get(asset.path);
+    if (
+      resident?.bytes === null ||
+      resident === undefined ||
+      asset.digest !== digestAutoMovieBytes(resident.bytes)
+    )
+      continue;
+    const diagnosticCount = diagnostics.length;
+    const closure = new Map<string, AutoMovieContentDigest>();
+    try {
+      const inspection = inspectAutoMovieExternalModelBytes({
+        path: asset.path,
+        bytes: resident.bytes,
+        profile: asset.motion.ingestProfile,
+        resolveResource: (uri) => {
+          const resource = externalModelResourcePath(asset.path, uri);
+          const resourceRecord = validation.data.assets.find(
+            (candidate) => candidate.path === resource,
+          );
+          const resourceInput = content.get(resource);
+          if (
+            resourceRecord === undefined ||
+            resourceInput?.bytes === null ||
+            resourceInput === undefined ||
+            resourceRecord.digest !== digestAutoMovieBytes(resourceInput.bytes)
+          ) {
+            diagnostic(
+              "asset-motion-provenance-missing",
+              asset.path,
+              `External motion "${asset.path}" references sidecar "${uri}", but resolved project asset "${resource}" is absent or byte-stale in the manifest.`,
+            );
+            return null;
+          }
+          if (
+            hasActiveAssetUse(
+              resourceRecord,
+              productionId,
+              "motion-resource",
+              asset.path,
+            ) === false
+          )
+            diagnostic(
+              "asset-motion-provenance-missing",
+              asset.path,
+              `External motion sidecar "${resource}" is not authorized as a motion-resource of "${asset.path}" in production "${productionId}".`,
+            );
+          else {
+            consumedMotionResources.add(`${asset.path}\0${resource}`);
+            closure.set(resource, resourceRecord.digest);
+          }
+          return resourceInput.bytes;
+        },
+      });
+      if (
+        inspection.motion === undefined ||
+        motionTakeInventoryMatches(
+          asset.motion.takes,
+          inspection.motion.takes,
+        ) === false ||
+        Buffer.from(canonicalAutoMovieJsonBytes(asset.motion.basis)).equals(
+          Buffer.from(
+            canonicalAutoMovieJsonBytes(
+              externalMotionBasisOf(inspection.motion),
+            ),
+          ),
+        ) === false
+      )
+        diagnostic(
+          "asset-motion-provenance-missing",
+          asset.path,
+          `External motion "${asset.path}" inspected take inventory or byte-grounded hierarchy/rest basis does not match its manifest provenance. Re-inspect the current digest and preserve every take identity, node, parent, and local rest transform.`,
+        );
+      if (diagnostics.length === diagnosticCount) {
+        motionInspections.set(asset.path, inspection);
+        motionClosures.set(
+          asset.path,
+          [...closure]
+            .map(([path, digest]) => ({ path, digest }))
+            .sort((left, right) => compareCodeUnits(left.path, right.path)),
+        );
+      }
+    } catch (error) {
+      diagnostic(
+        "asset-motion-ingest-invalid",
+        asset.path,
+        `External motion "${asset.path}" cannot be inspected with profile "${asset.motion.ingestProfile}": ${errorMessage(error)} Restore valid fixed bytes or correct the declared profile.`,
+      );
+    }
+  }
   for (const asset of validation.data.assets) {
     const folded = asset.path.toLowerCase();
     const prior = paths.get(folded);
@@ -5685,15 +6371,24 @@ const compilerAssetInventory = (
         `Asset "${asset.path}" differs from the digest it was acquired or generated at but records no processing steps. Record the reproducible transformation chain before compiling.`,
       );
     if (
-      isExternalModelAsset(asset.path) &&
-      (asset.model === undefined ||
-        asset.model.ingestProfile.trim().length === 0 ||
+      asset.model !== undefined &&
+      (asset.model.ingestProfile.trim().length === 0 ||
         asset.model.lod.length === 0)
     )
       diagnostic(
         "asset-model-provenance-missing",
         asset.path,
         `External model "${asset.path}" must declare its ingest profile, explicit LOD ledger, collision proxy and measurement proxy before compiling.`,
+      );
+    else if (
+      isExternalModelAsset(asset.path) &&
+      asset.model === undefined &&
+      asset.motion === undefined
+    )
+      diagnostic(
+        "asset-model-provenance-missing",
+        asset.path,
+        `External glTF-family asset "${asset.path}" must declare either model ingest/LOD/proxy provenance or motion ingest/take provenance before compiling.`,
       );
   }
   for (const asset of validation.data.assets) {
@@ -5706,7 +6401,8 @@ const compilerAssetInventory = (
       const priorAsset = activeConsumerAssets.get(key);
       const exclusive =
         use.consumer.kind !== "model-resource" &&
-        use.consumer.kind !== "model-proxy";
+        use.consumer.kind !== "model-proxy" &&
+        use.consumer.kind !== "motion-resource";
       if (seenUses.has(key) || (exclusive && priorAsset !== undefined))
         diagnostic(
           "asset-use-duplicate",
@@ -5886,7 +6582,8 @@ const compilerAssetInventory = (
       diagnostics.length === diagnosticCount &&
       collision !== null &&
       measurement !== null &&
-      inspection !== undefined
+      inspection !== undefined &&
+      inspection.profile !== "gltf-motion-v1"
     )
       externalByAsset.set(asset.path, {
         profile: inspection.profile,
@@ -5910,6 +6607,17 @@ const compilerAssetInventory = (
           "asset-use-dangling",
           resource.path,
           `Asset "${resource.path}" is authorized as a model-resource of "${use.consumer.id}" but is not an actual LOD, buffer, or image dependency of that model.`,
+        );
+      else if (
+        use.production === productionId &&
+        use.consumer.kind === "motion-resource" &&
+        consumedMotionResources.has(`${use.consumer.id}\0${resource.path}`) ===
+          false
+      )
+        diagnostic(
+          "asset-use-dangling",
+          resource.path,
+          `Asset "${resource.path}" is authorized as a motion-resource of "${use.consumer.id}" but is not an actual buffer or image dependency of that motion source.`,
         );
   const externalModels = new Map<
     string,
@@ -6013,11 +6721,119 @@ const compilerAssetInventory = (
       }
     }
   }
+  const externalMotions = new Map<string, ICompilerExternalMotionAdoption>();
+  const externalMotionClips = new Map<string, string>();
+  for (const declaration of graph.production?.externalMotions ?? []) {
+    const priorClip = externalMotionClips.get(declaration.clip);
+    if (
+      externalMotions.has(declaration.id) ||
+      declaration.id.trim().length === 0 ||
+      declaration.clip.trim().length === 0 ||
+      priorClip !== undefined
+    ) {
+      diagnostic(
+        "source-motion-adoption-invalid",
+        declaration.id || "external-motion-adoption",
+        priorClip === undefined
+          ? `External motion adoption and clip ids must be non-blank and unique, but received adoption "${declaration.id}" and clip "${declaration.clip}".`
+          : `External motion adoption "${declaration.id}" repeats clip "${declaration.clip}" already owned by "${priorClip}". Keep one adoption per clip identity.`,
+      );
+      continue;
+    }
+    externalMotionClips.set(declaration.clip, declaration.id);
+    const record = validation.data.assets.find(
+      (asset) => asset.path === declaration.asset,
+    );
+    const input = content.get(declaration.asset);
+    const inspection = motionInspections.get(declaration.asset);
+    if (
+      record?.motion === undefined ||
+      input?.bytes === null ||
+      input === undefined ||
+      inspection === undefined ||
+      record.uses.some(
+        (use) =>
+          use.production === productionId &&
+          use.consumer.kind === "motion-adoption" &&
+          use.consumer.id === declaration.id,
+      ) === false
+    ) {
+      diagnostic(
+        "asset-motion-provenance-missing",
+        declaration.id,
+        `External motion adoption "${declaration.id}" requires current motion provenance, resident digest-matched bytes, a successful inspection, and one matching motion-adoption use on asset "${declaration.asset}".`,
+      );
+      continue;
+    }
+    try {
+      if (inspection.motion === undefined)
+        throw new Error("External motion inspection has no motion basis.");
+      const receipt = adoptAutoMovieExternalMotion({
+        inspection,
+        source: {
+          path: declaration.asset,
+          digest: record.digest,
+          byteLength: input.bytes.byteLength,
+        },
+        decision:
+          declaration.mode.kind === "native"
+            ? {
+                mode: "native",
+                take: declaration.take,
+                sourceRig: declaration.sourceRig,
+                mapping: declaration.mapping.map((entry) => ({
+                  node: entry.source,
+                  bone: entry.target,
+                })),
+              }
+            : {
+                mode: "retarget",
+                take: declaration.take,
+                sourceRig: declaration.sourceRig,
+                mapping: declaration.mapping.map((entry) => ({
+                  node: entry.source,
+                  bone: entry.target,
+                })),
+                target: declaration.actor,
+                translationScale: declaration.mode.translationScale,
+              },
+      });
+      const sourceMotion = importedNodeClipToAutoMovieMotion({
+        clip: receipt.take,
+        sourceSkeleton: receipt.handoff.sourceRig,
+        mapping: receipt.handoff.mapping,
+        motionId: declaration.clip,
+      });
+      const sourceTake = record.motion.takes.find(
+        (take) => take.id === declaration.take,
+      );
+      const sourceClosure = motionClosures.get(declaration.asset);
+      if (sourceTake === undefined || sourceClosure === undefined)
+        throw new Error(
+          `External motion take "${declaration.take}" or its inspected source closure is absent from manifest provenance.`,
+        );
+      externalMotions.set(declaration.id, {
+        declaration,
+        receipt,
+        sourceClosure,
+        sourceBasis: externalMotionBasisOf(inspection.motion),
+        sourceTake: { ...sourceTake },
+        sourceMotion,
+      });
+    } catch (error) {
+      diagnostic(
+        "source-motion-adoption-invalid",
+        declaration.id,
+        `External motion adoption "${declaration.id}" is invalid: ${errorMessage(error)} Correct the selected take, source rig, mapping, or mode; the compiler will not infer a replacement.`,
+      );
+    }
+  }
   refuseUnsupportedExternalInstancing(graph, externalModels, diagnostic);
   return {
     assets,
     records: validation.data.assets,
     externalModels,
+    externalMotions,
     diagnostics,
   };
 };
@@ -6028,7 +6844,11 @@ const resolveExternalCollisionProxy = (props: {
   records: readonly IAutoMovieAssetProvenance[];
   content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
   productionId: string;
-  diagnostic: (code: string, target: string, message: string) => void;
+  diagnostic: (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ) => void;
 }): IAutoMovieGeneratedCollisionProxy | null => {
   const proxy =
     props.reference.kind === "generated"
@@ -6068,7 +6888,11 @@ const resolveExternalMeasurementProxy = (props: {
   records: readonly IAutoMovieAssetProvenance[];
   content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
   productionId: string;
-  diagnostic: (code: string, target: string, message: string) => void;
+  diagnostic: (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ) => void;
 }): IAutoMovieGeneratedMeasurementProxy | null => {
   const proxy =
     props.reference.kind === "generated"
@@ -6203,6 +7027,44 @@ const assetProcessingStepIncomplete = (
   step: IAutoMovieAssetProvenance["processing"][number],
 ): boolean => step.tool.trim().length === 0 || step.command.trim().length === 0;
 
+const motionTakeInventoryMatches = (
+  declared: Readonly<NonNullable<IAutoMovieAssetProvenance["motion"]>["takes"]>,
+  inspected: Readonly<
+    NonNullable<
+      ReturnType<typeof inspectAutoMovieExternalModelBytes>["motion"]
+    >["takes"]
+  >,
+): boolean =>
+  declared.length === inspected.length &&
+  declared.every((take, index) => {
+    const observed = inspected[index]!;
+    return (
+      take.id === observed.id &&
+      take.animationIndex === index &&
+      take.sourceName === observed.name &&
+      take.durationSeconds === observed.duration
+    );
+  });
+
+/** Convert byte-inspected glTF node facts to the manifest's canonical basis. */
+const externalMotionBasisOf = (
+  inspected: NonNullable<
+    ReturnType<typeof inspectAutoMovieExternalModelBytes>["motion"]
+  >,
+): IAutoMovieExternalMotionBasis => ({
+  profile: "gltf-motion-basis-v1",
+  lengthUnit: "meter",
+  handedness: "right-handed",
+  upAxis: "Y-up",
+  nodes: inspected.nodes.map((node) => ({
+    nodeIndex: node.index,
+    id: node.id,
+    sourceName: node.name,
+    parent: node.parent,
+    localRest: structuredClone(node.transform),
+  })),
+});
+
 const assetConsumerExists = (
   graph: IAutoMovieProductionDesignGraph,
   records: readonly IAutoMovieAssetProvenance[],
@@ -6232,6 +7094,17 @@ const assetConsumerExists = (
         )
       );
     }
+    case "motion-resource": {
+      const owner = records.find((record) => record.path === consumer.id);
+      return owner?.motion !== undefined && assetPath !== owner.path;
+    }
+    case "motion-adoption":
+      return (
+        graph.production?.externalMotions?.some(
+          (adoption) =>
+            adoption.id === consumer.id && adoption.asset === assetPath,
+        ) === true
+      );
     case "rendition-reference":
       return graph.shots.has(consumer.id);
     // Like an audio cue, the reverse binding is owned by the consumer's own
@@ -6255,7 +7128,7 @@ const assetConsumerExists = (
 const hasActiveAssetUse = (
   record: IAutoMovieAssetProvenance | undefined,
   productionId: string,
-  kind: "model-resource" | "model-proxy",
+  kind: "model-resource" | "model-proxy" | "motion-resource",
   owner: string,
 ): boolean =>
   record?.uses.some(
@@ -6281,7 +7154,11 @@ const requiredRecipeBones = (
 const refuseUnsupportedExternalInstancing = (
   graph: IAutoMovieProductionDesignGraph,
   externalModels: ReadonlyMap<string, IAutoMovieExternalModelRuntimeBinding>,
-  diagnostic: (code: string, target: string, message: string) => void,
+  diagnostic: (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ) => void,
 ): void => {
   for (const formation of graph.formations.values()) {
     const recipes = [
@@ -6418,6 +7295,10 @@ const productionCompilerInputFingerprint = (
  * Guarded publications use this inside the commit lock to prove that the
  * design, source, and declared-content bytes still match the snapshot they
  * intend to publish.
+ *
+ * @evidence requirements/operations-and-recovery/migration-and-compatibility.md#operations-semantic-change-new-identity Derives a new identity whenever compiler input semantics change.
+ * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-semantic-change-identity Binds publication guards to the current compiler-input identity.
+ * @author Samchon
  */
 export const currentAutoMovieProductionCompilerInputFingerprint = (
   project: AutoMovieProductionProject,
@@ -6528,6 +7409,10 @@ const materializeGeneratedFiles = (
     IAutoMovieCompiledShotSource["models"][number]
   >,
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>,
+  externalMotionConversions: ReadonlyMap<
+    string,
+    ICompilerExternalMotionConversionDraft
+  >,
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>,
   film: {
     edit: IAutoMovieCompiledFilmEdit;
@@ -6559,6 +7444,43 @@ const materializeGeneratedFiles = (
     put(`models/${encodeAutoMoviePathSegment(id)}.json`, value);
   for (const [id, value] of compiled)
     put(`shots/${encodeAutoMoviePathSegment(id)}.json`, value);
+  for (const [adoption, draft] of [...externalMotionConversions].sort(
+    ([left], [right]) => compareCodeUnits(left, right),
+  )) {
+    const outputPath = `shots/${encodeAutoMoviePathSegment(draft.decision.shot)}.json`;
+    const outputBytes = files.get(outputPath);
+    if (outputBytes === undefined)
+      throw new Error(
+        `External motion conversion "${adoption}" has no materialized shot output "${outputPath}".`,
+      );
+    const { motion, ...receipt } = draft;
+    const compiledShot = compiled.get(draft.decision.shot);
+    const resultMotionId = compiledShot?.shot.performances.find(
+      (performance) => performance.node === draft.decision.actor,
+    )?.motion;
+    const resultMotion = compiledShot?.motions.find(
+      (candidate) => candidate.id === resultMotionId,
+    );
+    if (resultMotion === undefined)
+      throw new Error(
+        `External motion conversion "${adoption}" for actor "${draft.decision.actor}" has no canonical enacted performance in materialized shot "${draft.decision.shot}".`,
+      );
+    const value: IAutoMovieExternalMotionConversionReceipt = {
+      ...receipt,
+      result: {
+        motionId: resultMotion.id,
+        motionDigest: digestAutoMovieBytes(
+          canonicalAutoMovieJsonBytes(resultMotion),
+        ),
+        outputPath,
+        outputDigest: digestAutoMovieBytes(outputBytes),
+      },
+    };
+    put(
+      `receipts/external-motion/${encodeAutoMoviePathSegment(adoption)}.json`,
+      value,
+    );
+  }
   for (const [id, value] of realizations)
     put(`realizations/${encodeAutoMoviePathSegment(id)}.json`, value);
   if (film !== null) {
@@ -6650,6 +7572,12 @@ const sourceTargetsOf = (
       file === `contracts/shots/${encodeAutoMoviePathSegment(id)}.json`
     )
       return [`shot:${id}`];
+  for (const adoption of graph.production?.externalMotions ?? [])
+    if (
+      file ===
+      `receipts/external-motion/${encodeAutoMoviePathSegment(adoption.id)}.json`
+    )
+      return [`external-motion:${adoption.id}`, `shot:${adoption.shot}`];
   for (const [id] of graph.models)
     if (
       file === `models/${encodeAutoMoviePathSegment(id)}.json` ||
@@ -7447,7 +8375,7 @@ const frameClockClose = (left: number, right: number): boolean =>
   Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
 const renderDeliverableDiagnostic = (
-  code: string,
+  code: AutoMovieDiagnosticCode,
   target: string,
   message: string,
   renderPath: string | null = null,

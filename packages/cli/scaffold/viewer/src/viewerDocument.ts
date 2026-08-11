@@ -1,16 +1,20 @@
-import type { AutoMovieGuidePass } from "@automovie/interface";
 import type {
+  AutoMovieGuidePass,
   IAutoMovieRenderObservation,
-  IAutoMovieSemanticMaskCoverage,
-} from "@automovie/viewer";
+} from "@automovie/interface";
+import type { IAutoMovieSemanticMaskCoverage } from "@automovie/viewer";
 
 export interface IAutoMovieCaptureHook {
   ready: boolean;
-  seek: (time: number, pass: AutoMovieGuidePass) => void;
+  seek: (
+    time: number,
+    pass: AutoMovieGuidePass,
+    globalFrame?: number | null,
+  ) => void;
 
   /**
-   * What the page has drawn, read off the scene graph the last seek left
-   * behind.
+   * What the page has drawn, read from the renderer counters accumulated
+   * across the last complete seek.
    *
    * The live viewer and the headless capture drive the SAME page through the
    * same hook, so "the viewer and the capture agree about the frame" stops
@@ -36,7 +40,7 @@ export interface IAutoMovieShotObservation {
   /** Compiled shot the numbers belong to. */
   shot: string;
 
-  /** What the built scene submits right now. */
+  /** Renderer-confirmed submissions for the complete frame. */
   observed: IAutoMovieRenderObservation;
 
   /**

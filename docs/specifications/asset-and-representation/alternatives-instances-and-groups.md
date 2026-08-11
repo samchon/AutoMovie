@@ -2,11 +2,11 @@
 
 ## 대안 표현 경계 {#asset-spec-alternatives-boundary}
 
+### variant와 상속 {#asset-spec-variant-inheritance}
+
 <!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-representations-bounds-lod 하나의 의미 identity 아래 목적별 표현을 연결해야 한다. -->
 
 시스템은 variant, representation, prototype, instance와 group을 서로 바꿔 부르지 않는다. variant는 같은 자산의 저작된 상태 대안이고, representation은 같은 의미를 다른 비용·목적으로 실현한 대안이며, prototype은 공유 정의, instance는 작품 속 개별 발생, group은 여러 identity 사이의 논리 관계이다.
-
-### variant와 상속 {#asset-spec-variant-inheritance}
 
 <!-- @evidence requirements/asset-authoring/identity-and-instances.md#asset-variant-inheritance 자산 변형과 상속 관계를 추적하고 교체 가능하게 유지해야 한다. -->
 

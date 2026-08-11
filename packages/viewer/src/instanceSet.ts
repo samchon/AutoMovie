@@ -10,23 +10,65 @@ import * as THREE from "three";
 import { IAutoMovieModelObject } from "./buildModel";
 import { flattenInstancedModel, flattenInstancedObject } from "./formation";
 
-/** Bounded viewer accounting for one general instance set. */
+/**
+ * Bounded viewer accounting for one general instance set.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @author Samchon
+ */
 export interface IAutoMovieInstanceSetViewerStats {
-  /** Slots currently drawn by automatic LOD tier. */
+  /**
+   * Slots currently drawn by automatic LOD tier.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
-  /** Slots rejected by chunk-frustum culling. */
+  /**
+   * Slots rejected by chunk-frustum culling.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   culled: number;
-  /** Slots intentionally hidden by authored or seeded visibility. */
+  /**
+   * Slots intentionally hidden by authored or seeded visibility.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   hidden: number;
 }
 
-/** Viewer-owned chunked object for a compiled general instance set. */
+/**
+ * Viewer-owned chunked object for a compiled general instance set.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @author Samchon
+ */
 export interface IAutoMovieInstanceSetViewerObject {
-  /** Add this group to the current scene. */
+  /**
+   * Add this group to the current scene.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   object: THREE.Group;
-  /** Current LOD and culling accounting. */
+  /**
+   * Current LOD and culling accounting.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   stats: IAutoMovieInstanceSetViewerStats;
-  /** Recompute chunk visibility for the current camera. */
+  /**
+   * Recompute chunk visibility for the current camera.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+   */
   update(camera: THREE.PerspectiveCamera, viewportHeight: number): void;
 }
 
@@ -64,6 +106,9 @@ interface IInstanceChunkObject {
  * the prototype, and it is flattened by the same rigid path a generated recipe
  * takes. Rigid is the whole condition: a skinned, morphed, or multi-material
  * source mesh is refused by name rather than instanced as something else.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
  */
 export const buildInstancedInstanceSet = (input: {
   instanceSet: IAutoMovieCompiledInstanceSet;
@@ -287,7 +332,19 @@ export const buildInstancedInstanceSet = (input: {
   };
 };
 
-/** Regenerate one exact instance from compact compiled parameters. */
+/**
+ * Regenerate one exact instance from compact compiled parameters.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Regenerates the selected grid, scatter, lattice, explicit, or route layout from its declared parameters.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Implements deterministic slot generation and assignment for that layout.
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-deterministic-population Regenerates prototype, palette, scale, traits, and visibility from stable seed and slot identity.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hero-variation-group-state Implements deterministic population and variation state.
+ * @evidence requirements/formations/scope-and-identity.md#formation-group-member-identity Preserves the compiled set and stable slot identity on each regenerated member.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Implements compact member identity independently of array presentation.
+ * @evidence requirements/formations/terrain-and-routes.md#formation-group-path Places along-route slots on the declared compiled path.
+ */
 export const regenerateInstanceSlot = (
   instanceSet: IAutoMovieCompiledInstanceSet,
   slot: number,

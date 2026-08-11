@@ -2,11 +2,11 @@
 
 ## 이동·가시성 질의 경계 {#world-site-traversal-visibility-boundary}
 
+### 이동 가능 표면 입력 {#world-site-traversable-surface-input}
+
 <!-- @evidence requirements/map/movement-and-visibility.md#map-movement-visibility Defines traversal and visibility as reproducible queries over canonical state. -->
 
 시스템은 한 시각과 representation level의 canonical geometry, network, surface, 차폐체와 환경 상태를 입력으로 받아 이동 가능성, route와 가시성을 질의한다. 출력은 사용한 traveler·observer, 시작과 목표, 시간, tolerance, source revision과 지원 수준을 포함하고, 보이는 화면이나 직관을 검증 결과로 대신하지 않는다.
-
-### 이동 가능 표면 입력 {#world-site-traversable-surface-input}
 
 <!-- @evidence requirements/map/movement-and-visibility.md#map-traversable-surfaces Requires surfaces to state whether and for whom they are traversable. -->
 

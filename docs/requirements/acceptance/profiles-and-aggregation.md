@@ -22,7 +22,9 @@ Delivery profile은 실제 게시 대상의 media, 언어, 접근성, 무결성,
 
 사용자는 작품 목적에 맞는 profile을 정의할 수 있어야 하지만 product exclusion을 뒤집거나 관찰 불가능한 promise를 통과 조건으로 만들지 않아야 한다.
 
-## Profile 간 판정 격리 {#acceptance-profile-isolation}
+## Profile 간 판정 격리 {#acceptance-profile-isolation-group}
+
+### Profile 간 판정 격리 {#acceptance-profile-isolation}
 
 한 profile의 pass는 criterion 집합과 threshold가 같거나 더 엄격하다는 관계가 명시되지 않은 한 다른 profile의 pass를 의미하지 않아야 한다.
 

@@ -25,6 +25,19 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+const PIXEL_ONLY_CAPTURE_EVIDENCE = {
+  observation: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not observe renderer cost metrics.",
+  },
+  maskSidecar: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not stage a semantic mask palette.",
+  },
+} as const;
+
 const png = (width: number, height: number): Uint8Array => {
   const image = new PNG({ width, height });
   image.data.fill(255);
@@ -1590,6 +1603,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
       () => ({
         ...currentStatus,
@@ -1623,7 +1637,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         success: false,
         diagnostics: [
           {
-            code: "source-invalid",
+            code: "compile-current-invalid",
             category: "error",
             phase: "source",
             target: "opening",
@@ -1688,6 +1702,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     ).preview({
       target: { kind: "shot", id: "opening" },
@@ -1706,6 +1721,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     );
     const invalidPreviewInputs = await Promise.all([
@@ -1759,6 +1775,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     );
     const absentShot = await absentTargetOracle.preview({
@@ -1829,6 +1846,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         }),
       ).preview({
         target: { kind: "shot", id: "opening" },
@@ -1846,11 +1864,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       runtimeIdentity: testCaptureRuntimeIdentity(),
       width: 2,
       height: 2,
-    } as {
-      bytes: Uint8Array;
-      runtimeIdentity: ReturnType<typeof testCaptureRuntimeIdentity>;
-      width: number;
-      height: number;
+      ...PIXEL_ONLY_CAPTURE_EVIDENCE,
     };
     Object.defineProperty(exceptionalBytes, "bytes", {
       get: () => {
@@ -1881,6 +1895,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 3,
         height: 3,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     ).preview({
       target: { kind: "shot", id: "opening" },
@@ -1902,6 +1917,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         };
       },
     ).preview({
@@ -1922,6 +1938,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         };
       }).preview({
         target: { kind: "shot", id: "opening" },
@@ -1940,6 +1957,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         }),
         () =>
           captureStatusReads++ === 0
@@ -1950,7 +1968,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
                 diagnostics: [
                   ...currentCaptureStatus.diagnostics,
                   {
-                    code: "synthetic-capture-race",
+                    code: "compile-input-changed",
                     category: "error" as const,
                     phase: "compile" as const,
                     target: "generated-manifest",
@@ -1976,6 +1994,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width: 2,
           height: 2,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         };
       },
     ).preview({
@@ -1999,6 +2018,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     ).preview({
       target: { kind: "shot", id: "opening" },
@@ -2018,6 +2038,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 2,
         height: 2,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       })).preview({
         target: { kind: "shot", id: "opening" },
         time: 0,
@@ -2089,6 +2110,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
               runtimeIdentity: testCaptureRuntimeIdentity(),
               width: size,
               height: size,
+              ...PIXEL_ONLY_CAPTURE_EVIDENCE,
             })).preview({
               target: { kind: "shot", id: "opening" },
               time: 0,
@@ -2107,6 +2129,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: input.width!,
         height: input.height!,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     );
     const defaultSized = await actual.preview({
@@ -2133,6 +2156,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity("148.0.7778.97"),
         width: input.width!,
         height: input.height!,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     ).preview({
       target: { kind: "shot", id: "opening" },
@@ -2153,6 +2177,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         },
         width: input.width!,
         height: input.height!,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     ).preview({
       target: { kind: "shot", id: "opening" },

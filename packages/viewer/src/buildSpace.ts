@@ -2,7 +2,13 @@ import { tessellateSurface } from "@automovie/engine";
 import { IAutoMovieSpace, IAutoMovieSurface } from "@automovie/interface";
 import * as THREE from "three";
 
-/** Name of the group `buildScene` adds for a scene's space geometry. */
+/**
+ * Name of the group `buildScene` adds for a scene's space geometry.
+ *
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this space surface from the resolved scene state only.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Keeps compiled space state distinct from its viewer-owned runtime group.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
+ */
 export const SPACE_GROUP_NAME = "__automovie_space";
 
 /**
@@ -39,6 +45,8 @@ const SPACE_COLOR = 0.62;
  * `validateSpace`, but a hand-built space may still carry one) encloses no area
  * and contributes no mesh rather than an invalid geometry.
  *
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this space surface from the resolved scene state only.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging space to viewer geometry.
  * @author Samchon
  */
 export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {

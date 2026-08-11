@@ -6,11 +6,27 @@ import {
 
 import { addPositiveModulo } from "../math/positiveModulo";
 
-/** A motion clip placed at a start time on an actor's shot timeline. */
+/**
+ * A motion clip placed at a start time on an actor's shot timeline.
+ *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Places one action source on the actor timeline without losing its authored state.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Supplies the interval and clip that the ordered composition evaluates.
+ * @author Samchon
+ */
 export interface IAutoMoviePlacement {
-  /** Seconds into the shot this clip begins. */
+  /**
+   * Seconds into the shot this clip begins.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Locates the action's state contribution on the shot clock.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Fixes the placement boundary used by ordered composition.
+   */
   start: number;
-  /** The clip (its own local time starts at 0). */
+  /**
+   * The clip (its own local time starts at 0).
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Preserves the authored action source and its terminal state during placement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Identifies the clip composed at this ordered layer position.
+   */
   motion: IAutoMovieMotion;
 }
 
@@ -19,6 +35,8 @@ export interface IAutoMoviePlacement {
  * perform (a beat of stillness), and the filler the timeline composer uses
  * across gaps. A two-keyframe clip with the same pose at both ends.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-sparse-channel-default Makes an explicit constant state span instead of inventing motion across an empty interval.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Encodes the hold as two ordered keys with identical state.
  * @author Samchon
  */
 export const holdMotion = (
@@ -61,6 +79,8 @@ export const holdMotion = (
  * is dropped: v1 sequences rather than layers concurrent actions). The result
  * is a plain non-looping clip sampled like any other.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Composes ordered actions and carries the preceding terminal pose through timeline gaps.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Makes the last accepted keyframe the authoritative boundary state of the composite.
  * @author Samchon
  */
 export const arrangeMotion = (

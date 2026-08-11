@@ -13,11 +13,40 @@ const COORDINATION_ROOT = path.join(
   ".automovie-root-locks",
 );
 
-/** Held namespace reservation for one physical production project root. */
+/**
+ * Held namespace reservation for one physical production project root.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source transactions an explicit capability representing the physical root they have fenced.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries path, identity, and token state as a typed lease checked by package code.
+ */
 export interface IAutoMovieProductionRootNamespaceLease {
+  /**
+   * Canonical physical root reserved by this lease.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Names the exact protected namespace.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Binds the lease to its physical claim scope.
+   */
   root: string;
+  /**
+   * Fenced coordinate locks held for the namespace.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing Carries the tokens that reject late writers.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Delivers every acquired fence with the lease.
+   */
   locks: ReadonlyArray<{ path: string; token: string }>;
+  /**
+   * Physical device identity included in the namespace claim.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Prevents aliases from becoming separate owners.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Grounds the claim in physical identity.
+   */
   device: string;
+  /**
+   * Physical inode identity included in the namespace claim.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Prevents path aliases from escaping one scope.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Completes the physical root identity.
+   */
   inode: string;
 }
 
@@ -218,6 +247,9 @@ const acquireExistingRoot = (
  *
  * Path and physical-identity locks live in a current-user coordination
  * directory, so neither the project nor its parent owns transient lock bytes.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows a source operation to reserve an existing production root before reading or mutating it.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Coordinates path and physical-identity locks outside the project through deterministic filesystem code.
  */
 export const acquireProductionRootNamespace = (
   rootDirectory: string,
@@ -231,6 +263,9 @@ export const acquireProductionRootNamespace = (
  * Missing parents and the root itself are created through already-resolved
  * physical parents under short external creation locks before the stable path
  * and physical-identity reservations take over.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows bootstrap code to create and reserve a missing root without racing aliases or parent replacement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encodes parent creation locking and stable-root fencing in a reusable source operation.
  */
 export const acquireOrCreateProductionRootNamespace = (
   rootDirectory: string,
@@ -261,7 +296,12 @@ export const acquireOrCreateProductionRootNamespace = (
   }
 };
 
-/** Verify that a held lease still names the same directory and lock token. */
+/**
+ * Verify that a held lease still names the same directory and lock token.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets every mutation checkpoint prove its held root and namespace token are still current.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs identity and fence revalidation locally before package code continues.
+ */
 export const assertProductionRootNamespaceLease = (
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {
@@ -296,7 +336,12 @@ export const assertProductionRootNamespaceLease = (
     );
 };
 
-/** Release one held physical-root namespace reservation. */
+/**
+ * Release one held physical-root namespace reservation.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets callers deterministically surrender the exact path and identity reservations held by a lease.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns token-checked lock cleanup in package code independently of MCP lifecycle.
+ */
 export const releaseProductionRootNamespace = (
   lease: IAutoMovieProductionRootNamespaceLease,
 ): void => {

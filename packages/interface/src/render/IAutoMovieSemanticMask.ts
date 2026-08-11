@@ -6,6 +6,9 @@ import { AutoMovieContentDigest } from "../production/IAutoMovieProductionDesign
  * `label` on an entry carries the open architectural word (`storey`, `room`,
  * `door`, `window`), so this stays a small computational classification while
  * the vocabulary of a building stays free.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `AutoMovieSemanticKind` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `AutoMovieSemanticKind` for the spec render pass products system contract.
  */
 export type AutoMovieSemanticKind =
   | "building"
@@ -45,19 +48,41 @@ export type AutoMovieSemanticKind =
  * authored value with no tolerance, and `#000000` is reserved for background
  * and never assigned.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMask` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMask` for the spec render pass products system contract.
  * @author Samchon
  */
 export interface IAutoMovieSemanticMask {
-  /** Mask format. */
+  /**
+   * Mask format.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `version` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `version` for the spec render pass products system contract.
+   */
   version: 1;
 
-  /** Versioned palette-derivation protocol. */
+  /**
+   * Versioned palette-derivation protocol.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `protocol` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `protocol` for the spec render pass products system contract.
+   */
   protocol: "automovie.semantic-mask.v1";
 
-  /** Reserved background colour, never assigned to an entry. */
+  /**
+   * Reserved background colour, never assigned to an entry.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `background` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `background` for the spec render pass products system contract.
+   */
   background: "#000000";
 
-  /** Entries in ascending semantic-id order. */
+  /**
+   * Entries in ascending semantic-id order.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `entries` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `entries` for the spec render pass products system contract.
+   */
   entries: IAutoMovieSemanticMaskEntry[];
 
   /**
@@ -67,36 +92,70 @@ export interface IAutoMovieSemanticMask {
    * arbitrarily large instanced set. A set listed here is still addressable as
    * a whole through its `instance-set` entry; only per-slot identity is absent,
    * and it is reported rather than quietly approximated.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `unaddressed` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `unaddressed` for the spec render pass products system contract.
    */
   unaddressed: IAutoMovieSemanticMaskGap[];
 
-  /** Digest over the protocol and every entry's id, kind and colour. */
+  /**
+   * Digest over the protocol and every entry's id, kind and colour.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `digest` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `digest` for the spec render pass products system contract.
+   */
   digest: AutoMovieContentDigest;
 }
 
-/** One addressable entity and the flat colour the mask pass paints it. */
+/**
+ * One addressable entity and the flat colour the mask pass paints it.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskEntry` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskEntry` for the spec render pass products system contract.
+ */
 export interface IAutoMovieSemanticMaskEntry {
   /**
    * Stable semantic id, of the form `<kind>:<path>`.
    *
    * Examples: `building:tower/unit-a`, `space:tower/level-2`,
    * `opening:tower/door-12`, `node:hero-actor`, `instance-slot:windows#417`.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `id` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `id` for the spec render pass products system contract.
    */
   id: string;
 
-  /** Computational classification. */
+  /**
+   * Computational classification.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `kind` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `kind` for the spec render pass products system contract.
+   */
   kind: AutoMovieSemanticKind;
 
   /**
    * The open architectural word the design used (`storey`, `room`, `door`), or
    * `null` for a kind that carries none.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `label` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `label` for the spec render pass products system contract.
    */
   label: string | null;
 
-  /** Exact opaque `#RRGGBB` colour, uppercase hexadecimal. */
+  /**
+   * Exact opaque `#RRGGBB` colour, uppercase hexadecimal.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `color` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `color` for the spec render pass products system contract.
+   */
   color: string;
 
-  /** Semantic id of the owning entity, or `null` for a root. */
+  /**
+   * Semantic id of the owning entity, or `null` for a root.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `owner` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `owner` for the spec render pass products system contract.
+   */
   owner: string | null;
 
   /**
@@ -105,33 +164,81 @@ export interface IAutoMovieSemanticMaskEntry {
    * This is the join between the semantic graph and the built scene: the viewer
    * resolves a mesh to its top-level node and finds its colour here, so the
    * mask pass needs no knowledge of architecture.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `nodes` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `nodes` for the spec render pass products system contract.
    */
   nodes: string[];
 
-  /** Owning instance set and zero-based slot, or `null` for every other kind. */
+  /**
+   * Owning instance set and zero-based slot, or `null` for every other kind.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `slot` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `slot` for the spec render pass products system contract.
+   */
   slot: IAutoMovieSemanticMaskSlot | null;
 }
 
-/** The instanced slot one entry addresses. */
+/**
+ * The instanced slot one entry addresses.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskSlot` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskSlot` for the spec render pass products system contract.
+ */
 export interface IAutoMovieSemanticMaskSlot {
-  /** Compiled instance-set id. */
+  /**
+   * Compiled instance-set id.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `instanceSet` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `instanceSet` for the spec render pass products system contract.
+   */
   instanceSet: string;
 
-  /** Zero-based deterministic slot index inside that set. */
+  /**
+   * Zero-based deterministic slot index inside that set.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `index` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `index` for the spec render pass products system contract.
+   */
   index: number;
 }
 
-/** One instance set whose per-slot colours were not allocated. */
+/**
+ * One instance set whose per-slot colours were not allocated.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieSemanticMaskGap` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieSemanticMaskGap` for the spec render pass products system contract.
+ */
 export interface IAutoMovieSemanticMaskGap {
-  /** Compiled instance-set id. */
+  /**
+   * Compiled instance-set id.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `instanceSet` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `instanceSet` for the spec render pass products system contract.
+   */
   instanceSet: string;
 
-  /** Slots that went unaddressed. */
+  /**
+   * Slots that went unaddressed.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `slots` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `slots` for the spec render pass products system contract.
+   */
   slots: number;
 
-  /** Exactly why they were not allocated. */
+  /**
+   * Exactly why they were not allocated.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `reason` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `reason` for the spec render pass products system contract.
+   */
   reason: string;
 
-  /** Exactly what would allocate them. */
+  /**
+   * Exactly what would allocate them.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `remedy` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `remedy` for the spec render pass products system contract.
+   */
   remedy: string;
 }

@@ -37,6 +37,8 @@ const DEFAULT_SIDES = 8;
  * a clash would put a picture of a working installation in front of the reason
  * it does not work, which is the one thing this record exists to prevent.
  *
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `lowerServiceNetwork` turns each validated service centre line and radius into the deterministic swept geometry that makes the routed installation visible.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `lowerServiceNetwork` refuses invalid networks before emitting one world-space model and stage piece for every declared run.
  * @author Samchon
  */
 export const lowerServiceNetwork = (props: {

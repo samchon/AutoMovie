@@ -17,6 +17,8 @@
  * The accessor form (rather than a `readonly number[]`) lets the pose sampler
  * search keyframes without materializing a times array on the hot path.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times Locates the exact neighboring key times that bound a requested motion sample.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Locates the exact neighboring key times that bound a requested motion sample.
  * @author Samchon
  */
 export const segmentIndex = (

@@ -2,11 +2,11 @@
 
 ## Identity-bound Observation Stream {#execution-observation-stream}
 
+### Progress Snapshot {#execution-progress-snapshot}
+
 <!-- @evidence requirements/operations-and-recovery/observability-and-secret-protection.md#operations-observability-secret-protection 결과를 바꾸지 않으면서 job 상태, 진행, 자원, 실패와 publication을 관측하게 한다. -->
 
 Observation은 job, attempt, state sequence, event type, observed scope와 record version에 결속된 read-only output이다. Observation의 활성화, sampling 빈도와 consumer 수는 deterministic state, scheduling decision의 정규 기준이나 output identity에 참여하지 않아야 한다.
-
-### Progress Snapshot {#execution-progress-snapshot}
 
 <!-- @evidence requirements/operations-and-recovery/observability-and-secret-protection.md#operations-progress-remaining-work 검증된 완료량, 전체 planned work와 추정의 불확실성을 분리한다. -->
 

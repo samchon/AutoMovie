@@ -16,6 +16,8 @@ import {
  * at a time, merge the poses, and the actor walks (legs) while waving (arms)
  * while looking (head): no bone claimed twice.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Preserves explicit last-writer authority while unioning disjoint joint channels.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Implements deterministic composition for already resolved pose layers.
  * @author Samchon
  */
 export const mergePoses = (poses: IAutoMoviePose[]): IAutoMoviePose => {

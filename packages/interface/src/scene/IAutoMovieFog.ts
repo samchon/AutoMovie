@@ -51,12 +51,17 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  * perceptible aerial perspective of a wide vista (half at ~416 m). Zero is a
  * vacuum and renders exactly as no fog at all.
  *
+ * @evidence requirements/lighting/sun-sky-and-environment.md#lighting-environment-spatial-variation Carries the fog attenuation state that lets environment contribution vary across declared regions.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-environment-image-spatial-variation Types the fog state that bounds spatially varying environment contribution.
  * @author Samchon
  */
 export interface IAutoMovieFog {
   /**
    * Extinction coefficient per meter, `>= 0`. Half-visibility sits at `0.8326 /
    * density` meters; `0` is a vacuum.
+   *
+   * @evidence requirements/lighting/sun-sky-and-environment.md#lighting-environment-spatial-variation Declares the attenuation coefficient used to vary environment contribution through fog.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-environment-image-spatial-variation Types the bounded spatial attenuation input for environment sampling.
    */
   density: number;
 
@@ -68,6 +73,9 @@ export interface IAutoMovieFog {
    *
    * A scene usually wants this to match its background, otherwise the horizon
    * cuts a visible seam where fogged geometry meets unfogged sky.
+   *
+   * @evidence requirements/lighting/sun-sky-and-environment.md#lighting-environment-spatial-variation Declares the environment color approached as fog attenuation increases.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-environment-image-spatial-variation Types the fog color input used by spatial environment sampling.
    */
   color: IAutoMovieColor;
 }

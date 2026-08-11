@@ -151,6 +151,8 @@ const cut = cutSequence(
   shots,
 );
 if (cut.success !== true) throw new Error("cut failed");
+
+/** Compiled running time, in seconds, of the back-to-back gesture showcase. */
 export const FILM_DURATION = cut.runtime;
 
 // ── the set ──────────────────────────────────────────────────────────────────

@@ -8,6 +8,8 @@
  * a `rom` failure is fed back with anatomical context a generic type error
  * could not carry.
  *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-failed-not-run Exposes `AutoMovieViolationKind` as the portable data boundary for the diagnostics failed not run requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-failed-not-run-states Types `AutoMovieViolationKind` for the validation failed not run states system contract.
  * @author Samchon
  */
 export type AutoMovieViolationKind =

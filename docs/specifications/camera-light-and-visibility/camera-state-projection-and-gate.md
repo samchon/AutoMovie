@@ -2,15 +2,16 @@
 
 ## Camera 관찰자 상태 {#clv-camera-observer-state}
 
+### 권위와 공간 Binding {#clv-camera-authority-spatial-binding}
+
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-scope-identity 이 상태가 camera identity, projection, transform, time과 take의 필수 필드를 정규화한다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-shot-distinction Camera identity와 shot·edit identity를 별도 key와 relation으로 보존한다. -->
+<!-- @evidence requirements/camera/scope-and-identity.md#camera-geometric-truth Camera source의 projection과 transform을 deterministic frame geometry의 정본으로 유지한다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-story-design-staging-trace Camera intent가 읽은 story, staging, design과 geometry revision을 상태 lineage에 고정한다. -->
 
 입력은 stable camera identity, owning shot과 take, supported projection kind, optical state, world 또는 rig-local transform, target 또는 intent, valid film interval, upstream story·staging·design identity와 resolved geometry revision이다. 정규화 결과는 camera identity와 edit identity를 분리하고, 한 take 안에서 각 film-time sample이 정확히 하나의 effective camera state를 가리키게 한다.
 
 같은 camera identity에 서로 다른 projection convention이나 coordinate frame이 동시에 current이면 상태는 충돌이다. 필수 delivery를 위한 camera가 없거나 projection을 정규화할 수 없으면 결과는 `failed`이며 임의 원점 camera나 이전 take를 선택하지 않는다.
-
-### 권위와 공간 Binding {#clv-camera-authority-spatial-binding}
 
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding 이 binding이 transform과 geometry를 같은 coordinate frame, revision과 sample에 묶는다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-authored-intent 시스템이 dramatic intent를 추측하지 않고 선언된 선택만 해석하게 한다. -->
@@ -23,6 +24,8 @@ Hero와 alternative take는 공통 upstream source를 공유해도 camera identi
 
 ## Projection Convention {#clv-projection-convention}
 
+### Lens Basis와 모순 처리 {#clv-lens-basis-consistency}
+
 <!-- @evidence requirements/camera/projection-lens-and-sensor.md#camera-projection-lens-sensor 이 계약이 projection kind와 gate가 frame geometry를 결정하는 방식을 정밀화한다. -->
 <!-- @evidence requirements/camera/projection-lens-and-sensor.md#camera-optical-conventions 모든 consumer가 같은 optical axis, unit과 transform 순서를 읽게 한다. -->
 <!-- @evidence requirements/camera/projection-lens-and-sensor.md#camera-orthographic-scale Orthographic projection의 world extent를 perspective lens와 분리한다. -->
@@ -30,8 +33,6 @@ Hero와 alternative take는 공통 upstream source를 공유해도 camera identi
 각 projection kind는 coordinate handedness, camera forward axis, image origin, horizontal·vertical orientation, angle과 length unit, view-to-clip transform 순서, supported depth convention과 projection center를 선언한다. Perspective는 image aperture와 field angle의 관계를, orthographic은 world-space width·height 또는 scale, center와 aspect relation을 가진다. Project-defined projection은 같은 입력과 출력 필드를 설명하는 versioned model identity와 지원 상태를 가진다.
 
 Projection 계산의 출력은 world point 또는 bounded geometry를 image-plane coordinate, normalized depth, clip-plane classification과 유효성 상태로 변환한 값이다. Orthographic state에 perspective focal parameter를 적용하거나 서로 다른 convention을 하나의 camera state에 합치면 `failed`다.
-
-### Lens Basis와 모순 처리 {#clv-lens-basis-consistency}
 
 <!-- @evidence requirements/camera/projection-lens-and-sensor.md#camera-focal-fov Focal length, aperture dimension과 field of view의 단일 authoring basis를 정한다. -->
 <!-- @evidence requirements/camera/projection-lens-and-sensor.md#camera-aperture-distinction Image aperture와 lens aperture를 서로 다른 quantity로 유지한다. -->

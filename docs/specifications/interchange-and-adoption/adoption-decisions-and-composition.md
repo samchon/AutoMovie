@@ -2,12 +2,12 @@
 
 ## Adoption Decision Identity {#interchange-adoption-decision-identity}
 
+### Direct Placement Boundary {#interchange-direct-placement-boundary}
+
 <!-- @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-mode-choice Direct placement, native reinterpretation과 group composition을 사용자 선택으로 identity에 결속한다. -->
 <!-- @evidence requirements/asset-authoring/external-assets.md#asset-external-adoption-mode 외부 3D 자산에 대한 동일한 mode 선택을 공통 adoption record로 구체화한다. -->
 
 Adoption decision은 pinned source revision, selected elements와 ranges, mode, interpretation profile, placement, override, composition membership, consumer와 승인 identity를 canonical record로 묶는다. 같은 source revision이라도 이 record의 의미 있는 field가 다르면 distinct adoption identity를 만들고 system은 media complexity를 근거로 mode를 변경하지 않는다.
-
-### Direct Placement Boundary {#interchange-direct-placement-boundary}
 
 <!-- @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-direct-placement Source structure를 유지하는 direct placement의 입력과 보존 불변식을 정한다. -->
 

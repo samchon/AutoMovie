@@ -1,18 +1,44 @@
 import { IAutoMovieAnalysisRun } from "@automovie/interface";
 import * as THREE from "three";
 
-/** A viewer-owned field overlay bound to one analysis run. */
+/**
+ * A viewer-owned field overlay bound to one analysis run.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Displays a declared scalar analysis channel through a deterministic range and color mapping.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+ * @author Samchon
+ */
 export interface IAutoMovieAnalysisOverlayObject {
-  /** Add these points to the current scene. */
+  /**
+   * Add these points to the current scene.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Displays the declared spatial samples of the analysis channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+   */
   object: THREE.Points;
 
-  /** Release the geometry, and the material when this object created it. */
+  /**
+   * Release the geometry, and the material when this object created it.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Releases the viewer resources used by the analysis-channel display.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+   */
   dispose: () => void;
 
-  /** Points drawn, one per spatial sample of the chosen metric. */
+  /**
+   * Points drawn, one per spatial sample of the chosen metric.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Reports the spatial sample count drawn for the analysis channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+   */
   count: () => number;
 
-  /** The value range the colour ramp was normalized over. */
+  /**
+   * The value range the colour ramp was normalized over.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Reports the numeric range used to encode the analysis channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+   */
   range: () => { min: number; max: number };
 }
 
@@ -22,6 +48,9 @@ export interface IAutoMovieAnalysisOverlayObject {
  * A three-stop blue-green-red ramp, interpolated linearly in each channel. It
  * is written out rather than sampled from a texture so the same input produces
  * the same colour in a live viewer and in a headless capture, on any host.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Maps the declared normalized analysis position to a deterministic display color.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
  */
 export const autoMovieAnalysisRampColor = (
   position: number,
@@ -52,6 +81,8 @@ export const autoMovieAnalysisRampColor = (
  * are all equal is drawn at the middle of the ramp rather than dividing by a
  * zero span.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Materializes declared scalar samples, range, and positions as an analysis-channel overlay.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
  * @author Samchon
  */
 export const buildAnalysisOverlayObject = (props: {

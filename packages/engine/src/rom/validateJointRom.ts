@@ -22,6 +22,8 @@ const AXES = ["flexion", "abduction", "twist"] as const;
  * `path` is the JSON path of the joint (e.g. `$input.joints[3]`); the offending
  * axis is appended so the `// ❌` feedback points at the exact field.
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-pose-validation Reports each pose field that violates its effective joint constraint.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Validates resolved pose controls against the rig's ROM before accepting actor state.
  * @author Samchon
  */
 export const validateJointRom = (props: {

@@ -73,12 +73,14 @@ const shareOf = (need: number, range: IAutoMovieAngleRange | null): number => {
  * so there is nothing to distribute for, and naming a bone the skeleton does
  * not declare would trade one violation for another.
  *
- * @author Samchon
  * @param props.rig The actor's resolved skeleton, or `null` when it has none.
  * @param props.flexionDeg Sagittal aim (tilt): `+` down, matching the pose
  *   axis.
  * @param props.twistDeg Transverse aim (turn) about the chain's long axis.
  * @returns The joints of the aim pose, parent first.
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention Distributes an authored target through the reachable cervical chain within its declared bounds.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Solves the bounded cervical chain while retaining an explicit residual for impossible aims.
+ * @author Samchon
  */
 export const gazeChainJoints = (props: {
   rig: IAutoMovieSkeleton | null;

@@ -14,15 +14,25 @@ import { IAutoMovieBone } from "./IAutoMovieBone";
  * user's glTF/VRM/FBX), it arrives here in the same normalized shape, so the
  * pose/motion/expression layers never need to know its origin.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Carries the normalized humanoid skeleton whose semantic bones make a motion portable across model-specific rigs.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Defines the public skeleton as the semantic-to-concrete rig mapping boundary.
  * @author Samchon
  */
 export interface IAutoMovieSkeleton {
-  /** Stable id so poses, motions, and scene nodes can cite this rig. */
+  /**
+   * Stable id so poses, motions, and scene nodes can cite this rig.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Gives the normalized semantic mapping a stable rig identity for motion targets.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Identifies the concrete rig binding that resolves semantic joint keys.
+   */
   id: string;
 
   /**
    * The bones, hierarchy, rest pose, and ROM. At least one bone (`hips`, the
    * root) is required. Each {@link IAutoMovieBone.bone} appears at most once.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Carries the normalized bone hierarchy and rest transforms against which deformation is interpreted.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Supplies the hierarchy and rest-state portion of the public deformation-binding record.
    */
   bones: IAutoMovieBone[];
 }

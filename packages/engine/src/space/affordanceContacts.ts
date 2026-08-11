@@ -29,6 +29,8 @@ import { Vector3 } from "../math/Vector3";
  * support judgment is a mis-wired pipeline, not a skippable frame
  * ({@link validateModel} rejects such data before it gets here).
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-support-load-transfer `affordanceSupportContacts` produces the world-space support contacts of a `"stack-top"` affordance: its extent corners carried through the affordance frame and the parent's world transform, in exactly the shape `detectSupportToppling` and `supportContactsFor` consume. This ensures stacked objects expose the support set used to judge load transfer.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support `affordanceSupportContacts` transforms a stack-top affordance's extent corners into the world-space contact set consumed by load-transfer checks.
  * @author Samchon
  */
 export const affordanceSupportContacts = (props: {

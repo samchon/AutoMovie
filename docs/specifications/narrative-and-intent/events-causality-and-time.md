@@ -2,12 +2,12 @@
 
 ## Beat와 Event 상태 {#narrative-intent-beat-event-state}
 
+### Semantic Event Identity와 Occurrence {#narrative-intent-semantic-event-occurrence}
+
 <!-- @evidence requirements/story/beats-and-causality.md#story-beats-causality beat가 하나의 검토 가능한 의미 변화를 소유하게 한다. -->
 <!-- @evidence requirements/story/beats-and-causality.md#story-beat-state-change 시작 조건과 결과 state를 활동에서 구분한다. -->
 
 Beat 입력은 행위 주체, want, 시도, prerequisite, 시작 state, 변화와 결과 state이고 출력은 성공, 실패, 부분 성공, 비용 또는 질문 갱신 중 명시된 outcome을 가진 변화 단위다. 서로 무관한 변화가 한 beat에 묶이거나 결과 없는 activity와 원인 없는 결과가 있으면 분할 또는 causal-gap 진단을 출력한다.
-
-### Semantic Event Identity와 Occurrence {#narrative-intent-semantic-event-occurrence}
 
 <!-- @evidence requirements/story/beats-and-causality.md#story-semantic-event-identity semantic event를 frame과 shot에서 독립시킨다. -->
 <!-- @evidence requirements/story/story-clock-and-state.md#story-time-ellipsis-compression 실제 사건, 기억, 상상과 replay occurrence를 구분한다. -->
@@ -23,12 +23,12 @@ Semantic event는 안정 identity를 가지고 각 실제 발생, 반복 시도,
 
 ## 인과 Graph 불변식 {#narrative-intent-causal-graph-invariants}
 
+### Setup, Payoff와 Coverage Role {#narrative-intent-setup-payoff-roles}
+
 <!-- @evidence requirements/story/beats-and-causality.md#story-causal-link-types 인과 종류와 단순 선후 관계를 구분한다. -->
 <!-- @evidence requirements/story/treatment-and-sequences.md#story-sequence-causality sequence 사이 인과와 escalation 축을 정한다. -->
 
 인과 edge는 direct-cause, enabling-condition, obstacle, trigger, information-reveal, choice, coincidence 또는 temporal-only 중 하나이며 방향, source event, target state와 confidence를 가진다. Sequence escalation은 규모, 비용, 정보, 관계, 시간 압력 또는 선택 불가능성의 전후 값으로 표현되고 사건 수 증가는 그 자체로 escalation이 아니다.
-
-### Setup, Payoff와 Coverage Role {#narrative-intent-setup-payoff-roles}
 
 <!-- @evidence requirements/story/beats-and-causality.md#story-setup-payoff setup과 payoff의 identity와 유효 범위를 연결한다. -->
 <!-- @evidence requirements/story/beats-and-causality.md#story-beat-coverage-duplication sequence promise의 누락과 중복 beat를 검출한다. -->
@@ -51,12 +51,12 @@ Missing prerequisite, 설명되지 않은 도약, 모순 원인, cycle, 의도�
 
 ## Story Clock 계약 {#narrative-intent-story-clock-contract}
 
+### 시간 표현과 Range {#narrative-intent-temporal-representation}
+
 <!-- @evidence requirements/story/story-clock-and-state.md#story-clock-state story clock과 film clock을 분리하고 생략 가능성을 보존한다. -->
 <!-- @evidence requirements/editorial/scope-and-identity.md#editorial-story-film-order story order와 presentation order의 독립성을 편집 경계까지 유지한다. -->
 
 Story clock 입력은 선택적인 원점, 단위, 방향과 적용 범위이며 film clock은 관객에게 제시되는 duration과 placement를 소유한다. Story clock이 생략된 작품에는 zero, scene 순서 또는 film time을 암묵 적용하지 않고 동기화 claim을 만들지 않으며 clock을 요구하는 criterion은 invalid 또는 unsupported로 남긴다.
-
-### 시간 표현과 Range {#narrative-intent-temporal-representation}
 
 <!-- @evidence requirements/story/story-clock-and-state.md#story-absolute-relative-time 절대, 상대, 범위, 순서와 unknown time을 구분한다. -->
 <!-- @evidence requirements/story/story-clock-and-state.md#story-duration-deadline-recurrence 사건과 상태의 duration, deadline과 반복을 bounded 규칙으로 표현한다. -->

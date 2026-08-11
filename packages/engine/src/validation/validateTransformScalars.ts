@@ -4,7 +4,12 @@ import { ViolationCollector } from "./violation";
 
 const UNIT_QUATERNION_EPSILON = 1e-6;
 
-/** Validate finite TRS components, unit rotation, and strictly-positive scale. */
+/**
+ * Validate finite TRS components, unit rotation, and strictly-positive scale.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateTransformScalars` reports each non-finite TRS component, non-unit rotation, or non-positive scale at its transform member path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateTransformScalars` retains the offending scalar or quaternion and its finite, unit-length, or positive-scale expectation without claiming a coordinate magnitude gate.
+ */
 export const validateTransformScalars = (props: {
   transform: IAutoMovieTransform;
   path: string;

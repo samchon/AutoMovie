@@ -2,11 +2,11 @@
 
 ## Family Dispatch와 Fact Envelope {#interchange-media-inspection-dispatch}
 
+### glTF와 GLB Scene Inspection {#interchange-gltf-glb-inspection}
+
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-family-contract Filename이 아니라 검증된 family와 해석 facts로 decoder boundary를 선택한다. -->
 
 Inspection은 declared media type, filename suffix, byte signature와 parser-confirmed container를 별도 observation으로 기록하고, 합의한 supported family에만 bounded inspector를 배정한다. 성공한 inspector는 container version, supported feature inventory, dependency edges, expanded resource estimates와 해석에 필요한 technical facts를 반환하며 서로 모순된 observation은 quarantine finding이 된다.
-
-### glTF와 GLB Scene Inspection {#interchange-gltf-glb-inspection}
 
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb glTF와 GLB의 scene graph 및 지원 feature를 element 단위로 검사한다. -->
 <!-- @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Direct placement가 보존할 scene graph inventory를 inspection 결과로 제공한다. -->
@@ -40,6 +40,12 @@ Motion inspection은 clip과 track identity, target skeleton 또는 semantic rol
 <!-- @evidence requirements/map/external-assets-and-placement.md#map-external-spatial-data 외부 raster, vector, point와 survey source의 format-specific facts를 확정한다. -->
 
 Spatial inspection은 geometry 또는 sample kind, coordinate reference와 version, horizontal·vertical datum, local origin, axis와 unit, extent, resolution 또는 level, no-data semantics, feature와 attribute schema, timestamp 또는 epoch, accuracy와 uncertainty를 산출한다. Reference가 없는 자료는 local-unresolved로 남고 지리 좌표나 높이 기준을 추정하지 않는다.
+
+### Design drawing inspection {#interchange-design-drawing-inspection}
+
+<!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Drawing reference의 container, source-space extent와 unsupported facts를 bytes에서 검사하게 한다. -->
+
+Design drawing inspector는 등록된 drawing family를 bytes에서 판별하고 source-space extent를 측정하거나 unsupported reason을 반환한다. 이 bounded observation은 map adoption이나 geospatial placement를 주장하지 않는다.
 
 ### Text와 Metadata Inspection {#interchange-text-metadata-inspection}
 

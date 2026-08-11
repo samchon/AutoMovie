@@ -22,6 +22,8 @@
  * Reference: VRM 1.0 humanoid specification
  * (https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0/humanoid.md).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Exposes `AutoMovieHumanoidBone` as the portable data boundary for the actor humanoid mapping requirement.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Types `AutoMovieHumanoidBone` for the performance rig semantic joint mapping system contract.
  * @author Samchon
  */
 export type AutoMovieHumanoidBone =

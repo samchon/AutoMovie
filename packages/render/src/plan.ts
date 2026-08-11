@@ -10,6 +10,8 @@ import { IAutoMovieRenderSpec } from "@automovie/interface";
  * stochastic diffusion video). A non-finite or non-positive fps/duration yields
  * no frames.
  *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized `frameTimes` keeps planned frame and encode artifact data separate from host materialization.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle `frameTimes` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const frameTimes = (fps: number, durationSeconds: number): number[] => {
@@ -24,11 +26,23 @@ export const frameTimes = (fps: number, durationSeconds: number): number[] => {
   return Array.from({ length: count }, (_, i) => i / fps);
 };
 
-/** Zero-padded frame filename, e.g. `frame_00042.png`, for an ffmpeg sequence. */
+/**
+ * Zero-padded frame filename, e.g. `frame_00042.png`, for an ffmpeg sequence.
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized `frameName` keeps planned frame and encode artifact data separate from host materialization.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle `frameName` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export const frameName = (index: number, ext = "png", pad = 5): string =>
   `frame_${String(index).padStart(pad, "0")}.${ext}`;
 
-/** The glob-free ffmpeg `-i` pattern matching {@link frameName} (`%0{pad}d`). */
+/**
+ * The glob-free ffmpeg `-i` pattern matching {@link frameName} (`%0{pad}d`).
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized `framePattern` keeps planned frame and encode artifact data separate from host materialization.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle `framePattern` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export const framePattern = (ext = "png", pad = 5): string =>
   `frame_%0${pad}d.${ext}`;
 
@@ -70,6 +84,10 @@ const WINDOWS_RESERVED_NAMES = new Set([
  * (`renders/..` is the project root). This also neutralizes a Windows reserved
  * device name and a trailing dot or space, both of which change the name
  * Windows actually writes.
+ *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized `renderPathStem` keeps planned frame and encode artifact data separate from host materialization.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle `renderPathStem` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export const renderPathStem = (target: string): string => {
   const cleaned = target
@@ -108,6 +126,11 @@ export const renderPathStem = (target: string): string => {
  * subsampling requires; pinning them here means the encoded frame size is the
  * requested one on every host regardless of the capture viewport.
  *
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized `ffmpegArgs` keeps planned frame and encode artifact data separate from host materialization.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle `ffmpegArgs` exposes that responsibility through the package-independent system contract.
+ * @evidence requirements/rendering/encoding-and-multiplexing.md#rendering-encode-input-closure Names the complete ordered frame input and requested encoded output passed to ffmpeg.
+ * @evidence requirements/rendering/encoding-and-multiplexing.md#rendering-codec-container-facts Pins the codec, pixel format, rate, raster, and container-facing arguments.
+ * @evidence specifications/editorial-render-and-delivery/render-encoding-and-validation.md#spec-render-encode-probe Materializes the encode contract as an exact host argument vector.
  * @author Samchon
  */
 export const ffmpegArgs = (

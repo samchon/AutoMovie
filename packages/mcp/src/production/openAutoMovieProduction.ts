@@ -1,8 +1,14 @@
 import {
   AutoMovieProductionFrameCapture,
+  IAutoMovieCaptionReadabilityBoundary,
+  IAutoMovieCaptionReadabilityMeasurement,
+  IAutoMovieCaptionReadabilityOutcome,
+  IAutoMovieCaptionReadabilityProfile,
+  IAutoMovieCaptionReadabilityReport,
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
   IAutoMovieDiagnostic,
+  IAutoMovieFilmTimeline,
   IAutoMovieProductionInspection,
   IAutoMovieProductionNextAction,
 } from "@automovie/interface";
@@ -15,6 +21,7 @@ import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleSer
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
 import { compareCodeUnits } from "./contentIdentity";
+import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 
@@ -23,7 +30,31 @@ const PROJECT_MARKERS = [
   ".automovie/manifest.json",
 ] as const;
 
-/** Find the nearest immutable AutoMovie workspace from one host-owned seed. */
+/**
+ * Exact grapheme implementation this MCP package can evaluate.
+ *
+ * The production still chooses whether to adopt this identity and owns every
+ * threshold. A different algorithm or Unicode/ICU revision is reported as
+ * unsupported and never evaluated through a substitute profile.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes the supported segmentation revision explicit without supplying thresholds.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Binds evaluation to the installed Unicode and ICU segmentation data.
+ */
+export const AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION = Object.freeze({
+  algorithm: "intl-segmenter-grapheme",
+  version: `unicode-${process.versions.unicode}/icu-${process.versions.icu}`,
+});
+
+const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
+  granularity: "grapheme",
+});
+
+/**
+ * Find the nearest immutable AutoMovie workspace from one host-owned seed.
+ *
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Requires the host path to identify one operation namespace.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Resolves one stable root before services are opened.
+ */
 export const findAutoMovieProjectRoot = (
   seed: string = process.cwd(),
 ): string => {
@@ -48,7 +79,12 @@ export const findAutoMovieProjectRoot = (
   }
 };
 
-/** Open the non-MCP compiler, oracle, review, and project runtime. */
+/**
+ * Open the non-MCP compiler, oracle, review, and project runtime.
+ *
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Keeps the requested production distinct from the opened effective namespace.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Binds all returned services to the same requested and effective project-production identity.
+ */
 export const openAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
   projectRoot?: string;
@@ -89,7 +125,12 @@ export const openAutoMovieProduction = (props: {
   };
 };
 
-/** Compile through the package API without exposing compilation as an MCP tool. */
+/**
+ * Compile through the package API without exposing compilation as an MCP tool.
+ *
+ * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Reuses only deterministic results for the same explicit scope.
+ * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Keeps compilation behind the ordinary package API and its verified inputs.
+ */
 export const compileAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
   projectRoot?: string;
@@ -102,7 +143,16 @@ export const compileAutoMovieProduction = (props: {
 }): IAutoMovieCompileProjectOutput =>
   openAutoMovieProduction(props).compiler.compile({ scope: props.scope });
 
-/** Project status projection for CLI/lint consumers, never an MCP tool. */
+/**
+ * Project status projection for CLI/lint consumers, never an MCP tool.
+ *
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Reports current state without converting missing work into success.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Distinguishes planned render targets from materialized current manifests in inspection.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation Keeps inspection facts separate from operation state.
+ * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-terminal-outcome Preserves incomplete work as a non-success terminal outcome.
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Includes measure-only caption outcomes only for the current compiled timeline.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Delivers caption measurements and supported-profile verdicts in inspection.
+ */
 export const inspectAutoMovieProduction = (
   services: IAutoMovieProductionServices,
 ): IAutoMovieProductionInspection => {
@@ -164,6 +214,19 @@ export const inspectAutoMovieProduction = (
         reason: `Current review state is ${entry.state}.`,
       })),
   ];
+  const captionReadability =
+    compilation.success &&
+    graph.production !== null &&
+    generated !== null &&
+    generated.inputFingerprint === compilation.compiler.inputFingerprint
+      ? inspectAutoMovieCaptionReadability(
+          readAutoMovieFilmTimeline(
+            services.project,
+            compilation.compiler.inputFingerprint,
+          ),
+          graph.production.captionReadabilityProfiles ?? [],
+        )
+      : { version: 1 as const, cues: [] };
   return {
     revision: services.project.revision(),
     design: services.project.inventory(),
@@ -171,9 +234,143 @@ export const inspectAutoMovieProduction = (
     diagnostics,
     reviews,
     renders,
+    captionReadability,
     nextActions,
   };
 };
+
+/**
+ * Measure every canonical caption cue and apply only a matching supported
+ * production-owned language profile.
+ *
+ * Missing profiles retain measurements with `not-run`. Unsupported requested
+ * segmentation is also `not-run`; the fixed installed segmenter still reports
+ * measure-only facts but is never substituted to produce a verdict.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Always reports cue metrics and reserves thresholds and verdict authority for the production.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Separates measurement, segmentation support, boundary comparison, and not-run outcomes.
+ */
+export const inspectAutoMovieCaptionReadability = (
+  timeline: IAutoMovieFilmTimeline,
+  profiles: readonly IAutoMovieCaptionReadabilityProfile[],
+): IAutoMovieCaptionReadabilityReport => {
+  const profilesByLanguage = new Map(
+    profiles.map((profile) => [profile.language, profile] as const),
+  );
+  const precedingEndByLanguage = new Map<string, number>();
+  return {
+    version: 1,
+    cues: timeline.tracks.captions.map((cue) => {
+      const lines = cue.text.split(/\r\n|[\n\r]/u);
+      const graphemesByLine = lines.map(countCaptionGraphemes);
+      const graphemes = graphemesByLine.reduce(
+        (total, count) => total + count,
+        0,
+      );
+      const durationFrames = cue.endFrame - cue.startFrame;
+      const precedingEnd = precedingEndByLanguage.get(cue.language);
+      precedingEndByLanguage.set(cue.language, cue.endFrame);
+      const measurement: IAutoMovieCaptionReadabilityMeasurement = {
+        cue: cue.id,
+        language: cue.language,
+        graphemes,
+        lines: lines.length,
+        maxLineGraphemes: Math.max(...graphemesByLine),
+        durationFrames,
+        gapBeforeFrames:
+          precedingEnd === undefined ? null : cue.startFrame - precedingEnd,
+        graphemesPerSecond: (graphemes * timeline.fps) / durationFrames,
+      };
+      return {
+        measurement,
+        outcome: captionReadabilityOutcome(
+          measurement,
+          profilesByLanguage.get(cue.language),
+        ),
+      };
+    }),
+  };
+};
+
+const countCaptionGraphemes = (value: string): number =>
+  [...CAPTION_GRAPHEME_SEGMENTER.segment(value)].length;
+
+const captionReadabilityOutcome = (
+  measurement: IAutoMovieCaptionReadabilityMeasurement,
+  profile: IAutoMovieCaptionReadabilityProfile | undefined,
+): IAutoMovieCaptionReadabilityOutcome => {
+  if (profile === undefined)
+    return {
+      status: "not-run",
+      segmentation: null,
+      reason: "caption-readability-profile-not-declared",
+    };
+  if (
+    profile.segmentation.algorithm !==
+      AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION.algorithm ||
+    profile.segmentation.version !==
+      AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION.version
+  )
+    return {
+      status: "not-run",
+      segmentation: profile.segmentation,
+      reason: "caption-grapheme-segmentation-unsupported",
+    };
+  const breaches: Extract<
+    IAutoMovieCaptionReadabilityOutcome,
+    { status: "evaluated" }
+  >["breaches"] = [];
+  if (
+    maximumBoundaryPassed(
+      measurement.graphemesPerSecond,
+      profile.maxGraphemesPerSecond,
+    ) === false
+  )
+    breaches.push("graphemes-per-second");
+  if (
+    maximumBoundaryPassed(measurement.lines, profile.maxLinesPerCue) === false
+  )
+    breaches.push("lines-per-cue");
+  if (
+    maximumBoundaryPassed(
+      measurement.maxLineGraphemes,
+      profile.maxGraphemesPerLine,
+    ) === false
+  )
+    breaches.push("graphemes-per-line");
+  if (
+    minimumBoundaryPassed(
+      measurement.durationFrames,
+      profile.minDurationFrames,
+    ) === false
+  )
+    breaches.push("duration-frames");
+  if (
+    measurement.gapBeforeFrames !== null &&
+    minimumBoundaryPassed(measurement.gapBeforeFrames, profile.minGapFrames) ===
+      false
+  )
+    breaches.push("gap-frames");
+  return {
+    status: "evaluated",
+    profile: profile.id,
+    segmentation: profile.segmentation,
+    passed: breaches.length === 0,
+    breaches,
+  };
+};
+
+const maximumBoundaryPassed = (
+  value: number,
+  boundary: IAutoMovieCaptionReadabilityBoundary,
+): boolean =>
+  boundary.inclusive ? value <= boundary.value : value < boundary.value;
+
+const minimumBoundaryPassed = (
+  value: number,
+  boundary: IAutoMovieCaptionReadabilityBoundary,
+): boolean =>
+  boundary.inclusive ? value >= boundary.value : value > boundary.value;
 
 const listFiles = (root: string): string[] => {
   const output: string[] = [];

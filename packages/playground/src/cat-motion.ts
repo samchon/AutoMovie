@@ -180,6 +180,8 @@ export const catCombo = (sk: string): IAutoMovieMotion =>
  */
 export const catProwl = (sk: string): IAutoMovieMotion =>
   travelMotion("prowl", catWalk(sk), 8, { x: 0, y: 0, z: 0.45 });
+
+/** Repeats the leap beat while advancing the cat along its forward axis. */
 export const catBound = (sk: string): IAutoMovieMotion =>
   travelMotion("bound", catLeap(sk), 5, { x: 0, y: 0, z: 0.95 });
 

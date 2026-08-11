@@ -29,11 +29,13 @@ Key important changes, then choose interpolation. Ease when force ramps; use sha
 
 Sample the exact production frame grid. Very short actions can disappear between frames; very dense keys can create noise without adding control. Verify angular velocity, reach, distance, contact, and bounds through deterministic engine functions.
 
+External motion remains an explicit adoption decision. The user or delegated authoring agent chooses the registered source asset, exact take, direct or humanoid-retarget mode, target actor, bone mapping, root policy, contact policy, trim, and layering. AutoMovie validates and applies that record without choosing a motion library, provider, take, target, or fallback mapping. If the chosen source cannot satisfy its declared channels, rig, contacts, or rights, keep the refusal and ask the decision owner to revise the record; do not substitute a similar clip or silently reinterpret the source.
+
 ## Face and gaze
 
 Gaze leads attention, confirms target relation, and connects reaction to cause. Coordinate eyes, head, torso, and timing instead of rotating only one layer. Expressions transition from a neutral or prior state, peak around meaningful events, and settle deliberately. Use available expression channels; do not invent facial capability absent from the asset.
 
-Dialogue mouth motion follows actual synthesized or aligned timing when available. Even spacing characters across a caption interval is not speech synchronization.
+Dialogue mouth motion follows final decoded audio and its adopted alignment when available. The user or delegated authoring agent chooses any recorded or synthesized voice source and, when applicable, its provider, model, version, and voice; no guide supplies a provider default. Mouth motion stays on the speaker's emission interval even when propagation makes the listener hear the line later. Even spacing characters across a caption interval is not speech synchronization, and missing alignment remains `unsupported` or `not-run` rather than guessed visemes.
 
 ## Contact and reaction
 

@@ -24,6 +24,8 @@
  * compose, is a later additive when a scene needs it; `upperBody` covers the
  * common case for now.)
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Declares the coarse channel-ownership mask used to compose disjoint motion layers and detect conflicts.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Types the body-region mask that is resolved into concrete channel ownership during composition.
  * @author Samchon
  */
 export type AutoMovieBodyRegion =

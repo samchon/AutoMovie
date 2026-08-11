@@ -2,11 +2,11 @@
 
 ## 관찰 범위에 결속된 Representation {#building-envelope-representation-view-contract}
 
+### Representation 입력과 선택 출력 {#building-envelope-representation-input-output}
+
 <!-- @evidence requirements/building-exterior/representations-lod-and-fidelity.md#building-exterior-representations-lod-fidelity 건물 외피의 proxy·standard·hero 표현과 원거리·근거리 성공 기준을 관찰 조건에 결속한다. -->
 
 각 building, mass, facade, roof, opening, attachment와 pattern은 authoring identity와 하나 이상의 representation identity를 가진다. Representation은 목적, tier, valid distance 또는 projected-size 범위, camera angle, interaction·measurement 권한, geometry·material ceiling, source revision과 cost bound를 선언한다.
-
-### Representation 입력과 선택 출력 {#building-envelope-representation-input-output}
 
 <!-- @evidence requirements/building-exterior/representations-lod-and-fidelity.md#building-exterior-fidelity-success fidelity 성공을 관찰 거리, raster, angle, light, motion과 required fact의 조합으로 판정한다. -->
 
@@ -38,11 +38,10 @@ Near representation은 declared view와 interaction 범위에서 facade·roof as
 
 ## Exterior-only Set Fidelity {#building-envelope-exterior-only-fidelity-range}
 
-<!-- @evidence requirements/building-exterior/representations-lod-and-fidelity.md#building-exterior-set-fidelity-range 내부가 없는 세트형 건물의 유효 camera 범위와 보이는 내부 backing 한계를 명시한다. -->
+### Set Fidelity 호환성 {#building-envelope-exterior-only-fidelity-compatibility}
+
 
 Exterior-only set은 허용 camera position, distance, elevation, angle, reflection·shadow 범위와 투명·개방 opening을 통해 보이는 최대 depth를 선언한다. 이 범위에서는 누락된 backside, roof top, return와 opening backing이 없어서는 안 되며 범위 밖 관찰은 `unsupported` 또는 더 높은 representation 요구로 보고한다.
-
-### Set Fidelity 호환성 {#building-envelope-exterior-only-fidelity-compatibility}
 
 <!-- @evidence requirements/building-exterior/representations-lod-and-fidelity.md#building-exterior-set-fidelity-range exterior-only set에 interior를 연결하거나 camera 범위를 넓힐 때 기존 성공 판정을 자동 승계하지 않는다. -->
 

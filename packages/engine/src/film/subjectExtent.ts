@@ -18,13 +18,25 @@ import { DEFAULT_SUBJECT_HEIGHT, computeModelRestExtentY } from "./cameraMove";
  * formation: two actors, a prop and a crowd together, or one figure, all reduce
  * to the same box, and the framing solve reads nothing else.
  *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion IAutoMovieSubjectBox carries the subject's current world-space minimum and maximum rather than substituting rest geometry for live extent.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants IAutoMovieSubjectBox realizes dynamic-bounds invariants: The world-space axis-aligned box a camera must contain to show a subject. Structurally the same record a compiled formation states its bounds in, so a unit's own bounds pass straight through here without a conversion that could disagree with them. It is spelled separately because a subject is not only a formation: two actors, a prop and a crowd together, or one figure, all reduce to the same box, and the framing solve reads nothing else.
  * @author Samchon
  */
 export interface IAutoMovieSubjectBox {
-  /** Minimum world corner. */
+  /**
+   * Minimum world corner.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion IAutoMovieSubjectBox.min exposes state-dependent asset extent: Minimum world corner.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants IAutoMovieSubjectBox.min realizes dynamic-bounds invariants: Minimum world corner.
+   */
   min: IAutoMovieVector3;
 
-  /** Maximum world corner. */
+  /**
+   * Maximum world corner.
+   *
+   * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion IAutoMovieSubjectBox.max exposes state-dependent asset extent: Maximum world corner.
+   * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants IAutoMovieSubjectBox.max realizes dynamic-bounds invariants: Maximum world corner.
+   */
   max: IAutoMovieVector3;
 }
 
@@ -35,15 +47,33 @@ export interface IAutoMovieSubjectBox {
  * above it, and `radius` half the widest horizontal span, measured about the
  * base rather than about any one member. The three together are the box below,
  * restated in the terms {@link compileCameraMove} consumes.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedBox exposes the base, height, and radius consumed directly by the landmark framing solve.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedBox realizes landmark-based framing: What the framing grammar solves a camera distance and an aim height from. `base` is the bottom of what the camera sees, `height` the vertical span above it, and `radius` half the widest horizontal span, measured about the base rather than about any one member. The three together are the box below, restated in the terms {@link compileCameraMove} consumes.
  */
 export interface IAutoMovieFramedBox {
-  /** Bottom-centre of the box. */
+  /**
+   * Bottom-centre of the box.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedBox.base drives required-landmark framing: Bottom-centre of the box.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedBox.base realizes landmark-based framing: Bottom-centre of the box.
+   */
   base: IAutoMovieVector3;
 
-  /** Vertical span of the box, in meters. */
+  /**
+   * Vertical span of the box, in meters.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedBox.height drives required-landmark framing: Vertical span of the box, in meters.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedBox.height realizes landmark-based framing: Vertical span of the box, in meters.
+   */
   height: number;
 
-  /** Half the box's horizontal diagonal, in meters. */
+  /**
+   * Half the box's horizontal diagonal, in meters.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedBox.radius drives required-landmark framing: Half the box's horizontal diagonal, in meters.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedBox.radius realizes landmark-based framing: Half the box's horizontal diagonal, in meters.
+   */
   radius: number;
 }
 
@@ -61,6 +91,9 @@ export interface IAutoMovieFramedBox {
  * Falls back to {@link DEFAULT_SUBJECT_HEIGHT} standing on the slot when the
  * recipe's runtime model was not supplied or draws nothing, which is the same
  * documented stand-in a subject with no measurable geometry has always taken.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion formationMemberExtent measures the addressed member's live formation slot and model height before world-space union.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants formationMemberExtent realizes dynamic-bounds invariants: One member's model-space vertical extent inside a compiled formation. A formation stores where its members STAND, not how tall they are: the compiled bounds are the box of slot positions, so their vertical span is the ground's, and a camera solved from it frames a crowd as a flat carpet. The member's own model supplies the missing dimension, measured through {@link computeModelRestExtentY} — the same read a node subject is measured with, so a hero promoted out of the unit and its anonymous neighbours are the same height by construction. Falls back to {@link DEFAULT_SUBJECT_HEIGHT} standing on the slot when the recipe's runtime model was not supplied or draws nothing, which is the same documented stand-in a subject with no measurable geometry has always taken.
  */
 export const formationMemberExtent = (
   formation: Pick<IAutoMovieCompiledFormation, "modelRecipe">,
@@ -89,6 +122,9 @@ export const formationMemberExtent = (
  * already derived for LOD projection and raised by the member's own extent,
  * because the box of slot POSITIONS is a footprint: the outermost member's body
  * hangs over its edge and its head stands above it.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion formationSubjectBox unions every member's sampled world extent at the addressed shot time into one live formation bound.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants formationSubjectBox realizes dynamic-bounds invariants: The box one formation's members occupy at a shot-local instant. The unit's designed bounds go through {@link transformFormationBounds} under the cue {@link sampleFormationMotion} reports at that instant, so a mass that has marched, wheeled, or closed its ranks is framed where it actually is. Both reads are the compiler's own: the ground gate that refuses a member standing off its staged surface asks the same two functions the same way, and a second implementation here is how a gate and a camera come to disagree about where a unit is. The transformed slot box is then widened by the member radius the compiler already derived for LOD projection and raised by the member's own extent, because the box of slot POSITIONS is a footprint: the outermost member's body hangs over its edge and its head stands above it.
  */
 export const formationSubjectBox = (props: {
   /** The unit being framed. */
@@ -131,6 +167,9 @@ export const formationSubjectBox = (props: {
  * only honest horizontal span a group of placements has is the spread between
  * them. Inventing a body width per member would put a number the renderer never
  * drew into the camera solve.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion pointSubjectBox exposes state-dependent asset extent: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants pointSubjectBox realizes dynamic-bounds invariants: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
  */
 export const pointSubjectBox = (
   point: IAutoMovieVector3,
@@ -140,7 +179,12 @@ export const pointSubjectBox = (
   max: { x: point.x, y: point.y + extent.max, z: point.z },
 });
 
-/** The smallest box containing every given box, or null when none were given. */
+/**
+ * The smallest box containing every given box, or null when none were given.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion unionSubjectBoxes exposes state-dependent asset extent: The smallest box containing every given box, or null when none were given.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants unionSubjectBoxes realizes dynamic-bounds invariants: The smallest box containing every given box, or null when none were given.
+ */
 export const unionSubjectBoxes = (
   boxes: readonly IAutoMovieSubjectBox[],
 ): IAutoMovieSubjectBox | null =>
@@ -174,6 +218,9 @@ export const unionSubjectBoxes = (
  * `base` is the box's bottom centre, not the members' centroid: a mass that is
  * denser on one flank has a centroid off its own middle, and framing there puts
  * the thin flank out of frame.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing framedBoxOf converts current world bounds into the base, vertical span, and horizontal radius required by landmark framing.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations framedBoxOf realizes landmark-based framing: Restate a world box as the base, height and radius the framing grammar solves from. `radius` is HALF THE HORIZONTAL DIAGONAL rather than half the wider side. A camera approaches on its staged bearing and an `orbit` sweeps that bearing 45 degrees, so the horizontal span the frame must hold varies with the bearing, and its widest value over every bearing is exactly the box's diagonal. Solving from the diagonal is therefore the one answer that holds from every side, which is what keeps a crowd inside the frame for the whole of a move instead of only at the instant the distance was solved. `base` is the box's bottom centre, not the members' centroid: a mass that is denser on one flank has a centroid off its own middle, and framing there puts the thin flank out of frame.
  */
 export const framedBoxOf = (
   box: IAutoMovieSubjectBox,

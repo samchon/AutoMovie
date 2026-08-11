@@ -1,6 +1,8 @@
 # 범위, 호스트와 공유 건물
 
-## 건물 interior 시스템 경계 {#interior-space-building-interior-boundary}
+## Contract units {#spec-scope-and-host-contract-units}
+
+### 건물 interior 시스템 경계 {#interior-space-building-interior-boundary}
 
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-host-bounded-scope Requires interior facts to remain inside a declared host boundary. -->
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope Limits the current MCP authoring contract to building interiors. -->
@@ -9,7 +11,7 @@
 
 시스템은 입력으로 하나의 interior work identity, 건물 identity, 좌표계, 실제 단위, 포함되는 building unit과 저작 범위를 받아야 한다. Current MCP 저작 범위는 건물의 점유 공간과 그 내부 구성에 한정된다. 선박 cabin, 항공기 cabin, 우주선 habitable compartment와 그 밖의 비건물 host 내부는 일반 공간 원리를 참고할 수 있지만 이 계약으로 생성·검증 가능한 current MCP 지원 대상으로 표시해서는 안 된다. Transport exterior 제외는 건물 외피 계약이 별도로 소유한다. Resolved interior는 모든 공간, 경계, 요소, 개구부와 설비를 정확히 한 building ownership 또는 명시된 work-owned connector에 귀속해야 하며, host 밖 geometry, identity 없는 root, scope 밖 전문 성능 주장은 경로와 영향을 가진 failure가 되어야 한다. 새 건축 종류와 사용자 정의 `kind`는 같은 일반 계약으로 추가할 수 있지만 기존 identity와 범위 의미를 바꾸는 호환성 축소는 명시적 migration 없이는 허용하지 않는다.
 
-## 독립 interior set의 상태 {#interior-space-independent-set-state}
+### 독립 interior set의 상태 {#interior-space-independent-set-state}
 
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-host-identity Requires a stable host identity and coordinate relationship. -->
 <!-- @evidence requirements/interior/scope-and-host-boundary.md#interior-without-exterior Allows a bounded interior set without inventing exterior facts. -->
@@ -17,7 +19,7 @@
 
 Exterior가 없는 촬영용 interior set는 `independent` scope, project-local frame, 실제 scale, virtual boundary, valid camera·collision·clearance extent, intentionally absent와 unknown 사실을 입력으로 가져야 한다. 이 상태에서는 room, finish, prop과 조명을 current로 만들 수 있으나 footprint, terrain contact, exterior envelope, roof, facade, external drainage와 map alignment를 검증한 것으로 출력해서는 안 된다. Virtual boundary 밖 배치나 선언되지 않은 exterior 의미는 failure이고, 이후 exterior와 연결할 때에는 기존 set를 조용히 늘이거나 축소하지 않고 새로운 shared-building reconciliation을 거쳐야 한다.
 
-## 연결된 건물의 공동 사실 {#interior-space-linked-building-shared-facts}
+### 연결된 건물의 공동 사실 {#interior-space-linked-building-shared-facts}
 
 <!-- @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-linked-interior Requires linked sides to share building and boundary facts. -->
 <!-- @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-shared-boundary-identity Prevents duplicated walls, slabs, and openings from masquerading as shared construction. -->

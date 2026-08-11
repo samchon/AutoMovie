@@ -1,16 +1,11 @@
 import type { IAutoMovieModel } from "@automovie/interface";
 import {
   AutoMovieTextureCache,
+  type IAutoMovieModelObject,
   buildModel,
   createImportedModelObject,
   materialTextureBindings,
 } from "@automovie/viewer";
-import {
-  VRM,
-  VRMHumanBoneName,
-  VRMLoaderPlugin,
-  VRMUtils,
-} from "@pixiv/three-vrm";
 import { Object3D, Texture, TextureLoader } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
@@ -32,7 +27,7 @@ export const createShotTextureCache = (): AutoMovieTextureCache =>
 export const loadCompiledModel = async (
   model: IAutoMovieModel,
   textures?: AutoMovieTextureCache,
-) => {
+): Promise<IAutoMovieModelObject> => {
   if (model.origin !== "imported" || model.asset === null) {
     const bindings = model.materials.flatMap(materialTextureBindings);
     // A model binding no image needs no cache, which is what keeps every
@@ -50,38 +45,8 @@ export const loadCompiledModel = async (
       `Imported model "${model.id}" has no compiler-sealed ingest binding.`,
     );
   const loader = new GLTFLoader();
-  if (model.imported.profile === "vrm-humanoid-v1")
-    loader.register((parser) => new VRMLoaderPlugin(parser));
   const gltf = await loader.loadAsync(assetUrl(model.asset));
   const slots = model.skeleton?.bones.map((bone) => bone.bone) ?? [];
-  if (model.imported.profile === "vrm-humanoid-v1") {
-    const vrm = gltf.userData.vrm as VRM | undefined;
-    if (vrm === undefined)
-      throw new Error(
-        `Imported model "${model.id}" did not produce an authoritative VRM runtime.`,
-      );
-    VRMUtils.rotateVRM0(vrm);
-    const bones = new Map(
-      slots.flatMap((bone) => {
-        const node = vrm.humanoid.getNormalizedBoneNode(
-          bone as VRMHumanBoneName,
-        );
-        return node === null ? [] : [[bone, node] as const];
-      }),
-    );
-    return createImportedModelObject({
-      object: vrm.scene,
-      bones,
-      expressionTargets: [
-        {
-          setExpressionValue: (name, weight) =>
-            vrm.expressionManager?.setValue(name, weight),
-        },
-      ],
-      afterAutoMovieFrame: ({ deltaSeconds }) =>
-        vrm.update(deltaSeconds > 0 ? deltaSeconds : 1 / 60),
-    });
-  }
   const requested = new Set(slots);
   const bones = new Map(
     (

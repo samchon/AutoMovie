@@ -39,6 +39,11 @@ const DEFERRED_DRIVER_TYPES = new Set<unknown>([
  * A dependency cycle among the value drivers (A copies from B while B copies
  * from A) throws rather than looping; the rig is ill-formed.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Evaluates channel-space drivers in declared dependency order.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Implements deterministic topological evaluation for the value-driver subgraph.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-dependencies Orders each value driver after the driver that produces its input channel.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-driver-refusal Rejects a dependency cycle instead of selecting an arbitrary evaluation order.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Defines cycle-safe topological evaluation for the channel-driver graph.
  * @author Samchon
  */
 export const resolveDrivers = (

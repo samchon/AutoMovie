@@ -2,6 +2,8 @@
 
 ## Unified Temporal State {#clv-unified-temporal-state}
 
+### Cue, Event와 Observable Transition {#clv-light-cue-observation}
+
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-temporal-state-continuity Sun, practical, event와 environment를 film·story time의 상태로 정규화한다. -->
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-state-time-sampling Story, shot-local과 rational frame clock의 mapping을 고정한다. -->
 <!-- @evidence requirements/staging/events-and-timing.md#staging-fixed-film-clock Camera, light, motion과 event가 같은 film clock을 사용하게 한다. -->
@@ -9,8 +11,6 @@
 Temporal context는 rational film clock, optional story clock, shot-local origin과 rate, interval endpoint rule, simultaneous-event rule와 exact conversion identity를 가진다. Camera, source light, practical, environment, material, geometry opening, effect와 visibility state는 같은 film sample을 읽고 각 component의 local clock은 명시적 mapping을 거친다.
 
 State evaluation은 requested time을 직접 resolve하며 playback delta를 누적하거나 previous-frame result를 초기값으로 사용하지 않는다. 별도 presentation exposure가 같은 clock에서 변해도 scene light state와 합치지 않는다.
-
-### Cue, Event와 Observable Transition {#clv-light-cue-observation}
 
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-cues-events Switch, ignition, flash와 daylight transition을 semantic event에 연결한다. -->
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-cue-observation Cue의 source transition과 first·peak·last observable sample을 연결한다. -->
@@ -22,13 +22,13 @@ Trigger receipt는 event가 평가됐음을 증명할 뿐 관객 전달을 증�
 
 ## Cross-shot Lighting Continuity {#clv-cross-shot-lighting-continuity}
 
+### Edit Transition과 World State {#clv-edit-presentation-light-boundary}
+
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-story-continuity Sun, practical, shadow, reflection과 exposure intent의 shot 간 관계를 추적한다. -->
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-state-lineage Effective light state가 phase, revision, event, time과 take를 가리키게 한다. -->
 <!-- @evidence requirements/staging/state-handoff-and-continuity.md#staging-cross-domain-continuity Camera, opening, practical, shadow와 weather를 같은 boundary에서 비교한다. -->
 
 각 shot sample의 effective lighting state는 production-design phase, location·environment revision, inherited base, source event, story-time sample, shot-local override와 take identity를 가리킨다. Connected shot boundary는 source identity, sun direction, practical control, shadow orientation, reflective·wet material state, environment와 exposure intent를 같은 story state에서 비교한다.
-
-### Edit Transition과 World State {#clv-edit-presentation-light-boundary}
 
 <!-- @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-edit-transition Edit overlap과 world lighting state를 분리한다. -->
 <!-- @evidence requirements/camera/continuity-and-intentional-violations.md#camera-continuity-intentional-violations Camera와 lighting relation을 sequence에서 함께 추적한다. -->

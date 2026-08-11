@@ -5,29 +5,84 @@ import {
 
 import { mixSeed } from "./math/random";
 
-/** One exact live billboard derived from a compiled effect stream. */
+/**
+ * One exact live billboard derived from a compiled effect stream.
+ *
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Carries the deterministic state of one live particle.
+ * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Exposes the bounded lifecycle sample consumed by projection.
+ */
 export interface IAutoMovieEffectParticle {
-  /** Stable zero-based spawn identity. */
+  /**
+   * Stable zero-based spawn identity.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Keeps each deterministic spawn independently addressable.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Carries the stable index from which spawn variation is derived.
+   */
   index: number;
-  /** Fixed-step sampled world position. */
+  /**
+   * Fixed-step sampled world position.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Records the particle state at the requested step.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Makes the live particle position available to deterministic projection.
+   */
   position: IAutoMovieVector3;
-  /** World billboard size in meters. */
+  /**
+   * World billboard size in meters.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Retains the authored particle size throughout its lifetime.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Carries the bounded drawable extent of the particle.
+   */
   size: number;
-  /** Bounded sampled alpha. */
+  /**
+   * Bounded sampled alpha.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Reports the sampled visibility state of the live particle.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Exposes the lifecycle-derived opacity without hidden renderer state.
+   */
   opacity: number;
-  /** Normalized lifetime progress. */
+  /**
+   * Normalized lifetime progress.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Makes the particle's bounded lifetime progress explicit.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Identifies the sampled position within the particle lifecycle.
+   */
   ageRatio: number;
 }
 
-/** One bounded deterministic effect sample. */
+/**
+ * One bounded deterministic effect sample.
+ *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Represents a complete reconstructed effect answer at an absolute time.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Carries the reconstructed state without playback cursor history.
+ */
 export interface IAutoMovieEffectSample {
-  /** Fixed-step shot time actually sampled. */
+  /**
+   * Fixed-step shot time actually sampled.
+   *
+   * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-step-boundary Exposes the exact fixed-step boundary used for the answer.
+   * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Records the deterministic film-time mapping chosen by the sampler.
+   */
   time: number;
-  /** Whether the cue is active at that step. */
+  /**
+   * Whether the cue is active at that step.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Distinguishes an inactive cue from an empty live population.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Carries the lifecycle state at the sampled boundary.
+   */
   active: boolean;
-  /** Sampled cue intensity. */
+  /**
+   * Sampled cue intensity.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-lifetime-state Exposes the bounded cue state that shapes particle visibility.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-lifecycle-contact-consequence Carries the deterministic lifecycle amplitude for projection.
+   */
   intensity: number;
-  /** Live particles after deterministic distance thinning and hard cap. */
+  /**
+   * Live particles after deterministic distance thinning and hard cap.
+   *
+   * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Preserves the repeatable live spawn population.
+   * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Returns the interval-derived population after bounded selection.
+   */
   particles: IAutoMovieEffectParticle[];
 }
 
@@ -36,6 +91,16 @@ export interface IAutoMovieEffectSample {
  *
  * Spawn identity depends only on compiled bytes and particle index. Call
  * scheduling, wall time, worker count and GPU randomness cannot change it.
+ *
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Derives the complete sample from absolute time without cursor history.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-arbitrary-seek Recomputes the sampled boundary, live population, and particle state solely from the requested absolute time and compiled effect.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Floors the request once onto the compiled fixed-step clock before evaluating cue or particle state.
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Keys every spawned particle from compiled seed and stable particle index.
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-emitter-geometry Samples every initial particle position inside the compiled world-space emitter bounds.
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-spawn-interval-boundary Assigns each regular birth to one ordinal-derived interval boundary and counts it with the same floor rule on every seek.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Reconstructs the same active set for repeated and out-of-order samples.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps the absolute request to its owning fixed-step boundary before any effect evaluation.
+ * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Uses fixed-step emission intervals and stable index-derived variation.
  */
 export const sampleCompiledEffect = (
   effect: IAutoMovieCompiledEffect,

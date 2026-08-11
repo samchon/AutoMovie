@@ -37,6 +37,11 @@ import { autoMovieStoryTime } from "./storyClock";
  * of a clip, and eventually a second answer to the same question — the split
  * the light-channel table exists to prevent. A source no clip touches comes
  * back by identity, inherited straight through.
+ *
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-time-sampling resolveProductionLighting samples every production light on the common story clock before lowering the active photometric state.
+ * @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-state-time-sampling resolveProductionLighting samples production-light clips directly at the supplied story second rather than advancing playback state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal resolveProductionLighting resolves declared light state at an explicit shot-local time and refuses invalid source sampling.
+ * @evidence specifications/camera-light-and-visibility/temporal-state-and-continuity.md#clv-light-cue-observation resolveProductionLighting supplies one explicit story-clock sample to every production-light channel.
  */
 export const resolveProductionLighting = (props: {
   /** The production's declared sources and their story-clock motion. */
@@ -86,6 +91,13 @@ export const resolveProductionLighting = (props: {
  * state (the light the production is under at this moment). Both are the same
  * pointer grammar over the same table, so the composition needs no rules of its
  * own.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-branch-identity inheritProductionLighting overlays shot-local sources on story-time production sources while preserving each light's branch identity.
+ * @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-state-time-sampling inheritProductionLighting maps the requested shot-local second through the authored story pin before resolving inherited lights.
+ * @evidence requirements/lighting/temporal-state-and-continuity.md#lighting-story-continuity inheritProductionLighting replaces matching staged lights by stable id and appends unmatched production sources in declaration order.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches inheritProductionLighting carries only explicitly inheritable production-lighting state into a child branch while preserving branch identity.
+ * @evidence specifications/camera-light-and-visibility/temporal-state-and-continuity.md#clv-light-cue-observation inheritProductionLighting derives the production sample from the shot's explicit story-clock mapping.
+ * @evidence specifications/camera-light-and-visibility/temporal-state-and-continuity.md#clv-edit-presentation-light-boundary inheritProductionLighting preserves stable source identity across a shot boundary by replacing the staged placeholder that carries the same id.
  */
 export const inheritProductionLighting = (props: {
   /** The production's declared sources, or `null` when it declares none. */

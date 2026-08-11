@@ -2,11 +2,11 @@
 
 ## 중단 Control Protocol {#execution-interruption-control-protocol}
 
+### Pause와 Cancel Semantics {#execution-pause-cancel-semantics}
+
 <!-- @evidence requirements/operations-and-recovery/cancellation-and-interruption.md#operations-cancellation-interruption Pause와 cancel 요청 접수와 실제 중단 완료를 구분하는 control 경계를 정의한다. -->
 
 Control request는 request identity, target job과 optional attempt, expected owner generation, mode, reason, authority, requested-at time와 optional deadline을 가진다. Control response는 accepted, already-satisfied, rejected 또는 conflict와 resulting state를 반환하며, accepted는 요청 접수이지 중단 완료가 아니다.
-
-### Pause와 Cancel Semantics {#execution-pause-cancel-semantics}
 
 <!-- @evidence requirements/operations-and-recovery/cancellation-and-interruption.md#operations-pause-cancel-distinction 재개 가능한 pause와 남은 work를 포기하는 cancel의 후속 상태를 분리한다. -->
 

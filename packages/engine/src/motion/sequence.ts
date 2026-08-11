@@ -12,6 +12,8 @@ import { IAutoMovieKeyframe, IAutoMovieMotion } from "@automovie/interface";
  * other (so a sequence can itself be sequenced). All parts must target the same
  * skeleton; the first part's skeleton id is used.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-event-composition Makes each clip's terminal state the next clip's composition boundary.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Resolves an ordered set of non-overlapping action layers into one clip timeline.
  * @author Samchon
  */
 export const sequenceMotion = (

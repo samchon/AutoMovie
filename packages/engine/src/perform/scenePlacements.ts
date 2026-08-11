@@ -19,6 +19,8 @@ import { IAutoMovieScene, IAutoMovieVector3 } from "@automovie/interface";
  * a hand-authored scene which (illegally) repeats an id between a node and a
  * camera still resolves to the node, the behaviour before cameras joined.
  *
+ * @evidence requirements/staging/interactions-and-choreography.md#staging-spatial-synchronization Builds the common world-position table against which participant targets synchronize.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Supplies the current staged positions required by choreography target resolution.
  * @author Samchon
  */
 export const scenePlacements = (

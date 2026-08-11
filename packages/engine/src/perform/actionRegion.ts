@@ -37,7 +37,12 @@ const REGION_BY_GESTURE: Partial<
   draw: "fullBody",
 };
 
-/** Which region an action owns: its explicit `region`, else the verb default. */
+/**
+ * Which region an action owns: its explicit `region`, else the verb default.
+ *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Resolves each action to the body-region mask that controls its surviving channels.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Implements the specification's named-mask input to layer composition.
+ */
 export const actionRegion = (
   action: IAutoMovieActionCall,
 ): AutoMovieBodyRegion =>

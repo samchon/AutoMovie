@@ -36,7 +36,37 @@ import {
   pointSubjectBox,
 } from "./subjectExtent";
 
-/** Derive and validate contract outcomes from actual compiled artifacts. */
+/**
+ * Derive and validate contract outcomes from actual compiled artifacts.
+ *
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance realizeShotContract makes delivery acceptance measurable: Derive and validate contract outcomes from actual compiled artifacts.
+ * @evidence requirements/story/beats-and-causality.md#story-semantic-event-identity Joins each authored contract event id to exactly one compiled event sample and preserves that identity in the realization outcome independently of frame or shot traversal.
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-observability Evaluates only typed compiled predicates over current state, event, camera, actor, and formation facts; it does not infer an unobservable inner state from prose.
+ * @evidence requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance Gives every opening, closing, event, camera, actor, and formation check an addressed subject, sample time, measured condition, and explicit failure result.
+ * @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-judgment-measurement Restricts automatic outcomes to structural and numeric facts from compiled artifacts and does not claim clarity, emotion, theme, or audience approval.
+ * @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance Separately records typed scene-boundary states, realized semantic events, and camera-required subjects instead of promoting one passing cue into whole-story acceptance.
+ * @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-blocking-pass Checks the blocking-pass structural invariants it can measure—subject identity, placement state, motion, event time, and coarse camera framing—without claiming final fidelity.
+ * @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-subject-prototype-instance Distinguishes compact anonymous formation slots from promoted hero actor instances when validating the compiled subject realization.
+ * @evidence requirements/production-design/subject-breakdown-and-asset-plan.md#production-design-hero-background Verifies declared formation population counts and exact promoted hero nodes while leaving anonymous background members represented by compact chunks.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-shot-review-times Samples the declared opening, every authored review frame, and the closing time from the compiled shot rather than inferring review instants from edit order.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-shot-contract-refusal Returns addressed diagnostics when required events, actors, formations, camera subjects, or typed opening and closing predicates fail their compiled-artifact checks.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-subject-deliveries Requires actor participants to have both a staged node and performance, verifies formation materialization, and tests every camera-required subject.
+ * @evidence requirements/staging/visibility-and-readability.md#staging-readability-acceptance Treats a required subject as readable only when its current world box intersects the realized camera's closed frustum; it does not claim contrast, duration, reveal, or priority evaluation.
+ * @evidence requirements/staging/visibility-and-readability.md#staging-visibility-time-sampling Recomputes the moving camera and each required subject bound at the opening, every declared review instant, and closing instead of reusing one visibility result.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Tests each required subject's current world box against the realized camera's declared near and far planes at the contract sample time.
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-framing-range Evaluates required subject bounds through resolved camera motion at every camera-contract sample rather than accepting one opening frame.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status realizeShotContract samples the compiled scene, motion, and camera facts needed to return an explicit outcome for each authored delivery predicate.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-semantic-event-occurrence Preserves authored semantic event ids while binding each one to its single current compiled occurrence and sampled predicate outcome.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-scene-dependency-refusal Makes observable compiled state and event predicates fail when their addressed subject or sample is absent instead of accepting narrative prose.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-criterion-cases Produces a mechanical pass/fail boundary for each typed contract criterion at its declared subject and time.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-human-machine-verdict Keeps structural event, state, camera, actor, and formation measurements distinct from any human narrative judgment.
+ * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-review-surfaces Returns one shot-contract surface of scene states, events, and camera delivery facts without claiming sequence or film acceptance.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-blocking-pass-invariants Validates only reproducible blocking structure and coarse framing facts, never photoreal finish or detailed likeness.
+ * @evidence specifications/narrative-and-intent/locations-subjects-and-assets.md#narrative-intent-subject-prototype-role Preserves the distinction between compact formation slots, anonymous members, and explicitly promoted hero instances in the realization result.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-visibility-reveal-readability Applies automatic coarse framing acceptance to current subject boxes at declared contract times; it does not evaluate occlusion, contrast, reveal, or readable duration.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Applies exact current-bound frustum clipping at the addressed contract time; it does not evaluate camera clearance or swept geometry.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-interval-crop Evaluates the live subject bound at each addressed contract time; it does not claim crop intent, interval extrema, or swept visibility between samples.
+ */
 export const realizeShotContract = (props: {
   contract: IAutoMovieShotContract;
   /**

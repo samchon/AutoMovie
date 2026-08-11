@@ -2,11 +2,11 @@
 
 ## 지식과 증거 host 경계 {#spec-authoring-knowledge-evidence-boundary}
 
+### 지식 요청과 출력 {#spec-authoring-knowledge-request-output}
+
 <!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-knowledge-boundary 이 계약이 저작 host를 안내와 실제 evidence 전달 경계로 제한한다. -->
 
 Knowledge-and-evidence host는 coding agent가 올바른 contract와 기법을 찾게 하고 current target에서 실제 evidence를 생산·전달한다. 이 host는 project source 밖의 authoring state, 작품별 asset catalogue 또는 별도 scene database를 소유하지 않는다.
-
-### 지식 요청과 출력 {#spec-authoring-knowledge-request-output}
 
 <!-- @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance 이 출력이 requirement, contract, 단위, 범위, refusal과 보편 기법을 current project 맥락에서 제공한다. -->
 <!-- @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-discovery 이 출력이 자연어 의도에서 관련 contract, 예시와 검증 경로까지 연결한다. -->

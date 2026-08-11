@@ -43,6 +43,8 @@ const DEFAULT_FOOT_BONES = ["leftFoot", "rightFoot"] as const;
  * foot, restage, or acknowledge a deliberate pass-through (a phasing ghost)
  * with `physicsIntent`.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateGroundContact` identifies the configured foot bone and sampled frame whose world height penetrates the ground.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateGroundContact` preserves foot identity, sample time, ground expectation, observed height, and penetration depth for each contact finding.
  * @author Samchon
  */
 export const validateGroundContact = (props: {

@@ -2,14 +2,14 @@
 
 ## 공통 Artifact 축과 Validation Verdict {#validation-artifact-state-completeness}
 
+### Refusal과 Success 경계 {#validation-artifact-refusal-boundary}
+
 <!-- @evidence requirements/diagnostics/partial-artifacts-and-recovery.md#diagnostics-artifact-completeness absent부터 quarantined까지 산출물 상태와 신뢰 범위를 구분한다. -->
 <!-- @evidence requirements/operations-and-recovery/partial-artifacts-and-publication.md#operations-artifact-state-ownership Artifact completeness, integrity와 validation을 같은 identity에 결속하되 서로 합치지 않는다. -->
 
 Validation은 [독립 Artifact 상태 축 계약](../execution-and-recovery/artifacts-and-atomic-publication.md#execution-artifact-lifecycle-contract)의 다섯 축 snapshot을 그대로 소비하고 local artifact lifecycle enum을 만들지 않는다. Artifact-scoped check status와 receipt는 공통 validation field에 기록하고, validation session은 result completeness, overall validation verdict, blocking diagnostics와 checked 및 not-run scope만 별도 결과로 추가하며 render phase, freshness, publication selection 또는 availability를 verdict에서 합성하지 않는다.
 
 Requirement의 absent, partial과 complete는 materialization 및 completeness 축에, stale은 freshness에, corrupt는 integrity에, quarantined는 quarantine에 기록한다. 같은 artifact가 complete이고 과거 integrity와 validation을 통과했으면서 현재 stale, incompatible, superseded, unavailable 또는 quarantined일 수 있고 publication이 current인 채 freshness가 stale로 바뀔 수도 있으므로 어느 조합도 다른 관측을 지우거나 path와 filename에서 추론하지 않는다.
-
-### Refusal과 Success 경계 {#validation-artifact-refusal-boundary}
 
 <!-- @evidence requirements/diagnostics/partial-artifacts-and-recovery.md#diagnostics-partial-success-boundary 부분 또는 임시 결과를 완전한 success와 publication에 사용하지 못하게 한다. -->
 

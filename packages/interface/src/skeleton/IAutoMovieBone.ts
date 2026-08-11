@@ -12,15 +12,25 @@ import { IAutoMovieJointConstraint } from "./IAutoMovieJointConstraint";
  * against (`constraint`). For a _generated_ character the geometry phase
  * produces these; for an _imported_ glTF/VRM the ingest package derives them.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Exposes `IAutoMovieBone` as the portable data boundary for the actor humanoid mapping requirement.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Types `IAutoMovieBone` for the performance rig semantic joint mapping system contract.
  * @author Samchon
  */
 export interface IAutoMovieBone {
-  /** Which normalized humanoid slot this bone fills. Unique within a skeleton. */
+  /**
+   * Which normalized humanoid slot this bone fills. Unique within a skeleton.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Exposes `bone` as the portable data boundary for the actor humanoid mapping requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Types `bone` for the performance rig semantic joint mapping system contract.
+   */
   bone: AutoMovieHumanoidBone;
 
   /**
    * Parent bone in the hierarchy, or `null` for the root (`hips`). Defines the
    * space in which `rest` and articulation are expressed.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping Exposes `parent` as the portable data boundary for the actor humanoid mapping requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Types `parent` for the performance rig semantic joint mapping system contract.
    */
   parent: AutoMovieHumanoidBone | null;
 
@@ -28,6 +38,9 @@ export interface IAutoMovieBone {
    * Rest-pose local transform relative to `parent`: the bone at 0 articulation.
    * Semantic joint angles ({@link IAutoMovieJointPose}) are applied _on top of_
    * this by the engine.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Exposes `rest` as the bone's explicit rest-pose transform.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Types `rest` as the deformation binding's declared rest basis.
    */
   rest: IAutoMovieTransform;
 
@@ -36,6 +49,9 @@ export interface IAutoMovieBone {
    * the normalized humanoid default when that slot has one; a slot absent from
    * the default table is unconstrained. Supply a constraint to replace the
    * default for a stylized, non-human, or specially trained character.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `constraint` as the declared joint range and coupled behavior.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `constraint` as the rig's explicit ROM contract.
    */
   constraint: IAutoMovieJointConstraint | null;
 }

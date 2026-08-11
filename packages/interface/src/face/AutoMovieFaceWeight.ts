@@ -11,6 +11,8 @@
  * tags would have no structured-output effect and would only duplicate the
  * validator that already owns the range.
  *
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `AutoMovieFaceWeight` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `AutoMovieFaceWeight` for the performance actor representation fidelity boundary system contract.
  * @author Samchon
  */
 export type AutoMovieFaceWeight = number;

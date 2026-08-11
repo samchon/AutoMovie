@@ -7,118 +7,335 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { convexHull2D } from "../math/hull";
+import { autoMoviePlanarRegionFailure } from "./planarRegion";
 
-/** One point of a code-authored 2D construction profile. */
+/**
+ * One point of a code-authored 2D construction profile.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Expresses free-form construction geometry in real coordinates.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries one metric input to the geometry kernel.
+ */
 export interface IAutoMovieProfilePoint {
-  /** Horizontal profile coordinate in metres. */
+  /**
+   * Horizontal profile coordinate in metres.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Keeps the authored horizontal dimension in metres.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the metric horizontal component of a free-form input.
+   */
   x: number;
-  /** Vertical profile coordinate in metres. */
+  /**
+   * Vertical profile coordinate in metres.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Keeps the authored vertical dimension in metres.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the metric vertical component of a free-form input.
+   */
   y: number;
 }
 
-/** One axis-aligned rectangular void in a wall's local XY face. */
+/**
+ * One axis-aligned rectangular void in a wall's local XY face.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Makes an opening a declared operand of wall construction.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Carries the bounded subtraction input whose topology the wall builder preserves.
+ */
 export interface IAutoMovieWallOpening {
-  /** Stable opening identity used in diagnostics. */
+  /**
+   * Stable opening identity used in diagnostics.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Keeps each opening operand independently addressable.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Identifies the opening involved in an operation or topology refusal.
+   */
   id: string;
-  /** Left edge measured from the wall's left edge. */
+  /**
+   * Left edge measured from the wall's left edge.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Locates the opening with a real wall-local dimension.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the metric horizontal placement of the void.
+   */
   x: number;
-  /** Bottom edge measured from the wall's bottom edge. */
+  /**
+   * Bottom edge measured from the wall's bottom edge.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Locates the opening with a real wall-local dimension.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the metric vertical placement of the void.
+   */
   y: number;
-  /** Positive opening width. */
+  /**
+   * Positive opening width.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Declares the physical width of the opening operand.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies one bounded metric extent of the void.
+   */
   width: number;
-  /** Positive opening height. */
+  /**
+   * Positive opening height.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Declares the physical height of the opening operand.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the other bounded metric extent of the void.
+   */
   height: number;
 }
 
-/** A rigid translate / unit-quaternion rotate / per-axis scale placement. */
+/**
+ * A rigid translate / unit-quaternion rotate / per-axis scale placement.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Places a mesh as one operand in a composed assembly.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Defines the transform input applied before mesh composition.
+ */
 export interface IAutoMovieMeshTransform {
-  /** Metres added after rotation and scale; omitted means the origin. */
+  /**
+   * Metres added after rotation and scale; omitted means the origin.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Keeps mesh placement in real metric coordinates.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the metric translation component of placement.
+   */
   translation?: IAutoMovieVector3;
-  /** Unit quaternion applied after scale; omitted means identity. */
+  /**
+   * Unit quaternion applied after scale; omitted means identity.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Declares the rotation used while composing a mesh operand.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Supplies the orientation applied without changing member topology.
+   */
   rotation?: IAutoMovieQuaternion;
-  /** Per-axis scale applied first; omitted means unit scale. */
+  /**
+   * Per-axis scale applied first; omitted means unit scale.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Applies the declared dimensional scale to a mesh operand.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the per-axis dimensional transform.
+   */
   scale?: IAutoMovieVector3;
 }
 
-/** One named member of an assembly, optionally placed by its own transform. */
+/**
+ * One named member of an assembly, optionally placed by its own transform.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Preserves an addressable member inside a logical mesh group.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Retains member identity while composing shared geometry.
+ */
 export interface IAutoMovieMeshPart {
-  /** Stable member identity, unique inside one assembly. */
+  /**
+   * Stable member identity, unique inside one assembly.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Keeps the grouped member independently addressable.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Preserves individual identity inside the composed group.
+   */
   id: string;
-  /** The member's geometry in its own local frame. */
+  /**
+   * The member's geometry in its own local frame.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Carries the geometry owned by one logical group member.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Keeps the member's own representation distinguishable after composition.
+   */
   mesh: IAutoMovieMesh;
-  /** Where the member sits in the assembly frame. */
+  /**
+   * Where the member sits in the assembly frame.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Places one member without erasing its group identity.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Resolves member placement while preserving individuality.
+   */
   transform?: IAutoMovieMeshTransform;
 }
 
-/** The index range one assembly member occupies in the merged mesh. */
+/**
+ * The index range one assembly member occupies in the merged mesh.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Retains group membership after buffers are merged.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Maps each individual member to its merged triangle span.
+ */
 export interface IAutoMovieMeshGroup {
-  /** The contributing {@link IAutoMovieMeshPart.id}. */
+  /**
+   * The contributing {@link IAutoMovieMeshPart.id}.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Names the member represented by this merged span.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Preserves the contributor's identity in the merged result.
+   */
   id: string;
-  /** First index of the member's triangles inside the merged index array. */
+  /**
+   * First index of the member's triangles inside the merged index array.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Keeps the member's geometry addressable within the group.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Defines where this individual's contribution begins.
+   */
   start: number;
-  /** How many indices the member contributes; always a multiple of three. */
+  /**
+   * How many indices the member contributes; always a multiple of three.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Bounds the member's addressable contribution to the group.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Defines the exact span owned by this individual.
+   */
   count: number;
 }
 
-/** One merged mesh plus the material groups its members occupy. */
+/**
+ * One merged mesh plus the material groups its members occupy.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Produces one composed mesh without discarding its member groups.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Preserves individual member spans in the merged output.
+ */
 export interface IAutoMovieMeshAssembly {
-  /** The merged rigid mesh. */
+  /**
+   * The merged rigid mesh.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Carries the geometry shared by the logical assembly.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Provides the composed representation alongside member identities.
+   */
   mesh: IAutoMovieMesh;
-  /** Declaration-ordered index ranges, one per contributing member. */
+  /**
+   * Declaration-ordered index ranges, one per contributing member.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Retains the declared ordering and addressability of group members.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Maps every individual contributor into the shared mesh.
+   */
   groups: IAutoMovieMeshGroup[];
 }
 
-/** What a mesh's triangle topology actually is, measured rather than assumed. */
+/**
+ * What a mesh's triangle topology actually is, measured rather than assumed.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Reports the actual topology of authored mesh geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Makes operation output topology explicit and inspectable.
+ */
 export interface IAutoMovieMeshTopology {
-  /** Triangle count, including degenerate ones. */
+  /**
+   * Triangle count, including degenerate ones.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Counts the faces present in the measured topology.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reports the complete triangle population of an operation result.
+   */
   triangles: number;
-  /** Triangles whose welded corners are not three distinct points. */
+  /**
+   * Triangles whose welded corners are not three distinct points.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Identifies faces that collapse after positional welding.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Exposes the degenerate output population for validation.
+   */
   degenerate: number;
-  /** Position, normal, or uv components that are not finite numbers. */
+  /**
+   * Position, normal, or uv components that are not finite numbers.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Measures numeric failures in mesh buffers.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Reports non-finite geometry components as structural evidence.
+   */
   nonFinite: number;
-  /** Welded edges used by exactly one triangle: the open boundary. */
+  /**
+   * Welded edges used by exactly one triangle: the open boundary.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Measures the open boundary of the authored surface.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reports edges left with only one incident face.
+   */
   boundaryEdges: number;
-  /** Welded edges used by three or more triangles. */
+  /**
+   * Welded edges used by three or more triangles.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Measures topology that cannot represent a manifold surface.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reports edges with conflicting face incidence.
+   */
   nonManifoldEdges: number;
-  /** True when every welded edge is shared by exactly two triangles. */
+  /**
+   * True when every welded edge is shared by exactly two triangles.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology States whether the mesh forms a closed two-manifold.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Summarizes the closed-edge invariant of the result.
+   */
   watertight: boolean;
-  /** Divergence-theorem signed volume; exact for a closed polyhedron. */
+  /**
+   * Divergence-theorem signed volume; exact for a closed polyhedron.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Measures the orientation and enclosed volume of a closed mesh.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Exposes the signed-volume invariant of the operation output.
+   */
   volume: number;
 }
 
-/** One closed ring's span inside a triangulation's shared point list. */
+/**
+ * One closed ring's span inside a triangulation's shared point list.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Preserves each planar boundary as a distinct closed ring.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Records a ring's topology inside the canonical point buffer.
+ */
 export interface IAutoMovieRegionRing {
-  /** First index the ring owns in {@link IAutoMovieRegionTriangulation.points}. */
+  /**
+   * First index the ring owns in {@link IAutoMovieRegionTriangulation.points}.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Keeps the ring boundary addressable in the shared geometry.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Identifies where this ring begins in canonical storage.
+   */
   start: number;
-  /** How many points the ring owns. */
+  /**
+   * How many points the ring owns.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Bounds the points belonging to one closed boundary.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Identifies the complete canonical span of this ring.
+   */
   count: number;
 }
 
-/** A free-form planar region resolved into counter-clockwise triangles. */
+/**
+ * A free-form planar region resolved into counter-clockwise triangles.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Resolves an outer boundary and holes into reusable geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Returns canonical points, rings, and triangles from the region operation.
+ */
 export interface IAutoMovieRegionTriangulation {
   /**
    * Every ring's points in one list, canonically wound: the outer ring
    * counter-clockwise first, then each hole clockwise in declared order.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Canonicalizes the winding of every region boundary.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Carries the point buffer on which ring topology is defined.
    */
   points: IAutoMovieProfilePoint[];
-  /** Where each ring sits in {@link points}; `rings[0]` is the outer ring. */
+  /**
+   * Where each ring sits in {@link points}; `rings[0]` is the outer ring.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Distinguishes the outer boundary from each authored hole.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the ring structure of the canonical region.
+   */
   rings: IAutoMovieRegionRing[];
-  /** Corner indices into {@link points}, three per counter-clockwise triangle. */
+  /**
+   * Corner indices into {@link points}, three per counter-clockwise triangle.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Exposes the resolved face connectivity of the planar region.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Carries the topology emitted by the triangulation operation.
+   */
   triangles: number[];
-  /** Enclosed area in square metres: the outer ring less every hole. */
+  /**
+   * Enclosed area in square metres: the outer ring less every hole.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Measures the actual metric area of the free-form region.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Reports a physical result derived from metric geometry inputs.
+   */
   area: number;
 }
 
-/** One station of a loft: where it sits along the path and what it looks like. */
+/**
+ * One station of a loft: where it sits along the path and what it looks like.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Declares one operand of a multi-section loft operation.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Supplies one compatible section to the loft topology.
+ */
 export interface IAutoMovieLoftSection {
   /**
    * Where the section sits along the path, `0` at its first point and `1` at
    * its last, measured by chord length.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Places the section within the loft operation.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Defines the interpolation station used to connect compatible rings.
    */
   at: number;
-  /** The enclosing ring, in the path frame's right / up axes, in metres. */
+  /**
+   * The enclosing ring, in the path frame's right / up axes, in metres.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Declares the section's metric outer boundary.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Supplies the free-form enclosing profile of a loft station.
+   */
   outer: readonly IAutoMovieProfilePoint[];
-  /** Rings removed from the section; omitted means a solid section. */
+  /**
+   * Rings removed from the section; omitted means a solid section.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Preserves the declared holes in each loft section.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Supplies the inner boundaries that the connected topology must retain.
+   */
   holes?: ReadonlyArray<readonly IAutoMovieProfilePoint[]>;
 }
 
@@ -129,6 +346,9 @@ export interface IAutoMovieLoftSection {
  * seam falls is a finish decision this kernel does not make for the caller, and
  * {@link buildAutoMoviePolyhedron} is the builder that does lay one out, by
  * measuring each face's own plane in metres.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a reusable solid by extruding an authored profile.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Emits the closed topology of the extrusion operation.
  */
 export const extrudeAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -165,6 +385,9 @@ export const extrudeAutoMovieProfile = (props: {
  * starts and ends on the axis closes into a solid whose pole rings collapse to
  * zero-area triangles, and one that does not is an open tube with a rim at each
  * end. Neither is repaired, and no UV atlas is generated.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
  */
 export const revolveAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -205,6 +428,9 @@ export const revolveAutoMovieProfile = (props: {
  * whose section repeats along a path. Adjacent path points must be distinct.
  * Both ends are capped, so a sweep along a simple path is a closed solid; no UV
  * atlas is generated.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a solid by sweeping one authored section along a path.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Connects section copies into a closed sweep topology.
  */
 export const sweepAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -268,6 +494,9 @@ export const sweepAutoMovieProfile = (props: {
  * concave outline emits triangles that cover ground the face does not. Whether
  * the result is a closed shell is the caller's declaration to make and
  * {@link inspectAutoMovieMeshTopology}'s to check.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Builds arbitrary convex-faced polyhedra from code-authored points.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Accepts explicit metric face geometry as a native asset input.
  */
 export const buildAutoMoviePolyhedron = (
   faces: ReadonlyArray<readonly IAutoMovieVector3[]>,
@@ -357,6 +586,9 @@ export const buildAutoMoviePolyhedron = (
  * have, so it raises its own diagnostic instead of emitting a pinched solid.
  *
  * The result carries flat per-face normals and no UV atlas.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Constructs a wall and subtracts declared rectangular openings.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Emits the wall's closed topology after bounded opening operations.
  */
 export const buildAutoMovieWall = (props: {
   width: number;
@@ -499,6 +731,9 @@ export const buildAutoMovieWall = (props: {
  * because which ring bounds the region and which is a void is settled by
  * containment and not by the order the points were typed in. The emitted
  * triangles are counter-clockwise, so the region faces +Z.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Refuses malformed planar topology before producing triangles.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Implements the shared numeric and topology validation contract for free-form regions.
  */
 export const triangulateAutoMovieRegion = (props: {
   outer: readonly IAutoMovieProfilePoint[];
@@ -525,6 +760,9 @@ export const triangulateAutoMovieRegion = (props: {
  *
  * The result is a closed 2-manifold whose volume is the region's area times the
  * depth, spanning `-depth / 2` to `+depth / 2` like the convex extrusion.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Extrudes a canonical region while retaining every declared hole.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Produces a closed manifold from the region's boundary topology.
  */
 export const extrudeAutoMovieRegion = (props: {
   outer: readonly IAutoMovieProfilePoint[];
@@ -606,6 +844,9 @@ export const extrudeAutoMovieRegion = (props: {
  * decide, exactly as it is for a sweep: a path that turns tighter than the
  * section is wide folds the surface through itself, and this kernel measures
  * neither the turn nor the width.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Connects authored planar sections along a declared path.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Refuses incompatible ring topology rather than inventing correspondence.
  */
 export const loftAutoMovieSections = (props: {
   path: readonly IAutoMovieVector3[];
@@ -775,6 +1016,9 @@ export const loftAutoMovieSections = (props: {
  * `Maximum call stack size exceeded` once one member passes roughly forty
  * thousand vertices. Merging a building's members past that size is the whole
  * reason this function exists, so the limit is not one worth inheriting.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Combines authored mesh operands without an argument-list size ceiling.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reindexes each input topology into one deterministic mesh.
  */
 export const mergeAutoMovieMeshes = (
   meshes: readonly IAutoMovieMesh[],
@@ -813,6 +1057,9 @@ export const mergeAutoMovieMeshes = (
  * non-uniform scale does not tilt them off the surface), and a mirroring scale
  * flips triangle winding so the outward face stays outward. UVs ride along
  * untouched, because a placement moves a surface without re-cutting its atlas.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
  */
 export const transformAutoMovieMesh = (
   mesh: IAutoMovieMesh,
@@ -882,6 +1129,9 @@ export const transformAutoMovieMesh = (
  * A material group is what lets one merged draw call still say which triangles
  * are the tread and which are the riser, so a finish, a budget, or a quantity
  * take-off can address a member after the buffers were concatenated.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Merges geometry while retaining named group membership.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Reports the exact index span contributed by each member.
  */
 export const mergeAutoMovieMeshParts = (
   parts: readonly IAutoMovieMeshPart[],
@@ -922,6 +1172,9 @@ export const mergeAutoMovieMeshParts = (
  * verdict on the same surface, adding winding consistency and an `expectClosed`
  * declaration, and it is what `validateModel` runs over every mesh a model
  * carries. A builder that wants a pass or a fail asks that one.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Measures face, edge, manifold, and volume facts of a mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reports the topology produced by geometry operations without assuming validity.
  */
 export const inspectAutoMovieMeshTopology = (
   mesh: IAutoMovieMesh,
@@ -1131,15 +1384,14 @@ const canonicalRegion = (
   holes: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
   label: string,
 ): Omit<IAutoMovieRegionTriangulation, "triangles"> => {
-  const labels = [
-    `${label} outer ring`,
-    ...holes.map((_hole, index) => `${label} hole[${index}]`),
-  ];
+  const failure = autoMoviePlanarRegionFailure({ outer, holes, label });
+  if (failure !== null) throw new Error(failure);
   const loops = [outer, ...holes].map((ring, index) =>
-    orientedRing(simpleRing(ring, labels[index]!), index === 0),
+    orientedRing(
+      ring.map((point) => ({ x: point.x, y: point.y })),
+      index === 0,
+    ),
   );
-  refuseRingContacts(loops, labels);
-  refuseHolePlacement(loops, labels);
   const points: IAutoMovieProfilePoint[] = [];
   const rings: IAutoMovieRegionRing[] = [];
   for (const loop of loops) {
@@ -1167,71 +1419,6 @@ const triangulateRegion = (
 const trianglesOf = (
   region: Omit<IAutoMovieRegionTriangulation, "triangles">,
 ): number[] => earClip(region.points, bridgeHoles(region.points, region.rings));
-
-/**
- * Copy one ring, refusing every shape a triangulator cannot answer for.
- *
- * A ring that repeats a point beside itself carries a zero-length edge with no
- * direction, one that doubles back along its own edge encloses a sliver of no
- * width, and one that crosses itself encloses two regions with opposite signs.
- * None of the three is repaired here: which of the shapes the author meant is
- * exactly what the input failed to say.
- */
-const simpleRing = (
-  ring: readonly IAutoMovieProfilePoint[],
-  label: string,
-): IAutoMovieProfilePoint[] => {
-  if (ring.length < 3) throw new Error(`${label} needs at least three points`);
-  ring.forEach((point, index) => finitePoint(point, `${label}[${index}]`));
-  const points = ring.map((point) => ({ x: point.x, y: point.y }));
-  const size = points.length;
-  points.forEach((point, index) => {
-    if (
-      Math.hypot(
-        points[(index + 1) % size]!.x - point.x,
-        points[(index + 1) % size]!.y - point.y,
-      ) <= PLANAR_EPSILON
-    )
-      throw new Error(`${label}[${index}] repeats the point beside it`);
-  });
-  // Before the spike check, because a ring of collinear points is a spike at
-  // every corner, and "encloses no area" is what its author needs to read.
-  if (Math.abs(signedArea(points)) <= PLANAR_EPSILON)
-    throw new Error(`${label} encloses no area`);
-  points.forEach((point, index) => {
-    const previous = points[(index + size - 1) % size]!;
-    const next = points[(index + 1) % size]!;
-    if (
-      Math.abs(cross2(previous, point, next)) <= PLANAR_EPSILON &&
-      (point.x - previous.x) * (next.x - point.x) +
-        (point.y - previous.y) * (next.y - point.y) <
-        0
-    )
-      throw new Error(`${label}[${index}] doubles back along its own edge`);
-  });
-  for (let left = 0; left < size; ++left)
-    for (let right = left + 1; right < size; ++right)
-      if (
-        neighbouringEdges(size, left, right) === false &&
-        segmentsMeet(
-          points[left]!,
-          points[(left + 1) % size]!,
-          points[right]!,
-          points[(right + 1) % size]!,
-        )
-      )
-        throw new Error(
-          `${label} crosses itself between edge ${left} and edge ${right}`,
-        );
-  return points;
-};
-
-/** Are two edges of the same ring the pair that share a corner? */
-const neighbouringEdges = (
-  size: number,
-  left: number,
-  right: number,
-): boolean => (left + 1) % size === right || (right + 1) % size === left;
 
 /**
  * The ring wound the way asked for, reversed in place when it disagrees.
@@ -1313,53 +1500,6 @@ const straddles = (left: number, right: number): boolean =>
   Math.abs(left) > PLANAR_EPSILON &&
   Math.abs(right) > PLANAR_EPSILON &&
   left * right < 0;
-
-/** Refuse any two distinct rings that touch or cross. */
-const refuseRingContacts = (
-  loops: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
-  labels: readonly string[],
-): void => {
-  for (let left = 0; left + 1 < loops.length; ++left)
-    for (let right = left + 1; right < loops.length; ++right) {
-      const one = loops[left]!;
-      const other = loops[right]!;
-      for (let a = 0; a < one.length; ++a)
-        for (let b = 0; b < other.length; ++b)
-          if (
-            segmentsMeet(
-              one[a]!,
-              one[(a + 1) % one.length]!,
-              other[b]!,
-              other[(b + 1) % other.length]!,
-            )
-          )
-            throw new Error(
-              `${labels[left]} and ${labels[right]} touch or cross at edge ${a} and edge ${b}`,
-            );
-    }
-};
-
-/**
- * Refuse a hole the outer ring does not contain, or that another hole does.
- *
- * One probe point decides it, because {@link refuseRingContacts} already
- * established that no two rings meet: a ring that neither crosses nor touches
- * another lies wholly inside it or wholly outside it, so the first point speaks
- * for all of them.
- */
-const refuseHolePlacement = (
-  loops: ReadonlyArray<readonly IAutoMovieProfilePoint[]>,
-  labels: readonly string[],
-): void => {
-  for (let hole = 1; hole < loops.length; ++hole) {
-    const probe = loops[hole]![0]!;
-    if (pointInRing(probe, loops[0]!) === false)
-      throw new Error(`${labels[hole]} must lie inside ${labels[0]}`);
-    for (let other = 1; other < loops.length; ++other)
-      if (other !== hole && pointInRing(probe, loops[other]!))
-        throw new Error(`${labels[hole]} must lie outside ${labels[other]}`);
-  }
-};
 
 /** Even-odd ray cast along +X; the caller guarantees the point is off-ring. */
 const pointInRing = (

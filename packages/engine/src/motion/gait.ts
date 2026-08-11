@@ -38,6 +38,8 @@ const gaitPhaseEase = (
  * its anatomical side of zero. Optional stance/swing easing curves shape each
  * half separately while preserving the same endpoints.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Evaluates one declared limb row by phase, duty, amplitude, and neutral angle.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Turns compact gait data into a repeatable articulated sample.
  * @author Samchon
  */
 export const gaitLimbFlexion = (
@@ -168,6 +170,8 @@ const assertUniqueProfileGaitNames = (
  * a continuous walk and a stutter at every cut. The wrapped cycle stays a
  * seamless loop for any constant phase.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Synthesizes the profile's limb rows and root bob into one complete gait cycle.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Bakes a compact gait rule into deterministic loop keyframes and phase state.
  * @author Samchon
  */
 export const gaitMotion = (
@@ -227,6 +231,8 @@ export const gaitMotion = (
  * set drives many bodies. Returns the clips keyed by gait name (empty when the
  * profile declares no gaits).
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Applies every named profile gait to the selected skeleton without embedding creature-specific code.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Expands a reusable compact gait set into skeleton-bound motion clips.
  * @author Samchon
  */
 export const bindProfileGaits = (

@@ -2,13 +2,13 @@
 
 ## 검사 계획과 수집 방식 {#validation-collection-plan}
 
+### Aggregate 실행 {#validation-aggregate-execution}
+
 <!-- @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-declared-collection-mode aggregate와 fail-fast 방식 및 실제 완료 상태를 session 입력과 결과에 고정한다. -->
 
 Session은 validation target을 canonical check plan으로 확장하고 각 check의 identity, prerequisite, owned scope, cost class와 blocking policy를 확정한다. Effective collection mode는 aggregate 또는 fail-fast이며 request와 result에 모두 기록한다.
 
 같은 check를 수행했다면 collection mode가 diagnostic identity, classification, severity와 observed verdict를 바꾸지 않는다. 두 mode의 차이는 실행한 check 집합, stop reason과 result completeness로만 설명할 수 있어야 한다.
-
-### Aggregate 실행 {#validation-aggregate-execution}
 
 <!-- @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-aggregate-boundary 독립 검사를 계속하면서 선행 사실이 없는 종속 검사를 추측하지 않는다. -->
 

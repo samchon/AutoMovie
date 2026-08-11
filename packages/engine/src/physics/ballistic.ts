@@ -11,12 +11,27 @@ const finiteVector = (v: IAutoMovieVector3): boolean => {
 const validArc = (arc: string): arc is "direct" | "high" =>
   arc === "direct" || arc === "high";
 
-/** The launch that hits a target: the initial velocity and the time of flight. */
+/**
+ * The launch that hits a target: the initial velocity and the time of flight.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Resolves a supported analytic trajectory from authored launch constraints.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Reports the launch state of the analytic trajectory tier.
+ */
 export interface IAutoMovieBallisticSolution {
-  /** Initial velocity to give the projectile (world m/s), magnitude = speed. */
+  /**
+   * Initial velocity to give the projectile (world m/s), magnitude = speed.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Supplies the analytic launch vector that realizes the authored shot.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Carries the initial condition of the resolved trajectory.
+   */
   velocity: IAutoMovieVector3;
 
-  /** Seconds until it reaches the target. */
+  /**
+   * Seconds until it reaches the target.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Reports when the analytic trajectory reaches its target.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Carries the solved flight duration of the trajectory.
+   */
   hitTime: number;
 }
 
@@ -37,6 +52,8 @@ export interface IAutoMovieBallisticSolution {
  * - 2h·s²))) / (g·d)`; a purely vertical target is handled on its own (no
  *   horizontal direction to aim along).
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Solves the supported analytic arc without introducing a hidden rigid-body simulation.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Implements the inverse launch solve of the analytic trajectory tier.
  * @author Samchon
  */
 export const solveBallisticLaunch = (
@@ -131,6 +148,8 @@ export const solveBallisticLaunch = (
  * when the intercept is out of range at that speed (or the speed is
  * non-positive).
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Resolves an analytic intercept against a declared moving target path.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Keeps moving-target interception inside the bounded analytic tier.
  * @author Samchon
  */
 export const solveMovingLaunch = (

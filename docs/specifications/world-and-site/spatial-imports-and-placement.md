@@ -2,12 +2,12 @@
 
 ## 공간 원본 채택 경계 {#world-site-spatial-source-adoption-boundary}
 
+### 공간 자료 입력 종류 {#world-site-spatial-data-input}
+
 <!-- @evidence requirements/map/external-assets-and-placement.md#map-external-asset-placement Defines external adoption as an explicit identity-preserving decision. -->
 <!-- @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-mode-choice Keeps direct placement, conversion and composition under user authority. -->
 
 시스템은 외부 공간 자료와 자산을 원본 그대로 보존하면서 직접 배치, 정규화된 공간 자료로의 변환, native 재해석 또는 group composition 중 사용자가 선택한 방식으로 채택한다. 채택 결과는 원본 identity, content digest, license, 선택한 mode, 변환 receipt와 배치 관계를 가지며, 원본을 조용히 정본 geometry로 흡수하지 않는다.
-
-### 공간 자료 입력 종류 {#world-site-spatial-data-input}
 
 <!-- @evidence requirements/map/external-assets-and-placement.md#map-external-spatial-data Requires survey, GIS, raster, point, mesh and tabular spatial inputs to retain their semantics. -->
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Recognizes spatial media without inferring unsupported meaning. -->

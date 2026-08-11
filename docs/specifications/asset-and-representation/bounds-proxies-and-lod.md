@@ -2,11 +2,10 @@
 
 ## 공간 파생 사실의 경계 {#asset-spec-bounds-boundary}
 
-<!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds 선언한 bounds와 실제 geometry에서 측정한 bounds를 비교할 수 있어야 한다. -->
+### bounds 입력과 좌표 {#asset-spec-bounds-inputs}
+
 
 시스템은 bounds, proxy와 상세도 표현을 원본 자산의 대체 identity가 아니라 특정 revision과 목적에서 계산하거나 저작한 파생 사실로 취급한다. 파생 기록은 기준 모델·geometry·rig·state와 계산 규칙을 가리키며, 기준이 바뀌면 이전 결과가 계속 유효하다고 추정하지 않는다.
-
-### bounds 입력과 좌표 {#asset-spec-bounds-inputs}
 
 <!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds bounds의 좌표계, 단위, 표현, 상태와 측정 근거를 명시해야 한다. -->
 

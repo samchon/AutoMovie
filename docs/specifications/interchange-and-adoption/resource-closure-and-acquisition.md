@@ -2,12 +2,12 @@
 
 ## Immutable Resource Closure {#interchange-resource-closure}
 
+### Media Dependency Extraction {#interchange-media-dependency-extraction}
+
 <!-- @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-closure 채택 revision을 해석에 필요한 dependency의 닫힌 집합으로 봉인한다. -->
 <!-- @evidence requirements/asset-authoring/external-assets.md#asset-external-resource-closure glTF와 GLB의 buffer, image와 URI를 포함한 closure를 검증한다. -->
 
 Resource closure는 root selections에서 parser-declared dependency edge를 따라 도달하는 finite graph이며 각 member의 canonical locator, role, required 여부, content digest, byte length와 parent edge를 포함한다. Accepted revision은 모든 required member가 resident하고 digest-verified인 closure digest를 가지며 closure 밖 fetch나 file read가 interpretation result에 영향을 줄 수 없다.
-
-### Media Dependency Extraction {#interchange-media-dependency-extraction}
 
 <!-- @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Media별 sidecar와 linked resource를 required·optional dependency로 식별한다. -->
 

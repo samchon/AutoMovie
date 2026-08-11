@@ -19,20 +19,54 @@ import { IAutoMovieModelObject } from "./buildModel";
  * 30 ms per step at a walking cadence, and the shader mixes the two
  * neighbouring steps, so the sampling rate bounds interpolation error rather
  * than the visible frame rate.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const AUTOMOVIE_FORMATION_CYCLE_SAMPLES = 32;
 
-/** Uniform cells shared by every material drawing one unit's cycles. */
+/**
+ * Uniform cells shared by every material drawing one unit's cycles.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
+ */
 export interface IAutoMovieFormationCycleUniforms {
-  /** Baked part-matrix table of the take playing now. */
+  /**
+   * Baked part-matrix table of the take playing now.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   automovieCycleTexture: { value: THREE.DataTexture };
-  /** Columns in the table: samples across one cycle. */
+  /**
+   * Columns in the table: samples across one cycle.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   automovieCycleSamples: { value: number };
-  /** Rows in the table: three per part. */
+  /**
+   * Rows in the table: three per part.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   automovieCycleRows: { value: number };
-  /** Cycles the unit's own travel has turned over by the current time. */
+  /**
+   * Cycles the unit's own travel has turned over by the current time.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   automovieCycleAdvance: { value: number };
-  /** Cycles per meter of member radius the unit's turning has turned over. */
+  /**
+   * Cycles per meter of member radius the unit's turning has turned over.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   automovieCycleTurn: { value: number };
 }
 
@@ -43,9 +77,18 @@ export interface IAutoMovieFormationCycleUniforms {
  * the table that says what it looks like, because those numbers are properties
  * of the cycle itself: how far one turn of it carries a body, and how long one
  * turn of it lasts when nothing carries the body at all.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCycleTake {
-  /** Name of the gait this take was baked from. */
+  /**
+   * Name of the gait this take was baked from.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   gait: string;
   /**
    * Ground meters one turn of this cycle carries a member.
@@ -62,9 +105,17 @@ export interface IAutoMovieFormationCycleTake {
    * Zero when the cycle carries a body nowhere: an idle, a salute, a figure
    * with nothing to plant. Such a take is played on {@link periodSeconds}
    * instead, which is the only honest reading of a cycle no ground drives.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
    */
   strideMeters: number;
-  /** Seconds one turn takes when no ground drives it: the gait's own period. */
+  /**
+   * Seconds one turn takes when no ground drives it: the gait's own period.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   periodSeconds: number;
   /**
    * Part matrices exactly as the texture stores them.
@@ -72,9 +123,17 @@ export interface IAutoMovieFormationCycleTake {
    * `((part * 3 + row) * samples + sample) * 4 + column` reads one element of
    * the rest-to-posed matrix of `part` at `sample`. The bottom row is implied
    * rather than stored: a rigid part never shears the homogeneous coordinate.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
    */
   matrices: Float32Array;
-  /** GPU-side view of {@link matrices}. */
+  /**
+   * GPU-side view of {@link matrices}.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   texture: THREE.DataTexture;
 }
 
@@ -92,19 +151,53 @@ export interface IAutoMovieFormationCycleTake {
  * Members differ only in where they are in the cycle, never in the cycle
  * itself, which is exactly the shape a crowd has: one figure, many phases. What
  * they perform, and how fast, belongs to the unit and changes with its cues.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCycle {
-  /** Even samples across one cycle; sample `samples` wraps to sample zero. */
+  /**
+   * Even samples across one cycle; sample `samples` wraps to sample zero.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   samples: number;
-  /** Rigid part names in the order the `automoviePart` attribute indexes them. */
+  /**
+   * Rigid part names in the order the `automoviePart` attribute indexes them.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   names: readonly string[];
-  /** Every gait this figure declares, by name. */
+  /**
+   * Every gait this figure declares, by name.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   takes: ReadonlyMap<string, IAutoMovieFormationCycleTake>;
-  /** Take performed where a cue calls for no gait this figure declares. */
+  /**
+   * Take performed where a cue calls for no gait this figure declares.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   fallback: IAutoMovieFormationCycleTake;
-  /** Take the last written frame selected. */
+  /**
+   * Take the last written frame selected.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   active: IAutoMovieFormationCycleTake;
-  /** Uniform cells shared by every material drawing this figure. */
+  /**
+   * Uniform cells shared by every material drawing this figure.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   uniforms: IAutoMovieFormationCycleUniforms;
 }
 
@@ -114,6 +207,9 @@ export interface IAutoMovieFormationCycle {
  * The merged instance geometry stamps each vertex with its part index and the
  * cycle bake writes one matrix row per part, so the two have to walk the model
  * the same way or every member wears another member's arm. They walk it here.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
   const parts: THREE.Mesh[] = [];
@@ -134,6 +230,9 @@ export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
  *
  * A model with no skeleton, or with no profile that locomotes, has no cycle at
  * all and keeps standing exactly as it did before.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const formationCycleGait = (
   model: IAutoMovieModel,
@@ -152,6 +251,9 @@ export const formationCycleGait = (
  * exactly at cycle position `i / samples`, and is applied through the same
  * {@link applyPose} a named performer goes through, so an anonymous member and a
  * promoted one at the same phase strike the same attitude.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const bakeFormationCycle = (input: {
   /** Runtime model the parts belong to. */
@@ -268,6 +370,9 @@ export const bakeFormationCycle = (input: {
  * A track that never moves horizontally returns zero, and a figure with no
  * parts returns zero: nothing is carried anywhere, and the caller plays such a
  * cycle on its own declared period.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const formationCycleStride = (
   tracks: ReadonlyArray<readonly THREE.Vector3[]>,
@@ -293,13 +398,34 @@ export const formationCycleStride = (
   return path / 2 / grounded;
 };
 
-/** Cycles one unit has turned over, and the take it is performing now. */
+/**
+ * Cycles one unit has turned over, and the take it is performing now.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
+ */
 export interface IAutoMovieFormationCadence {
-  /** Take playing at the sampled time. */
+  /**
+   * Take playing at the sampled time.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   take: IAutoMovieFormationCycleTake;
-  /** Cycles every member has turned over by the unit's own travel. */
+  /**
+   * Cycles every member has turned over by the unit's own travel.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   advance: number;
-  /** Cycles per meter of member radius turned over by the unit's turning. */
+  /**
+   * Cycles per meter of member radius turned over by the unit's turning.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+   */
   turn: number;
 }
 
@@ -320,6 +446,9 @@ export interface IAutoMovieFormationCadence {
  *
  * A take that carries a body nowhere is played on its own period instead, which
  * is the difference between a crowd standing at ease and a crowd frozen.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const formationCycleCadence = (
   cycle: IAutoMovieFormationCycle,
@@ -346,6 +475,9 @@ export const formationCycleCadence = (
  * The whole per-frame cost of an animated crowd: two floats and a texture
  * handle, once per tier. Nothing is written per member, and nothing carries
  * over from the previous frame, so the same time always draws the same frame.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const applyFormationCycleCadence = (
   cycle: IAutoMovieFormationCycle,
@@ -368,6 +500,9 @@ export const applyFormationCycleCadence = (
  * covered, expressed in cycles. No clock is read, and nothing accumulates
  * between frames: the same cues at the same time always resolve to the same
  * point of the cycle, which is what makes a re-render byte-identical.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const formationCyclePosition = (
   cadence: Pick<IAutoMovieFormationCadence, "advance" | "turn">,
@@ -386,6 +521,9 @@ export const formationCyclePosition = (
  * place: the two neighbouring samples are read and mixed, and the last sample
  * mixes back into the first so the cycle closes. Measurement scripts, tests,
  * and reviewers get the exact number a frame drew instead of a screenshot.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const sampleFormationCycleMatrix = (
   cycle: IAutoMovieFormationCycle,
@@ -430,7 +568,12 @@ export const sampleFormationCycleMatrix = (
   );
 };
 
-/** The cycle an instanced mesh performs, or null when it performs none. */
+/**
+ * The cycle an instanced mesh performs, or null when it performs none.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ */
 export const formationCycleOf = (
   object: THREE.Object3D,
 ): IAutoMovieFormationCycle | null =>
@@ -451,6 +594,9 @@ export const formationCycleOf = (
  * consumes `transformed`, so the member is posed and then placed rather than
  * the other way round. Normals are rotated by the same matrix, which keeps the
  * shading and the silhouette shells honest about the moving surface.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
  */
 export const applyFormationCycleMaterial = (
   material: THREE.Material,

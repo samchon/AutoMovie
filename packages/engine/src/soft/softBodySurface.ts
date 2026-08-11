@@ -29,6 +29,8 @@ import {
  * the weave rather than by the panel's momentary shape and does not swim as the
  * cloth folds.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Projects the computed particle state into one drawable cloth surface.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Keeps geometry derived from the same bounded solver transition.
  * @author Samchon
  */
 export const softBodySurfaceGeometry = (props: {

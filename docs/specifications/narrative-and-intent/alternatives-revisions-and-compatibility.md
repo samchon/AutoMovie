@@ -2,13 +2,13 @@
 
 ## Alternative 격리 {#narrative-intent-alternative-isolation}
 
+### 선택과 승인 분리 {#narrative-intent-alternative-selection-approval}
+
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-alternatives 대안별 story state와 downstream graph를 독립시킨다. -->
 <!-- @evidence requirements/story/treatment-and-sequences.md#story-sequence-alternatives-order sequence 경로와 presentation order 대안을 격리한다. -->
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-variants-selection design variant의 공통 base, 차이와 선택 이유를 보존한다. -->
 
 Alternative는 stable identity, purpose, parent 또는 common base, exact difference, own story와 design state, downstream dependency closure, selection과 approval status를 가진다. 한 alternative의 beat, asset, timing, render, review와 acceptance는 다른 alternative에 섞이지 않고 shared input 변경 시 영향받는 모든 descendant를 식별한다.
-
-### 선택과 승인 분리 {#narrative-intent-alternative-selection-approval}
 
 <!-- @evidence requirements/story/logline-and-premise.md#story-logline-alternatives logline 후보의 범위, 비용과 consequence를 비교한다. -->
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-status-approval 선택되지 않거나 미승인 variant의 current 사용을 막는다. -->
@@ -18,12 +18,12 @@ Selection은 어떤 목적과 audience에 current 후보를 택했는지 나타�
 
 ## Revision Identity와 계보 {#narrative-intent-revision-lineage}
 
+### 변경 이유와 Approval 상태 {#narrative-intent-revision-reason-status}
+
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-lineage revision identity, parent와 변경 집합을 추적한다. -->
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-stable-identity wording 변경과 의미 변경의 identity 영향을 구분한다. -->
 
 Revision은 stable identity, parent 또는 common ancestor, source closure, author, reason, timestamp, semantic change set과 status를 가진다. Wording과 표시명 변경은 단위 identity를 유지할 수 있지만 meaning, causal role, entry 또는 exit state와 acceptance 변경은 새 revision이며 같은 revision이 다른 내용을 가리킬 수 없다.
-
-### 변경 이유와 Approval 상태 {#narrative-intent-revision-reason-status}
 
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-reason 사용자 요청, evidence correction과 production constraint를 변경 근거로 기록한다. -->
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-approval-status 승인, 거부, 보류와 superseded 상태를 분리한다. -->
@@ -47,13 +47,13 @@ Merge는 common ancestor, 양쪽 semantic changes, overlap과 authority를 출�
 
 ## Change Impact와 Freshness {#narrative-intent-revision-impact-freshness}
 
+### Compatibility 불변식 {#narrative-intent-compatibility-invariants}
+
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-change-impact premise부터 delivery까지 consequence surface를 추적한다. -->
 <!-- @evidence requirements/story/revision-and-change-impact.md#story-revision-freshness 변경 뒤 affected source, artifact와 review를 stale로 만든다. -->
 <!-- @evidence requirements/acceptance/change-regression-and-revalidation.md#acceptance-revalidation-scope shared dependency를 포함한 재판정 범위를 요구한다. -->
 
 Semantic change는 premise, logline, sequence, beat, scene, character, relation, dialogue, theme, design, subject, shot, sound, edit, render, deliverable와 review까지 transitive impact graph를 출력한다. 영향받은 artifact와 verdict는 stale이고 확인된 비영향 범위만 근거와 함께 current로 유지한다.
-
-### Compatibility 불변식 {#narrative-intent-compatibility-invariants}
 
 <!-- @evidence requirements/story/story-clock-and-state.md#story-clock-state 선택적 story clock의 생략을 암묵값으로 해석하지 않는다. -->
 <!-- @evidence requirements/story/scope-and-source-of-truth.md#story-open-form 형식별 선택 요소의 부재를 legacy 오류로 만들지 않는다. -->

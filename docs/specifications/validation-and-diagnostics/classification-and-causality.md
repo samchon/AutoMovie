@@ -2,13 +2,13 @@
 
 ## 입력 사실과 파생 결과의 경계 {#validation-input-derived-boundary}
 
+### 입력 Finding {#validation-input-finding}
+
 <!-- @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-derived-separation 입력 결함과 파생 작업 또는 환경 실패의 책임을 분리한다. -->
 
 각 finding은 origin을 input, derived-result, external-dependency, execution-environment 또는 policy로 분류하고 어떤 input revision과 작업 단계에서 관찰되었는지 결속한다. 하나의 원인이 여러 단계에 영향을 주어도 최초 원인과 downstream consequence를 관계로 연결하고 모든 증상을 input error로 복제하지 않는다.
 
 Classification은 severity, lifecycle status와 독립된 축이다. 같은 invalid input도 좁은 optional 범위에서는 warning일 수 있고 required artifact에서는 error일 수 있지만 origin과 원인 identity는 바뀌지 않는다.
-
-### 입력 Finding {#validation-input-finding}
 
 <!-- @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding 사용자가 교정할 source 사실과 그 정확한 revision을 지목한다. -->
 

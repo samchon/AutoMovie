@@ -1,6 +1,8 @@
 # Render budget, identity와 recovery
 
-## Worst-case render budget {#spec-render-budget-preflight}
+## Contract units {#spec-render-budget-identity-recovery-contract-units}
+
+### Worst-case render budget {#spec-render-budget-preflight}
 <!-- @evidence requirements/rendering/budgets.md#rendering-budgets Render cost의 worst-case bound를 정밀화한다. -->
 <!-- @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Geometry와 memory 항목을 정밀화한다. -->
 <!-- @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Per-frame과 total 비용을 정밀화한다. -->
@@ -16,7 +18,13 @@ Instancing, procedural population, particles-like effects, sequences와 archives
 
 Unknown 또는 unbounded required cost, overflow, declared limit 초과와 profile 밖 degradation은 실행 전 거절한다. Actual usage가 bound를 넘으면 safe checkpoint에서 중단하고 completed atomic chunks와 measurements를 보존하며 frame drop, nondeterministic culling, downscale 또는 pass skip을 적용하지 않는다. 사용자가 명시적으로 다른 profile을 선택한 rerun은 새 request이지 원 budget의 성공이 아니다.
 
-## Frame identity와 content addressing {#spec-render-frame-identity}
+### Exact raster admission bound {#spec-render-raster-admission-bound}
+
+<!-- @evidence requirements/rendering/budgets.md#rendering-frame-total-budget 한 frame의 exact raster peak를 전체 film 비용과 분리해 제한한다. -->
+
+Raster admission은 declared width와 height의 exact pixel product를 overflow 없이 계산하고 selected production limit과 비교한다. Limit과 같은 값은 허용하며 초과, non-finite 또는 정수로 materialize할 수 없는 raster는 capture와 review 전에 거절한다. 이 gate는 encoding, visual review 또는 전체 render validation을 수행했다고 주장하지 않는다.
+
+### Frame identity와 content addressing {#spec-render-frame-identity}
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-identity-content-addressing Frame을 결정하는 input closure를 정밀화한다. -->
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Canonical fingerprint를 정밀화한다. -->
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure External dependency closure를 정밀화한다. -->
@@ -32,7 +40,19 @@ Input fingerprint, canonical pixel·channel content digest와 encoded file byte 
 
 같은 identity에 다른 content가 연결되거나 다른 identity가 같은 final destination을 요구하면 publication을 멈춘다. Corrupt entry와 partial bytes는 격리할 수 있지만 이름이나 크기로 복구하지 않는다. Canonicalization failure, missing digest, unsafe path, numeric unsupported value와 receipt-byte mismatch는 해당 frame을 거절하고 independent valid cache만 보존한다.
 
-## Chunk partition, resume와 atomic result {#spec-render-chunk-recovery}
+### Target fingerprint protocol {#spec-render-target-fingerprint-protocol}
+
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Target-local fingerprint가 versioned canonical field encoding을 사용하게 한다. -->
+
+Target fingerprint protocol은 canonical field ordering과 encoding revision을 identity input에 포함한다. Protocol revision 없이 serialization meaning을 바꾸거나 human-readable suffix를 fingerprint로 대신하지 않는다.
+
+### Target dependency fingerprint {#spec-render-target-dependency-fingerprint}
+
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure Target 결과를 바꿀 수 있는 generated payload와 declared render content만 fingerprint closure에 포함하게 한다. -->
+
+Target dependency fingerprint는 target-owned generated payload와 명시된 render content bytes를 canonical role로 결합한다. 관계없는 source 변경은 target identity를 무효화하지 않으며, 영향을 주는 dependency는 closure에서 빠질 수 없다.
+
+### Chunk partition, resume와 atomic result {#spec-render-chunk-recovery}
 <!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunks-resume-recovery Bounded chunk 작업 단위를 정밀화한다. -->
 <!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Deterministic partition을 정밀화한다. -->
 <!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Verified output resume를 정밀화한다. -->

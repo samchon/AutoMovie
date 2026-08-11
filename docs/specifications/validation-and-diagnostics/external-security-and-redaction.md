@@ -2,13 +2,13 @@
 
 ## 외부 Validation 경계 {#validation-external-boundary}
 
+### 취득과 해석 Failure Stage {#validation-external-failure-stages}
+
 <!-- @evidence requirements/diagnostics/external-input-and-security.md#diagnostics-external-boundary-trace 외부 자료의 출처와 고정 identity 및 검사 범위를 진단에 결속한다. -->
 
 외부 입력 session은 source와 acquisition identity, raw digest 또는 안전한 correlation identity, dependency closure, acquisition time, declared media facts, intended use, trust state와 검사 scope를 입력으로 고정한다. Mutable location이나 provider label만으로 bytes identity를 대신하지 않는다.
 
 외부 failure result는 affected input revision과 consumer scope를 가진다. Source 원문을 공개할 수 없어도 권한 있는 범위에서 같은 revision과 attempt를 대조할 opaque identity를 유지하며 다른 credential scope의 입력을 하나로 합치지 않는다.
-
-### 취득과 해석 Failure Stage {#validation-external-failure-stages}
 
 <!-- @evidence requirements/diagnostics/external-input-and-security.md#diagnostics-external-failure-stage 찾기부터 채택까지 실패한 실제 경계를 분리하고 복구 행동을 정한다. -->
 

@@ -14,6 +14,8 @@
  *
  * Reference: VRM 1.0 expressions (https://vrm.dev/en/vrm/vrm_features/).
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `AutoMovieExpressionPreset` as the portable data boundary for the actor expression channels requirement.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `AutoMovieExpressionPreset` for the performance actor pose gaze expression state system contract.
  * @author Samchon
  */
 export type AutoMovieExpressionPreset =

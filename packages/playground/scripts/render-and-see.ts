@@ -19,30 +19,58 @@ import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 
+/**
+ * Inputs for capturing one playground route into deterministic frame files and
+ * an H.264 preview.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundRenderAndSeeOptions {
+  /** Vite page loaded for the capture. */
   page: string;
+  /** Page-specific query parameters added before capture controls. */
   query: string;
+  /** Base URL of the running playground server. */
   base: string;
+  /** Chrome or Chromium executable used for the headless session. */
   chrome: string;
+  /** Film interval captured from the page, in seconds. */
   durationSeconds: number;
+  /** Frame sampling rate used by capture and encoding. */
   fps: number;
+  /** Output frame width in pixels. */
   width: number;
+  /** Output frame height in pixels. */
   height: number;
+  /** Stable render target identity recorded in the result. */
   target: string;
+  /** Destination of the encoded H.264 MP4. */
   outputPath: string;
+  /** Directory receiving the source PNG sequence. */
   frameDir: string;
+  /** Destination of the machine-readable capture artifact. */
   jsonPath: string;
   /** Guide passes captured per frame (#1165); defaults to plain beauty. */
   passes: AutoMovieGuidePass[];
 }
 
+/**
+ * Render result augmented with the playground route and local capture facts.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundRenderAndSeeArtifact extends IAutoMovieRenderAndSeeResult {
+  /** Fully resolved headless route, including capture query parameters. */
   route: string;
+  /** Path where this artifact is serialized. */
   jsonPath: string;
+  /** Encoder implementation used to materialize the preview. */
   encoder: "h264-mp4-encoder";
+  /** Pixel dimensions applied to both the browser viewport and render spec. */
   viewport: { width: number; height: number };
 }
 
+/** Parse the command line, capture the route, and print its artifact summary. */
 export const main = async (
   argv: string[] = process.argv.slice(2),
 ): Promise<void> => {
@@ -66,6 +94,10 @@ export const main = async (
   );
 };
 
+/**
+ * Capture a fixed frame schedule from one playground page and encode its PNG
+ * sequence while preserving the original failure across all cleanup steps.
+ */
 export const captureRenderAndSee = async (
   options: IAutoMoviePlaygroundRenderAndSeeOptions,
 ): Promise<IAutoMoviePlaygroundRenderAndSeeArtifact> => {

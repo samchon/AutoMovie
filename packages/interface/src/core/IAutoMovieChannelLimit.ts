@@ -17,18 +17,33 @@ import { IAutoMovieChannel } from "./IAutoMovieChannel";
  * channel limit covers scalar rig DOFs, group/node rotations, weights, and
  * generic object channels.
  *
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Exposes `IAutoMovieChannelLimit` as the portable data boundary for the motion channel contract requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `IAutoMovieChannelLimit` for the performance motion clip keytime interpolation system contract.
  * @author Samchon
  */
 export interface IAutoMovieChannelLimit {
-  /** The channel whose value is constrained. */
+  /**
+   * The channel whose value is constrained.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Exposes `channel` as the portable data boundary for the motion channel contract requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `channel` for the performance motion clip keytime interpolation system contract.
+   */
   channel: IAutoMovieChannel;
 
   /**
    * Lower bounds, one per channel component (e.g. `[xMin, yMin, zMin]`). `null`
    * = no lower bound on the channel; a `null` component = that axis is free.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Exposes `min` as the portable data boundary for the motion channel contract requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `min` for the performance motion clip keytime interpolation system contract.
    */
   min: (number | null)[] | null;
 
-  /** Upper bounds, one per channel component. `null` semantics as for `min`. */
+  /**
+   * Upper bounds, one per channel component. `null` semantics as for `min`.
+   *
+   * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Exposes `max` as the portable data boundary for the motion channel contract requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `max` for the performance motion clip keytime interpolation system contract.
+   */
   max: (number | null)[] | null;
 }

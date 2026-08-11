@@ -30,15 +30,28 @@ const SWIVEL_STEP = 1;
 /** Below this the mid joint cannot change the chain's span at all. */
 const SPAN_EPSILON = 1e-9;
 
-/** One scored candidate articulation. */
+/**
+ * One scored candidate articulation.
+ *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Represents a reachable two-joint candidate together with its limit cost.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Exposes the articulation selected by the bounded IK search.
+ */
 export interface IAutoMovieHingedArticulation {
-  /** Bone-local articulation delta for the chain-root joint (the shoulder). */
+  /**
+   * Bone-local articulation delta for the chain-root joint (the shoulder).
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Carries the upper-joint correction produced before limit validation.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Preserves the shoulder component of the selected IK articulation.
+   */
   upper: IAutoMovieQuaternion;
 
   /**
    * Bone-local articulation delta for the mid joint (the elbow): a pure
    * rotation about that joint's own flexion axis, so its abduction and twist
    * decompose to exactly zero.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-coupled-range-drivers Restricts the elbow result to its declared hinge control.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Preserves the hinge-only lower-joint component of the selected solve.
    */
   lower: IAutoMovieQuaternion;
 
@@ -52,6 +65,9 @@ export interface IAutoMovieHingedArticulation {
    * `Infinity` when the scorer found a violation with no measurable overshoot,
    * which {@link jointRomOvershoot} reserves for a non-finite angle: unusable
    * rather than free, so a malformed candidate can never win the selection.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-failure Quantifies the remaining limit violation instead of hiding an impossible target.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Reports the selected candidate's bounded-solve failure magnitude.
    */
   overshoot: number;
 }
@@ -99,6 +115,8 @@ export interface IAutoMovieHingedArticulation {
  * Returns `null` for a degenerate chain: a zero-length segment, a target
  * coincident with the chain root, or a hinge that cannot articulate the span.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Searches the declared hinge's reachable shell for an exact endpoint pose.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Returns the deterministic outcome of the legal-first bounded articulation search.
  * @author Samchon
  */
 export const hingedArmArticulation = (props: {
@@ -232,6 +250,8 @@ export const hingedArmArticulation = (props: {
  * runs so the solver cannot grade itself by a kinder rule than the one that
  * will judge it.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-range-of-motion Measures how far a candidate exceeds the rig's declared joint ranges.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Applies the same ROM verdict used to rank constrained IK candidates.
  * @author Samchon
  */
 export const jointRomOvershoot = (
@@ -252,7 +272,12 @@ export const jointRomOvershoot = (
   );
 };
 
-/** Squared clinical deviation from the anatomical neutral, in degrees². */
+/**
+ * Squared clinical deviation from the anatomical neutral, in degrees².
+ *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Breaks equally reachable candidates toward the declared anatomical neutral.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Supplies the anatomical-neutral prior used to break an otherwise tied candidate score.
+ */
 export const clinicalDeviation = (joint: {
   flexion: number;
   abduction: number;

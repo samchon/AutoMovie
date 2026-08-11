@@ -53,6 +53,8 @@ const assertFiniteQuaternion = (
  * rotation the base root already carries), so a walk that travels sideways can
  * turn the body to face where it is going instead of strafing.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Expands a looping gait into finite root travel without resetting its phase at seams.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Converts the compact gait into deterministic finite world-space travel.
  * @author Samchon
  */
 export const travelMotion = (

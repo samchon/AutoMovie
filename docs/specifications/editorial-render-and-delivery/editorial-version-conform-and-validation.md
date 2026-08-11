@@ -1,6 +1,8 @@
 # Editorial version, conform과 validation
 
-## Selected film identity와 duration closure {#spec-editorial-film-identity}
+## Contract units {#spec-editorial-version-conform-validation-contract-units}
+
+### Selected film identity와 duration closure {#spec-editorial-film-identity}
 <!-- @evidence requirements/editorial/scope-and-identity.md#editorial-scope-identity Edit와 film identity를 정밀화한다. -->
 <!-- @evidence requirements/editorial/scope-and-identity.md#editorial-story-film-order Story order와 film order의 분리를 정밀화한다. -->
 <!-- @evidence requirements/editorial/scope-and-identity.md#editorial-source-preservation Source 보존 경계를 정밀화한다. -->
@@ -15,7 +17,7 @@ Duration closure는 모든 enabled required track의 first presentation instant,
 
 Missing required source, ambiguous selection, duration overflow, unresolved graph와 source mutation은 selected current 상태를 거절한다. 이미 닫힌 independent range는 partial candidate에 남길 수 있지만 missing interval과 consumer 금지 범위를 명시한다. Source 또는 decision 변경은 affected conform, render, mix, caption, review와 delivery만 stale로 전파한다.
 
-## Append-only version과 alternative cut {#spec-editorial-version-selection}
+### Append-only version과 alternative cut {#spec-editorial-version-selection}
 <!-- @evidence requirements/editorial/versions-and-alternative-cuts.md#editorial-versions-alternative-cuts Version과 alternative cut 계약을 정밀화한다. -->
 <!-- @evidence requirements/editorial/versions-and-alternative-cuts.md#editorial-append-only-revision Append-only revision 계보를 정밀화한다. -->
 <!-- @evidence requirements/editorial/versions-and-alternative-cuts.md#editorial-difference-report Version difference report를 정밀화한다. -->
@@ -31,7 +33,7 @@ Difference report는 common ancestor에서 clip add·remove·replace·reorder, t
 
 Unknown parent, cycle, duplicate revision identity, unresolved merge conflict, stale selection precondition과 incomplete selected closure는 거절한다. 독립 candidate는 보존하고 conflict set과 사용자 선택지를 보고한다. Selected revision 변경은 정확한 dependency graph로 conform, media, review와 publication을 stale로 만들며 이전 revision의 historical evidence는 삭제하지 않는다.
 
-## Media reference, relink와 conform {#spec-editorial-conform-relink}
+### Media reference, relink와 conform {#spec-editorial-conform-relink}
 <!-- @evidence requirements/editorial/conform-and-media-references.md#editorial-conform-media-references Conform과 media reference 계약을 정밀화한다. -->
 <!-- @evidence requirements/editorial/conform-and-media-references.md#editorial-reference-resolution Reference resolution을 정밀화한다. -->
 <!-- @evidence requirements/editorial/conform-and-media-references.md#editorial-image-sequence-movie Image sequence와 movie source의 구분을 정밀화한다. -->
@@ -48,7 +50,7 @@ Conform은 selected edit의 각 source request를 current final media range와 c
 
 Conform state는 planned, resolving, partial, conformed, verified, stale와 failed를 구분하고 entry별 expected·resolved·missing·mismatched를 제공한다. Independent verified entry는 재개에 사용할 수 있지만 selected edit fingerprint가 같고 actual bytes receipt가 current일 때만 재사용한다. Missing range, mixed revision, wrong rate·dimensions·channel, digest mismatch와 unsafe locator는 거절하며 publication은 complete conform의 immutable receipt와 readback 뒤에만 current가 된다.
 
-## Editorial validation과 recovery {#spec-editorial-validation-recovery}
+### Editorial validation과 recovery {#spec-editorial-validation-recovery}
 <!-- @evidence requirements/editorial/validation.md#editorial-validation Editorial validation의 단계와 verdict를 정밀화한다. -->
 <!-- @evidence requirements/editorial/validation.md#editorial-structural-validation 구조 closure 검증을 정밀화한다. -->
 <!-- @evidence requirements/editorial/validation.md#editorial-story-coverage Story coverage 검증을 정밀화한다. -->

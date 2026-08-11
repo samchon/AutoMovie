@@ -59,6 +59,8 @@ interface IAutoMovieClinicalJoint {
  * degenerate, or the rig's elbow cannot bend the arm at all under these axes
  * ({@link armChainFault}): a rig that cannot reach.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Solves an arm only within the reachable set of its declared chain.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Produces a bounded clinical arm pose for the reach target.
  * @author Samchon
  */
 export const reachPose = (

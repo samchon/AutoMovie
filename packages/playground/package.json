@@ -30,7 +30,6 @@
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",
-    "@pixiv/three-vrm": "catalog:three",
     "three": "catalog:three"
   },
   "devDependencies": {

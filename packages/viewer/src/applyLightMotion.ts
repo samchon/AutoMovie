@@ -31,6 +31,8 @@ import { applyTransform } from "./buildModel";
  * time: a light nothing addresses is written back to where the scene staged it
  * rather than holding wherever the previous frame left it.
  *
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-time-sampling Writes this light surface from the exact sampled source state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal Implements the fixed-time source sampling and refusal boundary.
  * @author Samchon
  */
 export const applyLightState = (
@@ -82,6 +84,8 @@ export const applyLightState = (
  * clip addressing a light the scene does not stage, so the only way to arrive
  * here unresolved is a host that built a subset of the scene.
  *
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-time-sampling Writes this light surface from the exact sampled source state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal Implements the fixed-time source sampling and refusal boundary.
  * @author Samchon
  */
 export const applyLightMotion = (

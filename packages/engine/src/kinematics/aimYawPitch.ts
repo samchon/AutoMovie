@@ -16,6 +16,8 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * target sits on `from`). The caller maps yaw/pitch onto a rig's joints (a
  * head's twist + flexion, a camera's pan + tilt).
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention Converts a gaze target into the actor-local angular coordinates consumed by the cervical solve.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Supplies the actor-local angular solve consumed by gaze-chain evaluation.
  * @author Samchon
  */
 export const aimYawPitch = (

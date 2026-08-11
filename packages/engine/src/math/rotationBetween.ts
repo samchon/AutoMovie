@@ -26,6 +26,8 @@ import { Vector3 } from "./Vector3";
  * antiparallel takes a deterministic 180° flip about a perpendicular (the
  * `|a.x| < 0.9` axis split).
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention Derives the finite quaternion that turns one normalized constraint direction onto its target direction.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Derives the finite quaternion that turns one normalized constraint direction onto its target direction.
  * @author Samchon
  */
 export const rotationBetween = (

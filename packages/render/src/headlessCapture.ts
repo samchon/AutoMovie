@@ -3,7 +3,13 @@ import { AutoMovieGuidePass } from "@automovie/interface";
 import { guidePassFrameName } from "./guidePasses";
 import { IAutoMovieRenderAdapters } from "./renderVideo";
 
-/** Error category raised by the headless capture adapter. */
+/**
+ * Error category raised by the headless capture adapter.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `AutoMovieHeadlessCaptureErrorCode` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `AutoMovieHeadlessCaptureErrorCode` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export type AutoMovieHeadlessCaptureErrorCode =
   | "route"
   | "seek-hook"
@@ -11,7 +17,13 @@ export type AutoMovieHeadlessCaptureErrorCode =
   | "capture"
   | "empty-frame";
 
-/** Navigation milestones accepted by Playwright's page contract. */
+/**
+ * Navigation milestones accepted by Playwright's page contract.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `AutoMovieHeadlessWaitUntil` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `AutoMovieHeadlessWaitUntil` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export type AutoMovieHeadlessWaitUntil =
   | "commit"
   | "domcontentloaded"
@@ -21,12 +33,28 @@ export type AutoMovieHeadlessWaitUntil =
 /**
  * Structured capture failure. The code tells an agent whether it missed a page
  * route, a deterministic seek hook, the screenshot call, or an empty frame.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `AutoMovieHeadlessCaptureError` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `AutoMovieHeadlessCaptureError` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export class AutoMovieHeadlessCaptureError extends Error {
-  /** Machine-readable failure category. */
+  /**
+   * Machine-readable failure category.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `AutoMovieHeadlessCaptureError.code` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `AutoMovieHeadlessCaptureError.code` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   public readonly code: AutoMovieHeadlessCaptureErrorCode;
 
-  /** Original host error, when one exists. */
+  /**
+   * Original host error, when one exists.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `AutoMovieHeadlessCaptureError.source` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `AutoMovieHeadlessCaptureError.source` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   public readonly source: unknown;
 
   public constructor(
@@ -44,42 +72,94 @@ export class AutoMovieHeadlessCaptureError extends Error {
 /**
  * Minimal Playwright-like page surface the capture adapter needs.
  *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export interface IAutoMovieHeadlessPage {
-  /** Navigate to the viewer route. */
+  /**
+   * Navigate to the viewer route.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.goto` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.goto` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   goto(
     url: string,
     options: { waitUntil: AutoMovieHeadlessWaitUntil },
   ): Promise<unknown>;
 
-  /** Wait until the viewer exposes its deterministic seek hook. */
+  /**
+   * Wait until the viewer exposes its deterministic seek hook.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.waitForFunction` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.waitForFunction` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   waitForFunction<T>(predicate: (arg: T) => unknown, arg: T): Promise<unknown>;
 
-  /** Inject a style rule, usually to hide UI chrome before screenshots. */
+  /**
+   * Inject a style rule, usually to hide UI chrome before screenshots.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.addStyleTag` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.addStyleTag` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   addStyleTag(options: { content: string }): Promise<unknown>;
 
-  /** Run a browser-side function, used to drive the seek hook. */
+  /**
+   * Run a browser-side function, used to drive the seek hook.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.evaluate` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.evaluate` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   evaluate<T>(task: (arg: T) => unknown, arg: T): Promise<unknown>;
 
-  /** Find the element whose pixels should be captured. */
+  /**
+   * Find the element whose pixels should be captured.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.locator` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.locator` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   locator(selector: string): IAutoMovieHeadlessLocator;
 
-  /** Close the host page after capture. */
+  /**
+   * Close the host page after capture.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessPage.close` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessPage.close` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   close(): Promise<unknown>;
 }
 
 /**
  * Minimal Playwright-like locator surface for screenshots.
  *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessLocator` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessLocator` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export interface IAutoMovieHeadlessLocator {
-  /** Capture the element as PNG bytes. */
+  /**
+   * Capture the element as PNG bytes.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessLocator.screenshot` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessLocator.screenshot` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   screenshot(options: { type: "png" }): Promise<Uint8Array>;
 }
 
-/** Host filesystem write injected into the adapter. */
+/**
+ * Host filesystem write injected into the adapter.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessFrameWriter` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessFrameWriter` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export type IAutoMovieHeadlessFrameWriter = (
   path: string,
   bytes: Uint8Array,
@@ -89,22 +169,54 @@ export type IAutoMovieHeadlessFrameWriter = (
 /**
  * Options for opening one deterministic capture session.
  *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export interface IAutoMovieHeadlessCaptureOptions {
-  /** Playwright-like page to drive. */
+  /**
+   * Playwright-like page to drive.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.page` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.page` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   page: IAutoMovieHeadlessPage;
 
-  /** Fully resolved viewer URL, including `cap=1` when the route needs it. */
+  /**
+   * Fully resolved viewer URL, including `cap=1` when the route needs it.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.url` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.url` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   url: string;
 
-  /** Element selector to screenshot. Defaults to `#view`. */
+  /**
+   * Element selector to screenshot. Defaults to `#view`.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.viewSelector` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.viewSelector` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   viewSelector?: string;
 
-  /** UI selector to hide before capture. Defaults to `#clips`; null disables. */
+  /**
+   * UI selector to hide before capture. Defaults to `#clips`; null disables.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.hideSelector` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.hideSelector` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   hideSelector?: string | null;
 
-  /** Browser global seek function name. Defaults to `__afSeek`. */
+  /**
+   * Browser global seek function name. Defaults to `__afSeek`.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.seekFunction` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.seekFunction` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   seekFunction?: string;
 
   /**
@@ -124,32 +236,66 @@ export interface IAutoMovieHeadlessCaptureOptions {
    * params for exactly this. A host that captures guide passes at a viewport
    * not equal to the spec silently tears the guide frames away from both the
    * sidecar and the `-s`-conformed beauty video.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.passes` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.passes` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   passes?: readonly AutoMovieGuidePass[];
 
   /**
    * Browser global pass-switch function name. Defaults to `__afPass`. Only
    * required (and awaited) when `passes` asks for more than plain beauty.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.passFunction` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.passFunction` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   passFunction?: string;
 
-  /** Navigation wait condition. Defaults to `load`. */
+  /**
+   * Navigation wait condition. Defaults to `load`.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.waitUntil` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.waitUntil` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   waitUntil?: AutoMovieHeadlessWaitUntil;
 
-  /** Persist one PNG frame and its metadata. */
+  /**
+   * Persist one PNG frame and its metadata.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureOptions.writeFrame` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureOptions.writeFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   writeFrame: IAutoMovieHeadlessFrameWriter;
 }
 
 /**
  * Open capture session returned by {@link createHeadlessCaptureAdapter}.
  *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureSession` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureSession` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export interface IAutoMovieHeadlessCaptureSession {
-  /** Adapter usable as `renderVideo(..., { captureFrame, encode })`. */
+  /**
+   * Adapter usable as `renderVideo(..., { captureFrame, encode })`.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureSession.captureFrame` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureSession.captureFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   captureFrame: IAutoMovieRenderAdapters["captureFrame"];
 
-  /** Close the underlying page. */
+  /**
+   * Close the underlying page.
+   *
+   * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `IAutoMovieHeadlessCaptureSession.close` exposes the fixed headless runtime boundary needed for repeatable capture.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `IAutoMovieHeadlessCaptureSession.close` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   close(): Promise<void>;
 }
 
@@ -157,6 +303,15 @@ export interface IAutoMovieHeadlessCaptureSession {
  * Create a reusable `captureFrame` adapter over a Playwright-like page. It
  * loads the viewer route once, waits for the deterministic seek hook, then
  * captures `#view` after each `captureFrame(t, i, dir)` call.
+ *
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity `createHeadlessCaptureAdapter` exposes the fixed headless runtime boundary needed for repeatable capture.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-process-isolation Opens one bounded page session and exposes an explicit close operation.
+ * @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-headless-refusal Returns stable error codes for unavailable route, hook, capture, and frame bytes.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-pass-dependencies Applies each requested pass only after the deterministic seek for that frame.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-pass-refusal Refuses an empty pass set and unavailable pass hooks before claiming capture success.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform `createHeadlessCaptureAdapter` exposes that responsibility through the package-independent system contract.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps beauty and structural pass outputs separate under stable pass names.
+ * @author Samchon
  */
 export const createHeadlessCaptureAdapter = async (
   options: IAutoMovieHeadlessCaptureOptions,

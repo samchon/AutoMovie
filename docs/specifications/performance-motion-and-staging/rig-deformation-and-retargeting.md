@@ -2,16 +2,15 @@
 
 ## Skeleton, rest와 bind 계약 {#performance-rig-skeleton-rest-bind-contract}
 
+### Skin, rigid binding과 morph channel {#performance-rig-skin-rigid-morph-deformation}
+
 <!-- @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-skeleton-rig-retargeting actor motion을 운반하는 rig의 정규화 경계를 정의한다. -->
-<!-- @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation rest, bind와 deformation 기준을 분리해 보존한다. -->
 <!-- @evidence requirements/asset-authoring/rig-and-state.md#asset-general-joint-relations 인물과 물체 모두의 joint graph를 같은 관계 원칙으로 다룬다. -->
 <!-- @evidence requirements/asset-authoring/rig-and-state.md#asset-state-motion-distinction rig 상태와 그 위를 흐르는 motion을 구분한다. -->
 
 Rig record는 stable rig identity, node 또는 bone hierarchy, parent-local rest transform, bind transform과 inverse bind 기준, semantic joint·control mapping, unit·axis·handedness, root와 scale 기준을 가진다. Rest는 articulation zero의 local state이고 bind는 skin weight를 해석하는 deformation 기준이므로 둘을 같다고 가정하지 않으며, source가 둘 중 하나만 제공하면 어떤 규칙으로 다른 하나를 만들었는지 derivation과 residual을 기록한다. 계층은 하나의 명확한 root 또는 선언된 여러 root 정책을 가져야 하고 cycle, dangling parent, duplicate semantic slot, non-finite transform, zero-length 필수 chain을 거부한다.
 
 Rig output은 원본 source identity와 정규화된 hierarchy를 모두 보존하고, 변환 receipt에 source basis, target basis, rest conversion, scale factor, 이름이 아닌 authoritative mapping 근거, 손실과 override를 포함한다. 직접 생성 rig와 외부 rig는 이 정규화 이후 같은 pose·motion 계약을 받지만, 출처가 다르다는 사실과 원본 rest/bind 데이터는 사라지지 않는다.
-
-### Skin, rigid binding과 morph channel {#performance-rig-skin-rigid-morph-deformation}
 
 <!-- @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation deformation 방식마다 rest와 bind의 의미를 검증한다. -->
 <!-- @evidence requirements/asset-authoring/rig-and-state.md#asset-deformable-surface skin과 deformable surface의 binding을 명시한다. -->
@@ -27,6 +26,7 @@ Deformation binding은 `rigid`, `skinned`, `morph`, `soft` 중 적용 mode와 �
 <!-- @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-humanoid-mapping normalized humanoid slot과 실제 rig node의 mapping을 명시한다. -->
 <!-- @evidence requirements/actors/scope-and-identity.md#actor-open-performer-kind non-human performer도 semantic profile을 통해 rig에 참여하게 한다. -->
 <!-- @evidence requirements/motion/scope-and-identity.md#motion-all-objects-all-motion 모든 주체가 자신의 channel과 capability vocabulary로 움직일 수 있게 한다. -->
+<!-- @evidence requirements/motion/scope-and-identity.md#motion-actor-object-scope skeletal actor와 non-skeletal object의 서로 다른 mapping 경계를 보존한다. -->
 
 Semantic mapping은 profile identity와 version, semantic joint·control·socket key, concrete node, axis frame, required 여부, visible influence evidence를 가진다. Humanoid mapping은 알려진 slot으로 portability를 제공하지만 시스템 전체를 humanoid bone 목록으로 닫지 않으며, quadruped, 기계, 문, 날개, 촉수와 새 performer는 각자 등록된 profile과 control vocabulary를 사용할 수 있다. Motion은 semantic channel을 통해 portable하게 쓰고 concrete node path는 채택된 rig binding이 해결한다.
 

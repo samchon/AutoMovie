@@ -39,6 +39,19 @@ import {
 } from "./productionFixtures";
 import { productionH264Mp4 } from "./productionMediaFixtures";
 
+const PIXEL_ONLY_CAPTURE_EVIDENCE = {
+  observation: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not observe renderer cost metrics.",
+  },
+  maskSidecar: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not stage a semantic mask palette.",
+  },
+} as const;
+
 interface IProductionApplicationFailure {
   error: unknown;
 }
@@ -225,6 +238,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: image.width,
         height: image.height,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       };
     };
     const first = openAutoMovieProduction({

@@ -45,6 +45,9 @@ const NOOP_EPSILON = 1e-9;
  * the source contact mapped through `rootScale`; `"carry-joint-angles"` is v1's
  * verbatim angle copy, which foot-slides whenever the rigs differ in
  * proportion.
+ *
+ * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Makes contact re-solving an explicit retarget policy rather than an implicit angle-copy side effect.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Selects whether the target rig re-establishes source contacts.
  */
 export type AutoMovieRetargetContactPolicy =
   | "pin-source-contacts"
@@ -59,22 +62,49 @@ export type AutoMovieRetargetContactPolicy =
  * a hand in the air by position alone. So a hand contact is **declared**, never
  * inferred.
  *
+ * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Declares the arm chain and authored interval whose hand contact must survive retargeting.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Supplies an explicit non-ground contact for target-rig re-solving.
  * @author Samchon
  */
 export interface IAutoMovieRetargetHandContact {
-  /** Hand end-effector bone held on its source contact. */
+  /**
+   * Hand end-effector bone held on its source contact.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Identifies the source effector whose mapped world contact is preserved.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Selects the target hand measured after the retarget solve.
+   */
   hand: AutoMovieHumanoidBone;
 
-  /** Chain-root segment (upper arm). */
+  /**
+   * Chain-root segment (upper arm).
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Anchors contact correction at the corresponding proximal arm segment.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Establishes the first link of the target contact chain.
+   */
   upper: AutoMovieHumanoidBone;
 
-  /** Mid segment (forearm). */
+  /**
+   * Mid segment (forearm).
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Identifies the hinge segment adjusted to recover the mapped hand position.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Establishes the second link of the target contact chain.
+   */
   lower: AutoMovieHumanoidBone;
 
-  /** Inclusive contact-window start, seconds on the clip's own clock. */
+  /**
+   * Inclusive contact-window start, seconds on the clip's own clock.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Opens the authored interval in which the hand contact must be re-solved.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Aligns contact correction with the source clip clock.
+   */
   start: number;
 
-  /** Inclusive contact-window end, seconds on the clip's own clock. */
+  /**
+   * Inclusive contact-window end, seconds on the clip's own clock.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Closes the authored interval after which the hand may release.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Bounds target-rig correction to the declared source contact.
+   */
   end: number;
 }
 
@@ -83,12 +113,17 @@ export interface IAutoMovieRetargetHandContact {
  * optional: the pass runs with humanoid legs and no declared hand contact
  * unless the caller says otherwise.
  *
+ * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Carries the caller's target-contact preservation choices into the retarget pass.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Defines how source contacts are detected and re-established on the target rig.
  * @author Samchon
  */
 export interface IAutoMovieRetargetContactProps {
   /**
    * Run the contact-preserving pass. Defaults to `true`; `false` restores v1's
    * verbatim angle copy.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Allows explicit adoption or omission of the contact re-solve.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Selects the target-contact stage without changing the source clip.
    */
   enabled?: boolean;
 
@@ -97,6 +132,9 @@ export interface IAutoMovieRetargetContactProps {
    * y` source. Defaults to the **source rig's own rest floor** (the lowest
    * world Y of its zero pose), so a rig authored with its feet above the origin
    * still detects stance instead of never touching down.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Establishes the source-space ground authority used to discover foot contacts.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Supplies the ground reference from which contacts are mapped to the target.
    */
   groundY?: number | ((x: number, z: number) => number);
 
@@ -106,10 +144,18 @@ export interface IAutoMovieRetargetContactProps {
    * {@link validateGroundContact} use. It doubles as the residual budget: a
    * pinned effector that ends further than `tolerance * rootScale` from its
    * contact is reported as a plausibility warning.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Bounds both source contact detection and the acceptable target residual.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Defines the numeric budget for preserving a mapped contact.
    */
   tolerance?: number;
 
-  /** Hand contacts to preserve. Defaults to none. */
+  /**
+   * Hand contacts to preserve. Defaults to none.
+   *
+   * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Lists the non-ground contacts explicitly selected for re-solving.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Adds authored hand constraints to the target retarget solve.
+   */
   hands?: readonly IAutoMovieRetargetHandContact[];
 }
 
@@ -153,6 +199,10 @@ interface IAutoMovieContactWindow {
  *   retarget. When the clamped chain then cannot hold the contact, the residual
  *   is a `warning`, residual slide is implausible, not impossible.
  *
+ * @evidence requirements/motion/retargeting-and-scale.md#motion-retarget-contact-preservation Maps source effector contacts through root scale and re-solves them under the target rig's ROM.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Preserves proportional rigs exactly and reports unreachable target-contact residuals.
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-refusal Reports a mapped contact that target ROM cannot hold beyond the scaled tolerance.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Measures the post-solve residual against the declared contact budget.
  * @author Samchon
  */
 export const preserveRetargetContacts = (props: {

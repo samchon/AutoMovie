@@ -16,6 +16,9 @@ import { sampleMotion } from "../motion/sampleMotion";
  * the engine's default 24 Hz clock. Shared with {@link resolveBeatEnd}'s
  * baked-follow velocity so a mounted rider's end velocity uses the same
  * window.
+ *
+ * @evidence requirements/motion/validation-and-determinism.md#motion-fixed-step-baked-state VELOCITY_DT makes sampled motion replay deterministic: Finite-difference window for the end-velocity estimate, seconds: one frame of the engine's default 24 Hz clock. Shared with {@link resolveBeatEnd}'s baked-follow velocity so a mounted rider's end velocity uses the same window.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation VELOCITY_DT realizes deterministic motion sampling: Finite-difference window for the end-velocity estimate, seconds: one frame of the engine's default 24 Hz clock. Shared with {@link resolveBeatEnd}'s baked-follow velocity so a mounted rider's end velocity uses the same window.
  */
 export const VELOCITY_DT = 1 / 24;
 
@@ -30,7 +33,12 @@ const wrapTime = (seconds: number, duration: number): number =>
 const toMatrix = (transform: IAutoMovieTransform): number[] =>
   Matrix4.compose(transform.translation, transform.rotation, transform.scale);
 
-/** Fold a sampled pose root into a staged base placement, in world space. */
+/**
+ * Fold a sampled pose root into a staged base placement, in world space.
+ *
+ * @evidence requirements/motion/validation-and-determinism.md#motion-fixed-step-baked-state foldRoot makes sampled motion replay deterministic: Fold a sampled pose root into a staged base placement, in world space.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation foldRoot realizes deterministic motion sampling: Fold a sampled pose root into a staged base placement, in world space.
+ */
 export const foldRoot = (
   base: IAutoMovieTransform,
   root: IAutoMovieTransform | null,
@@ -75,6 +83,9 @@ const velocityOver = (
 /**
  * Seconds into a looping clip's cycle at `localTime`, or `null` when the clip
  * does not loop (a one-shot clip has no cycle to resume).
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases gaitPhaseOf preserves planted contact phases: Seconds into a looping clip's cycle at `localTime`, or `null` when the clip does not loop (a one-shot clip has no cycle to resume).
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support gaitPhaseOf realizes contact-phase support: Seconds into a looping clip's cycle at `localTime`, or `null` when the clip does not loop (a one-shot clip has no cycle to resume).
  */
 export const gaitPhaseOf = (
   clip: IAutoMovieMotion,
@@ -108,6 +119,9 @@ export const gaitPhaseOf = (
  * sampled exactly at its end uses that same incoming left-hand window for the
  * cut; only a sample after the clip has ended holds its last pose at zero
  * velocity.
+ *
+ * @evidence requirements/motion/validation-and-determinism.md#motion-fixed-step-baked-state rootVelocityOf converts the sampled clip boundary into an explicit staged world-space velocity for deterministic beat-end replay.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation rootVelocityOf realizes deterministic motion sampling: World root velocity at `localTime`, finite-differenced over the clip's last instants and folded through the node's staged placement. A looping clip's root teleports back at the seam, so the window never spans it: within a cycle the window is the trailing {@link VELOCITY_DT}; in the cycle's opening instants it shrinks to `[0, phase]`; and exactly on the seam the cycle's closing stretch is measured with the clip clamped (un-looped) so sampling `duration` does not wrap to the cycle start. A non-looping clip sampled exactly at its end uses that same incoming left-hand window for the cut; only a sample after the clip has ended holds its last pose at zero velocity.
  */
 export const rootVelocityOf = (
   node: IAutoMovieSceneNode,
@@ -134,6 +148,9 @@ export const rootVelocityOf = (
  * next beat should keep each foot on. Stance bounds are inclusive; later
  * entries win equal-start ties. Returns `null` when no plant data was supplied
  * or every run is past/future at the cut.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases plantsAtEnd preserves planted contact phases: The most recent stance plant per foot active at `localTime`, the contact the next beat should keep each foot on. Stance bounds are inclusive; later entries win equal-start ties. Returns `null` when no plant data was supplied or every run is past/future at the cut.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support plantsAtEnd realizes contact-phase support: The most recent stance plant per foot active at `localTime`, the contact the next beat should keep each foot on. Stance bounds are inclusive; later entries win equal-start ties. Returns `null` when no plant data was supplied or every run is past/future at the cut.
  */
 export const plantsAtEnd = (
   plants: readonly IAutoMovieBeatEndFootPlant[] | undefined,

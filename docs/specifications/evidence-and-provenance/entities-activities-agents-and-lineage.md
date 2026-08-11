@@ -2,13 +2,13 @@
 
 ## Typed lineage graph {#evp-typed-lineage-graph}
 
+### Entity revision model {#evp-entity-revision-model}
+
 <!-- @evidence requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md#provenance-readable-lineage entity, activity와 actor 사이의 사용·생성·파생·귀속·인계·무효화 관계를 시스템 graph로 정의한다. -->
 
 Lineage 입력은 versioned entity, activity와 actor node 및 typed edge다. 출력 graph는 각 node의 stable identity와 revision, edge direction, role, effective time과 source record를 보존하고, entity와 activity 또는 실제 actor와 책임 role을 같은 node로 합치지 않아야 한다.
 
 `used`, `generated`, `derivedFrom`, `revisionOf`, `attributedTo`, `transferredTo`와 `invalidatedBy` relation은 domain이 고정되어야 한다. 존재하지 않는 node, 허용되지 않은 endpoint 조합과 derivation cycle은 invalid이며 부분 graph로 보존하더라도 complete lineage로 표시해서는 안 된다.
-
-### Entity revision model {#evp-entity-revision-model}
 
 <!-- @evidence requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md#provenance-entity-and-revision 원본, 중간 산출물, reference, evidence와 delivery의 revision 관계를 immutable entity로 구체화한다. -->
 

@@ -18,6 +18,9 @@ import { lowerSkeletonNodes } from "./skeletonNodes";
  * prop's moving part by. Spelled out at each of them, the four agree until one
  * is edited, and a channel that silently addresses nothing is exactly the drop
  * this package refuses everywhere else.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Establishes the explicit namespace joining one host placement to all of its lowered nodes.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Implements the stable placement relation used by downstream transform consumers.
  */
 export const placementNodePrefix = (placement: string): string =>
   `${placement}/`;
@@ -29,6 +32,9 @@ export const placementNodePrefix = (placement: string): string =>
  * question, so they get the same answer: `"frontDoor"` plus `"hinge"` is
  * `"frontDoor/hinge"`, which is what a clip track, a bound profile limit and a
  * viewer lookup must all spell identically.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Preserves the host-to-child relation for a placed object.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Produces the canonical child identity for scene-graph lookup.
  */
 export const placementChildNode = (placement: string, child: string): string =>
   `${placementNodePrefix(placement)}${child}`;
@@ -67,6 +73,11 @@ export const placementChildNode = (placement: string, child: string): string =>
  * dangling parents are rejected downstream by `composeScene`'s index guard.
  * This bridge does not duplicate that gate.
  *
+ * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Lowers each staged placement into an explicit host-scene relation.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Retains the placement, model, prop, camera, and light identities that own every lowered scene node.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-refusal Rejects a missing model binding or contradictory model-and-prop registration instead of silently omitting the declared subtree.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Rejects a placement whose declared model binding cannot resolve.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Builds the explicit rest-structure graph that runtime sampling updates without mutating the authored scene record.
  * @author Samchon
  */
 export const sceneToNodes = (props: {

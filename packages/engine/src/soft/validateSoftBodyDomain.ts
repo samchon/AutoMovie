@@ -8,22 +8,58 @@ import {
 import { ViolationCollector } from "../validation/violation";
 import { softBodyTravelNumber } from "./softBody";
 
-/** Particles one panel may hold, so a lattice cannot silently cost a gigabyte. */
+/**
+ * Particles one panel may hold, so a lattice cannot silently cost a gigabyte.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-discretization-identity Bounds the particle topology carried by one stable domain identity.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Makes the bounded particle lattice part of the solver-domain contract.
+ * @author Samchon
+ */
 export const SOFT_MAX_PARTICLES = 16_384;
 
-/** Absolute steps one seek may integrate. */
+/**
+ * Absolute steps one seek may integrate.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Bounds replay work needed to derive one complete solver state.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Makes step admission finite before state transition.
+ * @author Samchon
+ */
 export const SOFT_MAX_STEPS = 100_000;
 
-/** Constraint relaxation sweeps one step may cost. */
+/**
+ * Constraint relaxation sweeps one step may cost.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Bounds deterministic constraint work per solver state transition.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Applies the declared iteration cap during ordered transition.
+ * @author Samchon
+ */
 export const SOFT_MAX_ITERATIONS = 64;
 
-/** Anchors one panel may declare. */
+/**
+ * Anchors one panel may declare.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Bounds the static and moving attachment inventory.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Keeps anchor evaluation finite at each fixed-step boundary.
+ * @author Samchon
+ */
 export const SOFT_MAX_ANCHORS = 4_096;
 
-/** Named anchor states one panel may declare. */
+/**
+ * Named anchor states one panel may declare.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Bounds named solver-state alternatives carried by one domain.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Keeps state selection inside a finite deterministic transition input.
+ * @author Samchon
+ */
 export const SOFT_MAX_STATES = 32;
 
-/** Colliders one panel may be kept out of. */
+/**
+ * Colliders one panel may be kept out of.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Bounds the shared proxy inventory presented to the solver.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Keeps ordered collision projection finite.
+ * @author Samchon
+ */
 export const SOFT_MAX_COLLIDERS = 64;
 
 /**
@@ -40,6 +76,10 @@ export const SOFT_MAX_COLLIDERS = 64;
  * clamped — a clamped panel is a panel whose author was told nothing and whose
  * frames changed anyway.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Refuses ambiguous static-plus-moving anchor inputs before the solver samples a boundary.
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Validates the shared actor-bound capsule without inventing unresolved world geometry.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Keeps static and evaluated moving anchor inputs structurally distinct.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Validates body-capsule identity and radius before pose-time resolution.
  * @author Samchon
  */
 export const validateSoftBodyDomain = (props: {
@@ -241,6 +281,31 @@ export const validateSoftBodyDomain = (props: {
     anchoredParticles.add(anchor.particle);
     if (anchor.position !== null)
       vector(out, `${path}.position`, anchor.position);
+    if (anchor.binding !== undefined) {
+      if (anchor.position !== null)
+        out.push(
+          "type",
+          `${path}.position`,
+          "a moving anchor must leave its static world position null",
+          anchor.position,
+        );
+      if (anchor.binding.kind === "node") {
+        if (anchor.binding.node.trim().length === 0)
+          out.push(
+            "type",
+            `${path}.binding.node`,
+            "moving anchor node identity must be non-empty",
+            anchor.binding.node,
+          );
+      } else if (anchor.binding.actor.trim().length === 0)
+        out.push(
+          "type",
+          `${path}.binding.actor`,
+          "moving anchor actor identity must be non-empty",
+          anchor.binding.actor,
+        );
+      vector(out, `${path}.binding.offset`, anchor.binding.offset);
+    }
   });
 
   bounded(
@@ -316,7 +381,7 @@ export const validateSoftBodyDomain = (props: {
         true,
         Infinity,
       );
-    } else {
+    } else if (collider.kind === "box") {
       vector(out, `${path}.min`, collider.min);
       vector(out, `${path}.max`, collider.max);
       for (const axis of ["x", "y", "z"] as const)
@@ -327,6 +392,30 @@ export const validateSoftBodyDomain = (props: {
             `collider box max ${axis} must be strictly above its min (${collider.min[axis]})`,
             collider.max[axis],
           );
+    } else {
+      if (collider.actor.trim().length === 0)
+        out.push(
+          "type",
+          `${path}.actor`,
+          "body-capsule actor identity must be non-empty",
+          collider.actor,
+        );
+      if (collider.capsule.from === collider.capsule.to)
+        out.push(
+          "range",
+          `${path}.capsule.to`,
+          "body-capsule endpoints must name two distinct bones",
+          collider.capsule.to,
+        );
+      numeric(
+        out,
+        `${path}.capsule.radius`,
+        "body-capsule radius",
+        collider.capsule.radius,
+        0,
+        true,
+        Infinity,
+      );
     }
   });
 
@@ -414,6 +503,10 @@ const embedded = (
     const dz = point.z - collider.center.z;
     return Math.sqrt(dx * dx + dy * dy + dz * dz) < collider.radius;
   }
+  // A body capsule is actor-local until the primary pose is evaluated. Treating
+  // its bone labels as world coordinates would invent an origin collider and
+  // reject an otherwise valid authored rest mesh.
+  if (collider.kind === "body-capsule") return false;
   return (
     point.x > collider.min.x &&
     point.x < collider.max.x &&

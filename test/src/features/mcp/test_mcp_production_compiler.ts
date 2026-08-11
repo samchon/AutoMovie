@@ -7,6 +7,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieAssetManifest,
+  IAutoMovieAssetProvenance,
   IAutoMovieCompiledShotSource,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
@@ -594,7 +595,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           },
         },
       },
-    };
+    } satisfies IAutoMovieAssetProvenance;
     const validModelManifest = {
       ...assetManifest,
       assets: [...assetManifest.assets, modelAsset],
@@ -606,18 +607,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         asset.path === modelAsset.path ? { ...asset, model: undefined } : asset,
       ),
     });
+    const invalidModelIngestProfile = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: { ...modelAsset.model, ingestProfile: "" },
+            }
+          : asset,
+      ),
+    });
     const incompleteModelDecisions = [
-      {
-        ...validModelManifest,
-        assets: validModelManifest.assets.map((asset) =>
-          asset.path === modelAsset.path
-            ? {
-                ...asset,
-                model: { ...modelAsset.model, ingestProfile: "" },
-              }
-            : asset,
-        ),
-      },
       {
         ...validModelManifest,
         assets: validModelManifest.assets.map((asset) =>
@@ -959,6 +960,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
       "missing model provenance reports asset-model-provenance-missing":
         missingModelProvenance.has("asset-model-provenance-missing"),
+      "invalid model ingest profile reports asset-manifest-invalid":
+        invalidModelIngestProfile.has("asset-manifest-invalid"),
       "every incomplete model decision reports asset-model-provenance-missing":
         incompleteModelDecisions.every((codes) =>
           codes.has("asset-model-provenance-missing"),

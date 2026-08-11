@@ -2,13 +2,13 @@
 
 ## Evidence obligation matrix {#evp-evidence-obligation-matrix}
 
+### Dependency-based freshness {#evp-dependency-based-freshness}
+
 <!-- @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-completeness-and-freshness claim, approval와 publication에 필요한 evidence와 실제 상태를 비교하는 matrix를 정의한다. -->
 
 Completeness 입력은 decision kind와 revision, required evidence roles와 scope, actual record inventory, dependency graph와 policy revision이다. 출력 matrix는 requirement별 satisfied, missing, stale, conflicting, unsupported, not-run 또는 invalid 상태, contributing record ids와 uncovered scope를 포함해야 한다.
 
 Complete는 모든 required row가 current positive evidence로 충족되고 blocking conflict가 없을 때만 출력할 수 있다. Optional row와 intentionally absent row는 정책 근거를 포함하고 required omission을 대신하지 않아야 한다.
-
-### Dependency-based freshness {#evp-dependency-based-freshness}
 
 <!-- @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status subject, source, dependency, activity, 조건, rubric과 judgment 변화로 current 상태를 계산한다. -->
 

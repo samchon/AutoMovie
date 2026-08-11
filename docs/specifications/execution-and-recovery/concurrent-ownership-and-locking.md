@@ -2,11 +2,11 @@
 
 ## Mutation Ownership Contract {#execution-concurrent-ownership-contract}
 
+### Duplicate Job Coordination {#execution-duplicate-job-coordination}
+
 <!-- @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-concurrent-runs-locking 겹치는 production 작업의 workspace, checkpoint, candidate와 current mutation을 소유권으로 분리한다. -->
 
 Mutable scope는 canonical production and action range identity를 가지며 동시에 하나의 owner generation만 write authority를 갖는다. Independent scopes는 병렬 실행할 수 있고 shared immutable input과 artifact는 read-only로 공유하며, current reference나 mutable checkpoint를 바꾸는 작업은 scope overlap을 admission에서 검출해야 한다.
-
-### Duplicate Job Coordination {#execution-duplicate-job-coordination}
 
 <!-- @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-duplicate-job-concurrency 같은 job identity의 동시 요청을 하나의 active execution에 연결하거나 거부한다. -->
 

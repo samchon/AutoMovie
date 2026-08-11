@@ -7,6 +7,8 @@ import { IAutoMovieDrivenCurve } from "@automovie/interface";
  * boundary. Missing source values default to the first authored source point,
  * so nonlinear curves do not depend on the linear driver's `inRange`.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Evaluates the authored nonlinear transfer from a driver source channel.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Implements deterministic driven-curve evaluation inside the declared dependency graph.
  * @author Samchon
  */
 export const evaluateDrivenCurve = (

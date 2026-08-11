@@ -1,44 +1,25 @@
-import { AutoMovieHumanoidBone } from "@automovie/interface";
+import type {
+  AutoMovieHumanoidBone,
+  IAutoMovieCapsuleProxy,
+} from "@automovie/interface";
 
 import { ViolationCollector } from "./violation";
 
-/**
- * Capsule proxy over two resolved bones.
- *
- * A segment from `from` to `to` with a radius: the coarse volume stand-in both
- * the self-intersection ({@link validateSelfIntersection}) and inter-body
- * collision ({@link detectBodyCollision}) checks resolve their overlap against,
- * before a mesh-level topology validator exists.
- *
- * @author Samchon
- */
-export interface IAutoMovieCapsuleProxy {
-  /** First endpoint bone. */
-  from: AutoMovieHumanoidBone;
-
-  /** Second endpoint bone. */
-  to: AutoMovieHumanoidBone;
-
-  /** Capsule radius in meters. */
-  radius: number;
-}
+/** Shared actor-local capsule used by body validation and soft contact. */
+export type { IAutoMovieCapsuleProxy } from "@automovie/interface";
 
 /**
- * Validate a capsule proxy against the skeleton it addresses: both endpoints
- * must be bones of the rig, FK-reachable from a root (#1056), the two endpoints
- * must be distinct, and the radius must be finite and positive. Returns whether
- * the capsule is usable; every failure is pushed as an **error** (structural
- * precondition, not a physics warning: you cannot advise on geometry that will
- * not resolve).
+ * Validate the shared capsule proxy against the skeleton it addresses: both
+ * endpoints must be bones of the rig, FK-reachable from a root, the two
+ * endpoints must be distinct, and the radius must be finite and positive.
+ * Returns whether the capsule is usable; every failure is pushed as an
+ * **error** (structural precondition, not a physics warning: you cannot advise
+ * on geometry that will not resolve).
  *
- * Shared by both capsule validators so a malformed capsule is rejected the same
- * way in each, where `detectBodyCollision` previously resolved a bad bone to
- * `undefined`, produced a NaN distance, and dropped the overlap in silence
- * (`NaN < minimum === false`). A declared-but-detached endpoint (its parent
- * chain never reaches a root) is never returned by FK, so reading its resolved
- * position would crash rather than report the malformed rig, the same gate the
- * footskate and balance validators carry.
- *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Refuses malformed shared body collision geometry.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Validates the bounded segment before collision projection.
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-fidelity-boundary Limits collision geometry to an explicit bounded proxy.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-failure-and-fidelity-boundary Refuses malformed bounded collision proxies before simulation.
  * @author Samchon
  */
 export const validateCapsule = (

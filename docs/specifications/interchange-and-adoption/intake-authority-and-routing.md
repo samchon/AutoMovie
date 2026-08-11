@@ -2,11 +2,11 @@
 
 ## 사용자 승인 Intake Intent {#interchange-intake-authority}
 
+### Channel-independent Source Revision {#interchange-channel-independent-revision}
+
 <!-- @evidence requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-user-choice 사용자가 고른 API, tool, file과 repository를 하나의 명시적 intake intent로 보존한다. -->
 
 Acquisition은 source locator, channel kind, 예상 media family, 요청한 revision 또는 version, 허용된 network authority, 전달할 project input과 사용자 승인 identity를 가진 intake intent에서 시작한다. System은 intent가 정하지 않은 provider, file, repository revision이나 이미 생성된 result를 후보로 추가하지 않는다.
-
-### Channel-independent Source Revision {#interchange-channel-independent-revision}
 
 <!-- @evidence requirements/external-inputs/source-selection-and-provider-neutrality.md#external-source-channel-parity 서로 다른 acquisition channel에서 온 자료에 같은 identity와 검증 의무를 적용한다. -->
 

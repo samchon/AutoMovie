@@ -20,6 +20,8 @@ import { AutoMovieContentDigest } from "@automovie/interface";
  * endianness, word size, and floating-point behavior cannot make one platform
  * disagree with another.
  *
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Computes the stable SHA-256 fingerprint used to bind render evidence to its canonical inputs.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Supplies the content-addressed digest primitive for render target, inventory, mask, and report identities.
  * @author Samchon
  */
 export const autoMovieRenderDigest = (text: string): AutoMovieContentDigest =>
@@ -33,6 +35,9 @@ export const autoMovieRenderDigest = (text: string): AutoMovieContentDigest =>
  * a polyfill differs is worse than a loop. Lone surrogates encode as U+FFFD,
  * which is what `TextEncoder` does, so an id carrying broken UTF-16 still
  * digests identically on both sides.
+ *
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Canonicalizes JavaScript strings to the exact UTF-8 bytes consumed by render fingerprints.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Keeps the digest input encoding identical in browser and capture runtimes.
  */
 export const utf8Bytes = (text: string): number[] => {
   const bytes: number[] = [];
@@ -175,6 +180,9 @@ const sha256Hex = (bytes: readonly number[]): string => {
  * digest above because a palette slot needs a fast, well-distributed integer
  * and not a cryptographic guarantee; the mask's collision handling, not the
  * hash, is what makes the palette exact.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Derives repeatable palette candidates from semantic identities without assigning meaning by traversal order.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the stable identity-mask channel seed used with explicit collision resolution.
  */
 export const autoMovieRenderHash32 = (text: string): number => {
   let hash = 0x811c9dc5;
@@ -199,6 +207,9 @@ export const autoMovieRenderHash32 = (text: string): number => {
  * `Array.prototype.sort` without a comparator, and every locale-aware
  * comparison, order differently on different hosts. Evidence that reorders
  * itself by operating-system language is not evidence.
+ *
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Orders render identity inputs by code unit so locale cannot alter their canonical fingerprint.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Provides the platform-independent identifier ordering used before render evidence is digested.
  */
 export const compareAutoMovieRenderIds = (
   left: string,

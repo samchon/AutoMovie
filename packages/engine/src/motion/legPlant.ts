@@ -38,18 +38,40 @@ import { sampleMotion } from "./sampleMotion";
  * an arm (shoulder → elbow → hand). The plant solver is limb-agnostic: which
  * bones form the chain is the caller's rig policy, the algebra is not.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Names the limb segments whose effector is solved against an authoritative contact target.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Defines the articulated support chain consumed by contact resolution.
  * @author Samchon
  */
 export interface IAutoMoviePlantChain {
-  /** End-effector bone driven onto the pinned target (foot / hand). */
+  /**
+   * End-effector bone driven onto the pinned target (foot / hand).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the point whose world contact is authoritative.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Selects the support effector measured after the solve.
+   */
   effector: AutoMovieHumanoidBone;
-  /** Chain-root segment (thigh / upper arm). */
+  /**
+   * Chain-root segment (thigh / upper arm).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Anchors contact correction at the declared proximal segment.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Establishes the first articulated link that transfers support.
+   */
   upper: AutoMovieHumanoidBone;
-  /** Mid segment (shin / forearm). */
+  /**
+   * Mid segment (shin / forearm).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the hinge segment adjusted to reach the contact target.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Establishes the second link of the support chain.
+   */
   lower: AutoMovieHumanoidBone;
 }
 
-/** The humanoid leg chains, the default both plant passes pin. */
+/**
+ * The humanoid leg chains, the default both plant passes pin.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Applies the shared contact policy to the two canonical foot effectors.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Supplies the default bilateral support set for humanoid planting.
+ */
 export const HUMANOID_LEG_CHAINS: readonly IAutoMoviePlantChain[] = [
   { effector: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" },
   { effector: "rightFoot", upper: "rightUpperLeg", lower: "rightLowerLeg" },
@@ -60,6 +82,9 @@ export const HUMANOID_LEG_CHAINS: readonly IAutoMoviePlantChain[] = [
  * stance target (the assembly stage of {@link plantStanceFeet}). Optional
  * clinical mappings must be the same ones used to resolve the stance samples
  * and later play the returned motion.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Re-solves every sample inside each declared planted interval while leaving swing samples unpinned.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Bakes the resolved support targets back into the motion keyframes.
  */
 export const rekeyPlantedFeet = (props: {
   skeleton: IAutoMovieSkeleton;
@@ -103,7 +128,12 @@ export const rekeyPlantedFeet = (props: {
   return keyframes;
 };
 
-/** Wrap the corrected keyframes + plants as the pass result. */
+/**
+ * Wrap the corrected keyframes + plants as the pass result.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Returns both the corrected motion and the planted intervals that explain it.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Couples the support observations to their baked motion result.
+ */
 export const assemblePlantedFeet = (
   motion: IAutoMovieMotion,
   keyframes: IAutoMovieKeyframe[],
@@ -122,6 +152,9 @@ export const assemblePlantedFeet = (
  * omit them for the canonical clinical basis, or supply a rig's own tables when
  * the pose's clinical angles must be read through them (what the ground plant
  * and retarget contact passes do for imported/non-canonical rigs).
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Resolves each effector in the same rig basis used to judge its contact target.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Produces the world-space joint state measured by the contact pass.
  */
 export const resolveBoneMap = (
   skeleton: IAutoMovieSkeleton,
@@ -152,6 +185,8 @@ export const resolveBoneMap = (
  * original pose in the candidate set makes an unreachable or constrained target
  * non-destructive.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Keeps every candidate inside the skeleton's declared joint ranges while seeking the target.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Chooses the closest legal articulated solve under the rig's ROM controls.
  * @author Samchon
  */
 export const fitChainToTarget = (props: {
@@ -503,6 +538,8 @@ const plantedJoints = (
  *
  * Returns `null` for a missing or degenerate chain.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Converts a reachable world target into clinical joint angles for the characterized chain.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Derives the chain articulation in the same axes and rest-frame basis used by rig validation.
  * @author Samchon
  */
 export const solveChainPlant = (props: {

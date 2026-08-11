@@ -8,6 +8,9 @@ import { ViolationCollector } from "./violation";
  * Locomotion remains proven by the profile's existing `gaits` field. This
  * validator owns the additional mountable and destructible traits so direct
  * engine consumers and production design lint enforce one contract.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateProfileCapabilities` reports malformed mountable or destructible capability fields at their exact model-profile member paths.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateProfileCapabilities` retains the observed capability value and semantic bound without inferring support from an unrelated gait field.
  */
 export const validateProfileCapabilities = (props: {
   /** Profiles attached to one runtime model or model recipe. */

@@ -16,6 +16,8 @@ import { Vector3 } from "../math/Vector3";
  * The physics layer weighs real shapes. A `plane` is a degenerate solid and
  * contributes no volume.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-weight-cues Derives a physical weight cue from the authored primitive dimensions.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Supplies the solid-volume fact used by center-of-mass support reasoning.
  * @author Samchon
  */
 export const primitiveVolume = (shape: AutoMoviePrimitiveShape): number => {
@@ -46,6 +48,8 @@ export const primitiveVolume = (shape: AutoMoviePrimitiveShape): number => {
  * cone with its wide base at `+Y` and apex at `-Y`, so that centroid is at
  * `+height/4`. Every other primitive is centered on its origin.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-weight-cues Locates each primitive's contribution to the center-of-mass proxy.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Supplies the local centroid used by support and load-transfer reasoning.
  * @author Samchon
  */
 export const primitiveCentroid = (
@@ -67,6 +71,8 @@ export const primitiveCentroid = (
  * weigh (a mesh-only or all-degenerate model), which is the caller's signal
  * that `centerOfMass` must be declared explicitly.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-weight-cues Computes the model center-of-mass proxy from authored physical geometry.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Produces the support-relevant center used to express weight and load transfer.
  * @author Samchon
  */
 export const deriveCenterOfMass = (
@@ -97,6 +103,8 @@ export const deriveCenterOfMass = (
  * primitive volume to weigh). The single entry point support/balance checks use
  * so an explicit COM (a weighted base) always wins over the geometric one.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-weight-cues Resolves the authoritative center-of-mass proxy used for weight cues.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Gives support checks one declared-or-derived center rather than competing calculations.
  * @author Samchon
  */
 export const bodyCenterOfMass = (

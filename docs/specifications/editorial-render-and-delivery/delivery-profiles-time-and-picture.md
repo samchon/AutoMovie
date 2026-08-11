@@ -1,6 +1,8 @@
 # Delivery profile, time과 picture
 
-## Destination profile과 product matrix {#spec-delivery-profile-matrix}
+## Contract units {#spec-delivery-profiles-time-picture-contract-units}
+
+### Destination profile과 product matrix {#spec-delivery-profile-matrix}
 <!-- @evidence requirements/delivery-and-accessibility/scope-and-profiles.md#delivery-scope-profiles 목적지별 전달 계약을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/scope-and-profiles.md#delivery-profile-ownership Profile ownership을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/scope-and-profiles.md#delivery-required-optional Required와 optional 상태를 정밀화한다. -->
@@ -17,7 +19,7 @@ Constraint resolution은 destination rule, explicit project choice와 measured s
 
 Selected edit, render, mix, translation, caption 또는 profile revision 변경은 dependency에 따라 plan, encode, probe, review와 publication을 stale로 만든다. 독립 item은 partial candidate로 보존하되 requested set의 completed, failed, unsupported와 not-run을 모두 나열한다. 모순된 조합, missing required stream, unknown timebase, duplicate identity, unmeasurable target와 unresolved precedence는 계획 단계에서 거절한다.
 
-## Container, codec와 observed media facts {#spec-delivery-container-media-facts}
+### Container, codec와 observed media facts {#spec-delivery-container-media-facts}
 <!-- @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-container-codec-facts Planned setting과 actual stream 일치를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-identity Stream role과 identity를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-supported-combinations Supported media combination을 정밀화한다. -->
@@ -33,7 +35,7 @@ Probe는 candidate와 published bytes를 직접 열어 container, stream populat
 
 Open 가능한 container라도 required stream, duration 또는 metadata가 빠지면 partial 또는 failed다. Probe failure, zero stream, unexpected codec, duplicate role, undecodable stream, duration drift와 planned-actual mismatch는 해당 result를 거절하고 stream별 expected·actual을 보고한다. Valid stream bytes는 recovery에 보존할 수 있지만 complete public media로 승격하지 않는다.
 
-## Rational rate, timebase와 timecode {#spec-delivery-timecode-sync}
+### Rational rate, timebase와 timecode {#spec-delivery-timecode-sync}
 <!-- @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-frame-rate-timebase-timecode Film time의 전달 표현을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-rational-frame-rate Exact rational rate를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md#delivery-rate-mode Constant와 variable rate를 정밀화한다. -->
@@ -49,7 +51,7 @@ Timecode는 drop-frame-like 또는 non-drop convention, nominal rate relation, s
 
 Validation은 first frame, end-exclusive film end, last presented frame, exact frame count, first·last audio sample, permitted tail와 final cue를 인접 boundary와 함께 확인한다. Invalid rate, ambiguous convention, unrepresentable mapping, count mismatch, timestamp reversal, overflow와 sync drift는 synchronized status를 거절한다. 유효 stream 일부를 보존해도 common timeline closure가 실패하면 complete delivery가 아니다.
 
-## Picture, color와 image sequence {#spec-delivery-picture-products}
+### Picture, color와 image sequence {#spec-delivery-picture-products}
 <!-- @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-color-sequences Picture product의 공간·색 계약을 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-scene-display-picture Scene-linear와 display-referred lineage를 정밀화한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/picture-color-and-image-sequences.md#delivery-picture-dimensions-window Dimensions와 window를 정밀화한다. -->

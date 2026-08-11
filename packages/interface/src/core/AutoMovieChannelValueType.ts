@@ -9,6 +9,8 @@
  * variable-width `float[]` (one per morph target), the only non-fixed-width
  * kind.
  *
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Exposes `AutoMovieChannelValueType` as the portable data boundary for the motion channel contract requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `AutoMovieChannelValueType` for the performance motion clip keytime interpolation system contract.
  * @author Samchon
  */
 export type AutoMovieChannelValueType =

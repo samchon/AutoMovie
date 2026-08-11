@@ -11,17 +11,47 @@ import {
 import { productionRuntimeModelId } from "./productionIdentity";
 import { surfaceHeightAt } from "./space/surfaces";
 
-/** One generated visible wall/building block and its support footprint. */
+/**
+ * One generated visible wall/building block and its support footprint.
+ *
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Keeps an authored primitive recipe, its staged node, and occupied bounds under the project's block identity.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Makes the caller's block semantics and geometry explicit data passed into later compilation stages.
+ */
 export interface IAutoMovieWorldBlock {
-  /** Stable block identity. */
+  /**
+   * Stable block identity.
+   *
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's chosen block identity across its recipe, node, bounds, and validation errors.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Requires block identity as authored input instead of deriving it from position or array order.
+   */
   id: string;
-  /** Block semantic. */
+  /**
+   * Block semantic.
+   *
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains whether the project authored the primitive as a wall or building without inferring semantics from its dimensions.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Carries the caller-selected block role as an explicit output field for downstream decisions.
+   */
   kind: "wall" | "building";
-  /** Primitive recipe registered with production design. */
+  /**
+   * Primitive recipe registered with production design.
+   *
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's archetype, dimensions, palette, and representation choices as its model recipe.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits the complete primitive recipe that the compiler consumes rather than hiding construction parameters in the helper.
+   */
   recipe: IAutoMovieModelRecipe;
-  /** Static scene node using the compiler-owned runtime model id. */
+  /**
+   * Static scene node using the compiler-owned runtime model id.
+   *
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Retains the project's grounded placement as a scene node bound to the compiler-owned runtime model identity.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the derived translation and runtime-model reference as plain output consumed by shot construction.
+   */
   node: IAutoMovieSceneNode;
-  /** Exact axis-aligned occupied world volume. */
+  /**
+   * Exact axis-aligned occupied world volume.
+   *
+   * @evidence requirements/product/capability-and-content.md#product-project-owned-content Carries the exact occupied volume derived from the project's base and size beside the visible block.
+   * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Publishes collision and support bounds as explicit output so validators need not reconstruct them from rendering data.
+   */
   bounds: {
     min: IAutoMovieVector3;
     max: IAutoMovieVector3;
@@ -35,6 +65,9 @@ export interface IAutoMovieWorldBlock {
  * defaults to the shipped `primitive-prop` builder and its `box` shape, because
  * that is what this helper's parameters describe; a production whose catalogue
  * spells the same static primitive differently passes its own id.
+ *
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Converts the project's chosen identity, role, primitive dimensions, palette, and placement into one source-owned block record.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Validates every authored input and emits the recipe, node, and bounds needed by downstream compilation.
  */
 export const worldBlock = (input: {
   id: string;
@@ -102,7 +135,14 @@ export const worldBlock = (input: {
   };
 };
 
-/** Build one flat terrain primitive from an explicit world-XZ footprint. */
+/**
+ * Build one flat terrain primitive from an explicit world-XZ footprint.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Preserves an authored XZ footprint, constant elevation, and traversal state as one terrain surface.
+ * @evidence requirements/map/movement-and-visibility.md#map-traversable-surfaces `worldTerrain` preserves the caller's explicit walkable state on the same stable terrain identity and footprint used by world queries.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Emits a constant-height surface whose footprint and elevation remain explicit deterministic inputs.
+ * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-traversable-surface-input The emitted surface carries its exact world footprint, height, and traversability flag without inferring a route or cost model.
+ */
 export const worldTerrain = (input: {
   id: string;
   polygon: IAutoMovieWorldSurface["polygon"];
@@ -115,7 +155,12 @@ export const worldTerrain = (input: {
   walkable: input.walkable,
 });
 
-/** Build one rectangular ramp surface from a centerline and explicit rise. */
+/**
+ * Build one rectangular ramp surface from a centerline and explicit rise.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Derives the ramp's footprint and planar slope from its authored centerline, width, base elevation, and rise.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Produces one explicit plane-height rule after rejecting degenerate or non-finite surface inputs.
+ */
 export const worldRamp = (input: {
   id: string;
   from: { x: number; z: number };
@@ -179,6 +224,11 @@ export const worldRamp = (input: {
  * must be a pure function of the point it is given. A sampler that reads a
  * clock, a counter or unseeded randomness bakes one machine's terrain into the
  * design, which is the one way this can produce different frames elsewhere.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Samples an authored elevation rule on a declared XZ lattice and stores the resulting terrain heights.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-resolution-uncertainty `worldHeightfield` makes sample origin, spacing, row and column counts, and every finite height explicit so callers can retain the terrain's actual resolution.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Fixes footprint, origin, spacing, sample order, and finite elevations in the emitted heightfield record.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-resolution-gap The heightfield record exposes the finite lattice resolution rather than presenting unsampled terrain as continuous measured detail.
  */
 export const worldHeightfield = (input: {
   id: string;
@@ -246,7 +296,12 @@ export const worldHeightfield = (input: {
   };
 };
 
-/** Build one deterministic rectangular instance placement. */
+/**
+ * Build one deterministic rectangular instance placement.
+ *
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's selected prototype, bounds, variation, and rectangular layout as one compact instance-set design.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Returns the caller's grid parameters as plain cloned output without inventing or expanding content.
+ */
 export const worldGrid = (
   base: Omit<IAutoMovieInstanceSetDesign, "layout">,
   layout: Extract<IAutoMovieInstanceSetDesign["layout"], { kind: "grid" }>,
@@ -255,7 +310,12 @@ export const worldGrid = (
   layout: structuredClone(layout),
 });
 
-/** Build one deterministic disk-scatter instance placement. */
+/**
+ * Build one deterministic disk-scatter instance placement.
+ *
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's selected prototype, variation, and disk-scatter rule as one compact instance-set design.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Returns the caller's scatter extent, count, seed, and spacing inputs without silently choosing population content.
+ */
 export const worldScatter = (
   base: Omit<IAutoMovieInstanceSetDesign, "layout">,
   layout: Extract<IAutoMovieInstanceSetDesign["layout"], { kind: "scatter" }>,
@@ -264,7 +324,12 @@ export const worldScatter = (
   layout: structuredClone(layout),
 });
 
-/** Build one deterministic route-following instance placement. */
+/**
+ * Build one deterministic route-following instance placement.
+ *
+ * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves the project's selected prototype and route-following placement rule as one compact instance-set design.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Returns the explicit route, spacing, offset, and variation inputs without resolving them through hidden defaults.
+ */
 export const worldAlongRoute = (
   base: Omit<IAutoMovieInstanceSetDesign, "layout">,
   layout: Extract<
@@ -282,6 +347,13 @@ export const worldAlongRoute = (
  * Blocks may touch but not overlap; every base must sit on a declared surface;
  * routes must clear block footprints; every landmark must lie on a walkable
  * surface or within its declared radius of a route.
+ *
+ * @evidence requirements/map/deliverables-and-validation.md#map-environment-relation-validation Rejects overlapping or unsupported blocks, obstructed routes, and landmarks unreachable from declared terrain.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-contact-boundary `assertWorldPlacements` rejects a block whose base does not contact the selected declared terrain height and rejects routes whose footprints intersect placed blocks.
+ * @evidence requirements/map/deliverables-and-validation.md#map-geometry-topology-validation The validator checks block overlap, terrain support, route clearance, and landmark reachability on the canonical world geometry before shot construction.
+ * @evidence specifications/world-and-site/delivery-and-validation.md#world-site-environment-relation-validation Checks support, contact, clearance, and traversal relationships against the same canonical world records.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-modification-contact The placement gate compares each block base with the actual supporting surface height and preserves touching boundaries as valid contact.
+ * @evidence specifications/world-and-site/delivery-and-validation.md#world-site-geometry-topology-validation The gate returns only after all declared placement, support, clearance, and reachability relations are geometrically consistent.
  */
 export const assertWorldPlacements = (input: {
   blocks: readonly IAutoMovieWorldBlock[];
@@ -355,6 +427,9 @@ export const assertWorldPlacements = (input: {
  * lives. A scene's standable patch carries the same {@link IAutoMovieHeightRule}
  * and is read by that same function, so terrain a crowd is placed on and ground
  * a performer plants a foot on cannot answer differently.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Evaluates constant, planar, and sampled terrain elevations through the shared surface-height arithmetic.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Derives an XZ point's elevation from the exact surface representation carried in canonical state.
  */
 export const worldSurfaceHeight = (
   surface: IAutoMovieWorldSurface,
@@ -374,6 +449,9 @@ export const worldSurfaceHeight = (
  * The height that goes with it is {@link worldSurfaceHeight} of the same record.
  * Both answers come from here so a placement, a gate and an oracle cannot each
  * pick a different surface.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Selects the authored terrain surface whose footprint contains the queried XZ point, including its boundary.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Resolves ground membership from ordered explicit footprints before any elevation is sampled.
  */
 export const worldGroundSurface = (
   surfaces: readonly IAutoMovieWorldSurface[],
@@ -381,7 +459,14 @@ export const worldGroundSurface = (
 ): IAutoMovieWorldSurface | null =>
   surfaces.find((surface) => insideOrOnPolygon(point, surface.polygon)) ?? null;
 
-/** Height of the world terrain under an XZ point, or `null` over nothing. */
+/**
+ * Height of the world terrain under an XZ point, or `null` over nothing.
+ *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Returns the declared terrain elevation below an XZ point while preserving the absence of ground as `null`.
+ * @evidence requirements/map/terrain-and-landforms.md#map-terrain-gap `worldGroundHeight` returns `null` when no declared surface contains the point, keeping missing terrain distinct from an invented zero elevation.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Joins footprint selection and the shared height rule so placement and terrain queries read one surface record.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-terrain-resolution-gap The ground query exposes an explicit gap outside every declared footprint instead of extrapolating the nearest heightfield.
+ */
 export const worldGroundHeight = (
   surfaces: readonly IAutoMovieWorldSurface[],
   point: { x: number; z: number },

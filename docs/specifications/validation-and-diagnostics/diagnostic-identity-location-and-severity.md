@@ -2,13 +2,13 @@
 
 ## 정규 진단 레코드 {#validation-diagnostic-record}
 
+### Identity 의미와 Version {#validation-diagnostic-identity-version}
+
 <!-- @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-traceable-record 표시 문구와 무관하게 같은 진단 종류와 한 발생을 추적할 레코드 경계를 정한다. -->
 
 정규 진단 레코드는 protocol version, diagnostic identity, occurrence identity, session과 input identity, classification, severity, 발견 위치, 영향 범위, 원인, correction, 검사 상태와 관련 evidence identity를 가진다. 선택 항목의 부재는 해당 맥락이 적용되지 않음을 뜻하고 unknown이나 redacted 상태는 명시된 값으로 구분한다.
 
 Occurrence identity는 한 확정 입력에서 같은 의미와 위치의 발생을 안정적으로 대조할 수 있어야 하지만 다른 입력 revision의 발생을 같은 사건으로 합치지 않는다. Display message, locale, 병렬 실행 순서와 wall-clock 시각은 diagnostic 또는 occurrence identity를 결정하지 않는다.
-
-### Identity 의미와 Version {#validation-diagnostic-identity-version}
 
 <!-- @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-identity-stability 진단 identity가 같은 실패 조건과 교정 의미를 지속해서 가리키도록 한다. -->
 

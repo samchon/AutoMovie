@@ -12,15 +12,29 @@ import {
   formationCycleOf,
 } from "./formationCycle";
 
-/** A reversible semantic-mask override, restored exactly like a render mode. */
+/**
+ * A reversible semantic-mask override, restored exactly like a render mode.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
+ */
 export interface IAutoMovieSemanticMaskHandle {
-  /** How many meshes were painted a semantic colour. */
+  /**
+   * How many meshes were painted a semantic colour.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+   */
   painted: number;
 
   /**
    * Meshes left at the reserved background colour because no entry claimed
    * them. Never silently zero: unaddressed geometry in a segmentation pass is a
    * hole in the evidence, and it is counted so a consumer can refuse it.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
    */
   unaddressed: number;
 
@@ -32,19 +46,43 @@ export interface IAutoMovieSemanticMaskHandle {
    * {@link auditAutoMovieSemanticMaskScene}, which reports both without
    * painting, for why an empty list is the only proof that what a production
    * declared is what it drew.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
    */
   unresolved: string[];
 
-  /** Undo the override completely, disposing everything it created. */
+  /**
+   * Undo the override completely, disposing everything it created.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+   */
   restore: () => void;
 }
 
-/** A built scene and the palette its structural mask pass must paint it with. */
+/**
+ * A built scene and the palette its structural mask pass must paint it with.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
+ */
 export interface IAutoMovieSemanticMaskBinding {
-  /** The design the scene was built from, in its own declaration order. */
+  /**
+   * The design the scene was built from, in its own declaration order.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+   */
   design: IAutoMovieScene;
 
-  /** Palette derived from the same production. */
+  /**
+   * Palette derived from the same production.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+   */
   mask: IAutoMovieSemanticMask;
 }
 
@@ -63,6 +101,8 @@ const SCENE_MASK_KEY = "automovieSemanticMask";
  * index ramp, which is what an asset turntable and any host without a compiled
  * design draw.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
  * @author Samchon
  */
 export const attachAutoMovieSemanticMask = (
@@ -72,7 +112,12 @@ export const attachAutoMovieSemanticMask = (
   scene.userData[SCENE_MASK_KEY] = binding;
 };
 
-/** The palette a scene was given, or `null` when it was given none. */
+/**
+ * The palette a scene was given, or `null` when it was given none.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ */
 export const autoMovieSemanticMaskOf = (
   scene: THREE.Scene,
 ): IAutoMovieSemanticMaskBinding | null =>
@@ -80,11 +125,20 @@ export const autoMovieSemanticMaskOf = (
     | IAutoMovieSemanticMaskBinding
     | undefined) ?? null;
 
-/** How completely one palette and one built scene account for each other. */
+/**
+ * How completely one palette and one built scene account for each other.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
+ */
 export interface IAutoMovieSemanticMaskCoverage {
   /**
    * Semantic ids that name a drawable this scene does not hold, ascending: what
    * the production declared and the viewer never built.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
    */
   unresolved: string[];
 
@@ -97,6 +151,9 @@ export interface IAutoMovieSemanticMaskCoverage {
    * Zero is a real answer and means the palette named every mesh; above zero,
    * the two populations that land here today are a formation's anonymous
    * members and an effect's particles, which the palette does not address yet.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
    */
   unaddressed: number;
 }
@@ -122,6 +179,8 @@ export interface IAutoMovieSemanticMaskCoverage {
  * coverage once at build time and reports it beside every frame, instead of
  * opening a pass boundary it would then have to close.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
  * @author Samchon
  */
 export const auditAutoMovieSemanticMaskScene = (props: {
@@ -175,6 +234,8 @@ const INSTANCE_SET_PREFIX = "instance-set:";
  * exactly as it marches in the film, and the mask describes the frame that will
  * be delivered rather than a rest pose nobody sees.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
  * @author Samchon
  */
 export const applyAutoMovieSemanticMask = (props: {

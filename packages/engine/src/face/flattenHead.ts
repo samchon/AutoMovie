@@ -70,6 +70,8 @@ const MAP: Record<string, Record<string, AutoMovieHeadParameterName>> = {
  * carries only the traits the document set. The map covers every leaf exactly
  * once; no field is invented and none is dropped.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-deformable-surface Maps authored head anatomy fields onto the stable controls that deform the face surface.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-skin-morph-facts Produces the named morph weights that the deformation stage applies to its base geometry.
  * @author Samchon
  */
 export const flattenHead = (

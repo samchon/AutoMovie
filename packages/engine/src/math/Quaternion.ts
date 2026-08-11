@@ -9,9 +9,17 @@ import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
  * the renderer consumes them. All helpers are stateless and return fresh
  * objects.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Provides the rotation operations used to sample and compose declared motion channels.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Provides the rotation operations used to sample and compose declared motion channels.
  * @author Samchon
  */
 export namespace Quaternion {
+  /**
+   * Unit quaternion representing no rotation.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Supplies the neutral rotation used when a motion channel has no authored turn.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Supplies the neutral rotation used when a motion channel has no authored turn.
+   */
   export const identity = (): IAutoMovieQuaternion => ({
     x: 0,
     y: 0,
@@ -19,9 +27,20 @@ export namespace Quaternion {
     w: 1,
   });
 
+  /**
+   * Scalar that converts degrees to radians.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Converts authored degree angles to the radian basis used by quaternion sampling.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Converts authored degree angles to the radian basis used by quaternion sampling.
+   */
   export const DEG2RAD = Math.PI / 180;
 
-  /** Hamilton product `a * b` (apply `b` first, then `a`). */
+  /**
+   * Hamilton product `a * b` (apply `b` first, then `a`).
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Composes rotations in a fixed order so layered motion preserves channel semantics.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Composes rotations in a fixed order so layered motion preserves channel semantics.
+   */
   export const multiply = (
     a: IAutoMovieQuaternion,
     b: IAutoMovieQuaternion,
@@ -32,6 +51,12 @@ export namespace Quaternion {
     w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
   });
 
+  /**
+   * Return a unit-length copy, or identity for a zero quaternion.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Returns a unit rotation before it is sampled or composed, preventing scale from leaking into motion.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Returns a unit rotation before it is sampled or composed, preventing scale from leaking into motion.
+   */
   export const normalize = (q: IAutoMovieQuaternion): IAutoMovieQuaternion => {
     const len = Math.sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     if (len === 0) return identity();
@@ -44,11 +69,19 @@ export namespace Quaternion {
    * the exact inverse (`q * inverse(q) = identity`); for a near-unit one the
    * normalization keeps the result a valid rotation. The single source both IK
    * lowerings (two-bone, affordance seat) share.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Reverses a rotation for relative-pose and constraint calculations without changing its orientation basis.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Reverses a rotation for relative-pose and constraint calculations without changing its orientation basis.
    */
   export const inverse = (q: IAutoMovieQuaternion): IAutoMovieQuaternion =>
     normalize({ x: -q.x, y: -q.y, z: -q.z, w: q.w });
 
-  /** Rotation of `angleDeg` degrees about a (not necessarily unit) `axis`. */
+  /**
+   * Rotation of `angleDeg` degrees about a (not necessarily unit) `axis`.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Lowers an authored axis and angle into the quaternion representation consumed by motion sampling.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Lowers an authored axis and angle into the quaternion representation consumed by motion sampling.
+   */
   export const fromAxisAngle = (
     axis: IAutoMovieVector3,
     angleDeg: number,
@@ -67,6 +100,9 @@ export namespace Quaternion {
    * boundary lowers an LLM-authored semantic placement rotation
    * ({@link "@automovie/interface".IAutoMovieEuler}) into the engine's
    * quaternion. The model never emits a quaternion (#723).
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Lowers authored Euler order into the same quaternion composition convention used by playback.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Lowers authored Euler order into the same quaternion composition convention used by playback.
    */
   export const fromEuler = (euler: {
     x: number;
@@ -88,7 +124,12 @@ export namespace Quaternion {
       .reduce((acc, q) => multiply(acc, q), identity());
   };
 
-  /** Rotate a vector by a quaternion: `q * v * q⁻¹`. */
+  /**
+   * Rotate a vector by a quaternion: `q * v * q⁻¹`.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Applies a sampled quaternion to a direction or offset without invoking renderer state.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Applies a sampled quaternion to a direction or offset without invoking renderer state.
+   */
   export const rotateVector = (
     q: IAutoMovieQuaternion,
     v: IAutoMovieVector3,
@@ -104,7 +145,12 @@ export namespace Quaternion {
     };
   };
 
-  /** Spherical linear interpolation, `t` in `[0, 1]`. */
+  /**
+   * Spherical linear interpolation, `t` in `[0, 1]`.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Interpolates quaternion keys on the shortest spherical path for the declared sample fraction.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Interpolates quaternion keys on the shortest spherical path for the declared sample fraction.
+   */
   export const slerp = (
     a: IAutoMovieQuaternion,
     b: IAutoMovieQuaternion,

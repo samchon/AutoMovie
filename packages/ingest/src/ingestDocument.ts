@@ -13,12 +13,28 @@ import type {
 
 type AutoMovieNodeTrackPath = "translation" | "rotation" | "scale" | "weights";
 
-/** The automovie-core payload an imported glTF/GLB resolves to. */
+/**
+ * The automovie-core payload an imported glTF/GLB resolves to.
+ *
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Preserves source nodes and animations as stable project-native identities.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Implements the native external-scene interpretation result.
+ * @author Samchon
+ */
 export interface IAutoMovieIngestResult {
-  /** The scene graph as a flat list of core nodes (parent by id reference). */
+  /**
+   * The scene graph as a flat list of core nodes (parent by id reference).
+   *
+   * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Retains node identity, hierarchy, transform, and bound object references.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Preserves selected scene elements during native interpretation.
+   */
   nodes: IAutoMovieNode[];
 
-  /** One clip per glTF animation, its tracks targeting node TRS / weights. */
+  /**
+   * One clip per glTF animation, its tracks targeting node TRS / weights.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times Preserves source key times in the returned clips.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Emits the general flat-array clip form.
+   */
   clips: IAutoMovieClip[];
 }
 
@@ -43,6 +59,25 @@ export interface IAutoMovieIngestResult {
  * (`node_{i}`), deterministic and collision-free even when names repeat. All
  * cross-references (a child's `parent`, a channel's target) use the same key.
  *
+ * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Converts a selected external scene into project-native structural facts.
+ * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Consumes a caller-selected parsed document without acquisition authority.
+ * @evidence requirements/motion/README.md#동작-요구사항 Converts embedded glTF animations into general project motion clips.
+ * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Emits project node and clip representations from external scene facts.
+ * @evidence specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 Implements the parsed-document to native-representation boundary.
+ * @evidence specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Supplies source-order clips to the general motion pipeline.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-contract Stable node targets, property paths, interpolation, times, and typed value widths survive structural mapping.
+ * @evidence requirements/motion/scope-and-identity.md#motion-all-objects-all-motion Generic node translation, rotation, scale, and weight tracks preserve non-humanoid object motion.
+ * @evidence requirements/motion/scope-and-identity.md#motion-actor-object-scope Source nodes retain mesh, camera, skin, bone, and generic transform roles without forcing one actor model.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-gltf-scene Maps a selected glTF scene's nodes, meshes, cameras, skins, and animations.
+ * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-native-reinterpretation Rewrites each selected source node and animation into project-native forms.
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-key-times Carries source key-time arrays into each emitted track.
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Maps glTF LINEAR, STEP, and CUBICSPLINE modes explicitly.
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-clip-refusal Rejects absent samplers, targets, arrays, and mismatched output arity.
+ * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-native-reinterpretation-boundary Source-local nodes and tracks map to stable project-native identities.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Stable index ids preserve source node and animation correspondence.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Emits source-order key times, values, targets, and interpolation modes.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Preserves the selected glTF scene as a project-native external-adoption result.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Keeps skeletal and generic object nodes open to their own motion vocabularies.
  * @author Samchon
  */
 export const ingestDocument = (doc: Document): IAutoMovieIngestResult => {

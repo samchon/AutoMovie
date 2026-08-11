@@ -26,6 +26,19 @@ import {
   testRendererIdentity,
 } from "./productionFixtures";
 
+const PIXEL_ONLY_CAPTURE_EVIDENCE = {
+  observation: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not observe renderer cost metrics.",
+  },
+  maskSidecar: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not stage a semantic mask palette.",
+  },
+} as const;
+
 const png = (width = 16, height = 16): Uint8Array => {
   const image = new PNG({ width, height });
   image.data.fill(180);
@@ -117,6 +130,7 @@ export const test_mcp_production_review_render_edges =
             runtimeIdentity: testCaptureRuntimeIdentity(),
             width,
             height,
+            ...PIXEL_ONLY_CAPTURE_EVIDENCE,
           };
         },
       );

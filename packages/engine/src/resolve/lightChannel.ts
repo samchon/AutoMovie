@@ -7,7 +7,12 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
-/** Every runtime light discriminator, shared by every ingress gate. */
+/**
+ * Every runtime light discriminator, shared by every ingress gate.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Enumerates the light kinds that may enter deterministic authored lighting state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Keeps runtime light-kind admission aligned with the authored-source branches.
+ */
 export const AUTO_MOVIE_LIGHT_TYPES = new Set<IAutoMovieLight["type"]>([
   "directional",
   "point",
@@ -15,7 +20,12 @@ export const AUTO_MOVIE_LIGHT_TYPES = new Set<IAutoMovieLight["type"]>([
   "area",
 ]);
 
-/** Whether an untyped artifact names one of the supported light kinds. */
+/**
+ * Whether an untyped artifact names one of the supported light kinds.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Refuses an unrecognized kind before treating raw input as an authored light.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Validates that an input belongs to one declared light-authority branch.
+ */
 export const isAutoMovieLightType = (
   value: unknown,
 ): value is IAutoMovieLight["type"] =>
@@ -58,7 +68,12 @@ export const isAutoMovieLightType = (
  * @author Samchon
  */
 
-/** A light property a shot's `lightMotions` may animate. */
+/**
+ * A light property a shot's `lightMotions` may animate.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Defines the explicit light values an authored shot may vary over time.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Bounds animation to properties owned by the staged authored light branch.
+ */
 export type AutoMovieLightProperty =
   | "intensity"
   | "color"
@@ -71,24 +86,58 @@ export type AutoMovieLightProperty =
  * The animatable property values accumulated for one light before they are
  * folded back onto it. Every field absent means the light is returned
  * unchanged, by identity.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries only the explicit authored light-channel values sampled at an instant.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Represents a partial update without replacing the staged light's authority branch.
+ * @author Samchon
  */
 export interface IAutoMovieLightOverride {
-  /** Radiant intensity, when an `intensity` track wrote one. */
+  /**
+   * Radiant intensity, when an `intensity` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the sampled authored intensity instead of deriving brightness from appearance.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Applies intensity only when its authored channel owns the value.
+   */
   intensity?: number;
 
-  /** Linear colour, when a `color` track wrote one. */
+  /**
+   * Linear colour, when a `color` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the sampled authored linear colour of the light source.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Applies colour within the selected authored light branch.
+   */
   color?: IAutoMovieColor;
 
-  /** Falloff range in metres, when a `range` track wrote one. */
+  /**
+   * Falloff range in metres, when a `range` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the sampled range only for authored light kinds that own falloff distance.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Preserves kind-specific range authority in the partial light update.
+   */
   range?: number;
 
-  /** Cone half-angle in degrees, when a `coneAngle` track wrote one. */
+  /**
+   * Cone half-angle in degrees, when a `coneAngle` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the explicit spot cone angle sampled from its authored channel.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Keeps cone authority confined to the spot-light branch.
+   */
   coneAngle?: number;
 
-  /** World translation in metres, when a `position` track wrote one. */
+  /**
+   * World translation in metres, when a `position` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the sampled authored placement of a movable light.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Applies position only to light kinds whose authority includes a location.
+   */
   position?: IAutoMovieVector3;
 
-  /** World orientation, when a `rotation` track wrote one. */
+  /**
+   * World orientation, when a `rotation` track wrote one.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Carries the sampled authored orientation of a directional light source.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Applies rotation only to branches whose illumination has a direction.
+   */
   rotation?: IAutoMovieQuaternion;
 }
 
@@ -121,7 +170,13 @@ const unitQuaternionFault = (value: readonly unknown[]): string | null => {
     : `must be a unit quaternion (length 1), but length was ${length}`;
 };
 
-/** One animatable light property: how it is addressed, and how it is applied. */
+/**
+ * One animatable light property: how it is addressed, and how it is applied.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Binds one authored light property to its explicit channel rule.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Defines one branch-aware light-property contract.
+ * @author Samchon
+ */
 export interface IAutoMovieLightChannelProperty {
   /**
    * The value type the addressing pointer channel must declare, which is also
@@ -129,6 +184,9 @@ export interface IAutoMovieLightChannelProperty {
    * the value-type → width mapping and refuses a track that disagrees with it,
    * so restating "vec3 is three numbers" here would be a second copy of a rule
    * that already has an owner, and the two could drift.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input States the typed value shape required from this authored light channel.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Keeps the channel's value representation consistent across admitted light branches.
    */
   valueType: AutoMovieChannelValueType;
 
@@ -138,6 +196,9 @@ export interface IAutoMovieLightChannelProperty {
    * state through time what `commitScene` refuses outright (a negative
    * intensity, a 200-degree cone), and the axis would be the one place in the
    * artifact where a documented range is not enforced.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Enforces the numeric domain of an authored light property before playback.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Supplies the numeric domain used to admit sampled writes.
    */
   bounds: {
     /** Lower bound. */
@@ -167,6 +228,9 @@ export interface IAutoMovieLightChannelProperty {
    * value a check is about to doubt is how a validator stops validating. A kind
    * outside the union is a broken scene the scene gate owns, not something this
    * predicate is deciding.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Tests whether the staged light kind actually owns the authored property.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Prevents a property from crossing into a light-authority branch that does not carry it.
    */
   carries: (kind: unknown) => boolean;
 
@@ -181,6 +245,9 @@ export interface IAutoMovieLightChannelProperty {
    * to unit length, and no range over one component can say so. The gate reads
    * it off this table for the same reason it reads everything else here — a
    * rule stated beside the applier cannot drift from what the applier writes.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Validates whole-value constraints that component bounds cannot express.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Keeps branch-specific authored values valid before they are written.
    */
   valueFault?: (value: readonly unknown[]) => string | null;
 
@@ -189,6 +256,9 @@ export interface IAutoMovieLightChannelProperty {
    * and `value` is as wide as {@link valueType} resolves to — the gate
    * establishes the first, `sampleClip`'s width check the second, before a
    * value ever reaches here.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Applies the sampled authored value to its matching light property only.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Implements the property write owned by the accepted light branch.
    */
   write: (override: IAutoMovieLightOverride, value: readonly number[]) => void;
 }
@@ -199,6 +269,11 @@ export interface IAutoMovieLightChannelProperty {
  * Total over {@link AutoMovieLightProperty}: adding a member to that union
  * without giving it a `carries`/`write` pair does not compile, which is how a
  * widened contract cannot outrun its applier.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Registers each animatable light property in the exhaustive channel table.
+ * @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-color-refusal Declares finite scene-linear color channel components valid only inside the inclusive unit interval consumed by the artifact gate.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Makes property support exhaustive across the declared light branches.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-color-comparison-refusal Supplies the explicit scene-linear color domain that rejects non-finite and out-of-range animated source values before application.
  */
 export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   Record<AutoMovieLightProperty, IAutoMovieLightChannelProperty>
@@ -281,12 +356,28 @@ export const LIGHT_CHANNEL_PROPERTIES: Readonly<
   },
 };
 
-/** A parsed light pointer: which staged light, and which of its properties. */
+/**
+ * A parsed light pointer: which staged light, and which of its properties.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Identifies the authored property address for one staged light.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Carries the stable target identity needed to select the correct light branch.
+ * @author Samchon
+ */
 export interface IAutoMovieLightPointer {
-  /** Id of the addressed scene light. */
+  /**
+   * Id of the addressed scene light.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Addresses an authored light by stable identity rather than array position.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Selects the staged source whose authority branch receives the channel.
+   */
   light: string;
 
-  /** The animatable property. */
+  /**
+   * The animatable property.
+   *
+   * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Names the explicit authored light axis targeted by the pointer.
+   * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Selects the property contract within the addressed light branch.
+   */
   property: AutoMovieLightProperty;
 }
 
@@ -302,6 +393,9 @@ export interface IAutoMovieLightPointer {
  * RFC-6901 escaping applies to the id segment (`~1` is `/`, `~0` is `~`, in
  * that order). A pointer that is not the canonical encoding of what it decodes
  * to is rejected, which also rejects an invalid escape such as `~2`.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Parses one canonical authored-light property address.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Rejects a pointer that cannot select a declared light-property branch.
  */
 export const parseLightPointer = (
   pointer: unknown,
@@ -318,13 +412,23 @@ export const parseLightPointer = (
   return { light, property };
 };
 
-/** The canonical pointer addressing one light's property. */
+/**
+ * The canonical pointer addressing one light's property.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Encodes one authored light-property address by stable light identity.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Produces the canonical address shared by authored light-channel branches.
+ */
 export const formatLightPointer = (
   light: string,
   property: AutoMovieLightProperty,
 ): string => `/lights/${escapePointerSegment(light)}/${property}`;
 
-/** Whether a string names an animatable light property. */
+/**
+ * Whether a string names an animatable light property.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Restricts authored animation to the registered light-property surface.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Confirms that a property has an explicit branch-aware application contract.
+ */
 export const isLightProperty = (
   property: string,
 ): property is AutoMovieLightProperty =>
@@ -350,6 +454,9 @@ const unescapePointerSegment = (segment: string): string =>
  * from the exhaustiveness check: the switch is what makes adding an
  * `IAutoMovieLight` arm a compile error here rather than a wrong light at
  * runtime.
+ *
+ * @evidence requirements/lighting/scope-and-identity.md#lighting-authored-input Applies sampled properties without changing the staged light kind.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-light-authority-branches Rebuilds each light through its own exhaustive authority branch.
  */
 export const applyLightOverride = (
   light: IAutoMovieLight,

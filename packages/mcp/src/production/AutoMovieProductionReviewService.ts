@@ -1,5 +1,6 @@
 import {
   AutoMovieContentDigest,
+  AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceOutcomeReference,
   IAutoMovieAcceptanceScenario,
   IAutoMovieCompileProjectOutput,
@@ -116,7 +117,12 @@ interface IReviewReadContext {
   >;
 }
 
-/** Required review criteria in their canonical submission order. */
+/**
+ * Required review criteria in their canonical submission order.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the complete ordered criterion vocabulary for typed review worksheet producers and validators.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes review criterion ordering as code data shared by review services rather than session-owned knowledge.
+ */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
   asset: [
     "silhouette-and-proportion",
@@ -173,6 +179,16 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * target identity, exact selectors, actual current PNG and repaint bytes,
  * receipt provenance, checklist coverage, self-consistency and fingerprint
  * freshness, then stores the external agent's worksheet as a tracked record.
+ *
+ * @evidence requirements/review/scope-and-authority.md#review-validation-decision-boundary Validates evidence while leaving the review outcome with the external reviewer.
+ * @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Preserves submitted criterion outcomes without manufacturing a human verdict.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Keeps deterministic worksheet validation separate from reviewer judgment.
+ * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary Refuses invalid worksheets without making the aesthetic judgment itself.
+ * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories Worksheets carry criterion observations, not a defect category taxonomy.
+ * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary The service has no defect-versus-accepted-variation classification record.
+ * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-severity-priority Criterion outcomes do not assign defect severity or scheduling priority.
+ * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-reproduction-frequency The service stores no defect reproduction state or frequency.
+ * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-duplicate-common-impact The worksheet model has no duplicate-defect or shared-impact relation.
  */
 export class AutoMovieProductionReviewService {
   public constructor(
@@ -181,7 +197,12 @@ export class AutoMovieProductionReviewService {
       new AutoMovieProductionCompiler(project).lint({ scope: "source" }),
   ) {}
 
-  /** Prepare current selectors, frames and required criteria for one target. */
+  /**
+   * Prepare current selectors, frames and required criteria for one target.
+   *
+   * @evidence requirements/review/reproducible-context.md#review-context-source-artifact-identity Prepares review from current target-local source and artifact identities.
+   * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-source-artifact-binding Binds the worksheet to exact source and artifact identities.
+   */
   public prepare(
     input: IAutoMoviePrepareReviewInput,
   ): IAutoMoviePrepareReviewOutput {
@@ -381,7 +402,12 @@ export class AutoMovieProductionReviewService {
     };
   }
 
-  /** Validate and store one external-agent review worksheet. */
+  /**
+   * Validate and store one external-agent review worksheet.
+   *
+   * @evidence requirements/review/records-and-completeness.md#review-completeness-claim Refuses any incomplete criterion set.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-completeness-claim Rechecks current evidence before storing completion.
+   */
   public submit(
     input: IAutoMovieSubmitReviewInput,
   ): IAutoMovieSubmitReviewOutput {
@@ -486,6 +512,10 @@ export class AutoMovieProductionReviewService {
    *
    * A compiler-provided snapshot reuses the exact declared content bytes that
    * formed its input fingerprint instead of opening a second filesystem scan.
+   *
+   * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes missing, stale, incomplete, revise, and complete review state.
+   * @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Compares required queue entries with the actual current review records.
+   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Reports the queue state without implying a verdict.
    */
   public queue(
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
@@ -559,7 +589,7 @@ const validateWorksheet = (
   prepared: IAutoMoviePrepareReviewOutput,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const add = (code: string, message: string): void => {
+  const add = (code: AutoMovieDiagnosticCode, message: string): void => {
     diagnostics.push({
       code,
       category: "error",
@@ -906,7 +936,7 @@ const validateEvidence = (
   check: IAutoMovieReviewCheck,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const fail = (code: string, message: string): void => {
+  const fail = (code: AutoMovieDiagnosticCode, message: string): void => {
     diagnostics.push({
       code,
       category: "error",

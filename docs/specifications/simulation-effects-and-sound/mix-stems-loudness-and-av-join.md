@@ -1,13 +1,15 @@
 # Mix, Stems, Loudness, and A/V Join
 
 ## Mix graph와 bus priority {#sound-mix-graph-and-bus-priority}
+
+### Processing chain과 stable summation {#sound-processing-chain-and-stable-summation}
+
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-mix-hierarchy-loudness 이 절은 의미 source에서 delivery master까지 추적 가능한 mix를 정의한다. -->
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-bus-priority 이 절은 dialogue, effects, ambience, music 등의 bus와 priority를 명시한다. -->
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-cue-identity-deduplication 이 절은 같은 source를 재사용하는 cue occurrence와 route를 독립 identity로 보존한다. -->
 
 Mix input은 presentation sample ranges와 stable unique identity를 가진 presentation source instances, stable bus graph, channel layouts, gain/automation, acoustic response와 delivery target이다. 각 directed route는 source instance 또는 upstream bus identity, destination bus 또는 output identity, route role과 stable route ordinal에서 고유한 identity를 만들고 gain, processing split와 active range를 route revision에 결속한다. Graph는 acyclic이고 각 source instance는 하나 이상의 명시 route를 가지며 같은 source instance가 여러 destination에 기여하면 route identity도 각각 달라야 한다. Priority는 sidechain/ducking 또는 author decision에만 사용한다. Output은 bus stems, master, routing receipt와 sample range다.
 
-### Processing chain과 stable summation {#sound-processing-chain-and-stable-summation}
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-processing-chain 이 절은 processing의 순서와 parameter revision을 결과 identity로 만든다. -->
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-deterministic-summation 이 절은 worker와 입력 열거 순서가 sample 합에 영향을 주지 않게 한다. -->
 
@@ -33,13 +35,15 @@ Automation input은 rational film-time 또는 integer sample keys, interpolation
 Measurement input은 final decoded master samples, sample rate, channel layout와 named delivery profile이고 output은 integrated/segment loudness proxy, sample/true peak, clipping count, measured range와 tool revision이다. Cyclic bus, missing route, nonfinite sample, incompatible layout, unbounded tail, limit violation은 실패다. Limiter나 normalization은 선언된 processing node일 때만 실행하며 검증 단계가 자동 수정하지 않는다.
 
 ## Picture edit와 sound conform {#picture-edit-and-sound-conform}
+
+### Event sync와 boundary continuity {#sound-event-sync-and-boundary-continuity}
+
 <!-- @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-editing-sync-continuity 이 절은 sound 상태를 picture edit revision에 결합한다. -->
 <!-- @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-time-transform 이 절은 trim, slip, rate와 transition을 하나의 유리 time transform으로 표현한다. -->
 <!-- @evidence requirements/editorial/picture-and-sound-edits.md#editorial-sound-emission-presentation 이 절은 edit가 presentation을 바꾸되 emission authority를 보존하게 한다. -->
 
 Conform input은 previous sound timeline, 새 picture edit revision, rational clip transforms, transition ranges와 author sync constraints다. Output은 새 presentation ranges, transformed marks/automation, tails, invalidated dependencies와 conform receipt다. Source/emission time은 보존하고 presentation time만 명시 transform으로 갱신한다.
 
-### Event sync와 boundary continuity {#sound-event-sync-and-boundary-continuity}
 <!-- @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-event-synchronization 이 절은 causal event와 audible presentation의 offset을 검증 가능하게 한다. -->
 <!-- @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-boundary-continuity 이 절은 cut와 transition에서 loop, tail, ambience와 room state를 판정한다. -->
 
@@ -65,7 +69,10 @@ Join input은 rational picture frame rate와 range, masterㆍalternateㆍaudio-d
 
 Noninvertible 또는 unsupported rate transform, source 범위 밖 trim, duplicated ownership, stale conform, sync tolerance 초과, A/V duration mismatch는 clipㆍcue와 sample/frame 경계를 지목한 실패다. 자동 sample drop, frame duplication, tail 절단으로 성공 판정을 만들지 않는다.
 
-## Delivery stream과 inventory {#sound-delivery-stream-and-inventory}
+## Delivery stream과 inventory {#sound-delivery-stream-and-inventory-group}
+
+### Delivery stream과 inventory {#sound-delivery-stream-and-inventory}
+
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-final-media-probe 이 절은 최종 container의 실제 stream facts를 검사하게 한다. -->
 <!-- @evidence requirements/sound/validation-and-delivery.md#sound-delivery-inventory 이 절은 master, stems, source와 receipt의 완전한 목록을 요구한다. -->
 <!-- @evidence requirements/delivery-and-accessibility/containers-codecs-and-media-facts.md#delivery-stream-identity 이 절은 inventory가 실제 container stream identity를 기록하게 한다. -->

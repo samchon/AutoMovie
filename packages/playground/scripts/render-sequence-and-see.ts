@@ -23,51 +23,102 @@ import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 
+/**
+ * Inputs for capturing a compiled playground sequence and its transitions.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundSequenceRenderOptions {
+  /** Vite page exposing the sequence capture hooks. */
   page: string;
+  /** Page-specific query parameters added before capture controls. */
   query: string;
+  /** Base URL of the running playground server. */
   base: string;
+  /** Chrome or Chromium executable used for the headless session. */
   chrome: string;
+  /** Frame sampling rate used by the sequence render plan. */
   fps: number;
+  /** Output frame width in pixels. */
   width: number;
+  /** Output frame height in pixels. */
   height: number;
+  /** Explicit render target, or the page's sequence identity when omitted. */
   target: string | null;
+  /** Destination of the encoded H.264 MP4. */
   outputPath: string;
+  /** Directory receiving the source PNG sequence. */
   frameDir: string;
+  /** Destination of the machine-readable capture artifact. */
   jsonPath: string;
 }
 
+/**
+ * Compiled sequence facts published by a capture-ready playground page.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundSequenceMetadata {
+  /** Readiness marker asserted only after all capture hooks are installed. */
   ready: true;
+  /** Complete sequence running time in seconds. */
   duration: number;
+  /** Compiled sequence whose global timeline drives capture. */
   sequence: IAutoMovieSequence;
+  /** Compiled shots addressable by sequence and isolated-shot capture. */
   shots: IAutoMovieShot[];
+  /** Stable shot order exposed for the resulting artifact. */
   shotIds: string[];
 }
 
+/**
+ * Pixel-distance observation for one sampled cross-dissolve transition.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieSequenceDissolvePixelCheck {
+  /** Outgoing and incoming shots with the transition's film interval. */
   transition: Pick<
     IAutoMovieSequenceRenderTransitionSpan,
     "from" | "to" | "start" | "end"
   >;
+  /** Captured frame nearest the middle blend, or null when none was sampled. */
   frame: number | null;
+  /** Incoming-shot blend weight at the sampled frame. */
   alpha: number | null;
+  /** Mean RGB distance between isolated outgoing and incoming probes. */
   baselineDistance: number;
+  /** Mean RGB distance from the blended frame to the incoming probe. */
   actualToIncoming: number;
+  /** Mean RGB distance from the blended frame to the outgoing probe. */
   actualToOutgoing: number;
+  /** Whether the sampled frame lies measurably between both isolated probes. */
   verified: boolean;
+  /** Explanation retained when the observation cannot verify the dissolve. */
   reason: string | null;
 }
 
+/**
+ * Sequence render result augmented with page metadata and dissolve
+ * observations.
+ *
+ * @author Samchon
+ */
 export interface IAutoMoviePlaygroundSequenceRenderArtifact extends IAutoMovieSequenceRenderAndSeeResult {
+  /** Fully resolved headless route, including capture query parameters. */
   route: string;
+  /** Path where this artifact is serialized. */
   jsonPath: string;
+  /** Encoder implementation used to materialize the preview. */
   encoder: "h264-mp4-encoder";
+  /** Pixel dimensions applied to both the browser viewport and render spec. */
   viewport: { width: number; height: number };
+  /** Minimal page facts needed to interpret the captured sequence. */
   page: {
     duration: number;
     shots: string[];
   };
+  /** Per-transition pixel observations made from isolated shot probes. */
   dissolveChecks: IAutoMovieSequenceDissolvePixelCheck[];
 }
 
@@ -82,6 +133,7 @@ interface SequenceCaptureSession {
   close(): Promise<void>;
 }
 
+/** Parse the command line, capture the sequence, and print its artifact summary. */
 export const main = async (
   argv: string[] = process.argv.slice(2),
 ): Promise<void> => {
@@ -106,6 +158,10 @@ export const main = async (
   );
 };
 
+/**
+ * Capture a compiled sequence, encode its frames, and compare each sampled
+ * dissolve against isolated outgoing and incoming shot probes.
+ */
 export const captureSequenceRenderAndSee = async (
   options: IAutoMoviePlaygroundSequenceRenderOptions,
 ): Promise<IAutoMoviePlaygroundSequenceRenderArtifact> => {

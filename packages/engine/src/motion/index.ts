@@ -2,6 +2,7 @@ export * from "./dampedSpring";
 export * from "./easing";
 export * from "./gait";
 export * from "./gesture";
+export * from "./importedNodeMotion";
 export { fitChainToTarget } from "./legPlant";
 export type { IAutoMoviePlantChain } from "./legPlant";
 export * from "./plantFeet";

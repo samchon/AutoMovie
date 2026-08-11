@@ -2,12 +2,12 @@
 
 ## Pinned Current Revision {#interchange-pinned-current-revision}
 
+### External Version Snapshot {#interchange-external-version-snapshot}
+
 <!-- @evidence requirements/external-inputs/refresh-version-pinning-and-offline.md#external-version-pinning Mutable source가 작품을 다시 열 때 current input을 바꾸지 못하게 한다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption Remote audio와 synthesis result를 immutable bytes로 봉인한다. -->
 
 Current input pointer는 logical source가 아니라 source revision, closure digest, interpretation version와 adoption identity를 가리킨다. Open, compile, render와 review는 이 pointer를 읽기만 하고 mutable URL, latest alias, moving branch와 local pathname의 현재 bytes를 조회해 revision을 갱신하지 않는다.
-
-### External Version Snapshot {#interchange-external-version-snapshot}
 
 <!-- @evidence requirements/external-inputs/refresh-version-pinning-and-offline.md#external-provider-tool-version-pinning Provider, model, dataset, schema와 tool version의 알려진 범위와 unknown을 기록한다. -->
 

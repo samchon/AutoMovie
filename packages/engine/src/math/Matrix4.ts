@@ -12,10 +12,17 @@ import { IAutoMovieQuaternion, IAutoMovieVector3 } from "@automovie/interface";
  * renderer world matrices. Every helper is stateless and returns a fresh
  * `number[16]`.
  *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Provides the matrix algebra that resolves local scene transforms into inspectable world-space geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Provides the matrix algebra that resolves local scene transforms into inspectable world-space geometry.
  * @author Samchon
  */
 export namespace Matrix4 {
-  /** The identity matrix. */
+  /**
+   * The identity matrix.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Supplies the neutral matrix from which parent-to-child world transforms are accumulated.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Supplies the neutral matrix from which parent-to-child world transforms are accumulated.
+   */
   export const identity = (): number[] => [
     1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
   ];
@@ -24,6 +31,9 @@ export namespace Matrix4 {
    * Build the local transform matrix from a TRS triple, matching `three.js`
    * `Matrix4.compose` exactly (so engine and viewer agree bit-for-bit): `M = T
    * · R · S`.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Combines declared translation, quaternion rotation, and scale in the hierarchy's canonical transform order.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Combines declared translation, quaternion rotation, and scale in the hierarchy's canonical transform order.
    */
   export const compose = (
     t: IAutoMovieVector3,
@@ -62,7 +72,12 @@ export namespace Matrix4 {
     ];
   };
 
-  /** Matrix product `a · b` (apply `b` first, then `a`), column-major. */
+  /**
+   * Matrix product `a · b` (apply `b` first, then `a`), column-major.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies parent and local matrices in column-major order so child world transforms preserve their hierarchy.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Applies parent and local matrices in column-major order so child world transforms preserve their hierarchy.
+   */
   export const multiply = (a: number[], b: number[]): number[] => {
     const out = new Array<number>(16);
     for (let col = 0; col < 4; ++col)
@@ -74,7 +89,12 @@ export namespace Matrix4 {
     return out;
   };
 
-  /** The translation column of a matrix. */
+  /**
+   * The translation column of a matrix.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Reads the resolved world translation used by spatial and visibility measurements.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reads the resolved world translation used by spatial and visibility measurements.
+   */
   export const position = (m: number[]): IAutoMovieVector3 => ({
     x: m[12]!,
     y: m[13]!,
@@ -99,6 +119,9 @@ export namespace Matrix4 {
    * spreading through the quaternion and every descendant world matrix. The
    * recovered rotation of a collapsed axis is indeterminate, but finite, so a
    * degenerate node no longer silently poisons the frame.
+   *
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Recovers finite translation, rotation, and scale from a resolved matrix for downstream scene-state inspection.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Recovers finite translation, rotation, and scale from a resolved matrix for downstream scene-state inspection.
    */
   export const decompose = (
     m: number[],

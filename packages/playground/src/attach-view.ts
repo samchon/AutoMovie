@@ -206,6 +206,8 @@ const cut = cutSequence(
   shots,
 );
 if (cut.success !== true) throw new Error("cut failed");
+
+/** Compiled running time, in seconds, of the continuous carry demonstration. */
 export const FILM_DURATION = cut.runtime;
 
 // ── the set: scene nodes → three.js (groups tracked by id) ───────────────────

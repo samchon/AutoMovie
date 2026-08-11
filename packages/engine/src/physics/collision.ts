@@ -18,18 +18,47 @@ const assertFiniteVector = (name: string, vector: IAutoMovieVector3): void => {
  * arrow vs. a rider's torso). Cheap, rotation-free, and enough to answer the
  * one question a strike needs: _did it connect, and when?_
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-collision-proxies Represents the bounded sphere proxy used by deterministic contact queries.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the world-space center and radius consumed by the first-contact solve.
  * @author Samchon
  */
 export interface IAutoMovieSphere {
+  /**
+   * Sphere center in world space.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-collision-proxies Locates the bounded contact proxy in world space.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the center consumed by deterministic first-contact queries.
+   */
   center: IAutoMovieVector3;
+  /**
+   * Positive radius in world meters.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-collision-proxies Bounds the spherical contact proxy with a physical radius.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the proxy extent consumed by first-contact queries.
+   */
   radius: number;
 }
 
-/** A detected hit: the parameter/time of first contact and the contact point. */
+/**
+ * A detected hit: the parameter/time of first contact and the contact point.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Exposes the resolved first contact of a bounded collision query.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the time and world point of contact.
+ */
 export interface IAutoMovieHit {
-  /** Time (or segment parameter) of first contact. */
+  /**
+   * Time (or segment parameter) of first contact.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Identifies when the deterministic contact begins.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Reports the first-contact parameter of the query.
+   */
   time: number;
-  /** World point of first contact. */
+  /**
+   * World point of first contact.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Identifies where the deterministic contact begins.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Reports the resolved world-space contact output.
+   */
   point: IAutoMovieVector3;
 }
 
@@ -42,6 +71,8 @@ export interface IAutoMovieHit {
  * that falls within the segment. A degenerate segment (`a == b`) reduces to a
  * point-in-sphere test.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-collision-proxies Tests a bounded segment against the declared spherical proxy.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Computes the first world contact without persistent solver state.
  * @author Samchon
  */
 export const segmentSphere = (
@@ -85,6 +116,8 @@ export const segmentSphere = (
  * test exact per segment (the projectile is smooth, so a modest `steps`
  * resolves the contact time closely).
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Returns the first bounded contact along an analytic projectile path.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Produces the contact time and point consumed by aftermath logic.
  * @author Samchon
  */
 export const projectileSphereHit = (

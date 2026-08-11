@@ -18,6 +18,8 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
  *   sconce, a peg hole, a bottle mouth).
  * - `"hook"`: a hanging point (a lantern ring, a coat peg).
  *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `AutoMovieAffordanceKind` as the portable data boundary for the motion object authored vocabulary requirement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `AutoMovieAffordanceKind` for the performance interaction attachment object handoff system contract.
  * @author Samchon
  */
 export type AutoMovieAffordanceKind =
@@ -38,19 +40,34 @@ export type AutoMovieAffordanceKind =
  * affordance frame onto another's; `affordanceSupportContacts` turns a
  * `stack-top` extent into the support contacts the topple judgment consumes.
  *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `IAutoMovieAffordance` as the portable data boundary for the motion object authored vocabulary requirement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `IAutoMovieAffordance` for the performance interaction attachment object handoff system contract.
  * @author Samchon
  */
 export interface IAutoMovieAffordance {
-  /** Stable id, unique within the model; action targets cite it by this. */
+  /**
+   * Stable id, unique within the model; action targets cite it by this.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `id` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `id` for the performance interaction attachment object handoff system contract.
+   */
   id: string;
 
-  /** What the point is for. Drives which fields apply (see `extent`). */
+  /**
+   * What the point is for. Drives which fields apply (see `extent`).
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `kind` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `kind` for the performance interaction attachment object handoff system contract.
+   */
   kind: AutoMovieAffordanceKind;
 
   /**
    * The contact frame in the model's local space: `translation` is where the
    * contact sits, `rotation` orients it (`+Y` out of a stack-top face, out of a
    * socket mouth). Seating aligns two of these frames coincident.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `frame` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `frame` for the performance interaction attachment object handoff system contract.
    */
   frame: IAutoMovieTransform;
 
@@ -61,6 +78,9 @@ export interface IAutoMovieAffordance {
    * {@link IAutoMovieSurface.polygon}. Its corners, transformed to world, become
    * #601 support contacts. **Must be `null` for point-like kinds** (`handle` /
    * `socket` / `hook`), which have no face to rest on.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `extent` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `extent` for the performance interaction attachment object handoff system contract.
    */
   extent: IAutoMovieVector3[] | null;
 }

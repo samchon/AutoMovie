@@ -2,17 +2,23 @@
 
 ## 공간 기준 상태 {#world-site-spatial-reference-state}
 
+### 좌표축과 단위 입력 {#world-site-coordinate-axis-unit-input}
+
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-spatial-source-of-truth Establishes the resolved spatial record as the sole source used downstream. -->
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-spatial-feature-identity Carries stable feature identity and lineage across revisions. -->
 
 시스템은 하나의 세계·사이트 정본 안에 자료 원본 identity, 안정된 feature identity, 제작 좌표계, 원본별 좌표 기준, 단위, 변환 계보, 공간 범위와 revision을 보관한다. 모든 geometry, 네트워크, 구역, 환경 상태와 파생 산출물은 이 정본의 feature와 revision을 참조하며, 화면상 이름이나 배열 순서를 identity로 대신하지 않는다.
 
-### 좌표축과 단위 입력 {#world-site-coordinate-axis-unit-input}
-
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-coordinate-unit Requires explicit axes, handedness, vertical direction and units. -->
 <!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-units-coordinate-frame Keeps production scale and coordinate interpretation explicit. -->
 
 입력은 축 순서, handedness, 수직축과 위쪽 방향, 수평·수직 거리 단위, 각도 단위, 원점 해석과 북쪽 방향을 명시한다. 해석에 필요한 항목이 없고 출처만으로 유일하게 결정할 수 없으면 시스템은 좌표를 추측하지 않고 미해결 입력으로 보류하며, 사용자가 선택한 해석을 새로운 provenance가 있는 결정으로 기록한다.
+
+### Deterministic coordinate magnitude admission {#world-site-coordinate-magnitude-admission}
+
+<!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound deterministic runtime의 coordinate magnitude bound와 초과 거절을 요구한다. -->
+
+Coordinate admission은 normalized local·world position, extent와 derived endpoint가 finite이고 declared inclusive magnitude bound 안에 있는지 확인한다. 초과한 coordinate는 clamp, wrap 또는 silent origin shift로 통과시키지 않고 exact field, observed magnitude와 supported bound를 진단한다. 이 수치 gate는 CRS, datum 또는 source transform authority를 대신 판정하지 않는다.
 
 ### CRS, datum과 epoch {#world-site-crs-datum-epoch}
 

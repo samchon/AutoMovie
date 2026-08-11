@@ -21,6 +21,9 @@ const CLIP_EPSILON = 1e-10;
  * evaluate every resulting vertex through {@link surfaceHeightAt}. The viewer
  * therefore draws internal relief from the same bilinear rule that feet and
  * placement queries obey.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Tessellates a declared support surface into renderer-ready geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves footprint holes and heightfield boundaries in the emitted topology.
  */
 export const tessellateSurface = (
   surface: IAutoMovieSurface,

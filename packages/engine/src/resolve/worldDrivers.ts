@@ -40,6 +40,8 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * {@link resolveFrame} when the caller provides `dt` + state, or in the host's
  * own pass otherwise; nothing is silently dropped.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Evaluates each driver that depends on composed world state.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Implements the world-space stage of the declared deterministic driver graph.
  * @author Samchon
  */
 export const resolveWorldDrivers = (
@@ -61,7 +63,12 @@ export const resolveWorldDrivers = (
   return deferred;
 };
 
-/** Build the parent → children adjacency the recompose walk needs. */
+/**
+ * Build the parent → children adjacency the recompose walk needs.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Preserves hierarchy dependency edges so a driver update propagates through descendants.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Builds the concrete subtree graph used by world-driver recomposition.
+ */
 export const childrenIndex = (
   nodes: IAutoMovieNode[],
 ): Map<string, string[]> => {

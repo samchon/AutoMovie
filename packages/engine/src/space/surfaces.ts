@@ -18,10 +18,17 @@ const MIN_RAMP_AXIS = 1e-9;
  * Prepared footprint for one surface. Build once when checking many points
  * against the same static polygon.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `IAutoMoviePreparedSurface` represents prepared footprint for one surface. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMoviePreparedSurface` structures prepared footprint for one surface for the system that resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export interface IAutoMoviePreparedSurface {
-  /** The source surface whose height/identity remains authoritative. */
+  /**
+   * The source surface whose height/identity remains authoritative.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `surface` records `IAutoMoviePreparedSurface`'s source surface whose height/identity remains authoritative. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surface` supplies `IAutoMoviePreparedSurface`'s source surface whose height/identity remains authoritative when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly surface: IAutoMovieSurface;
 
   /**
@@ -30,6 +37,9 @@ export interface IAutoMoviePreparedSurface {
    * This used to be the footprint's convex hull, which is why an L-shaped plate
    * had to be refused: a hull fills the notch, and a hull of a holed slab fills
    * the atrium. The region carried here is the rings themselves.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `footprint` records `IAutoMoviePreparedSurface`'s exact plan region of `IAutoMovieSurface.polygon` and its holes. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprint` supplies `IAutoMoviePreparedSurface`'s exact plan region of `IAutoMovieSurface.polygon` and its holes when the engine resolves host-relative support geometry and whole-footprint zone membership.
    */
   readonly footprint: IAutoMovieFootprint;
 }
@@ -37,19 +47,33 @@ export interface IAutoMoviePreparedSurface {
 /**
  * Prepared footprint index for all surfaces in a space.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `IAutoMoviePreparedSpace` represents prepared footprint index for all surfaces in a space. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMoviePreparedSpace` structures prepared footprint index for all surfaces in a space for the system that resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export interface IAutoMoviePreparedSpace {
-  /** The source space this prepared index was built from. */
+  /**
+   * The source space this prepared index was built from.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `space` records `IAutoMoviePreparedSpace`'s source space this prepared index was built from. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `space` supplies `IAutoMoviePreparedSpace`'s source space this prepared index was built from when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly space: IAutoMovieSpace;
 
-  /** Surface footprints with precomputed convex hulls. */
+  /**
+   * Surface footprints with precomputed convex hulls.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `surfaces` records `IAutoMoviePreparedSpace`'s surface footprints with precomputed convex hulls. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surfaces` supplies `IAutoMoviePreparedSpace`'s surface footprints with precomputed convex hulls when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly surfaces: readonly IAutoMoviePreparedSurface[];
 }
 
 /**
  * Precompute one surface footprint hull for repeated point queries.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `prepareSurface` precomputes one surface footprint hull for repeated point queries. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `prepareSurface` performs surface preparation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export const prepareSurface = (
@@ -62,6 +86,8 @@ export const prepareSurface = (
 /**
  * Precompute every surface footprint hull in a space.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `prepareSpace` precomputes every surface footprint hull in a space. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `prepareSpace` performs space preparation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export const prepareSpace = (space: IAutoMovieSpace): IAutoMoviePreparedSpace =>
@@ -80,16 +106,33 @@ export const prepareSpace = (space: IAutoMovieSpace): IAutoMoviePreparedSpace =>
  * and so a caller holding neither — a prepared patch, a projected footprint —
  * can still ask.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `IAutoMovieHeightSurface` represents whatever states how high the ground is: either surface record answers here. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMovieHeightSurface` structures whatever states how high the ground is: either surface record answers here for the system that resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export interface IAutoMovieHeightSurface {
-  /** The general ground rule, when the surface states one. */
+  /**
+   * The general ground rule, when the surface states one.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `height` records `IAutoMovieHeightSurface`'s general ground rule, when the surface states one. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `height` supplies `IAutoMovieHeightSurface`'s general ground rule, when the surface states one when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly height?: IAutoMovieHeightRule | undefined;
 
-  /** First height anchor of the two-anchor spelling. */
+  /**
+   * First height anchor of the two-anchor spelling.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `anchor` records `IAutoMovieHeightSurface`'s first height anchor of the two-anchor spelling. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `anchor` supplies `IAutoMovieHeightSurface`'s first height anchor of the two-anchor spelling when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly anchor?: IAutoMovieVector3 | undefined;
 
-  /** Second height anchor of the two-anchor spelling; `null` when flat. */
+  /**
+   * Second height anchor of the two-anchor spelling; `null` when flat.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `rampTo` records `IAutoMovieHeightSurface`'s second height anchor of the two-anchor spelling; `null` when flat. This ensures marks and supports resolve against their declared host geometry.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `rampTo` supplies `IAutoMovieHeightSurface`'s second height anchor of the two-anchor spelling; `null` when flat when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly rampTo?: IAutoMovieVector3 | null | undefined;
 }
 
@@ -123,6 +166,8 @@ export interface IAutoMovieHeightSurface {
  * before spaces existed. `validateSpace` refuses one, so this is what a
  * hand-built patch reaching a renderer answers rather than a throw.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `surfaceHeightAt` produces height of one surface at `(x, z)`, ignoring its footprint. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surfaceHeightAt` performs height at surface evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export const surfaceHeightAt = (
@@ -219,6 +264,9 @@ const mix = (from: number, to: number, progress: number): number =>
  * crowds and the camera base all read. `validateSpace` refused those footprints
  * precisely because this query could not tell the truth about them; it can now,
  * so they are authored instead of forbidden.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `surfaceContains` answers "Is `(x, z)` on the surface's footprint?" This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surfaceContains` performs contains surface evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const surfaceContains = (
   surface: IAutoMovieSurface,
@@ -229,6 +277,8 @@ export const surfaceContains = (
 /**
  * Is `(x, z)` on a prepared surface footprint?
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `preparedSurfaceContains` answers "Is `(x, z)` on a prepared surface footprint?" This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `preparedSurfaceContains` tests a prepared surface's cached footprint for the queried plan point.
  * @author Samchon
  */
 export const preparedSurfaceContains = (
@@ -247,6 +297,8 @@ export const preparedSurfaceContains = (
  * regardless of walkability. For "may an actor stand here", see {@link heightAt}
  * / {@link isWalkable}.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `surfaceAt` produces the **topmost** surface under `(x, z)` (walkable or not), or `null` when the point is over nothing. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surfaceAt` performs at surface evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
 export const surfaceAt = (
@@ -279,6 +331,8 @@ export const surfaceAt = (
  * `isWalkable` is exactly `heightAt !== null`, so the two queries can never
  * disagree.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `heightAt` produces the walking height at `(x, z)`: the height of the topmost surface there, **when that surface is walkable**: `null` over nothing and `null` when the topmost surface is a no-go top (standing space is occupied by something an actor may not stand on; this 2.5-D heightfield cannot walk _under_ it: overhang clearance belongs to the structured building volume layer). This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `heightAt` returns the topmost walkable height at a plan point and refuses empty or no-go tops with `null`.
  * @author Samchon
  */
 export const heightAt = (
@@ -293,7 +347,12 @@ export const heightAt = (
   return surfaceHeightAt(surface, x, z);
 };
 
-/** May an actor stand at `(x, z)`? Exactly `heightAt(...) !== null`. */
+/**
+ * May an actor stand at `(x, z)`? Exactly `heightAt(...) !== null`.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `isWalkable` answers "May an actor stand at `(x, z)`?" This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `isWalkable` classifies a plan point by whether its topmost support surface permits standing.
+ */
 export const isWalkable = (
   space: IAutoMovieSpace,
   x: number,
@@ -309,6 +368,8 @@ export const isWalkable = (
  * crate half off a table edge yields only the on-table contacts, so its
  * overhanging center of mass topples exactly as #601 judges it.
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `supportContactsFor` produces support contacts for an object footprint resting on the space: each footprint point that lies over a surface (walkable or not: objects rest on no-go tops too) becomes a contact at that surface's height; points over nothing contribute none. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `supportContactsFor` lifts every footprint point over a support surface to that surface's height and omits points over empty space.
  * @author Samchon
  */
 export const supportContactsFor = (
@@ -338,6 +399,8 @@ export const supportContactsFor = (
  * surfaces degrades to the legacy behavior instead of a solver-ish
  * nearest-surface search, which stays deferred).
  *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `spaceGround` adapts a prepared space into the `(x, z) → y` ground callback consumed by path following, foot planting, and ground-contact validation. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `spaceGround` exposes the space's walkable-height query as the host-relative ground function used by motion seams.
  * @author Samchon
  */
 export const spaceGround = (

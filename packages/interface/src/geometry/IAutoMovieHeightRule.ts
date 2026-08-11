@@ -10,6 +10,8 @@
  * Every kind is pure arithmetic over its own stored numbers: the same rule
  * answers the same height on every machine and every run.
  *
+ * @evidence requirements/map/terrain-and-landforms.md#map-elevation-slope Declares the elevation rule from which ground height and slope are deterministically derived.
+ * @evidence specifications/world-and-site/terrain-ground-and-geology.md#world-site-elevation-slope-surface-input Types the supported single-valued terrain surface inputs and their sampling state.
  * @author Samchon
  */
 export type IAutoMovieHeightRule =

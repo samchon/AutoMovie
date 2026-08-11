@@ -22,10 +22,9 @@ pnpm --filter @automovie/playground preview
 - `drivers.html`: 3관절 팔과 two-bone IK, driver resolver를 확인한다.
 - `stickman.html`: stickman/humanoid 및 cat 모션 클립을 선택 재생한다.
 - `gesture.html`, `showcase.html`: 엔진이 합성하는 gesture/action vocabulary를 확인한다.
-- `film.html`, `perform.html`: script/stage/block/perform/cut 파이프라인의 결과를 확인한다.
+- `film.html`: script/stage/block/perform/cut 파이프라인의 결과를 확인한다.
 - `launch.html`, `impact.html`, `attach.html`, `trampoline.html`: projectile, impact, attach, jump 계열의 엔진 모션을 확인한다.
 - `knight.html`, `archery.html`, `spar.html`: mounted, archery, boxing 장면을 확인한다.
-- `human.html`: VRM 아바타 표면. expression, gaze, blink, arm/head pose를 확인한다.
 - `body.html`, `face.html`, `head.html`, `mhhead.html`, `mhfull.html`: face/head/body 연구 표면. 현재 제품 경로의 중심은 아니지만 asset/shape 검증용으로 보존한다.
 
 ## 모션 자산 인벤토리
@@ -66,15 +65,3 @@ pnpm --filter @automovie/playground preview
 이들은 별도 gesture/action profile이나 driven-driver 이관 기준이 생길 때까지 손작성 clip으로 둔다.
 
 Profile-generated clip으로 바꾸는 PR은 기존 clip과 key observable을 비교하는 regression을 먼저 추가하고, playground capture로 silhouette와 timing을 확인한다.
-
-## 외부 모델
-
-`human.html`은 VRoid sample avatar `"Vita"`를 사용한다.
-
-이 모델은 CC0(public domain)이며 저장소에는 커밋하지 않고 필요할 때 내려받는다.
-
-```bash
-packages/playground/scripts/fetch-models.sh
-```
-
-다른 `.vrm`을 쓰려면 `public/models/`에 넣고 `src/human.ts`의 경로를 바꾼다.

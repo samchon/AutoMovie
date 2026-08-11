@@ -44,22 +44,59 @@ const FALLBACK_NORMAL: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
  * itself (a malformed capsule is an error, returned before sampling) rather
  * than trusting an upstream pass.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `IAutoMovieCollisionActor` binds a stable scene node to the rig, motion, proxies, and physical inputs inspected for one collision participant.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `IAutoMovieCollisionActor` defines the named subject root from which capsule and motion member paths are reconstructed.
  * @author Samchon
  */
 export interface IAutoMovieCollisionActor {
-  /** Scene node id, used to label emitted interaction events. */
+  /**
+   * Scene node id, used to label emitted interaction events.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `node` labels the actor and target identities on every sampled contact event.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `node` distinguishes collision subjects even when their capsule layouts or display names coincide.
+   */
   node: string;
-  /** Rig for forward kinematics. */
+  /**
+   * Rig for forward kinematics.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `skeleton` supplies the bone identities against which malformed capsule endpoints are located.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `skeleton` establishes the rig root and hierarchy used to decide whether a named endpoint is FK-reachable.
+   */
   skeleton: IAutoMovieSkeleton;
-  /** Motion clip to sample. */
+  /**
+   * Motion clip to sample.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `motion` supplies the shot-clock pose samples from which this actor's contact times are identified.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `motion` bounds collision discovery to the participant's declared clip duration and sampled pose state.
+   */
   motion: IAutoMovieMotion;
-  /** Capsule proxies over this actor's bones. */
+  /**
+   * Capsule proxies over this actor's bones.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `capsules` retains the indexed body proxies whose endpoint or radius field can fail before sampling.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `capsules` provides the stable collection position and bone pair used to locate each overlap calculation.
+   */
   capsules: readonly IAutoMovieCapsuleProxy[];
-  /** Physical body (mass, restitution). `null` → default mass. */
+  /**
+   * Physical body (mass, restitution). `null` → default mass.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `body` identifies the mass and restitution source used for the reported deepest-contact response.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `body` distinguishes declared physical parameters from the documented default-human fallback.
+   */
   body: IAutoMovieBody | null;
-  /** Optional clinical-axis remap. */
+  /**
+   * Optional clinical-axis remap.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `jointAxes` names the optional per-bone axis remap used when resolving this participant's sampled capsules.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `jointAxes` keeps clinical-axis interpretation attached to the actor whose contact positions depend on it.
+   */
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
-  /** Optional rest-frame remap. */
+  /**
+   * Optional rest-frame remap.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `restFrames` names the optional per-bone rest basis applied to this actor before overlap is measured.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `restFrames` preserves the pose-resolution basis alongside the subject whose world-space proxy positions it changes.
+   */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 }
 
@@ -68,14 +105,31 @@ export interface IAutoMovieCollisionActor {
  * the `contact` interaction events for downstream/render, and a suggested
  * response at the deepest penetration (or `null`).
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `IAutoMovieBodyCollisionResult` keeps collision diagnostics, contact events, and the deepest-contact response under one participant-pair outcome.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `IAutoMovieBodyCollisionResult` separates invalid input, sampled contact scope, and optional correction data instead of conflating their effects.
  * @author Samchon
  */
 export interface IAutoMovieBodyCollisionResult {
-  /** Warning-severity feedback (or an error for a bad sampleRate). */
+  /**
+   * Warning-severity feedback (or an error for a bad sampleRate).
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validation` carries capsule-input errors and indexed contact-distance warnings at their discovered paths.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validation` preserves severity, expected overlap condition, penetration depth, and overshoot for the collision pair.
+   */
   validation: IAutoMovieValidation;
-  /** Contact events on the shot clock: "one calculation, two consumers". */
+  /**
+   * Contact events on the shot clock: "one calculation, two consumers".
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `events` records each contact's time, actor, target, and midpoint for downstream identification.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `events` preserves the sampled temporal and subject scope even when physics intent suppresses advisory warnings.
+   */
   events: IAutoMovieInteractionEvent[];
-  /** Suggested response at the deepest contact, or `null` when none applies. */
+  /**
+   * Suggested response at the deepest contact, or `null` when none applies.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `response` identifies the correction suggested for the single deepest sampled penetration.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `response` remains null when no unsuppressed contact applies, keeping advisory scope distinct from event existence.
+   */
   response: IAutoMovieCollisionResponse | null;
 }
 
@@ -102,6 +156,8 @@ interface IPenetration {
  * synthesis of the suggested react action into `performShot` is deferred (#600
  * follow-up); this returns the response as data.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `detectBodyCollision` reports malformed actor proxies at their input paths and each interpenetration at an indexed contact-distance path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `detectBodyCollision` binds participant ids, sample times, penetration observations, and warning scope to the same deterministic collision pass.
  * @author Samchon
  */
 export const detectBodyCollision = (props: {

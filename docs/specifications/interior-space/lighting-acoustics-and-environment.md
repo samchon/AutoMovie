@@ -1,6 +1,8 @@
 # 조명, 음향과 환경 분석
 
-## Daylight, luminaire와 optical state {#interior-space-lighting-optical-state}
+## Contract units {#spec-lighting-acoustics-and-environment-contract-units}
+
+### Daylight, luminaire와 optical state {#interior-space-lighting-optical-state}
 
 <!-- @evidence requirements/interior/lighting-daylight-and-optics.md#interior-lighting-daylight-optics Requires daylight and artificial lighting as authored, measurable systems. -->
 <!-- @evidence requirements/interior/lighting-daylight-and-optics.md#interior-daylight-path Requires openings, obstructions, time, and exterior context in daylight evaluation. -->
@@ -11,7 +13,7 @@
 
 Lighting 입력은 exterior opening과 shading state, read-only north·ground·time·sky·sun·neighbour context, luminaire identity·geometry·distribution·spectrum·intensity, mount·support, circuit·control group와 named state를 가져야 한다. Material emission과 fixture light source를 구분하고 reflector, diffuser, glazing, transmission과 surface reflectance의 measured 또는 authored basis를 기록한다. 출력은 동일 design revision과 state를 읽은 render lighting, target별 illuminance·contrast·glare 등 지원 metric, sample field와 gap을 제공한다. Missing context, stale opening, unsupported photometry, disconnected control, floating fixture와 분석 미실행은 fabricated number 대신 `unsupported` 또는 `not-run`이며 beauty image만으로 정량 pass를 주장하지 않는다.
 
-## Acoustic boundary와 sound scenario {#interior-space-acoustic-boundary-scenario}
+### Acoustic boundary와 sound scenario {#interior-space-acoustic-boundary-scenario}
 
 <!-- @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustics-sound-boundaries Requires sound boundaries and room scenarios. -->
 <!-- @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-sound-transmission Requires openings, partitions, flanking paths, and state in transmission. -->

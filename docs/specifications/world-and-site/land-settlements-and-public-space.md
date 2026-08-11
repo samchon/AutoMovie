@@ -2,13 +2,13 @@
 
 ## 토지와 장소의 상태 {#world-site-land-place-state}
 
+### 필지 경계 provenance와 topology {#world-site-parcel-boundary-topology}
+
 <!-- @evidence requirements/map/parcels-and-land-use.md#map-parcels-land-use Defines parcels and land use as sourced spatial state. -->
 <!-- @evidence requirements/map/settlements-and-urban-form.md#map-settlement-urban-form Defines settlement form without shipping a settlement catalogue. -->
 <!-- @evidence requirements/map/parks-and-public-space.md#map-parks-public-space Defines public space through function, access and state. -->
 
 시스템은 필지, 토지 이용, 권리 overlay, 정착지 hierarchy와 도시 형태, 공원과 공공 공간을 서로 참조하는 stable feature로 표현한다. 특정 국가의 지적 체계, 용도지역 명칭, 도시 시대나 공원 시설을 내장하지 않고 사용자 어휘, 출처, 유효 시각과 공간 관계를 보존한다. 법적 주장과 물리적 표현은 별도 상태다.
-
-### 필지 경계 provenance와 topology {#world-site-parcel-boundary-topology}
 
 <!-- @evidence requirements/map/parcels-and-land-use.md#map-parcel-boundary-provenance Requires surveyed, interpreted and illustrative boundaries to remain distinguishable. -->
 <!-- @evidence requirements/map/parcels-and-land-use.md#map-parcel-boundary-topology Requires parcels to close, share edges consistently and expose gaps or overlaps. -->

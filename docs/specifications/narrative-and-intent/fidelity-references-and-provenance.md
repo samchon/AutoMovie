@@ -2,12 +2,12 @@
 
 ## Visual Deliverable 계약 {#narrative-intent-visual-deliverable-contract}
 
+### Blocking Pass 불변식 {#narrative-intent-blocking-pass-invariants}
+
 <!-- @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-visual-delivery 각 deliverable의 audience, raster, clock, tier와 source revision을 정한다. -->
 <!-- @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-representation-tier project가 tier별 관찰 가능한 ceiling을 정의하게 한다. -->
 
 Visual deliverable은 stable identity, purpose, target audience, raster 또는 scale, frame clock 또는 view set, required pass, representation tier, source design revision, delivery state와 acceptance profile을 가진다. Proxy, guide, blocking, final deterministic와 optional rendition은 이름이나 해상도가 아니라 이 계약으로 구분된다.
-
-### Blocking Pass 불변식 {#narrative-intent-blocking-pass-invariants}
 
 <!-- @evidence requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-blocking-pass staging, motion, timing과 readable state를 재현 가능하게 증명한다. -->
 
@@ -43,12 +43,12 @@ Deliverable과 review는 design, asset, source, renderer, repaint input와 outpu
 
 ## Reference Record 경계 {#narrative-intent-reference-record-boundary}
 
+### Original, Derived와 Generated Reference {#narrative-intent-reference-lineage}
+
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-references-provenance external 자료를 독립된 관찰 근거로 등록한다. -->
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-observation-interpretation raw observation과 adopted interpretation을 분리한다. -->
 
 Reference record는 stable identity, media kind, creator 또는 provider, source location 또는 generated identity, acquisition time, exact bytes digest, license, rights, observed range와 consumer를 가진다. Raw mark와 measured fact, semantic candidate, interpretation과 adopted design decision은 별도 claim이며 등록만으로 design truth가 되지 않는다.
-
-### Original, Derived와 Generated Reference {#narrative-intent-reference-lineage}
 
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-generated-reference generated reference의 provider, model, prompt와 digest를 기록한다. -->
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-reference-original-derived original과 processing-derived 자료의 lineage를 보존한다. -->
@@ -69,6 +69,12 @@ Reference permission은 production과 design observation, asset ingest, model in
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-reference-unsupported-incomplete 분석 실패와 unsupported geometry를 보존한다. -->
 
 Observation과 interpretation은 authority, confidence, uncertainty와 disagreement를 가진다. Reference replacement는 새 identity와 explicit supersession relation을 만들고 과거 reading을 자동 이식하지 않으며 unreadable range, unknown scale, ambiguous candidate, missing rights, unsupported analysis와 not-run attempt는 삭제하지 않고 withheld 또는 skipped 상태로 출력한다.
+
+### Reference manifest closure {#narrative-intent-reference-manifest-closure}
+
+<!-- @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure Design reference가 exact source bytes, declared frame와 lineage로 재구성되게 한다. -->
+
+Reference manifest 진단은 각 adopted reference의 source identity, frame, digest와 consumer relation이 닫혔는지 검사하고, 누락된 manifest fact를 human review가 끝났다는 주장으로 대체하지 않는다.
 
 ### Manifest Closure와 Review {#narrative-intent-reference-manifest-review}
 

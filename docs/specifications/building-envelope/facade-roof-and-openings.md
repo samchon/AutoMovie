@@ -2,11 +2,11 @@
 
 ## Facade Resolution {#building-envelope-facade-resolution}
 
+### Facade 입력과 배치 {#building-envelope-facade-placement-input}
+
 <!-- @evidence requirements/building-exterior/facades-and-walls.md#building-facades-walls facade placement, depth, corner, interior boundary와 외피 전용 완결성을 하나의 resolution 계약으로 묶는다. -->
 
 Facade는 building mass의 named exterior face 또는 curved·faceted region에 결속되고 base line, local frame, height extent, depth direction, assembly, opening과 corner relation을 가진다. Curtain wall, masonry, panel, screen과 freeform facade는 열린 kind이며 동일한 좌표·경계 규칙을 따른다.
-
-### Facade 입력과 배치 {#building-envelope-facade-placement-input}
 
 <!-- @evidence requirements/building-exterior/facades-and-walls.md#building-facade-placement-basis facade가 mass face, grid, curve 또는 명시된 surface 중 어느 근거에 배치됐는지 보존한다. -->
 
@@ -26,11 +26,11 @@ Host를 벗어난 facade, 뒤집힌 depth, 열린 corner, 이중 face, mass와�
 
 ## 지붕과 Rooftop State {#building-envelope-roof-rooftop-state}
 
+### Roof 입력과 경계 {#building-envelope-roof-input-boundary}
+
 <!-- @evidence requirements/building-exterior/roofs-and-rooftops.md#building-roofs-rooftops 평지붕, 경사지붕, dome, canopy와 rooftop 공간·배수·표현을 일반 지붕 계약으로 정의한다. -->
 
 Roof는 building mass의 상부 boundary를 이루는 surface set이며 ridge, valley, hip, eave, parapet, overhang, opening, roof deck와 mounted equipment를 stable identity로 가진다. 곡면이 faceted representation이면 실제 곡면 정밀량으로 표시하지 않는다.
-
-### Roof 입력과 경계 {#building-envelope-roof-input-boundary}
 
 <!-- @evidence requirements/building-exterior/roofs-and-rooftops.md#building-roof-elements 지붕 구성 요소와 서로 만나는 edge 및 opening 관계를 보존한다. -->
 
@@ -56,11 +56,11 @@ Representation 교체가 peak, ridge, eave, parapet, opening, water path 또는 
 
 ## 개구부와 작동 State {#building-envelope-opening-operation-state}
 
+### Opening 입력과 Cut 출력 {#building-envelope-opening-cut-input-output}
+
 <!-- @evidence requirements/building-exterior/openings-and-fenestration.md#building-openings-fenestration 창, 문, skylight, vent와 자유형 aperture의 cut, 구성 요소, 작동 상태와 interior 일관성을 규정한다. -->
 
 Opening은 하나의 host boundary identity, 그 boundary-local frame의 closed profile, depth, fill 또는 open-cut 상태와 stable opening identity를 가진다. Frame, jamb, head, sill, glazing, mullion, leaf, sash, shutter, seal, flashing와 hardware는 필요한 fidelity에서 별도 구성 identity를 가질 수 있다.
-
-### Opening 입력과 Cut 출력 {#building-envelope-opening-cut-input-output}
 
 <!-- @evidence requirements/building-exterior/openings-and-fenestration.md#building-opening-form-layout 직선과 곡선 profile, 반복 layout 및 host cut의 실제 형상을 같은 입력에서 해결한다. -->
 

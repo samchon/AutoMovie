@@ -31,6 +31,8 @@ const UNIT_SCALE = { x: 1, y: 1, z: 1 } as const;
  * `compileAttach` does for bones) is a follow-up. This is the primitive it will
  * call per frame.
  *
+ * @evidence requirements/staging/subjects-and-object-staging.md#staging-placement-support-contact Aligns the child's declared contact frame with its current support frame.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Composes the child's deterministic world transform from its authored affordance frames.
  * @author Samchon
  */
 export const resolveAffordanceSeat = (props: {

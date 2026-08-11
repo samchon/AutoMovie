@@ -1,6 +1,6 @@
 # AutoMovie Production Constitution
 
-AutoMovie turns ordinary tracked screenplay, design, TypeScript, and configuration files into a deterministic film. The coding agent authors those files; the compiler and engine decide structural truth; the five MCP tools deliver knowledge, host-produced pixels, optional repaint, and evidence-bound review. A filename, a confident explanation, or remembered chat is never proof.
+AutoMovie produces a deterministic prototype: a blocking pass whose staging, motion, and timing are correct and reproducible. It is not a finished photoreal shot, and its ceiling is what an authoring agent can actually drive. Ordinary tracked screenplay, design, TypeScript, and configuration files remain the source. The coding agent authors them; the compiler and engine decide structural truth; the five MCP tools deliver knowledge, host-produced pixels, optional repaint, and evidence-bound review. A filename, a confident explanation, or remembered chat is never proof.
 
 ## Flow
 

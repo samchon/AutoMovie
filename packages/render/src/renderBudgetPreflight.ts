@@ -28,15 +28,37 @@ import {
  * `renderer` is WebGL's own spelling of the device string, and the render
  * target calls the same field `device`. Naming both here is what keeps the
  * translation in one place instead of at every call site.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderGraphicsIdentity` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderGraphicsIdentity` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieRenderGraphicsIdentity {
-  /** Graphics API family the context reported, such as `webgl2`. */
+  /**
+   * Graphics API family the context reported, such as `webgl2`.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderGraphicsIdentity.api` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderGraphicsIdentity.api` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   api: string;
 
-  /** `UNMASKED_VENDOR_WEBGL`, or the plain `VENDOR` when it is masked. */
+  /**
+   * `UNMASKED_VENDOR_WEBGL`, or the plain `VENDOR` when it is masked.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderGraphicsIdentity.vendor` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderGraphicsIdentity.vendor` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   vendor: string;
 
-  /** `UNMASKED_RENDERER_WEBGL`, or the plain `RENDERER` when it is masked. */
+  /**
+   * `UNMASKED_RENDERER_WEBGL`, or the plain `RENDERER` when it is masked.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderGraphicsIdentity.renderer` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderGraphicsIdentity.renderer` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   renderer: string;
 }
 
@@ -51,6 +73,8 @@ export interface IAutoMovieRenderGraphicsIdentity {
  * report would read as fresh. A host that answered but withheld a field is a
  * different case and keeps the `unknown` the target contract documents.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `autoMovieRenderTargetRendererOfGraphics` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `autoMovieRenderTargetRendererOfGraphics` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const autoMovieRenderTargetRendererOfGraphics = (
@@ -83,6 +107,8 @@ const blankAs = (value: string, fallback: string): string =>
  * renders states what it WOULD use, and recording that as the drawn setting
  * would be a claim about a map that does not exist.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `autoMovieRenderTargetSettingsOfShot` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `autoMovieRenderTargetSettingsOfShot` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const autoMovieRenderTargetSettingsOfShot = (props: {
@@ -122,6 +148,9 @@ export const autoMovieRenderTargetSettingsOfShot = (props: {
  * makes every metric `unbudgeted`, and a job that treated that as a clearance
  * would be reporting that nobody's limits were met.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `selectAutoMovieRenderBudget` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence requirements/rendering/budgets.md#rendering-budget-tiers Selects only the caller-requested purpose tier and preserves an undeclared tier as an explicit unbudgeted result.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `selectAutoMovieRenderBudget` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const selectAutoMovieRenderBudget = (
@@ -130,9 +159,21 @@ export const selectAutoMovieRenderBudget = (
 ): IAutoMovieRenderBudget | null =>
   (budgets ?? []).find((budget) => budget.tier === tier) ?? null;
 
-/** One shot's measured cost, checked against the budget the job targets. */
+/**
+ * One shot's measured cost, checked against the budget the job targets.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export interface IAutoMovieRenderBudgetAssessment {
-  /** Compiled shot the measurement belongs to. */
+  /**
+   * Compiled shot the measurement belongs to.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.shot` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.shot` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   shot: string;
 
   /**
@@ -141,22 +182,56 @@ export interface IAutoMovieRenderBudgetAssessment {
    * `not-run` is this record's own: the report's `incomplete` says an analysis
    * had no input, and `not-run` says no report exists at all because the job
    * never learned what it draws with.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.status` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.status` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   status: IAutoMovieRenderReport["status"] | "not-run";
 
-  /** Why no report exists, or `null` when one does. */
+  /**
+   * Why no report exists, or `null` when one does.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.reason` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.reason` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   reason: string | null;
 
-  /** The bounded verdict, or `null` when the assessment did not run. */
+  /**
+   * The bounded verdict, or `null` when the assessment did not run.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.report` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.report` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   report: IAutoMovieRenderReport | null;
 
-  /** The measured cost, or `null` when the assessment did not run. */
+  /**
+   * The measured cost, or `null` when the assessment did not run.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.inventory` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.inventory` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   inventory: IAutoMovieRenderInventory | null;
 
-  /** The palette the report's owners resolve in, or `null` as above. */
+  /**
+   * The palette the report's owners resolve in, or `null` as above.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.mask` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.mask` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   mask: IAutoMovieSemanticMask | null;
 
-  /** The sealed target, or `null` when the renderer was never identified. */
+  /**
+   * The sealed target, or `null` when the renderer was never identified.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetAssessment.target` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetAssessment.target` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   target: IAutoMovieRenderTarget | null;
 }
 
@@ -174,6 +249,14 @@ export interface IAutoMovieRenderBudgetAssessment {
  * specific renderer drawing specific bytes, so a report measured against an
  * invented target would be a stale report nothing could detect.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `assessAutoMovieRenderBudget` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Measures the lowered render inventory, including expanded geometry and resident resource costs, before evaluating its limits.
+ * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Measures the materialized subject inventory so bounded instances and procedural expansion are charged to the report.
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Seals the renderer, settings, protocol revision, and ordered dependency fields into the target returned with the assessment.
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure Binds every caller-declared frame dependency path and exact byte digest into the assessed render target.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `assessAutoMovieRenderBudget` exposes that responsibility through the package-independent system contract.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-dependency-fingerprint Canonicalizes the declared render-content dependencies through the versioned target sealer before publishing the budget verdict.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-fingerprint-protocol Returns the target whose digest includes the protocol revision and canonical ordered field encoding.
  * @author Samchon
  */
 export const assessAutoMovieRenderBudget = (props: {
@@ -247,15 +330,39 @@ export const assessAutoMovieRenderBudget = (props: {
   }
 };
 
-/** One render job's budget evidence over every shot it draws. */
+/**
+ * One render job's budget evidence over every shot it draws.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
+ */
 export interface IAutoMovieRenderBudgetEvidence {
-  /** Evidence format. */
+  /**
+   * Evidence format.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.version` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.version` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   version: 1;
 
-  /** Versioned evidence protocol. */
+  /**
+   * Versioned evidence protocol.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.protocol` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.protocol` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   protocol: "automovie.render-budget-evidence.v1";
 
-  /** Quality tier the job targeted. */
+  /**
+   * Quality tier the job targeted.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.tier` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.tier` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   tier: string;
 
   /**
@@ -264,10 +371,20 @@ export interface IAutoMovieRenderBudgetEvidence {
    * A job that found no budget for its own tier reads as `unbudgeted`, and this
    * is what tells a mistyped tier apart from a production that deliberately
    * declares none.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.declaredTiers` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.declaredTiers` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   declaredTiers: string[];
 
-  /** Whether a budget was found for {@link tier}. */
+  /**
+   * Whether a budget was found for {@link tier}.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.budgeted` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.budgeted` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   budgeted: boolean;
 
   /**
@@ -281,13 +398,29 @@ export interface IAutoMovieRenderBudgetEvidence {
    * A document over no shots at all is `not-run`, never `within`: nothing was
    * measured, and a verdict over an empty set is the cheapest way a report ends
    * up clearing a production it never read.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.status` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.status` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   status: IAutoMovieRenderBudgetAssessment["status"];
 
-  /** One assessment per shot, ascending by shot id. */
+  /**
+   * One assessment per shot, ascending by shot id.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.shots` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.shots` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   shots: IAutoMovieRenderBudgetAssessment[];
 
-  /** Digest over the protocol, the tier, and every shot's own verdict. */
+  /**
+   * Digest over the protocol, the tier, and every shot's own verdict.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision `IAutoMovieRenderBudgetEvidence.digest` carries the conservative measurement basis and deterministic budget decision.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `IAutoMovieRenderBudgetEvidence.digest` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
+   */
   digest: AutoMovieContentDigest;
 }
 
@@ -308,6 +441,8 @@ const STATUS_ORDER: Readonly<
  * tier; hand them a different budget and `budgeted` describes the declaration
  * while every finding describes something else.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `autoMovieRenderBudgetEvidence` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `autoMovieRenderBudgetEvidence` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const autoMovieRenderBudgetEvidence = (props: {
@@ -370,6 +505,9 @@ export const autoMovieRenderBudgetEvidence = (props: {
  * and refusing a render for an unmeasured metric would make the honest report
  * the one nobody dares emit.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-budget-decision `autoMovieRenderBudgetRefusal` carries the conservative measurement basis and deterministic budget decision.
+ * @evidence requirements/rendering/budgets.md#rendering-budget-refusal Names every over-limit shot and its recorded recoveries instead of silently degrading the requested render.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `autoMovieRenderBudgetRefusal` exposes that responsibility through the package-independent system contract.
  * @author Samchon
  */
 export const autoMovieRenderBudgetRefusal = (

@@ -104,6 +104,9 @@ const RIG_IS_PARTITIONED: UnregionedBone extends never ? true : UnregionedBone =
  * aliases over them: a downstream compiler would otherwise re-evaluate the
  * proof against whichever `@automovie/interface` it resolves, and read 55 bone
  * literals to learn the type of a constant that is `true`.
+ *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Proves that named body-region owners cover every declared humanoid bone exactly once.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Guards the complete channel partition assumed by region-mask composition.
  */
 export const AUTOMOVIE_RIG_IS_PARTITIONED: true = RIG_IS_PARTITIONED;
 
@@ -122,6 +125,8 @@ export const AUTOMOVIE_RIG_IS_PARTITIONED: true = RIG_IS_PARTITIONED;
  * module's own array rather than a copy. Typed mutable, a caller could have
  * pushed into the engine's partition and changed masking for every later shot.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-mask-weight Resolves each authored body-region mask to the precise bone channels it controls.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Implements named region masks as deterministic channel sets for composition.
  * @author Samchon
  */
 export const bodyRegionBones = (

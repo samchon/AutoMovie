@@ -14,27 +14,59 @@ import { ViolationCollector } from "../validation/violation";
  * and, when articulated, for `resolveFrame` to constrain and drive through
  * `bindProfile`.
  *
+ * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation Exposes a prop to staging only after its model geometry and articulation profile have both been checked against the declared use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp realizes purpose-driven prop validation: A forged prop: the spec gated on both contracts, ready for staging to place and, when articulated, for `resolveFrame` to constrain and drive through `bindProfile`.
  * @author Samchon
  */
 export type IAutoMovieForgedProp =
   | IAutoMovieForgedProp.ISuccess
   | IAutoMovieForgedProp.IFailure;
 export namespace IAutoMovieForgedProp {
-  /** The prop passed the model and articulation contracts. */
+  /**
+   * The prop passed the model and articulation contracts.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation Marks one prop specification admissible only when both its model validation and articulation-purpose checks succeed.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.ISuccess realizes purpose-driven prop validation: The prop passed the model and articulation contracts.
+   */
   export interface ISuccess {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation The true discriminator admits a prop whose geometry and articulation serve its declared purpose.
+     * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.ISuccess.success marks the prop as fit for its declared staging purpose.
+     */
     success: true;
 
-    /** The accepted spec, echoed for the staging join. */
+    /**
+     * The accepted spec, echoed for the staging join.
+     *
+     * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation Preserves the accepted prop specification that staging will join to the already validated geometry and semantic controls.
+     * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.ISuccess.prop realizes purpose-driven prop validation: The accepted spec, echoed for the staging join.
+     */
     prop: IAutoMoviePropSpec;
   }
 
-  /** The spec broke a contract; every violation listed for the correction round. */
+  /**
+   * The spec broke a contract; every violation listed for the correction round.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation Withholds a prop whose geometry, articulation, or semantic profile cannot serve its authored purpose and carries the correction violations.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.IFailure realizes purpose-driven prop validation: The spec broke a contract; every violation listed for the correction round.
+   */
   export interface IFailure {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation The false discriminator withholds a purpose-invalid prop from staging and interaction.
+     * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.IFailure.success withholds a purpose-invalid prop from staging.
+     */
     success: false;
 
-    /** Every violation found, for the correction round. */
+    /**
+     * Every violation found, for the correction round.
+     *
+     * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation Returns every geometry, articulation, and declared-purpose mismatch for correction before staging.
+     * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs IAutoMovieForgedProp.IFailure.violations realizes purpose-driven prop validation: Every violation found, for the correction round.
+     */
     violations: IAutoMovieConstraintViolation[];
   }
 }
@@ -65,6 +97,30 @@ export namespace IAutoMovieForgedProp {
  * gates binds without a throw; the door round-trip test drives the forged
  * artifact through `resolveFrame` to prove the declared limit clamps and the
  * declared driver drives.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-purpose-validation forgeProp admits an authored prop only when its geometry, affordances, and articulation satisfy the object's declared staging purpose.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-gltf-scene Accepts only a compiler-sealed rigid glTF appearance profile for an imported prop while preserving its model and LOD records.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-provenance-digest Requires every imported asset and LOD reference to carry a well-formed sealed content digest and one explicit model registration.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-resource-closure Verifies that every imported LOD asset is present in the sealed asset ledger with the same digest and profile.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-semantic-enrichment Keeps imported appearance separate from the project-authored affordances, articulation, binding, and purpose semantics validated beside it.
+ * @evidence requirements/asset-authoring/validation.md#asset-external-generated-validation Applies the same geometry and purpose validation after distinguishing compiler-sealed imported appearance from generated model input.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-general-joint-relations Validates unique articulation nodes, resolvable acyclic parents, unambiguous mesh ownership, and complete profile mappings for a skeleton-less prop.
+ * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-direct-placement Preserves a registered imported prop's sealed model, asset, and LOD closure while adding only its project-owned prop semantics and placement identity.
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-elements-dependencies Keeps the adopted model id and every sealed asset and LOD dependency attached to the forged prop gate.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure Withholds an imported prop whose registered appearance closure or project-native semantic structure is invalid instead of substituting a placeholder.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-fidelity-semantic-boundary Validates geometry appearance separately from affordance, articulation, profile, and physical-purpose semantics.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Applies the imported model gate before the distinct prop articulation and declared-purpose semantic gates.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs forgeProp realizes purpose-driven prop validation: The FORGE consumer's object side, accept a prop an agent authored as data (crude primitive proxy, rich meaning: body, affordances, self-declared articulation, D011) and gate it on both contracts. `forgeCast` forges the performers; this forges the things they hold, open, and stack. The **model contract**: the prop's `model.id` must equal `node` (the staged scene joins on it, exactly as a forged cast member does), `origin` must be `"generated"` unless the spec names the registration its imported bytes came from ({@link gateImportedAppearance}), and `skeleton` must be `null`, a riggable actor goes through `forgeCast`; a prop's moving parts are articulation nodes, not bones. `validateModel` covers parts/materials/extents plus the body (#595) and affordance (#604) semantics, remapped onto the spec's path. The **articulation contract** (when present): joint node ids unique and non-empty, parents resolving within the declared nodes (`null` = the prop's root) without a cycle; each joint's optional `mesh` naming one part of this prop's own model, and no part claimed by two joints; the binding targeting the declared profile; every `boneMap` value naming a declared node; and every semantic key the profile references ({@link profileSemanticKeys}) mapped, reported **all at once**, where `bindProfile` itself would throw on the first, so one correction round sees the whole list. A spec that passes these gates binds without a throw; the door round-trip test drives the forged artifact through `resolveFrame` to prove the declared limit clamps and the declared driver drives.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Admits the supported rigid glTF direct-placement subset while refusing humanoid profiles and leaving native conversion or group composition to their owners.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-adoption-output Preserves the accepted model reference, import profile, asset digests, and LOD closure in the returned prop record; it does not claim to create the compiler's full adoption receipt.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure Checks the sealed path-to-digest ledger and every LOD dependency before the imported appearance can pass the prop gate.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-element-consumer-links Joins imported appearance identity to the exact project-authored prop node and keeps its added articulation and affordance semantics distinct.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-joint-control-invariants Enforces the prop articulation hierarchy, mesh ownership, binding target, and semantic control-map invariants used by downstream motion.
+ * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-direct-placement-boundary Admits the registered appearance closure without relabeling it as project-native prop semantics.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-element-dependency-identity Preserves the imported model identity and sealed asset and LOD dependencies consumed by the prop.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-hard-refusal-predicate Returns the located gate violations and no forged prop when the sealed imported closure or required semantic structure fails.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-appearance-semantics-fence Prevents accepted imported appearance from implying valid articulation, affordance, collision, or authored-purpose semantics.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-layered-validation Separates imported model closure validation from prop hierarchy, binding, affordance, and purpose validation.
  */
 export const forgeProp = (spec: IAutoMoviePropSpec): IAutoMovieForgedProp => {
   const out = new ViolationCollector();

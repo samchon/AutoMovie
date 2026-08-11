@@ -32,13 +32,25 @@ import { AutoMovieSurfaceKind } from "./AutoMovieSurfaceKind";
  * nothing can be placed on. Author the flights as separate spaces, and read
  * multi-valued ground as unsupported rather than as relief that came out flat.
  *
+ * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `IAutoMovieSurface` as the portable data boundary for the interior floor level slope requirement.
+ * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `IAutoMovieSurface` for the interior space level storey height constraints system contract.
  * @author Samchon
  */
 export interface IAutoMovieSurface {
-  /** Stable id; `IAutoMovieSpace.walkable` cites surfaces by this. */
+  /**
+   * Stable id; `IAutoMovieSpace.walkable` cites surfaces by this.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `id` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `id` for the interior space level storey height constraints system contract.
+   */
   id: string;
 
-  /** Discriminator-like semantic label (does not change the math). */
+  /**
+   * Discriminator-like semantic label (does not change the math).
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `kind` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `kind` for the interior space level storey height constraints system contract.
+   */
   kind: AutoMovieSurfaceKind;
 
   /**
@@ -55,6 +67,9 @@ export interface IAutoMovieSurface {
    * A curved edge has no spelling here. Author it as chords and read it as
    * exactly those chords: the footprint is never resampled, so what the ground
    * query answers is what was written rather than a curve somebody assumed.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `polygon` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `polygon` for the interior space level storey height constraints system contract.
    */
   polygon: IAutoMovieVector3[];
 
@@ -75,6 +90,9 @@ export interface IAutoMovieSurface {
    *
    * The rings say where the surface is, never how high it is. What stands under
    * a hole is whatever other patch is authored there, or nothing.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `holes` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `holes` for the interior space level storey height constraints system contract.
    */
   holes?: IAutoMovieVector3[][];
 
@@ -90,6 +108,9 @@ export interface IAutoMovieSurface {
    * foot on are one statement read by one function.
    *
    * Present means {@link anchor} and {@link rampTo} are absent, and the reverse.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `height` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `height` for the interior space level storey height constraints system contract.
    */
   height?: IAutoMovieHeightRule;
 
@@ -100,6 +121,9 @@ export interface IAutoMovieSurface {
    * The two-anchor spelling of {@link height}, and absent when that rule is
    * given. Kept because it is what every authored space says and because two
    * points are the plainest way to write a floor or a ramp.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `anchor` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `anchor` for the interior space level storey height constraints system contract.
    */
   anchor?: IAutoMovieVector3;
 
@@ -108,6 +132,9 @@ export interface IAutoMovieSurface {
    * from `anchor.y` to `rampTo.y` along the `anchor → rampTo` direction on the
    * XZ plan (constant perpendicular to it). Its `(x, z)` must differ from
    * `anchor`'s. `null` or absent = flat at `anchor.y`.
+   *
+   * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope Exposes `rampTo` as the portable data boundary for the interior floor level slope requirement.
+   * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-level-storey-height-constraints Types `rampTo` for the interior space level storey height constraints system contract.
    */
   rampTo?: IAutoMovieVector3 | null;
 }

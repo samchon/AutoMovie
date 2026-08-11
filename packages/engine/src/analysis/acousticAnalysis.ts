@@ -23,71 +23,204 @@ import {
  * It is the constant of the equation `T60 = 0.161 * V / A`, not a property of
  * any room or material, which is why it lives in the solver rather than in a
  * table a production would have to supply.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `AUTOMOVIE_SABINE_CONSTANT` fixes the metric coefficient that converts room volume and absorption area into a declared Sabine reverberation time.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The constant pins the supported metric-unit Sabine equation instead of implying an impulse-response simulation.
  */
 export const AUTOMOVIE_SABINE_CONSTANT = 0.161;
 
 /** Distances shorter than this are the same point. */
 const EPSILON = 1e-12;
 
-/** One absorbing surface of a room. */
+/**
+ * One absorbing surface of a room.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `IAutoMovieAcousticSurface` declares one bounded area-and-absorption contribution to the room's scalar reverberation estimate.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The surface record supplies the exact operands accumulated into the scenario's equivalent absorption area.
+ */
 export interface IAutoMovieAcousticSurface {
-  /** Stable surface identity within the request. */
+  /**
+   * Stable surface identity within the request.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary This `id` keeps each absorbing surface traceable as a separate authored room input.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The surface key gives validation and gap reporting a stable identity for the corresponding absorption operand.
+   */
   id: string;
-  /** Area in m^2; strictly positive. */
+  /**
+   * Area in m^2; strictly positive.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Surface `area` states how much material participates in the room absorption calculation.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The square-metre operand weights this surface's coefficient in the Sabine absorption sum.
+   */
   area: number;
-  /** Sabine absorption coefficient within `[0, 1]`. */
+  /**
+   * Sabine absorption coefficient within `[0, 1]`.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `absorption` declares the broadband fraction removed at this room surface without claiming frequency-resolved behavior.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The bounded coefficient is multiplied by surface area to form this scenario's Sabine absorption contribution.
+   */
   absorption: number;
 }
 
-/** One partition sound passes through on its way out of the room. */
+/**
+ * One partition sound passes through on its way out of the room.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `IAutoMovieAcousticPartition` captures one area-weighted path through the room boundary for composite isolation reporting.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The partition record provides the area and reduction index needed to combine transmission coefficients across the scenario boundary.
+ */
 export interface IAutoMovieAcousticPartition {
-  /** Stable partition identity within the request. */
+  /**
+   * Stable partition identity within the request.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary The partition `id` lets an isolation result identify the authored boundary element it evaluates.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario This stable key distinguishes each transmission path before their coefficients are combined.
+   */
   id: string;
-  /** Area in m^2; strictly positive. */
+  /**
+   * Area in m^2; strictly positive.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Partition `area` declares the extent over which sound transmission is aggregated.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The area weights this partition's linear transmission coefficient in the composite reduction index.
+   */
   area: number;
-  /** Sound reduction index in dB; finite. */
+  /**
+   * Sound reduction index in dB; finite.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `transmissionLoss` declares the broadband sound reduction assigned to this partition.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The decibel input is converted to a linear transmission coefficient before area-weighted composition.
+   */
   transmissionLoss: number;
 }
 
-/** One steady noise source inside the room, such as a fan or a diffuser. */
+/**
+ * One steady noise source inside the room, such as a fan or a diffuser.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `IAutoMovieAcousticSource` declares one steady emitter whose level, location, and directivity feed the bounded room-noise estimate.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The source record supplies the power and geometric operands for the scenario's direct-plus-diffuse pressure calculation.
+ */
 export interface IAutoMovieAcousticSource {
-  /** Stable source identity within the request. */
+  /**
+   * Stable source identity within the request.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary The source `id` preserves which declared emitter contributed to the room-level calculation.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario This key makes source validation deterministic when several emitters share the same acoustic scenario.
+   */
   id: string;
-  /** World position in metres. */
+  /**
+   * World position in metres.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Source `position` places the emitter so receiver distance can affect the reported direct field.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The world-space point supplies the distance term in the inverse-square source contribution.
+   */
   position: IAutoMovieVector3;
-  /** Sound power level in dB re 1 pW; finite. */
+  /**
+   * Sound power level in dB re 1 pW; finite.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `soundPower` states the emitter strength used for the supported steady broadband level estimate.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The declared dB re 1 pW value is converted to linear power before sources are summed at a receiver.
+   */
   soundPower: number;
-  /** Directivity factor; strictly positive, `1` being omnidirectional. */
+  /**
+   * Directivity factor; strictly positive, `1` being omnidirectional.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `directivity` declares how strongly this source favors its direct-field contribution over an omnidirectional emitter.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The positive factor scales the source's inverse-square term while leaving the diffuse room term unchanged.
+   */
   directivity: number;
 }
 
-/** One place the room is listened from. */
+/**
+ * One place the room is listened from.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `IAutoMovieAcousticReceiver` names a listening point at which the supported steady room level is evaluated.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The receiver record contributes the identity and position used to emit one spatial acoustic result.
+ */
 export interface IAutoMovieAcousticReceiver {
-  /** Stable receiver identity within the request. */
+  /**
+   * Stable receiver identity within the request.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary The receiver `id` keeps each reported listening location independently traceable.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario This identity becomes the stable sample key for the level computed at that receiver.
+   */
   id: string;
-  /** World position in metres. */
+  /**
+   * World position in metres.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Receiver `position` establishes where every source's direct-field distance is measured.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The point is paired with each source location to calculate the scenario's inverse-square attenuation.
+   */
   position: IAutoMovieVector3;
 }
 
-/** Everything one room-acoustic study is configured with. */
+/**
+ * Everything one room-acoustic study is configured with.
+ *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `IAutoMovieAcousticRequest` closes one authored room scenario over geometry-independent surfaces, partitions, emitters, listeners, and targets.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The request binds every operand and revision needed to reproduce the supported scalar acoustic outputs.
+ */
 export interface IAutoMovieAcousticRequest {
-  /** Stable run identity. */
+  /**
+   * Stable run identity.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary The request `id` gives this acoustic study a stable run identity distinct from its room subject.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The study key anchors deterministic acoustic run identifiers and diagnostics.
+   */
   id: string;
-  /** Logical space being listened to. */
+  /**
+   * Logical space being listened to.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `subject` names the logical room whose acoustic performance the run reports.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The subject label is carried into the sealed run so results remain attributable to the studied space.
+   */
   subject: string;
-  /** Design revision being read. */
+  /**
+   * Design revision being read.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `inputRevision` records which authored design state the acoustic evidence measured.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The revision enters the sealed run and later distinguishes current results from stale acoustic evidence.
+   */
   inputRevision: string;
-  /** Room volume in m^3; strictly positive. */
+  /**
+   * Room volume in m^3; strictly positive.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Room `volume` supplies the spatial magnitude needed for the bounded reverberation-time estimate.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The cubic-metre value is the numerator of the scenario's Sabine decay calculation.
+   */
   volume: number;
-  /** Absorbing surfaces; at least one. */
+  /**
+   * Absorbing surfaces; at least one.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `surfaces` enumerates every declared absorbing area used to characterize this room's diffuse field.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The collection is reduced into total area, equivalent absorption, and mean absorption for supported scalar outputs.
+   */
   surfaces: readonly IAutoMovieAcousticSurface[];
-  /** Partitions whose composite transmission loss is asked for. */
+  /**
+   * Partitions whose composite transmission loss is asked for.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `partitions` declares the room-boundary elements whose combined broadband isolation is requested.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The list feeds area-weighted transmission composition, including the empty-boundary gap case.
+   */
   partitions: readonly IAutoMovieAcousticPartition[];
-  /** Steady sources inside the room. */
+  /**
+   * Steady sources inside the room.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `sources` bounds the steady emitters included in the room-noise result rather than inferring an unlisted sound scene.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The declared emitters are summed in linear power at each requested receiver.
+   */
   sources: readonly IAutoMovieAcousticSource[];
-  /** Listening positions the field is reported at. */
+  /**
+   * Listening positions the field is reported at.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `receivers` declares exactly where the supported sound-pressure field is sampled.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario Each listed listener produces one keyed level metric and one spatial sample when the diffuse field is defined.
+   */
   receivers: readonly IAutoMovieAcousticReceiver[];
-  /** Targets the production declares for this study. */
+  /**
+   * Targets the production declares for this study.
+   *
+   * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary Acoustic `targets` state the author-selected thresholds against which supported metrics receive verdicts.
+   * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The target list is validated and resolved by metric key and unit when the scenario run is sealed.
+   */
   targets: readonly IAutoMovieAnalysisTarget[];
 }
 
@@ -117,6 +250,13 @@ export interface IAutoMovieAcousticRequest {
  * returning `0.161 * V / A`, a positive decay time for an anechoic chamber,
  * which is the arithmetic of the model rather than a property of the room.
  *
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-analysis-boundary `analyzeAutoMovieAcoustics` computes only reverberation, diffuse steady level, and composite transmission loss while returning explicit gaps for unsupported acoustic claims.
+ * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-acoustic-boundary-scenario The solver validates the scenario, evaluates its three closed forms, records receiver samples, and seals the deterministic acoustic run.
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-absorption-reverberation `analyzeAutoMovieAcoustics` combines declared surface area and absorption with room volume to compute the supported Sabine reverberation time and room constant, while reporting unavailable inputs as gaps.
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-acoustic-zones-scenarios `analyzeAutoMovieAcoustics` seals one logical-space subject and revision with its declared surfaces, partitions, sources, receivers, targets, and bounded omissions as a reproducible scenario.
+ * @evidence requirements/interior/acoustics-and-sound-boundaries.md#interior-sound-transmission `analyzeAutoMovieAcoustics` converts each declared partition reduction index to linear transmittance, combines it by area, and returns composite decibels or an explicit unbounded gap.
+ * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-analysis-boundary `analyzeAutoMovieAcoustics` solves only the declared closed-form acoustic metrics and leaves unsupported or unavailable material-dependent claims as explicit gaps and statuses.
+ * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary The acoustic solver consumes only supported declared physical facts and does not turn missing material behavior into a successful estimate.
  * @author Samchon
  */
 export const analyzeAutoMovieAcoustics = (props: {

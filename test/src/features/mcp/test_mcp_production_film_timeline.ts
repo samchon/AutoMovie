@@ -35,6 +35,19 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+const PIXEL_ONLY_CAPTURE_EVIDENCE = {
+  observation: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not observe renderer cost metrics.",
+  },
+  maskSidecar: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not stage a semantic mask palette.",
+  },
+} as const;
+
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
 
@@ -1637,6 +1650,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         runtimeIdentity: testCaptureRuntimeIdentity(),
         width: 16,
         height: 16,
+        ...PIXEL_ONLY_CAPTURE_EVIDENCE,
       }),
     );
     const capturedTrimEntry = await captureOracle.preview({

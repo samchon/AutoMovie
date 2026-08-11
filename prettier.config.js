@@ -6,7 +6,6 @@ module.exports = {
   trailingComma: "all",
   plugins: [
     require.resolve("@trivago/prettier-plugin-sort-imports"),
-    require.resolve("prettier-plugin-jsdoc"),
   ],
   importOrder: ["<THIRD_PARTY_MODULES>", "^[./]"],
   importOrderSeparation: true,

@@ -28,6 +28,19 @@ import {
   writeProductionScreenplay,
 } from "./productionFixtures";
 
+const PIXEL_ONLY_CAPTURE_EVIDENCE = {
+  observation: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not observe renderer cost metrics.",
+  },
+  maskSidecar: {
+    status: "not-run",
+    reason:
+      "This fixture supplies PNG pixels only and does not stage a semantic mask palette.",
+  },
+} as const;
+
 /**
  * Evaluate named facts in order and stop at the first false one, so a failed
  * comparison names the fact instead of collapsing into one boolean. Stopping
@@ -529,6 +542,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width,
           height,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         };
       },
     );
@@ -650,6 +664,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
           runtimeIdentity: testCaptureRuntimeIdentity(),
           width,
           height,
+          ...PIXEL_ONLY_CAPTURE_EVIDENCE,
         };
       },
     );

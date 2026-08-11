@@ -550,30 +550,67 @@ const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
  * rides for the whole film without re-issuing `attachTo`, the engine owns the
  * composition, the host stays a pure player.
  *
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries the resolved scene or addressed validation result produced from the script and staging plan.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet preserves deterministic success and failure outcomes for the same authored staging inputs.
  * @author Samchon
  */
 export type IAutoMovieStagedSet =
   | IAutoMovieStagedSet.ISuccess
   | IAutoMovieStagedSet.IFailure;
 export namespace IAutoMovieStagedSet {
-  /** Staging was coherent; the set is ready for blocking/performance. */
+  /**
+   * Staging was coherent; the set is ready for blocking/performance.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay The success branch carries one coherent resolved set for the blocking pass.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.ISuccess makes the deterministic resolved-scene outcome explicit.
+   */
   export interface ISuccess {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay The success discriminator separates a resolved staged set from an addressed failure result.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.ISuccess.success fixes the status of the deterministic staging outcome.
+     */
     success: true;
 
-    /** The composed scene (actors at rest, cameras aimed, lights rigged). */
+    /**
+     * The composed scene (actors at rest, cameras aimed, lights rigged).
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries the resolved scene produced from the declared staging plan without hidden mutation.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.ISuccess.scene exposes the replayable scene state consumed by blocking.
+     */
     scene: IAutoMovieScene;
 
-    /** Validated persistent couplings, one per mounted rider. */
+    /**
+     * Validated persistent couplings, one per mounted rider.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries the validated mount bindings produced alongside the resolved scene.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.ISuccess.mounts keeps coupling inputs stable across replay and beat-end handoff.
+     */
     mounts: IMount[];
   }
 
-  /** Staging contradicted the script or itself; nothing was composed. */
+  /**
+   * Staging contradicted the script or itself; nothing was composed.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries deterministic validation failure when the plan cannot form a coherent set.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.IFailure preserves the non-playable staging result rather than fabricating a scene.
+   */
   export interface IFailure {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay The failure discriminator prevents an invalid staging result from masquerading as a resolved set.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.IFailure.success prevents a failed set from entering blocking.
+     */
     success: false;
 
-    /** Every contradiction found, for the correction round. */
+    /**
+     * Every contradiction found, for the correction round.
+     *
+     * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries every addressed staging contradiction produced by the deterministic validation pass.
+     * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet.IFailure.violations supplies the correction data instead of a partial resolved scene.
+     */
     violations: IAutoMovieConstraintViolation[];
   }
 
@@ -581,12 +618,25 @@ export namespace IAutoMovieStagedSet {
    * One rider→parent-bone coupling. `performShot` bakes it into the rider's
    * per-frame follow clip (#674); the host plays that clip, it does not resolve
    * the coupling itself.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAutoMovieStagedSet.IMount preserves declared attachment handoff: One rider→parent-bone coupling. `performShot` bakes it into the rider's per-frame follow clip (#674); the host plays that clip, it does not resolve the coupling itself.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieStagedSet.IMount realizes declared attachment and object handoff: One rider→parent-bone coupling. `performShot` bakes it into the rider's per-frame follow clip (#674); the host plays that clip, it does not resolve the coupling itself.
    */
   export interface IMount {
-    /** The mounted (riding) scene node. */
+    /**
+     * The mounted (riding) scene node.
+     *
+     * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAutoMovieStagedSet.IMount.node preserves declared attachment handoff: The mounted (riding) scene node.
+     * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieStagedSet.IMount.node realizes declared attachment and object handoff: The mounted (riding) scene node.
+     */
     node: string;
 
-    /** The coupling it rides. */
+    /**
+     * The coupling it rides.
+     *
+     * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAutoMovieStagedSet.IMount.binding preserves declared attachment handoff: The coupling it rides.
+     * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieStagedSet.IMount.binding realizes declared attachment and object handoff: The coupling it rides.
+     */
     binding: IAutoMovieMountBinding;
   }
 }
@@ -623,6 +673,23 @@ export namespace IAutoMovieStagedSet {
  * exterior otherwise has no way to state: it is range-checked here and lowered
  * verbatim. Omitting it composes a scene with no `fog` at all, which renders
  * exactly as every staged scene did before atmospheres existed.
+ *
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Resolves the screenplay's sets, performers, cameras, lights, and mounts or returns every deterministic contradiction.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-spatial-validation Checks finite placement geometry and exact cast, node, camera-target, and mount-parent relations before composing the scene.
+ * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Lowers accepted rest transforms, camera aims, typed lights, ground, and environment into one explicit initial scene state.
+ * @evidence requirements/staging/subjects-and-object-staging.md#staging-rest-active-placement Emits actors and set pieces at their authored rest transforms with no active motion or pose, while retaining declared mount bindings beside the scene.
+ * @evidence requirements/staging/subjects-and-object-staging.md#staging-placement-refusal Refuses missing cast or target identities, duplicate scene ids, dangling mounts, and non-finite placement transforms instead of inventing replacements.
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-distribution Lowers the supported directional, point, spot, and rectangular-area subset with its kind-specific direction, position, range, cone, extent, and authored color.
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-refusal Rejects invalid intensity, missing or zero direction, forbidden position or range, invalid cone, and missing or non-positive panel extent before lowering a source.
+ * @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-color-refusal Rejects a staged light color when its linear components are non-finite or outside the unit interval.
+ * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Validates the staged source's cast flag, map size, bias, normal bias, and near/far interval, and refuses an unsupported area-light shadow map.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result stageScene produces the same resolved scene or addressed failure for the same script and staging inputs.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership Composes accepted rest placements into a resolved scene state without fabricating missing identities or transforms.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Separates static rest-node placement from persistent mount bindings and refuses unresolved, duplicate, or non-finite placement relations.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-distribution-color Carries only the engine's supported source kinds, orientation, falloff, cone, panel extent, and linear color into scene light state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal Validates the static staged sample's intensity, direction, range, cone, and extent and rejects unsupported field combinations before scene creation.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-color-comparison-refusal Enforces the finite unit-range numeric domain of authored linear light components without claiming a display conversion.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-shadow-state-sampling Carries one fixed source's validated cast flag and explicit shadow-map sampling settings into the scene light.
  */
 export const stageScene = (
   script: IAutoMovieScript,

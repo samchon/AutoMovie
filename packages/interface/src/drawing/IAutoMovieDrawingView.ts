@@ -21,6 +21,8 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
  * - `elevation` has no cut at all. Nothing is removed and nothing is `cut`; the
  *   origin only fixes where the page origin sits on the picture plane.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `AutoMovieDrawingProjection` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `AutoMovieDrawingProjection` for the interior space drawing schedule quantity system contract.
  * @author Samchon
  */
 export type AutoMovieDrawingProjection =
@@ -46,13 +48,25 @@ export type AutoMovieDrawingProjection =
  * design cites; a derived drawing is output the design produces. Neither may be
  * read back as the other, and a drawing never becomes a source of truth.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingView` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingView` for the interior space drawing schedule quantity system contract.
  * @author Samchon
  */
 export interface IAutoMovieDrawingView {
-  /** Stable view identity within the production. */
+  /**
+   * Stable view identity within the production.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `id` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `id` for the interior space drawing schedule quantity system contract.
+   */
   id: string;
 
-  /** Cut and projection convention this view follows. */
+  /**
+   * Cut and projection convention this view follows.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `projection` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `projection` for the interior space drawing schedule quantity system contract.
+   */
   projection: AutoMovieDrawingProjection;
 
   /**
@@ -62,6 +76,9 @@ export interface IAutoMovieDrawingView {
    * Open rather than closed for the same reason element kinds are: a discipline
    * a catalogue never anticipated must be expressible as a filter over the same
    * design rather than as a new drawing type nobody can add.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `discipline` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `discipline` for the interior space drawing schedule quantity system contract.
    */
   discipline: string;
 
@@ -72,6 +89,9 @@ export interface IAutoMovieDrawingView {
    * the view direction does. The remaining components move the page origin,
    * which is what lets two views of the same building share a coordinate
    * origin.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `origin` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `origin` for the interior space drawing schedule quantity system contract.
    */
   origin: IAutoMovieVector3;
 
@@ -82,6 +102,9 @@ export interface IAutoMovieDrawingView {
    * A plan looks along `-Y`, a reflected ceiling plan along `+Y`, and an
    * elevation or section along any horizontal direction. Nothing forbids an
    * oblique direction: an axonometric-style projection is the same math.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `direction` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `direction` for the interior space drawing schedule quantity system contract.
    */
   direction: IAutoMovieVector3;
 
@@ -92,10 +115,18 @@ export interface IAutoMovieDrawingView {
    * write the nearest cardinal axis rather than an exact in-plane vector. A
    * plan conventionally writes `-Z`, so world north runs up the page; an
    * elevation writes `+Y`.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `up` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `up` for the interior space drawing schedule quantity system contract.
    */
   up: IAutoMovieVector3;
 
-  /** Drawing scale denominator: `50` means 1:50. Must be finite and positive. */
+  /**
+   * Drawing scale denominator: `50` means 1:50. Must be finite and positive.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `scale` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `scale` for the interior space drawing schedule quantity system contract.
+   */
   scale: number;
 
   /**
@@ -105,6 +136,9 @@ export interface IAutoMovieDrawingView {
    * Geometry entirely beyond this depth is drawn `hidden` rather than dropped,
    * because a footing under a slab is a thing the drawing has to be able to say
    * quietly instead of not saying at all.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `depth` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `depth` for the interior space drawing schedule quantity system contract.
    */
   depth: number | null;
 
@@ -115,6 +149,9 @@ export interface IAutoMovieDrawingView {
    * Material the cut removed is not simply gone: a beam, a mezzanine edge or a
    * wall cabinet above the cut is drawn `overhead` within this band, which is
    * the dashed convention every floor plan uses.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `overhead` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `overhead` for the interior space drawing schedule quantity system contract.
    */
   overhead: number | null;
 
@@ -131,6 +168,9 @@ export interface IAutoMovieDrawingView {
    * gap. A filter is a reference into the design's own space graph, so a
    * dangling one is a mistake rather than a narrow sheet, and a drawing says so
    * instead of coming back blank.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `spaces` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `spaces` for the interior space drawing schedule quantity system contract.
    */
   spaces: string[];
 
@@ -144,16 +184,34 @@ export interface IAutoMovieDrawingView {
    * It decides linework and nothing else. A view's opening marks are bounded by
    * {@link spaces} alone, so a lighting plan of a room still answers for that
    * room's doors instead of reporting a room with none.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `elementKinds` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `elementKinds` for the interior space drawing schedule quantity system contract.
    */
   elementKinds: string[];
 
-  /** Dimensions this view draws, in the order it draws them. */
+  /**
+   * Dimensions this view draws, in the order it draws them.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `dimensions` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `dimensions` for the interior space drawing schedule quantity system contract.
+   */
   dimensions: IAutoMovieDrawingDimensionSpec[];
 
-  /** Notes this view draws, in the order it draws them. */
+  /**
+   * Notes this view draws, in the order it draws them.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `annotations` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `annotations` for the interior space drawing schedule quantity system contract.
+   */
   annotations: IAutoMovieDrawingAnnotationSpec[];
 
-  /** Pen weights, dash patterns and text height this view is drawn with. */
+  /**
+   * Pen weights, dash patterns and text height this view is drawn with.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `style` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `style` for the interior space drawing schedule quantity system contract.
+   */
   style: IAutoMovieDrawingStyle;
 }
 
@@ -167,16 +225,33 @@ export interface IAutoMovieDrawingView {
  * find it. Both outcomes are correct; a stale number that still looks right is
  * the only wrong one.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingFeature` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingFeature` for the interior space drawing schedule quantity system contract.
  * @author Samchon
  */
 export interface IAutoMovieDrawingFeature {
-  /** Building element the feature belongs to. */
+  /**
+   * Building element the feature belongs to.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `element` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `element` for the interior space drawing schedule quantity system contract.
+   */
   element: string;
 
-  /** Model part within the element, or `null` for the element's whole geometry. */
+  /**
+   * Model part within the element, or `null` for the element's whole geometry.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `part` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `part` for the interior space drawing schedule quantity system contract.
+   */
   part: string | null;
 
-  /** Which family of feature is addressed. */
+  /**
+   * Which family of feature is addressed.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `kind` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `kind` for the interior space drawing schedule quantity system contract.
+   */
   kind: AutoMovieDrawingFeatureKind;
 
   /**
@@ -187,6 +262,9 @@ export interface IAutoMovieDrawingFeature {
    * them, so reordering a model's parts does not move every note on every
    * sheet. For `axis` this is `0`, `1` or `2` for the element's local X, Y or
    * Z; for `centroid` it is ignored and must be `0`.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `index` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `index` for the interior space drawing schedule quantity system contract.
    */
   index: number;
 
@@ -198,11 +276,19 @@ export interface IAutoMovieDrawingFeature {
    * which is the point; but if the count changed, the index now addresses a
    * different feature, and the target is reported stale rather than silently
    * relocated onto whichever feature inherited the number.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `count` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `count` for the interior space drawing schedule quantity system contract.
    */
   count: number | null;
 }
 
-/** Family of geometric feature an annotation target addresses. */
+/**
+ * Family of geometric feature an annotation target addresses.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `AutoMovieDrawingFeatureKind` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `AutoMovieDrawingFeatureKind` for the interior space drawing schedule quantity system contract.
+ */
 export type AutoMovieDrawingFeatureKind =
   | "vertex"
   | "edge"
@@ -210,15 +296,35 @@ export type AutoMovieDrawingFeatureKind =
   | "axis"
   | "centroid";
 
-/** What a dimension measures, and between which two features. */
+/**
+ * What a dimension measures, and between which two features.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingDimensionSpec` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingDimensionSpec` for the interior space drawing schedule quantity system contract.
+ */
 export interface IAutoMovieDrawingDimensionSpec {
-  /** Stable dimension identity within the view. */
+  /**
+   * Stable dimension identity within the view.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `id` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `id` for the interior space drawing schedule quantity system contract.
+   */
   id: string;
 
-  /** Feature the measurement starts at. */
+  /**
+   * Feature the measurement starts at.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `from` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `from` for the interior space drawing schedule quantity system contract.
+   */
   from: IAutoMovieDrawingFeature;
 
-  /** Feature the measurement ends at. */
+  /**
+   * Feature the measurement ends at.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `to` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `to` for the interior space drawing schedule quantity system contract.
+   */
   to: IAutoMovieDrawingFeature;
 
   /**
@@ -228,31 +334,69 @@ export interface IAutoMovieDrawingDimensionSpec {
    * A plan dimension across a sloped ramp is a different number in each, and a
    * drawing that could not say which one it meant would be unusable for setting
    * out.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `measure` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `measure` for the interior space drawing schedule quantity system contract.
    */
   measure: "page" | "world";
 }
 
-/** A note pinned to one feature of the design. */
+/**
+ * A note pinned to one feature of the design.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingAnnotationSpec` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingAnnotationSpec` for the interior space drawing schedule quantity system contract.
+ */
 export interface IAutoMovieDrawingAnnotationSpec {
-  /** Stable annotation identity within the view. */
+  /**
+   * Stable annotation identity within the view.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `id` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `id` for the interior space drawing schedule quantity system contract.
+   */
   id: string;
 
-  /** Note text, drawn as authored. */
+  /**
+   * Note text, drawn as authored.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `text` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `text` for the interior space drawing schedule quantity system contract.
+   */
   text: string;
 
-  /** Feature the note is pinned to. */
+  /**
+   * Feature the note is pinned to.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `target` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `target` for the interior space drawing schedule quantity system contract.
+   */
   target: IAutoMovieDrawingFeature;
 }
 
-/** One drafted line's relation to the cut plane and the view depth. */
+/**
+ * One drafted line's relation to the cut plane and the view depth.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `AutoMovieDrawingRole` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `AutoMovieDrawingRole` for the interior space drawing schedule quantity system contract.
+ */
 export type AutoMovieDrawingRole = "cut" | "projected" | "overhead" | "hidden";
 
-/** Stroke width in page millimetres, per line role. */
+/**
+ * Stroke width in page millimetres, per line role.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingWeights` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingWeights` for the interior space drawing schedule quantity system contract.
+ */
 export type IAutoMovieDrawingWeights = {
   [role in AutoMovieDrawingRole]: number;
 };
 
-/** Dash pattern in page millimetres, per line role; an empty array is solid. */
+/**
+ * Dash pattern in page millimetres, per line role; an empty array is solid.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingDashes` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingDashes` for the interior space drawing schedule quantity system contract.
+ */
 export type IAutoMovieDrawingDashes = {
   [role in AutoMovieDrawingRole]: number[];
 };
@@ -267,18 +411,33 @@ export type IAutoMovieDrawingDashes = {
  * numbers, rather than a named house style, is the difference between shipping
  * a capability and shipping somebody's title block.
  *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `IAutoMovieDrawingStyle` as the portable data boundary for the interior drawing views requirement.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `IAutoMovieDrawingStyle` for the interior space drawing schedule quantity system contract.
  * @author Samchon
  */
 export interface IAutoMovieDrawingStyle {
-  /** Stroke width per role, in page millimetres. Each must be positive. */
+  /**
+   * Stroke width per role, in page millimetres. Each must be positive.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `weights` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `weights` for the interior space drawing schedule quantity system contract.
+   */
   weights: IAutoMovieDrawingWeights;
 
   /**
    * Dash pattern per role, in page millimetres. Each entry must be positive; an
    * empty array draws a solid line.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `dashes` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `dashes` for the interior space drawing schedule quantity system contract.
    */
   dashes: IAutoMovieDrawingDashes;
 
-  /** Annotation and dimension text height in page millimetres. Positive. */
+  /**
+   * Annotation and dimension text height in page millimetres. Positive.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Exposes `textHeight` as the portable data boundary for the interior drawing views requirement.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Types `textHeight` for the interior space drawing schedule quantity system contract.
+   */
   textHeight: number;
 }

@@ -21,7 +21,6 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         drivers: resolve(__dirname, "drivers.html"),
-        human: resolve(__dirname, "human.html"),
         body: resolve(__dirname, "body.html"),
         stickman: resolve(__dirname, "stickman.html"),
         knight: resolve(__dirname, "knight.html"),

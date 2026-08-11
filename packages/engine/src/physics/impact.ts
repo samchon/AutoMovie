@@ -9,25 +9,55 @@ import { Vector3 } from "../math/Vector3";
  * (per the project's direction) is to compute a high-level, deterministic
  * _result_ an AI can be handed as a hint, not to run a full rigid-body sim.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Reduces authored bodies to the traits needed for a deterministic impact result.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the physical inputs consumed after contact is established.
  * @author Samchon
  */
 export interface IAutoMovieImpactBody {
-  /** Mass (kg); larger = harder to move. */
+  /**
+   * Mass (kg); larger = harder to move.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Determines the impulse split between contacted bodies.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the inertial input used to compute the response.
+   */
   mass: number;
-  /** Linear velocity (world m/s). */
+  /**
+   * Linear velocity (world m/s).
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Determines closing speed and post-impact motion.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the world velocity at contact.
+   */
   velocity: IAutoMovieVector3;
-  /** Bounciness `[0,1]`: how much closing speed is returned. */
+  /**
+   * Bounciness `[0,1]`: how much closing speed is returned.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Selects how much normal motion rebounds after contact.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the bounded restitution trait of the response.
+   */
   restitution: number;
-  /** Rigidity `[0,1]`: 1 a hard shell, 0 soft flesh. */
+  /**
+   * Rigidity `[0,1]`: 1 a hard shell, 0 soft flesh.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Distinguishes bounce and deflection material outcomes.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies one material trait used by the qualitative contact result.
+   */
   hardness: number;
   /**
    * How easily this body is pierced `[0,1]`: 1 a soft target an arrow sinks
    * into.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Selects embed or pass-through outcomes for fast strikes.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Supplies the penetration trait used by the bounded response heuristic.
    */
   penetrability: number;
 }
 
-/** How a collision resolves: the qualitative outcome. */
+/**
+ * How a collision resolves: the qualitative outcome.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Names the authored-facing consequence of a contact.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Classifies the resolved contact output for downstream reaction.
+ */
 export type AutoMovieImpactKind = "bounce" | "embed" | "through" | "deflect";
 
 /**
@@ -36,19 +66,52 @@ export type AutoMovieImpactKind = "bounce" | "embed" | "through" | "deflect";
  * qualitative {@link AutoMovieImpactKind}. One value serves both consumers: an
  * AI hint ("recoil this hard, this way; it embeds") and a deterministic driver
  * for auto-played aftermath.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Carries impulse, motion, and qualitative aftermath as one contact result.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Exposes the deterministic output of the bounded collision response.
  */
 export interface IAutoMovieImpact {
-  /** Unit contact normal, from `a` toward `b`. */
+  /**
+   * Unit contact normal, from `a` toward `b`.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Preserves the direction along which contact response is resolved.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the world contact normal used by downstream reaction.
+   */
   normal: IAutoMovieVector3;
-  /** Closing speed along the normal at contact (0 if not approaching). */
+  /**
+   * Closing speed along the normal at contact (0 if not approaching).
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Quantifies the severity of the resolved contact.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Reports the measured normal closing speed at contact.
+   */
   speed: number;
-  /** Impulse delivered to `b` (the equal and opposite acts on `a`). */
+  /**
+   * Impulse delivered to `b` (the equal and opposite acts on `a`).
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Carries the deterministic impulse that drives aftermath.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Reports the bounded response derived from world contact.
+   */
   impulse: IAutoMovieVector3;
-  /** `a`'s velocity after the impact. */
+  /**
+   * `a`'s velocity after the impact.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Exposes the first body's deterministic post-contact motion.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries one side of the contact response output.
+   */
   velocityA: IAutoMovieVector3;
-  /** `b`'s velocity after the impact. */
+  /**
+   * `b`'s velocity after the impact.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Exposes the second body's deterministic post-contact motion.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the other side of the contact response output.
+   */
   velocityB: IAutoMovieVector3;
-  /** What happened. */
+  /**
+   * What happened.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Names the bounce, embed, through, or deflect aftermath.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Classifies the contact output for authored reaction logic.
+   */
   kind: AutoMovieImpactKind;
 }
 
@@ -120,6 +183,8 @@ const assertImpactBody = (
  * transfers); a hard, bouncy pair **bounces**; otherwise it **deflects**.
  * Bodies already separating yield a pure `deflect` with no impulse.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Computes a bounded impulse and qualitative aftermath from one contact.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Produces the deterministic response consumed after world contact.
  * @author Samchon
  */
 export const resolveImpact = (

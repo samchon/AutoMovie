@@ -9,17 +9,47 @@ import {
   IAutoMovieRepaintRuntimeIdentity,
 } from "./application/IAutoMovieRepaintShot";
 
-/** Host input for one structure-preserving shot repaint. */
+/**
+ * Host input for one structure-preserving shot repaint.
+ *
+ * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `IAutoMovieProductionRepaintInput` as the portable data boundary for the repaint reference roles requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `IAutoMovieProductionRepaintInput` for the asset spec repaint controls references system contract.
+ */
 export interface IAutoMovieProductionRepaintInput {
-  /** Active project root. */
+  /**
+   * Active project root.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `projectRoot` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `projectRoot` for the asset spec repaint controls references system contract.
+   */
   projectRoot: string;
-  /** Active production namespace. */
+  /**
+   * Active production namespace.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `productionId` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `productionId` for the asset spec repaint controls references system contract.
+   */
   productionId: string;
-  /** Current compiler-owned registry fingerprint. */
+  /**
+   * Current compiler-owned registry fingerprint.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `compileFingerprint` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `compileFingerprint` for the asset spec repaint controls references system contract.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Exact compiled shot id. */
+  /**
+   * Exact compiled shot id.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `shot` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `shot` for the asset spec repaint controls references system contract.
+   */
   shot: string;
-  /** Verified deterministic source identity and bytes. */
+  /**
+   * Verified deterministic source identity and bytes.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `source` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `source` for the asset spec repaint controls references system contract.
+   */
   source: {
     /** Project-relative content-addressed source bundle. */
     bundle: string;
@@ -43,7 +73,12 @@ export interface IAutoMovieProductionRepaintInput {
     /** Capture runtime that produced the deterministic controls. */
     captureRuntime: IAutoMovieCaptureRuntimeIdentity;
   };
-  /** Verified fixed reference bytes. */
+  /**
+   * Verified fixed reference bytes.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `references` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `references` for the asset spec repaint controls references system contract.
+   */
   references: Array<{
     /** Style or character role. */
     role: "style" | "character";
@@ -54,11 +89,21 @@ export interface IAutoMovieProductionRepaintInput {
     /** Current bytes. */
     bytes: Uint8Array;
   }>;
-  /** Exact generation controls. */
+  /**
+   * Exact generation controls.
+   *
+   * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `parameters` as the portable data boundary for the repaint reference roles requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `parameters` for the asset spec repaint controls references system contract.
+   */
   parameters: IAutoMovieRepaintParameters;
 }
 
-/** Host-owned optional diffusion adapter. */
+/**
+ * Host-owned optional diffusion adapter.
+ *
+ * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Exposes `AutoMovieProductionShotRepaint` as the portable data boundary for the repaint reference roles requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-controls-references Types `AutoMovieProductionShotRepaint` for the asset spec repaint controls references system contract.
+ */
 export type AutoMovieProductionShotRepaint = (
   input: IAutoMovieProductionRepaintInput,
 ) => Promise<{

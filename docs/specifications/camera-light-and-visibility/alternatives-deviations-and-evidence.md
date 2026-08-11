@@ -2,13 +2,13 @@
 
 ## Alternative Branch Model {#clv-alternative-branch-model}
 
+### Camera Continuity와 Intentional Deviation {#clv-camera-continuity-deviation}
+
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternatives-intentional-deviations Lighting choice의 common source, difference, interval와 acceptance를 정규화한다. -->
 <!-- @evidence requirements/camera/scope-and-identity.md#camera-take-lineage Camera take의 common source와 독립 optical·grammar state를 보존한다. -->
 <!-- @evidence requirements/staging/coverage-and-alternative-takes.md#staging-take-identity Performance, camera, timing과 staging take identity를 함께 추적한다. -->
 
 Alternative branch는 stable branch identity, common story·staging·design·geometry source closure, parent branch, changed camera·lighting fields, applicable shot·film interval, delivery profile, budget consequence, acceptance와 evidence set을 가진다. Branch는 immutable comparison candidate이며 선택 전 서로 다른 branch의 state, pixels, metrics와 receipts를 결합하지 않는다.
-
-### Camera Continuity와 Intentional Deviation {#clv-camera-continuity-deviation}
 
 <!-- @evidence requirements/camera/continuity-and-intentional-violations.md#camera-continuity-intentional-violations Shot size, axis, eyeline, movement, lens와 subject scale의 sequence state를 추적한다. -->
 <!-- @evidence requirements/camera/continuity-and-intentional-violations.md#camera-match-contrast Match와 contrast를 저작 가능한 continuity operation으로 만든다. -->
@@ -32,13 +32,13 @@ Camera alternative comparison은 같은 story event, staging state, production-d
 
 ## Lighting Deviation와 Selection {#clv-lighting-deviation-selection}
 
+### A/B Basis와 Selection Receipt {#clv-lighting-ab-selection-receipt}
+
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-intentional-deviations Lighting continuity, source, shadow, reflection와 exposure deviation의 cue를 정밀화한다. -->
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-state-branches Environment, source, link, practical, optical와 color state의 branch lineage를 보존한다. -->
 <!-- @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-intentional-optical-break Optical deviation을 physical analysis result와 분리한다. -->
 
 Lighting deviation은 affected source·surface·subject·camera·rule·interval, story reason, viewer cue, accepted optical·continuity consequence와 review authority를 가진다. Stylized shadow, selective reflection, practical mismatch와 exposure contrast가 승인돼도 source-state 또는 physical-analysis result를 변경하지 않고 별도 creative acceptance로 남는다.
-
-### A/B Basis와 Selection Receipt {#clv-lighting-ab-selection-receipt}
 
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-comparison-conditions Camera, staging, geometry, material, time, exposure, view와 raster를 통제한다. -->
 <!-- @evidence requirements/lighting/alternatives-and-intentional-deviations.md#lighting-alternative-selection 선택 이유, acceptance, approximation, continuity와 budget consequence를 기록한다. -->
@@ -51,13 +51,13 @@ Common condition이 불명확하거나 semantic event를 대응할 수 없는 �
 
 ## Evidence Manifest {#clv-evidence-manifest}
 
+### Multi-time, A/B와 Deterministic Recheck {#clv-evidence-sampling-recheck}
+
 <!-- @evidence requirements/camera/validation.md#camera-validation-manifest Camera evidence가 take, upstream source, revisions, raster, samples와 tolerance를 기록하게 한다. -->
 <!-- @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-contract Lighting evidence가 question, quantity, operands, samples와 approximation을 기록하게 한다. -->
 <!-- @evidence requirements/review/reproducible-context.md#review-reproducible-context 다른 검토자가 같은 target과 조건을 다시 열 수 있게 한다. -->
 
 Evidence manifest는 target production·scene·shot·take·branch identity, exact source and dependency closure, story·staging·design·geometry·material revisions, camera·lighting·exposure·display state, delivery raster, rational sample plan, pass 또는 analysis profile, tolerance, execution identity, artifact digest, method, coverage와 freshness를 가진다. 한 evidence item은 자신이 실제 관찰한 method와 scope만 증명한다.
-
-### Multi-time, A/B와 Deterministic Recheck {#clv-evidence-sampling-recheck}
 
 <!-- @evidence requirements/camera/validation.md#camera-multi-time-capture Start, middle, end와 critical transition sample의 coverage를 요구한다. -->
 <!-- @evidence requirements/camera/validation.md#camera-reproducible-capture 같은 source와 sample identity의 capture 결정을 재현한다. -->
