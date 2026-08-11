@@ -15,7 +15,15 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/**/*.md"],
+        files: [
+          "requirements/agent-authoring/**/*.md",
+          "requirements/delivery-and-accessibility/**/*.md",
+          "requirements/diagnostics/**/*.md",
+          "requirements/evidence-and-provenance/**/*.md",
+          "requirements/operations-and-recovery/**/*.md",
+          "requirements/product/**/*.md",
+          "requirements/rendering/**/*.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
@@ -27,7 +35,13 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["specifications/**/*.md"],
+        files: [
+          "specifications/authoring-and-authority/**/*.md",
+          "specifications/editorial-render-and-delivery/**/*.md",
+          "specifications/evidence-and-provenance/**/*.md",
+          "specifications/execution-and-recovery/**/*.md",
+          "specifications/validation-and-diagnostics/**/*.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },

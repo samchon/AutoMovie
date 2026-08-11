@@ -15,7 +15,13 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/**/*.md"],
+        files: [
+          "requirements/camera/**/*.md",
+          "requirements/lighting/**/*.md",
+          "requirements/rendering/**/*.md",
+          "requirements/review/**/*.md",
+          "requirements/staging/**/*.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
@@ -27,7 +33,12 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["specifications/**/*.md"],
+        files: [
+          "specifications/camera-light-and-visibility/**/*.md",
+          "specifications/editorial-render-and-delivery/**/*.md",
+          "specifications/performance-motion-and-staging/**/*.md",
+          "specifications/review-and-acceptance/**/*.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
