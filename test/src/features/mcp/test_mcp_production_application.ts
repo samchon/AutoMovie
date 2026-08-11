@@ -51,7 +51,7 @@ interface IProductionApplicationConnectionCleanup {
 class ProductionApplicationCleanupError extends AggregateError {}
 
 /** Close application resources without replacing an earlier failure. */
-export const preserveProductionApplicationCleanup = async (
+const preserveProductionApplicationCleanup = async (
   failure: IProductionApplicationFailure | undefined,
   connections: readonly IProductionApplicationConnectionCleanup[],
   fixtureCleanup: () => unknown,

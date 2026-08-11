@@ -15,7 +15,7 @@ interface IScreenplayProseFixtureFailure {
 
 class ScreenplayProseFixtureCleanupError extends AggregateError {}
 
-export const preserveScreenplayProseFixtureCleanup = (
+const preserveScreenplayProseFixtureCleanup = (
   failure: IScreenplayProseFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

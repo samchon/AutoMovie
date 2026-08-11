@@ -39,7 +39,7 @@ interface IScreenplayLedgerFixtureFailure {
 
 class ScreenplayLedgerFixtureCleanupError extends AggregateError {}
 
-export const preserveScreenplayLedgerFixtureCleanup = (
+const preserveScreenplayLedgerFixtureCleanup = (
   failure: IScreenplayLedgerFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

@@ -18,7 +18,7 @@ interface ICliRenderFixtureCleanup {
 class CliRenderFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired fixture cleanup without replacing earlier failure. */
-export const preserveCliRenderFixtureCleanup = (
+const preserveCliRenderFixtureCleanup = (
   failure: ICliRenderFixtureFailure | undefined,
   resources: readonly ICliRenderFixtureCleanup[],
 ): void => {

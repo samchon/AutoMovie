@@ -37,7 +37,7 @@ interface IProductionInstancesFixtureFailure {
 class ProductionInstancesFixtureCleanupError extends AggregateError {}
 
 /** Dispose the production-instances fixture without replacing its failure. */
-export const preserveProductionInstancesFixtureCleanup = (
+const preserveProductionInstancesFixtureCleanup = (
   failure: IProductionInstancesFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

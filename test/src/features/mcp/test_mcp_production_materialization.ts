@@ -47,7 +47,7 @@ interface IProductionMaterializationFixtureFailure {
 class ProductionMaterializationFixtureCleanupError extends AggregateError {}
 
 /** Dispose the materialization fixture without replacing its failure. */
-export const preserveProductionMaterializationFixtureCleanup = (
+const preserveProductionMaterializationFixtureCleanup = (
   failure: IProductionMaterializationFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

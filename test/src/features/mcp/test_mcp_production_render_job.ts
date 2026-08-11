@@ -65,7 +65,7 @@ interface IRenderJobFixtureCleanup {
 class RenderJobFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired render-job fixture cleanup without hiding failure. */
-export const preserveRenderJobFixtureCleanup = (
+const preserveRenderJobFixtureCleanup = (
   failure: IRenderJobFixtureFailure | undefined,
   resources: readonly IRenderJobFixtureCleanup[],
 ): void => {

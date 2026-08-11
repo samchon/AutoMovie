@@ -22,7 +22,7 @@ interface IProductionShotContinuityFixtureFailure {
 
 class ProductionShotContinuityFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionShotContinuityFixtureCleanup = (
+const preserveProductionShotContinuityFixtureCleanup = (
   failure: IProductionShotContinuityFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

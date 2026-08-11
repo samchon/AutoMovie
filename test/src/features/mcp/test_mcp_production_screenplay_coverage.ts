@@ -16,7 +16,7 @@ interface IScreenplayCoverageFixtureFailure {
 
 class ScreenplayCoverageFixtureCleanupError extends AggregateError {}
 
-export const preserveScreenplayCoverageFixtureCleanup = (
+const preserveScreenplayCoverageFixtureCleanup = (
   failure: IScreenplayCoverageFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

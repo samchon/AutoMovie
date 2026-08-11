@@ -91,7 +91,7 @@ interface IFilmSourceFixtureCleanup {
 class FilmSourceFixtureCleanupError extends AggregateError {}
 
 /** Attempt each independent film-source cleanup without hiding failure. */
-export const preserveFilmSourceFixtureCleanup = (
+const preserveFilmSourceFixtureCleanup = (
   failure: IFilmSourceFixtureFailure | undefined,
   resources: readonly IFilmSourceFixtureCleanup[],
 ): void => {
@@ -123,7 +123,7 @@ interface IFilmTimelineFixtureFailure {
 class FilmTimelineFixtureCleanupError extends AggregateError {}
 
 /** Dispose the film-timeline fixture without replacing its failure. */
-export const preserveFilmTimelineFixtureCleanup = (
+const preserveFilmTimelineFixtureCleanup = (
   failure: IFilmTimelineFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

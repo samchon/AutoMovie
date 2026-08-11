@@ -17,7 +17,7 @@ interface IProjectManifestFixtureFailure {
 class ProjectManifestFixtureCleanupError extends AggregateError {}
 
 /** Remove the project-manifest fixture without replacing its primary failure. */
-export const preserveProjectManifestFixtureCleanup = (
+const preserveProjectManifestFixtureCleanup = (
   failure: IProjectManifestFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
@@ -40,7 +40,7 @@ interface IProjectManifestRaceCleanup {
 class ProjectManifestRaceCleanupError extends AggregateError {}
 
 /** Attempt every project-manifest race cleanup without hiding failure. */
-export const preserveProjectManifestRaceCleanup = (
+const preserveProjectManifestRaceCleanup = (
   failure: IProjectManifestFixtureFailure | undefined,
   resources: readonly IProjectManifestRaceCleanup[],
 ): void => {

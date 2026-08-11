@@ -40,7 +40,7 @@ interface IProductionRealizationFixtureFailure {
 
 class ProductionRealizationFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionRealizationFixtureCleanup = (
+const preserveProductionRealizationFixtureCleanup = (
   failure: IProductionRealizationFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

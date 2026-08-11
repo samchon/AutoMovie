@@ -208,7 +208,7 @@ interface IProductionProjectFixtureCleanup {
 class ProductionProjectFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired project fixture cleanup without hiding failure. */
-export const preserveProductionProjectFixtureCleanup = (
+const preserveProductionProjectFixtureCleanup = (
   failure: IProductionProjectFixtureFailure | undefined,
   resources: readonly IProductionProjectFixtureCleanup[],
 ): void => {
@@ -239,7 +239,7 @@ interface ISingleProductionProjectFixtureFailure {
 
 class SingleProductionProjectFixtureCleanupError extends AggregateError {}
 
-export const preserveSingleProductionProjectFixtureCleanup = (
+const preserveSingleProductionProjectFixtureCleanup = (
   failure: ISingleProductionProjectFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {
