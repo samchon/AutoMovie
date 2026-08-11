@@ -12,6 +12,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/asset-authoring/README.md",
           "requirements/asset-authoring/geometry.md",
           "requirements/asset-authoring/materials-and-textures.md",
           "requirements/asset-authoring/rig-and-state.md",
@@ -28,6 +29,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/asset-and-representation/README.md",
           "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
           "specifications/asset-and-representation/rig-deformation-and-state.md",
         ],
@@ -43,6 +45,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/story/README.md",
           "requirements/story/dialogue-language-and-silence.md",
           "requirements/story/scenes-and-observable-action.md",
           "requirements/story/scope-and-source-of-truth.md",
@@ -59,6 +62,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/narrative-and-intent/README.md",
           "specifications/narrative-and-intent/events-causality-and-time.md",
           "specifications/narrative-and-intent/story-authority-and-hierarchy.md",
         ],
@@ -74,8 +78,10 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/delivery-and-accessibility/README.md",
           "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
           "requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md",
+          "requirements/rendering/README.md",
           "requirements/rendering/chunks-resume-and-recovery.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
         ],
@@ -91,6 +97,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
           "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
           "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
@@ -108,10 +115,14 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/camera/README.md",
           "requirements/camera/projection-lens-and-sensor.md",
+          "requirements/lighting/README.md",
           "requirements/lighting/sun-sky-and-environment.md",
+          "requirements/rendering/README.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
           "requirements/rendering/passes-channels-and-products.md",
+          "requirements/repaint/README.md",
           "requirements/repaint/source-frames-and-reference-locking.md",
         ],
         symbol: ["h2", "h3"],
@@ -126,9 +137,12 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/asset-and-representation/README.md",
           "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+          "specifications/camera-light-and-visibility/README.md",
           "specifications/camera-light-and-visibility/camera-state-projection-and-gate.md",
           "specifications/camera-light-and-visibility/light-source-photometry-and-environment.md",
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
         ],
@@ -144,7 +158,9 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/editorial/README.md",
           "requirements/editorial/rational-time-and-ranges.md",
+          "requirements/rendering/README.md",
           "requirements/rendering/encoding-and-multiplexing.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
           "requirements/rendering/passes-channels-and-products.md",
@@ -162,6 +178,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
           "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
@@ -183,6 +200,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/encoding-and-multiplexing.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
           "requirements/rendering/scope-and-artifact-identity.md",
@@ -204,6 +222,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
         ],
@@ -219,6 +238,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/budgets.md",
           "requirements/rendering/chunks-resume-and-recovery.md",
           "requirements/rendering/passes-channels-and-products.md",
@@ -235,6 +255,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
         ],
@@ -250,6 +271,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/headless-and-platform-determinism.md",
           "requirements/rendering/passes-channels-and-products.md",
           "requirements/rendering/validation.md",
@@ -266,6 +288,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
@@ -282,6 +305,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/budgets.md",
           "requirements/rendering/frame-identity-and-content-addressing.md",
           "requirements/rendering/passes-channels-and-products.md",
@@ -299,6 +323,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
           "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
