@@ -17,17 +17,40 @@ import { ViolationCollector } from "./violation";
  * these in so this validator stays a pure function of facts, and so the same
  * closure runs against probed bytes in the compiler and against fixed facts in
  * a test.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `IAutoMovieTextureImageFacts` carries the byte-proven format and dimensions used to validate a sampled surface image.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `IAutoMovieTextureImageFacts` provides the observed image facts required to reject unresolved or incompatible surface resources.
  */
 export interface IAutoMovieTextureImageFacts {
-  /** IANA media type the bytes themselves prove. */
+  /**
+   * IANA media type the bytes themselves prove.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `mediaType` records the IANA image format proved by the asset bytes before channel use is accepted.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `mediaType` supplies the observed container identity checked against the texture or environment consumer's accepted set.
+   */
   mediaType: AutoMovieTextureMediaType;
-  /** Pixel width, a positive integer. */
+  /**
+   * Pixel width, a positive integer.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `width` records the byte-proven horizontal pixel count used to detect an unusable surface image.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `width` provides the measured edge checked for positivity and the portable sampling limit.
+   */
   width: number;
-  /** Pixel height, a positive integer. */
+  /**
+   * Pixel height, a positive integer.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `height` records the byte-proven vertical pixel count used to detect an unusable surface image.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `height` provides the independent vertical edge measurement enforced before model output is accepted.
+   */
   height: number;
 }
 
-/** Every image container a texture or environment asset may actually be. */
+/**
+ * Every image container a texture or environment asset may actually be.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `AutoMovieTextureMediaType` enumerates the actual image containers whose channels can enter texture and environment validation.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `AutoMovieTextureMediaType` bounds format interpretation to named byte containers instead of trusting a file extension.
+ */
 export type AutoMovieTextureMediaType =
   | "image/png"
   | "image/jpeg"
@@ -43,6 +66,9 @@ export type AutoMovieTextureMediaType =
  * this project's capture matrix samples without a driver-side rescale, so it is
  * the bound a production is held to rather than the bound a driver happens to
  * allow.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `AUTO_MOVIE_MAX_TEXTURE_EDGE` fixes the largest image dimension accepted by the portable surface-sampling contract.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `AUTO_MOVIE_MAX_TEXTURE_EDGE` supplies the expected bound reported beside an oversized width or height observation.
  */
 export const AUTO_MOVIE_MAX_TEXTURE_EDGE = 8192;
 
@@ -61,27 +87,70 @@ const ENVIRONMENT_MEDIA: ReadonlySet<AutoMovieTextureMediaType> = new Set([
   "image/vnd.radiance",
 ]);
 
-/** One compiled shot's scene environment, addressed by the shot that owns it. */
+/**
+ * One compiled shot's scene environment, addressed by the shot that owns it.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `IAutoMovieSceneEnvironmentUse` attaches one environment image declaration to the exact compiled shot that samples it.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `IAutoMovieSceneEnvironmentUse` provides the consumer scope needed to locate missing or multiply interpreted lighting resources.
+ */
 export interface IAutoMovieSceneEnvironmentUse {
-  /** Exact shot id. */
+  /**
+   * Exact shot id.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `shot` names the compiled shot whose image-lighting use is being validated.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `shot` supplies the stable consumer identity included in an environment-resource failure path.
+   */
   shot: string;
-  /** The scene's declared environment, or null/undefined when it declares none. */
+  /**
+   * The scene's declared environment, or null/undefined when it declares none.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `environment` carries the optional lighting image and interpretation selected by the owning scene.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `environment` distinguishes an absent use from a declared image whose resource closure must resolve.
+   */
   environment?: IAutoMovieSceneEnvironment | null;
 }
 
-/** Everything the texture closure is decided against. */
+/**
+ * Everything the texture closure is decided against.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `IAutoMovieTextureClosureInput` gathers every material and environment image use with the ledger and byte facts that authorize it.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `IAutoMovieTextureClosureInput` defines the complete resource-closure scope checked for missing, unused, or conflicting surface assets.
+ */
 export interface IAutoMovieTextureClosureInput {
-  /** Exact production id whose ledger entries authorize these uses. */
+  /**
+   * Exact production id whose ledger entries authorize these uses.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `production` names the production whose provenance ledger is allowed to authorize the sampled images.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `production` supplies the ownership identity checked against each registered asset record.
+   */
   production: string;
-  /** Compiled models whose materials bind PBR images. */
+  /**
+   * Compiled models whose materials bind PBR images.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `models` identifies the compiled material slots that actually sample each PBR image.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `models` provides model, material, and texture-member paths for locating unresolved surface resources.
+   */
   models: readonly IAutoMovieModel[];
-  /** Compiled shots whose scenes bind image lighting. */
+  /**
+   * Compiled shots whose scenes bind image lighting.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `scenes` identifies the shot-owned environment declarations that sample image lighting.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `scenes` provides shot and environment paths for failures outside model material bindings.
+   */
   scenes: readonly IAutoMovieSceneEnvironmentUse[];
-  /** The project asset ledger, exactly as the manifest holds it. */
+  /**
+   * The project asset ledger, exactly as the manifest holds it.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `assets` carries the manifest ledger entries against which every sampled image path is authorized.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `assets` supplies ownership, kind, and declared-use facts for missing-use and unused-resource decisions.
+   */
   assets: readonly IAutoMovieAssetProvenance[];
   /**
    * Image facts for one registered asset path, or `undefined` when the compiler
    * could not read the bytes as an image at all.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `facts` resolves one asset path to the media type and dimensions proved by its bytes.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `facts` leaves an unreadable image unresolved so the validator rejects it instead of inventing metadata.
    */
   facts: (asset: string) => IAutoMovieTextureImageFacts | undefined;
 }
@@ -110,6 +179,16 @@ export interface IAutoMovieTextureClosureInput {
  * be a second copy of a rule with an owner. What this adds is the reason that
  * gate applies at all: an image nobody registered is an image nobody digests.
  *
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation Verifies every sampled texture is registered with matching image facts and intent.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Rejects missing, unused, mismatched, and multiply interpreted surface resources before model output is accepted.
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-value-interpretation `validateTextureAssets` keeps sRGB color slots, linear measurement slots, and Radiance environment intent explicit and rejects one image used under contradictory interpretations.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-value-interpretation-layer The texture gate validates the Engine's image color-space and channel-role subset without claiming general raster, audio, no-data, or scalar-unit interpretation.
+ * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies `validateTextureAssets` resolves every sampled material or environment image through its typed asset-ledger use and byte-proven image facts and rejects missing or stale uses.
+ * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction The validator closes the Engine's material-texture and scene-environment dependency subset; archive, stream, sidecar, and network closure remain upstream.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature `validateTextureAssets` distinguishes a readable image container from suitability for a material or environment consumer and rejects the unsupported image/material combination.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix The texture gate evaluates byte-proven container type against the selected Engine consumer's accepted image subset instead of treating parser recognition as universal support.
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-collision-ambiguity `validateTextureAssets` rejects a shared image whose material and environment bindings demand competing color-space interpretations rather than selecting one by traversal order.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-identity-ambiguity-refusal The validator reports every conflicting binding path and blocks the ambiguous image interpretation without choosing a silent winner.
  * @author Samchon
  */
 export const validateTextureAssets = (

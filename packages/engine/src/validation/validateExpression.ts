@@ -15,6 +15,12 @@ import { ViolationCollector } from "./violation";
  * menus, and magnitudes still sit in `[0, 1]`: preset intensity and every
  * blendshape weight. ARKit channels also must not be set twice.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateExpression` reports an unknown preset, unknown ARKit channel, or out-of-range weight at that expression member's path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateExpression` retains the channel identity and observed magnitude beside the closed-menu or unit-interval constraint it violated.
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding `validateExpression` identifies malformed authored preset, channel, duplication, and weight inputs before they enter expression resolution.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding The validator reports declaration defects at their input member paths rather than misclassifying them as failures of a derived expression result.
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels `validateExpression` admits only the declared neutral or named preset and closed ARKit channel vocabulary, rejects duplicate channels, and bounds every authored intensity or blendshape weight to the unit interval.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state `validateExpression` enforces the representation-facing preset and detailed expression-channel state before the Engine accepts that face control input.
  * @author Samchon
  */
 export const validateExpression = (props: {
@@ -59,7 +65,12 @@ export const validateExpression = (props: {
   return collector;
 };
 
-/** Convenience wrapper returning a finished {@link IAutoMovieValidation}. */
+/**
+ * Convenience wrapper returning a finished {@link IAutoMovieValidation}.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateExpressionResult` returns the expression validator's located findings under the default expression root.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateExpressionResult` converts the collected channel paths into the canonical success-or-error envelope without readdressing them.
+ */
 export const validateExpressionResult = (
   expression: IAutoMovieExpression,
 ): IAutoMovieValidation => validateExpression({ expression }).toValidation();

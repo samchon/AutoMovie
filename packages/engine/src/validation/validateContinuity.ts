@@ -43,6 +43,9 @@ interface ITolerances {
  * - Facing drift beyond `facingToleranceDeg` degrees.
  * - A persistent mount dropped or changed (the rider's horse vanished).
  * - The actor missing entirely from the incoming opening.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateContinuity` locates each actor position, facing, mount, or prop-state mismatch at the incoming beat's opening member.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateContinuity` preserves the previous end observation, opening observation, expected tolerance, and actor identity for one cut boundary.
  */
 export const validateContinuity = (props: {
   /** The previous beat's resolved end-state. */
@@ -85,6 +88,11 @@ export const validateContinuity = (props: {
  * The beats are the ordered {@link IResolveBeatProps} the pipeline already
  * builds for {@link resolveBeatEnd} (scene, shot, motions, mounts, plants). A
  * film of zero or one beat has no cut to lint and passes trivially.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateFilmContinuity` attaches every cut mismatch to the playback-order beat index whose opening failed to resume prior state.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateFilmContinuity` maintains separate boundary scopes while aggregating the ordered film-wide continuity findings.
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-aggregate-boundary `validateFilmContinuity` evaluates every adjacent cut in playback order and returns their located findings in one film-level result.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-aggregate-execution The aggregate validator runs the same pairwise continuity check at each boundary without allowing an earlier mismatch to suppress later findings.
  */
 export const validateFilmContinuity = (props: {
   /** The film's beats, in playback order. */

@@ -15,7 +15,12 @@ import { Quaternion } from "../math/Quaternion";
 import { validateTransformScalars } from "../validation/validateTransformScalars";
 import { ViolationCollector } from "../validation/violation";
 
-/** Every container family a design reference may declare. */
+/**
+ * Every container family a design reference may declare.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `AUTO_MOVIE_DESIGN_REFERENCE_MEDIA` fixes every container family a design reference may declare. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `AUTO_MOVIE_DESIGN_REFERENCE_MEDIA` bounds the auto movie design reference media policy while the engine closes a reviewed reference from source identity through downstream consumers.
+ */
 export const AUTO_MOVIE_DESIGN_REFERENCE_MEDIA = [
   "image/png",
   "image/jpeg",
@@ -24,7 +29,12 @@ export const AUTO_MOVIE_DESIGN_REFERENCE_MEDIA = [
   "image/vnd.dxf",
 ] as const;
 
-/** Every drawing family a source frame may declare. */
+/**
+ * Every drawing family a source frame may declare.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `AUTO_MOVIE_DESIGN_FRAME_VIEWS` fixes every drawing family a source frame may declare. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `AUTO_MOVIE_DESIGN_FRAME_VIEWS` bounds the auto movie design frame views policy while the engine closes a reviewed reference from source identity through downstream consumers.
+ */
 export const AUTO_MOVIE_DESIGN_FRAME_VIEWS = [
   "plan",
   "section",
@@ -33,7 +43,12 @@ export const AUTO_MOVIE_DESIGN_FRAME_VIEWS = [
   "perspective",
 ] as const;
 
-/** Every reason family that keeps a reading unsettled. */
+/**
+ * Every reason family that keeps a reading unsettled.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `AUTO_MOVIE_DESIGN_ISSUE_KINDS` fixes every reason family that keeps a reading unsettled. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `AUTO_MOVIE_DESIGN_ISSUE_KINDS` bounds the auto movie design issue kinds policy while the engine closes a reviewed reference from source identity through downstream consumers.
+ */
 export const AUTO_MOVIE_DESIGN_ISSUE_KINDS = [
   "unknown-scale",
   "ambiguous-geometry",
@@ -66,7 +81,12 @@ const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 /** Direction vectors shorter than this are treated as having no direction. */
 const AXIS_EPSILON = 1e-12;
 
-/** Test whether a value names a registrable design-reference container. */
+/**
+ * Test whether a value names a registrable design-reference container.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `isAutoMovieDesignReferenceMedia` tests whether a value names a registrable design-reference container. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `isAutoMovieDesignReferenceMedia` accepts only the declared container families that may enter a reviewed reference manifest.
+ */
 export const isAutoMovieDesignReferenceMedia = (
   value: unknown,
 ): value is AutoMovieDesignReferenceMedia =>
@@ -94,6 +114,13 @@ export const isAutoMovieDesignReferenceMedia = (
  * and filing it here would let a section's geometry inherit a plan's scale.
  * Correlating two sheets is the authored building's job, through evidence that
  * may cite any candidate of any document.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure `validateDesignReference` rejects a reference whose source asset, digest, frames, or observed readings do not form a self-consistent manifest.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-closure `validateDesignReference` checks the source identity, content digest, declared frames, and frame-local observations needed to reconstruct an adopted reference.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-observation-conditions `validateDesignReference` binds each observed primitive and analysis to a declared source frame, its bounds, scale state, and exact candidate outputs.
+ * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-observation-record-contract The design-reference validator enforces the Engine's frame-local observation inputs and observed, unsupported, or not-run outputs without turning them into design facts.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-claim-basis `validateDesignReference` requires each candidate interpretation to cite observed primitives and retain confidence, alternatives, and unresolved issue identities.
+ * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-claim-evaluation-contract The candidate record preserves the Engine's concrete observation basis and uncertainty fields; it does not claim human approval or a general claim ledger.
  */
 export const validateDesignReference = (props: {
   reference: IAutoMovieDesignReference;
@@ -447,6 +474,23 @@ export const validateDesignReference = (props: {
  * fractional, infinite, `NaN`, or beyond-2^53 value is not null and so passes
  * both rules above while naming no draw at all, which is the invented replay
  * handle they exist to prevent. It is therefore refused before either speaks.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `validateGeneratedAcquisition` validates the generation identity recorded for bytes nothing served. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `validateGeneratedAcquisition` performs generated acquisition validation when the engine closes a reviewed reference from source identity through downstream consumers.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-generated-output-record `validateGeneratedAcquisition` checks provider, model, request, prompt digest, input identities, seed semantics, reproducibility claim, and adopted output digest for one generated asset.
+ * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-generated-output-receipt The generated-acquisition record implements the Engine's adopted-output receipt subset while leaving terms and discarded-candidate retention to upstream provenance.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-nondeterministic-generation `validateGeneratedAcquisition` requires a seed for a reproducible claim and warns that a seed attached to an irreproducible generation is not a replay handle.
+ * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-nondeterministic-attempt-model The validator preserves the stated reproducibility boundary of one adopted attempt without claiming retry or discarded-variant history.
+ * @evidence requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md#third-party-generated-source `validateGeneratedAcquisition` requires the external generator provider and model identity alongside the request and content digests for adopted bytes.
+ * @evidence specifications/evidence-and-provenance/third-party-sources-rights-and-attribution.md#evp-generated-provider-provenance The Engine validates provider and model provenance for generated output but does not claim rights, terms, or attribution clearance.
+ * @evidence requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-boundary-integrity-check `validateGeneratedAcquisition` compares the recorded generated-output digest with the bytes digest supplied at the current acquisition boundary.
+ * @evidence specifications/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#evp-custody-boundary-receipt The direct digest comparison implements one Engine boundary integrity check without claiming a signed or multi-hop custody ledger.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-reproduction-boundary `validateGeneratedAcquisition` distinguishes a seeded reproducibility claim from an explicitly irreproducible generation and retains the exact adopted output digest.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-reproduction-verification-boundary The acquisition validator checks the recorded replay prerequisites and current byte identity; it does not claim that a provider rerun was performed.
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-generation-reproducibility-boundary `validateGeneratedAcquisition` treats the returned output digest as the durable replay boundary and refuses a reproducible claim that lacks its declared seed.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary The validator distinguishes recorded output identity from request replay and does not imply that provider execution is bit-deterministic.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity `validateGeneratedAcquisition` checks the provider, model, request, prompt digest, input paths, seed boundary, and output digest captured for one acquisition.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot The Engine validates the generated-acquisition snapshot fields it consumes while leaving credentials, rights, and network execution outside this boundary.
  */
 export const validateGeneratedAcquisition = (props: {
   acquisition: IAutoMovieGeneratedAcquisition;
@@ -530,6 +574,9 @@ export const validateGeneratedAcquisition = (props: {
  * accountability this graph exists for. What it may not do is point at nothing.
  * A dangling document, a dangling candidate, or a blank rationale each turn the
  * citation into a decoration that survives the evidence it claims to rest on.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure `validateDesignEvidence` rejects consumer citations whose reference document or observed candidates do not resolve in the adopted manifest.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-closure `validateDesignEvidence` closes each design consumer relation by resolving its document and candidate ids against the recorded references.
  */
 export const validateDesignEvidence = (props: {
   references: readonly IAutoMovieDesignReference[];
@@ -618,6 +665,11 @@ export const validateDesignEvidence = (props: {
  * The result is therefore never a design. It is a proposal the authored
  * building source may accept, reject, or contradict; the source of truth stays
  * the TypeScript that a human and a coding agent wrote.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `promoteDesignObservations` promotes only settled reference candidates into metric geometry and reports why unresolved readings remain withheld. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `promoteDesignObservations` converts settled frame readings to metres while preserving diagnostics for ambiguous or unscaled candidates.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-disagreement-and-resolution `promoteDesignObservations` withholds candidates that retain competing interpretations or open issues and reports the exact unresolved identities instead of selecting one silently.
+ * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-disagreement-resolution The promotion boundary preserves unresolved disagreement as a refusal; authorized resolution history remains outside this Engine helper.
  */
 export const promoteDesignObservations = (props: {
   reference: IAutoMovieDesignReference;
@@ -749,6 +801,11 @@ export const promoteDesignObservations = (props: {
  *
  * Throws when the frame's scale is unsettled: producing a number there is the
  * exact failure this whole graph exists to prevent.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `designReferenceWorldPoint` maps one source-space point onto world metres through its frame. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `designReferenceWorldPoint` maps one frame-local source point through its settled scale, axes, origin, and optional transform into world metres.
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units `designReferenceWorldPoint` explicitly applies the settled source-unit scale, source axes, anchor, origin, and optional placement transform when producing world metres.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-spatial-transform-chain The point conversion implements the design-reference subset of an ordered source-to-world transform chain and refuses an unsettled scale.
  */
 export const designReferenceWorldPoint = (
   frame: IAutoMovieDesignSourceFrame,
@@ -786,7 +843,12 @@ export const designReferenceWorldPoint = (
   };
 };
 
-/** The metres-per-unit a frame has actually settled on, or null. */
+/**
+ * The metres-per-unit a frame has actually settled on, or null.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-review `designFrameScale` produces the metres-per-unit a frame has actually settled on, or null. This ensures reviewers can trace each adopted design reading back to its source and uncertainty.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-review `designFrameScale` resolves the selected scale candidate to metres per source unit, or returns `null` while scale is unsettled.
+ */
 export const designFrameScale = (
   frame: IAutoMovieDesignSourceFrame,
 ): number | null => {

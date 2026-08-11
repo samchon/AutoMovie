@@ -50,6 +50,21 @@ const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
  * alternatives of one decision both carry a derived artifact of the same kind,
  * those artifacts must share a lowering configuration and a phase, because a
  * comparison shot under two cameras compares the cameras.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `validateDesignLineage` validates one lineage record as a self-consistent phase, alternative, and derivation graph. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `validateDesignLineage` performs design lineage validation when the engine compares revisions and walks shared design dependencies.
+ * @evidence requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md#provenance-entity-and-revision `validateDesignLineage` requires stable subject identities, a resolvable acyclic revision chain, a current head, and revision-bound derived artifacts.
+ * @evidence specifications/evidence-and-provenance/entities-activities-agents-and-lineage.md#evp-entity-revision-model The validator enforces the Engine lineage subset of entity/revision identity, parentage, head selection, and derived-output revision binding.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-selection-and-composition `validateDesignLineage` records candidate variants, their changes and rationales, decision options, and the selected option while rejecting selection outside the compared set.
+ * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-selection-composition-record The lineage validator enforces the Engine's design-selection record over a common base revision; it does not claim a general media-composition ledger.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status `validateDesignLineage` refuses derived artifacts whose stamped revision, variant, phase, configuration, upstream stamp, or imported-input digest no longer matches their dependencies.
+ * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness The validator compares the stored Engine lineage freshness key against current revision and dependency identities and reports each mismatching role.
+ * @evidence requirements/evidence-and-provenance/retention-invalidation-and-disposal.md#retention-freshness-expiry-and-review `validateDesignLineage` makes revision and dependency changes expire affected derived artifacts as stale; time, policy, and human-review expiry remain outside this Engine record.
+ * @evidence specifications/evidence-and-provenance/retention-invalidation-and-disposal.md#evp-freshness-expiry-evaluation The lineage validator implements source-revision and dependency-digest freshness evaluation without claiming the specification's broader retention-policy evaluator.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-transformation-record `validateDesignLineage` checks a derived output's source revision, inputs, configuration digest, phase, variant, imported-byte digests, and output digest as the Engine's transformation provenance subset.
+ * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-transformation-mapping-and-loss The lineage stamp preserves transformation inputs, normalized configuration identity, and result identity, but does not claim element-level mapping or loss accounting.
+ * @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-phase-coordination `validateDesignLineage` rejects prerequisite cycles, impossible lifecycle order, unresolved phase references, and derived outputs stamped against a different phase or dependency state.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-phase-change-failures The lineage validator implements the shared phase-graph and stale-derived failure subset; exterior-to-interior and map-specific relations remain with their owning graphs.
  */
 export const validateDesignLineage = (props: {
   lineage: IAutoMovieDesignLineage;
@@ -521,6 +536,11 @@ export const validateDesignLineage = (props: {
  * production may phase one wing and leave the rest unannotated. The refusals
  * run the other way: a declared subject that resolves to nothing, and a derived
  * artifact id that squats on a design identity.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership `validateDesignLineageBinding` keeps tracked design identities distinct from derived artifacts by rejecting missing source-owned subjects and derived ids that collide with them.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership `validateDesignLineageBinding` verifies that lineage subjects resolve to published design identities while derived evidence remains outside that source-owned identity set.
+ * @evidence requirements/evidence-and-provenance/scope-identity-and-status.md#evidence-subject-record-separation `validateDesignLineageBinding` keeps source-owned subject ids distinct from the lineage record and from derived artifact ids while resolving every tracked subject against its host graph.
+ * @evidence specifications/evidence-and-provenance/scope-identity-and-status.md#evp-subject-record-identity-separation The binding check prevents an evidence artifact identity from impersonating the design subject it describes.
  */
 export const validateDesignLineageBinding = (props: {
   lineage: IAutoMovieDesignLineage;
@@ -558,6 +578,9 @@ export const validateDesignLineageBinding = (props: {
  * one of them: reordering a source array must not reorder a schedule. Ready
  * phases are therefore taken in ascending id order, which makes the answer a
  * function of the plan alone.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineagePhaseOrder` orders the construction plan deterministically. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineagePhaseOrder` topologically orders construction phases with stable id ordering for simultaneously ready phases.
  */
 export const designLineagePhaseOrder = (
   lineage: IAutoMovieDesignLineage,
@@ -597,6 +620,13 @@ export const designLineagePhaseOrder = (
  * A null phase asks for the completed work: everything the plan ever removes is
  * gone and everything else stands. That is also the only sensible answer for a
  * lineage that records alternatives without recording a construction sequence.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineagePhaseSnapshot` reports every declared subject's role and presence once a phase completes. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineagePhaseSnapshot` records each declared subject's role and presence after a selected construction phase.
+ * @evidence requirements/interior/existing-conditions-phases-and-alternatives.md#interior-construction-renovation-phases `designLineagePhaseSnapshot` resolves each declared subject to pending, present, or removed after the selected prerequisite-ordered construction phase.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-phase-alternative-graph The snapshot implements phase-ordered lifecycle presence for tracked interior identities without claiming interior-specific support, access, or collision state.
+ * @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-construction-phases `designLineagePhaseSnapshot` evaluates install and remove lifecycle events over the declared prerequisite graph rather than assuming a fixed linear phase order.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-phase-input-output The function consumes the lineage phase graph and lifecycle roles and returns a deterministic identity-by-identity presence snapshot.
  */
 export const designLineagePhaseSnapshot = (
   lineage: IAutoMovieDesignLineage,
@@ -664,6 +694,9 @@ export const designLineagePhaseSnapshot = (
  * annotated production must not be silently emptied by adding a phase plan for
  * one wing, and {@link validateDesignLineageBinding} is where a typo is caught
  * instead.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineageProject` keeps only the records that stand at one phase. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineageProject` filters design records to the identities present at one construction phase.
  */
 export const designLineageProject = <T extends { id: string }>(
   lineage: IAutoMovieDesignLineage,
@@ -688,6 +721,11 @@ export const designLineageProject = <T extends { id: string }>(
  * different base revisions are refused rather than compared, because the
  * differences would then mix the two schemes with everything the revision
  * changed underneath them.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineageCompare` compares two alternatives on the revision they share. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineageCompare` compares two alternatives only after confirming they share a base revision.
+ * @evidence requirements/interior/existing-conditions-phases-and-alternatives.md#interior-design-alternatives `designLineageCompare` refuses variants from different base revisions and reports their stable per-subject, per-aspect differences without replacing either candidate.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-phase-alternative-graph The comparison implements the common-base explicit-change-set subset of the interior alternative graph.
  */
 export const designLineageCompare = (
   lineage: IAutoMovieDesignLineage,
@@ -753,6 +791,9 @@ export const designLineageCompare = (
  * way twice. A settled decision is compared exactly like an open one: the
  * rejected schemes are still on the record, and the reason a choice was made is
  * the comparison that produced it.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineageDecisionComparisons` compares every pair of alternatives one decision holds open. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineageDecisionComparisons` materializes every pairwise alternative comparison held open by one design decision.
  */
 export const designLineageDecisionComparisons = (
   lineage: IAutoMovieDesignLineage,
@@ -785,6 +826,17 @@ export const designLineageDecisionComparisons = (
  * drew them, and reaches nothing else. The untouched artifacts are returned
  * beside the invalidated ones because "only these" is a claim about the
  * complement, and a report naming one side alone cannot be checked.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-change-impact-visibility `designLineageImpact` reports the changed identities, transitively invalidated artifacts, and unaffected artifacts as stable sorted ids.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report `designLineageImpact` walks declared dependency edges and returns both the artifacts invalidated by a source change and the artifacts retained for follow-up planning.
+ * @evidence requirements/evidence-and-provenance/generation-transformation-and-derivation.md#provenance-derivation-impact `designLineageImpact` traces each changed subject or derived artifact through direct and transitive consumers and names the unaffected derived complement.
+ * @evidence specifications/evidence-and-provenance/generation-transformation-and-derivation.md#evp-derivation-reverse-impact-index The function computes the Engine lineage's reverse dependency index from declared identity edges and returns stable invalidated and unaffected sets.
+ * @evidence requirements/interior/existing-conditions-phases-and-alternatives.md#interior-change-impact `designLineageImpact` propagates a changed tracked identity through declared derived consumers and returns both the stale candidates and the unaffected complement.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-phase-alternative-graph The impact walk supplies the graph's dependency-aware staleness subset without claiming domain-specific geometry, clearance, sound, or service inference.
+ * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers `designLineageImpact` follows an external subject identity through every declared derived artifact and transitive Engine consumer in the lineage graph.
+ * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability The reverse walk exposes reachable derived consumers and the unaffected complement without claiming upstream acquisition or rights provenance.
+ * @evidence requirements/external-inputs/refresh-version-pinning-and-offline.md#external-refresh-impact-staleness `designLineageImpact` turns a refreshed source identity into the stable set of direct and transitive derived artifacts requiring replacement or review.
+ * @evidence specifications/interchange-and-adoption/revision-refresh-and-offline-cache.md#interchange-refresh-staleness-propagation The impact result implements dependency-based staleness propagation inside Engine lineage while leaving refresh acquisition and adoption transactions upstream.
  */
 export const designLineageImpact = (
   lineage: IAutoMovieDesignLineage,
@@ -833,6 +885,11 @@ export const designLineageImpact = (
  * Windows and POSIX and after any reshuffle of its arrays. Every separator is
  * written here rather than taken from the platform, which is why no newline
  * convention can reach the bytes.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineageDigest` digests the whole lineage record. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineageDigest` hashes revisions, alternatives, phases, decisions, subjects, and derivation stamps into one stable lineage identity.
+ * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization `designLineageDigest` canonicalizes every lineage collection by code-unit identity order and serializes tagged, length-prefixed fields before hashing.
+ * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-structured-canonicalization The digest fixes field representation, collection ordering, separators, and SHA-256 input independently of platform, locale, and authoring traversal order.
  */
 export const designLineageDigest = (
   lineage: IAutoMovieDesignLineage,
@@ -932,6 +989,15 @@ export const designLineageDigest = (
  * identically, two alternatives of the same revision digest differently, and a
  * texture whose bytes changed moves the digest even though not one line of the
  * design moved, because a subject's own content digest is part of the view.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact `designLineageViewDigest` digests one design view selected by revision, alternative, and phase. This ensures revision changes expose every affected design consumer.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-design-change-impact-comparison `designLineageViewDigest` hashes a selected revision, alternative, phase snapshot, and shared inputs into a stable view identity.
+ * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-binary-dependency-closure `designLineageViewDigest` incorporates every standing subject's declared content digest with the selected revision, variant, phase, and applied changes, so changed imported bytes change the view identity.
+ * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-binary-closure-digest The view digest closes over declared subject content identities and their roles rather than trusting filesystem paths or enumeration order; byte acquisition itself remains upstream.
+ * @evidence requirements/interior/existing-conditions-phases-and-alternatives.md#interior-canonical-state `designLineageViewDigest` binds one resolved interior view to its revision, optional alternative, construction phase, lifecycle snapshot, changes, and subject content identities.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-phase-alternative-graph The digest supplies one unambiguous phase-and-alternative view identity for downstream outputs; operating, simulation, and film clocks remain separate inputs.
+ * @evidence requirements/building-exterior/existing-phases-and-alternatives.md#building-exterior-canonical-state `designLineageViewDigest` gives a selected revision, alternative, phase, standing-subject state, and asset closure one canonical view identity.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-alternative-canonical-invariant The view digest prevents outputs from silently mixing base and variant state while preserving phase and subject-content identity in the canonical handle.
  */
 export const designLineageViewDigest = (
   lineage: IAutoMovieDesignLineage,

@@ -28,6 +28,10 @@ import { ViolationCollector } from "./violation";
  * connected root; material coefficients (`metallic`/`roughness`/`opacity`) and
  * color components sit in `[0, 1]`.
  *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects non-finite, degenerate, and structurally invalid model geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Reports exact paths for numeric and structural model violations.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics `validateModel` checks resolved references, finite transforms and mesh values, ranges, topology, skeleton hierarchy, material wiring, and supported profile semantics after parsing.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-layered-validation The model gate implements the Engine's structural and intended-consumer validation layers without claiming container integrity, quarantine state, or adoption authority.
  * @author Samchon
  */
 export const validateModel = (props: {
