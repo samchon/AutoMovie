@@ -15,9 +15,33 @@ const COORDINATION_ROOT = path.join(
 
 /** Held namespace reservation for one physical production project root. */
 export interface IAutoMovieProductionRootNamespaceLease {
+  /**
+   * Canonical physical root reserved by this lease.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Names the exact protected namespace.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Binds the lease to its physical claim scope.
+   */
   root: string;
+  /**
+   * Fenced coordinate locks held for the namespace.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing Carries the tokens that reject late writers.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-fencing-late-writer Delivers every acquired fence with the lease.
+   */
   locks: ReadonlyArray<{ path: string; token: string }>;
+  /**
+   * Physical device identity included in the namespace claim.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Prevents aliases from becoming separate owners.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Grounds the claim in physical identity.
+   */
   device: string;
+  /**
+   * Physical inode identity included in the namespace claim.
+   *
+   * @evidence requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner Prevents path aliases from escaping one scope.
+   * @evidence specifications/execution-and-recovery/concurrent-ownership-and-locking.md#execution-claim-scope-owner Completes the physical root identity.
+   */
   inode: string;
 }
 

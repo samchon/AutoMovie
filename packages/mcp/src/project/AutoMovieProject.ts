@@ -110,6 +110,12 @@ export class AutoMovieProject {
   private lastReadRevision_: number;
 
   private constructor(
+    /**
+     * Canonical root that owns this resident project state.
+     *
+     * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Makes project scope explicit for every mutation.
+     * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Binds project operations to one stable root identity.
+     */
     public readonly root: string,
     private readonly rootDevice: string,
     private readonly rootInode: string,

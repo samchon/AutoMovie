@@ -1,5 +1,6 @@
 import {
   AutoMovieCaptureTarget,
+  AutoMovieDiagnosticCode,
   AutoMovieProductionFrameCapture,
   AutoMovieProductionGuideName,
   AutoMovieProductionShotRepaint,
@@ -20,6 +21,12 @@ import { canonicalizeAutoMovieJson } from "./production/contentIdentity";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 import { readAutoMovieProductionRegistry } from "./production/productionRegistry";
 
+export {
+  findAutoMovieDiagnosticCatalogEntry,
+  listAutoMovieDiagnosticCatalog,
+} from "./production/diagnosticCatalog";
+export type { IAutoMovieDiagnosticCatalogEntry } from "./production/diagnosticCatalog";
+
 /**
  * AutoMovie exposes only knowledge delivery, host-produced visual evidence,
  * optional structure-preserving repaint, and evidence-first review. Coding,
@@ -28,6 +35,12 @@ import { readAutoMovieProductionRegistry } from "./production/productionRegistry
  * named by a refusal, then retry the same tool.
  *
  * @author Samchon
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Limits MCP to guidance, host evidence, optional repaint, and review.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps ordinary source authoring and compilation outside the tool surface.
+ * @evidenceExclude requirements/repaint/eligibility-and-prerequisites.md#repaint-delivery-declaration The tool verifies the production-wide delivery mode but does not author the shot source time, output purpose, or sequence policy required by this full declaration.
+ * @evidenceExclude requirements/repaint/retries-seeds-and-variation.md#repaint-retry-budget-stop This five-tool surface runs one request and owns no user retry, cost, time, backoff, cancellation, or acceptance budget.
+ * @evidenceExclude requirements/repaint/retries-seeds-and-variation.md#repaint-candidate-comparison The tool accepts one request result and does not compare or select among candidates.
+ * @evidenceExclude requirements/repaint/retries-seeds-and-variation.md#repaint-attempt-failure-provenance The host adapter returns one attempt outcome; durable histories of timeout, rate-limit, cancellation, or partial-output attempts belong outside this service.
  */
 export class AutoMovieApplication {
   private readonly context: AutoMovieProductionContext;
@@ -64,6 +77,9 @@ export class AutoMovieApplication {
    * Return one exact package-versioned guide and grant this session credit for
    * reading it. Unknown names fail with the complete valid production-guide
    * list. This call never reads or mutates project files.
+   *
+   * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Delivers one exact named topic document.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Returns versioned knowledge without project mutation.
    */
   public getGuideDocument(
     props: IAutoMovieGetGuideDocument.IProps,
@@ -78,6 +94,9 @@ export class AutoMovieApplication {
    * through the host adapter. AutoMovie validates current compilation, decoded
    * PNG bytes, raster, runtime identity, target-local fingerprint, and atomic
    * content-addressed receipt. `captured:false` is never review evidence.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Restricts capture to host-produced current evidence.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Returns verified pixels and identity instead of claiming a view was observed.
    */
   public async captureFrame(
     props: IAutoMovieCaptureFrame.IProps,
@@ -122,7 +141,7 @@ export class AutoMovieApplication {
       };
     }
     const failure = (
-      code: string,
+      code: AutoMovieDiagnosticCode,
       message: string,
     ): IAutoMovieCaptureFrame => ({
       captured: false,
@@ -293,6 +312,9 @@ export class AutoMovieApplication {
    * adapter returns a concrete provisioning script. Accepted output is parsed
    * and atomically committed with source, model, parameters, references, and
    * output digests in one immutable receipt.
+   *
+   * @evidence requirements/repaint/scope-and-user-choice.md#repaint-provider-independence Leaves provider and candidate selection outside the application.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-output-provenance Commits adopted rendition bytes with their immutable derivation receipt.
    */
   public async repaintShot(
     props: IAutoMovieRepaintShot.IProps,
@@ -355,6 +377,9 @@ export class AutoMovieApplication {
    * Prepare the current four-surface review worksheet. It returns the exact
    * target fingerprint, mandatory axes, and current design/source/frame/outcome
    * evidence. It performs no aesthetic judgment and stores no verdict.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Prepares current host evidence without deciding the review outcome.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Binds the returned worksheet to current target evidence.
    */
   public prepareReview(
     props: IAutoMoviePrepareReview.IProps,
@@ -368,6 +393,9 @@ export class AutoMovieApplication {
    * its freshly prepared fingerprint. Every criterion and current evidence
    * digest is rechecked. Corrections and completion basis precede the final
    * boolean deliberately; rejected or stale input stores no false completion.
+   *
+   * @evidence requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision Stores the delegated reviewer's submitted decision without replacing it.
+   * @evidence specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-agent-input-output Treats the worksheet as author-agent input and returns validation state.
    */
   public submitReview(
     props: IAutoMovieSubmitReview.IProps,
@@ -401,7 +429,12 @@ export class AutoMovieApplication {
   }
 }
 
-/** Compile-time-complete guide declaration for the entire reflected surface. */
+/**
+ * Compile-time-complete guide declaration for the entire reflected surface.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Makes each tool's required contract guidance explicit.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Keeps knowledge prerequisites discoverable without another tool.
+ */
 export const AUTOMOVIE_TOOL_GUIDES = {
   getGuideDocument: [],
   captureFrame: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
@@ -413,11 +446,21 @@ export const AUTOMOVIE_TOOL_GUIDES = {
   readonly AutoMovieProductionGuideName[]
 >;
 
-/** Additional guide required only by productions declaring repaint delivery. */
+/**
+ * Additional guide required only by productions declaring repaint delivery.
+ *
+ * @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence Applies repaint knowledge before current deterministic pixels can be handed off.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-eligibility-source-lock Gates the external handoff on declared eligibility.
+ */
 export const AUTOMOVIE_REPAINT_GUIDE =
   "DIFFUSION_ENHANCE" as const satisfies AutoMovieProductionGuideName;
 
-/** Target-specific review contract added to both review tools. */
+/**
+ * Target-specific review contract added to both review tools.
+ *
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Selects guidance by exact review target kind.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Keeps the target-specific knowledge choice explicit.
+ */
 export const AUTOMOVIE_REVIEW_GUIDES = {
   asset: "REVIEW_ASSET",
   design: "REVIEW_DEPENDENCY",
@@ -436,7 +479,7 @@ const reviewGuide = (
 ): AutoMovieProductionGuideName => AUTOMOVIE_REVIEW_GUIDES[target.kind];
 
 const diagnostic = (
-  code: string,
+  code: AutoMovieDiagnosticCode,
   target: string,
   message: string,
 ): IAutoMovieDiagnostic => ({

@@ -12,6 +12,8 @@ Inspect the authoritative source page and license, not a repost. Record creator,
 
 Store or register the exact acquired bytes and compute their digest before conversion. Record media type and facts. Conversion creates a derived asset with its own digest, tool identity, parameters, and parent provenance; never overwrite the only source while pretending it is unchanged.
 
+Content identity is provider- and package-independent. Exact bytes may share one content identity only when the interpretation metadata that gives those bytes meaning is also identical. That reuse never merges source identity, acquisition event, provenance, rights, provider receipt, adoption decision, or adoption revision; each remains a separately reviewable record even when the content digest matches.
+
 For archives, enumerate the selected member and preserve relevant license files. Reject path escapes, symlink surprises, executable payloads, malformed media, or content whose parsed facts disagree with its declaration.
 
 ## Technical normalization
@@ -26,7 +28,7 @@ Asset registration declares more than existence. Restrict each asset to the prod
 
 ## Generated and API assets
 
-Record provider, model, exact version, execution boundary, prompt, seed, controls, references, terms, and output digest. Research current provider rights and retention policy at acquisition time. Do not claim reproducibility from a seed when model, scheduler, service implementation, or references are unpinned.
+The user or delegated authoring agent chooses the source channel and, when applicable, provider, model, exact version, and execution boundary. AutoMovie validates the adopted result without choosing a provider from host availability or treating one provider as required. Record the chosen provider metadata, prompt, seed, controls, references, terms, and output digest. Research current provider rights and retention policy at acquisition time. Do not claim reproducibility from a seed when model, scheduler, service implementation, or references are unpinned.
 
 Bytes nothing ever served have no acquisition URL, and inventing one is a fabrication. A provenance record carries either an `original` (the URL and digest of what was fetched) or a `generated` identity, never both: provider, exact model, provider-side request id or null, the verbatim instruction or null with its digest always recorded, the manifest inputs the request was conditioned on in request order, the digest of the bytes that came back, and a `reproducible` boolean. Answer that boolean honestly. Sampled image generation is usually irreproducible, and `false` is the correct record; a replay handle you cannot actually replay is worse than no handle.
 

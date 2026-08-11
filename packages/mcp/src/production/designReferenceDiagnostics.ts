@@ -3,6 +3,7 @@ import {
   validateDesignReference,
 } from "@automovie/engine";
 import {
+  AutoMovieDiagnosticCode,
   IAutoMovieDesignEvidence,
   IAutoMovieDesignReference,
   IAutoMovieDiagnostic,
@@ -61,7 +62,11 @@ export const designReferenceDiagnostics = (props: {
   uses: ReadonlyMap<string, ReadonlySet<string>>;
 }): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const diagnostic = (code: string, target: string, message: string): void => {
+  const diagnostic = (
+    code: AutoMovieDiagnosticCode,
+    target: string,
+    message: string,
+  ): void => {
     diagnostics.push({
       code,
       category: "error",

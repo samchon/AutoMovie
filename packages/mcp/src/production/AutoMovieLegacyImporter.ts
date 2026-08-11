@@ -1,5 +1,6 @@
 import {
   AutoMovieContentDigest,
+  AutoMovieDiagnosticCode,
   IAutoMovieDiagnostic,
   IAutoMovieLegacyImportApplyOutput,
   IAutoMovieLegacyImportInventoryEntry,
@@ -1146,7 +1147,7 @@ const changedImportError = (stateRoot: string, relative: string): Error =>
   );
 
 const importWarning = (
-  code: string,
+  code: AutoMovieDiagnosticCode,
   target: string,
   pathValue: string | null,
   message: string,

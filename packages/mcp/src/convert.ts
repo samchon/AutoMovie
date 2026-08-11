@@ -43,6 +43,12 @@ export const toEngineTransform = (
   scale: transform.scale,
 });
 
+/**
+ * Project engine motion into the writable MCP production-design shape.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-source-authority Keeps the engine motion authoritative while changing only representation.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Treats the MCP form as a derived projection of the same authored motion.
+ */
 export const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
   ...motion,
   keyframes: motion.keyframes.map((keyframe) => ({
@@ -51,6 +57,12 @@ export const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
   })),
 });
 
+/**
+ * Project one engine Bezier tuple into named MCP control points.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-authority Preserves the source curve rather than selecting new interpolation.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Keeps this named shape derived from the tuple source.
+ */
 export const toMcpBezier = (
   bezier: IAutoMovieKeyframe["bezier"],
 ): IAutoMovieMcpBezier | null =>
@@ -63,6 +75,12 @@ export const toMcpBezier = (
         y2: bezier[3],
       };
 
+/**
+ * Lower one writable MCP motion into the deterministic engine contract.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Consumes the caller-authored motion without replacing its content.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the MCP record an explicit deterministic lowering input.
+ */
 export const toEngineMotion = (
   motion: IAutoMovieMcpMotion,
 ): IAutoMovieMotion => ({

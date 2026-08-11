@@ -1,4 +1,5 @@
 import type {
+  AutoMovieDiagnosticCode,
   IAutoMovieDiagnostic,
   IAutoMovieScreenplayIndex,
 } from "@automovie/interface";
@@ -100,7 +101,11 @@ export const screenplayProseDiagnostics = (props: {
   const screenplay = props.screenplay;
   if (screenplay === null) return [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const refuse = (code: string, message: string, path: string | null): void => {
+  const refuse = (
+    code: AutoMovieDiagnosticCode,
+    message: string,
+    path: string | null,
+  ): void => {
     diagnostics.push({
       code,
       category: "error",

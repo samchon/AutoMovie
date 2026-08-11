@@ -417,6 +417,12 @@ export interface IAutoMovieMcpSlateDigest {
   cleared: string[];
 }
 
+/**
+ * Result of attempting to commit one caller-authored production artifact.
+ *
+ * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-change-impact Reports the exact invalidation consequence of a committed change.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Keeps persisted source and cleared derived state in one result.
+ */
 export interface IAutoMovieCommitOutput {
   /**
    * True only when the input artifact was persisted. Always equal to

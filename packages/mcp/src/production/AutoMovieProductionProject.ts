@@ -118,6 +118,12 @@ export class AutoMovieProductionInputRaceError extends Error {}
 /** Structured source-read failure used by the compiler diagnostic boundary. */
 export class AutoMovieProductionSourcePathError extends Error {
   public constructor(
+    /**
+     * Stable classification of the failed source-root relation.
+     *
+     * @evidence requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-failure-isolation Distinguishes absence from an escaped source path.
+     * @evidence specifications/execution-and-recovery/failure-reconciliation-and-disaster-recovery.md#execution-failure-isolation Keeps the source-read refusal locally classifiable.
+     */
     public readonly reason: "missing" | "outside-root",
     message: string,
   ) {
@@ -193,6 +199,12 @@ export class AutoMovieProductionProject {
   private deleted_ = false;
 
   private constructor(
+    /**
+     * Canonical host-selected project root for this production repository.
+     *
+     * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Binds operations to one explicit project namespace.
+     * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Makes the root part of stable production operation identity.
+     */
     public readonly root: string,
     rootIdentity: Pick<
       IAutoMovieProductionRootNamespaceLease,
@@ -2655,7 +2667,7 @@ export class AutoMovieProductionProject {
       )
       .map((diagnostic) => ({
         ...diagnostic,
-        code: "design-downstream-invalidated",
+        code: "design-downstream-invalidated" as const,
         category: "warning" as const,
         message: `${diagnostic.message} This staged mutation was accepted so the dependent artifact can be updated next; compilation remains blocked until it is corrected.`,
       }));

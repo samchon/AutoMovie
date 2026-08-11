@@ -23,6 +23,7 @@ import {
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
+  AutoMovieDiagnosticCode,
   AutoMovieProductionFrameCapture,
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledShotSource,
@@ -1604,7 +1605,7 @@ const rayBoundsIntersectionLength = (
 
 const previewFailure = (
   compileFingerprint: AutoMovieContentDigest,
-  code: string,
+  code: AutoMovieDiagnosticCode,
   message: string,
 ): IAutoMoviePreviewFrameOutput => ({
   captured: false,

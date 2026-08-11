@@ -389,6 +389,12 @@ export const validateShotArtifact = (
   return toValidation(violations);
 };
 
+/**
+ * Validate one sequence and its complete referenced shot collection.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-aggregate-boundary Collects independent sequence findings in one deterministic result.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-aggregate-execution Evaluates the full supplied sequence boundary without mutating it.
+ */
 export const validateSequenceArtifact = (
   sequence: IAutoMovieSequence,
   shots: IAutoMovieShot[],
