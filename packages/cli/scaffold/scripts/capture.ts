@@ -14,6 +14,10 @@ import {
   launchCaptureBrowser,
 } from "./capture-browser";
 import { generatedShotPlugin } from "./generatedShotPlugin";
+import {
+  productionDialogueFrameForShotTime,
+  productionDialogueRuntimeIdentity,
+} from "./productionRuntimeState";
 
 interface CaptureSession {
   server: Awaited<ReturnType<typeof createServer>>;
@@ -310,9 +314,15 @@ export const closeProductionFrameCapture = async (
 };
 
 /** Capture only the project-owned viewer and its fixed canvas. */
-export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
-  input,
-) => {
+type IProductionFrameCaptureInput =
+  Parameters<AutoMovieProductionFrameCapture>[0] & {
+    /** Exact film-global frame when the render scheduler already owns it. */
+    globalFrame?: number;
+  };
+
+export const captureProductionFrame = async (
+  input: IProductionFrameCaptureInput,
+): ReturnType<AutoMovieProductionFrameCapture> => {
   const session = await captureSession(input.projectRoot, input.productionId);
   const resident = await capturePage(session, input);
   const previous = resident.queue;
@@ -331,8 +341,20 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
     try {
       ++captureMetrics.seeks;
       await resident.page.evaluate(
-        ({ time, pass }) => window.__automovieCapture!.seek(time, pass),
-        { time: input.time, pass: input.pass ?? "beauty" },
+        ({ time, pass, globalFrame }) =>
+          window.__automovieCapture!.seek(time, pass, globalFrame),
+        {
+          time: input.time,
+          pass: input.pass ?? "beauty",
+          globalFrame:
+            input.globalFrame ??
+            (input.target.kind === "shot"
+              ? productionDialogueFrameForShotTime({
+                  shot: input.target.id,
+                  time: input.time,
+                })
+              : null),
+        },
       );
       renderEvidence = await resident.page.evaluate(() => {
         const hook = window.__automovieCapture!;
@@ -410,6 +432,7 @@ const capturePageKey = (
     // A page drawn under one delivery curve is not a page that can serve
     // another, so the curve belongs in the identity that decides page reuse.
     toneMapping: PRODUCTION_DELIVERY_TONE_MAPPING,
+    dialogueRuntime: productionDialogueRuntimeIdentity(),
     width: input.width,
     height: input.height,
   });

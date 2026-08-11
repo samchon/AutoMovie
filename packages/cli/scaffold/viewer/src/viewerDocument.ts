@@ -6,7 +6,11 @@ import type {
 
 export interface IAutoMovieCaptureHook {
   ready: boolean;
-  seek: (time: number, pass: AutoMovieGuidePass) => void;
+  seek: (
+    time: number,
+    pass: AutoMovieGuidePass,
+    globalFrame?: number | null,
+  ) => void;
 
   /**
    * What the page has drawn, read off the scene graph the last seek left

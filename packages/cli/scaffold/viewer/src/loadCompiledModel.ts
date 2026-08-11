@@ -1,6 +1,7 @@
 import type { IAutoMovieModel } from "@automovie/interface";
 import {
   AutoMovieTextureCache,
+  type IAutoMovieModelObject,
   buildModel,
   createImportedModelObject,
   materialTextureBindings,
@@ -14,6 +15,12 @@ import {
 import { Object3D, Texture, TextureLoader } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+
+/** Scaffold model object with an optional mouth-layer-only runtime flush. */
+export interface IAutoMovieCompiledModelObject extends IAutoMovieModelObject {
+  /** Apply changed expression weights without advancing pose or spring time. */
+  flushExpressionTargets?: () => void;
+}
 
 /**
  * One shot's shared texture cache over the scaffold asset proxy.
@@ -32,7 +39,7 @@ export const createShotTextureCache = (): AutoMovieTextureCache =>
 export const loadCompiledModel = async (
   model: IAutoMovieModel,
   textures?: AutoMovieTextureCache,
-) => {
+): Promise<IAutoMovieCompiledModelObject> => {
   if (model.origin !== "imported" || model.asset === null) {
     const bindings = model.materials.flatMap(materialTextureBindings);
     // A model binding no image needs no cache, which is what keeps every
@@ -69,18 +76,25 @@ export const loadCompiledModel = async (
         return node === null ? [] : [[bone, node] as const];
       }),
     );
-    return createImportedModelObject({
-      object: vrm.scene,
-      bones,
-      expressionTargets: [
-        {
-          setExpressionValue: (name, weight) =>
-            vrm.expressionManager?.setValue(name, weight),
-        },
-      ],
-      afterAutoMovieFrame: ({ deltaSeconds }) =>
-        vrm.update(deltaSeconds > 0 ? deltaSeconds : 1 / 60),
-    });
+    return {
+      ...createImportedModelObject({
+        object: vrm.scene,
+        bones,
+        expressionTargets: [
+          {
+            setExpressionValue: (name, weight) =>
+              vrm.expressionManager?.setValue(name, weight),
+          },
+        ],
+        afterAutoMovieFrame: ({ deltaSeconds }) =>
+          vrm.update(deltaSeconds > 0 ? deltaSeconds : 1 / 60),
+      }),
+      // A derived mouth target is layered after AutoMoviePlayer has flushed the
+      // authored expression. Updating only the manager makes that mouth target
+      // visible in this same captured frame without advancing VRM spring time a
+      // second time.
+      flushExpressionTargets: () => vrm.expressionManager?.update(),
+    };
   }
   const requested = new Set(slots);
   const bones = new Map(

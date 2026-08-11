@@ -1,5 +1,5 @@
 import {
-  deriveProductionSoundPlan,
+  type IAutoMovieDialogueSpeakerBinding,
   productionPhonemesToVisemes,
   productionSoundSpectrogram,
   productionSoundWaveform,
@@ -90,6 +90,16 @@ import {
   captureExistingDialogueCache,
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
+import {
+  compileProductionDialogueRuntime,
+  deriveProductionRuntimeSoundPlan,
+  installProductionDialogueRuntime,
+  productionDialogueRuntimeIdentity,
+} from "./productionRuntime";
+import {
+  productionAcousticBindings,
+  productionAcousticStudies,
+} from "./productionStudies";
 import {
   captureProxyPublicationGcTarget,
   publishProxyBundle,
@@ -224,7 +234,69 @@ const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
 const KOKORO_DEVICE = "cpu" as const;
-const KOKORO_VOICE = "af_heart";
+
+interface IKokoroDialogueSelection {
+  provider: "kokoro-local-v1";
+  model: typeof KOKORO_MODEL;
+  modelRevision: typeof KOKORO_MODEL_REVISION;
+  dtype: "q8";
+  device: typeof KOKORO_DEVICE;
+  voice: string;
+  speed: number;
+}
+
+/** Read and validate the production's explicit local synthesis selection. */
+const productionDialogueSelection = (): IKokoroDialogueSelection | null => {
+  const selected = (config.sound as { dialogueSynthesis?: unknown })
+    .dialogueSynthesis;
+  if (selected === undefined) return null;
+  if (typeof selected !== "object" || selected === null)
+    throw new Error("sound.dialogueSynthesis must be an object when selected.");
+  const value = selected as Record<string, unknown>;
+  if (
+    value.provider !== "kokoro-local-v1" ||
+    value.model !== KOKORO_MODEL ||
+    value.modelRevision !== KOKORO_MODEL_REVISION ||
+    value.dtype !== "q8" ||
+    value.device !== KOKORO_DEVICE
+  )
+    throw new Error(
+      "This scaffold runtime supports only its explicitly pinned Kokoro local adapter; it never substitutes a provider, model, revision, dtype, or device.",
+    );
+  if (typeof value.voice !== "string" || value.voice.trim().length === 0)
+    throw new Error("sound.dialogueSynthesis.voice must be non-blank.");
+  if (
+    typeof value.speed !== "number" ||
+    Number.isFinite(value.speed) === false ||
+    value.speed <= 0
+  )
+    throw new Error("sound.dialogueSynthesis.speed must be positive.");
+  return value as unknown as IKokoroDialogueSelection;
+};
+
+/** Read the exact authored speaker joins without inventing an actor. */
+const productionSpeakerBindings = (): IAutoMovieDialogueSpeakerBinding[] => {
+  const selected = (config.sound as { speakerBindings?: unknown })
+    .speakerBindings;
+  if (selected === undefined) return [];
+  if (Array.isArray(selected) === false)
+    throw new Error("sound.speakerBindings must be an array.");
+  return selected.map((binding, index) => {
+    if (typeof binding !== "object" || binding === null)
+      throw new Error(`sound.speakerBindings[${index}] must be an object.`);
+    const value = binding as Record<string, unknown>;
+    if (
+      typeof value.speaker !== "string" ||
+      value.speaker.trim().length === 0 ||
+      typeof value.actor !== "string" ||
+      value.actor.trim().length === 0
+    )
+      throw new Error(
+        `sound.speakerBindings[${index}] needs non-blank speaker and actor ids.`,
+      );
+    return { speaker: value.speaker, actor: value.actor };
+  });
+};
 const RENDER_LOCK_JSON_MAX_BYTES = 64 * 1024;
 const renderObservationAudits: IProductionRenderObservationAudit[] = [];
 const renderMaskSidecars: Array<
@@ -846,37 +918,41 @@ const renderSourceDigest = (
               input.bytes === null ? null : digestAutoMovieBytes(input.bytes),
           })),
         soundRuntime: productionSoundRuntimeIdentity(),
+        dialogueRuntime: productionDialogueRuntimeIdentity(),
+        acousticStudies: productionAcousticStudies,
+        acousticBindings: productionAcousticBindings,
       }),
       "utf8",
     ),
   );
 
-const productionSoundRuntimeIdentity = () => ({
-  protocol: "automovie.production-sound.v1",
-  sampleRate: 48_000,
-  channels: 2,
-  opus: {
-    ...resolvedPackageIdentity("libopus-wasm"),
-    bitrate: 128_000,
-    complexity: 10,
-    vbr: false,
-    frameSize: 960,
-  },
-  mux: resolvedPackageIdentity("mp4box"),
-  evidencePng: resolvedPackageIdentity("pngjs"),
-  tts: {
-    ...resolvedPackageIdentity("kokoro-js"),
-    adapter: resolvedPackageIdentity("@huggingface/transformers"),
-    backend: onnxRuntimeNodeIdentity(),
-    imageCapability: resolvedPackageIdentity("sharp"),
-    model: KOKORO_MODEL,
-    modelRevision: KOKORO_MODEL_REVISION,
-    dtype: "q8",
-    device: KOKORO_DEVICE,
-    voice: KOKORO_VOICE,
-    speed: 1,
-  },
-});
+const productionSoundRuntimeIdentity = () => {
+  const selection = productionDialogueSelection();
+  return {
+    protocol: "automovie.production-sound.v1",
+    sampleRate: 48_000,
+    channels: 2,
+    opus: {
+      ...resolvedPackageIdentity("libopus-wasm"),
+      bitrate: 128_000,
+      complexity: 10,
+      vbr: false,
+      frameSize: 960,
+    },
+    mux: resolvedPackageIdentity("mp4box"),
+    evidencePng: resolvedPackageIdentity("pngjs"),
+    tts:
+      selection === null
+        ? null
+        : {
+            ...resolvedPackageIdentity("kokoro-js"),
+            adapter: resolvedPackageIdentity("@huggingface/transformers"),
+            backend: onnxRuntimeNodeIdentity(),
+            imageCapability: resolvedPackageIdentity("sharp"),
+            ...selection,
+          },
+  };
+};
 
 const resolvedPackageIdentity = (
   packageName: string,
@@ -1151,6 +1227,7 @@ const renderChunk = async (
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: layer.shot },
         time: layer.sourceFrame / plan.sourceFrameFormat.fps,
+        globalFrame: sample.globalFrame,
         pass: chunk.pass,
         width: plan.frameFormat.width,
         height: plan.frameFormat.height,
@@ -1624,6 +1701,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: frame.shot },
         time: frame.sourceFrame / timeline.fps,
+        globalFrame: 0,
         pass: "beauty",
         width: plan.frameFormat.width,
         height: plan.frameFormat.height,
@@ -1975,6 +2053,100 @@ interface IProductionSoundBundle {
   spectrogram: Uint8Array;
 }
 
+interface IPreparedProductionRuntime {
+  plan: IAutoMovieProductionSoundPlan;
+  synthesized: {
+    pcm: Map<string, Float32Array>;
+    receipts: IAutoMovieProductionTtsReceipt[];
+  };
+}
+
+let preparedProductionRuntime:
+  | {
+      identity: AutoMovieContentDigest;
+      value: Promise<IPreparedProductionRuntime>;
+    }
+  | undefined;
+
+/** Prepare sound and mouth artifacts before the first viewer frame opens. */
+const prepareProductionRuntime = async (props: {
+  project: AutoMovieProductionProject;
+  compileFingerprint: AutoMovieContentDigest;
+  timeline: ReturnType<typeof readAutoMovieFilmTimeline>;
+}): Promise<IPreparedProductionRuntime> => {
+  const graph = props.project.graph();
+  const production = graph.production;
+  if (production === null)
+    throw new Error("Production runtime preparation requires a design.");
+  const identity = digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        compileFingerprint: props.compileFingerprint,
+        sound: production.sound ?? null,
+        dialogueSynthesis: productionDialogueSelection(),
+        speakerBindings: productionSpeakerBindings(),
+        acousticStudies: productionAcousticStudies,
+        acousticBindings: productionAcousticBindings,
+      }),
+      "utf8",
+    ),
+  );
+  if (preparedProductionRuntime?.identity !== identity) {
+    preparedProductionRuntime = {
+      identity,
+      value: (async () => {
+        const compiled = readProductionCompiledShots(
+          props.project,
+          props.timeline,
+        );
+        const plan = deriveProductionRuntimeSoundPlan({
+          timeline: props.timeline,
+          contracts: graph.shots,
+          compiled,
+          sound: production.sound,
+          acousticStudies: productionAcousticStudies,
+          acousticBindings: productionAcousticBindings,
+        });
+        const synthesized = await synthesizeProductionDialogue(
+          plan,
+          productionDialogueSelection(),
+        );
+        return { plan, synthesized };
+      })(),
+    };
+  }
+  const prepared = await preparedProductionRuntime.value;
+  installProductionDialogueRuntime(
+    compileProductionDialogueRuntime({
+      plan: prepared.plan,
+      timeline: props.timeline,
+      receipts: prepared.synthesized.receipts,
+      bindings: productionSpeakerBindings(),
+    }),
+  );
+  return prepared;
+};
+
+/** Read each compiled shot once for the sound/runtime joins. */
+const readProductionCompiledShots = (
+  project: AutoMovieProductionProject,
+  timeline: ReturnType<typeof readAutoMovieFilmTimeline>,
+): Map<string, IAutoMovieCompiledShotSource> =>
+  new Map(
+    [...new Set(timeline.segments.map((segment) => segment.shot))].map(
+      (shot) => [
+        shot,
+        JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile(
+              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+            ),
+          ).toString("utf8"),
+        ) as IAutoMovieCompiledShotSource,
+      ],
+    ),
+  );
+
 interface IKokoroCacheRecord {
   version: 2;
   cacheKey: AutoMovieContentDigest;
@@ -2019,24 +2191,12 @@ const produceProductionSound = async (
     project,
     renderPlan.compileFingerprint,
   );
-  const graph = project.graph();
-  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
-  for (const shot of new Set(timeline.segments.map((segment) => segment.shot)))
-    compiled.set(
-      shot,
-      JSON.parse(
-        Buffer.from(
-          project.readGeneratedFile(
-            `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-          ),
-        ).toString("utf8"),
-      ) as IAutoMovieCompiledShotSource,
-    );
-  const soundPlan = deriveProductionSoundPlan({
+  const prepared = await prepareProductionRuntime({
+    project,
+    compileFingerprint: renderPlan.compileFingerprint,
     timeline,
-    contracts: graph.shots,
-    compiled,
   });
+  const soundPlan = prepared.plan;
   renderProgress("sound.plan.complete", {
     dialogueLines: soundPlan.dialogue.length,
   });
@@ -2061,7 +2221,7 @@ const produceProductionSound = async (
   );
   renderProgress("sound.assets.decode.complete", { decoded: assets.size });
   renderProgress("sound.synthesis.start");
-  const synthesized = await synthesizeProductionDialogue(soundPlan);
+  const synthesized = prepared.synthesized;
   renderProgress("sound.synthesis.complete");
   renderProgress("sound.render.start");
   const rendered = renderProductionSound({
@@ -2100,12 +2260,18 @@ const produceProductionSound = async (
 
 const synthesizeProductionDialogue = async (
   plan: IAutoMovieProductionSoundPlan,
+  selection: IKokoroDialogueSelection | null,
 ): Promise<{
   pcm: Map<string, Float32Array>;
   receipts: IAutoMovieProductionTtsReceipt[];
 }> => {
   const pcm = new Map<string, Float32Array>();
   const receipts: IAutoMovieProductionTtsReceipt[] = [];
+  if (plan.dialogue.length !== 0 && selection === null)
+    throw new Error(
+      "Dialogue lines require an explicit sound.dialogueSynthesis selection.",
+    );
+  if (selection === null) return { pcm, receipts };
   const cacheRoot = ensureRenderPhysicalDirectory(
     productionStateRoot,
     "audio-cache/kokoro",
@@ -2116,10 +2282,14 @@ const synthesizeProductionDialogue = async (
     "kokoro",
     KOKORO_MODEL_REVISION,
   );
-  const baseRuntimeAssets = kokoroBaseRuntimeAssets();
+  const baseRuntimeAssets = kokoroBaseRuntimeAssets(selection.voice);
   let runtime: Promise<IKokoroLoadedRuntime> | undefined;
   const currentRuntime = (): Promise<IKokoroLoadedRuntime> =>
-    (runtime ??= loadPinnedKokoroRuntime(modelCacheRoot, baseRuntimeAssets));
+    (runtime ??= loadPinnedKokoroRuntime(
+      modelCacheRoot,
+      baseRuntimeAssets,
+      selection,
+    ));
   let runtimeAssets = [
     ...baseRuntimeAssets,
     ...kokoroModelCacheAssets(modelCacheRoot),
@@ -2135,12 +2305,7 @@ const synthesizeProductionDialogue = async (
       Buffer.from(
         JSON.stringify({
           version: 2,
-          model: KOKORO_MODEL,
-          modelRevision: KOKORO_MODEL_REVISION,
-          dtype: "q8",
-          device: KOKORO_DEVICE,
-          voice: KOKORO_VOICE,
-          speed: 1,
+          ...selection,
           text: line.text.normalize("NFKC"),
           language: line.language.normalize("NFKC"),
           speaker: line.speaker?.normalize("NFKC") ?? null,
@@ -2157,7 +2322,12 @@ const synthesizeProductionDialogue = async (
     try {
       const captured = captureExistingDialogueCache(cacheRoot, cachePath);
       if (captured !== null)
-        cached = validatedDialogueCache(captured, cacheKey, runtimeAssets);
+        cached = validatedDialogueCache(
+          captured,
+          cacheKey,
+          runtimeAssets,
+          selection,
+        );
     } catch {
       cached = undefined;
     }
@@ -2172,8 +2342,8 @@ const synthesizeProductionDialogue = async (
       let sourceSampleRate: number | undefined;
       let sourceOffset = 0;
       for await (const chunk of loadedRuntime.runtime.stream(dialogueText, {
-        voice: KOKORO_VOICE,
-        speed: 1,
+        voice: selection.voice,
+        speed: selection.speed,
       })) {
         if (
           Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
@@ -2215,9 +2385,9 @@ const synthesizeProductionDialogue = async (
       const record: IKokoroCacheRecord = {
         version: 2,
         cacheKey,
-        model: KOKORO_MODEL,
-        modelRevision: KOKORO_MODEL_REVISION,
-        voice: KOKORO_VOICE,
+        model: selection.model,
+        modelRevision: selection.modelRevision,
+        voice: selection.voice,
         sourceSampleRate,
         sourceSamples: samples.length,
         pcmDigest: digestAutoMovieBytes(bytes),
@@ -2231,7 +2401,12 @@ const synthesizeProductionDialogue = async (
         receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
         target: cachePath,
       });
-      cached = validatedDialogueCache(published, cacheKey, runtimeAssets);
+      cached = validatedDialogueCache(
+        published,
+        cacheKey,
+        runtimeAssets,
+        selection,
+      );
       if (cached === undefined)
         throw new Error(
           `Published Kokoro cache generation for line "${line.id}" is invalid.`,
@@ -2257,6 +2432,7 @@ const validatedDialogueCache = (
   snapshot: IDialogueCacheSnapshot,
   cacheKey: AutoMovieContentDigest,
   runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+  selection: IKokoroDialogueSelection,
 ): { record: IKokoroCacheRecord; samples: Float32Array } | undefined => {
   const record = JSON.parse(
     Buffer.from(snapshot.receipt).toString("utf8"),
@@ -2264,9 +2440,9 @@ const validatedDialogueCache = (
   if (
     record.version !== 2 ||
     record.cacheKey !== cacheKey ||
-    record.model !== KOKORO_MODEL ||
-    record.modelRevision !== KOKORO_MODEL_REVISION ||
-    record.voice !== KOKORO_VOICE ||
+    record.model !== selection.model ||
+    record.modelRevision !== selection.modelRevision ||
+    record.voice !== selection.voice ||
     isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
     Number.isSafeInteger(record.sourceSampleRate) === false ||
     record.sourceSampleRate <= 0 ||
@@ -2288,11 +2464,12 @@ const validatedDialogueCache = (
 const loadPinnedKokoroRuntime = async (
   modelCacheRoot: string,
   baseRuntimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+  selection: IKokoroDialogueSelection,
 ): Promise<IKokoroLoadedRuntime> => {
   fs.mkdirSync(modelCacheRoot, { recursive: true });
   renderProgress("sound.model.load.start", {
-    model: KOKORO_MODEL,
-    revision: KOKORO_MODEL_REVISION,
+    model: selection.model,
+    revision: selection.modelRevision,
   });
   const [{ KokoroTTS, TextSplitterStream }, { env }] = await Promise.all([
     import("kokoro-js"),
@@ -2310,7 +2487,7 @@ const loadPinnedKokoroRuntime = async (
         : input instanceof URL
           ? input.href
           : input.url;
-    const marker = `huggingface.co/${KOKORO_MODEL}/resolve/`;
+    const marker = `huggingface.co/${selection.model}/resolve/`;
     const markerIndex = source.indexOf(marker);
     if (markerIndex < 0) return fetcher(input, init);
     const suffix = source.slice(markerIndex + marker.length);
@@ -2319,7 +2496,7 @@ const loadPinnedKokoroRuntime = async (
       throw new Error(`Kokoro model URL has no asset path: ${source}`);
     const pinned =
       source.slice(0, markerIndex + marker.length) +
-      KOKORO_MODEL_REVISION +
+      selection.modelRevision +
       suffix.slice(separator);
     const request =
       typeof input === "object" &&
@@ -2352,9 +2529,9 @@ const loadPinnedKokoroRuntime = async (
       },
     ],
     async () => {
-      const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
-        dtype: "q8",
-        device: KOKORO_DEVICE,
+      const loaded = await KokoroTTS.from_pretrained(selection.model, {
+        dtype: selection.dtype,
+        device: selection.device,
       });
       const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
       if (modelAssets.length === 0)
@@ -2362,8 +2539,8 @@ const loadPinnedKokoroRuntime = async (
           "Pinned Kokoro load produced no revision-scoped model cache assets.",
         );
       renderProgress("sound.model.load.complete", {
-        model: KOKORO_MODEL,
-        revision: KOKORO_MODEL_REVISION,
+        model: selection.model,
+        revision: selection.modelRevision,
       });
       return {
         runtime: loaded as unknown as IKokoroRuntime,
@@ -2374,39 +2551,40 @@ const loadPinnedKokoroRuntime = async (
   );
 };
 
-const kokoroBaseRuntimeAssets =
-  (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
-    const voiceRelative = `voices/${KOKORO_VOICE}.bin`;
-    const kokoro = resolvedPackageSnapshot("kokoro-js", [
-      { kind: "file", relative: voiceRelative },
-    ]);
-    const transformers = resolvedPackageIdentity("@huggingface/transformers");
-    const backend = onnxRuntimeNodeIdentity();
-    const imageCapability = resolvedPackageIdentity("sharp");
-    const voice = kokoro.assets.find((asset) => asset.path === voiceRelative);
-    if (voice === undefined)
-      throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
-    return [
-      { path: "package:kokoro-js", digest: kokoro.entryDigest },
-      {
-        path: "package:@huggingface/transformers",
-        digest: transformers.entryDigest,
-      },
-      {
-        path: "package:onnxruntime-node",
-        digest: backend.entryDigest,
-      },
-      ...backend.nativeAssets,
-      {
-        path: "package:sharp-capability-wall",
-        digest: imageCapability.entryDigest,
-      },
-      {
-        path: `voice:${KOKORO_VOICE}.bin`,
-        digest: voice.digest,
-      },
-    ];
-  };
+const kokoroBaseRuntimeAssets = (
+  voiceId: string,
+): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
+  const voiceRelative = `voices/${voiceId}.bin`;
+  const kokoro = resolvedPackageSnapshot("kokoro-js", [
+    { kind: "file", relative: voiceRelative },
+  ]);
+  const transformers = resolvedPackageIdentity("@huggingface/transformers");
+  const backend = onnxRuntimeNodeIdentity();
+  const imageCapability = resolvedPackageIdentity("sharp");
+  const voice = kokoro.assets.find((asset) => asset.path === voiceRelative);
+  if (voice === undefined)
+    throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
+  return [
+    { path: "package:kokoro-js", digest: kokoro.entryDigest },
+    {
+      path: "package:@huggingface/transformers",
+      digest: transformers.entryDigest,
+    },
+    {
+      path: "package:onnxruntime-node",
+      digest: backend.entryDigest,
+    },
+    ...backend.nativeAssets,
+    {
+      path: "package:sharp-capability-wall",
+      digest: imageCapability.entryDigest,
+    },
+    {
+      path: `voice:${voiceId}.bin`,
+      digest: voice.digest,
+    },
+  ];
+};
 
 const kokoroModelCacheAssets = (
   modelCacheRoot: string,
@@ -2775,12 +2953,18 @@ const renderRuntimeIdentity = async (props: {
   height: number;
   fps: number;
 }): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
+  await prepareProductionRuntime({
+    project: props.project,
+    compileFingerprint: props.compileFingerprint,
+    timeline: props.timeline,
+  });
   const preflight = await captureProductionFrame({
     projectRoot: root,
     productionId,
     compileFingerprint: props.compileFingerprint,
     target: { kind: "shot", id: props.first.shot },
     time: props.first.sourceFrame / props.timeline.fps,
+    globalFrame: 0,
     pass: "beauty",
     width: props.width,
     height: props.height,
