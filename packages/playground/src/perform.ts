@@ -46,6 +46,8 @@ const gaze = new THREE.Object3D();
 scene.add(gaze);
 
 const EXPR = ["happy", "angry", "sad", "relaxed", "surprised"];
+
+/** Duration, in seconds, of one expression-and-gaze performance cycle. */
 export const DURATION = 5.0;
 const EMPTY_POSE: IAutoMoviePose = {
   skeleton: "humanoid",

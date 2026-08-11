@@ -42,6 +42,12 @@ const mat = (
   baseColorTexture: null,
 });
 
+/**
+ * Build the mounted stick-figure rider, optionally omitting its handheld lance.
+ *
+ * The returned skeleton remains compatible with ordinary humanoid clips while
+ * the helmet, shield, and optional lance stay attached to their owning bones.
+ */
 export const buildKnight = (
   opts: { lance?: boolean } = {},
 ): {

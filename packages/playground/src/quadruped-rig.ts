@@ -14,4 +14,10 @@ type RestFrameTable = Partial<
  * calibrated for T-pose humanoid arms and would reinterpret those front legs.
  */
 export const QUADRUPED_JOINT_AXES: JointAxesTable | undefined = undefined;
+
+/**
+ * Leaves quadruped rest rotations unremapped for the same rig-space reason as
+ * {@link QUADRUPED_JOINT_AXES}; the authored cat and horse clips already match
+ * their procedural skeletons.
+ */
 export const QUADRUPED_REST_FRAME: RestFrameTable | undefined = undefined;

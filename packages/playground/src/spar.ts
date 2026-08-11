@@ -59,7 +59,10 @@ const tint = (
   };
 };
 
+/** Build the red corner's uniquely identified and tinted stick figure. */
 export const buildRedBoxer = () => tint("boxerRed", [0.66, 0.18, 0.18]);
+
+/** Build the blue corner's uniquely identified and tinted stick figure. */
 export const buildBlueBoxer = () => tint("boxerBlue", [0.2, 0.34, 0.62]);
 
 // ── shared boxing vocabulary (mirrors the shadowbox guard/strike scheme) ─────
@@ -400,6 +403,7 @@ const key = (
   bezier: null,
 });
 
+/** Assemble the red boxer's side of the shared sparring timeline. */
 export const redClip = (sk: string): IAutoMovieMotion => ({
   id: "spar-red",
   skeleton: sk,
@@ -407,6 +411,8 @@ export const redClip = (sk: string): IAutoMovieMotion => ({
   loop: false,
   keyframes: MOMENTS.map((m) => key(m.t, m.red, sk, m.redRoot ?? upright)),
 });
+
+/** Assemble the blue boxer's side of the shared sparring timeline. */
 export const blueClip = (sk: string): IAutoMovieMotion => ({
   id: "spar-blue",
   skeleton: sk,
@@ -415,4 +421,5 @@ export const blueClip = (sk: string): IAutoMovieMotion => ({
   keyframes: MOMENTS.map((m) => key(m.t, m.blue, sk, m.blueRoot ?? upright)),
 });
 
+/** Shared duration, in seconds, that keeps both sparring clips synchronized. */
 export const SPAR_DURATION = DURATION;
