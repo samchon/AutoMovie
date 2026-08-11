@@ -1,0 +1,50 @@
+# Render budget, identity와 recovery
+
+## Worst-case render budget {#spec-render-budget-preflight}
+<!-- @evidence requirements/rendering/budgets.md#rendering-budgets Render cost의 worst-case bound를 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Geometry와 memory 항목을 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Per-frame과 total 비용을 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-budget-tiers Purpose별 tier를 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Expansion bound를 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-budget-decision Budget decision의 관찰 결과를 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Runtime enforcement를 정밀화한다. -->
+<!-- @evidence requirements/rendering/budgets.md#rendering-budget-refusal Budget 거절 조건을 정밀화한다. -->
+
+Budget preflight는 requested product와 tier, exact schedule, lowered owner inventory와 runtime profile에서 draw submission, geometry, instance, skin·morph, material, decoded texture, light·shadow·effect, intermediate target, frame-pass work, encode work, output bytes와 wall-time-like limit의 conservative bound를 만든다. Source bytes, expanded resident bytes, shared resource, per-frame peak, chunk retention, concurrent products와 whole-film total을 별도 dimension으로 유지한다.
+
+Instancing, procedural population, particles-like effects, sequences와 archives는 materialization 전 maximum expansion을 가져야 한다. Tier는 dimensions, sampling, passes, representation과 allowed resources를 소유하고 proxy 성공을 final clearance로 바꾸지 않는다. Decision은 target limit, exact 또는 conservative estimate, confidence, dominant owners, worst frame과 requested product를 사용자에게 제공한다.
+
+Unknown 또는 unbounded required cost, overflow, declared limit 초과와 profile 밖 degradation은 실행 전 거절한다. Actual usage가 bound를 넘으면 safe checkpoint에서 중단하고 completed atomic chunks와 measurements를 보존하며 frame drop, nondeterministic culling, downscale 또는 pass skip을 적용하지 않는다. 사용자가 명시적으로 다른 profile을 선택한 rerun은 새 request이지 원 budget의 성공이 아니다.
+
+## Frame identity와 content addressing {#spec-render-frame-identity}
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-identity-content-addressing Frame을 결정하는 input closure를 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Canonical fingerprint를 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure External dependency closure를 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-output-naming Collision-resistant output naming을 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-byte-digest Input, content와 byte digest를 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-current-stale Current와 stale 판정을 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-identity-collision-corruption Collision과 corruption 처리를 정밀화한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-digest-refusal Missing digest 거절 조건을 정밀화한다. -->
+
+Frame input identity는 production·compiled·edit revision, global sample time와 number, camera·view, pass, dimensions, shutter schedule, renderer·runtime profile, settings와 model·texture·font·media·color-transform 등 모든 external dependency digest를 canonical serialization으로 묶는다. Property와 collection ordering, relative path, rational, finite scalar, string과 absent value의 표현을 고정하며 mutable alias나 remote current를 digest 없이 허용하지 않는다.
+
+Input fingerprint, canonical pixel·channel content digest와 encoded file byte digest는 서로 다른 사실이다. Human-readable production·time·view suffix에는 collision-resistant fingerprint를 결합하되 filename을 truth로 사용하지 않는다. Current 판정은 expected fingerprint, receipt, actual bytes와 dependency closure의 일치를 모두 요구하고 source, edit, runtime, pass 또는 setting 변경을 relation에 따라 stale로 만든다.
+
+같은 identity에 다른 content가 연결되거나 다른 identity가 같은 final destination을 요구하면 publication을 멈춘다. Corrupt entry와 partial bytes는 격리할 수 있지만 이름이나 크기로 복구하지 않는다. Canonicalization failure, missing digest, unsafe path, numeric unsupported value와 receipt-byte mismatch는 해당 frame을 거절하고 independent valid cache만 보존한다.
+
+## Chunk partition, resume와 atomic result {#spec-render-chunk-recovery}
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunks-resume-recovery Bounded chunk 작업 단위를 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Deterministic partition을 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-resume Verified output resume를 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication Chunk atomic publication을 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-concurrent-work Concurrent ownership을 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-failure-recovery Crash와 cancellation recovery를 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-retry-identity Retry identity를 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Assembly closure를 정밀화한다. -->
+<!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-recovery-refusal Unsafe resume 거절 조건을 정밀화한다. -->
+
+Chunk plan은 전체 ordered schedule을 frame range, view, pass와 product별 bounded, contiguous, non-overlapping, complete partition으로 나눈다. 각 chunk는 plan identity, global start-inclusive·end-exclusive frame range, exact sample subset, dependencies, expected outputs, owner claim, attempt, status와 verified receipt를 가진다. Chunk size, worker count와 execution order는 global frame number, sample time, state 또는 content identity를 바꾸지 않는다.
+
+Worker는 isolated temporary ownership tree에서 expected files를 materialize하고 각 byte digest, dimensions, channels와 inventory closure를 검사한 뒤 immutable complete receipt와 current pointer를 원자적으로 publish한다. Resume는 current plan과 일치하며 bytes와 receipt가 재검증된 output만 재사용하고 partial, stale, corrupt, missing과 unverified 항목의 exact work unit만 다시 수행한다. Same-input retry는 attempt·diagnostic·elapsed facts만 바뀌며 setting이나 dependency 변화는 새 plan identity다.
+
+Concurrent worker와 publisher는 expected identity와 exclusive ownership 또는 compare-and-publish precondition을 사용한다. Crash, timeout, cancellation, storage exhaustion과 worker loss 뒤 verified atomic chunks는 보존하고 orphan이나 ambiguous owner는 격리한다. Assembly 전 모든 expected chunk·frame·pass·view가 current, contiguous, unique한지 확인하며 불완전 set은 partial manifest일 뿐 complete sequence나 encode input이 아니다. Ambiguous ownership, overlapping range, pointer-byte mismatch, unbounded retry와 unsafe temporary destination은 재개를 거절한다.
