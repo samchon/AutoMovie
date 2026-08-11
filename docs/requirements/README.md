@@ -26,8 +26,15 @@
 - [Formation](./formations/README.md)
 - [장면 연출](./staging/README.md)
 - [Camera](./camera/README.md)
+- [조명](./lighting/README.md)
+- [Effect와 Simulation](./effects-and-simulation/README.md)
+- [음향](./sound/README.md)
+- [편집](./editorial/README.md)
+- [Rendering](./rendering/README.md)
+- [전달과 접근성](./delivery-and-accessibility/README.md)
+- [Repaint](./repaint/README.md)
 - [맵과 세계](./map/README.md)
 - [건물 외관](./building-exterior/README.md)
 - [실내 공간](./interior/README.md)
 
-조명, 음향, 타임라인, 렌더, 전달, 접근성, 증거, 진단, 외부 입력과 repaint는 각각 독립 주제 폴더로 이어서 정의한다.
+Acceptance, review, 증거, provenance, 진단, 외부 입력과 운영 복구는 각각 독립 주제 폴더로 이어서 정의한다.
