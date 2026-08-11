@@ -68,7 +68,11 @@ export const AUTOMOVIE_MAX_GENERAL_INSTANCES = 250_000;
 /** Maximum per-instance matrix, color, and declared trait storage. */
 export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 
-/** Validate graph-level production invariants after structural validation. */
+/**
+ * Validate graph-level production invariants after structural validation.
+ *
+ * @evidence specifications/orchestration/mcp.md#declared-propagation-validation Refuses invalid speed and absorption declarations before the sound plan can present derived arrival evidence.
+ */
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
   productionId: string = graph.production?.id ?? "unbound-production",
@@ -112,6 +116,43 @@ export const validateAutoMovieProductionGraph = (
         file,
         "storyClock.epoch",
       );
+    const eventSoundPropagation = graph.production.eventSoundPropagation;
+    if (eventSoundPropagation !== undefined) {
+      positive(
+        diagnostics,
+        eventSoundPropagation.speedOfSoundMetersPerSecond,
+        target,
+        file,
+        "eventSoundPropagation.speedOfSoundMetersPerSecond",
+      );
+      const airAbsorption = eventSoundPropagation.airAbsorption;
+      if (airAbsorption !== null) {
+        if (
+          Number.isFinite(airAbsorption.crossoverHz) === false ||
+          airAbsorption.crossoverHz <= 0 ||
+          airAbsorption.crossoverHz >= 24_000
+        )
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            target,
+            file,
+            `eventSoundPropagation.airAbsorption.crossoverHz must be finite, above zero, and below the 24000 Hz PCM Nyquist boundary. Correct the tracked production design record.`,
+          );
+        if (
+          Number.isFinite(airAbsorption.highBandLossDecibelsPerMeter) ===
+            false ||
+          airAbsorption.highBandLossDecibelsPerMeter < 0
+        )
+          invalid(
+            diagnostics,
+            "design-range-invalid",
+            target,
+            file,
+            `eventSoundPropagation.airAbsorption.highBandLossDecibelsPerMeter must be finite and non-negative. Correct the tracked production design record.`,
+          );
+      }
+    }
     integer(
       diagnostics,
       graph.production.frameFormat.width,

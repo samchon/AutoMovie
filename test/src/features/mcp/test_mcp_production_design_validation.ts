@@ -48,6 +48,8 @@ import {
  *    missing evidence addresses, invalid operators, and target mismatches.
  * 8. Portable case-folding and source-path rules catch cross-artifact identity
  *    collisions without rejecting deliberate shared canonical source modules.
+ * 9. Event sound propagation accepts one declared direct path or explicit absent
+ *    absorption and rejects unsafe speed, crossover, and loss values.
  */
 export const test_mcp_production_design_validation = (): void => {
   const valid: IAutoMovieProductionDesignGraph = {
@@ -62,6 +64,93 @@ export const test_mcp_production_design_validation = (): void => {
     "valid starter graph",
     validateAutoMovieProductionGraph(valid),
     [],
+  );
+  const propagationDiagnostics = (props: {
+    speed: number;
+    crossover: number;
+    loss: number;
+  }) =>
+    validateAutoMovieProductionGraph({
+      ...valid,
+      production: {
+        ...productionDesign(),
+        eventSoundPropagation: {
+          kind: "direct-path-v1",
+          speedOfSoundMetersPerSecond: props.speed,
+          airAbsorption: {
+            crossoverHz: props.crossover,
+            highBandLossDecibelsPerMeter: props.loss,
+          },
+        },
+      },
+    }).filter((diagnostic) =>
+      diagnostic.message.includes("eventSoundPropagation"),
+    );
+  TestValidator.equals(
+    "event sound propagation is declared, bounded, and nullable only at the absorption layer",
+    namedFacts([
+      [
+        "declaredDirectPathAccepted",
+        () =>
+          propagationDiagnostics({
+            speed: 343,
+            crossover: 23_999,
+            loss: 0,
+          }).length === 0,
+      ],
+      [
+        "absorptionAbsenceAccepted",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            production: {
+              ...productionDesign(),
+              eventSoundPropagation: {
+                kind: "direct-path-v1",
+                speedOfSoundMetersPerSecond: 343,
+                airAbsorption: null,
+              },
+            },
+          }).every(
+            (diagnostic) =>
+              diagnostic.message.includes("eventSoundPropagation") === false,
+          ),
+      ],
+      [
+        "rangeErrorsRefused",
+        () =>
+          propagationDiagnostics({
+            speed: 0,
+            crossover: 24_000,
+            loss: -1,
+          }).length === 3,
+      ],
+      [
+        "nonFiniteErrorsRefused",
+        () =>
+          propagationDiagnostics({
+            speed: Number.NaN,
+            crossover: Number.NaN,
+            loss: Number.NaN,
+          }).length === 3,
+      ],
+      [
+        "lowerCrossoverAndInfiniteLossRefused",
+        () =>
+          propagationDiagnostics({
+            speed: Number.POSITIVE_INFINITY,
+            crossover: 0,
+            loss: Number.POSITIVE_INFINITY,
+          }).length === 3,
+      ],
+    ]),
+    {
+      declaredDirectPathAccepted: true,
+      absorptionAbsenceAccepted: true,
+      rangeErrorsRefused: true,
+      nonFiniteErrorsRefused: true,
+      lowerCrossoverAndInfiniteLossRefused: true,
+    },
   );
   TestValidator.predicate(
     "repainted delivery requires one non-optional feature",

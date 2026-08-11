@@ -9,6 +9,7 @@ import {
 import { IAutoMovieRenderBudget } from "../render/IAutoMovieRenderBudget";
 import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
+import type { IAutoMovieProductionEventSoundPropagation } from "./IAutoMovieProductionSound";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
 /** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
@@ -131,6 +132,14 @@ export interface IAutoMovieProductionDesign {
    * before the field existed.
    */
   renderBudgets?: IAutoMovieRenderBudget[];
+  /**
+   * Declared direct-path model for compiler-derived semantic event sound.
+   *
+   * Omitted preserves immediate dry event sound. Authored timeline cues and
+   * dialogue carry no spatial event binding and are therefore not propagated by
+   * this field.
+   */
+  eventSoundPropagation?: IAutoMovieProductionEventSoundPropagation;
   /**
    * Read-only site context every environmental analysis is measured against.
    *

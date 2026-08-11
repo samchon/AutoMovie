@@ -4,6 +4,36 @@ import {
   IAutoMovieShotEventContract,
 } from "./IAutoMovieProductionDesign";
 
+/**
+ * One declared, bounded direct path for compiler-derived event sound.
+ *
+ * This is deliberately not weather. The production states the propagation
+ * values it has chosen rather than asking the engine to infer them from a
+ * climate record that does not contain a complete acoustic atmosphere. The
+ * model resolves one representative path from the emission-time source and
+ * listener, then leaves diffraction, occlusion, Doppler, reverberation, ground
+ * reflection, and a moving-listener wave solve unsupported.
+ *
+ * @evidence specifications/contracts/interface.md#event-propagation-records Carries declared direct-path parameters and separate emission and arrival evidence without inventing an environmental model.
+ * @author Samchon
+ */
+export interface IAutoMovieProductionEventSoundPropagation {
+  /** Versioned direct-path calculation supported by the deterministic mixer. */
+  kind: "direct-path-v1";
+  /** Declared propagation speed in meters per second; finite and above zero. */
+  speedOfSoundMetersPerSecond: number;
+  /**
+   * Optional two-band air loss, or null when the production makes no absorption
+   * claim.
+   */
+  airAbsorption: {
+    /** One-pole low/high crossover in hertz, above zero and below 24 kHz. */
+    crossoverHz: number;
+    /** Finite non-negative high-band amplitude loss in decibels per meter. */
+    highBandLossDecibelsPerMeter: number;
+  } | null;
+}
+
 /** One semantic event lowered from the compiled film edit into audible space. */
 export interface IAutoMovieProductionSoundEvent {
   /** Stable occurrence id, including the owning film segment. */
@@ -14,9 +44,9 @@ export interface IAutoMovieProductionSoundEvent {
   event: string;
   /** Procedural sound family selected by the event contract. */
   kind: IAutoMovieShotEventContract["kind"];
-  /** Exact film-global event frame. */
+  /** Exact film-global emission frame. */
   frame: number;
-  /** Exact frame-derived film time. */
+  /** Exact frame-derived emission time. */
   timeSeconds: number;
   /** Sampled world-space source point. */
   emitter: IAutoMovieVector3;
@@ -24,6 +54,25 @@ export interface IAutoMovieProductionSoundEvent {
   listener: IAutoMovieVector3;
   /** Euclidean distance in meters from the listener to `emitter`. */
   distanceMeters: number;
+  /**
+   * Representative source/listener path in meters, equal to
+   * `hypot(distanceMeters, spreadRadiusMeters)`.
+   */
+  propagationDistanceMeters: number;
+  /** Exact unrounded direct-path delay in seconds. */
+  propagationDelaySeconds: number;
+  /**
+   * Film-global audible arrival frame after the non-negative delay is rounded
+   * to the nearest production frame.
+   */
+  arrivalFrame: number;
+  /** Exact frame-derived audible arrival time. */
+  arrivalTimeSeconds: number;
+  /**
+   * Linear gain applied to the declared high band, or null when no air
+   * absorption was declared.
+   */
+  airAbsorptionHighBandGain: number | null;
   /**
    * How many individual sources the event's subjects contain: one for a scene
    * node, the member count for a formation or an instance set, summed over
@@ -152,6 +201,11 @@ export interface IAutoMovieProductionSoundPlan {
   sampleRate: 48_000;
   /** Fixed interleaved stereo channel count. */
   channels: 2;
+  /**
+   * Declared event propagation, null when current planning intentionally keeps
+   * immediate dry sound, or omitted only by a legacy version-1 plan.
+   */
+  propagation?: IAutoMovieProductionEventSoundPropagation | null;
   /** Ordered semantic sound occurrences. */
   events: IAutoMovieProductionSoundEvent[];
   /** Ordered authored procedural score cues. */
@@ -235,11 +289,13 @@ export interface IAutoMovieProductionSoundAnalysis {
   clippingSamples: number;
   /** Longest contiguous near-silent span. */
   longestSilenceSeconds: number;
-  /** Per-event energy evidence centered on the authoritative event frame. */
+  /** Per-event energy evidence centered on audible arrival. */
   eventAlignment: Array<{
     /** Stable sound occurrence id. */
     id: string;
-    /** Exact expected event time. */
+    /** Exact emission time retained for causal review. */
+    emissionSeconds: number;
+    /** Exact expected audible arrival time. */
     expectedSeconds: number;
     /** Peak-energy sample time inside the event gate. */
     peakSeconds: number;

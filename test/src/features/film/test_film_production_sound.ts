@@ -309,10 +309,165 @@ export const test_film_production_sound = (): void => {
   const dialogue = new Map([["line", Float32Array.from([0.5])]]);
   const first = renderProductionSound({ plan, dialogue });
   const second = renderProductionSound({ plan, dialogue });
+  const legacyPlan = structuredClone(plan);
+  Reflect.deleteProperty(legacyPlan, "propagation");
+  for (const event of legacyPlan.events) {
+    Reflect.deleteProperty(event, "propagationDistanceMeters");
+    Reflect.deleteProperty(event, "propagationDelaySeconds");
+    Reflect.deleteProperty(event, "arrivalFrame");
+    Reflect.deleteProperty(event, "arrivalTimeSeconds");
+    Reflect.deleteProperty(event, "airAbsorptionHighBandGain");
+  }
+  const legacyRendered = renderProductionSound({ plan: legacyPlan, dialogue });
   TestValidator.equals(
     "the same sound plan produces byte-identical PCM",
     Buffer.from(first.pcm.buffer),
     Buffer.from(second.pcm.buffer),
+  );
+  TestValidator.equals(
+    "a legacy plan with no propagation records preserves the full PCM mix",
+    namedFacts([
+      [
+        "pcmBytes",
+        () =>
+          Buffer.from(legacyRendered.pcm.buffer).equals(
+            Buffer.from(first.pcm.buffer),
+          ),
+      ],
+      [
+        "alignmentUsesEmission",
+        () =>
+          legacyRendered.analysis.eventAlignment.every(
+            (event, index) =>
+              event.expectedSeconds === legacyPlan.events[index]!.timeSeconds,
+          ),
+      ],
+    ]),
+    { pcmBytes: true, alignmentUsesEmission: true },
+  );
+  const missingDialogue = renderProductionSound({
+    plan: { ...plan, events: [], cues: [] },
+  });
+  const shortDialoguePlan = {
+    ...plan,
+    fps: 48_000,
+    totalFrames: 4,
+    events: [],
+    cues: [],
+    dialogue: [{ ...plan.dialogue[0]!, startFrame: 0, endFrame: 2 }],
+  };
+  const emptyDialogue = renderProductionSound({
+    plan: shortDialoguePlan,
+    dialogue: new Map([["line", new Float32Array()]]),
+  });
+  const zeroWindowDialogue = renderProductionSound({
+    plan: {
+      ...shortDialoguePlan,
+      dialogue: [{ ...shortDialoguePlan.dialogue[0]!, endFrame: 0 }],
+    },
+    dialogue: new Map([["line", Float32Array.from([0.5])]]),
+  });
+  const oneSampleDialogue = renderProductionSound({
+    plan: {
+      ...shortDialoguePlan,
+      totalFrames: 1,
+      dialogue: [{ ...shortDialoguePlan.dialogue[0]!, endFrame: 1 }],
+    },
+    dialogue: new Map([["line", Float32Array.from([0.25, 0.5])]]),
+  });
+  const subThresholdDialogue = renderProductionSound({
+    plan: shortDialoguePlan,
+    dialogue: new Map([["line", Float32Array.from([1e-8, -1e-8])]]),
+  });
+  const zeroDurationCue = renderProductionSound({
+    plan: {
+      ...plan,
+      events: [],
+      cues: [{ ...plan.cues[0]!, durationFrames: 0 }],
+      dialogue: [],
+    },
+  });
+  const exhaustedAsset = renderProductionSound({
+    plan: {
+      ...plan,
+      events: [],
+      cues: [plan.cues[0]!],
+      dialogue: [],
+    },
+    assets: new Map([[plan.cues[0]!.asset, new Float32Array()]]),
+  });
+  const legacyFormationSource = structuredClone(source);
+  Reflect.deleteProperty(legacyFormationSource, "formationMotions");
+  const legacyFormationPlan = deriveProductionSoundPlan({
+    timeline: timeline(),
+    contracts: new Map([["sound-shot", contract()]]),
+    compiled: new Map([["sound-shot", legacyFormationSource]]),
+  });
+  const tiedSource = {
+    ...source,
+    eventSamples: [
+      { id: "arrival", time: 0.2 },
+      { id: "contact", time: 0.2 },
+      { id: "contact", time: 0.2 },
+    ],
+  };
+  const tiedPlan = deriveProductionSoundPlan({
+    timeline: timeline(),
+    contracts: new Map([["sound-shot", contract()]]),
+    compiled: new Map([["sound-shot", tiedSource]]),
+  });
+  TestValidator.equals(
+    "legacy and degenerate sound records retain deterministic boundaries",
+    namedFacts([
+      [
+        "missingDialogueIsSilent",
+        () => missingDialogue.analysis.samplePeak === 0,
+      ],
+      ["emptyDialogueIsSilent", () => emptyDialogue.analysis.samplePeak === 0],
+      [
+        "zeroWindowDialogueIsSilent",
+        () => zeroWindowDialogue.analysis.samplePeak === 0,
+      ],
+      [
+        "oneSampleDialogueHasExactRuntime",
+        () => oneSampleDialogue.analysis.sampleFrames === 1,
+      ],
+      [
+        "subThresholdDialogueHasNoIntegratedLoudness",
+        () => subThresholdDialogue.analysis.integratedLoudness === null,
+      ],
+      [
+        "zeroDurationCueIsSilent",
+        () => zeroDurationCue.analysis.samplePeak === 0,
+      ],
+      [
+        "exhaustedAssetIsSilent",
+        () => exhaustedAsset.analysis.samplePeak === 0,
+      ],
+      [
+        "missingLegacyFormationMotionUsesRestPose",
+        () =>
+          legacyFormationPlan.events.find((event) => event.event === "arrival")
+            ?.emitter.x === -4,
+      ],
+      [
+        "sameFrameIdsUseCodeUnitOrder",
+        () =>
+          tiedPlan.events.map((event) => event.event).join(",") ===
+          "arrival,contact,contact",
+      ],
+    ]),
+    {
+      missingDialogueIsSilent: true,
+      emptyDialogueIsSilent: true,
+      zeroWindowDialogueIsSilent: true,
+      oneSampleDialogueHasExactRuntime: true,
+      subThresholdDialogueHasNoIntegratedLoudness: true,
+      zeroDurationCueIsSilent: true,
+      exhaustedAssetIsSilent: true,
+      missingLegacyFormationMotionUsesRestPose: true,
+      sameFrameIdsUseCodeUnitOrder: true,
+    },
   );
   const offsetTimeline = timeline();
   offsetTimeline.tracks.audio[0]!.sourceOffsetFrame = 5;
@@ -505,6 +660,35 @@ export const test_film_production_sound = (): void => {
       chunkTimedItemIndex: true,
       chunkTimedItemItem: true,
     },
+  );
+  TestValidator.equals(
+    "late phoneme chunks append to the last audible target or fall back to rest",
+    namedFacts([
+      [
+        "lateChunkAppended",
+        () =>
+          productionPhonemesToVisemes({
+            chunks: [
+              { phonemes: "a", startSample: 0, endSample: 10 },
+              { phonemes: "i", startSample: 20, endSample: 20 },
+            ],
+            sourceSamples: 20,
+            startFrame: 0,
+            endFrame: 1,
+          })[0]?.phoneme === "ai",
+      ],
+      [
+        "onlyLateChunkFallsBackToRest",
+        () =>
+          productionPhonemesToVisemes({
+            chunks: [{ phonemes: "a", startSample: 20, endSample: 20 }],
+            sourceSamples: 20,
+            startFrame: 0,
+            endFrame: 1,
+          })[0]?.viseme === "rest",
+      ],
+    ]),
+    { lateChunkAppended: true, onlyLateChunkFallsBackToRest: true },
   );
   const silence = renderProductionSound({
     plan: { ...plan, events: [], cues: [], dialogue: [] },

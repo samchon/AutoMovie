@@ -2,6 +2,7 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
   IAutoMovieFormationBounds,
+  IAutoMovieProductionEventSoundPropagation,
   IAutoMovieProductionPhonemeChunk,
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
@@ -47,12 +48,16 @@ export interface IAutoMovieProductionSoundRaster {
  * ({@link IAutoMovieProductionSoundEvent.densityGain}), so a mass sounds like a
  * mass and a crowd's size is audible rather than assumed. A lone actor is a
  * one-member mass of zero radius and plans exactly as it always did.
+ *
+ * @evidence specifications/runtime/engine.md#direct-path-event-sound Computes one declared representative path and consumes arrival only where audible timing requires it.
  */
 export const deriveProductionSoundPlan = (props: {
   timeline: IAutoMovieFilmTimeline;
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
+  propagation?: IAutoMovieProductionEventSoundPropagation | null;
 }): IAutoMovieProductionSoundPlan => {
+  const propagation = normalizeEventSoundPropagation(props.propagation);
   const events: IAutoMovieProductionSoundPlan["events"] = [];
   props.timeline.segments.forEach((segment, segmentIndex) => {
     const contract = props.contracts.get(segment.shot);
@@ -103,6 +108,30 @@ export const deriveProductionSoundPlan = (props: {
       // it serves the pan and the attenuation from one number.
       const spreadRadiusMeters = Math.sqrt(mass.variance);
       const rmsDistanceMeters = Math.hypot(distanceMeters, spreadRadiusMeters);
+      const propagationDelaySeconds =
+        propagation === null
+          ? 0
+          : rmsDistanceMeters / propagation.speedOfSoundMetersPerSecond;
+      const arrivalOffsetFrames = Math.round(
+        propagationDelaySeconds * props.timeline.fps,
+      );
+      const arrivalFrame = frame + arrivalOffsetFrames;
+      if (
+        Number.isSafeInteger(arrivalOffsetFrames) === false ||
+        Number.isSafeInteger(arrivalFrame) === false
+      )
+        throw new Error(
+          `Sound event "${segment.shot}:${event.id}" derives an arrival outside the safe film-frame range. Increase the declared sound speed or reduce the source distance.`,
+        );
+      const airAbsorptionHighBandGain =
+        propagation === null || propagation.airAbsorption === null
+          ? null
+          : Math.pow(
+              10,
+              (-propagation.airAbsorption.highBandLossDecibelsPerMeter *
+                rmsDistanceMeters) /
+                20,
+            );
       events.push({
         id: `${segmentIndex}:${segment.shot}:${event.id}`,
         shot: segment.shot,
@@ -113,6 +142,11 @@ export const deriveProductionSoundPlan = (props: {
         emitter,
         listener: listener.position,
         distanceMeters,
+        propagationDistanceMeters: rmsDistanceMeters,
+        propagationDelaySeconds,
+        arrivalFrame,
+        arrivalTimeSeconds: arrivalFrame / props.timeline.fps,
+        airAbsorptionHighBandGain,
         memberCount: mass.count,
         spreadRadiusMeters,
         densityGain: Math.sqrt(mass.count),
@@ -131,6 +165,7 @@ export const deriveProductionSoundPlan = (props: {
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
+    propagation,
     events: events.sort(
       (left, right) =>
         left.frame - right.frame || compareCodeUnits(left.id, right.id),
@@ -503,10 +538,25 @@ const mixEvent = (
     reveal: 1.1,
     transition: 0.55,
   };
-  const start = frameToSample(plan, event.frame);
+  const start = frameToSample(plan, event.arrivalFrame ?? event.frame);
   const length = Math.round(durationSeconds[event.kind] * plan.sampleRate);
   const left = Math.sqrt((1 - event.pan) * 0.5);
   const right = Math.sqrt((1 + event.pan) * 0.5);
+  const highBandGain = event.airAbsorptionHighBandGain ?? 1;
+  const airAbsorption = plan.propagation?.airAbsorption;
+  if (
+    highBandGain !== 1 &&
+    (airAbsorption === null || airAbsorption === undefined)
+  )
+    throw new Error(
+      `Sound event "${event.id}" declares high-band loss without a propagation crossover.`,
+    );
+  const lowPassCoefficient =
+    highBandGain === 1
+      ? 0
+      : 1 -
+        Math.exp((-2 * Math.PI * airAbsorption!.crossoverHz) / plan.sampleRate);
+  let lowBand = 0;
   for (
     let index = 0;
     index < length && start + index < pcm.length / 2;
@@ -530,10 +580,13 @@ const mixEvent = (
     // summation result, and clamping it would be an opinion about how loud a
     // crowd is allowed to be. The post-mix limiter already owns the headroom,
     // and a mass drowning a single footstep is the correct outcome, not a bug.
-    const value =
-      (base[event.kind] * envelope * 0.28 + impulse * 0.5) *
-      event.attenuation *
-      event.densityGain;
+    const dry = base[event.kind] * envelope * 0.28 + impulse * 0.5;
+    let propagated = dry;
+    if (highBandGain !== 1) {
+      lowBand += lowPassCoefficient * (dry - lowBand);
+      propagated = lowBand + (dry - lowBand) * highBandGain;
+    }
+    const value = propagated * event.attenuation * event.densityGain;
     pcm[(start + index) * 2] += value * left;
     pcm[(start + index) * 2 + 1] += value * right;
   }
@@ -611,8 +664,8 @@ const analyzeProductionSound = (
     const left = pcm[frame * 2]!;
     const right = pcm[frame * 2 + 1]!;
     peak = Math.max(peak, Math.abs(left), Math.abs(right));
-    if (Math.abs(left) > 1) clippingSamples += 1;
-    if (Math.abs(right) > 1) clippingSamples += 1;
+    clippingSamples += Number(Math.abs(left) > 1);
+    clippingSamples += Number(Math.abs(right) > 1);
     if (Math.max(Math.abs(left), Math.abs(right)) < 1e-5) {
       silence += 1;
       longestSilence = Math.max(longestSilence, silence);
@@ -629,7 +682,7 @@ const analyzeProductionSound = (
     clippingSamples,
     longestSilenceSeconds: longestSilence / plan.sampleRate,
     eventAlignment: plan.events.map((event) => {
-      const expected = frameToSample(plan, event.frame);
+      const expected = frameToSample(plan, event.arrivalFrame ?? event.frame);
       const radius = Math.max(1, frameToSample(plan, 1));
       let peakSample = expected;
       let peakValue = -1;
@@ -651,12 +704,58 @@ const analyzeProductionSound = (
         (Math.abs(peakSample - expected) * plan.fps) / plan.sampleRate;
       return {
         id: event.id,
+        emissionSeconds: event.timeSeconds,
         expectedSeconds: expected / plan.sampleRate,
         peakSeconds: peakSample / plan.sampleRate,
         errorFrames,
         passed: peakValue > 1e-5 && errorFrames <= 1,
       };
     }),
+  };
+};
+
+/** Validate and detach one author-declared direct-path event model. */
+const normalizeEventSoundPropagation = (
+  value: IAutoMovieProductionEventSoundPropagation | null | undefined,
+): IAutoMovieProductionEventSoundPropagation | null => {
+  if (value === null || value === undefined) return null;
+  if (value.kind !== "direct-path-v1")
+    throw new Error(
+      `Sound propagation kind must be "direct-path-v1", but was ${String(value.kind)}.`,
+    );
+  if (
+    Number.isFinite(value.speedOfSoundMetersPerSecond) === false ||
+    value.speedOfSoundMetersPerSecond <= 0
+  )
+    throw new Error(
+      `Sound propagation speed must be finite and above zero, but was ${value.speedOfSoundMetersPerSecond}.`,
+    );
+  if (value.airAbsorption === null)
+    return {
+      kind: "direct-path-v1",
+      speedOfSoundMetersPerSecond: value.speedOfSoundMetersPerSecond,
+      airAbsorption: null,
+    };
+  if (
+    Number.isFinite(value.airAbsorption.crossoverHz) === false ||
+    value.airAbsorption.crossoverHz <= 0 ||
+    value.airAbsorption.crossoverHz >= 24_000
+  )
+    throw new Error(
+      `Sound propagation crossover must be finite, above zero, and below 24000 Hz, but was ${value.airAbsorption.crossoverHz}.`,
+    );
+  if (
+    Number.isFinite(value.airAbsorption.highBandLossDecibelsPerMeter) ===
+      false ||
+    value.airAbsorption.highBandLossDecibelsPerMeter < 0
+  )
+    throw new Error(
+      `Sound propagation high-band loss must be finite and non-negative, but was ${value.airAbsorption.highBandLossDecibelsPerMeter}.`,
+    );
+  return {
+    kind: "direct-path-v1",
+    speedOfSoundMetersPerSecond: value.speedOfSoundMetersPerSecond,
+    airAbsorption: { ...value.airAbsorption },
   };
 };
 
