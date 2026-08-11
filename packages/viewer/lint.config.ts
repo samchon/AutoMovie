@@ -17,6 +17,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/camera/README.md",
           "requirements/camera/clipping-occlusion-and-spatial-constraints.md",
           "requirements/camera/projection-lens-and-sensor.md",
         ],
@@ -32,6 +33,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/camera-light-and-visibility/README.md",
           "specifications/camera-light-and-visibility/camera-state-projection-and-gate.md",
           "specifications/camera-light-and-visibility/visibility-and-image-space-observation.md",
         ],
@@ -51,6 +53,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/lighting/README.md",
           "requirements/lighting/budgets-and-representation.md",
           "requirements/lighting/color-exposure-and-display-boundary.md",
           "requirements/lighting/shadows-reflections-and-transmission.md",
@@ -74,6 +77,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/camera-light-and-visibility/README.md",
           "specifications/camera-light-and-visibility/light-source-photometry-and-environment.md",
           "specifications/camera-light-and-visibility/light-transport-color-and-budget.md",
           "specifications/camera-light-and-visibility/temporal-state-and-continuity.md",
@@ -96,6 +100,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/staging/README.md",
           "requirements/staging/events-and-timing.md",
           "requirements/staging/interactions-and-choreography.md",
           "requirements/staging/state-handoff-and-continuity.md",
@@ -119,6 +124,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
           "specifications/performance-motion-and-staging/motion-sampling-and-composition.md",
           "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
@@ -141,6 +147,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/staging/README.md",
           "requirements/staging/budgets-safety-and-validation.md",
           "requirements/staging/marks-zones-and-blocking.md",
           "requirements/staging/shot-contracts-and-deliveries.md",
@@ -162,6 +169,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md",
           "specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md",
           "specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md",
@@ -187,6 +195,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/geometry-visibility-and-culling.md",
           "requirements/rendering/materials-lighting-and-color.md",
           "requirements/rendering/scene-lowering-and-runtime-state.md",
@@ -212,6 +221,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
         ],
@@ -234,6 +244,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
           "requirements/rendering/headless-and-platform-determinism.md",
           "requirements/rendering/materials-lighting-and-color.md",
@@ -259,6 +270,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
         ],
@@ -279,9 +291,11 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/rendering/README.md",
           "requirements/rendering/budgets.md",
           "requirements/rendering/passes-channels-and-products.md",
           "requirements/rendering/validation.md",
+          "requirements/review/README.md",
           "requirements/review/annotations-findings-and-verdicts.md",
           "requirements/review/criteria-and-comparison.md",
           "requirements/review/frame-range-and-whole-work.md",
@@ -306,8 +320,10 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
           "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+          "specifications/review-and-acceptance/README.md",
           "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md",
           "specifications/review-and-acceptance/evidence-freshness-and-completeness.md",
           "specifications/review-and-acceptance/observations-findings-and-defects.md",
@@ -326,6 +342,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/staging/README.md",
           "requirements/staging/marks-zones-and-blocking.md",
           "requirements/staging/scope-and-source-of-truth.md",
           "requirements/staging/subjects-and-object-staging.md",
@@ -343,6 +360,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/staging-space-state-and-choreography.md",
         ],
         symbol: ["h2", "h3"],
