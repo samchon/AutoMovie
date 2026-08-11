@@ -38,6 +38,16 @@ const LIPS = [
  * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Provides bounded named morph channels usable as coarse proxy facial cues without reconstructing detail or inferring expression.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Carries the morph-channel part of proxy facial state while pose, gaze, timing, and authority remain caller-owned.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-deformable-surface Defines or applies morph deltas against explicit base geometry without changing its topology.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-skin-morph-facts Carries named base-relative morph facts and bounded application over matching proxy geometry.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Provides the morph deformation mode only; no skeleton, skinning, retargeting, or hidden fidelity is introduced.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export const buildFaceMorphs = (
   positions: number[] = CANONICAL_FACE_POSITIONS,

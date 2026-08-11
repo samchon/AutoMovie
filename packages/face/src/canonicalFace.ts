@@ -221,12 +221,32 @@ const CANONICAL_FACE_POSITIONS_RAW: number[] = [
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Carries proxy geometry in explicit metric coordinates rather than a hidden display scale.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Exposes the fixed coordinate and attribute facts of the proxy mesh.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Preserves the indexed surface relationships used by the proxy mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps proxy topology and surface attributes explicit for downstream use.
+ * @evidenceExclude requirements/actors/README.md#actor-요구사항 The general face proxy slice implements representation only, not the complete actor requirement family.
+ * @evidenceExclude requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-external-representation Fixed procedural arrays neither ingest nor select an external actor representation.
+ * @evidenceExclude requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-shot-tier-selection The canonical proxy owns no shot-level representation-tier decision.
+ * @evidenceExclude requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-tier-compatibility These arrays carry no identity or state handoff for switching representations.
+ * @evidenceExclude requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-quality-claim-boundary Canonical proxy geometry contains no review verdict or likeness approval.
+ * @evidenceExclude specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Fixed proxy geometry is not the whole performance, motion, formation, and staging specification.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Static face coordinates do not plan story action or sampled performance time.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-state-continuity-ledger The canonical arrays store no actor state ledger or scene continuity.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment General face geometry carries no costume, hair, or attachment state.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-voice-utterance-expression Static geometry has no voice bytes, utterance timing, alignment, or viseme receipt.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Canonical arrays carry no authored pose, gaze target, or expression state.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-population-double-variation The package creates no actor population, double, or population budget decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-validation-output-compatibility Face coordinates return no actor compatibility or validation status.
  * @evidenceExclude requirements/product/README.md#제품-계약-요구사항 This frozen compatibility leaf does not implement the whole product contract map.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-content-catalogue-exclusion Retained face geometry is not a completed content catalogue and does not own catalogue policy.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion These deterministic legacy helpers neither adopt nor govern probabilistic completion.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-editor-export-exclusion This package exposes legacy geometry helpers, not an interactive editor or generic export path.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-exclusion-reopening A retained API has no authority or mechanism to reopen a product exclusion.
- * @evidenceExclude specifications/authoring-and-authority/README.md#spec-authoring-authority-index A documentation topic index is not implemented by face runtime declarations.
+ * @evidenceExclude specifications/authoring-and-authority/README.md#저작과-권한-시스템-명세 This frozen face slice is not the complete authoring-and-authority specification.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity These legacy value helpers carry no source snapshot, digest, runtime version, clock, or seed identity contract.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Face geometry does not produce the film-wide structural prototype output.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant This frozen API owns no authorized quality-tier or seeded-variation choice contract.
@@ -240,6 +260,13 @@ export const CANONICAL_FACE_POSITIONS: number[] = CANONICAL_FACE_POSITIONS_RAW;
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Carries proxy geometry in explicit metric coordinates rather than a hidden display scale.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Exposes the fixed coordinate and attribute facts of the proxy mesh.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Preserves the indexed surface relationships used by the proxy mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps proxy topology and surface attributes explicit for downstream use.
  */
 export const CANONICAL_FACE_UVS: number[] = [
   0.499977, 0.652534, 0.500026, 0.547487, 0.499974, 0.602372, 0.482113,
@@ -372,6 +399,13 @@ export const CANONICAL_FACE_UVS: number[] = [
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Carries proxy geometry in explicit metric coordinates rather than a hidden display scale.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Exposes the fixed coordinate and attribute facts of the proxy mesh.
+ * @evidence requirements/asset-authoring/geometry.md#asset-geometry-topology Preserves the indexed surface relationships used by the proxy mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps proxy topology and surface attributes explicit for downstream use.
  */
 export const CANONICAL_FACE_INDICES: number[] = [
   173, 155, 133, 246, 33, 7, 382, 398, 362, 263, 466, 249, 308, 415, 324, 78,

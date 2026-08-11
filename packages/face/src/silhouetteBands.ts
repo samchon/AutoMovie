@@ -3,6 +3,13 @@
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export interface IForgeSilhouetteRow {
   /**
@@ -10,6 +17,13 @@ export interface IForgeSilhouetteRow {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   y: number;
 
@@ -18,6 +32,13 @@ export interface IForgeSilhouetteRow {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   runs: [number, number][];
 }
@@ -27,6 +48,13 @@ export interface IForgeSilhouetteRow {
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export interface IForgeSilhouetteBand {
   /**
@@ -34,6 +62,13 @@ export interface IForgeSilhouetteBand {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   y: number;
 
@@ -42,6 +77,13 @@ export interface IForgeSilhouetteBand {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   min: number;
 
@@ -50,6 +92,13 @@ export interface IForgeSilhouetteBand {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   max: number;
 }
@@ -68,6 +117,13 @@ export interface IForgeSilhouetteBand {
  * @throws When the first row has no runs (there is nothing to start from)
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export const trackSilhouetteBands = (
   rows: IForgeSilhouetteRow[],
@@ -100,6 +156,13 @@ export const trackSilhouetteBands = (
  *
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export interface IForgeBandCleaning {
   /**
@@ -109,6 +172,13 @@ export interface IForgeBandCleaning {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   monoMin?: boolean;
 
@@ -117,6 +187,13 @@ export interface IForgeBandCleaning {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   monoMax?: boolean;
 
@@ -127,6 +204,13 @@ export interface IForgeBandCleaning {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   extremumAbove?: number;
 
@@ -135,6 +219,13 @@ export interface IForgeBandCleaning {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   medianRadius?: number;
 
@@ -144,6 +235,13 @@ export interface IForgeBandCleaning {
    *
    * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
    * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+   * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+   * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
    */
   smoothRadius?: number;
 }
@@ -159,6 +257,13 @@ export interface IForgeBandCleaning {
  * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice This frozen compatibility declaration treats unsupported likeness as a fidelity failure, not prototype capability.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-fidelity-capability-separation Carries appearance geometry or controls without inferring rig, motion, gaze, contact, or interaction capability.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries actual proxy representation geometry or controls without promoting it to a higher-fidelity actor tier.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects or bounds invalid proxy coordinates and indices before they can silently become usable geometry.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Carries the numeric or structural input and result surface used by the package's explicit bounded checks.
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Performs a deterministic local geometry derivation that composes with the retained proxy pipeline.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves explicit coordinate or topology facts across the bounded derivation.
  */
 export const cleanSilhouetteBands = (
   bands: IForgeSilhouetteBand[],
