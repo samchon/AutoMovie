@@ -40,7 +40,9 @@ import {
 } from "@automovie/viewer";
 import * as THREE from "three";
 
-import type { IAutoMovieProductionDialogueRuntime } from "../../scripts/productionRuntimeState";
+import type {
+  IAutoMovieProductionDialogueRuntime,
+} from "../../scripts/productionRuntimeState";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 
 const MOUTH_PRESETS: readonly AutoMovieExpressionPreset[] = [
