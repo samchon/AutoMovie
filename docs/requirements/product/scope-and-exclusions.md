@@ -10,7 +10,7 @@
 
 ### 완성 콘텐츠 카탈로그의 제외 {#product-content-catalogue-exclusion}
 
-제품 package와 기본 scaffold는 작품별 건물, 가구, 복식, 장식, 차량, 식생과 음원을 완성품으로 제공하지 않는다. 필요한 콘텐츠를 project에서 만들 수 있는 일반 능력은 범위에 포함된다.
+AutoMovie와 새 project의 시작 구조는 작품별 건물, 가구, 복식, 장식, 차량, 식생과 음원을 완성품으로 제공하지 않는다. 필요한 콘텐츠를 project에서 만들 수 있는 일반 능력은 범위에 포함된다.
 
 ### 비결정적 자동 완성의 제외 {#product-nondeterministic-completion-exclusion}
 
@@ -19,3 +19,7 @@
 ### 편집기와 export의 제외 {#product-editor-export-exclusion}
 
 제품은 interactive 3D 편집기나 범용 scene export 도구가 아니다. 저작은 project source에서 이루어지고 결과는 AutoMovie의 결정론적 검증과 렌더 경로 안에서 판단한다.
+
+### 제외의 변경 조건 {#product-exclusion-reopening}
+
+현재 제외는 숨은 backlog나 묵시적 약속이 아니다. 저작 에이전트가 해당 표현을 명시적으로 통제하고 사용자가 prototype에서 검증할 수 있으며 결정성과 source ownership을 유지할 수 있다는 근거가 생길 때 별도의 제품 선택으로 다시 검토해야 한다.

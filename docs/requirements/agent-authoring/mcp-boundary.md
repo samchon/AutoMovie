@@ -8,13 +8,21 @@ AutoMovie MCP는 저자 에이전트가 project source에서 올바른 능력을
 
 MCP는 요구사항, specification, source ownership, 단위, 범위, 거부 조건과 보편 저작 기법을 현재 project 맥락에 맞게 발견할 수 있도록 제공해야 한다.
 
+### 제공자 중립적 안내 {#agent-mcp-provider-neutrality}
+
+MCP는 외부 능력의 입력, 출력, 한계, provenance와 실패를 안내하되 특정 provider, model, account 또는 catalogue를 사용자에게 필요한 기본 경로로 정해서는 안 된다. Local 실행, 사용자가 채택한 외부 결과와 지원되는 다른 실행 경로는 같은 제품 계약 아래 구분되어야 한다.
+
 ### Host-produced evidence {#agent-mcp-host-evidence}
 
 Frame capture, 분석, 진단과 review 입력은 host가 실제 project와 target을 실행하여 생산해야 하며, receipt는 입력 digest와 target identity를 포함해야 한다.
 
 ### 저작 API 중복의 거부 {#agent-mcp-authoring-api-refusal}
 
-MCP tool 호출만으로 별도 장면 상태를 만들거나 source 밖에서 asset을 누적 편집하게 하지 않는다. 저작 결과는 project source와 project-owned bytes로 돌아와야 한다.
+MCP tool 호출만으로 별도 장면 상태를 만들거나 source 밖에서 asset을 누적 편집하게 하지 않는다. 안내나 진단이 제안한 교정은 코딩 에이전트가 project source 또는 project-owned bytes에 명시적으로 반영한 뒤에만 작품 사실이 되어야 한다.
+
+### 무단 외부 실행의 거부 {#agent-mcp-no-surprise-external-effects}
+
+지식 조회, capability 탐색과 deterministic evidence 요청만으로 project 입력을 외부 서비스에 upload하거나 외부 생성을 시작해서는 안 된다. 외부 실행은 선택된 service, 전달할 입력, 결과의 용도와 비용 경계를 가진 별도의 명시적 요청이어야 한다.
 
 ### 완성 콘텐츠 공급의 거부 {#agent-mcp-content-supply-refusal}
 

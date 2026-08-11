@@ -8,6 +8,10 @@
 
 문서는 package 이름만으로 나열하지 않고 map, building, interior, actors, motion, camera와 sound처럼 저자가 찾는 제품 주제를 통해 필요한 책임으로 안내해야 한다.
 
+### 선택지와 한계의 발견 {#agent-choice-surface-discovery}
+
+서로 다른 저작 기법, local 또는 external 실행 경로, 품질 tier와 부분 작업 경계를 지원한다면 각각의 선행 조건, 관찰 가능한 차이와 실패를 찾을 수 있어야 한다. 한 예시나 설치된 provider를 유일한 정답으로 제시해서는 안 된다.
+
 ### 하나의 기법을 가르치는 예시 {#agent-technique-example}
 
 예시는 하나의 보편 기법, 적용 이유, 조절점과 검증 결과를 설명해야 한다. 완성 콘텐츠의 외형만 보여 주거나 복사할 거대한 장면을 제공하는 것으로 끝내지 않는다.

@@ -4,6 +4,7 @@
 
 - [제품 헌장](./charter.md)
 - [저작 가능성 기준](./authorability.md)
+- [사용자 선택과 외부 서비스](./choice-and-external-services.md)
 - [prototype 품질](./prototype-quality.md)
 - [능력과 콘텐츠](./capability-and-content.md)
 - [확장과 호환성](./extensibility-and-compatibility.md)

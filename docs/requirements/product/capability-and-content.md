@@ -8,6 +8,10 @@
 
 고대 전장, 중세 도시, 현대 아파트와 미래 우주선은 서로 다른 콘텐츠이지만 지형, 표면, 경계, 반복, 재료, 연결, 행위자, 상태와 시간이라는 공통 능력으로 구성할 수 있어야 한다.
 
+### 심어 두지 않은 주제의 저작 {#product-unplanted-subject-authoring}
+
+AutoMovie와 예시에 이름, 형상 또는 전용 helper가 미리 존재하지 않는 주제도 공개된 보편 능력을 조합하여 project 안에서 저작하고 검증할 수 있어야 한다. 새 주제를 표현할 때마다 AutoMovie가 그 콘텐츠를 catalogue 항목으로 먼저 배포하도록 요구해서는 안 된다.
+
 ### 프로젝트 소유 콘텐츠 {#product-project-owned-content}
 
 특정 인물, 군대, 가구, 건물, 무늬, texture, 음원과 장소 자산은 사용자 project가 저작하거나 제공하며, 안정된 identity와 provenance를 가지고 보편 능력에 연결되어야 한다.
