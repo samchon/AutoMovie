@@ -1,7 +1,18 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
+const publicLeaves = ["src/**/*.ts", "!src/**/index.ts"];
+
+const requirementReadmes = ["requirements/**/README.md"];
+const requirementContent = [
+  "requirements/**/*.md",
+  "!requirements/**/README.md",
+];
+const specificationReadmes = ["specifications/**/README.md"];
+const specificationContent = [
+  "specifications/**/*.md",
+  "!specifications/**/README.md",
+];
 
 /**
  * The public engine surface answers for stable contract populations.
@@ -15,28 +26,42 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public engine exports implement requirements",
       type: "typescript",
-      files: publicSurface,
+      files: publicLeaves,
+      evidenceExcludeCarriers: ["src/AutoMovieEngineEvidenceExclusions.ts"],
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["requirements/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: requirementReadmes,
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: requirementContent,
+          symbol: "h3",
         },
       ],
     },
     {
       name: "public engine exports implement specifications",
       type: "typescript",
-      files: publicSurface,
+      files: publicLeaves,
+      evidenceExcludeCarriers: ["src/AutoMovieEngineEvidenceExclusions.ts"],
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: specificationReadmes,
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: specificationContent,
+          symbol: "h3",
         },
       ],
     },
