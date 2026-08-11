@@ -10,15 +10,15 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public create-automovie exports implement requirements",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/bin.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "requirements/agent-authoring/**/*.md",
-          "requirements/operations-and-recovery/**/*.md",
-          "requirements/product/**/*.md",
+          "requirements/agent-authoring/project-ownership.md",
+          "requirements/agent-authoring/source-owned-loop.md",
+          "requirements/product/charter.md",
         ],
         symbol: ["h2", "h3"],
       },
@@ -26,14 +26,14 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public create-automovie exports implement specifications",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/bin.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "specifications/authoring-and-authority/**/*.md",
-          "specifications/execution-and-recovery/**/*.md",
+          "specifications/authoring-and-authority/capability-and-content-boundary.md",
+          "specifications/authoring-and-authority/source-authority-and-derivation.md",
         ],
         symbol: ["h2", "h3"],
       },
