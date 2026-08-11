@@ -395,7 +395,12 @@ export const checkExampleRenovation = (): void => {
     );
 };
 
-/** The construction plan in a deterministic order, prerequisites first. */
+/**
+ * Derive construction order from the prerequisite graph.
+ *
+ * A second numbered sequence can contradict the graph, while this reading
+ * remains deterministic and keeps every prerequisite before its dependants.
+ */
 export const exampleRenovationPhases = (): string[] =>
   designLineagePhaseOrder(EXAMPLE_RENOVATION);
 
@@ -425,7 +430,13 @@ export const exampleRenovationElementsAt = (phase: string | null): string[] =>
     new ExampleBuilding().design().elements,
   ).map((element) => element.id);
 
-/** How the two finish schemes differ, over the identities they both keep. */
+/**
+ * Compare alternatives over the identities both schemes retain.
+ *
+ * Reading their changes from one lineage avoids copying the building once per
+ * scheme and preserves the common subjects that make the comparison
+ * meaningful.
+ */
 export const exampleRenovationAlternatives = (): IAutoMovieDesignComparison =>
   designLineageCompare(EXAMPLE_RENOVATION, "warm-oak", "cool-stone");
 
