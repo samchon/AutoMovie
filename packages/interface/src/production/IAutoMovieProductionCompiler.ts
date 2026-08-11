@@ -844,6 +844,28 @@ export type IAutoMovieCaptionReadabilityOutcome =
        */
       profile: string;
       /**
+       * Requested segmentation algorithm and version used for measurement.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Binds the evaluated result to the selected segmentation identity.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the measurement algorithm and revision explicit in the report.
+       */
+      segmentation: {
+        /**
+         * Requested algorithm identity.
+         *
+         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Carries the production-selected segmentation algorithm.
+         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Identifies the algorithm that produced grapheme measurements.
+         */
+        algorithm: string;
+        /**
+         * Requested algorithm or segmentation-data revision.
+         *
+         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Carries the production-selected segmentation revision.
+         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Binds measurements to one algorithm revision.
+         */
+        version: string;
+      };
+      /**
        * Whether every profile-declared boundary passed.
        *
        * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the aggregate result of declared comparisons.
@@ -873,12 +895,36 @@ export type IAutoMovieCaptionReadabilityOutcome =
        */
       status: "not-run";
       /**
+       * Requested segmentation identity, or null when no profile was declared.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the exact unsupported production choice without substituting a fallback.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Preserves requested algorithm and revision on non-evaluation.
+       */
+      segmentation: {
+        /**
+         * Requested algorithm identity.
+         *
+         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the unsupported production-selected algorithm.
+         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents fallback algorithm inference.
+         */
+        algorithm: string;
+        /**
+         * Requested algorithm or segmentation-data revision.
+         *
+         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the unsupported production-selected revision.
+         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents fallback revision inference.
+         */
+        version: string;
+      } | null;
+      /**
        * Exact reason a verdict was not computed.
        *
        * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Explains profile absence instead of inventing a default.
        * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the non-evaluation cause machine-readable.
        */
-      reason: "caption-readability-profile-not-declared";
+      reason:
+        | "caption-readability-profile-not-declared"
+        | "caption-grapheme-segmentation-unsupported";
     };
 
 /**

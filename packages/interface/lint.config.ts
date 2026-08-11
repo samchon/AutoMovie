@@ -573,6 +573,7 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md",
         "requirements/external-inputs/README.md",
         "requirements/external-inputs/adoption-modes-and-composition.md",
+        "requirements/external-inputs/conversion-receipts-and-determinism.md",
         "requirements/external-inputs/credentials-rights-and-provenance.md",
         "requirements/external-inputs/resource-closure-and-acquisition.md",
         "requirements/external-inputs/source-selection-and-provider-neutrality.md",

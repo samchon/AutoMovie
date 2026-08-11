@@ -69,7 +69,7 @@ export interface IAutoMovieRenderObservation {
 }
 
 /**
- * One observed metric that exceeds the corresponding declared bound.
+ * One observed metric that exceeds its preflight inventory bound.
  *
  * @evidence requirements/rendering/budgets.md#rendering-budget-refusal Names the exact observed metric and boundary involved in a refusal.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries a deterministic comparison result without selecting the budget.
@@ -83,10 +83,10 @@ export interface IAutoMovieRenderObservationBreach {
    */
   metric: AutoMovieRenderMetric;
   /**
-   * Production-declared maximum.
+   * Exact or conservative preflight estimate recorded as `finding.measured`.
    *
-   * @evidence requirements/rendering/budgets.md#rendering-budget-decision Preserves the declared decision used for comparison.
-   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries the planned side of the comparison.
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision Preserves the exact or conservative estimated value used for comparison.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries the preflight inventory bound rather than the production's maximum limit.
    */
   bound: number;
   /**
