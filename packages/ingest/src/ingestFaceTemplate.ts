@@ -20,6 +20,10 @@ import type { Document, Primitive } from "@gltf-transform/core";
  * resting face.
  *
  * @author Samchon
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-deformable-surface Preserves the resting POSITION basis and each named morph delta channel.
+ * @evidenceExclude requirements/asset-authoring/rig-and-state.md#asset-derived-deformation-basis A parsed Document carries no source revision or derivation-lineage receipt.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-skin-morph-facts Emits stable morph names, neutral positions, and topology-matched deltas.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Rejects missing, duplicate, unnamed, or topology-mismatched morph channels.
  */
 export const ingestFaceTemplate = (doc: Document): IAutoMovieFaceTemplate => {
   for (const mesh of doc.getRoot().listMeshes())

@@ -87,6 +87,26 @@ const normalize = (name: string): string =>
  * be identified. The caller then keeps the model as a non-articulated object.
  *
  * @author Samchon
+ * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Normalizes imported rig structure into the shared asset skeleton form.
+ * @evidence requirements/motion/README.md#동작-요구사항 Provides the normalized skeleton basis required by portable humanoid motion.
+ * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Emits the rig representation used by later pose and deformation stages.
+ * @evidence specifications/asset-and-representation/README.md#asset-spec-readme-boundary Implements the imported skeleton and rest-transform subset.
+ * @evidence specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Supplies a normalized humanoid rig to the performance pipeline.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-general-joint-relations Rebuilds explicit parent-local joint relations over mapped source nodes.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Preserves composed source rest transforms under normalized bone identities.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-motion-retargeting Produces the shared humanoid skeleton shape required for later retargeting.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-state-motion-distinction Emits static rest state and no temporal motion samples.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Emits stable rig identity, hierarchy, and parent-local rest transforms.
+ * @evidenceExclude specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-joint-control-invariants It emits bones and rest transforms but no control or driver graph.
+ * @evidenceExclude specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-state-motion-separation The return type is static rig state; temporal state ledgers live downstream.
+ * @evidenceExclude specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-retarget-compatibility Source-target compatibility is checked only after a target rig is selected.
+ * @evidenceExclude specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-derived-deformation-staleness A parsed Document provides no source revision ledger for staleness comparison.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Returns null when no skin or normalized hips root exists.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Maps concrete imported joints onto normalized humanoid roles.
+ * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph No ROM override, control, or driver dependency is derived.
+ * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Adoption receipts and source-target characterization are compiler and engine outputs.
+ * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure No motion retarget operation is executed here.
+ * @evidenceExclude specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-compatibility-fidelity-ceiling Skeleton normalization makes no deformation-fidelity claim.
  */
 export const humanoidSkeleton = (
   doc: Document,

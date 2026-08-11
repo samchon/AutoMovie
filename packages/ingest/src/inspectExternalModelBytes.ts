@@ -1,12 +1,36 @@
-import { AutoMovieHumanoidBone } from "@automovie/interface";
+import {
+  AutoMovieHumanoidBone,
+  IAutoMovieClip,
+  IAutoMovieTrack,
+} from "@automovie/interface";
 
-/** One external URI whose exact resident bytes participate in model ingest. */
+/**
+ * One external URI whose exact resident bytes participate in model ingest.
+ *
+ * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Declares every glTF sidecar needed to interpret the selected bytes.
+ * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Emits the URI, role, and declared length of each dependency.
+ */
 export interface IAutoMovieExternalModelResource {
-  /** URI as declared by glTF. */
+  /**
+   * URI as declared by glTF.
+   *
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-location-boundary Keeps the declared locator visible for compiler-owned resolution.
+   * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-locator-redirect-fence Resolution remains outside the inspector's provider-neutral boundary.
+   */
   uri: string;
-  /** Resource role. */
+  /**
+   * Resource role.
+   *
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Distinguishes buffer and image dependency obligations.
+   * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Preserves the media-specific dependency role.
+   */
   kind: "buffer" | "image";
-  /** Exact declared byte length for buffers; images carry no glTF length. */
+  /**
+   * Exact declared byte length for buffers; images carry no glTF length.
+   *
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Retains the glTF buffer length needed for closure validation.
+   * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Carries the declared bound beside the dependency identity.
+   */
   byteLength: number | null;
 }
 
@@ -17,37 +41,132 @@ export interface IAutoMovieExternalModelResource {
  * exact resident bytes and must reject malformed glTF/GLB/VRM before source
  * materialization. Hosts still use their native loader to construct the final
  * render mesh from the same content-addressed asset.
+ *
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Exposes validated glTF or GLB facts without accepting filename claims alone.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Returns the bounded scene, resource, rig, and animation inventory.
  */
 export interface IAutoMovieExternalModelInspection {
-  /** Fixed normalization profile applied to these facts. */
+  /**
+   * Fixed normalization profile applied to these facts.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families Uses an explicit versioned family profile rather than a guessed decoder.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-extensible-media-profile Makes profile extension additive and named.
+   */
   profile: AutoMovieExternalModelIngestProfile;
-  /** Parsed container family. */
+  /**
+   * Parsed container family.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Distinguishes JSON glTF, GLB, and VRM facts.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Reports the verified container family.
+   */
   format: "gltf" | "glb" | "vrm";
-  /** GlTF asset version. */
+  /**
+   * GlTF asset version.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Rejects unsupported glTF versions at the family boundary.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Fixes the accepted glTF interpretation version.
+   */
   version: "2.0";
-  /** Declared scene graph inventory. */
+  /**
+   * Declared scene graph inventory.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Inventories nodes, meshes, skins, and animations from resident bytes.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Exposes bounded element counts for adoption preview.
+   */
   counts: {
+    /** Declared node count. */
     nodes: number;
+    /** Declared mesh count. */
     meshes: number;
+    /** Declared skin count. */
     skins: number;
+    /** Declared animation count. */
     animations: number;
   };
-  /** Unique extension identities in code-unit order. */
+  /**
+   * Unique extension identities in code-unit order.
+   *
+   * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Makes declared feature identities available for support decisions.
+   * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix Preserves a deterministic extension inventory.
+   */
   extensions: string[];
-  /** Unique non-data external buffer/image dependencies in URI order. */
+  /**
+   * Unique non-data external buffer/image dependencies in URI order.
+   *
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Enumerates the exact external closure the compiler must bind.
+   * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Emits dependencies in deterministic URI order.
+   */
   resources: IAutoMovieExternalModelResource[];
-  /** Authoritative normalized humanoid mapping proved by the selected profile. */
+  /**
+   * Authoritative normalized humanoid mapping proved by the selected profile.
+   *
+   * @evidence requirements/asset-authoring/validation.md#asset-rig-validation Exposes only mapped joints that resolve inside the validated rig inventory.
+   * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Reports normalized rig facts after structural checks.
+   */
   humanoidBones: Array<{
+    /** Normalized humanoid role. */
     bone: AutoMovieHumanoidBone;
+    /** Source node index carrying the role. */
     node: number;
+    /** Whether validated skin weights visibly use the joint. */
     weighted: boolean;
   }>;
+  /**
+   * Normalized node-track takes under the explicit motion profile.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Exposes take, target, key-time, value, and interpolation facts.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Separates inspected motion facts from later mapping and adoption decisions.
+   */
+  motion?: IAutoMovieExternalMotionInspection;
 }
 
-/** Supported fixed normalization profiles at the compiler ingest boundary. */
+/**
+ * Animation facts normalized from one exact glTF, GLB, or VRM byte revision.
+ *
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Normalizes selected external performance data into named node tracks.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Inventories take identity, channel targets, time, values, and interpolation.
+ */
+export interface IAutoMovieExternalMotionInspection {
+  /**
+   * Exact path whose container suffix selected the bounded decoder.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Keeps the selected motion source identity visible.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Binds inspected take facts to their source path.
+   */
+  path: string;
+  /**
+   * Resident byte length inspected by the decoder.
+   *
+   * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-original-bytes Records the resident source byte boundary without rewriting it.
+   * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-original-byte-preservation Keeps normalized facts tied to the original byte count.
+   */
+  byteLength: number;
+  /**
+   * Stable node identities available to an explicit source-rig mapping.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Exposes motion targets without assigning semantic bones.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Keeps retarget mapping outside inspection facts.
+   */
+  nodeIds: string[];
+  /**
+   * Source-order takes rewritten as deterministic AutoMovie node tracks.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Preserves take and track order from the selected bytes.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Returns normalized samples for later explicit adoption.
+   */
+  takes: IAutoMovieClip[];
+}
+
+/**
+ * Supported fixed normalization profiles at the compiler ingest boundary.
+ *
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families Adds motion as one explicit, versioned glTF profile.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-extensible-media-profile Keeps format expansion additive and bounded.
+ */
 export type AutoMovieExternalModelIngestProfile =
   | "gltf-static-v1"
   | "gltf-humanoid-v1"
+  | "gltf-motion-v1"
   | "vrm-humanoid-v1";
 
 /**
@@ -57,10 +176,86 @@ export type AutoMovieExternalModelIngestProfile =
  * validates referenced indices and structural profile promises, and returns
  * every sidecar URI the compiler must bind to manifest-owned bytes. It never
  * guesses a profile or repairs malformed input.
+ *
+ * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Provides the bounded external model and motion inspection capability.
+ * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Applies shared external-input validation to resident glTF-family bytes.
+ * @evidence requirements/external-inputs/README.md#external-inputs-scope Reads declared facts without choosing user sources, providers, or networks.
+ * @evidence requirements/external-inputs/README.md#external-inputs-lifecycle Produces inspected facts for a later explicit adoption decision.
+ * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Establishes the external representation facts available to later asset stages.
+ * @evidence specifications/asset-and-representation/README.md#asset-spec-readme-boundary Validates the byte-level geometry, rig, surface-resource, and motion subset.
+ * @evidence specifications/interchange-and-adoption/README.md#interchange와-adoption-시스템-계약 Implements the resident-byte inspection boundary before adoption.
+ * @evidence specifications/interchange-and-adoption/README.md#interchange-system-boundary Receives bytes and a resolver but owns no acquisition or provider authority.
+ * @evidence specifications/interchange-and-adoption/README.md#interchange-adoption-lifecycle Produces the inspection state required before selection and adoption.
+ * @evidence specifications/interchange-and-adoption/README.md#interchange-contract-surfaces Exposes typed facts and explicit failures as the reusable contract surface.
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Checks mesh primitives, POSITION accessors, indices, and payload ranges.
+ * @evidence requirements/asset-authoring/validation.md#asset-rig-validation Checks skin joints, normalized humanoid mapping, and weighted influences.
+ * @evidence requirements/asset-authoring/validation.md#asset-surface-validation Validates image resource presence but does not claim visual material review.
+ * @evidenceExclude requirements/asset-authoring/validation.md#asset-purpose-validation The inspector receives no story role, camera distance, or intended use.
+ * @evidence requirements/asset-authoring/validation.md#asset-representation-bounds-validation Rejects malformed indices, ranges, strides, container chunks, and payload lengths.
+ * @evidence requirements/asset-authoring/validation.md#asset-external-generated-validation Applies the same structural boundary to external bytes regardless of their origin.
+ * @evidence requirements/asset-authoring/validation.md#asset-validation-gap Unsupported or unproved structure fails instead of being presented as verified.
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Humanoid profiles reject missing roots, dangling joints, malformed weights, and invalid mappings.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Invalid skin and humanoid facts fail before a normalized inspection is returned.
+ * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Image URIs are closure dependencies here; raster and video facts are not decoded.
+ * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio The glTF-family inspector accepts no audio container.
+ * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data It does not decode map, survey, point-cloud, or georeferenced spatial datasets.
+ * @evidenceExclude requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata JSON is parsed as glTF structure, not as an instruction-bearing text input.
+ * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Image URIs are closure dependencies here; raster and video facts are not decoded.
+ * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection The glTF-family inspector accepts no audio container.
+ * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-spatial-data-inspection It does not decode map, survey, point-cloud, or georeferenced spatial datasets.
+ * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-text-metadata-inspection JSON is parsed as glTF structure, not as an instruction-bearing text input.
+ * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-archive-bounds Rejects declared ranges outside resident buffer bytes; archive expansion is unsupported.
+ * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-network-dependency Requires caller-resolved bytes and performs no live fetch.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Rejects unknown profiles, versions, paths, interpolation, and target channels.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure Throws before returning an inspection when required structure is unsupported.
+ * @evidenceExclude requirements/external-inputs/unsupported-and-degradation.md#external-user-chosen-degradation Inspection reports no user-approved degraded substitute.
+ * @evidenceExclude requirements/external-inputs/unsupported-and-degradation.md#external-partial-adoption-boundary Selection of a partial element subset occurs after byte inspection.
+ * @evidenceExclude requirements/external-inputs/unsupported-and-degradation.md#external-placeholder-final-boundary No placeholder artifact is emitted by this inspector.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-fidelity-semantic-boundary Reports structural and semantic mapping facts without claiming visual fidelity.
+ * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-support-regression-compatibility Uses explicit versioned profiles so support changes cannot masquerade as the same interpretation.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-content-facts Compares resident payload lengths and accessor values with declared facts.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics Validates graph indices, accessor shapes, animation arity, and humanoid mappings.
+ * @evidenceExclude requirements/external-inputs/validation-and-quarantine.md#external-validation-active-content The supported glTF subset contains no executable script or active document payload.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-adoption-gate A thrown inspection prevents malformed bytes from reaching adoption.
+ * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-result-states Success returns facts and every failure throws a specific diagnostic.
+ * @evidenceExclude requirements/external-inputs/validation-and-quarantine.md#external-validation-quarantine-handling Storage, exposure, removal, and release of quarantined bytes belong to the caller.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-purpose-inputs The function validates structural asset facts but receives no shot-purpose envelope.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Rejects non-finite motion samples, invalid indices, malformed ranges, and inconsistent weights.
+ * @evidenceExclude specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-surface-visual It does not render silhouette, material, UV, or lighting evidence.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-motion-transitions Checks motion key ordering, interpolation, arity, and unit quaternions before playback.
+ * @evidenceExclude specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-current-evidence No cached validation artifact or current-review ledger is stored here.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-status-failures Returns complete facts only on success and field-located errors otherwise.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-compatibility-ceiling Structural success makes no finished-fidelity or runtime-compatibility promise.
+ * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-era-style-inputs No era, style, location, or design language is interpreted from bytes.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Inventories mesh POSITION accessors, nodes, skins, and source units fixed by glTF.
+ * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology No modeling operation or manifold-topology derivation is performed.
+ * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Image dependencies are closed, but material semantics and UV roles are not normalized here.
+ * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-states-substitution No material state, substitution rule, weathering, or damage state is authored.
+ * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-procedural-pattern-inputs The decoder emits no procedural pattern or instance-generation inputs.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure Resolves every declared buffer and image dependency to resident bytes.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Rejects missing meshes for model profiles and malformed resource or rig facts.
+ * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-expanded-resource-budget Enforces declared byte ranges and refuses archives rather than expanding them.
+ * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-live-network-dependency-state The resolver supplies resident bytes; the inspector performs no live network access.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix The closed profile and target-path sets define the supported subset.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-hard-refusal-predicate Structural, resource, profile, and sample violations fail explicitly.
+ * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-explicit-degradation-policy This inspector never chooses or applies a degraded substitute.
+ * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-partial-adoption-closure Partial element selection is a later adoption decision.
+ * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-placeholder-status-fence No placeholder or proxy result is returned.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-appearance-semantics-fence Structural and mapping facts are reported without appearance-quality claims.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-compatibility-migration-gate Explicit profile literals make a changed interpretation distinguishable.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-declared-observed-comparison Compares glTF declarations against exact payloads and decoded accessor values.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-layered-validation Separately checks container, graph, resources, accessors, rig, and motion semantics.
+ * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-active-content-isolation The supported format subset has no executable active-content surface.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-atomic-adoption-gate Returns no partial inspection after any required check fails.
+ * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-validation-result-envelope Uses explicit diagnostics but leaves the shared status envelope to the compiler.
+ * @evidenceExclude specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-quarantine-exposure-removal Quarantine storage and release policy is outside this pure decoder.
  */
 export const inspectAutoMovieExternalModelBytes = (props: {
+  /** Exact project-relative source path. */
   path: string;
+  /** Exact resident container bytes. */
   bytes: Uint8Array;
+  /** Caller-selected fixed interpretation profile. */
   profile: string;
   /** Exact sidecar bytes, resolved inside the compiler-owned asset namespace. */
   resolveResource?: (uri: string) => Uint8Array | null;
@@ -228,7 +423,23 @@ export const inspectAutoMovieExternalModelBytes = (props: {
     images,
     resolveResource: props.resolveResource,
   });
-  if (meshes.length === 0)
+  const motion =
+    props.profile === "gltf-motion-v1"
+      ? inspectExternalMotion({
+          path: props.path,
+          byteLength: props.bytes.byteLength,
+          animations,
+          nodes,
+          accessors,
+          bufferViews,
+          payloads,
+        })
+      : undefined;
+  if (props.profile === "gltf-motion-v1" && motion === undefined)
+    throw new Error(
+      'Profile "gltf-motion-v1" requires at least one animation.',
+    );
+  if (props.profile !== "gltf-motion-v1" && meshes.length === 0)
     throw new Error("External model has no mesh to render or review.");
   const humanoidMapping =
     props.profile === "gltf-humanoid-v1"
@@ -245,7 +456,7 @@ export const inspectAutoMovieExternalModelBytes = (props: {
       'Profile "gltf-humanoid-v1" requires a skin and a normalized hips/pelvis joint.',
     );
   const weightedNodes =
-    props.profile === "gltf-static-v1"
+    props.profile === "gltf-static-v1" || props.profile === "gltf-motion-v1"
       ? new Set<number>()
       : validateHumanoidSkinning({
           nodes,
@@ -286,6 +497,7 @@ export const inspectAutoMovieExternalModelBytes = (props: {
     extensions,
     resources,
     humanoidBones,
+    ...(motion === undefined ? {} : { motion }),
   };
 };
 
@@ -293,8 +505,245 @@ const SUPPORTED_PROFILES: ReadonlySet<string> =
   new Set<AutoMovieExternalModelIngestProfile>([
     "gltf-static-v1",
     "gltf-humanoid-v1",
+    "gltf-motion-v1",
     "vrm-humanoid-v1",
   ]);
+
+const inspectExternalMotion = (props: {
+  path: string;
+  byteLength: number;
+  animations: unknown[];
+  nodes: unknown[];
+  accessors: unknown[];
+  bufferViews: unknown[];
+  payloads: Uint8Array[];
+}): IAutoMovieExternalMotionInspection | undefined => {
+  if (props.animations.length === 0) return undefined;
+  const nodeIds = props.nodes.map((_, index) => `node_${index}`);
+  const takes = props.animations.map((value, animationIndex) => {
+    const animation = object(value, `animations[${animationIndex}]`);
+    const samplers = requiredArray(
+      animation.samplers,
+      `animations[${animationIndex}].samplers`,
+    );
+    const channels = requiredArray(
+      animation.channels,
+      `animations[${animationIndex}].channels`,
+    );
+    if (samplers.length === 0 || channels.length === 0)
+      throw new Error(
+        `animations[${animationIndex}] needs at least one sampler and channel.`,
+      );
+    const targets = new Set<string>();
+    const tracks = channels.map((value, channelIndex): IAutoMovieTrack => {
+      const channelPath = `animations[${animationIndex}].channels[${channelIndex}]`;
+      const channel = object(value, channelPath);
+      integerIndex(
+        channel.sampler,
+        samplers.length,
+        `${channelPath}.sampler`,
+        true,
+      );
+      const target = object(channel.target, `${channelPath}.target`);
+      integerIndex(
+        target.node,
+        props.nodes.length,
+        `${channelPath}.target.node`,
+        true,
+      );
+      if (
+        typeof target.path !== "string" ||
+        MOTION_TARGET_PATHS.has(target.path) === false
+      )
+        throw new Error(
+          `${channelPath}.target.path must be translation, rotation, scale, or weights.`,
+        );
+      const targetKey = `${String(target.node)}\u0000${target.path}`;
+      if (targets.has(targetKey))
+        throw new Error(
+          `${channelPath} duplicates the ${target.path} channel for node ${String(target.node)}.`,
+        );
+      targets.add(targetKey);
+
+      const samplerPath = `animations[${animationIndex}].samplers[${String(channel.sampler)}]`;
+      const sampler = object(samplers[channel.sampler as number], samplerPath);
+      integerIndex(
+        sampler.input,
+        props.accessors.length,
+        `${samplerPath}.input`,
+        true,
+      );
+      integerIndex(
+        sampler.output,
+        props.accessors.length,
+        `${samplerPath}.output`,
+        true,
+      );
+      const interpolation = motionInterpolation(
+        sampler.interpolation,
+        `${samplerPath}.interpolation`,
+      );
+      const times = readMotionAccessor({
+        ...props,
+        accessorIndex: sampler.input as number,
+        expectedType: "SCALAR",
+        path: `${samplerPath}.input`,
+      });
+      const outputType =
+        target.path === "rotation"
+          ? "VEC4"
+          : target.path === "weights"
+            ? "SCALAR"
+            : "VEC3";
+      const values = readMotionAccessor({
+        ...props,
+        accessorIndex: sampler.output as number,
+        expectedType: outputType,
+        path: `${samplerPath}.output`,
+      });
+      validateMotionTimes(times, `${samplerPath}.input`);
+      validateMotionOutput({
+        path: `${samplerPath}.output`,
+        targetPath: target.path as AutoMovieMotionTargetPath,
+        interpolation,
+        keyframes: times.length,
+        values,
+      });
+      return {
+        channel: {
+          kind: "node",
+          node: nodeIds[target.node as number]!,
+          path: target.path as AutoMovieMotionTargetPath,
+        },
+        times,
+        values,
+        interpolation,
+      };
+    });
+    const name = animation.name;
+    if (name !== undefined && typeof name !== "string")
+      throw new Error(`animations[${animationIndex}].name must be a string.`);
+    return {
+      id: `clip_${animationIndex}`,
+      name: name === undefined || name.length === 0 ? null : name,
+      duration: tracks.reduce(
+        (maximum, track) =>
+          Math.max(maximum, track.times[track.times.length - 1]!),
+        0,
+      ),
+      loop: false,
+      tracks,
+    } satisfies IAutoMovieClip;
+  });
+  return { path: props.path, byteLength: props.byteLength, nodeIds, takes };
+};
+
+type AutoMovieMotionTargetPath =
+  | "translation"
+  | "rotation"
+  | "scale"
+  | "weights";
+
+const MOTION_TARGET_PATHS: ReadonlySet<string> =
+  new Set<AutoMovieMotionTargetPath>([
+    "translation",
+    "rotation",
+    "scale",
+    "weights",
+  ]);
+
+const motionInterpolation = (
+  value: unknown,
+  path: string,
+): IAutoMovieTrack["interpolation"] => {
+  if (value === undefined || value === "LINEAR") return "linear";
+  if (value === "STEP") return "step";
+  if (value === "CUBICSPLINE") return "cubicspline";
+  throw new Error(`${path} must be LINEAR, STEP, or CUBICSPLINE.`);
+};
+
+const readMotionAccessor = (props: {
+  accessors: unknown[];
+  bufferViews: unknown[];
+  payloads: Uint8Array[];
+  accessorIndex: number;
+  expectedType: "SCALAR" | "VEC3" | "VEC4";
+  path: string;
+}): number[] => {
+  const accessor = object(
+    props.accessors[props.accessorIndex],
+    `accessors[${props.accessorIndex}]`,
+  );
+  if (
+    accessor.componentType !== 5126 ||
+    accessor.type !== props.expectedType ||
+    accessor.bufferView === undefined ||
+    accessor.sparse !== undefined
+  )
+    throw new Error(
+      `${props.path} must resolve to a non-sparse FLOAT ${props.expectedType} accessor.`,
+    );
+  const width =
+    props.expectedType === "SCALAR" ? 1 : props.expectedType === "VEC3" ? 3 : 4;
+  const values: number[] = [];
+  for (let element = 0; element < (accessor.count as number); ++element)
+    for (let component = 0; component < width; ++component) {
+      const value = readAccessorComponent(
+        props,
+        props.accessorIndex,
+        element,
+        component,
+      );
+      if (Number.isFinite(value) === false)
+        throw new Error(`${props.path} contains a non-finite value.`);
+      values.push(value);
+    }
+  return values;
+};
+
+const validateMotionTimes = (times: number[], path: string): void => {
+  for (let index = 0; index < times.length; ++index)
+    if (times[index]! < 0 || (index > 0 && times[index]! <= times[index - 1]!))
+      throw new Error(
+        `${path} keyframe times must be non-negative and strictly increasing.`,
+      );
+};
+
+const validateMotionOutput = (props: {
+  path: string;
+  targetPath: AutoMovieMotionTargetPath;
+  interpolation: IAutoMovieTrack["interpolation"];
+  keyframes: number;
+  values: number[];
+}): void => {
+  const factor = props.interpolation === "cubicspline" ? 3 : 1;
+  const width =
+    props.targetPath === "rotation"
+      ? 4
+      : props.targetPath === "weights"
+        ? null
+        : 3;
+  const group = props.keyframes * factor;
+  if (
+    group === 0 ||
+    (width === null
+      ? props.values.length === 0 || props.values.length % group !== 0
+      : props.values.length !== group * width)
+  )
+    throw new Error(
+      `${props.path} does not match the ${props.targetPath} keyframe arity.`,
+    );
+  if (props.targetPath !== "rotation") return;
+  for (let frame = 0; frame < props.keyframes; ++frame) {
+    const quaternion =
+      (props.interpolation === "cubicspline" ? frame * 3 + 1 : frame) * 4;
+    const magnitude = Math.hypot(
+      ...props.values.slice(quaternion, quaternion + 4),
+    );
+    if (Math.abs(magnitude - 1) > 1e-4)
+      throw new Error(`${props.path} contains a non-unit rotation keyframe.`);
+  }
+};
 
 const GLB_MAGIC = 0x46546c67;
 const GLB_JSON_CHUNK = 0x4e4f534a;
@@ -350,7 +799,7 @@ const decodeJson = (bytes: Uint8Array): unknown => {
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch (error) {
     throw new Error(
-      `External model JSON is invalid: ${error instanceof Error ? error.message : String(error)}.`,
+      `External model JSON is invalid: ${(error as Error).message}.`,
     );
   }
 };
@@ -434,7 +883,7 @@ const uniqueStrings = (values: string[]): string[] =>
   [...new Set(values)].sort(compareCodeUnits);
 
 const compareCodeUnits = (left: string, right: string): number =>
-  left < right ? -1 : left > right ? 1 : 0;
+  Number(left > right) - Number(left < right);
 
 const fileExtension = (value: string): string => {
   const name = value.slice(value.lastIndexOf("/") + 1);
@@ -504,24 +953,25 @@ const validatePayloadClosure = (props: {
         throw new Error(
           `GLB BIN chunk length ${bytes.byteLength} does not cover buffers[${index}].byteLength ${length} with at most three padding bytes.`,
         );
-    } else if (typeof buffer.uri !== "string") {
-      throw new Error(`buffers[${index}].uri must be a URI string.`);
-    } else if (buffer.uri.startsWith("data:")) {
-      bytes = decodeDataUri(buffer.uri, `buffers[${index}].uri`);
-      if (bytes.byteLength !== length)
-        throw new Error(
-          `buffers[${index}] data URI has ${bytes.byteLength} bytes, not declared byteLength ${length}.`,
-        );
     } else {
-      bytes = props.resolveResource?.(buffer.uri) ?? null;
-      if (bytes === null)
-        throw new Error(
-          `External buffer "${buffer.uri}" has no compiler-resolved resident bytes.`,
-        );
-      if (bytes.byteLength !== length)
-        throw new Error(
-          `External buffer "${buffer.uri}" has ${bytes.byteLength} bytes, not declared byteLength ${length}.`,
-        );
+      const uri = buffer.uri as string;
+      if (uri.startsWith("data:")) {
+        bytes = decodeDataUri(uri, `buffers[${index}].uri`);
+        if (bytes.byteLength !== length)
+          throw new Error(
+            `buffers[${index}] data URI has ${bytes.byteLength} bytes, not declared byteLength ${length}.`,
+          );
+      } else {
+        bytes = props.resolveResource?.(uri) ?? null;
+        if (bytes === null)
+          throw new Error(
+            `External buffer "${uri}" has no compiler-resolved resident bytes.`,
+          );
+        if (bytes.byteLength !== length)
+          throw new Error(
+            `External buffer "${uri}" has ${bytes.byteLength} bytes, not declared byteLength ${length}.`,
+          );
+      }
     }
     return bytes;
   });
@@ -599,7 +1049,7 @@ const decodeDataUri = (uri: string, path: string): Uint8Array => {
     return Uint8Array.from(output);
   } catch (error) {
     throw new Error(
-      `${path} has an invalid data payload: ${error instanceof Error ? error.message : String(error)}.`,
+      `${path} has an invalid data payload: ${(error as Error).message}.`,
     );
   }
 };
