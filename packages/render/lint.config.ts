@@ -107,7 +107,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/delivery-and-accessibility/README.md",
         "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
         "requirements/rendering/README.md",
-        "requirements/rendering/chunks-resume-and-recovery.md",
         "requirements/rendering/frame-schedules-and-sampling.md",
       ]),
     },
@@ -130,7 +129,6 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "requirements/rendering/README.md",
-        "requirements/rendering/passes-channels-and-products.md",
         "requirements/repaint/README.md",
         "requirements/repaint/source-frames-and-reference-locking.md",
       ]),
@@ -233,7 +231,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/rendering/README.md",
         "requirements/rendering/headless-and-platform-determinism.md",
         "requirements/rendering/passes-channels-and-products.md",
-        "requirements/rendering/validation.md",
       ]),
     },
     {
