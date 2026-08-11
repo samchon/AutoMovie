@@ -13,7 +13,6 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMovieCut supports ordered output-track composition: An assembled cut: the {@link IAutoMovieSequence} the ASSEMBLE stage edited, or the contradictions that stopped it.
  * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMovieCut realizes ordered output-track composition: An assembled cut: the {@link IAutoMovieSequence} the ASSEMBLE stage edited, or the contradictions that stopped it.
- *
  * @author Samchon
  */
 export type IAutoMovieCut = IAutoMovieCut.ISuccess | IAutoMovieCut.IFailure;

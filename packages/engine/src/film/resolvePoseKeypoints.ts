@@ -61,7 +61,6 @@ export const DEFAULT_KEYPOINT_BONES: readonly AutoMovieHumanoidBone[] = [
  *
  * @evidence requirements/camera/validation.md#camera-hand-computable-geometry Projects named pose joints through rig, staged-world, and camera transforms into explicit 2D keypoints with depth.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-computable-geometry-results resolvePoseKeypoints realizes independently computable image geometry: Project one posed actor's named joints to 2D screen keypoints (#1168), the exact OpenPose-style conditioning automovie can emit because it already knows every bone's exact 3D world position. Forward kinematics resolves the pose in rig space, the staged scene node's transform lifts each bone into scene-world (the same TRS the renderer composes), and the shot's camera projects it to a normalized `[0, 1]` frame coordinate. A joint behind the camera or outside the frame is still projected (never silently clamped: a clamped point reads as a false edge keypoint) but flagged `inFrame: false`. Deterministic: pure FK + stateless projection.
- *
  * @author Samchon
  */
 export const resolvePoseKeypoints = (props: {

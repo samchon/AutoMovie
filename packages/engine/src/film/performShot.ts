@@ -170,7 +170,6 @@ const orderEvents = (
  *
  * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMoviePerformedShot supports reproducible staging and performance: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
  * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMoviePerformedShot realizes deterministic staging replay and validation: A performed shot: the assembled {@link IAutoMovieShot} plus the dense motion clips the compiler synthesised for it. The clips travel alongside the shot because the shot references them by id, the host registers them wherever its clip store lives.
- *
  * @author Samchon
  */
 export type IAutoMoviePerformedShot =

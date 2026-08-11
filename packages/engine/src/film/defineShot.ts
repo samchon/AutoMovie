@@ -181,13 +181,13 @@ export interface IAutoMovieShotRuntime {
    */
   lightMotions?: readonly IAutoMovieClip[];
   /**
-   * The shot's own object clips and the prop registry they are measured against,
-   * carried onto the compiled shot's `objectMotions`.
+   * The shot's own object clips and the prop registry they are measured
+   * against, carried onto the compiled shot's `objectMotions`.
    *
-   * A building's panel and a prop's leaf are the two things a shot can move that
-   * no verb reaches, and both are one node in the staged graph turned over the
-   * shot's clock. The performance boundary admits the nodes this shot may drive
-   * and bounds a driven joint by the travel its prop declares; see
+   * A building's panel and a prop's leaf are the two things a shot can move
+   * that no verb reaches, and both are one node in the staged graph turned over
+   * the shot's clock. The performance boundary admits the nodes this shot may
+   * drive and bounds a driven joint by the travel its prop declares; see
    * {@link gateAuthoredObjectMotions}.
    *
    * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.objectMotions binds authored object clips to the prop registry used to validate and reproduce them.

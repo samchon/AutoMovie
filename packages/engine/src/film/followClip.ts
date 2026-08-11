@@ -11,7 +11,6 @@ import { sampleClip, sampleClipSequence } from "../resolve/sampleClip";
  *
  * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects Samples the baked follow transform shared by rendering, chained couplings, and beat-end continuity for the attached node.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff bakedTransformAt realizes declared attachment and object handoff: The world transform a baked follow clip writes onto `node` at `t`. A coupled child's world root comes from here (the exact clip {@link performShot} baked through `compileAttach`), so beat-end, per-frame render, and a chained coupling's parent read (#1140) all share the SAME composition (#674). Scale is not baked (rigid couplings never scale), so it stays identity.
- *
  * @author Samchon
  */
 export const bakedTransformAt = (
@@ -98,7 +97,6 @@ const drivingStart = (clip: IAutoMovieClip, node: string): number =>
  *
  * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects followClipOf selects the baked parent transform source needed to continue a chained object coupling for the addressed node.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff followClipOf realizes declared attachment and object handoff: The baked clip that supplies a chained coupling's parent transform for `node`, or `null` when none does. `coupleObjects` already groups these clips by the child they drive. The latest clip to start wins, so a chained coupling composes through the last parent handoff without interpreting its artifact id. Ties go to the later producer entry.
- *
  * @author Samchon
  */
 export const followClipOf = (

@@ -13,7 +13,6 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @evidence requirements/review/annotations-findings-and-verdicts.md#review-observation-interpretation IAutoMovieShotReview makes review judgment actionable: A normalized review verdict: pass the shot through, or hand the correction backlog to the next blocking/performance round.
  * @evidence specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-observation-interpretation IAutoMovieShotReview realizes review observation interpretation: A normalized review verdict: pass the shot through, or hand the correction backlog to the next blocking/performance round.
- *
  * @author Samchon
  */
 export type IAutoMovieShotReview =

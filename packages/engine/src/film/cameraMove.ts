@@ -135,7 +135,6 @@ const FOLLOW_HZ = 4;
  *
  * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject drives required-landmark framing: What a `frame` action points the camera at, resolved by the caller: the subject's base (ground) point, its measured height, and, when the subject has an actor or effective object motion, its animated base over shot time. `at: null` means the subject holds still; a `follow` move on it degenerates to a static framing.
  * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject realizes landmark-based framing: What a `frame` action points the camera at, resolved by the caller: the subject's base (ground) point, its measured height, and, when the subject has an actor or effective object motion, its animated base over shot time. `at: null` means the subject holds still; a `follow` move on it degenerates to a static framing.
- *
  * @author Samchon
  */
 export interface IAutoMovieFramedSubject {
@@ -160,8 +159,8 @@ export interface IAutoMovieFramedSubject {
    *
    * A single figure has no horizontal extent worth solving from: it is taller
    * than it is wide at every shot size, so its framing is the vertical fit and
-   * always has been. A mass is the opposite — two thousand figures on a field are
-   * a hundred meters across and one and a half tall — and framing that from
+   * always has been. A mass is the opposite — two thousand figures on a field
+   * are a hundred meters across and one and a half tall — and framing that from
    * height alone puts the camera where one person would fill the frame and the
    * unit runs off both edges.
    *

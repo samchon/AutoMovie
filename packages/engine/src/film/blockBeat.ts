@@ -33,7 +33,6 @@ const CAMERA_MOVES = new Set<IAutoMovieBlockingCamera["move"]>([
  *
  * @evidence requirements/staging/marks-zones-and-blocking.md#staging-blocking-relations IAutoMovieBlockedBeat makes authored blocking mechanically validatable: A validated blocking: the beat's shot plan, coherent with the script and the staged world, ready to steer the performance stage.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership IAutoMovieBlockedBeat realizes staged spatial-relation validation: A validated blocking: the beat's shot plan, coherent with the script and the staged world, ready to steer the performance stage.
- *
  * @author Samchon
  */
 export type IAutoMovieBlockedBeat =
@@ -64,10 +63,10 @@ export namespace IAutoMovieBlockedBeat {
     blocking: IAutoMovieBlocking;
 
     /**
-     * The validated initial condition from the prior beat, or `null` for the first
-     * beat (or when none was supplied). Surfaced so the performance stage seeds
-     * each actor's start position, facing, articulation, gait phase, velocity,
-     * plants, and mount from where the previous beat actually ended.
+     * The validated initial condition from the prior beat, or `null` for the
+     * first beat (or when none was supplied). Surfaced so the performance stage
+     * seeds each actor's start position, facing, articulation, gait phase,
+     * velocity, plants, and mount from where the previous beat actually ended.
      *
      * @evidence requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity Carries the prior beat's measured placement, facing, motion, plant, and mount state as this beat's explicit opening condition.
      * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff IAutoMovieBlockedBeat.ISuccess.previous preserves the authored state handoff instead of resetting the world at the cut.

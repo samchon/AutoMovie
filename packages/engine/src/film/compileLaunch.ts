@@ -31,12 +31,12 @@ export interface IAutoMovieLaunchResult {
 
   /**
    * The target's recoil, scheduled at the **computed** contact: a synthetic
-   * {@link IAutoMovieReactAction} to fold into the action list, or `null` when the
-   * launch carried no `onHit` (or aimed at a point/group with no single actor to
-   * recoil). Its `start` is the shot-local instant the projectile lands, and its
-   * `from` sits upstream along the arrow's incoming velocity, so the reference
-   * synthesiser recoils the body **along the shot's travel** (an arrow flying
-   * `+x` knocks the target `+x`), lobbed or flat.
+   * {@link IAutoMovieReactAction} to fold into the action list, or `null` when
+   * the launch carried no `onHit` (or aimed at a point/group with no single
+   * actor to recoil). Its `start` is the shot-local instant the projectile
+   * lands, and its `from` sits upstream along the arrow's incoming velocity, so
+   * the reference synthesiser recoils the body **along the shot's travel** (an
+   * arrow flying `+x` knocks the target `+x`), lobbed or flat.
    *
    * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Carries the optional target recoil scheduled at the computed impact time and incoming direction.
    * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output IAutoMovieLaunchResult.react realizes observable world-contact output: The target's recoil, scheduled at the **computed** contact: a synthetic {@link IAutoMovieReactAction} to fold into the action list, or `null` when the launch carried no `onHit` (or aimed at a point/group with no single actor to recoil). Its `start` is the shot-local instant the projectile lands, and its `from` sits upstream along the arrow's incoming velocity, so the reference synthesiser recoils the body **along the shot's travel** (an arrow flying `+x` knocks the target `+x`), lobbed or flat.
@@ -108,7 +108,6 @@ const firstActor = (action: IAutoMovieLaunchAction): string | null =>
  * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Solves and bakes the authored launch while keeping the engine-computed contact time authoritative for downstream reaction.
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-story-performance-state Returns the realized impact event and target reaction on the performance clock beside the projectile motion.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-interaction-choreography-role Realizes action, impact, and reaction as ordered records with stable projectile and target identities and explicit hit consequences.
- *
  * @author Samchon
  */
 export const compileLaunch = (props: {

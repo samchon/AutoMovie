@@ -238,8 +238,8 @@ export interface IAutoMoviePropSupportFace {
    * This carried the footprint's convex hull until #1868, which is why a crate
    * could be reported resting on the middle of an atrium: the hull floors the
    * void, and the gap query then measures the prop against ground that is not
-   * there. A prop affordance's own top is a quad and is still one convex ring; a
-   * support patch is whatever region its rings describe.
+   * there. A prop affordance's own top is a quad and is still one convex ring;
+   * a support patch is whatever region its rings describe.
    *
    * @evidence requirements/interior/furniture-fixtures-and-equipment.md#interior-object-anchor-support IAutoMoviePropSupportFace.polygon bounds the exact world-XZ bearing region used to decide whether the prop stands over its support.
    * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-furniture-fixture-equipment-placement IAutoMoviePropSupportFace.polygon realizes furnishing placement clearance: The face's plan region in world XZ, holes and all. This carried the footprint's convex hull until #1868, which is why a crate could be reported resting on the middle of an atrium: the hull floors the void, and the gap query then measures the prop against ground that is not there. A prop affordance's own top is a quad and is still one convex ring; a support patch is whatever region its rings describe.

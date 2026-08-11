@@ -552,7 +552,6 @@ const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
  *
  * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay Carries the resolved scene or addressed validation result produced from the script and staging plan.
  * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieStagedSet preserves deterministic success and failure outcomes for the same authored staging inputs.
- *
  * @author Samchon
  */
 export type IAutoMovieStagedSet =

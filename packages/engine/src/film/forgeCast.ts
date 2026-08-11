@@ -14,7 +14,6 @@ import { ViolationCollector } from "../validation/violation";
  *
  * @evidence requirements/asset-authoring/validation.md#asset-rig-validation Separates a fully validated node-keyed stand-in set from addressed forge failure before staging can consume any rig.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-motion-transitions IAutoMovieForgedCast realizes rig validation for motion transitions: A forged cast: every stand-in rig validated and keyed by the cast node it embodies, ready for the staged scene's `modelRef ?? node` join.
- *
  * @author Samchon
  */
 export type IAutoMovieForgedCast =

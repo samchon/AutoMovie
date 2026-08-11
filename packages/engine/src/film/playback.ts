@@ -13,7 +13,6 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
  *
  * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMoviePlaybackEntry supports ordered output-track composition: One entry's placement on the output timeline: where it starts globally, how long it plays (its trim, else the whole shot), and the shot-local second its playback begins at.
  * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEntry realizes ordered output-track composition: One entry's placement on the output timeline: where it starts globally, how long it plays (its trim, else the whole shot), and the shot-local second its playback begins at.
- *
  * @author Samchon
  */
 export interface IAutoMoviePlaybackEntry {
@@ -87,7 +86,6 @@ export interface IAutoMoviePlaybackTimeline {
  *
  * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEvent anchors canonical film-clock computation: A shot-local interaction event placed on the sequence output clock.
  * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEvent realizes rational global-timeline evaluation: A shot-local interaction event placed on the sequence output clock.
- *
  * @author Samchon
  */
 export interface IAutoMoviePlaybackEvent extends IAutoMovieInteractionEvent {

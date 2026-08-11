@@ -55,9 +55,9 @@ export interface IAutoMovieObjectMotionGate {
   clips: readonly IAutoMovieClip[];
 
   /**
-   * The object clips the engine baked for this shot (launched flights, `attachTo`
-   * follows, staged mounts). Their ids and the channels they drive are already
-   * spoken for.
+   * The object clips the engine baked for this shot (launched flights,
+   * `attachTo` follows, staged mounts). Their ids and the channels they drive
+   * are already spoken for.
    *
    * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.baked constrains authored object motion: The object clips the engine baked for this shot (launched flights, `attachTo` follows, staged mounts). Their ids and the channels they drive are already spoken for.
    * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.baked realizes declared attachment and object handoff: The object clips the engine baked for this shot (launched flights, `attachTo` follows, staged mounts). Their ids and the channels they drive are already spoken for.

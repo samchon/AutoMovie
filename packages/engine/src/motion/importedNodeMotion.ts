@@ -24,7 +24,6 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
  *
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Uses only an author-selected semantic mapping.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records the selected mapping as an explicit adoption decision instead of inferring it from node names.
- *
  * @author Samchon
  */
 export interface IAutoMovieImportedNodeBoneMapping {
@@ -49,7 +48,6 @@ export interface IAutoMovieImportedNodeBoneMapping {
  *
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Implements the explicitly selected retarget conversion path.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Defines the source-to-native conversion boundary.
- *
  * @author Samchon
  */
 export interface IAutoMovieImportedNodeMotionProps {
@@ -138,7 +136,6 @@ export interface IAutoMovieImportedNodeMotionProps {
  * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-identity-ambiguity-refusal Rejects ambiguous element and channel ownership before any source value is reinterpreted.
  * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-hard-refusal-predicate Produces no fallback motion when the explicit identity, mapping, clock, or representable channel boundary fails.
  * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-layered-validation Applies structural clip and skeleton checks before the semantic node-to-bone and clinical-value lowering checks.
- *
  * @author Samchon
  */
 export const importedNodeClipToAutoMovieMotion = (
