@@ -16,7 +16,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/asset-authoring/README.md",
           "requirements/external-inputs/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -49,7 +49,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "specifications/asset-and-representation/README.md",
           "specifications/interchange-and-adoption/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -84,7 +84,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/external-inputs/README.md",
           "requirements/motion/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -117,7 +117,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "specifications/interchange-and-adoption/README.md",
           "specifications/performance-motion-and-staging/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -150,7 +150,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/external-inputs/README.md",
           "requirements/motion/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -185,7 +185,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "specifications/interchange-and-adoption/README.md",
           "specifications/performance-motion-and-staging/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -223,7 +223,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/asset-authoring/README.md",
           "requirements/motion/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
@@ -261,7 +261,7 @@ const graph: ITtscEvidenceGraphConfig = {
           "specifications/asset-and-representation/README.md",
           "specifications/performance-motion-and-staging/README.md",
         ],
-        symbol: ["h2", "h3"],
+        symbol: ["h1", "h2", "h3"],
       },
     },
     {
