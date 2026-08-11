@@ -45,6 +45,7 @@ import {
 export const test_mcp_production_external_motion = (): void => {
   const fixture = productionFixture();
   try {
+    const project = AutoMovieProductionProject.open(fixture.root);
     const motion = externalMotionFixture();
     const motionPath = "public/motion/imported-cue.gltf";
     const bufferPath = "public/motion/imported-cue.bin";
@@ -121,7 +122,7 @@ export const test_mcp_production_external_motion = (): void => {
 
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const production = JSON.parse(
       fs.readFileSync(productionPath, "utf8"),
@@ -156,7 +157,7 @@ export const test_mcp_production_external_motion = (): void => {
     fs.writeFileSync(shotSourcePath, adoptedShotSource);
 
     const first = new AutoMovieProductionCompiler(
-      AutoMovieProductionProject.open(fixture.root),
+      project,
     ).compile({ scope: "source" });
     const compiledPath = path.join(
       fixture.root,
@@ -361,7 +362,7 @@ export const test_mcp_production_external_motion = (): void => {
     production.externalMotions[0]!.sourceRig.id = "automovie:skeleton:soloist";
     const modelPath = path.join(
       fixture.root,
-      ".automovie/design/models/soloist.json",
+      ".automovie/design/shared/models/soloist.json",
     );
     const modelBytes = fs.readFileSync(modelPath);
     const resizedModel = JSON.parse(modelBytes.toString("utf8")) as {
