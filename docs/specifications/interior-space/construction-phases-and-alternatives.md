@@ -4,12 +4,18 @@
 
 <!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-construction-maintenance-safety Requires installation, maintenance, and temporary safety facts. -->
 <!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-installation-disassembly Requires assembly and removal order. -->
-<!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-construction-tolerance-stack Requires dimensional tolerance stacks. -->
+<!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-construction-tolerance-stack Requires typed contributions, datum, assembly order, combination method and a reproducible stack receipt. -->
 <!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-maintenance-access Requires access and service envelopes. -->
 <!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-temporary-hazard-state Requires temporary hazards to follow phase state. -->
 <!-- @evidence requirements/interior/construction-maintenance-and-safety.md#interior-safety-claim-boundary Requires professional safety analysis to remain distinct from authored checks. -->
 
-Element와 assembly는 install·remove predecessor, fastener·support, access direction, lifting·staging envelope, dimensional tolerance contribution, inspection·replacement interval와 temporary protection·opening·hazard state를 입력으로 가질 수 있다. 시스템은 phase별 present·visible·collidable·supported·accessible 상태, tolerance stack, blocked maintenance volume와 disassembly dependency를 파생한다. Removed support에 매달린 element, 닫힌 access, impossible sequence, 허용오차 초과, unguarded temporary void와 phase에 존재하지 않는 service를 current로 표시하는 행위는 failure다. 이 구조 검증은 공사 안전·구조·소방 전문 승인을 대신하지 않으며 계산하지 않은 안전 성능은 `unknown` 또는 `not-run`이다.
+Element와 assembly는 install·remove predecessor, fastener·support, access direction, lifting·staging envelope, inspection·replacement interval와 temporary protection·opening·hazard state를 입력으로 가질 수 있다. 시스템은 phase별 present·visible·collidable·supported·accessible 상태, blocked maintenance volume와 disassembly dependency를 파생한다.
+
+Tolerance stack 입력은 하나의 datum과 측정 방향, stable assembly order, 각 contribution의 source identity, `material-dimension`·`fabrication`·`installation`·`movement`·`survey-uncertainty` semantic kind, signed value·interval 또는 distribution, unit, correlation과 적용 조건을 가져야 한다. Combination method는 `worst-case`, 명시된 distribution·dependency·confidence를 사용하는 `statistical` 또는 공식과 parameter가 있는 project-declared method 중 하나이며 포함·제외하는 contribution kind와 순서를 고정해야 한다. Numeric comparison tolerance는 resolved residual을 판정하는 별도 threshold이고 authored aesthetic variation은 사용자가 승인한 resolved geometry 입력이므로 어느 것도 물리 stack contribution과 교환하거나 불리한 fit·clearance 결과를 줄이는 값으로 사용할 수 없다.
+
+Stack result receipt는 design·phase·alternative revision, datum, assembly order, ordered typed contributions, unit conversions, combination method와 parameter, correlation assumption, nominal result, lower·upper 또는 distribution result, measured residual, comparison threshold와 joint·fit·clearance·replacement 판정을 결속해야 한다. Contribution, datum, assembly order 또는 combination method가 바뀌면 새 receipt를 만들고 이전 maintenance, quantity, drawing, analysis와 review를 stale로 표시해야 한다.
+
+Removed support에 매달린 element, 닫힌 access, impossible sequence, incompatible unit, datum·assembly order·combination method가 없는 stack, tolerance kind 교환, 허용오차 초과, unguarded temporary void와 phase에 존재하지 않는 service를 current로 표시하는 행위는 failure다. 이 구조 검증은 공사 안전·구조·소방 전문 승인을 대신하지 않으며 계산하지 않은 안전 성능은 `unknown` 또는 `not-run`이다.
 
 ## Existing condition과 survey uncertainty {#interior-space-existing-condition-uncertainty}
 
