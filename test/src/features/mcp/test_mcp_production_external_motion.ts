@@ -156,9 +156,9 @@ export const test_mcp_production_external_motion = (): void => {
     );
     fs.writeFileSync(shotSourcePath, adoptedShotSource);
 
-    const first = new AutoMovieProductionCompiler(
-      project,
-    ).compile({ scope: "source" });
+    const first = new AutoMovieProductionCompiler(project).compile({
+      scope: "source",
+    });
     const compiledPath = path.join(
       fixture.root,
       "generated/fixture-film/shots/opening.json",

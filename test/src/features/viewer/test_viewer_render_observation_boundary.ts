@@ -47,7 +47,11 @@ export const test_viewer_render_observation_boundary = (): void => {
       instanceSlots: null,
     },
   });
-  TestValidator.equals("renderer reset policy is restored", info.autoReset, true);
+  TestValidator.equals(
+    "renderer reset policy is restored",
+    info.autoReset,
+    true,
+  );
   let refused = false;
   try {
     observeAutoMovieRendererFrame(renderer, () => {
