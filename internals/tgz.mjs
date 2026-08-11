@@ -25,6 +25,7 @@ export const PACKAGES = Object.freeze([
   "mcp",
   "cli",
 ]);
+
 /** Where a sandbox keeps the tarballs it installs from. */
 const TARBALL_DIR = ".tarballs";
 
