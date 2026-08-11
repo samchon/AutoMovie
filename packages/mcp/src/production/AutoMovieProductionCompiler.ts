@@ -3340,7 +3340,11 @@ const transpileDeterministicSource = (props: {
 const compileDeterministicSource = <T>(
   props: ICompileDeterministicSourceProps<T>,
 ): ICompileDeterministicSourceResult<T> => {
-  const diagnostics = inspectSource(props.target, props.path, props.source);
+  const diagnostics = inspectDeterministicSource(
+    props.target,
+    props.path,
+    props.source,
+  );
   // Imported project source is inspected and transpiled exactly as the entry
   // is. A determinism rule that applied only to the module a shot happens to
   // live in would be no rule at all once the work moved one import away.
@@ -3363,7 +3367,7 @@ const compileDeterministicSource = <T>(
   );
   for (const module of imported)
     diagnostics.push(
-      ...inspectSource(props.target, module.path, module.source),
+      ...inspectDeterministicSource(props.target, module.path, module.source),
     );
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
@@ -4292,7 +4296,25 @@ const containsTemplateSentinel = (source: string): boolean => {
   return false;
 };
 
-const inspectSource = (
+/**
+ * Everything one deterministic source module is refused for, in one pass.
+ *
+ * A shot module is ordinary TypeScript that the compiler runs in a sandbox with
+ * no clock, no network, no filesystem and no unseeded randomness, and this is
+ * where a module is told it broke one of those rules. Every diagnostic it
+ * returns names the exact construct rather than the rule: the import that
+ * cannot be linked and why, the member whose result depends on a locale, the
+ * global that is not there. A refusal an author cannot act on costs a
+ * compile-and-guess cycle each time it fires.
+ *
+ * Exported because the refusals are part of the authoring contract rather than
+ * an implementation detail of one compile stage, and because a rule nothing can
+ * exercise on its own is a rule nobody can pin.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reports every determinism and linking refusal a production's ordinary TypeScript source is held to.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps source refusal inside the deterministic compiler boundary and names the construct each refusal is about.
+ */
+export const inspectDeterministicSource = (
   target: string,
   sourcePath: string,
   source: string,
@@ -4328,6 +4350,31 @@ const inspectSource = (
       message: `${capability} is unavailable in deterministic shot source. Replace it with design input, an explicit seed, or an AutoMovie engine oracle in ${sourcePath}.`,
     });
   };
+  /**
+   * Refuse one import by name, or say nothing when it links.
+   *
+   * Keyed by the specifier and the reason rather than by the code, so a module
+   * with three unlinkable imports is told about three of them instead of
+   * revealing the next one each time the author corrects the last. Two
+   * different mistakes against one module are two corrections and so two
+   * messages; the same mistake written twice is still one.
+   */
+  const reportUnlinkableImport = (
+    refusal: { specifier: string; reason: string } | null,
+  ): void => {
+    if (refusal === null) return;
+    const key = `source-import-unsupported:${refusal.specifier}:${refusal.reason}`;
+    if (found.has(key)) return;
+    found.add(key);
+    diagnostics.push({
+      code: "source-import-unsupported",
+      category: "error",
+      phase: "source",
+      target,
+      path: sourcePath,
+      message: `Import of "${refusal.specifier}" in ${sourcePath} cannot be linked: ${refusal.reason}.`,
+    });
+  };
   const visit = (node: ts.Node): void => {
     if (
       ts.canHaveModifiers(node) &&
@@ -4338,15 +4385,23 @@ const inspectSource = (
       report("source-capability-forbidden", "async function");
     if (
       ts.isImportDeclaration(node) &&
-      importDeclarationHasRuntimeBinding(node) &&
-      isLinkableImport(node) === false
+      importDeclarationHasRuntimeBinding(node)
     )
-      report("source-import-unsupported", "runtime import");
+      reportUnlinkableImport(unlinkableImportReason(node));
     if (
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword
-    )
-      report("source-import-unsupported", "dynamic import");
+    ) {
+      const argument = node.arguments[0];
+      reportUnlinkableImport({
+        specifier:
+          argument !== undefined && ts.isStringLiteralLike(argument)
+            ? argument.text
+            : node.getText(sourceFile),
+        reason:
+          "a shot module is linked before it runs, so an import that happens during the run has nothing to resolve against",
+      });
+    }
     if (ts.isPropertyAccessExpression(node)) {
       const expression = node.expression.getText(sourceFile);
       const name = node.name.text;
@@ -4415,10 +4470,41 @@ const importDeclarationHasRuntimeBinding = (
  * out a frozen exports object, and binding it as a whole hides which names a
  * module actually depends on from the link graph that has to resolve them.
  */
-const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
+const isLinkableImport = (declaration: ts.ImportDeclaration): boolean =>
+  unlinkableImportReason(declaration) === null;
+
+/**
+ * Why one runtime import cannot be linked, in the author's own terms.
+ *
+ * The refusal used to say only that "runtime import is unavailable", naming the
+ * module it was found in and never the import it refused. In a shot module with
+ * a dozen imports that points at the file and not at the line, and the
+ * deduplication key made it worse: one refusal was emitted per file however
+ * many imports were unlinkable, so correcting the first one revealed the
+ * second. Four different mistakes also arrived under one sentence, and the
+ * advice attached to it -- replace it with design input or a seed -- belongs to
+ * nondeterminism rather than to linking, so the one case it did address was
+ * addressed wrongly.
+ *
+ * {@link isLinkableImport} is this function asked whether it found anything, so
+ * the predicate the compiler enforces and the sentence the author reads cannot
+ * drift apart.
+ *
+ * Returns `null` when the import links, and otherwise the specifier it names
+ * beside the reason, so the caller can key its deduplication on the import
+ * rather than on the file.
+ */
+const unlinkableImportReason = (
+  declaration: ts.ImportDeclaration,
+): { specifier: string; reason: string } | null => {
   if (ts.isStringLiteralLike(declaration.moduleSpecifier) === false)
-    return false;
+    return {
+      specifier: declaration.moduleSpecifier.getText(),
+      reason:
+        "its module specifier is computed rather than written, so nothing can resolve it before the shot runs",
+    };
   const specifier = declaration.moduleSpecifier.text;
+  const named = { specifier };
   const clause = declaration.importClause;
   if (
     clause === undefined ||
@@ -4427,17 +4513,38 @@ const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
     clause.namedBindings === undefined ||
     ts.isNamedImports(clause.namedBindings) === false
   )
-    return false;
+    return {
+      ...named,
+      reason:
+        "a default, namespace, or whole-module binding hides which names the link graph has to resolve. Import the exact names instead",
+    };
   const runtime = clause.namedBindings.elements.filter(
     (element) => element.isTypeOnly === false,
   );
-  if (runtime.length === 0) return false;
-  if (isProjectSourceSpecifier(specifier)) return true;
+  if (runtime.length === 0)
+    return {
+      ...named,
+      reason:
+        "it binds no runtime name, so there is nothing for the sandbox to link",
+    };
+  if (isProjectSourceSpecifier(specifier)) return null;
   const permitted = AUTOMOVIE_SANDBOX_MODULE_EXPORTS.get(specifier);
-  if (permitted === undefined) return false;
-  return runtime.every((element) =>
-    permitted.has(element.propertyName?.text ?? element.name.text),
-  );
+  if (permitted === undefined)
+    return {
+      ...named,
+      reason:
+        "a shot module may link the AutoMovie engine surface and project-relative source, and nothing else",
+    };
+  const missing = runtime
+    .map((element) => element.propertyName?.text ?? element.name.text)
+    .filter((name) => permitted.has(name) === false);
+  if (missing.length === 0) return null;
+  return {
+    ...named,
+    reason: `the sandbox stand-in for that module provides no ${missing
+      .map((name) => `"${name}"`)
+      .join(", ")}`,
+  };
 };
 
 const LOCALE_SENSITIVE_SOURCE_MEMBERS = new Set([
