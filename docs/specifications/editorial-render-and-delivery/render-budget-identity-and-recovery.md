@@ -18,6 +18,12 @@ Instancing, procedural population, particles-like effects, sequences와 archives
 
 Unknown 또는 unbounded required cost, overflow, declared limit 초과와 profile 밖 degradation은 실행 전 거절한다. Actual usage가 bound를 넘으면 safe checkpoint에서 중단하고 completed atomic chunks와 measurements를 보존하며 frame drop, nondeterministic culling, downscale 또는 pass skip을 적용하지 않는다. 사용자가 명시적으로 다른 profile을 선택한 rerun은 새 request이지 원 budget의 성공이 아니다.
 
+### Exact raster admission bound {#spec-render-raster-admission-bound}
+
+<!-- @evidence requirements/rendering/budgets.md#rendering-frame-total-budget 한 frame의 exact raster peak를 전체 film 비용과 분리해 제한한다. -->
+
+Raster admission은 declared width와 height의 exact pixel product를 overflow 없이 계산하고 selected production limit과 비교한다. Limit과 같은 값은 허용하며 초과, non-finite 또는 정수로 materialize할 수 없는 raster는 capture와 review 전에 거절한다. 이 gate는 encoding, visual review 또는 전체 render validation을 수행했다고 주장하지 않는다.
+
 ### Frame identity와 content addressing {#spec-render-frame-identity}
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-identity-content-addressing Frame을 결정하는 input closure를 정밀화한다. -->
 <!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Canonical fingerprint를 정밀화한다. -->

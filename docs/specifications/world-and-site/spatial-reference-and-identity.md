@@ -14,6 +14,12 @@
 
 입력은 축 순서, handedness, 수직축과 위쪽 방향, 수평·수직 거리 단위, 각도 단위, 원점 해석과 북쪽 방향을 명시한다. 해석에 필요한 항목이 없고 출처만으로 유일하게 결정할 수 없으면 시스템은 좌표를 추측하지 않고 미해결 입력으로 보류하며, 사용자가 선택한 해석을 새로운 provenance가 있는 결정으로 기록한다.
 
+### Deterministic coordinate magnitude admission {#world-site-coordinate-magnitude-admission}
+
+<!-- @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound deterministic runtime의 coordinate magnitude bound와 초과 거절을 요구한다. -->
+
+Coordinate admission은 normalized local·world position, extent와 derived endpoint가 finite이고 declared inclusive magnitude bound 안에 있는지 확인한다. 초과한 coordinate는 clamp, wrap 또는 silent origin shift로 통과시키지 않고 exact field, observed magnitude와 supported bound를 진단한다. 이 수치 gate는 CRS, datum 또는 source transform authority를 대신 판정하지 않는다.
+
 ### CRS, datum과 epoch {#world-site-crs-datum-epoch}
 
 <!-- @evidence requirements/map/scope-and-coordinates.md#map-coordinate-reference-system Requires named projected, geographic or local coordinate interpretation. -->

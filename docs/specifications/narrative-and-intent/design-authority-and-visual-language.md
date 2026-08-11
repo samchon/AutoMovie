@@ -10,6 +10,12 @@
 
 입력은 stable design identity, revision, author 또는 approver, 상태, 적용 scope와 story requirement이고 출력은 owning source와 authority가 명시된 current design snapshot이다. Reference, mood board, chat, derived drawing, asset, render와 review는 입력 또는 evidence이며 명시적 design decision 없이 정본을 바꾸지 않는다.
 
+### Tracked design graph ownership {#narrative-intent-design-graph-ownership}
+
+<!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership tracked source가 소유하는 production design graph와 derived evidence를 분리한다. -->
+
+Canonical design graph는 production, model, world, formation, shot와 acceptance slice를 stable identity로 묶고 각 slice가 읽은 tracked source revision을 드러낸다. 이 구조는 source-owned facts의 closure를 표현하지만 충돌한 author나 approver의 권위를 자체적으로 판정하지 않으며, derived render나 review가 graph를 역으로 변경하게 하지 않는다.
+
 ### Story와 Design 소유권 {#narrative-intent-story-design-ownership}
 
 <!-- @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary screenplay requirement와 production design decision의 소유 경계를 정한다. -->

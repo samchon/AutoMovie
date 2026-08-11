@@ -47,6 +47,14 @@ Slot identity는 stable index 또는 explicit stable key이고 slot state는 loc
 
 Dressing은 exact slot에서 벗어날 수 있는 lateral·depth·facing tolerance와 seed law로 선언하고, layout integrity를 훼손하는 arbitrary per-member offset이 아니다. Parameter 누락·미사용, insufficient capacity, non-positive scale, non-finite result, duplicate slot, unstable ordering은 layout failure다.
 
+## Static spacing measurement {#performance-formation-static-spacing-measurement}
+
+### Model-derived static clearance {#performance-formation-static-clearance}
+
+<!-- @evidence requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing resolved slot에서 model-derived member bound와 minimum clearance를 비교한다. -->
+
+Static spacing validator는 각 member runtime에서 보수적으로 증명할 수 있는 body bound를 파생하고, 같은 높이 구간을 차지하는 resolved slots 사이의 수평 clearance를 측정한다. 움직이는 envelope, route, terrain 또는 avoidance solve를 이 정적 측정이 소유한다고 주장하지 않으며, 증명할 bound가 없는 representation은 임의 크기로 대체하지 않는다.
+
 ## Terrain support와 route envelope {#performance-formation-terrain-route-envelope}
 
 ### Spacing, overlap와 bounded avoidance {#performance-formation-spacing-overlap-avoidance}

@@ -75,6 +75,18 @@ Validation input은 exact formation design과 revision, prototype and tier ident
 
 결과는 finding마다 formation·unit·slot 또는 chunk identity, sample time, policy, expected·actual, tolerance, source revision과 affected event·shot을 제공한다. Layout·motion·resolution을 서로 다른 snapshot으로 검증하지 않고 하나의 input fingerprint로 묶는다. Review는 wide, representative near·far, reform·contact와 continuity frame에서 group silhouette, interval, motion life와 hero exclusion을 확인한다.
 
+### Resolved layout와 ground validation {#performance-formation-layout-ground-validation}
+
+<!-- @evidence requirements/formations/budgets-and-validation.md#formation-layout-validation resolved slot, prototype bounds와 ground relation을 같은 배치에서 검증한다. -->
+
+Layout validator는 실제 resolved member position, prototype bound와 authored support surface를 같은 snapshot에서 읽는다. Stable slot uniqueness, finite placement, body clearance와 ground contact 가운데 구현한 조건만 보고하며, resolution policy나 motion cue 전체를 검증했다고 확대하지 않는다.
+
+### Authored formation motion validation {#performance-formation-motion-validation}
+
+<!-- @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation group cue와 sparse member exception을 fixed shot clock 전체에서 검증한다. -->
+
+Motion validator는 cue와 sparse slot exception의 identity, 대상 formation·slot, bounded count, shot-local interval과 시작·내부·종료 상태를 검사한다. Layout 또는 resolution validator가 소유한 조건을 대신 통과시키지 않고, 확인한 motion 범위와 실패한 exact field를 반환한다.
+
 ### Determinism, status와 호환성 {#performance-formation-determinism-status-compatibility}
 
 <!-- @evidence requirements/formations/budgets-and-validation.md#formation-determinism 같은 design과 seed에서 slot, variation, motion과 LOD 결과를 재현한다. -->

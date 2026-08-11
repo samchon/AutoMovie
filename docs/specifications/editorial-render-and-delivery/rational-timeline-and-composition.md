@@ -18,6 +18,12 @@ Trim, offset, rate와 reverse는 source range에서 film range로 가는 명시�
 
 결과는 canonical timebase, normalized ordered ranges, transform lineage, exact duration과 grid mapping을 포함한다. Zero denominator, non-finite 또는 비정수 입력, overflow, reversed required range, non-invertible required transform, grid 밖 강제 snap과 모호한 origin은 계획 전에 거절한다. 일부 독립 range만 유효하면 invalid range와 downstream 영향 범위를 함께 반환하는 partial plan으로 남기고, 실패 항목을 삭제한 새 cut으로 자동 승격하지 않는다.
 
+### Integer production frame predicate {#spec-editorial-frame-grid-predicate}
+
+<!-- @evidence requirements/editorial/rational-time-and-ranges.md#editorial-frame-grid declared frame rate가 authored time의 integer frame grid membership을 결정한다. -->
+
+Frame-grid predicate는 authored time과 positive finite frame rate의 product가 machine precision을 고려한 integer frame에 해당하는지만 판정한다. Decimal display, clip transform, mixed timebase conversion 또는 range repair를 이 predicate가 수행했다고 주장하지 않으며 grid 밖 값은 가장 가까운 frame으로 자동 snap하지 않는다.
+
 ### Track, stack과 nested composition {#spec-editorial-track-composition}
 <!-- @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-tracks-stacks-composition Track과 stack 합성의 system 경계를 정밀화한다. -->
 <!-- @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks 순차 track의 점유 불변식을 정밀화한다. -->

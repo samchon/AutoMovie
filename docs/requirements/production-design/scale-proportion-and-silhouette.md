@@ -32,6 +32,10 @@ Dimension, reference actor, bounds, plan·section과 actual render를 통해 sca
 
 Project는 length, angle, area와 volume의 unit, up와 forward, local와 world frame, measurement origin을 선언할 수 있어야 한다. External asset과 reference의 다른 unit 또는 axis는 adopted design과의 변환을 기록해야 한다.
 
+### Coordinate Magnitude Bound {#production-design-coordinate-magnitude-bound}
+
+Project는 deterministic runtime이 안전하게 표현하고 검증할 수 있는 local·world coordinate magnitude bound를 선언해야 한다. Non-finite 값과 bound를 넘는 position, extent 또는 derived endpoint는 임의 clamp나 origin 이동으로 숨기지 않고 affected subject와 허용 범위를 포함해 거절해야 한다.
+
 ### Host와 Clearance 관계 {#production-design-host-clearance}
 
 Door, furniture, vehicle, costume, held prop와 other hosted subject는 host opening, support, reach, travel와 keep-out clearance를 실제 scale에서 비교할 수 있어야 한다. Render에서 겹치지 않는 한 frame만으로 전체 movement range의 fit을 증명하지 않아야 한다.
