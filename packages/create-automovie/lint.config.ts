@@ -20,7 +20,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/agent-authoring/README.md",
             "requirements/product/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -44,7 +44,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/authoring-and-authority/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
