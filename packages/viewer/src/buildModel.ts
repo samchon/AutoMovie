@@ -17,9 +17,9 @@ import {
 /**
  * Expression sink supplied by imported runtimes such as VRM managers.
  *
- * @author Samchon
  * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Accepts only the resolved expression channels owned by the sampled frame.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Implements the runtime expression sink for those resolved channels.
+ * @author Samchon
  */
 export interface IAutoMovieExpressionTarget {
   /**
@@ -34,9 +34,9 @@ export interface IAutoMovieExpressionTarget {
 /**
  * The deterministic state an {@link AutoMoviePlayer} just wrote this frame.
  *
- * @author Samchon
  * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Carries the state sampled at one exact playback boundary.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps time, pose, and expression on the same motion-clock sample.
+ * @author Samchon
  */
 export interface IAutoMovieViewerFrame {
   /**
@@ -72,9 +72,9 @@ export interface IAutoMovieViewerFrame {
 /**
  * A built model: its `three.js` root object and a lookup of its bones.
  *
- * @author Samchon
  * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
+ * @author Samchon
  */
 export interface IAutoMovieModelObject {
   /**
@@ -160,11 +160,11 @@ export const applyTransform = (
  * binding's color space, UV transform and sampler onto whatever it is given,
  * and two slots sharing one object would fight over one repeat.
  *
- * @author Samchon
  * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Keeps compiled model identity distinct from viewer-owned runtime objects.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
+ * @author Samchon
  */
 export const buildModel = (
   model: IAutoMovieModel,

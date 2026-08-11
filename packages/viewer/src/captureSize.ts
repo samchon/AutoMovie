@@ -12,9 +12,9 @@
  * dimension is ignored, so interactive viewing (no capture dimensions) keeps
  * the responsive CSS size.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Binds this surface to the requested product dimensions.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements those dimensions as part of the render-product identity.
+ * @author Samchon
  */
 export const applyCaptureCanvasSize = (
   canvas: HTMLCanvasElement,

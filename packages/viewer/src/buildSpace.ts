@@ -45,9 +45,9 @@ const SPACE_COLOR = 0.62;
  * `validateSpace`, but a hand-built space may still carry one) encloses no area
  * and contributes no mesh rather than an invalid geometry.
  *
- * @author Samchon
  * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this space surface from the resolved scene state only.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging space to viewer geometry.
+ * @author Samchon
  */
 export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {
   const group = new THREE.Group();

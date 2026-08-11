@@ -36,9 +36,9 @@ import {
  * that were never indexed for it emits `NaN` positions a renderer draws as
  * nothing at all — a silent empty pond in place of a named refusal.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier Derives the declared bounded fluid tier's drawable surface and flow field.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Projects one solved shallow-water state without a second renderer-side solve.
+ * @author Samchon
  */
 export const fluidSurfaceGeometry = (props: {
   domain: IAutoMovieFluidDomain;

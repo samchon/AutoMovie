@@ -21,7 +21,6 @@ export type ForgeHeadDelta = [number, number, number, number];
  * The two are NOT negatives of each other: "wider nose" and "narrower nose" are
  * separately authored shapes, so each direction carries its own deltas.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -32,6 +31,7 @@ export type ForgeHeadDelta = [number, number, number, number];
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Provides the morph deformation mode only; no skeleton, skinning, retargeting, or hidden fidelity is introduced.
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
  */
 export interface IForgeHeadMorph {
   /**
@@ -82,7 +82,6 @@ export interface IForgeHeadMorph {
  * same additive model MakeHuman's `.target` system uses, kept independent of
  * any geometry source so it can be unit-tested in isolation.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects non-integer, negative, and out-of-range morph vertex indices before they can poison the output geometry.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Checks each sparse morph index against the current base vertex count and reports the observed invalid target.
  * @evidence requirements/asset-authoring/validation.md#asset-rig-validation Validates each sparse morph target against the base topology before applying deformation.
@@ -98,6 +97,7 @@ export interface IForgeHeadMorph {
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Provides the morph deformation mode only; no skeleton, skinning, retargeting, or hidden fidelity is introduced.
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
  */
 export const morphHead = (
   base: number[],

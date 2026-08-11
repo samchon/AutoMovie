@@ -1,7 +1,6 @@
 /**
  * A fitted 2D similarity (rotation + uniform scale + translation).
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -9,6 +8,7 @@
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
  */
 export interface IForgeSimilarity2 {
   /**
@@ -61,7 +61,6 @@ export interface IForgeSimilarity2 {
  * flips image-y up before fitting). Points are flat xyz triples and the arrays
  * must pair up index by index.
  *
- * @author Samchon
  * @throws When the source points are all coincident (no scale is defined)
  * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Rejects a coincident source set because it cannot define a finite similarity transform.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Reports the degenerate source instead of emitting an unusable geometry transform.
@@ -72,6 +71,7 @@ export interface IForgeSimilarity2 {
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Defines an explicit input, result, or operation in a deterministic local geometry derivation that composes with the retained proxy pipeline.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Keeps the inputs, parameters, or results of the bounded geometry derivation explicit for deterministic review and composition.
+ * @author Samchon
  */
 export const fitSimilarity2 = (
   src: number[],

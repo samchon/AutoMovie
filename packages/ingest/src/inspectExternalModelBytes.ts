@@ -8,9 +8,9 @@ import {
 /**
  * One external URI whose exact resident bytes participate in model ingest.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/resource-closure-and-acquisition.md#external-resource-media-dependencies Declares every glTF sidecar needed to interpret the selected bytes.
  * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-media-dependency-extraction Emits the URI, role, and declared length of each dependency.
+ * @author Samchon
  */
 export interface IAutoMovieExternalModelResource {
   /**
@@ -44,9 +44,9 @@ export interface IAutoMovieExternalModelResource {
  * materialization. Hosts still use their native loader to construct the final
  * render mesh from the same content-addressed asset.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Exposes validated glTF or GLB facts without accepting filename claims alone.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Returns the bounded scene, resource, rig, and animation inventory.
+ * @author Samchon
  */
 export interface IAutoMovieExternalModelInspection {
   /**
@@ -136,9 +136,9 @@ export const AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE =
 /**
  * One source-order node whose local rest basis was read from motion bytes.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Preserves the source skeleton identity and rest basis beside its motion tracks.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Exposes node identity, hierarchy, and local rest facts before any retarget decision.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionNodeInspection {
   /**
@@ -181,9 +181,9 @@ export interface IAutoMovieExternalMotionNodeInspection {
 /**
  * Animation facts normalized from one exact glTF, GLB, or VRM byte revision.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Normalizes selected external performance data into named node tracks.
  * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Inventories take identity, channel targets, time, values, and interpolation.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionInspection {
   /**

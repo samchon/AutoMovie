@@ -14,9 +14,9 @@ import type {
  * which the report produced no number remains `unchecked`; absence of a breach
  * never turns an analysis that did not run into agreement.
  *
- * @author Samchon
  * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Distinguishes the report's exact or conservative preflight estimate from the measured scene-graph actual and refuses agreement when a runtime measurement is absent.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Compares the actual draw inventory with the preflight bound without changing the requested tier.
+ * @author Samchon
  */
 export function auditAutoMovieRenderObservation(props: {
   /** The report that cleared the artifact. */

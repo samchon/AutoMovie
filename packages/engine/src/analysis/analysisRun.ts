@@ -272,9 +272,9 @@ export const warnAutoMovieAnalysisTargetKeys = (props: {
  * to hold, so the seal runs the same validator a deserialized run faces and
  * throws on the first violation rather than shipping it.
  *
- * @author Samchon
  * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `sealAutoMovieAnalysisRun` refuses to emit incomplete evidence and binds accepted settings and outcomes to reproducible digests.
  * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The sealing operation hashes settings, canonicalizes the record, computes its digest, and validates the finished run before return.
+ * @author Samchon
  */
 export const sealAutoMovieAnalysisRun = (props: {
   /** Stable run identity. */

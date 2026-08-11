@@ -123,7 +123,6 @@ const MEDIUM_UNITS: Record<
  * boundary, an opening — is resolved here, which is the one place the two
  * records meet and therefore the only place they can be shown to agree.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `validateServiceNetwork` proves that authored runs connect compatible ports, stay in their spaces, declare crossings, avoid clashes, and preserve maintenance access.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `validateServiceNetwork` resolves every system, node, port, segment, sleeve, and architectural reference into deterministic path-addressed violations.
  * @evidence requirements/interior/services-and-environment.md#interior-service-network-validation `validateServiceNetwork` reports unresolved or dangling ports, system, medium, unit, direction and section mismatches, off-port routes, missing sleeves, clashes, and maintenance obstruction at stable paths.
@@ -133,6 +132,7 @@ const MEDIUM_UNITS: Record<
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-interface-boundary `validateServiceNetwork` implements the stable port, compatible medium/unit/direction, route endpoint, built-space crossing, and boundary-penetration subset of the interior interface.
  * @evidence requirements/building-exterior/services-and-envelope-interfaces.md#building-service-interior-interface `validateServiceNetwork` resolves stable service nodes, ports, route endpoints, logical spaces, boundary crossings, and penetrations in the cited built environment.
  * @evidence specifications/building-envelope/services-water-weather-and-site.md#building-envelope-service-input-output The validator implements building-side port, route, space, connectivity, and penetration checks without claiming an exterior map utility network.
+ * @author Samchon
  */
 export const validateServiceNetwork = (props: {
   network: IAutoMovieServiceNetwork;

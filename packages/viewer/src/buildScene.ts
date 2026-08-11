@@ -17,9 +17,9 @@ import { applySceneEnvironment } from "./sceneEnvironment";
  * Result of building a scene: the `three.js` scene, its cameras (first is
  * default), and its lights indexed by id.
  *
- * @author Samchon
  * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this surface from the resolved scene state only.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging state to the viewer scene.
+ * @author Samchon
  */
 export interface IAutoMovieSceneObject {
   /**
@@ -76,9 +76,9 @@ export interface IAutoMovieSceneObject {
  * nodes and lights, for that reason, and so the whole ground reads as one
  * colour rather than one per surface.
  *
- * @author Samchon
  * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this surface from the resolved scene state only.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging state to the viewer scene.
+ * @author Samchon
  */
 export const buildScene = (
   scene: IAutoMovieScene,

@@ -3,9 +3,9 @@ import * as THREE from "three";
 /**
  * Minimal renderer shape needed to capture one deterministic viewer frame.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ * @author Samchon
  */
 export interface IAutoMovieViewerSnapshotRenderer {
   /**
@@ -31,9 +31,9 @@ export interface IAutoMovieViewerSnapshotRenderer {
 /**
  * Options for reading one rendered viewer frame as an inline image.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ * @author Samchon
  */
 export interface IAutoMovieViewerSnapshotOptions {
   /**
@@ -55,9 +55,9 @@ export interface IAutoMovieViewerSnapshotOptions {
 /**
  * Captured viewer frame.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ * @author Samchon
  */
 export interface IAutoMovieViewerSnapshot {
   /**
@@ -97,9 +97,9 @@ export interface IAutoMovieViewerSnapshot {
  * workers can inject a Playwright-backed or fake renderer without importing
  * browser globals.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ * @author Samchon
  */
 export const captureViewerSnapshot = (
   renderer: IAutoMovieViewerSnapshotRenderer,

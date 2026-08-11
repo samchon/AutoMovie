@@ -26,9 +26,9 @@ import typia from "typia";
 /**
  * Input for loading one active production from an initialized project.
  *
- * @author Samchon
  * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Keeps the selected project and production as explicit input facts.
  * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Carries the exact input revision boundary into diagnostic inspection.
+ * @author Samchon
  */
 export interface IAutoMovieProjectStateInput {
   /**
@@ -50,9 +50,9 @@ export interface IAutoMovieProjectStateInput {
 /**
  * One reason loaded compiler-owned state cannot be treated as current.
  *
- * @author Samchon
  * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Separates a loader result finding from the project input facts.
  * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Classifies the exact derived-state failure boundary.
+ * @author Samchon
  */
 export interface IAutoMovieProjectStateProblem {
   /**
@@ -93,9 +93,9 @@ export interface IAutoMovieProjectStateProblem {
 /**
  * Compiler identity and freshness attached to one loaded state snapshot.
  *
- * @author Samchon
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-dependency-based-current-status Computes current state from source, dependency, and compiler identities.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-dependency-based-freshness Exposes the dependency-based freshness decision with its evidence.
+ * @author Samchon
  */
 export interface IAutoMovieProjectStateFreshness {
   /**
@@ -139,9 +139,9 @@ export interface IAutoMovieProjectStateFreshness {
 /**
  * Compiler-owned artifacts loaded and typed from digest-verified JSON bytes.
  *
- * @author Samchon
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Keeps incomplete generated evidence visible instead of promoting it to current.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Exposes every available generated component without overstating completeness.
+ * @author Samchon
  */
 export interface IAutoMovieGeneratedProjectState {
   /**
@@ -191,9 +191,9 @@ export interface IAutoMovieGeneratedProjectState {
 /**
  * One transport-free, read-only project-state snapshot for ordinary scripts.
  *
- * @author Samchon
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation Returns observed current and generated evidence without concealing gaps.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation Keeps the available component set observable.
+ * @author Samchon
  */
 export interface IAutoMovieProjectState {
   /**
@@ -244,9 +244,9 @@ export interface IAutoMovieProjectState {
  * Generated state whose ownership, registry, and required contracts are
  * current.
  *
- * @author Samchon
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Narrows only after all required generated evidence is current.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Exposes a non-null state only after the fail-closed gate passes.
+ * @author Samchon
  */
 export interface IAutoMovieCurrentGeneratedProjectState extends IAutoMovieGeneratedProjectState {
   /**
@@ -280,9 +280,9 @@ export interface IAutoMovieCurrentGeneratedProjectState extends IAutoMovieGenera
 /**
  * Project state narrowed by {@link requireCurrentAutoMovieProjectState}.
  *
- * @author Samchon
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Represents only a snapshot that passed the current-state refusal boundary.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-fail-closed-decision-gate Makes the successful evidence gate explicit in the type.
+ * @author Samchon
  */
 export interface IAutoMovieCurrentProjectState extends IAutoMovieProjectState {
   /**

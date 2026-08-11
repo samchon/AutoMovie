@@ -86,7 +86,6 @@ const normalize = (name: string): string =>
  * Returns `null` when there is no skin or no `hips` (the required root) could
  * be identified. The caller then keeps the model as a non-articulated object.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Normalizes imported rig structure into the shared asset skeleton form.
  * @evidence requirements/motion/README.md#동작-요구사항 Provides the normalized skeleton basis required by portable humanoid motion.
  * @evidence specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 Emits the rig representation used by later pose and deformation stages.
@@ -102,6 +101,7 @@ const normalize = (name: string): string =>
  * @evidenceExclude specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-derived-deformation-staleness A parsed Document provides no source revision ledger for staleness comparison.
  * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Returns null when no skin or normalized hips root exists.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Maps concrete imported joints onto normalized humanoid roles.
+ * @author Samchon
  */
 export const humanoidSkeleton = (
   doc: Document,

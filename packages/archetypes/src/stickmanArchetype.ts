@@ -20,7 +20,6 @@ import { numberOf, numberParameter } from "./parameterValues";
  * idea of an upright figure, registered like any other archetype rather than
  * known to the compiler.
  *
- * @author Samchon
  * @evidence requirements/actors/body-scale-and-landmarks.md#actor-proportion-neutral Derives one explicit neutral skeleton and every segment proportion from metric height inputs.
  * @evidence requirements/actors/body-scale-and-landmarks.md#actor-bounds-shot-scale Reports a conservative height-derived radius before the rigged proxy is built.
  * @evidence requirements/actors/body-scale-and-landmarks.md#actor-scale-validation Bounds height, head radius, and limb radius instead of applying a hidden render scale.
@@ -94,6 +93,7 @@ import { numberOf, numberParameter } from "./parameterValues";
  * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state A neutral skeleton is not a pose, gaze, expression, or attention-state solver.
  * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-population-double-variation This archetype builds one requested proxy and does not allocate doubles or population budgets.
  * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-validation-output-compatibility The builder returns geometry, not an actor validation or replacement-compatibility receipt.
+ * @author Samchon
  */
 export const STICKMAN_ARCHETYPE: IAutoMovieModelArchetype = {
   id: "stickman",

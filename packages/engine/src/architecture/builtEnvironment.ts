@@ -722,9 +722,9 @@ export const builtEnvironmentContainsPoint = (
  * a second reading of the same field is how a room and its own camera ended up
  * with two answers about where the camera stood.
  *
- * @author Samchon
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceContainsPoint` answers "Does one logical space's own stated volume contain a point?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceContainsPoint` tests a point only against one logical space's own declared cells or shell.
+ * @author Samchon
  */
 export const builtSpaceContainsPoint = (
   space: IAutoMovieBuiltSpace,
@@ -752,9 +752,9 @@ export const builtSpaceContainsPoint = (
  * outside of. Asking through this rather than through `cells.length` is what
  * keeps a shelled space from reading as unlocated.
  *
- * @author Samchon
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceStatesVolume` answers "Does a logical space bound a volume at all, in either spelling?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceStatesVolume` performs declared-volume test when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @author Samchon
  */
 export const builtSpaceStatesVolume = (space: IAutoMovieBuiltSpace): boolean =>
   space.cells.length !== 0 || space.shell !== undefined;
@@ -767,9 +767,9 @@ export const builtSpaceStatesVolume = (space: IAutoMovieBuiltSpace): boolean =>
  * or the gap between two cells. This answers which of the two it is holding, so
  * the cheap test is taken exactly when it is exact.
  *
- * @author Samchon
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceIsConvex` answers "Is the space's stated volume a single convex region?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceIsConvex` performs space-convexity test when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @author Samchon
  */
 export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
   space.shell === undefined && space.cells.length === 1;
@@ -797,9 +797,9 @@ export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
  * placement rather than after a measurement — and it needs an entry on the
  * sandbox's engine export list before a source module can reach it.
  *
- * @author Samchon
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceFidelity` returns what a logical space's own volume claims to be, folded over its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceFidelity` performs space-fidelity fold when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @author Samchon
  */
 export const builtEnvironmentSpaceFidelity = (
   environment: IAutoMovieBuiltEnvironment,
@@ -826,9 +826,9 @@ export const builtEnvironmentSpaceFidelity = (
  * flats as written; what the flats stand for is
  * {@link builtEnvironmentSpaceFidelity}'s answer, not this one's.
  *
- * @author Samchon
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceShellVolume` produces volume, in cubic metres, enclosed by a closed outward-wound shell. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceShellVolume` performs volume calculation when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @author Samchon
  */
 export const builtSpaceShellVolume = (shell: IAutoMovieSpaceShell): number => {
   let sum = 0;

@@ -21,9 +21,9 @@ export const releaseViewerRenderer = (renderer: THREE.WebGLRenderer): void => {
  * Handle returned by {@link mountViewer}; call `stop()` to end the loop and
  * release the renderer, including any dissolve GPU state the frames created.
  *
- * @author Samchon
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-lifecycle Exposes the mounted renderer and its matching release operation.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Keeps viewer runtime ownership and cleanup explicit.
+ * @author Samchon
  */
 export interface IAutoMovieViewerHandle {
   /**

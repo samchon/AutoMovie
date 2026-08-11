@@ -25,11 +25,11 @@ import {
  * never disposed; they belong to the scene. Restoring twice is safe: the second
  * call is a no-op, so nothing double-disposes.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-state-isolation Restores every temporary pass mutation before another pass or frame can observe it.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements reversible pass-local scene and renderer state.
+ * @author Samchon
  */
 export interface IAutoMovieRenderModeHandle {
   /**
@@ -154,9 +154,9 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  * clamp to black past that range in the bundled capture. Override via a direct
  * call, not the hook.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps this surface explicit about beauty versus structural output.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that distinction as a reversible render-product pass.
+ * @author Samchon
  */
 export const applyRenderMode = (
   scene: THREE.Scene,

@@ -4,7 +4,6 @@ import { clampSignedParameter, clampUnitParameter } from "./parameters";
 /**
  * A self-contained triangle mesh part (flat xyz triples + indices).
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -12,6 +11,7 @@ import { clampSignedParameter, clampUnitParameter } from "./parameters";
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeMeshPart {
   /**
@@ -45,7 +45,6 @@ export interface IForgeMeshPart {
  * The parametric hair controls: pure numbers in `[0, 1]`, so a character's
  * hairstyle rides in a preset document next to its face parameters.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -53,6 +52,7 @@ export interface IForgeMeshPart {
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeHairParameters {
   /**
@@ -127,7 +127,6 @@ export interface IForgeHairParameters {
 /**
  * The neck/shoulder bust controls: preset data like every other parameter.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -135,6 +134,7 @@ export interface IForgeHairParameters {
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeBustParameters {
   /**
@@ -167,7 +167,6 @@ export interface IForgeBustParameters {
 /**
  * The chignon controls: preset data like every other hair parameter.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -175,6 +174,7 @@ export interface IForgeBustParameters {
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeBunParameters {
   /**
@@ -208,7 +208,6 @@ export interface IForgeBunParameters {
  * The parametric cranium controls: signed `[-1, 1]` numbers, `0` the
  * face-derived default, each scaling its axis by ±20%.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -216,6 +215,7 @@ export interface IForgeBunParameters {
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeSkullParameters {
   /**
@@ -336,7 +336,6 @@ const NEUTRAL_SKULL: IForgeSkullParameters = { width: 0, crown: 0, depth: 0 };
  * mannequin-grade simplification, not anatomy: props and hair need a volume,
  * not a skull atlas.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -344,6 +343,7 @@ const NEUTRAL_SKULL: IForgeSkullParameters = { width: 0, crown: 0, depth: 0 };
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export const buildSkullShell = (
   skull: IForgeSkullParameters = NEUTRAL_SKULL,
@@ -395,7 +395,6 @@ export const buildSkullShell = (
  * sections), while a parametric shell stays well-formed across the whole
  * control range.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -403,6 +402,7 @@ export const buildSkullShell = (
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export const buildHairShell = (
   params: IForgeHairParameters,
@@ -504,7 +504,6 @@ export const buildHairShell = (
  * hidden. `size` `0` yields empty parts, so the same preset schema covers
  * bunless styles.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -512,6 +511,7 @@ export const buildHairShell = (
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export const buildHairBun = (
   params: IForgeBunParameters,
@@ -560,7 +560,6 @@ export const buildHairBun = (
  * the jaw overlaps it, no gap at any chin length), flaring into a shoulder slab
  * below. A mannequin-grade base for portraits, not anatomy.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -568,6 +567,7 @@ export const buildHairBun = (
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export const buildBust = (
   params: IForgeBustParameters,

@@ -83,13 +83,13 @@ import {
  * solve, is named at the step it first appeared rather than quietly turning
  * into NaN frames a renderer would draw as nothing at all.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-seek-state Reconstructs the requested absolute step from declared initial state.
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-volume-boundary Advances declared sources, drains, walls, open edges, and retained cell volume in physical volume units.
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-conservation-account Returns retained volume beside cumulative source, drain, and open-boundary outflow for the same solve.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Implements the bounded flux-form surface state and its explicit volume-change account.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-seek-and-checkpoint-state Produces the same bounded state for repeated and out-of-order seeks.
  * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-volume-level `simulateFluidDomain` computes bounded cell depths, retained volume, sources, drains, and open-boundary outflow for the requested deterministic step.
+ * @author Samchon
  */
 export const simulateFluidDomain = (
   domain: IAutoMovieFluidDomain,
@@ -291,9 +291,9 @@ export const simulateFluidDomain = (
  * fps read the same integrated state whenever they land inside the same step,
  * instead of each integrating a different number of times.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-seek-state Maps an arbitrary shot second to the declared absolute fluid step.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-seek-and-checkpoint-state Returns the repeatable state at the snapped seek boundary.
+ * @author Samchon
  */
 export const sampleFluidDomain = (
   domain: IAutoMovieFluidDomain,
@@ -319,9 +319,9 @@ export const sampleFluidDomain = (
  * integrated at all, which is why the validator reads it instead of guessing a
  * step on the author's behalf.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-refusal Measures whether the authored explicit solve is numerically admissible.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#world-coupling-invalidation-and-refusal Supplies the stability fact used to refuse an invalid fluid domain.
+ * @author Samchon
  */
 export const fluidCourantNumber = (domain: IAutoMovieFluidDomain): number =>
   domain.solver.fixedStepSeconds *
@@ -339,9 +339,9 @@ export const fluidCourantNumber = (domain: IAutoMovieFluidDomain): number =>
  * water feature before the first solve, and the same numbers ride into the
  * compiler's report so a reviewer sees what the water cost.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Exposes the fluid work contributed across the declared shot horizon.
  * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Computes the domain cost before any fluid step executes.
+ * @author Samchon
  */
 export const fluidDomainBudget = (
   domain: IAutoMovieFluidDomain,
@@ -373,9 +373,9 @@ export const fluidDomainBudget = (
  * or a second machine reproduced the reference state rather than merely a close
  * one.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-platform-determinism Records exact replay equality rather than an approximate visual match.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#numeric-platform-repeatability-class Provides a stable byte-level receipt for repeatability checks.
+ * @author Samchon
  */
 export const fluidStateDigest = (state: IAutoMovieFluidState): string => {
   const values = [

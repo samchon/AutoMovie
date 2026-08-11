@@ -261,7 +261,6 @@ export interface IAutoMovieDaylightRequest {
  * identical requests produce one identical artifact and any change to shading,
  * time or grid produces a different one.
  *
- * @author Samchon
  * @evidence requirements/interior/lighting-daylight-and-optics.md#interior-lighting-analysis-boundary `analyzeAutoMovieDaylight` samples direct sun, isotropic sky, and declared point lights while naming every unsupported or unavailable lighting claim.
  * @evidence specifications/interior-space/lighting-acoustics-and-environment.md#interior-space-lighting-optical-state The solver validates all state, traces obstruction rays over ordered cell centres, derives bounded metrics, and seals one reproducible lighting run.
  * @evidence requirements/lighting/analysis-and-visual-validation.md#lighting-analysis-contract `analyzeAutoMovieDaylight` binds the subject and input revision to identified context, shade, source, workplane, instant, sky model, solver settings, targets, tolerances, and explicit omissions in one sealed run.
@@ -295,6 +294,7 @@ export interface IAutoMovieDaylightRequest {
  * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-environment-sampling-claims The named instant, sky model, settings, and unsupported gaps bound exactly which environmental lighting claims the numeric run can make.
  * @evidence requirements/building-exterior/lighting-and-optics.md#building-exterior-lighting-review `analyzeAutoMovieDaylight` fixes the source revision, environment instant, sun, sky, point luminaires, blocker geometry, workplane, samples, and numeric findings without claiming a rendered review.
  * @evidence specifications/building-envelope/exterior-spaces-circulation-and-optics.md#building-envelope-optical-input-review-condition The solver implements the fixed natural-and-artificial lighting scenario and measured-observation subset while reflection, transmission, camera capture, and approval remain unsupported.
+ * @author Samchon
  */
 export const analyzeAutoMovieDaylight = (props: {
   request: IAutoMovieDaylightRequest;

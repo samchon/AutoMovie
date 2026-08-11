@@ -133,9 +133,9 @@ export const roundAutoMovieDrawingScalar = (value: number): number => {
  * has already established that it has something to measure; the identities are
  * what makes that precondition visible rather than a thrown `undefined`.
  *
- * @author Samchon
  * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Finds drawing and model extents without an argument-spread limit that would fail on ordinary large meshes.
  * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Folds an arbitrary numeric iterable into stable minimum and maximum identities in one pass.
+ * @author Samchon
  */
 export const autoMovieDrawingRange = (
   values: Iterable<number>,
@@ -179,9 +179,9 @@ export const autoMovieDrawingHasCut = (
  * direction — throws rather than silently producing a basis that is not a
  * basis.
  *
- * @author Samchon
  * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Establishes the validated page basis that makes each authored view direction, scale, and reflected-ceiling orientation reproducible.
  * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates view vectors and depths, derives an orthonormal right-up-normal frame, and reflects only the ceiling-plan right axis.
+ * @author Samchon
  */
 export const autoMovieDrawingFrame = (
   view: IAutoMovieDrawingView,

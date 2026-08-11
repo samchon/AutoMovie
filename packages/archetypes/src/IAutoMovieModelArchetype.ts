@@ -7,11 +7,11 @@ import {
 /**
  * One archetype parameter's accepted value kind and inclusive bounds.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Defines the typed, bounded dimensions a recipe may author.
  * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Publishes the value-kind and range constraints the design gate uses before geometry construction.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries the geometry-input schema before a builder consumes it.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Supplies the expected kind and range for each numeric structure finding.
+ * @author Samchon
  */
 export interface IAutoMovieArchetypeParameter {
   /**
@@ -40,11 +40,11 @@ export interface IAutoMovieArchetypeParameter {
 /**
  * One archetype-owned refusal raised while planning a parameter map.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Requires invalid or unsupported geometry inputs to fail explicitly.
  * @evidence requirements/asset-authoring/validation.md#asset-validation-gap Preserves an unsupported parameter decision as a refusal instead of successful output.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Carries a stable refusal before invalid parameters reach geometry output.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-status-failures Carries a machine-readable failure and operator-facing reason for the unsupported input.
+ * @author Samchon
  */
 export interface IAutoMovieArchetypeRefusal {
   /**
@@ -71,9 +71,9 @@ export interface IAutoMovieArchetypeRefusal {
  * meaningful. The design gate owns the diagnostics; the archetype owns only the
  * facts they are derived from.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Declares exactly which dimensions one selected recipe must and may provide.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Resolves discriminated geometry inputs before materialization.
+ * @author Samchon
  */
 export interface IAutoMovieArchetypeParameterPlan {
   /**
@@ -102,9 +102,9 @@ export interface IAutoMovieArchetypeParameterPlan {
 /**
  * Everything a geometry builder needs beyond the recipe's own parameters.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Supplies a registered builder with the context needed to materialize either primitive or mesh parts.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries accepted source facts into the selected geometry builder.
+ * @author Samchon
  */
 export interface IAutoMovieArchetypeBuildInput {
   /**
@@ -140,9 +140,9 @@ export interface IAutoMovieArchetypeBuildInput {
 /**
  * Deterministic geometry one archetype builds for one recipe.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Returns primitive or mesh parts behind one reusable builder result.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Publishes the deterministic geometry facts built from accepted inputs.
+ * @author Samchon
  */
 export interface IAutoMovieArchetypeGeometry {
   /**
@@ -173,7 +173,6 @@ export interface IAutoMovieArchetypeGeometry {
  * must always plan the same keys, measure the same radius, and build the same
  * geometry, on every host and in every process.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Lets a host register builders that return either primitive or mesh representation parts.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Implements the geometry-input boundary as a deterministic parameter contract and builder.
  * @evidenceExclude requirements/asset-authoring/README.md#자산-저작-요구사항 Generic archetype contracts cover model inputs, bounds, rigs, and refusals but not the entire material, pattern, external, generated, style, and validation topic.
@@ -271,6 +270,7 @@ export interface IAutoMovieArchetypeGeometry {
  * @evidenceExclude specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-motion-transitions Archetype planning is static and does not validate motion or representation transitions.
  * @evidenceExclude specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-current-evidence No validation receipt, frame reference, or prior approved result is stored here.
  * @evidenceExclude specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-compatibility-ceiling Capability declarations are inputs to compatibility review, not the review output or approval.
+ * @author Samchon
  */
 export interface IAutoMovieModelArchetype {
   /**

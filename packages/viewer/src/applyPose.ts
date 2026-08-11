@@ -32,9 +32,9 @@ import { IAutoMovieModelObject, applyTransform } from "./buildModel";
  * MEANT to map, so a typo in the bone map is distinguishable from an
  * intentional gap instead of both silently not articulating.
  *
- * @author Samchon
  * @evidence requirements/motion/root-motion-and-trajectories.md#motion-root-authority-mode Preserves the resolved pose root as this surface's transform authority.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Implements the package-independent root-trajectory authority boundary.
+ * @author Samchon
  */
 export const applyPose = (
   target: IAutoMovieModelObject,

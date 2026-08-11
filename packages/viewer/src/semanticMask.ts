@@ -15,9 +15,9 @@ import {
 /**
  * A reversible semantic-mask override, restored exactly like a render mode.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export interface IAutoMovieSemanticMaskHandle {
   /**
@@ -64,9 +64,9 @@ export interface IAutoMovieSemanticMaskHandle {
 /**
  * A built scene and the palette its structural mask pass must paint it with.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export interface IAutoMovieSemanticMaskBinding {
   /**
@@ -101,9 +101,9 @@ const SCENE_MASK_KEY = "automovieSemanticMask";
  * index ramp, which is what an asset turntable and any host without a compiled
  * design draw.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export const attachAutoMovieSemanticMask = (
   scene: THREE.Scene,
@@ -128,9 +128,9 @@ export const autoMovieSemanticMaskOf = (
 /**
  * How completely one palette and one built scene account for each other.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export interface IAutoMovieSemanticMaskCoverage {
   /**
@@ -179,9 +179,9 @@ export interface IAutoMovieSemanticMaskCoverage {
  * coverage once at build time and reports it beside every frame, instead of
  * opening a pass boundary it would then have to close.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export const auditAutoMovieSemanticMaskScene = (props: {
   /** The built scene. */
@@ -234,9 +234,9 @@ const INSTANCE_SET_PREFIX = "instance-set:";
  * exactly as it marches in the film, and the mask describes the frame that will
  * be delivered rather than a rest pose nobody sees.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Makes this public surface part of the stable identity-mask channel.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements that channel as a structural render product.
+ * @author Samchon
  */
 export const applyAutoMovieSemanticMask = (props: {
   /** The built scene. */

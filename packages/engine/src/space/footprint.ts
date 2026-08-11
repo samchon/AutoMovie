@@ -64,9 +64,9 @@ export type AutoMovieRingPlacement = "outside" | "boundary" | "inside";
  * per foot per frame, and mapping `(x, z)` to `(x, y)` inside that loop would
  * build one array per containment test.
  *
- * @author Samchon
  * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `IAutoMovieFootprintRing` represents one closed ring of a footprint, with the plan projection and the signed area the queries read. This ensures membership is judged from a subject footprint rather than a point.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMovieFootprintRing` structures one closed ring of a footprint, with the plan projection and the signed area the queries read for the system that resolves host-relative support geometry and whole-footprint zone membership.
+ * @author Samchon
  */
 export interface IAutoMovieFootprintRing {
   /**
@@ -98,9 +98,9 @@ export interface IAutoMovieFootprintRing {
 /**
  * A surface's plan region: the outer ring, and the holes cut out of it.
  *
- * @author Samchon
  * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `IAutoMovieFootprint` represents a surface's plan region: the outer ring, and the holes cut out of it. This ensures membership is judged from a subject footprint rather than a point.
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMovieFootprint` structures a surface's plan region: the outer ring, and the holes cut out of it for the system that resolves host-relative support geometry and whole-footprint zone membership.
+ * @author Samchon
  */
 export interface IAutoMovieFootprint {
   /**

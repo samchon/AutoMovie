@@ -35,9 +35,9 @@ import * as THREE from "three";
  * must restore staged bases itself (the engine's `resolveFrame` falls back to
  * rest instead: it owns node rests; this helper does not).
  *
- * @author Samchon
  * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-state-transition Applies this surface only to the resolved object-motion channels.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Materializes those channels at the object-interaction boundary.
+ * @author Samchon
  */
 export const applyObjectMotion = (
   clip: IAutoMovieClip,

@@ -60,9 +60,9 @@ export type AutoMovieDrawingScheduleSubject = "opening" | "connector";
  * reports `unmeasured` with `null` dimensions and the schedule reports the gap;
  * it never prints a zero.
  *
- * @author Samchon
  * @evidence requirements/interior/deliverables-and-quantities.md#interior-schedules Groups the selected design occurrences by type and measured size into stable marks whose counts, samples, and gaps reconcile with the model.
  * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates the environment, derives profile or fill dimensions, canonicalizes rows and omission totals, declares unsupported performance, and hashes the schedule.
+ * @author Samchon
  */
 export const deriveAutoMovieDrawingSchedule = (props: {
   /** Design the schedule is derived from. */

@@ -16,9 +16,9 @@ import { STICKMAN_ARCHETYPE } from "./stickmanArchetype";
  * owns. A pre-registered lookup beside this list would be a second spelling of
  * the same catalogue that none of them can use without giving that seam up.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Supplies the package's primitive blocking builders while hosts remain free to add mesh builders.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Exposes the deterministic builders that consume explicit shape and scale facts.
+ * @author Samchon
  */
 export const AUTOMOVIE_PRIMITIVE_ARCHETYPES: readonly IAutoMovieModelArchetype[] =
   [STICKMAN_ARCHETYPE, PRIMITIVE_PROP_ARCHETYPE];

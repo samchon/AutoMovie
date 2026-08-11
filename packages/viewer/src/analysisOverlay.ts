@@ -4,9 +4,9 @@ import * as THREE from "three";
 /**
  * A viewer-owned field overlay bound to one analysis run.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Displays a declared scalar analysis channel through a deterministic range and color mapping.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+ * @author Samchon
  */
 export interface IAutoMovieAnalysisOverlayObject {
   /**
@@ -81,9 +81,9 @@ export const autoMovieAnalysisRampColor = (
  * are all equal is drawn at the middle of the ramp rather than dividing by a
  * zero span.
  *
- * @author Samchon
  * @evidence requirements/rendering/passes-channels-and-products.md#rendering-arbitrary-channels Materializes declared scalar samples, range, and positions as an analysis-channel overlay.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the same surface inside the declared render-product boundary.
+ * @author Samchon
  */
 export const buildAnalysisOverlayObject = (props: {
   /** Run to draw. */

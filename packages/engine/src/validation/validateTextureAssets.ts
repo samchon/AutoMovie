@@ -179,7 +179,6 @@ export interface IAutoMovieTextureClosureInput {
  * be a second copy of a rule with an owner. What this adds is the reason that
  * gate applies at all: an image nobody registered is an image nobody digests.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/validation.md#asset-surface-validation Verifies every sampled texture is registered with matching image facts and intent.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Rejects missing, unused, mismatched, and multiply interpreted surface resources before model output is accepted.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-value-interpretation `validateTextureAssets` keeps sRGB color slots, linear measurement slots, and Radiance environment intent explicit and rejects one image used under contradictory interpretations.
@@ -196,6 +195,7 @@ export interface IAutoMovieTextureClosureInput {
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-model-resource-separation Material records retain independent texture resource identities, and the validator checks those bindings without collapsing image bytes into model identity.
  * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-element-consumer-links The validator derives model-material and scene-environment consumer paths and checks each against its exact ledger authorization.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure The validator closes every sampled texture through ledger ownership, declared use, byte-proven image facts, and compatible interpretation.
+ * @author Samchon
  */
 export const validateTextureAssets = (
   props: IAutoMovieTextureClosureInput,

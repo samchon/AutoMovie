@@ -419,9 +419,9 @@ const dialogueLines = (line: IAutoMovieDialogueLine): string[] => {
  * span captions `null`. A node unreachable from the root is never visited:
  * commit validation owns that rejection, the join is total.
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness Joins each caption and slug to its authored beat identity without creating replacement text.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Exposes the authored text needed to build a frame-aligned selectable cue sidecar.
+ * @author Samchon
  */
 export const beatCaptions = (
   script: IAutoMovieScript,

@@ -7,9 +7,9 @@ import * as THREE from "three";
 /**
  * A viewer-owned planting cluster drawn as two instanced batches.
  *
- * @author Samchon
  * @evidence requirements/map/vegetation-and-ecology.md#map-vegetation-individual-cluster Displays this surface from declared vegetation individuals and clusters.
  * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-vegetation-layer-form-input Materializes those vegetation forms without inferring ecology.
+ * @author Samchon
  */
 export interface IAutoMoviePlantingObject {
   /**
@@ -87,9 +87,9 @@ export interface IAutoMoviePlantingObject {
  * both radii for anything that needs them. A leaf is a unit plane scaled by its
  * per-axis size, which is exactly the prototype the derivation emitted.
  *
- * @author Samchon
  * @evidence requirements/map/vegetation-and-ecology.md#map-vegetation-individual-cluster Displays this surface from declared vegetation individuals and clusters.
  * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-vegetation-layer-form-input Materializes those vegetation forms without inferring ecology.
+ * @author Samchon
  */
 export const buildPlantingObject = (props: {
   plant: IAutoMoviePlantingState;

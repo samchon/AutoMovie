@@ -7,9 +7,9 @@ import * as THREE from "three";
 /**
  * A viewer-owned cloth panel bound to one soft-body domain.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
  * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
+ * @author Samchon
  */
 export interface IAutoMovieSoftBodyObject {
   /**
@@ -70,9 +70,9 @@ export interface IAutoMovieSoftBodyObject {
  * solved one is exactly the silent pass this domain refuses, and a default
  * value here would be the cheapest way to reintroduce it.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
  * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
+ * @author Samchon
  */
 export const buildSoftBodyObject = (props: {
   surface: IAutoMovieSoftBodySurface;

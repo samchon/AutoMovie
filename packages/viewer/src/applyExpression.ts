@@ -171,9 +171,9 @@ const PRESET_CHANNELS: Partial<
  * Imported meshes with `morphTargetDictionary` receive exact or
  * case-insensitive matching names; generated primitive models simply no-op.
  *
- * @author Samchon
  * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Restricts this surface to the expression channels resolved for the frame.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Materializes those channels at the expression and attention boundary.
+ * @author Samchon
  */
 export const applyExpression = (
   target: IAutoMovieModelObject,

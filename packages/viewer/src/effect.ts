@@ -5,9 +5,9 @@ import * as THREE from "three";
 /**
  * Current bounded viewer evidence for one deterministic effect cue.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Displays this surface from the deterministic compiled particle sample.
  * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Materializes the same deterministic spawn interval for the viewer.
+ * @author Samchon
  */
 export interface IAutoMovieEffectViewerStats {
   /**
@@ -43,9 +43,9 @@ export interface IAutoMovieEffectViewerStats {
 /**
  * Built deterministic billboard emitter.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Displays this surface from the deterministic compiled particle sample.
  * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Materializes the same deterministic spawn interval for the viewer.
+ * @author Samchon
  */
 export interface IAutoMovieEffectViewerObject {
   /**

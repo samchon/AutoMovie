@@ -28,9 +28,9 @@ export const AUTOMOVIE_FORMATION_CYCLE_SAMPLES = 32;
 /**
  * Uniform cells shared by every material drawing one unit's cycles.
  *
- * @author Samchon
  * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
  * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCycleUniforms {
   /**
@@ -78,9 +78,9 @@ export interface IAutoMovieFormationCycleUniforms {
  * of the cycle itself: how far one turn of it carries a body, and how long one
  * turn of it lasts when nothing carries the body at all.
  *
- * @author Samchon
  * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
  * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCycleTake {
   /**
@@ -152,9 +152,9 @@ export interface IAutoMovieFormationCycleTake {
  * itself, which is exactly the shape a crowd has: one figure, many phases. What
  * they perform, and how fast, belongs to the unit and changes with its cues.
  *
- * @author Samchon
  * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
  * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCycle {
   /**
@@ -401,9 +401,9 @@ export const formationCycleStride = (
 /**
  * Cycles one unit has turned over, and the take it is performing now.
  *
- * @author Samchon
  * @evidence requirements/formations/reform-and-group-motion.md#formation-turn-speed-response Applies the formation's resolved turn and speed response here.
  * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes that response in the group-motion cycle state.
+ * @author Samchon
  */
 export interface IAutoMovieFormationCadence {
   /**

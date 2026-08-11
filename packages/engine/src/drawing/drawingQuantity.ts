@@ -96,11 +96,11 @@ export const AUTOMOVIE_QUANTITY_CELL_UNION_APPROXIMATION =
  * design cannot yet support is a gap, because a take-off that quietly left out
  * material would read as a building that needs none.
  *
- * @author Samchon
  * @evidence requirements/interior/deliverables-and-quantities.md#interior-quantities-waste Derives each take-off value from resolved source geometry, identifies its contributing owners and unit, and names every unavailable or approximate result.
  * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates the environment, aggregates each canonical subject, rounds totals, records basis and omissions, sorts gaps, and seals the report with a deterministic digest.
  * @evidence requirements/building-exterior/deliverables.md#building-exterior-schedules-quantities `measureAutoMovieQuantities` derives identified area, volume, length, and count results from the same validated building geometry and marks exact, approximate, and unavailable subjects.
  * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-deliverable-quantity-invariant The report implements stable owner contribution, unit, geometric basis, exactness, omission, and digest fields without claiming every assembly or waste quantity.
+ * @author Samchon
  */
 export const measureAutoMovieQuantities = (props: {
   /** Design the quantities are measured from. */

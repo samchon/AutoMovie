@@ -16,9 +16,9 @@ import {
  * Manifest-owned identity of the exact external motion bytes selected by the
  * author.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt The record retains the selected byte identity instead of overwriting the source.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The receipt binds the selected source facts to the adopted take.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionSource {
   /**
@@ -47,9 +47,9 @@ export interface IAutoMovieExternalMotionSource {
 /**
  * Author-selected node-to-humanoid correspondence for one source rig.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The correspondence is supplied explicitly instead of inferred from names.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The selected mapping becomes part of the adoption record.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionBoneMapping {
   /**
@@ -81,9 +81,9 @@ export type AutoMovieExternalMotionAdoptionDecision =
 /**
  * Native use keeps the inspected node tracks and performs no rig inference.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Native use is an explicit choice that preserves source channels.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The native decision is retained as receipt input.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionNativeDecision {
   /**
@@ -121,9 +121,9 @@ export interface IAutoMovieExternalMotionNativeDecision {
  * Retarget use supplies the source rig, semantic mapping, and target identity
  * without guessing any of them inside ingest.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Retargeting proceeds only from the author's explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The decision records mapping, source rig, and target identity.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionRetargetDecision {
   /**
@@ -178,9 +178,9 @@ export interface IAutoMovieExternalMotionRetargetDecision {
  * The compiler still decides whether interpolation and channel completeness can
  * be represented as clinical motion.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The handoff contains only validated explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff preserves the selected mapping and rig identities.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionNativeHandoff {
   /**
@@ -211,9 +211,9 @@ export interface IAutoMovieExternalMotionNativeHandoff {
  * operation. Source conversion and source-target compatibility remain explicit
  * downstream validation boundaries.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override The handoff contains only validated explicit compatibility inputs.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff preserves the selected mapping and rig identities.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionRetargetHandoff {
   /**
@@ -259,9 +259,9 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
  * Non-destructive result connecting one byte-pinned take to native playback or
  * a later engine retarget pass.
  *
- * @author Samchon
  * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt The result preserves byte, take, mode, mapping, and rig choices.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The result is the deterministic adoption receipt passed onward.
+ * @author Samchon
  */
 export interface IAutoMovieExternalMotionAdoption {
   /**

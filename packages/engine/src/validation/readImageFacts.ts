@@ -14,7 +14,6 @@ import { IAutoMovieTextureImageFacts } from "./validateTextureAssets";
  * samples", which is a finding, not an error to swallow: the caller reports it
  * against the material or scene that bound them.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/validation.md#asset-surface-validation `readAutoMovieImageFacts` derives media type, width, and height from image bytes rather than a claimed filename.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures `readAutoMovieImageFacts` leaves unsupported or malformed containers unresolved so resource closure validation can reject the exact asset use.
  * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video `readAutoMovieImageFacts` inspects PNG, JPEG, WebP, and Radiance headers to return the byte-proven image container and raster dimensions; video and richer color or timing facts remain outside this reader.
@@ -23,6 +22,7 @@ import { IAutoMovieTextureImageFacts } from "./validateTextureAssets";
  * @evidence specifications/interchange-and-adoption/validation-and-quarantine.md#interchange-declared-observed-comparison The reader supplies the independent byte-observed facts consumed by the declaration comparison; it does not itself manage quarantine or response metadata.
  * @evidence requirements/asset-authoring/external-assets.md#asset-bounded-decoder `readAutoMovieImageFacts` performs bounded header inspection for four supported image containers and returns no fact for truncated, malformed, or unsupported bytes instead of fully decoding them.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure The reader contributes the bounded byte-signature and raster-extent inspection used to close supported image resources without claiming archive or network acquisition.
+ * @author Samchon
  */
 export const readAutoMovieImageFacts = (
   bytes: Uint8Array | null | undefined,

@@ -7,7 +7,6 @@ import { IAutoMovieModelArchetype } from "./IAutoMovieModelArchetype";
  * and reports the recipe when nothing answers, while a host decides what it
  * registered.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Keeps reusable archetype definitions distinct from the recipe occurrences that reference them.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Provides the shared prototype lookup without storing placement or instance state.
  * @evidenceExclude requirements/asset-authoring/identity-and-instances.md#asset-logical-group The archetype registry indexes definitions; authored group membership belongs to production instances.
@@ -21,6 +20,7 @@ import { IAutoMovieModelArchetype } from "./IAutoMovieModelArchetype";
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives External scene adoption modes are handled before a native archetype is registered.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-selection-output This registry performs exact id lookup, not shot-purpose representation selection.
  * @evidenceExclude specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-alternative-failure-compatibility Replacement compatibility belongs to asset selection, while this registry only rejects blank or duplicate ids.
+ * @author Samchon
  */
 export type AutoMovieModelArchetypeRegistry = ReadonlyMap<
   string,
@@ -34,9 +34,9 @@ export type AutoMovieModelArchetypeRegistry = ReadonlyMap<
  * the map answers one definition per id and nobody can tell which of two
  * builders a recipe reached.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Registers one unambiguous shared definition for recipe occurrences to reference.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Refuses ambiguous prototype registration before an occurrence can bind to it.
+ * @author Samchon
  */
 export const createAutoMovieArchetypeRegistry = (
   archetypes: Iterable<IAutoMovieModelArchetype>,

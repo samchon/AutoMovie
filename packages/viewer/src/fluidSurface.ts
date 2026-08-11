@@ -8,9 +8,9 @@ import * as THREE from "three";
 /**
  * A viewer-owned water surface bound to one fluid domain.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier Displays this surface from the selected compiled fluid tier.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Materializes that tier without introducing a second fluid solve.
+ * @author Samchon
  */
 export interface IAutoMovieFluidSurfaceObject {
   /**
@@ -44,9 +44,9 @@ export interface IAutoMovieFluidSurfaceObject {
 /**
  * A viewer-owned bounded spray for one fluid domain.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier Displays this surface from the selected compiled fluid tier.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Materializes that tier without introducing a second fluid solve.
+ * @author Samchon
  */
 export interface IAutoMovieFluidSprayObject {
   /**
@@ -98,9 +98,9 @@ export interface IAutoMovieFluidSprayObject {
  * bounding sphere is the engine's own extent of the drawn surface, so what a
  * camera culls and what the depth field says are the same statement.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier Displays this surface from the selected compiled fluid tier.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Materializes that tier without introducing a second fluid solve.
+ * @author Samchon
  */
 export const buildFluidSurfaceObject = (props: {
   surface: IAutoMovieFluidSurface;
@@ -188,9 +188,9 @@ export const buildFluidSurfaceObject = (props: {
  * which the structural guide passes hide by design: mist is decoration and must
  * not colour a segmentation mask or read as geometry in a depth pass.
  *
- * @author Samchon
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-surface-flow-tier Displays this surface from the selected compiled fluid tier.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Materializes that tier without introducing a second fluid solve.
+ * @author Samchon
  */
 export const buildFluidSprayObject = (props: {
   sample: IAutoMovieFluidSpraySample;

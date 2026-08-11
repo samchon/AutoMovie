@@ -19,11 +19,11 @@ type BoneMapInput =
  * so {@link AutoMoviePlayer} can drive imported assets through the same path as
  * generated automovie models.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-direct-placement Adapts this already-loaded object by direct placement without decoding it.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-direct-placement-boundary Implements the direct-placement boundary while preserving caller ownership.
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Wraps imported caller state without transferring or overwriting its ownership.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
+ * @author Samchon
  */
 export interface IAutoMovieImportedModelOptions {
   /**
@@ -61,9 +61,9 @@ export interface IAutoMovieImportedModelOptions {
 /**
  * Wrap an imported runtime object as an {@link IAutoMovieModelObject}.
  *
- * @author Samchon
  * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-direct-placement Adapts this already-loaded object by direct placement without decoding it.
  * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-direct-placement-boundary Implements the direct-placement boundary while preserving caller ownership.
+ * @author Samchon
  */
 export const createImportedModelObject = (
   options: IAutoMovieImportedModelOptions,

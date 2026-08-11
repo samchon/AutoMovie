@@ -16,9 +16,9 @@ type AutoMovieNodeTrackPath = "translation" | "rotation" | "scale" | "weights";
 /**
  * The automovie-core payload an imported glTF/GLB resolves to.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/external-assets.md#asset-external-scene-graph-preservation Preserves source nodes and animations as stable project-native identities.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Implements the native external-scene interpretation result.
+ * @author Samchon
  */
 export interface IAutoMovieIngestResult {
   /**
@@ -59,7 +59,6 @@ export interface IAutoMovieIngestResult {
  * (`node_{i}`), deterministic and collision-free even when names repeat. All
  * cross-references (a child's `parent`, a channel's target) use the same key.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/README.md#자산-저작-요구사항 Converts a selected external scene into project-native structural facts.
  * @evidence requirements/external-inputs/README.md#외부-입력-요구사항 Consumes a caller-selected parsed document without acquisition authority.
  * @evidence requirements/motion/README.md#동작-요구사항 Converts embedded glTF animations into general project motion clips.
@@ -79,6 +78,7 @@ export interface IAutoMovieIngestResult {
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Emits source-order key times, values, targets, and interpolation modes.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Preserves the selected glTF scene as a project-native external-adoption result.
  * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-semantic-joint-mapping Keeps skeletal and generic object nodes open to their own motion vocabularies.
+ * @author Samchon
  */
 export const ingestDocument = (doc: Document): IAutoMovieIngestResult => {
   const root = doc.getRoot();

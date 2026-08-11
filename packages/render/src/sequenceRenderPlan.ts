@@ -22,71 +22,71 @@ import {
 /**
  * A shot entry resolved onto the sequence output clock.
  *
- * @author Samchon
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan` preserves the deterministic mapping between output frame identity and film time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieSequenceRenderShotSpan {
   /**
    * Index into `sequence.shots`.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.entry` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.entry` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   entry: number;
 
   /**
    * Shot id played by this entry.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.shot` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.shot` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   shot: string;
 
   /**
    * Global output second where the entry starts.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.start` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.start` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   start: number;
 
   /**
    * Global output second where the entry ends.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.end` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.end` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   end: number;
 
   /**
    * Seconds of the source shot that this entry plays.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.played` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.played` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   played: number;
 
   /**
    * Source shot-local second where playback begins.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.offset` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.offset` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   offset: number;
 
   /**
    * Trim copied from the sequence entry.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderShotSpan.trim` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderShotSpan.trim` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   trim: IAutoMovieTrim | null;
 }
@@ -94,71 +94,71 @@ export interface IAutoMovieSequenceRenderShotSpan {
 /**
  * Incoming transition span on the output clock.
  *
- * @author Samchon
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan` preserves the deterministic mapping between output frame identity and film time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieSequenceRenderTransitionSpan {
   /**
    * Index of the incoming entry in `sequence.shots`.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.entry` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.entry` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   entry: number;
 
   /**
    * Outgoing shot id.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.from` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.from` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   from: string;
 
   /**
    * Incoming shot id.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.to` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.to` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   to: string;
 
   /**
    * Transition style copied from the sequence entry.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.kind` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.kind` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   kind: IAutoMovieTransition["kind"];
 
   /**
    * Global output second where the transition begins.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.start` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.start` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   start: number;
 
   /**
    * Global output second where the transition ends.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.end` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.end` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   end: number;
 
   /**
    * Transition overlap duration in seconds.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderTransitionSpan.duration` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderTransitionSpan.duration` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   duration: number;
 }
@@ -166,62 +166,62 @@ export interface IAutoMovieSequenceRenderTransitionSpan {
 /**
  * A sequence frame sample ready for a render host.
  *
- * @author Samchon
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame` preserves the deterministic mapping between output frame identity and film time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieSequenceRenderFrame {
   /**
    * Zero-based output frame index.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.index` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.index` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   index: number;
 
   /**
    * Global output sample time in seconds.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.timeSeconds` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.timeSeconds` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   timeSeconds: number;
 
   /**
    * Frame path that the capture host should write.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.path` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.path` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   path: string;
 
   /**
    * Live shot id at this output frame.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.shot` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.shot` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   shot: string;
 
   /**
    * Live shot-local time in seconds.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.shotTimeSeconds` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.shotTimeSeconds` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   shotTimeSeconds: number;
 
   /**
    * Outgoing tail blended into this frame, or `null` for a hard cut.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderFrame.blend` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderFrame.blend` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   blend: {
     /** Outgoing shot id. */
@@ -239,143 +239,143 @@ export interface IAutoMovieSequenceRenderFrame {
  * Public sequence render manifest: editorial timeline, transition spans, frame
  * samples, output paths, and encoder args in one deterministic artifact.
  *
- * @author Samchon
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan` preserves the deterministic mapping between output frame identity and film time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieSequenceRenderPlan {
   /**
    * Render target identity.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.target` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.target` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   target: { kind: "sequence"; id: string };
 
   /**
    * Sequence fps as authored by the cut.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.sequenceFps` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.sequenceFps` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   sequenceFps: number;
 
   /**
    * Output fps from the render spec.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.renderFps` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.renderFps` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   renderFps: number;
 
   /**
    * Total output seconds after transition overlaps are subtracted.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.durationSeconds` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.durationSeconds` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   durationSeconds: number;
 
   /**
    * Number of output frames.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.frameCount` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.frameCount` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameCount: number;
 
   /**
    * Global output sample times, one per frame.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.times` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.times` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   times: number[];
 
   /**
    * Shot spans on the output clock.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.shots` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.shots` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   shots: IAutoMovieSequenceRenderShotSpan[];
 
   /**
    * Incoming transition spans on the output clock.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.transitionSpans` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.transitionSpans` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   transitionSpans: IAutoMovieSequenceRenderTransitionSpan[];
 
   /**
    * Frame samples in capture order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.frames` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.frames` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frames: IAutoMovieSequenceRenderFrame[];
 
   /**
    * Directory where frame files should be written.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.frameDir` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.frameDir` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameDir: string;
 
   /**
    * First output frame path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.firstFrame` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.firstFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   firstFrame: string;
 
   /**
    * Last output frame path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.lastFrame` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.lastFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   lastFrame: string;
 
   /**
    * Ffmpeg input pattern for the frame sequence.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.inputPattern` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.inputPattern` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   inputPattern: string;
 
   /**
    * Encoded video output path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.outputPath` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.outputPath` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   outputPath: string;
 
   /**
    * Exact ffmpeg argument vector for the encoded output.
    *
-   * @author Samchon
    * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time `IAutoMovieSequenceRenderPlan.ffmpegArgs` preserves the deterministic mapping between output frame identity and film time.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule `IAutoMovieSequenceRenderPlan.ffmpegArgs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   ffmpegArgs: string[];
 }

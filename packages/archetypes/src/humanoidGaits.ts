@@ -24,7 +24,6 @@ import { IAutoMovieGait, IAutoMovieProfile } from "@automovie/interface";
  * masking, not from the broad region names: this counter-swing can layer with a
  * head-only look, but correctly conflicts with a simultaneous arm gesture.
  *
- * @author Samchon
  * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Owns period, phase, duty, amplitude, and limb relationships as declared humanoid gait data.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Supplies the compact deterministic rule data sampled by the motion engine.
  * @evidenceExclude requirements/motion/README.md#동작-요구사항 Static gait tables implement procedural locomotion data, not the complete clip, root, contact, IK, interaction, timing, and validation family.
@@ -148,6 +147,7 @@ import { IAutoMovieGait, IAutoMovieProfile } from "@automovie/interface";
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice The tables contain no secondary-motion domain, moving boundary, solver, or bake policy.
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Profiles are selectable data but do not compute rig mapping, scale retarget, or contact re-resolution.
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-determinism-compatibility Deterministic interaction receipts and compatibility statuses belong to the sampling and interaction pipeline.
+ * @author Samchon
  */
 export const HUMANOID_GAITS: Record<
   "walk" | "run" | "sprint" | "sneak" | "march",
@@ -316,9 +316,9 @@ export const HUMANOID_GAITS: Record<
  * {@link HUMANOID_GAITS}, packaged as reusable profile data so a host can bind
  * it onto any humanoid skeleton without hand-authored TypeScript clips.
  *
- * @author Samchon
  * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection Packages the named table as a host-selectable humanoid profile.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Keeps the reusable rule vocabulary in profile data rather than engine heuristics.
+ * @author Samchon
  */
 export const HUMANOID_PROFILE: IAutoMovieProfile = {
   id: "humanoid",

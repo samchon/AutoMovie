@@ -46,9 +46,9 @@ export type {
 /**
  * Per-frame bounded debug summary for one formation.
  *
- * @author Samchon
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Reports visible, culled, removed, and promoted populations separately.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements bounded logical-to-display accounting for a formation.
+ * @author Samchon
  */
 export interface IAutoMovieFormationViewerStats {
   /**
@@ -95,9 +95,9 @@ export interface IAutoMovieFormationViewerStats {
 /**
  * Built instance runtime consumed by a viewer host.
  *
- * @author Samchon
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Exposes the selected display representation and its bounded accounting.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display formation boundary.
+ * @author Samchon
  */
 export interface IAutoMovieFormationViewerObject {
   /**

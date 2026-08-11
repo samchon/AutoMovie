@@ -11,9 +11,9 @@ import * as THREE from "three";
  * Build a `three.js` geometry from a automovie geometry node: tessellating a
  * parametric primitive (via the engine) or uploading raw mesh arrays.
  *
- * @author Samchon
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Lowers compiled geometry into a viewer-owned runtime buffer object.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
+ * @author Samchon
  */
 export const buildGeometry = (
   geometry: IAutoMovieGeometry,

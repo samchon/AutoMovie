@@ -24,12 +24,12 @@ import { beatCaptions } from "./screenplay";
  *
  * Planning only: the host writes the file ({@link renderCaptionSidecar}).
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness `planCaptionSidecar` preserves deterministic cue-to-frame mapping in the timed-text sidecar.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues `planCaptionSidecar` exposes that responsibility through the package-independent system contract.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Uses start-inclusive, end-exclusive frame spans on the render clock.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Resolves each output frame at its deterministic global sample time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Applies the same frame schedule and direct-seek convention as sequence rendering.
+ * @author Samchon
  */
 export const planCaptionSidecar = (props: {
   /** The script whose tree carries captions and slugs. */

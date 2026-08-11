@@ -18,62 +18,62 @@ import {
  * encoder output. A 1-hour film is rendered (and regenerated) chunk by chunk in
  * bounded windows without ever holding the whole timeline at once.
  *
- * @author Samchon
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieRenderChunk {
   /**
    * Chunk ordinal (0-based, capture order).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.index` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.index` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   index: number;
 
   /**
    * First global output frame index in this chunk (inclusive).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.frameStart` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.frameStart` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameStart: number;
 
   /**
    * One past the last global output frame index (exclusive).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.frameEnd` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.frameEnd` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameEnd: number;
 
   /**
    * Number of frames in this chunk.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.frameCount` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.frameCount` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameCount: number;
 
   /**
    * Global output second of this chunk's first frame.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.startSeconds` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.startSeconds` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   startSeconds: number;
 
   /**
    * Global output second of this chunk's last frame.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.endSeconds` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.endSeconds` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   endSeconds: number;
 
@@ -85,63 +85,63 @@ export interface IAutoMovieRenderChunk {
    * the whole plan, so a chunk renders frame-identical to the same frames of
    * the un-chunked render.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.frames` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.frames` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frames: IAutoMovieSequenceRenderFrame[];
 
   /**
    * Directory where this chunk's frame files should be written.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.frameDir` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.frameDir` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameDir: string;
 
   /**
    * First chunk frame path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.firstFrame` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.firstFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   firstFrame: string;
 
   /**
    * Last chunk frame path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.lastFrame` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.lastFrame` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   lastFrame: string;
 
   /**
    * Ffmpeg input pattern for this chunk's frame sequence.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.inputPattern` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.inputPattern` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   inputPattern: string;
 
   /**
    * This chunk's encoded video output path.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.outputPath` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.outputPath` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   outputPath: string;
 
   /**
    * Exact ffmpeg argument vector for this chunk's encoded output.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.ffmpegArgs` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.ffmpegArgs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   ffmpegArgs: string[];
 
@@ -151,9 +151,9 @@ export interface IAutoMovieRenderChunk {
    * pass's untagged paths coincide with {@link frames}' paths (it IS the base
    * capture); tagged passes sit beside them (`frame_00000.depth.png`).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunk.passOutputs` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunk.passOutputs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   passOutputs?: IAutoMovieGuidePassOutput[];
 }
@@ -164,44 +164,44 @@ export interface IAutoMovieRenderChunk {
  * directories in play order, with the per-chunk ffmpeg input pattern alongside
  * for hosts that want to encode a pass per chunk.
  *
- * @author Samchon
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderPassManifest` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderPassManifest` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieRenderPassManifest {
   /**
    * The guide pass this manifest walks.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderPassManifest.pass` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderPassManifest.pass` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   pass: AutoMovieGuidePass;
 
   /**
    * Chunk frame directories in play order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderPassManifest.chunkFrameDirs` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderPassManifest.chunkFrameDirs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   chunkFrameDirs: string[];
 
   /**
    * Per-chunk ffmpeg input patterns, parallel to {@link chunkFrameDirs}.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderPassManifest.inputPatterns` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderPassManifest.inputPatterns` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   inputPatterns: string[];
 
   /**
    * Total frames of the pass across all chunks (equals the plan's).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderPassManifest.frameCount` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderPassManifest.frameCount` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameCount: number;
 }
@@ -209,53 +209,53 @@ export interface IAutoMovieRenderPassManifest {
 /**
  * The plan to stitch the rendered chunk videos back into one timeline.
  *
- * @author Samchon
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieRenderReassembly {
   /**
    * Final video path (the whole plan's `outputPath`).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly.outputPath` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly.outputPath` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   outputPath: string;
 
   /**
    * Chunk output video paths, in play order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly.chunkOutputs` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly.chunkOutputs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   chunkOutputs: string[];
 
   /**
    * Path of the ffmpeg concat-demuxer list the host writes.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly.concatListPath` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly.concatListPath` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   concatListPath: string;
 
   /**
    * Lines of that list (`file '<path>'`), in play order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly.concatListLines` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly.concatListLines` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   concatListLines: string[];
 
   /**
    * Ffmpeg argument vector that concatenates the chunk videos losslessly.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderReassembly.ffmpegArgs` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderReassembly.ffmpegArgs` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   ffmpegArgs: string[];
 }
@@ -264,71 +264,71 @@ export interface IAutoMovieRenderReassembly {
  * A long sequence render split into independently-renderable chunks plus the
  * plan to reassemble them.
  *
- * @author Samchon
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan` exposes that responsibility through the package-independent system contract.
+ * @author Samchon
  */
 export interface IAutoMovieRenderChunkPlan {
   /**
    * Render target identity (copied from the whole plan).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.target` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.target` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   target: IAutoMovieSequenceRenderPlan["target"];
 
   /**
    * Output fps (copied from the whole plan).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.renderFps` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.renderFps` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   renderFps: number;
 
   /**
    * Total output frames across all chunks (equals the whole plan).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.frameCount` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.frameCount` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   frameCount: number;
 
   /**
    * Frames per chunk (the last chunk may be shorter).
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.chunkFrames` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.chunkFrames` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   chunkFrames: number;
 
   /**
    * Number of chunks.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.chunkCount` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.chunkCount` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   chunkCount: number;
 
   /**
    * The chunks, in capture order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.chunks` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.chunks` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   chunks: IAutoMovieRenderChunk[];
 
   /**
    * How to stitch the chunk outputs into the final video.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.reassembly` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.reassembly` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   reassembly: IAutoMovieRenderReassembly;
 
@@ -338,9 +338,9 @@ export interface IAutoMovieRenderChunkPlan {
    * {@link reassembly}; tagged passes terminate as frame sequences (diffusion
    * consumes frames, not videos), so their reassembly IS this walk order.
    *
-   * @author Samchon
    * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `IAutoMovieRenderChunkPlan.passManifests` makes the bounded chunk partition and its deterministic reassembly data explicit.
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `IAutoMovieRenderChunkPlan.passManifests` exposes that responsibility through the package-independent system contract.
+   * @author Samchon
    */
   passManifests?: IAutoMovieRenderPassManifest[];
 }
@@ -379,10 +379,10 @@ export interface IAutoMovieRenderChunkPlan {
  * {@link planGuidePassOutputs} convention); an unknown pass name throws before
  * any chunk is built.
  *
- * @author Samchon
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition `planChunkedSequenceRender` makes the bounded chunk partition and its deterministic reassembly data explicit.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery `planChunkedSequenceRender` exposes that responsibility through the package-independent system contract.
  * @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-assembly Emits the ordered lossless concat plan that closes all chunk outputs into the requested artifact.
+ * @author Samchon
  */
 export const planChunkedSequenceRender = (props: {
   /** The whole-sequence render manifest to split. */

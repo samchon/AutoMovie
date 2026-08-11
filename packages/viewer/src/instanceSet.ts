@@ -13,9 +13,9 @@ import { flattenInstancedModel, flattenInstancedObject } from "./formation";
 /**
  * Bounded viewer accounting for one general instance set.
  *
- * @author Samchon
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @author Samchon
  */
 export interface IAutoMovieInstanceSetViewerStats {
   /**
@@ -44,9 +44,9 @@ export interface IAutoMovieInstanceSetViewerStats {
 /**
  * Viewer-owned chunked object for a compiled general instance set.
  *
- * @author Samchon
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @author Samchon
  */
 export interface IAutoMovieInstanceSetViewerObject {
   /**

@@ -1,9 +1,9 @@
 /**
  * One recipe's exact parameter map, as the design gate accepted it.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Carries only the explicit dimensions and discriminators accepted for one recipe.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Preserves the accepted geometry facts without a second normalized store.
+ * @author Samchon
  */
 export type AutoMovieArchetypeParameters = Readonly<
   Record<string, number | string | boolean>
@@ -12,9 +12,9 @@ export type AutoMovieArchetypeParameters = Readonly<
 /**
  * Read one parameter as the number the design gate already accepted.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Reads the explicit metric value that controls generated geometry.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Preserves the numeric input accepted by the design gate.
+ * @author Samchon
  */
 export const numberParameter = (
   parameters: AutoMovieArchetypeParameters,
@@ -24,9 +24,9 @@ export const numberParameter = (
 /**
  * Read one parameter as the string the design gate already accepted.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Reads the explicit discriminator that selects a geometry interpretation.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Preserves the string input accepted by the design gate.
+ * @author Samchon
  */
 export const stringParameter = (
   parameters: AutoMovieArchetypeParameters,
@@ -40,9 +40,9 @@ export const stringParameter = (
  * that never passed it must still yield a number instead of poisoning a bound
  * with `NaN`.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/geometry.md#asset-geometry-dimensions Reads a dimension only when it is a finite authored number, so unvalidated input cannot introduce `NaN`.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Provides a total pre-build reader while leaving acceptance authority with the design gate.
+ * @author Samchon
  */
 export const numberOf = (
   parameters: AutoMovieArchetypeParameters,

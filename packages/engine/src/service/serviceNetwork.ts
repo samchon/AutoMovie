@@ -248,9 +248,9 @@ export interface IAutoMovieServiceCheckReport {
  * A route with fewer than two points has no span and yields nothing to compare;
  * the validator refuses that route on its own path.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentSpanBounds` gives every straight route leg its own radius-expanded occupied volume for precise interference checks.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentSpanBounds` derives one conservative axis-aligned box per adjacent centre-line point pair and none for a spanless route.
+ * @author Samchon
  */
 export const serviceSegmentSpanBounds = (
   segment: IAutoMovieServiceSegment,
@@ -283,9 +283,9 @@ export const serviceSegmentSpanBounds = (
  * a caller can index, cull or draw a bounding volume from without walking every
  * leg. Interference is decided on the spans, never on this.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentBounds` provides the single world box containing an entire service run for drawing, indexing, and broad-phase lookup.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentBounds` envelopes all route coordinates plus the declared radius and rejects a route with no point to bound.
+ * @author Samchon
  */
 export const serviceSegmentBounds = (
   segment: IAutoMovieServiceSegment,
@@ -323,11 +323,11 @@ export const serviceSegmentBounds = (
  * it is opened in; a world box authored beside a world position would let the
  * two drift apart with no way to tell which one was meant.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceMaintenanceBounds` locates the world-space keep-out volume that must remain open around serviceable equipment.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceMaintenanceBounds` translates a node-local maintenance box by the node position and returns `null` when none was declared.
  * @evidence requirements/interior/construction-maintenance-and-safety.md#interior-maintenance-access `serviceMaintenanceBounds` materializes the declared equipment-maintenance clearance as an exact world-space access envelope.
  * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-installation-maintenance-safety The world maintenance box supplies the measurable access envelope consumed by obstruction and safety checks.
+ * @author Samchon
  */
 export const serviceMaintenanceBounds = (
   node: IAutoMovieServiceNode,
@@ -365,9 +365,9 @@ export const serviceMaintenanceBounds = (
  * A system whose root does not resolve reaches nothing rather than reaching a
  * name; the validator owns reporting the dangling root itself.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSystemReach` reveals which declared nodes are actually connected to a system root, optionally showing the isolation caused by closed valves.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSystemReach` traverses segment ownership according to `from-root`, `to-root`, or bidirectional flow and returns reached nodes in declaration order.
+ * @author Samchon
  */
 export const serviceSystemReach = (props: {
   network: IAutoMovieServiceNetwork;
@@ -436,9 +436,9 @@ export const serviceSystemReach = (props: {
  * and no head loss enter it; `serviceAnalysisSupport` names the solver that
  * would as `unsupported`.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSystemLoad` reports the demand a supply or collection system is declared to carry without pretending to solve hydraulic or electrical performance.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSystemLoad` sums matching-system `in` demands for flow from the root and `out` demands for flow toward it.
+ * @author Samchon
  */
 export const serviceSystemLoad = (props: {
   network: IAutoMovieServiceNetwork;
@@ -467,9 +467,9 @@ export const serviceSystemLoad = (props: {
  * whether or not the two belong to the same discipline, because a duct and a
  * cable tray cannot share a cubic metre any more than two ducts can.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceSegmentClashes` names every pair of routed runs whose occupied volumes interfere outside a shared fitting.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceSegmentClashes` compares radius-expanded span boxes, exempts segments sharing an endpoint node, and preserves pair declaration order.
+ * @author Samchon
  */
 export const serviceSegmentClashes = (
   network: IAutoMovieServiceNetwork,
@@ -512,11 +512,11 @@ export const serviceSegmentClashes = (
  * longer be serviced. Contact alone is not intrusion, so a cabinet standing
  * exactly on the edge of an access zone is left alone.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceEnvelopeObstructions` identifies equipment whose required maintenance access is intruded on by a prop or another routed object.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceEnvelopeObstructions` intersects one world occupancy box with every non-null node maintenance envelope and returns the obstructed node ids.
  * @evidence requirements/interior/construction-maintenance-and-safety.md#interior-maintenance-access `serviceEnvelopeObstructions` returns the exact stable node identities whose declared maintenance access volume is blocked by the supplied occupancy box.
  * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-installation-maintenance-safety The obstruction query measures whether the declared installation and maintenance envelope remains accessible.
+ * @author Samchon
  */
 export const serviceEnvelopeObstructions = (props: {
   network: IAutoMovieServiceNetwork;
@@ -538,10 +538,10 @@ export const serviceEnvelopeObstructions = (props: {
  * {@link serviceSystemLoad}, so a drainage stack reports what it carries rather
  * than the zero a supply-shaped reading would give it.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceNetworkSchematic` produces the reviewable plan, topology, installed length, declared demand, and disconnection list for one service system.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceNetworkSchematic` resolves port owners, projects world routes onto `x`/`z`, and derives totals and root reachability from the selected system.
  * @evidence requirements/interior/services-and-environment.md#interior-service-terminals-controls `serviceNetworkSchematic` preserves the selected system's node, terminal, equipment, port, flow direction, demand, and valve-controlled reachability in one deterministic diagram.
+ * @author Samchon
  */
 export const serviceNetworkSchematic = (props: {
   network: IAutoMovieServiceNetwork;
@@ -601,9 +601,9 @@ export const serviceNetworkSchematic = (props: {
  * before faces existed cannot be asked where its holes are. Saying `supported`
  * in either case would be the dressing-up this report exists to prevent.
  *
- * @author Samchon
  * @evidence requirements/interior/services-and-environment.md#interior-service-routing `serviceAnalysisSupport` tells the author which structural service checks ran and which discipline-performance questions remain unsolved.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `serviceAnalysisSupport` derives support from located spaces, faced boundaries, and available validators while marking each declared discipline solver unavailable.
+ * @author Samchon
  */
 export const serviceAnalysisSupport = (props: {
   network: IAutoMovieServiceNetwork;

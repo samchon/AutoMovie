@@ -10,7 +10,6 @@ import { clampUnitParameter } from "./parameters";
  * The twin-tail controls: pure `[0, 1]` numbers, preset data like every other
  * hair parameter.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -18,6 +17,7 @@ import { clampUnitParameter } from "./parameters";
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export interface IForgeTailParameters {
   /**
@@ -145,7 +145,6 @@ const tailPart = (
  * settling back in the way a bound tail hangs. `length` 0 yields empty parts,
  * so the same preset schema covers tailless styles.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion This frozen compatibility declaration preserves legacy proxy data or helpers without claiming detailed likeness.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Keeps this frozen compatibility declaration inside the unsupported-likeness boundary instead of presenting it as prototype capability.
  * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Produces or describes bounded blocking-proxy face data while keeping directly authored likeness at the declared ceiling.
@@ -153,6 +152,7 @@ const tailPart = (
  * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Carries proxy representation geometry, controls, or bounded derivation facts without promoting them to a higher-fidelity actor tier.
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Defines or builds bounded primitive and freeform mesh parts for the proxy.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Carries an explicit proxy-mesh coordinate, index, dimension, or shape control instead of a hidden display adjustment.
+ * @author Samchon
  */
 export const buildHairTails = (
   params: IForgeTailParameters,

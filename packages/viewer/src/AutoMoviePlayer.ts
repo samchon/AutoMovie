@@ -24,9 +24,9 @@ import { IAutoMovieModelObject } from "./buildModel";
  * Secondary-motion config: the joints that should lag/overshoot the animated
  * target (a tail, ears) and the spring that drives them.
  *
- * @author Samchon
  * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Exposes the bounded joint, stiffness, and damping controls owned by this secondary-motion solver.
  * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Implements the live deterministic spring choice at the sampled moving boundary.
+ * @author Samchon
  */
 export interface IAutoMovieSpringConfig {
   /**
@@ -64,9 +64,9 @@ interface IAxisSprings {
  * Expression output is sampled on the same frame clock and applied to morph
  * targets or imported-runtime expression sinks when the target provides them.
  *
- * @author Samchon
  * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Samples this public playback surface on the exact motion boundary.
  * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Implements that boundary on the shared motion clock.
+ * @author Samchon
  */
 export class AutoMoviePlayer {
   private lastSample: IAutoMovieMotionSample | null = null;

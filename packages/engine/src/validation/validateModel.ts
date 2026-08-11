@@ -28,7 +28,6 @@ import { ViolationCollector } from "./violation";
  * connected root; material coefficients (`metallic`/`roughness`/`opacity`) and
  * color components sit in `[0, 1]`.
  *
- * @author Samchon
  * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation Rejects non-finite, degenerate, and structurally invalid model geometry.
  * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure Reports exact paths for numeric and structural model violations.
  * @evidence requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics `validateModel` checks resolved references, finite transforms and mesh values, ranges, topology, skeleton hierarchy, material wiring, and supported profile semantics after parsing.
@@ -38,6 +37,7 @@ import { ViolationCollector } from "./violation";
  * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale `validateModel` checks the supported UV set, texture transform components, and slot-specific sampling interpretation rather than accepting arbitrary coordinate state.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations The model gate enforces the Engine's bounded material-channel, image-binding, UV, transform, and color-space relation subset.
  * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-joint-control-invariants The model gate validates unique joint identities, parent resolution, acyclic hierarchy, finite rest transforms, and declared joint constraints without claiming a separate control graph.
+ * @author Samchon
  */
 export const validateModel = (props: {
   model: IAutoMovieModel;
