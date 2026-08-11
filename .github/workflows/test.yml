@@ -29,7 +29,10 @@ on:
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
-      - 'internals/config/**'
+      # Shared compiler/lint policy and the documentation evidence project are
+      # workspace build inputs in their own right.
+      - 'config/**'
+      - 'docs/**'
       - 'internals/*.mjs'
       - 'test/**'
       # Root tooling configuration, by shape (#1335). This list is deliberately
