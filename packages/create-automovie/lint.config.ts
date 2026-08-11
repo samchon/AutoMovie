@@ -12,34 +12,50 @@ const graph: ITtscEvidenceGraphConfig = {
       type: "typescript",
       files: ["src/bin.ts"],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "requirements/agent-authoring/README.md",
-          "requirements/agent-authoring/project-ownership.md",
-          "requirements/agent-authoring/source-owned-loop.md",
-          "requirements/product/README.md",
-          "requirements/product/charter.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/agent-authoring/README.md",
+            "requirements/product/README.md",
+          ],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/agent-authoring/project-ownership.md",
+            "requirements/agent-authoring/source-owned-loop.md",
+            "requirements/product/charter.md",
+          ],
+          symbol: "h3",
+        },
+      ],
     },
     {
       name: "public create-automovie exports implement specifications",
       type: "typescript",
       files: ["src/bin.ts"],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "specifications/authoring-and-authority/README.md",
-          "specifications/authoring-and-authority/capability-and-content-boundary.md",
-          "specifications/authoring-and-authority/source-authority-and-derivation.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/authoring-and-authority/README.md"],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/authoring-and-authority/capability-and-content-boundary.md",
+            "specifications/authoring-and-authority/source-authority-and-derivation.md",
+          ],
+          symbol: "h3",
+        },
+      ],
     },
   ],
 };
