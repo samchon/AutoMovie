@@ -154,11 +154,7 @@ const groups: IEvidenceGroup[] = [
   },
   {
     name: "frozen face compatibility boundary",
-    sources: [
-      "src/face/**/*.ts",
-      "src/validation/validateFace.ts",
-      "src/validation/validateExpression.ts",
-    ],
+    sources: ["src/face/**/*.ts", "src/validation/validateFace.ts"],
     requirements: [
       "requirements/product/README.md",
       "requirements/product/extensibility-and-compatibility.md",
@@ -167,6 +163,18 @@ const groups: IEvidenceGroup[] = [
     specifications: [
       "specifications/authoring-and-authority/README.md",
       "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
+    ],
+  },
+  {
+    name: "supported expression validation",
+    sources: ["src/validation/validateExpression.ts"],
+    requirements: [
+      "requirements/actors/README.md",
+      "requirements/actors/pose-expression-and-gaze.md",
+    ],
+    specifications: [
+      "specifications/performance-motion-and-staging/README.md",
+      "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
     ],
   },
   {
@@ -307,7 +315,6 @@ const groups: IEvidenceGroup[] = [
       "src/validation/fkReachableBones.ts",
       "src/validation/validateBalanceSupport.ts",
       "src/validation/validateBodyCollision.ts",
-      "src/validation/validateExpression.ts",
       "src/validation/validateFootSkate.ts",
       "src/validation/validateFreeFall.ts",
       "src/validation/validateGroundContact.ts",
