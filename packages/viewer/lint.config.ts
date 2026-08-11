@@ -291,9 +291,11 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "specifications/asset-and-representation/alternatives-instances-and-groups.md",
             "specifications/asset-and-representation/identity-resources-and-lifecycle.md",
             "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
             "specifications/interchange-and-adoption/identity-coordinates-and-units.md",
+            "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
             "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
           ],
           symbol: ["h3"],
