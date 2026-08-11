@@ -273,7 +273,7 @@ const claudeSettings = (rendered) => {
  * from the public registry at a version this monorepo has never published, and
  * the install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct
  * entry makes npm satisfy those transitive ranges from the siblings instead,
- * which is the same technique `internals/e2e-tgz.mjs` relies on.
+ * which is the same technique generated-package verification relies on.
  *
  * Pnpm was tried first and its `overrides` do not reach a transitive range from
  * inside a packed tarball; the same 404 surfaced one package later. Installing
