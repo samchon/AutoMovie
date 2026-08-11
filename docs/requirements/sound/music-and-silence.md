@@ -12,9 +12,17 @@ World emitter와 공간 propagation을 갖는 diegetic music, audience-only scor
 
 Tempo, beat, bar, phrase, marker와 free-time cue를 edit point, action event와 dialogue에 연결할 수 있으나 music grid가 story timing을 자동 지배하지 않아야 한다.
 
+### Music Conform {#sound-music-conform}
+
+Source range, edit, loop, stem alignment, transition, rate change와 tail을 rational film time과 final sample clock에 conform하고 proxy edit와 final source가 다르면 timing과 mix evidence를 다시 검증해야 한다.
+
 ### Rights와 Source {#sound-music-rights-source}
 
 Original, commissioned, library, generated와 placeholder music의 license, provider 또는 author, source digest와 allowed usage를 추적해야 한다.
+
+### Provider-independent Music Source {#sound-music-provider-neutrality}
+
+음악 제작 또는 generation provider의 선택은 사용자에게 있고 delivery는 provider API가 아니라 채택된 local bytes, stem relation, technical facts와 provenance를 소비해야 한다. Provider alias나 prompt만으로 source를 재현 가능하다고 주장하지 않아야 한다.
 
 ### Silence State {#sound-silence-state}
 

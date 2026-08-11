@@ -1,6 +1,6 @@
 # Effect와 Simulation 요구사항
 
-Effect와 simulation은 story event가 만드는 particle, fire, smoke, fluid, collision, soft deformation와 환경 변화를 bounded deterministic state로 표현한다. 저작 가능한 입력과 검증 범위를 벗어난 production-grade 물리를 주장하지 않는다.
+Effect와 simulation은 story event가 만드는 particle, fire, smoke, fluid, collision, soft deformation와 환경 변화를 bounded deterministic state로 표현한다. 모든 실행 tier는 같은 fixed film clock에서 반복 seek가 가능해야 하며, 사용자가 채택한 외부 solver나 cache의 공급자를 AutoMovie가 대신 선택하지 않는다. 결과는 staging, motion과 timing을 검토하는 prototype이고 저작 가능한 입력과 검증 범위를 벗어난 production-grade 물리나 안전 분석을 주장하지 않는다.
 
 - [범위와 Simulation Tier](./scope-and-simulation-tiers.md)
 - [Particle와 Emission](./particles-and-emission.md)
