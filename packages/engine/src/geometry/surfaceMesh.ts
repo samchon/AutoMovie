@@ -1,10 +1,40 @@
-import { IAutoMovieSurface, IAutoMovieVector3 } from "@automovie/interface";
+import {
+  IAutoMovieMesh,
+  IAutoMovieSurface,
+  IAutoMovieVector3,
+} from "@automovie/interface";
 
 import { footprintConvexPieces, surfaceFootprint } from "../space/footprint";
 import { surfaceHeightAt } from "../space/surfaces";
-import { ITessellation } from "./tessellate";
 
 const CLIP_EPSILON = 1e-10;
+
+/**
+ * A tessellated support surface: an ordinary mesh that always has normals and
+ * indices.
+ *
+ * It is an `IAutoMovieMesh` because the ground is a drawable like any other. A
+ * production that authors its own terrain wants to measure it with
+ * {@link inspectAutoMovieMeshTopology}, move it with `transformAutoMovieMesh`,
+ * merge it with what stands on it, or carry it as a part of a model it owns,
+ * and every one of those speaks that type. Returning a shape that only this
+ * function produced left the one mesh an author is told to build unable to
+ * enter the vocabulary the same guide teaches, which cost a production a
+ * hand-written conversion to say nothing new.
+ *
+ * The two fields are narrowed back to non-null rather than left optional
+ * because a tessellation always computes both, and widening them would make
+ * every existing reader handle an absence that cannot happen.
+ *
+ * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Presents a tessellated surface as a composable mesh rather than as a private buffer shape.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Types surface tessellation output as the same mesh record the topology and composition operations consume.
+ */
+export interface IAutoMovieSurfaceMesh extends IAutoMovieMesh {
+  /** Packed xyz vertex normals, one per position. */
+  normals: number[];
+  /** Triangle indices into the packed vertex arrays. */
+  indices: number[];
+}
 
 /**
  * Tessellate exactly the support surface that engine height queries read.
@@ -27,7 +57,7 @@ const CLIP_EPSILON = 1e-10;
  */
 export const tessellateSurface = (
   surface: IAutoMovieSurface,
-): ITessellation | null => {
+): IAutoMovieSurfaceMesh | null => {
   const footprint = surfaceFootprint(surface);
   const pieces = footprintConvexPieces(footprint);
   if (pieces.length === 0) return null;
@@ -119,7 +149,7 @@ const edgeDistance = (
 const tessellatePolygons = (
   surface: IAutoMovieSurface,
   polygons: IAutoMovieVector3[][],
-): ITessellation => {
+): IAutoMovieSurfaceMesh => {
   const positions: number[] = [];
   const indices: number[] = [];
   const vertexByPlan = new Map<string, number>();
@@ -141,7 +171,13 @@ const tessellatePolygons = (
     for (let index = 1; index + 1 < vertices.length; ++index)
       indices.push(vertices[0]!, vertices[index + 1]!, vertices[index]!);
   }
-  return { positions, normals: vertexNormals(positions, indices), indices };
+  return {
+    positions,
+    normals: vertexNormals(positions, indices),
+    uvs: null,
+    indices,
+    skin: null,
+  };
 };
 
 const vertexNormals = (positions: number[], indices: number[]): number[] => {

@@ -36,6 +36,8 @@ Measure what you built before you ship it. `inspectAutoMovieMeshTopology(mesh)` 
 
 `tessellateSurface(surface)` turns one declared support surface into triangles through the engine's own height rule, evaluating a heightfield at every lattice cut inside the footprint, and drawing a concave footprint's notch and a holed one's void open rather than filled. Use it so what is drawn and what feet stand on are one bilinear evaluation instead of two that drift.
 
+It returns a mesh, the same `IAutoMovieMesh` the constructors above return, so the ground composes with the rest of this vocabulary: measure it with `inspectAutoMovieMeshTopology`, move it with `transformAutoMovieMesh`, merge it with what stands on it, or carry it as a part of a model your production owns. Its `normals` and `indices` are always present, which the narrower `IAutoMovieSurfaceMesh` says so a reader does not have to test for an absence that cannot happen. A footprint enclosing no area tessellates to `null` rather than to an empty mesh, because nothing is drawn for it at all.
+
 ```ts
 import {
   buildAutoMovieWall,
