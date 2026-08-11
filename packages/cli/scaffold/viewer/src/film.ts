@@ -24,7 +24,10 @@ import {
   type IAutoMovieCompiledShotRuntime,
   createCompiledShotRuntime,
 } from "./shotRuntime";
-import { viewerDocument } from "./viewerDocument";
+import {
+  type IAutoMovieShotObservation,
+  viewerDocument,
+} from "./viewerDocument";
 
 interface IFilmLayer {
   shot: string;
