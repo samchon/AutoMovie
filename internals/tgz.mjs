@@ -5,7 +5,17 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PACKAGES = Object.freeze([
+
+/**
+ * The workspace packages a sandbox installs, dependencies before consumers.
+ *
+ * This is the scaffold's own set (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed
+ * under `@automovie/*` dependencies, which adds `ingest` and `render` through
+ * `mcp`. The closure matters because `pnpm pack` rewrites a `workspace:^` range
+ * to a plain semver one: any member left unpacked would be resolved from the
+ * public registry at a version this monorepo has never published.
+ */
+export const PACKAGES = Object.freeze([
   "interface",
   "engine",
   "archetypes",
@@ -15,9 +25,36 @@ const PACKAGES = Object.freeze([
   "mcp",
   "cli",
 ]);
+/** Where a sandbox keeps the tarballs it installs from. */
 const TARBALL_DIR = ".tarballs";
 
-/** Build the publishable workspace closure as content-addressed tarballs. */
+/**
+ * Pack every workspace package into `<target>/.tarballs`, returning each
+ * package's `file:` specifier.
+ *
+ * Packing rather than linking is the whole design. `pnpm pack` runs each
+ * package's `prepack` build and applies `publishConfig`, so the tarball's
+ * `exports` name built `lib/*.js` instead of `src/*.ts`. Three consequences
+ * follow, and all three were measured before this replaced `link:`.
+ *
+ * The MCP host starts in seconds instead of 133, which is the difference
+ * between a usable sandbox and an unusable one: an MCP client's `initialize`
+ * request times out at 60 seconds, and no environment variable moves it, so a
+ * linked sandbox handed a live agent zero tools no matter how long it waited.
+ *
+ * Typia's compile-time transform is already applied, so no consumer needs
+ * `ttsx` to avoid `typia.llm.controller(): no transform has been configured`,
+ * and the scaffold's own `tsx` scripts run unmodified.
+ *
+ * `lib/index.js` is CommonJS emitted by `tsc`, whose `__exportStar` form
+ * `cjs-module-lexer` does follow, so an ESM importer sees every name the index
+ * re-exports. Under a link the same import lost every `export * from` line.
+ *
+ * The digest in each filename is not decoration. `file:` specifiers are keyed
+ * by path, so a rebuilt package under an unchanged name and version would leave
+ * an existing sandbox installed against stale bytes; changing the specifier is
+ * what forces pnpm to resolve the new tarball.
+ */
 export const packWorkspace = (target) => {
   const directory = path.join(target, TARBALL_DIR);
   fs.rmSync(directory, { recursive: true, force: true });
