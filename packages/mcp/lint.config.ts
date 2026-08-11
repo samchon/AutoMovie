@@ -101,7 +101,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/review/README.md",
         "requirements/review/annotations-findings-and-verdicts.md",
         "requirements/review/criteria-and-comparison.md",
-        "requirements/review/defect-classification.md",
         "requirements/review/records-and-completeness.md",
         "requirements/review/reproducible-context.md",
         "requirements/review/scope-and-authority.md",
@@ -259,7 +258,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/production/contentIdentity.ts",
         "src/production/decodeProductionAudioAsset.ts",
         "src/production/inspectDesignReferenceAsset.ts",
-        "src/production/trimProductionAudioPresentation.ts",
       ],
       symbol: ["type", "function", "property"],
       reference: contractReferences([
@@ -272,7 +270,9 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/external-inputs/conversion-receipts-and-determinism.md",
         "requirements/external-inputs/credentials-rights-and-provenance.md",
         "requirements/external-inputs/identity-coordinates-and-units.md",
+        "requirements/external-inputs/media-families-and-declared-facts.md",
         "requirements/external-inputs/source-selection-and-provider-neutrality.md",
+        "requirements/external-inputs/unsupported-and-degradation.md",
         "requirements/external-inputs/validation-and-quarantine.md",
       ]),
     },
@@ -285,7 +285,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/production/contentIdentity.ts",
         "src/production/decodeProductionAudioAsset.ts",
         "src/production/inspectDesignReferenceAsset.ts",
-        "src/production/trimProductionAudioPresentation.ts",
       ],
       symbol: ["type", "function", "property"],
       reference: contractReferences([
@@ -297,8 +296,51 @@ const graph: ITtscEvidenceGraphConfig = {
         "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
         "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
         "specifications/interchange-and-adoption/identity-coordinates-and-units.md",
+        "specifications/interchange-and-adoption/media-inspection-boundaries.md",
         "specifications/interchange-and-adoption/provenance-rights-and-secrets.md",
+        "specifications/interchange-and-adoption/support-degradation-and-refusal.md",
         "specifications/interchange-and-adoption/validation-and-quarantine.md",
+      ]),
+    },
+    {
+      name: "mcp generated asset acquisition requirements",
+      type: "typescript",
+      files: ["src/production/assetAcquisition.ts"],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "requirements/asset-authoring/README.md",
+        "requirements/asset-authoring/generated-assets.md",
+      ]),
+    },
+    {
+      name: "mcp generated asset acquisition specifications",
+      type: "typescript",
+      files: ["src/production/assetAcquisition.ts"],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "specifications/asset-and-representation/README.md",
+        "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+      ]),
+    },
+    {
+      name: "mcp production audio decode requirements",
+      type: "typescript",
+      files: ["src/production/decodeProductionAudioAsset.ts"],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "requirements/sound/README.md",
+        "requirements/sound/sources-and-external-assets.md",
+        "requirements/sound/validation-and-delivery.md",
+      ]),
+    },
+    {
+      name: "mcp production audio decode specifications",
+      type: "typescript",
+      files: ["src/production/decodeProductionAudioAsset.ts"],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "specifications/simulation-effects-and-sound/README.md",
+        "specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md",
       ]),
     },
     {
@@ -356,6 +398,7 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/production/productionRenderJob.ts",
         "src/production/renderIdentity.ts",
         "src/production/renditionIdentity.ts",
+        "src/production/trimProductionAudioPresentation.ts",
       ],
       symbol: ["type", "function", "property"],
       reference: contractReferences([
@@ -395,6 +438,7 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/production/productionRenderJob.ts",
         "src/production/renderIdentity.ts",
         "src/production/renditionIdentity.ts",
+        "src/production/trimProductionAudioPresentation.ts",
       ],
       symbol: ["type", "function", "property"],
       reference: contractReferences([
@@ -407,6 +451,34 @@ const graph: ITtscEvidenceGraphConfig = {
         "specifications/execution-and-recovery/artifacts-and-atomic-publication.md",
         "specifications/execution-and-recovery/resource-budgets-and-backpressure.md",
         "specifications/execution-and-recovery/retention-cleanup-and-quarantine.md",
+      ]),
+    },
+    {
+      name: "mcp final audio picture join requirements",
+      type: "typescript",
+      files: [
+        "src/production/muxProductionFeatureMp4.ts",
+        "src/production/trimProductionAudioPresentation.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "requirements/sound/README.md",
+        "requirements/sound/validation-and-delivery.md",
+      ]),
+    },
+    {
+      name: "mcp final audio picture join specifications",
+      type: "typescript",
+      files: [
+        "src/production/muxProductionFeatureMp4.ts",
+        "src/production/trimProductionAudioPresentation.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: contractReferences([
+        "specifications/editorial-render-and-delivery/README.md",
+        "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
+        "specifications/simulation-effects-and-sound/README.md",
+        "specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md",
       ]),
     },
   ],
