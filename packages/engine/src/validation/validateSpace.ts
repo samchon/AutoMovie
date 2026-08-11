@@ -54,6 +54,12 @@ const MIN_RING_DOUBLE_AREA = 1e-9;
  * inside, or holes that do not describe a region — rather than a shape it can.
  *
  * @author Samchon
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope `validateSpace` locates malformed surface ids, rings, height rules, anchors, holes, and spacing at their exact space member paths.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope `validateSpace` preserves surface identity, ring position, observed coordinate, and expected structural relation for every staging-space finding.
+ * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-contact-scope `validateSpace` checks the support surface identities, walkable state, footprint rings, holes, and height rules used by contact queries.
+ * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-level-slope `validateSpace` validates constant, plane, and sampled height fields that state finished support elevation and local slope.
+ * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-openings-edges `validateSpace` preserves authored footprint holes and rejects rings that cannot describe a valid support region.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-floor-raised-floor-contract The validator implements the finished support-surface, footprint-hole, walkability, elevation, and local-slope subset without claiming slab or raised-floor assembly depth.
  */
 export const validateSpace = (props: {
   space: IAutoMovieSpace;

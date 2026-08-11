@@ -49,9 +49,11 @@ const FEATURE_MODES = new Set(["static", "flowing", "simulated"]);
  * unusable grid has no lattice to place, and reporting where its cells fell
  * would be a second answer derived from the first bad one.
  *
+ * @author Samchon
  * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-refusal Refuses unresolved basin, rim, and domain bindings before lowering.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Validates the join between a water feature and its independent fluid domain.
- * @author Samchon
+ * @evidence requirements/building-exterior/building-integrated-water.md#building-water-validation `validateWaterFeatures` rejects unresolved building, basin, rim, or domain identity, an unbounded rim, and fluid cells placed outside the declared basin volume.
+ * @evidence specifications/building-envelope/services-water-weather-and-site.md#building-envelope-water-validation-boundary The validator implements the host, basin, rim, bounded-domain, and contained-depth subset without claiming professional pressure or drainage analysis.
  */
 export const validateWaterFeatures = (props: {
   environment: IAutoMovieBuiltEnvironment;
@@ -275,9 +277,9 @@ export interface IAutoMovieWaterFeatureFrame {
  * solve — two features over the same domain must never disagree about where the
  * water is.
  *
+ * @author Samchon
  * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-flow-spray Lowers the authored water mode to state, surface, and bounded spray.
  * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Produces the renderer-ready result of the feature's independent fluid domain.
- * @author Samchon
  */
 export const lowerWaterFeature = (props: {
   feature: IAutoMovieWaterFeature;

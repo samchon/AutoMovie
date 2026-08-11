@@ -272,9 +272,9 @@ export const warnAutoMovieAnalysisTargetKeys = (props: {
  * to hold, so the seal runs the same validator a deserialized run faces and
  * throws on the first violation rather than shipping it.
  *
+ * @author Samchon
  * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism `sealAutoMovieAnalysisRun` refuses to emit incomplete evidence and binds accepted settings and outcomes to reproducible digests.
  * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The sealing operation hashes settings, canonicalizes the record, computes its digest, and validates the finished run before return.
- * @author Samchon
  */
 export const sealAutoMovieAnalysisRun = (props: {
   /** Stable run identity. */
@@ -651,6 +651,10 @@ const validateMetric = (
  * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism The rollup validates ordered runs, classifies missing and stale coverage, bounds visible gaps, and computes the aggregate status.
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-partial-results-and-aggregation `summarizeAutoMovieAnalysis` retains per-domain solved, unsupported, not-run, stale, measured, and missed counts while deriving the bounded aggregate verdict.
  * @evidence specifications/evidence-and-provenance/completeness-freshness-and-refusal.md#evp-partial-aggregation The summary carries partial domain results and omitted-gap counts forward instead of allowing available measurements to conceal missing evidence.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-validation-scope-freshness `summarizeAutoMovieAnalysis` compares every run's input revision with the requested current revision and separates stale or missing required domains from current solved evidence.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-validation-status `summarizeAutoMovieAnalysis` retains solved, unsupported, not-run, stale, measured, and missed counts instead of collapsing partial execution into success.
+ * @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-validation-outcomes `summarizeAutoMovieAnalysis` derives a bounded aggregate from current, stale, unsupported, not-run, measured, and missed outcomes while preserving domain gaps.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-validation-state-compatibility The summary implements current solved, stale, unsupported, not-run, missing, and failed-target state separation without claiming schema migration or suppression policy.
  */
 export const summarizeAutoMovieAnalysis = (props: {
   /** Runs to roll up; each is validated before it is counted. */

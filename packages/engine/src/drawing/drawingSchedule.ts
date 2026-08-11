@@ -30,10 +30,18 @@ import {
  * what keeps a schedule over five thousand windows the same size as a schedule
  * over five, and the omitted count is stated so the bound is never mistaken for
  * the total.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-schedules Keeps a schedule row readable by listing only a bounded occurrence sample while still reporting its full count and omitted remainder.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Fixes the canonical row member sample at eight identities before the residual population is recorded in `omittedMembers`.
  */
 export const AUTOMOVIE_DRAWING_SCHEDULE_MAX_MEMBERS = 8;
 
-/** What a schedule counts. */
+/**
+ * What a schedule counts.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-schedules Lets an authored schedule select the resolved opening or connector population it must reconcile with the design.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Closes the derivation input to the two occurrence collections for which canonical grouping and measurement are defined.
+ */
 export type AutoMovieDrawingScheduleSubject = "opening" | "connector";
 
 /**
@@ -53,6 +61,8 @@ export type AutoMovieDrawingScheduleSubject = "opening" | "connector";
  * it never prints a zero.
  *
  * @author Samchon
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-schedules Groups the selected design occurrences by type and measured size into stable marks whose counts, samples, and gaps reconcile with the model.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates the environment, derives profile or fill dimensions, canonicalizes rows and omission totals, declares unsupported performance, and hashes the schedule.
  */
 export const deriveAutoMovieDrawingSchedule = (props: {
   /** Design the schedule is derived from. */

@@ -73,7 +73,44 @@ const SLOPE_TOLERANCE = 1e-6;
  */
 const FULL_TURN_EPSILON = 1e-6;
 
-/** Validate the graph, geometry references, and spatial topology of a building. */
+/**
+ * Validate the graph, geometry references, and spatial topology of a building.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `validateBuiltEnvironment` validates the graph, geometry references, and spatial topology of a building. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `validateBuiltEnvironment` performs built environment validation when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @evidence requirements/interior/connections-and-circulation.md#interior-route-refusal `validateBuiltEnvironment` rejects missing or identical connector endpoints, short or non-finite routes, invalid section dimensions, slopes, landings, states, and operation travel instead of accepting a broken circulation path.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-connector-route-topology `validateBuiltEnvironment` enforces the connector endpoints, route, section, landing, and operation invariants that make one circulation topology usable.
+ * @evidence requirements/interior/doors-windows-and-openings.md#interior-opening-validation `validateBuiltEnvironment` checks each opening's host and cut geometry, fill and panel containment, overlap, named states, travel, and panel fit before the opening can enter the built environment.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-host-opening-operation `validateBuiltEnvironment` enforces the host, aperture, fill, panel, state, and travel invariants of an operable opening.
+ * @evidence requirements/interior/columns-beams-and-architectural-elements.md#interior-element-open-form `validateBuiltEnvironment` admits open element kinds and arbitrary referenced models while validating stable identity, ownership, hierarchy, and parent-local transforms.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-element-host-support-form The validator implements the open-form, model-reference, owner, hierarchy, and transform subset without claiming structural support analysis.
+ * @evidence requirements/interior/spatial-hierarchy-and-zones.md#interior-multilevel-spaces `validateBuiltEnvironment` preserves arbitrary convex cells and closed triangle shells in three dimensions instead of flattening logical spaces into one storey plane.
+ * @evidence requirements/interior/spatial-hierarchy-and-zones.md#interior-space-boundaries `validateBuiltEnvironment` validates stable boundary identities whose faces relate one or two logical spaces.
+ * @evidence requirements/interior/spatial-hierarchy-and-zones.md#interior-space-graph-validation `validateBuiltEnvironment` rejects unresolved parents, ownership collisions, cycles, malformed cells, and open or inconsistently wound shells.
+ * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-hierarchy-zone-overlay The validator implements the three-dimensional space hierarchy, containment, boundary, and topology subset without claiming authored logical-zone overlays.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-addressable-diagnostics `validateBuiltEnvironment` reports each failed building identity, relation, transform, face, cell, shell, opening, and connector fact at its stable input path with observed and expected values.
+ * @evidence requirements/interior/validation-and-iteration.md#interior-geometry-topology-validation `validateBuiltEnvironment` checks finite geometry, face outlines, cell planes, shell closure and winding, containment, ownership, and graph topology before lowering.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-layered-validation-diagnostics The building validator contributes the addressable geometry-and-topology layer without claiming visual review, code compliance, or every diagnostic field.
+ * @evidence requirements/interior/walls-partitions-and-linings.md#interior-wall-boundary-validation `validateBuiltEnvironment` rejects invalid boundary thickness, planar face geometry, ownership, shell closure, opening containment, and overlapping cuts.
+ * @evidence requirements/interior/walls-partitions-and-linings.md#interior-wall-partial-freeform `validateBuiltEnvironment` accepts arbitrary simple planar face outlines and faceted closed shells rather than limiting walls to full-height rectangles.
+ * @evidence requirements/interior/walls-partitions-and-linings.md#interior-wall-two-sided-ownership `validateBuiltEnvironment` preserves one boundary identity shared by at most two spaces instead of duplicating the construction for each side.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-wall-partition-boundary The validator implements the boundary face, thickness, one-or-two-space ownership, cut, and topology subset without claiming finish-side policy.
+ * @evidence requirements/building-exterior/balconies-terraces-and-courtyards.md#building-exterior-space-boundary `validateBuiltEnvironment` preserves each enclosing or open boundary face and its related space identities without claiming guard or drainage compliance.
+ * @evidence requirements/building-exterior/balconies-terraces-and-courtyards.md#building-exterior-space-identity `validateBuiltEnvironment` validates stable building-owned space identity, three-dimensional extent, boundaries, surfaces, and connectors.
+ * @evidence specifications/building-envelope/exterior-spaces-circulation-and-optics.md#building-envelope-exterior-space-input-output The building-space graph implements the stable identity, extent, boundary, and access-relation subset without claiming weather exposure or resolved drainage.
+ * @evidence specifications/building-envelope/exterior-spaces-circulation-and-optics.md#building-envelope-exterior-space-boundary-drainage-invariant The validator contributes the boundary-face and open-edge identity subset without claiming guards, thresholds, or water-path analysis.
+ * @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-shared-boundary-identity `validateBuiltEnvironment` makes one boundary or opening identity own the shared face, cut, and related space references.
+ * @evidence specifications/building-envelope/identity-scope-and-coordinates.md#building-envelope-coordinate-shared-boundary-identity The validator enforces single shared boundary and opening identities for its built-environment subset without claiming site control-point authority.
+ * @evidence requirements/building-exterior/openings-and-fenestration.md#building-opening-interior-consistency `validateBuiltEnvironment` uses one host face, aperture profile, depth, fill, panel, and named state for an opening seen from either related space.
+ * @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-identity `validateBuiltEnvironment` binds stable building units to unique visible-element and logical-space roots and rejects unattributed or multiply owned members.
+ * @evidence specifications/building-envelope/identity-scope-and-coordinates.md#building-envelope-scope-input-normalization The validator implements building-unit, root, element, space, unit, and ownership normalization without claiming phase or source-revision authority.
+ * @evidence requirements/building-exterior/scope-and-building-identity.md#building-exterior-linked-interior `validateBuiltEnvironment` keeps exterior elements, logical interior spaces, shared boundaries, openings, and connectors under the same building-unit ownership graph.
+ * @evidence specifications/building-envelope/linked-interior-coordination.md#building-envelope-linked-interior-input-output The unified building graph implements shared building, space, boundary, and opening identity without claiming revision, authority, or coordination receipts.
+ * @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-geometry-validation `validateBuiltEnvironment` reports addressable exterior element, boundary, opening, connector, cell, and shell geometry or topology failures.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-validation-finding-output The validator supplies stable paths, severity, observed values, and expected conditions for its geometry subset without claiming the specification's full finding schema.
+ * @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-interior-shared-validation `validateBuiltEnvironment` jointly validates the shared boundary, opening, coordinate hierarchy, containment, and ownership facts held in one built environment.
+ * @evidence specifications/building-envelope/linked-interior-coordination.md#building-envelope-linked-interior-matrix-rules The validator implements the boundary, opening, coordinate, and containment rows of the coordination matrix without claiming area, storey, or stale-propagation coverage.
+ */
 export const validateBuiltEnvironment = (props: {
   environment: IAutoMovieBuiltEnvironment;
 }): IAutoMovieValidation => {
@@ -589,6 +626,13 @@ export const validateBuiltEnvironment = (props: {
  * between the declared passage and the visible hole this graph exists to close.
  * A record that declares no operation lowers byte-for-byte as it always did,
  * because the joint displacement it would contribute is the identity.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `lowerBuiltEnvironment` lowers one building record to ordinary subject contributions. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `lowerBuiltEnvironment` performs built environment lowering when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ * @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-coordinate-transform-chain `lowerBuiltEnvironment` composes every building root and child element's declared local translation, rotation, and scale in parent-to-child order into deterministic world transforms.
+ * @evidence specifications/building-envelope/identity-scope-and-coordinates.md#building-envelope-coordinate-input-output The lowering implements the building-root and child-transform composition subset without claiming CRS, control-point residual, or source-frame receipts.
+ * @evidence requirements/building-exterior/facades-and-walls.md#building-facade-placement-basis `lowerBuiltEnvironment` preserves each facade element's authored parent-local transform and resolves it through the building coordinate root rather than applying a view-dependent offset.
+ * @evidence specifications/building-envelope/facade-roof-and-openings.md#building-envelope-facade-placement-input The lowering contributes deterministic local-to-world facade placement while face-region selection, corners, and panel rules remain authored facts.
  */
 export const lowerBuiltEnvironment = (
   environment: IAutoMovieBuiltEnvironment,
@@ -633,7 +677,12 @@ export const lowerBuiltEnvironment = (
   };
 };
 
-/** Merge several subject-owned support spaces into one stage space. */
+/**
+ * Merge several subject-owned support spaces into one stage space.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `mergeAutoMovieSpaces` merges several subject-owned support spaces into one stage space. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `mergeAutoMovieSpaces` performs auto movie spaces merge when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export const mergeAutoMovieSpaces = (
   id: string,
   spaces: readonly IAutoMovieSpace[],
@@ -643,7 +692,12 @@ export const mergeAutoMovieSpaces = (
   walkable: spaces.flatMap((space) => space.walkable),
 });
 
-/** Test whether a point lies in a logical space or any of its child spaces. */
+/**
+ * Test whether a point lies in a logical space or any of its child spaces.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentContainsPoint` tests whether a point lies in a logical space or any of its child spaces. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentContainsPoint` tests the requested logical space and its descendant spaces until one declared volume contains the point.
+ */
 export const builtEnvironmentContainsPoint = (
   environment: IAutoMovieBuiltEnvironment,
   spaceId: string,
@@ -669,6 +723,8 @@ export const builtEnvironmentContainsPoint = (
  * with two answers about where the camera stood.
  *
  * @author Samchon
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceContainsPoint` answers "Does one logical space's own stated volume contain a point?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceContainsPoint` tests a point only against one logical space's own declared cells or shell.
  */
 export const builtSpaceContainsPoint = (
   space: IAutoMovieBuiltSpace,
@@ -697,6 +753,8 @@ export const builtSpaceContainsPoint = (
  * keeps a shelled space from reading as unlocated.
  *
  * @author Samchon
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceStatesVolume` answers "Does a logical space bound a volume at all, in either spelling?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceStatesVolume` performs declared-volume test when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
  */
 export const builtSpaceStatesVolume = (space: IAutoMovieBuiltSpace): boolean =>
   space.cells.length !== 0 || space.shell !== undefined;
@@ -710,6 +768,8 @@ export const builtSpaceStatesVolume = (space: IAutoMovieBuiltSpace): boolean =>
  * the cheap test is taken exactly when it is exact.
  *
  * @author Samchon
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceIsConvex` answers "Is the space's stated volume a single convex region?" This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceIsConvex` performs space-convexity test when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
  */
 export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
   space.shell === undefined && space.cells.length === 1;
@@ -738,6 +798,8 @@ export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
  * sandbox's engine export list before a source module can reach it.
  *
  * @author Samchon
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceFidelity` returns what a logical space's own volume claims to be, folded over its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceFidelity` performs space-fidelity fold when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
  */
 export const builtEnvironmentSpaceFidelity = (
   environment: IAutoMovieBuiltEnvironment,
@@ -765,6 +827,8 @@ export const builtEnvironmentSpaceFidelity = (
  * {@link builtEnvironmentSpaceFidelity}'s answer, not this one's.
  *
  * @author Samchon
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtSpaceShellVolume` produces volume, in cubic metres, enclosed by a closed outward-wound shell. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtSpaceShellVolume` performs volume calculation when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
  */
 export const builtSpaceShellVolume = (shell: IAutoMovieSpaceShell): number => {
   let sum = 0;
@@ -870,6 +934,9 @@ const pointOnTriangle = (
  * stops at are the floors it joins. A one-way run reaches only stops further
  * along its own route, which is the same rule its two-ended form has always
  * followed, generalized to the stops between them.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentAdjacentSpaces` returns spaces directly joined by a boundary or traversal connector. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentAdjacentSpaces` finds the logical spaces joined to a space by a boundary or traversal connector inside one building-interior boundary.
  */
 export const builtEnvironmentAdjacentSpaces = (
   environment: IAutoMovieBuiltEnvironment,
@@ -907,6 +974,9 @@ export const builtEnvironmentAdjacentSpaces = (
  * asking a building root returns the connectors declared on the root itself
  * rather than every connector inside it. That is the same rule
  * {@link builtEnvironmentAdjacentSpaces} follows.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceConnectors` returns every connector landing on a logical space, endpoints and route intact. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceConnectors` collects the connectors whose landings belong to a logical space while preserving their endpoints and routes.
  */
 export const builtEnvironmentSpaceConnectors = (
   environment: IAutoMovieBuiltEnvironment,
@@ -925,6 +995,9 @@ export const builtEnvironmentSpaceConnectors = (
  * without being somewhere a performer may walk. Both are answered by the stable
  * surface id the lowered stage space also cites, so a caller never has to match
  * geometry to learn which patch it is holding.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceSurfaces` reports the support patches usable in a logical space and its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceSurfaces` collects support patches owned by a logical space or any of its descendants.
  */
 export const builtEnvironmentSpaceSurfaces = (
   environment: IAutoMovieBuiltEnvironment,
@@ -949,6 +1022,9 @@ export const builtEnvironmentSpaceSurfaces = (
  * drifting apart: the ids returned here are exactly the `node` ids
  * {@link lowerBuiltEnvironment} emits, so a room can be asked what is visibly
  * inside it without a second traversal that could answer differently.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceNodes` names the staged set nodes standing in a logical space and its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceNodes` collects staged node ids from a logical space and every child space within its building boundary.
  */
 export const builtEnvironmentSpaceNodes = (
   environment: IAutoMovieBuiltEnvironment,
@@ -973,6 +1049,9 @@ export const builtEnvironmentSpaceNodes = (
  * is this room in" is a real question rather than a constant. A validated
  * environment answers it for every space; an unowned space is refused here for
  * the same reason validation refuses it.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentBuildingOfSpace` names the building unit that owns a logical space. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentBuildingOfSpace` resolves a logical space id to the building unit that owns it.
  */
 export const builtEnvironmentBuildingOfSpace = (
   environment: IAutoMovieBuiltEnvironment,
@@ -989,109 +1068,334 @@ export const builtEnvironmentBuildingOfSpace = (
   return owner.id;
 };
 
-/** The rectangular wall panel and cut voids one boundary's own face implies. */
+/**
+ * The rectangular wall panel and cut voids one boundary's own face implies.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieBoundaryWallCut` represents the rectangular wall panel and cut voids one boundary's own face implies. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieBoundaryWallCut` structures the rectangular wall panel and cut voids one boundary's own face implies for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieBoundaryWallCut {
-  /** Panel extent along the boundary's local X, in metres. */
+  /**
+   * Panel extent along the boundary's local X, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `width` records `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local X, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `width` supplies `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local X, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   width: number;
-  /** Panel extent along the boundary's local Y, in metres. */
+  /**
+   * Panel extent along the boundary's local Y, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `height` records `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local Y, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `height` supplies `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local Y, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   height: number;
-  /** Panel extent along the boundary's local Z, in metres. */
+  /**
+   * Panel extent along the boundary's local Z, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `depth` records `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local Z, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `depth` supplies `IAutoMovieBoundaryWallCut`'s panel extent along the boundary's local Z, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   depth: number;
-  /** World position of the panel's own centre. */
+  /**
+   * World position of the panel's own centre.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `origin` records `IAutoMovieBoundaryWallCut`'s world position of the panel's own centre. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `origin` supplies `IAutoMovieBoundaryWallCut`'s world position of the panel's own centre when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   origin: IAutoMovieVector3;
-  /** World rotation of the panel, taken from the boundary's face. */
+  /**
+   * World rotation of the panel, taken from the boundary's face.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `rotation` records `IAutoMovieBoundaryWallCut`'s world rotation of the panel, taken from the boundary's face. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `rotation` supplies `IAutoMovieBoundaryWallCut`'s world rotation of the panel, taken from the boundary's face when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   rotation: IAutoMovieQuaternion;
-  /** Kernel voids, each keyed by the architectural opening that declared it. */
+  /**
+   * Kernel voids, each keyed by the architectural opening that declared it.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `openings` records `IAutoMovieBoundaryWallCut`'s kernel voids, each keyed by the architectural opening that declared it. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `openings` supplies `IAutoMovieBoundaryWallCut`'s kernel voids, each keyed by the architectural opening that declared it when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   openings: IAutoMovieWallOpening[];
 }
 
-/** Where one movable panel stands, in world space, at one operating state. */
+/**
+ * Where one movable panel stands, in world space, at one operating state.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieOpeningPanelPlacement` defines where one movable panel stands, in world space, at one operating state. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieOpeningPanelPlacement` structures where one movable panel stands, in world space, at one operating state for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieOpeningPanelPlacement {
-  /** Panel id inside its opening. */
+  /**
+   * Panel id inside its opening.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `panel` records `IAutoMovieOpeningPanelPlacement`'s panel id inside its opening. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `panel` supplies `IAutoMovieOpeningPanelPlacement`'s panel id inside its opening when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   panel: string;
-  /** The visible element the panel drives. */
+  /**
+   * The visible element the panel drives.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `element` records `IAutoMovieOpeningPanelPlacement`'s visible element the panel drives. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `element` supplies `IAutoMovieOpeningPanelPlacement`'s visible element the panel drives when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   element: string;
-  /** The staged node id {@link lowerBuiltEnvironment} emits for that element. */
+  /**
+   * The staged node id {@link lowerBuiltEnvironment} emits for that element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `node` records `IAutoMovieOpeningPanelPlacement`'s staged node id `lowerBuiltEnvironment` emits for that element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `node` supplies `IAutoMovieOpeningPanelPlacement`'s staged node id `lowerBuiltEnvironment` emits for that element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   node: string;
-  /** World translation of the panel's element. */
+  /**
+   * World translation of the panel's element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `position` records `IAutoMovieOpeningPanelPlacement`'s world translation of the panel's element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `position` supplies `IAutoMovieOpeningPanelPlacement`'s world translation of the panel's element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   position: IAutoMovieVector3;
-  /** World rotation of the panel's element, as a unit quaternion. */
+  /**
+   * World rotation of the panel's element, as a unit quaternion.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `rotation` records `IAutoMovieOpeningPanelPlacement`'s world rotation of the panel's element, as a unit quaternion. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `rotation` supplies `IAutoMovieOpeningPanelPlacement`'s world rotation of the panel's element, as a unit quaternion when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   rotation: IAutoMovieQuaternion;
-  /** World per-axis scale of the panel's element. */
+  /**
+   * World per-axis scale of the panel's element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `scale` records `IAutoMovieOpeningPanelPlacement`'s world per-axis scale of the panel's element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `scale` supplies `IAutoMovieOpeningPanelPlacement`'s world per-axis scale of the panel's element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   scale: IAutoMovieVector3;
 }
 
-/** The world volume one movable panel sweeps across its whole travel. */
+/**
+ * The world volume one movable panel sweeps across its whole travel.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieOpeningSweep` represents the world volume one movable panel sweeps across its whole travel. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieOpeningSweep` structures the world volume one movable panel sweeps across its whole travel for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieOpeningSweep {
-  /** Panel id inside its opening. */
+  /**
+   * Panel id inside its opening.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `panel` records `IAutoMovieOpeningSweep`'s panel id inside its opening. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `panel` supplies `IAutoMovieOpeningSweep`'s panel id inside its opening when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   panel: string;
-  /** The visible element the panel drives. */
+  /**
+   * The visible element the panel drives.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `element` records `IAutoMovieOpeningSweep`'s visible element the panel drives. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `element` supplies `IAutoMovieOpeningSweep`'s visible element the panel drives when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   element: string;
-  /** World minimum corner of the swept volume. */
+  /**
+   * World minimum corner of the swept volume.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `min` records `IAutoMovieOpeningSweep`'s world minimum corner of the swept volume. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `min` supplies `IAutoMovieOpeningSweep`'s world minimum corner of the swept volume when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   min: IAutoMovieVector3;
-  /** World maximum corner of the swept volume. */
+  /**
+   * World maximum corner of the swept volume.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `max` records `IAutoMovieOpeningSweep`'s world maximum corner of the swept volume. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `max` supplies `IAutoMovieOpeningSweep`'s world maximum corner of the swept volume when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   max: IAutoMovieVector3;
 }
 
-/** One oriented station of a connector's route. */
+/**
+ * One oriented station of a connector's route.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieConnectorStation` represents one oriented station of a connector's route. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieConnectorStation` structures one oriented station of a connector's route for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieConnectorStation {
-  /** World position of the station. */
+  /**
+   * World position of the station.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `position` records `IAutoMovieConnectorStation`'s world position of the station. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `position` supplies `IAutoMovieConnectorStation`'s world position of the station when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   position: IAutoMovieVector3;
-  /** Authored facing, or null when the connector declared none. */
+  /**
+   * Authored facing, or null when the connector declared none.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `rotation` records `IAutoMovieConnectorStation`'s authored facing, or null when the connector declared none. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `rotation` supplies `IAutoMovieConnectorStation`'s authored facing, or null when the connector declared none when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   rotation: IAutoMovieQuaternion | null;
-  /** Arc-length fraction of the station along the route, in `[0, 1]`. */
+  /**
+   * Arc-length fraction of the station along the route, in `[0, 1]`.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `at` records `IAutoMovieConnectorStation`'s arc-length fraction of the station along the route, in `[0, 1]`. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `at` supplies `IAutoMovieConnectorStation`'s arc-length fraction of the station along the route, in `[0, 1]` when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   at: number;
 }
 
-/** The measured traversal shape of one connector. */
+/**
+ * The measured traversal shape of one connector.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieConnectorGeometry` represents the measured traversal shape of one connector. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieConnectorGeometry` structures the measured traversal shape of one connector for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieConnectorGeometry {
-  /** Signed climb from the first station to the last, in metres. */
+  /**
+   * Signed climb from the first station to the last, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `rise` records `IAutoMovieConnectorGeometry`'s signed climb from the first station to the last, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `rise` supplies `IAutoMovieConnectorGeometry`'s signed climb from the first station to the last, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   rise: number;
-  /** Horizontal length of the route polyline, in metres. */
+  /**
+   * Horizontal length of the route polyline, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `run` records `IAutoMovieConnectorGeometry`'s horizontal length of the route polyline, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `run` supplies `IAutoMovieConnectorGeometry`'s horizontal length of the route polyline, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   run: number;
-  /** Total 3D length of the route polyline, in metres. */
+  /**
+   * Total 3D length of the route polyline, in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `length` records `IAutoMovieConnectorGeometry`'s total 3D length of the route polyline, in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `length` supplies `IAutoMovieConnectorGeometry`'s total 3D length of the route polyline, in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   length: number;
-  /** Slope of the run from horizontal, in radians within `[0, PI / 2]`. */
+  /**
+   * Slope of the run from horizontal, in radians within `[0, PI / 2]`.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `slope` records `IAutoMovieConnectorGeometry`'s slope of the run from horizontal, in radians within `[0, PI / 2]`. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `slope` supplies `IAutoMovieConnectorGeometry`'s slope of the run from horizontal, in radians within `[0, PI / 2]` when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   slope: number;
-  /** The route's own stations, in authored order. */
+  /**
+   * The route's own stations, in authored order.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `stations` records `IAutoMovieConnectorGeometry`'s route's own stations, in authored order. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `stations` supplies `IAutoMovieConnectorGeometry`'s route's own stations, in authored order when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   stations: IAutoMovieConnectorStation[];
-  /** The further spaces the run stops at, placed on its own route. */
+  /**
+   * The further spaces the run stops at, placed on its own route.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `landings` records `IAutoMovieConnectorGeometry`'s further spaces the run stops at, placed on its own route. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `landings` supplies `IAutoMovieConnectorGeometry`'s further spaces the run stops at, placed on its own route when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   landings: IAutoMovieConnectorLandingAt[];
 }
 
-/** One further space a run stops at, placed on the route that reaches it. */
+/**
+ * One further space a run stops at, placed on the route that reaches it.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieConnectorLandingAt` represents one further space a run stops at, placed on the route that reaches it. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieConnectorLandingAt` structures one further space a run stops at, placed on the route that reaches it for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieConnectorLandingAt {
-  /** Logical space served at this stop. */
+  /**
+   * Logical space served at this stop.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `space` records `IAutoMovieConnectorLandingAt`'s logical space served at this stop. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `space` supplies `IAutoMovieConnectorLandingAt`'s logical space served at this stop when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   space: string;
-  /** Arc-length fraction of the route, as authored. */
+  /**
+   * Arc-length fraction of the route, as authored.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `at` records `IAutoMovieConnectorLandingAt`'s arc-length fraction of the route, as authored. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `at` supplies `IAutoMovieConnectorLandingAt`'s arc-length fraction of the route, as authored when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   at: number;
-  /** World position of that point of the route. */
+  /**
+   * World position of that point of the route.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `position` records `IAutoMovieConnectorLandingAt`'s world position of that point of the route. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `position` supplies `IAutoMovieConnectorLandingAt`'s world position of that point of the route when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   position: IAutoMovieVector3;
 }
 
-/** Where one carriage of a run stands, in world space, at one state. */
+/**
+ * Where one carriage of a run stands, in world space, at one state.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieConnectorCarriagePlacement` defines where one carriage of a run stands, in world space, at one state. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieConnectorCarriagePlacement` structures where one carriage of a run stands, in world space, at one state for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieConnectorCarriagePlacement {
-  /** Carriage id inside its connector. */
+  /**
+   * Carriage id inside its connector.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `carriage` records `IAutoMovieConnectorCarriagePlacement`'s carriage id inside its connector. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `carriage` supplies `IAutoMovieConnectorCarriagePlacement`'s carriage id inside its connector when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   carriage: string;
-  /** The visible element the carriage drives. */
+  /**
+   * The visible element the carriage drives.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `element` records `IAutoMovieConnectorCarriagePlacement`'s visible element the carriage drives. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `element` supplies `IAutoMovieConnectorCarriagePlacement`'s visible element the carriage drives when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   element: string;
-  /** The staged node id {@link lowerBuiltEnvironment} emits for that element. */
+  /**
+   * The staged node id {@link lowerBuiltEnvironment} emits for that element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `node` records `IAutoMovieConnectorCarriagePlacement`'s staged node id `lowerBuiltEnvironment` emits for that element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `node` supplies `IAutoMovieConnectorCarriagePlacement`'s staged node id `lowerBuiltEnvironment` emits for that element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   node: string;
-  /** World translation of the carriage's element. */
+  /**
+   * World translation of the carriage's element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `position` records `IAutoMovieConnectorCarriagePlacement`'s world translation of the carriage's element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `position` supplies `IAutoMovieConnectorCarriagePlacement`'s world translation of the carriage's element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   position: IAutoMovieVector3;
-  /** World rotation of the carriage's element, as a unit quaternion. */
+  /**
+   * World rotation of the carriage's element, as a unit quaternion.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `rotation` records `IAutoMovieConnectorCarriagePlacement`'s world rotation of the carriage's element, as a unit quaternion. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `rotation` supplies `IAutoMovieConnectorCarriagePlacement`'s world rotation of the carriage's element, as a unit quaternion when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   rotation: IAutoMovieQuaternion;
-  /** World per-axis scale of the carriage's element. */
+  /**
+   * World per-axis scale of the carriage's element.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `scale` records `IAutoMovieConnectorCarriagePlacement`'s world per-axis scale of the carriage's element. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `scale` supplies `IAutoMovieConnectorCarriagePlacement`'s world per-axis scale of the carriage's element when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   scale: IAutoMovieVector3;
-  /** Logical space this carriage stands at in that state, or null. */
+  /**
+   * Logical space this carriage stands at in that state, or null.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `serves` records `IAutoMovieConnectorCarriagePlacement`'s logical space this carriage stands at in that state, or null. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `serves` supplies `IAutoMovieConnectorCarriagePlacement`'s logical space this carriage stands at in that state, or null when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   serves: string | null;
 }
 
-/** The usable section of a connector at one point of its route. */
+/**
+ * The usable section of a connector at one point of its route.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `IAutoMovieConnectorSectionAt` represents the usable section of a connector at one point of its route. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `IAutoMovieConnectorSectionAt` structures the usable section of a connector at one point of its route for the system that resolves ownership, topology, and geometry inside one building-interior boundary.
+ */
 export interface IAutoMovieConnectorSectionAt {
-  /** Usable width in metres. */
+  /**
+   * Usable width in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `width` records `IAutoMovieConnectorSectionAt`'s usable width in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `width` supplies `IAutoMovieConnectorSectionAt`'s usable width in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   width: number;
-  /** Vertical clearance in metres. */
+  /**
+   * Vertical clearance in metres.
+   *
+   * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `clearHeight` records `IAutoMovieConnectorSectionAt`'s vertical clearance in metres. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+   * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `clearHeight` supplies `IAutoMovieConnectorSectionAt`'s vertical clearance in metres when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
+   */
   clearHeight: number;
 }
 
@@ -1111,6 +1415,11 @@ export interface IAutoMovieConnectorSectionAt {
  * as outlines may therefore still have overlapping bounds, and the kernel
  * refuses that pair by name; that refusal is the rectangle's limit speaking,
  * not a defect in the design it was handed.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtBoundaryWallCut` turns one boundary's declared face into the wall panel a mesh kernel can cut. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtBoundaryWallCut` converts a declared boundary face into the wall-panel cut consumed by the mesh layer.
+ * @evidence requirements/building-exterior/openings-and-fenestration.md#building-opening-form-layout `builtBoundaryWallCut` lowers the host-local opening profile, hull or arc into the exact wall-panel cut while preserving the validated host containment and cut layout.
+ * @evidence specifications/building-envelope/facade-roof-and-openings.md#building-envelope-opening-cut-input-output `builtBoundaryWallCut` converts the declared host face and aperture geometry into the deterministic opening-cut input consumed by the mesh layer.
  */
 export const builtBoundaryWallCut = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1172,6 +1481,11 @@ export const builtBoundaryWallCut = (
  * is a shot `objectMotions` clip over the
  * {@link IAutoMovieOpeningPanelPlacement.node} ids this answers with, so the
  * architecture record never grows a second clock beside the shot's own.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtOpeningPanelPlacements` returns where an opening's panels stand, in world space, at one named state. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtOpeningPanelPlacements` resolves every opening panel to its world-space placement at the requested state.
+ * @evidence requirements/interior/doors-windows-and-openings.md#interior-opening-components `builtOpeningPanelPlacements` materializes the declared movable fill panels at their named-state world placements without claiming unmodeled frame or hardware components.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-host-opening-operation `builtOpeningPanelPlacements` resolves the movable panel subset of the host opening's declared operation state.
  */
 export const builtOpeningPanelPlacements = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1226,6 +1540,15 @@ export const builtOpeningPanelPlacements = (
  * caller wanting that union asks for each state in turn and takes the hull
  * itself; inventing it here would quietly report a chain's envelope under one
  * panel's name.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtOpeningSweepEnvelope` produces the world volume each panel of an opening sweeps across its whole travel. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtOpeningSweepEnvelope` derives the world-space volume swept by each panel across the opening's full travel.
+ * @evidence requirements/interior/doors-windows-and-openings.md#interior-opening-operable-state `builtOpeningSweepEnvelope` evaluates every declared panel across the opening's named travel states and returns its complete world-space sweep volume.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-host-opening-operation `builtOpeningSweepEnvelope` turns the host opening's declared panel operation into a measurable travel envelope.
+ * @evidence requirements/building-exterior/openings-and-fenestration.md#building-opening-operable-state `builtOpeningSweepEnvelope` computes each exterior opening panel's named-state travel as a world-space sweep rather than treating operability as metadata.
+ * @evidence specifications/building-envelope/facade-roof-and-openings.md#building-envelope-opening-operable-sweep-invariant `builtOpeningSweepEnvelope` measures the validated panel travel and sweep invariant for an operable facade opening.
+ * @evidence requirements/interior/clearance-anthropometrics-and-accessibility.md#interior-static-dynamic-clearance `builtOpeningSweepEnvelope` returns the world-space volume occupied across each panel's declared travel for downstream dynamic-clearance checks.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-anthropometric-accessibility-clearance The sweep implements the moving-opening envelope subset without claiming route, reach, jurisdiction, or accessibility compliance.
  */
 export const builtOpeningSweepEnvelope = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1281,6 +1604,15 @@ export const builtOpeningSweepEnvelope = (
  * this function invented. A connector that declared no orientation has no
  * orientation, and saying so is what keeps a later analysis from reading a
  * derived guess as a design decision.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtConnectorGeometry` measures one connector's traversal shape: climb, run, length, slope, stations. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtConnectorGeometry` measures a connector route's climb, run, length, slope, and stations inside its building boundary.
+ * @evidence requirements/interior/connections-and-circulation.md#interior-horizontal-vertical-routes `builtConnectorGeometry` resolves the connector endpoint path into one three-dimensional route with climb, horizontal run, length, slope, and ordered stations.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-connector-route-topology `builtConnectorGeometry` computes the geometric route that connects the declared spaces through horizontal and vertical travel.
+ * @evidence requirements/building-exterior/external-circulation-and-attached-elements.md#building-external-circulation `builtConnectorGeometry` derives the exterior connector's endpoint route, landings, rise, horizontal run, length, slope, width, and headroom as its measurable circulation contribution.
+ * @evidence specifications/building-envelope/exterior-spaces-circulation-and-optics.md#building-envelope-exterior-circulation-input-output `builtConnectorGeometry` produces the validated route geometry and section facts for an exterior circulation connector without claiming guard, port, or code compliance.
+ * @evidence requirements/building-exterior/external-circulation-and-attached-elements.md#building-external-multi-building-connection `builtConnectorGeometry` preserves a connector whose resolved endpoint spaces belong to different building roots and refuses unresolved, self-linked, or malformed route state.
+ * @evidence specifications/building-envelope/exterior-spaces-circulation-and-optics.md#building-envelope-multibuilding-connector-failures `builtConnectorGeometry` materializes the declared cross-building route after endpoint, route, section, and operation validation without claiming transform-revision authority.
  */
 export const builtConnectorGeometry = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1318,6 +1650,11 @@ export const builtConnectorGeometry = (
  * bottom. The space each carriage serves is handed back beside its placement,
  * because "where the car is" and "which floor that is" are one answer and
  * making a caller rejoin them invites two.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtConnectorCarriagePlacements` returns where a run's carriages stand, in world space, at one named state. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtConnectorCarriagePlacements` resolves every connector carriage to its world-space placement at the requested state.
+ * @evidence requirements/interior/connections-and-circulation.md#interior-access-state `builtConnectorCarriagePlacements` resolves each declared carriage through the connector's named access state and drive onto its served world-space route position.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-connector-route-topology `builtConnectorCarriagePlacements` materializes the connector's named operational access state on its declared route topology.
  */
 export const builtConnectorCarriagePlacements = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1365,6 +1702,11 @@ export const builtConnectorCarriagePlacements = (
  * the piecewise-linear function its stations describe, so a corridor that
  * narrows between two stations narrows evenly rather than in a step nothing
  * declared.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtConnectorSectionAt` produces the usable section of a connector at one arc-length fraction of its route. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtConnectorSectionAt` samples the usable connector section at one arc-length fraction of its route.
+ * @evidence requirements/interior/connections-and-circulation.md#interior-circulation-transitions `builtConnectorSectionAt` samples the route's rise, run, slope, station and landing transition together with its usable width and headroom at the requested arc-length fraction.
+ * @evidence specifications/interior-space/boundaries-openings-and-circulation.md#interior-space-connector-route-topology `builtConnectorSectionAt` exposes the measurable section and landing state along the connector transition.
  */
 export const builtConnectorSectionAt = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1394,6 +1736,9 @@ export const builtConnectorSectionAt = (
  * — a contradiction validation refuses by name, and one this function has no
  * business re-deciding. The route parameter is not range-checked here; the
  * id-addressed form owns that guard.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtConnectorSection` produces the usable section of one connector record, or null when it states none. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtConnectorSection` returns the usable section declared by a connector, or `null` when it has none.
  */
 export const builtConnectorSection = (
   connector: IAutoMovieBuiltConnector,

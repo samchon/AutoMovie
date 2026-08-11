@@ -53,11 +53,13 @@ const EXTERIOR = " exterior";
  *   Proving a closed door would hide more, and proving it belongs to the
  *   openings issue rather than to a guess made here.
  *
+ * @author Samchon
  * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-room-region-culling Computes conservative leaf-space visibility through declared openings, connectors, and the exterior graph node.
  * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-visibility-state Returns the exact visible-space set and the resolved camera space for the current declared environment state.
  * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-culling-refusal Falls back to all spaces when camera containment or a leaf-space extent is ambiguous, so an unproved occlusion never hides geometry.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Refuses unsafe room culling when camera containment or a leaf-space extent is unresolved.
- * @author Samchon
+ * @evidence requirements/interior/spaces-and-occupancy.md#interior-space-visibility-culling `autoMovieRoomVisibility` conservatively resolves the camera's leaf space and traverses declared opening, connector, and exterior portals to return visible space identities.
+ * @evidence specifications/interior-space/space-level-zone-topology.md#interior-space-occupancy-activity-visibility The portal graph implements the spatial-visibility subset while unresolved containment or extent disables culling instead of hiding unproved rooms.
  */
 export const autoMovieRoomVisibility = (props: {
   /** Building whose spaces are being culled. */

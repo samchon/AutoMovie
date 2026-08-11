@@ -33,10 +33,18 @@ import {
  * the artifact somebody orders material from grows with the building until
  * nobody reads it. What the bound leaves out is counted and summed, never
  * dropped, so the named owners and the total always reconcile.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-quantities-waste Bounds each take-off's named owner sample while preserving the count and value of every omitted contributor.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Sets the canonical contributor-list limit to eight before omitted owners are separately counted and summed.
  */
 export const AUTOMOVIE_QUANTITY_MAX_CONTRIBUTORS = 8;
 
-/** Every subject a report answers for, in the order it answers for them. */
+/**
+ * Every subject a report answers for, in the order it answers for them.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-quantities-waste Ensures every promised take-off subject receives an ordered finding, including an explicit zero when no owner contributes.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Defines the canonical report order for floor area, volume, opening area, connector length, and occurrence counts.
+ */
 export const AUTOMOVIE_QUANTITY_SUBJECTS: AutoMovieQuantitySubject[] = [
   "space-floor-area",
   "space-volume",
@@ -65,6 +73,9 @@ const UNITS: { [subject in AutoMovieQuantitySubject]: AutoMovieQuantityUnit } =
  * Stated once and attached to the volume finding, so nobody has to find it in a
  * document to know that the number they are about to order concrete against is
  * a sum over cells rather than the volume of their union.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-quantities-waste Discloses that summed convex-cell volumes may double-count overlaps instead of presenting that take-off as an exact union.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Supplies the exact approximation reason attached to cell-sum volume findings while distinguishing exact shell measurement and faceted gaps.
  */
 export const AUTOMOVIE_QUANTITY_CELL_UNION_APPROXIMATION =
   "a logical volume stated as convex cells is the union of them, and this is the sum of the cells: overlapping cells are counted once each. A volume stated as a closed boundary shell is measured exactly, and a space that declares itself faceted is reported as a gap of its own";
@@ -86,6 +97,10 @@ export const AUTOMOVIE_QUANTITY_CELL_UNION_APPROXIMATION =
  * material would read as a building that needs none.
  *
  * @author Samchon
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-quantities-waste Derives each take-off value from resolved source geometry, identifies its contributing owners and unit, and names every unavailable or approximate result.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates the environment, aggregates each canonical subject, rounds totals, records basis and omissions, sorts gaps, and seals the report with a deterministic digest.
+ * @evidence requirements/building-exterior/deliverables.md#building-exterior-schedules-quantities `measureAutoMovieQuantities` derives identified area, volume, length, and count results from the same validated building geometry and marks exact, approximate, and unavailable subjects.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-deliverable-quantity-invariant The report implements stable owner contribution, unit, geometric basis, exactness, omission, and digest fields without claiming every assembly or waste quantity.
  */
 export const measureAutoMovieQuantities = (props: {
   /** Design the quantities are measured from. */

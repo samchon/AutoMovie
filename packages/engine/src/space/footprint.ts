@@ -5,6 +5,7 @@ import {
 } from "@automovie/interface";
 
 import { pointInPolygon } from "../architecture/planarGeometry";
+import { autoMoviePlanarRegionFailure } from "../geometry/planarRegion";
 import { closestPointOnSegmentXZ, convexHull2D } from "../math/hull";
 
 /**
@@ -41,10 +42,18 @@ import { closestPointOnSegmentXZ, convexHull2D } from "../math/hull";
  *
  * A nanometre is exact for authored coordinates while keeping the classifier
  * from flickering across a rim as the last bits of a coordinate move.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `FOOTPRINT_EPSILON` fixes slack, in metres, within which a plan point counts as standing on a ring. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `FOOTPRINT_EPSILON` bounds the footprint epsilon policy while the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const FOOTPRINT_EPSILON = 1e-9;
 
-/** Where a plan point stands relative to one closed ring. */
+/**
+ * Where a plan point stands relative to one closed ring.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `AutoMovieRingPlacement` defines where a plan point stands relative to one closed ring. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `AutoMovieRingPlacement` structures where a plan point stands relative to one closed ring for the system that resolves host-relative support geometry and whole-footprint zone membership.
+ */
 export type AutoMovieRingPlacement = "outside" | "boundary" | "inside";
 
 /**
@@ -56,17 +65,32 @@ export type AutoMovieRingPlacement = "outside" | "boundary" | "inside";
  * build one array per containment test.
  *
  * @author Samchon
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `IAutoMovieFootprintRing` represents one closed ring of a footprint, with the plan projection and the signed area the queries read. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMovieFootprintRing` structures one closed ring of a footprint, with the plan projection and the signed area the queries read for the system that resolves host-relative support geometry and whole-footprint zone membership.
  */
 export interface IAutoMovieFootprintRing {
-  /** The ring as authored, in world XZ. */
+  /**
+   * The ring as authored, in world XZ.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `points` records `IAutoMovieFootprintRing`'s ring as authored, in world XZ. This ensures membership is judged from a subject footprint rather than a point.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `points` supplies `IAutoMovieFootprintRing`'s ring as authored, in world XZ when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly points: readonly IAutoMovieVector3[];
 
-  /** The same ring as `(x, y) = (x, z)`, for the planar predicates. */
+  /**
+   * The same ring as `(x, y) = (x, z)`, for the planar predicates.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `plan` records `IAutoMovieFootprintRing`'s same ring as `(x, y) = (x, z)`, for the planar predicates. This ensures membership is judged from a subject footprint rather than a point.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `plan` supplies `IAutoMovieFootprintRing`'s same ring as `(x, y) = (x, z)`, for the planar predicates when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly plan: readonly IAutoMoviePlanarPoint[];
 
   /**
    * Twice the signed plan area, positive in {@link convexHull2D}'s own winding.
    * Zero means the ring encloses nothing at all.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `doubleArea` records `IAutoMovieFootprintRing`'s twice the signed plan area, positive in `convexHull2D`'s own winding. This ensures membership is judged from a subject footprint rather than a point.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `doubleArea` supplies `IAutoMovieFootprintRing`'s twice the signed plan area, positive in `convexHull2D`'s own winding when the engine resolves host-relative support geometry and whole-footprint zone membership.
    */
   readonly doubleArea: number;
 }
@@ -75,16 +99,33 @@ export interface IAutoMovieFootprintRing {
  * A surface's plan region: the outer ring, and the holes cut out of it.
  *
  * @author Samchon
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `IAutoMovieFootprint` represents a surface's plan region: the outer ring, and the holes cut out of it. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `IAutoMovieFootprint` structures a surface's plan region: the outer ring, and the holes cut out of it for the system that resolves host-relative support geometry and whole-footprint zone membership.
  */
 export interface IAutoMovieFootprint {
-  /** The ring that bounds the region. */
+  /**
+   * The ring that bounds the region.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `outer` records `IAutoMovieFootprint`'s ring that bounds the region. This ensures membership is judged from a subject footprint rather than a point.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `outer` supplies `IAutoMovieFootprint`'s ring that bounds the region when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly outer: IAutoMovieFootprintRing;
 
-  /** Voids cut in {@link outer}; empty for a solid patch. */
+  /**
+   * Voids cut in {@link outer}; empty for a solid patch.
+   *
+   * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `holes` records `IAutoMovieFootprint`'s voids cut in `outer`; empty for a solid patch. This ensures membership is judged from a subject footprint rather than a point.
+   * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `holes` supplies `IAutoMovieFootprint`'s voids cut in `outer`; empty for a solid patch when the engine resolves host-relative support geometry and whole-footprint zone membership.
+   */
   readonly holes: readonly IAutoMovieFootprintRing[];
 }
 
-/** Prepare one closed ring for repeated plan queries. */
+/**
+ * Prepare one closed ring for repeated plan queries.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `footprintRing` prepares one closed ring for repeated plan queries. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprintRing` performs ring footprint evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
+ */
 export const footprintRing = (
   points: readonly IAutoMovieVector3[],
 ): IAutoMovieFootprintRing => {
@@ -98,7 +139,12 @@ export const footprintRing = (
   return { points, plan, doubleArea };
 };
 
-/** The plan region one support surface covers. */
+/**
+ * The plan region one support surface covers.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `surfaceFootprint` produces the plan region one support surface covers. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `surfaceFootprint` performs footprint surface evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
+ */
 export const surfaceFootprint = (
   surface: IAutoMovieSurface,
 ): IAutoMovieFootprint => ({
@@ -113,6 +159,9 @@ export const surfaceFootprint = (
  * an edge is `"boundary"` rather than whichever side the parity happened to
  * land on. A ring of fewer than three points bounds nothing, so every point is
  * outside it.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `footprintRingPlacement` returns where `(x, z)` stands relative to one ring. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprintRingPlacement` performs ring placement footprint evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const footprintRingPlacement = (
   ring: IAutoMovieFootprintRing,
@@ -145,6 +194,9 @@ export const footprintRingPlacement = (
  * covers nothing, matching what the hull query answered before holes existed;
  * `validateSpace` refuses such a footprint, so this is what a hand-built patch
  * reaching a renderer reads as rather than a throw.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `footprintContains` answers "Is `(x, z)` on the surface the footprint describes?" This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprintContains` performs contains footprint evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const footprintContains = (
   footprint: IAutoMovieFootprint,
@@ -166,6 +218,9 @@ export const footprintContains = (
  * cannot go negative for a record that passed. An unvalidated one is reported
  * as the arithmetic actually says rather than clamped, because a negative area
  * is a reader-visible symptom and a zero is a lie.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `footprintArea` produces plan area of the region, in square metres: the outer ring less its holes. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprintArea` performs area calculation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const footprintArea = (footprint: IAutoMovieFootprint): number =>
   footprint.holes.reduce(
@@ -198,10 +253,19 @@ export const footprintArea = (footprint: IAutoMovieFootprint): number =>
  * there is no shape for them to agree on. That is why `validateSpace` refuses a
  * self-crossing ring outright rather than leaving either reading to stand for
  * it.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `footprintConvexPieces` produces the footprint as convex pieces whose union is exactly the region. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `footprintConvexPieces` performs convex pieces footprint evaluation when the engine checks finite planar topology before consuming geometry.
  */
 export const footprintConvexPieces = (
   footprint: IAutoMovieFootprint,
 ): IAutoMovieVector3[][] => {
+  const failure = autoMoviePlanarRegionFailure({
+    outer: footprint.outer.plan,
+    holes: footprint.holes.map((hole) => hole.plan),
+    label: "footprint",
+  });
+  if (failure !== null) return [];
   if (footprint.outer.doubleArea === 0) return [];
   if (footprint.holes.length === 0) {
     const hull = convexHull2D(footprint.outer.points);
@@ -220,6 +284,9 @@ export const footprintConvexPieces = (
  * that piece, and the widest piece is chosen so the anchor sits in the part of
  * the patch there is most of. A patch that was already convex is its own widest
  * piece, so the answer is unchanged wherever it was already right.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-zone-membership `footprintInteriorPoint` produces a plan point guaranteed to be on the region, or `null` when it has none. This ensures membership is judged from a subject footprint rather than a point.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `footprintInteriorPoint` performs interior point footprint evaluation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  */
 export const footprintInteriorPoint = (
   footprint: IAutoMovieFootprint,

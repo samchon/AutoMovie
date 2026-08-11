@@ -83,6 +83,12 @@ interface IDrawable {
  * that has none of it.
  *
  * @author Samchon
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Derives the requested view's actual page lines, space regions, annotations, extent, and unresolved gaps from the validated environment.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Canonicalizes one validated environment and drawing view into deterministic cut geometry, projected geometry, feature resolutions, and a digest.
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-deliverable-consistency `deriveAutoMovieDrawing` derives one identified view, geometry, annotations, gaps, and digest from the same validated built-environment record without copying an editable design.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-capture-deliverable-consistency The drawing implements the shared-environment and deterministic-derived-output subset without claiming rendered captures or a full provenance manifest.
+ * @evidence requirements/building-exterior/deliverables.md#building-exterior-drawing-views `deriveAutoMovieDrawing` resolves plan, elevation, and section frames, extent, scale, projected geometry, annotations, and gaps from the building state.
+ * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-deliverable-input-manifest The result preserves environment identity, view settings, coordinate frame, scale, and deterministic digest without claiming producer or generated-time fields.
  */
 export const deriveAutoMovieDrawing = (props: {
   /** Design the drawing is taken from. */

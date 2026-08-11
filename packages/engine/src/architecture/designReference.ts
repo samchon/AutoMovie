@@ -121,6 +121,8 @@ export const isAutoMovieDesignReferenceMedia = (
  * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-observation-record-contract The design-reference validator enforces the Engine's frame-local observation inputs and observed, unsupported, or not-run outputs without turning them into design facts.
  * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-claim-basis `validateDesignReference` requires each candidate interpretation to cite observed primitives and retain confidence, alternatives, and unresolved issue identities.
  * @evidence specifications/evidence-and-provenance/observations-claims-and-human-judgments.md#evp-claim-evaluation-contract The candidate record preserves the Engine's concrete observation basis and uncertainty fields; it does not claim human approval or a general claim ledger.
+ * @evidence requirements/interior/existing-conditions-phases-and-alternatives.md#interior-existing-survey-uncertainty `validateDesignReference` preserves source frames, scale state, confidence, alternative readings, unresolved issues, and observed, unsupported, or not-run outcomes without promoting them to design facts.
+ * @evidence specifications/interior-space/construction-phases-and-alternatives.md#interior-space-existing-condition-uncertainty The validator implements the recorded-observation and unsettled-reading subset without claiming surveyed confirmation or building phase authority.
  */
 export const validateDesignReference = (props: {
   reference: IAutoMovieDesignReference;

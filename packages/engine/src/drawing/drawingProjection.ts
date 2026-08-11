@@ -22,10 +22,18 @@ import { convexHull2D } from "../math/hull";
  * between two runs is not comparable by digest. Six places is a micrometre at
  * building scale: finer than any construction tolerance and coarse enough that
  * the last bits of an accumulated dot product cannot move it.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Fixes page coordinates and measurements to six decimal places so identical drawing inputs retain comparable values and digests.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Defines the `10^-6` output grid applied to deterministic drawing coordinates, lengths, and areas.
  */
 export const AUTOMOVIE_DRAWING_DECIMALS = 6;
 
-/** Tolerance for deciding which side of the cut plane a vertex is on. */
+/**
+ * Tolerance for deciding which side of the cut plane a vertex is on.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Prevents negligible floating-point drift around a section plane from changing which cut lines a drawing contains.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Sets the `1e-9` signed-distance tolerance used by plane classification and geometric degeneracy checks.
+ */
 export const AUTOMOVIE_DRAWING_EPSILON = 1e-9;
 
 /**
@@ -36,24 +44,62 @@ export const AUTOMOVIE_DRAWING_EPSILON = 1e-9;
  * forces that intersection to be bounded. Clipping starts from a square this
  * large and reports an unbounded result rather than printing a ten-kilometre
  * room as if somebody had drawn it.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Makes an unbounded logical-space section detectable instead of presenting the clipping seed as a plausible room outline.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Supplies the `10,000` metre half-extent whose surviving boundary marks a half-space intersection as unbounded.
  */
 export const AUTOMOVIE_DRAWING_CELL_BOUND = 1e4;
 
-/** One world-space triangle of some element's geometry. */
+/**
+ * One world-space triangle of some element's geometry.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Carries one exact world-space surface primitive from which the drawing derives section and silhouette linework.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Represents a consistently wound three-corner facet consumed by the deterministic projection kernel.
+ */
 export interface IAutoMovieDrawingTriangle {
-  /** First corner. */
+  /**
+   * First corner.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Supplies the first world-space corner that anchors a source facet's projected and cut geometry.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Establishes the origin corner used with `b` and `c` to classify the facet's plane and winding.
+   */
   a: IAutoMovieVector3;
-  /** Second corner. */
+  /**
+   * Second corner.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Supplies the second world-space corner that fixes the facet's first edge for line extraction.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Forms the first directed span from `a` used in the facet normal and plane-intersection calculations.
+   */
   b: IAutoMovieVector3;
-  /** Third corner. */
+  /**
+   * Third corner.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Supplies the third world-space corner that closes the facet projected onto the drawing.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Forms the second span from `a`, completing the facet normal, winding, and clipping domain.
+   */
   c: IAutoMovieVector3;
 }
 
-/** A straight world-space segment awaiting projection. */
+/**
+ * A straight world-space segment awaiting projection.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Carries one world-space segment that becomes a traceable cut or silhouette line on the page.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Defines the endpoint pair passed unchanged from geometric classification into page projection.
+ */
 export interface IAutoMovieDrawingEdge {
-  /** Segment start. */
+  /**
+   * Segment start.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Locates the world-space start of a drawing segment before its page-coordinate projection.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Preserves the first classified intersection or silhouette vertex as the segment's initial endpoint.
+   */
   from: IAutoMovieVector3;
-  /** Segment end. */
+  /**
+   * Segment end.
+   *
+   * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Locates the world-space end that completes a cut or silhouette segment on the derived sheet.
+   * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Preserves the second classified intersection or outline vertex as the segment's terminal endpoint.
+   */
   to: IAutoMovieVector3;
 }
 
@@ -63,6 +109,9 @@ export interface IAutoMovieDrawingEdge {
  * Negative zero is normalized away: `-0` and `0` are different strings, and a
  * digest over stringified coordinates would disagree with itself depending on
  * which side of an axis a wall happened to be built.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Stabilizes every reported drawing scalar on the fixed precision grid and prevents negative zero from changing serialized evidence.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Rounds through `AUTOMOVIE_DRAWING_DECIMALS` and canonicalizes a resulting `-0` to `0`.
  */
 export const roundAutoMovieDrawingScalar = (value: number): number => {
   const factor = 10 ** AUTOMOVIE_DRAWING_DECIMALS;
@@ -85,6 +134,8 @@ export const roundAutoMovieDrawingScalar = (value: number): number => {
  * what makes that precondition visible rather than a thrown `undefined`.
  *
  * @author Samchon
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Finds drawing and model extents without an argument-spread limit that would fail on ordinary large meshes.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Folds an arbitrary numeric iterable into stable minimum and maximum identities in one pass.
  */
 export const autoMovieDrawingRange = (
   values: Iterable<number>,
@@ -101,6 +152,9 @@ export const autoMovieDrawingRange = (
 /**
  * Whether a projection removes material and draws what the plane passes
  * through.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Decides whether a requested projection must expose material intersected by its view plane.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Classifies elevation as non-cutting and every plan or section projection as cutting.
  */
 export const autoMovieDrawingHasCut = (
   projection: AutoMovieDrawingProjection,
@@ -126,6 +180,8 @@ export const autoMovieDrawingHasCut = (
  * basis.
  *
  * @author Samchon
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Establishes the validated page basis that makes each authored view direction, scale, and reflected-ceiling orientation reproducible.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Validates view vectors and depths, derives an orthonormal right-up-normal frame, and reflects only the ceiling-plan right axis.
  */
 export const autoMovieDrawingFrame = (
   view: IAutoMovieDrawingView,
@@ -163,7 +219,12 @@ export const autoMovieDrawingFrame = (
   };
 };
 
-/** Project one world point onto the page, without rounding. */
+/**
+ * Project one world point onto the page, without rounding.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Maps an exact world coordinate to the two page coordinates used by derived linework and regions.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Projects the point's frame-relative offset onto the view's right and up axes without premature rounding.
+ */
 export const projectAutoMovieDrawingPoint = (
   frame: IAutoMovieDrawingFrame,
   point: IAutoMovieVector3,
@@ -175,7 +236,12 @@ export const projectAutoMovieDrawingPoint = (
   };
 };
 
-/** Signed distance from the cut plane; positive is the viewer's side. */
+/**
+ * Signed distance from the cut plane; positive is the viewer's side.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Locates a world point on the viewer side, far side, or surface of the drawing's cut plane.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Computes signed plane distance as the dot product of the frame-relative point and normalized view normal.
+ */
 export const autoMovieDrawingPlaneDistance = (
   frame: IAutoMovieDrawingFrame,
   point: IAutoMovieVector3,
@@ -188,6 +254,9 @@ export const autoMovieDrawingPlaneDistance = (
  * hierarchy into staged scene nodes, so a line on the drawing and the set piece
  * it depicts stand in the same place. The suite pins that agreement directly
  * rather than trusting the two to stay in step.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Places drawing geometry through the same parent-child transforms as its staged element so the sheet cannot drift from the model.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Recursively composes each element's local transform with its ancestors and caches one world matrix per resolved identity.
  */
 export const autoMovieDrawingWorldMatrices = (
   environment: IAutoMovieBuiltEnvironment,
@@ -216,7 +285,12 @@ export const autoMovieDrawingWorldMatrices = (
   return matrices;
 };
 
-/** Apply a column-major 4x4 matrix to a point. */
+/**
+ * Apply a column-major 4x4 matrix to a point.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Moves a source vertex into its resolved element frame before that geometry is cut or projected.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Applies the column-major affine `4x4` position transform to all three coordinates of one drawing point.
+ */
 export const transformAutoMovieDrawingPoint = (
   matrix: readonly number[],
   point: IAutoMovieVector3,
@@ -246,6 +320,9 @@ export const transformAutoMovieDrawingPoint = (
  * Malformed arrays throw: a triangle list that is not a multiple of three is an
  * authoring defect, and drawing whatever prefix happens to divide evenly would
  * hide it behind a plausible-looking outline.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Extracts the actual triangles of one model part so its drawing linework comes from the same authored geometry as the staged object.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Tessellates primitives or reads mesh indices, rejects malformed arrays, and applies the part-local transform to every resulting facet.
  */
 export const autoMovieDrawingPartTriangles = (
   model: IAutoMovieModel,
@@ -296,7 +373,12 @@ export const autoMovieDrawingPartTriangles = (
   return triangles;
 };
 
-/** Move every triangle of a list into world space. */
+/**
+ * Move every triangle of a list into world space.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Moves a complete part's triangle soup into world space before the view classifies its visible and intersected edges.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Maps one resolved world matrix across every `a`, `b`, and `c` corner without changing facet order.
+ */
 export const transformAutoMovieDrawingTriangles = (
   matrix: readonly number[],
   triangles: readonly IAutoMovieDrawingTriangle[],
@@ -314,6 +396,9 @@ export const transformAutoMovieDrawingTriangles = (
  * plane contributes nothing: a face tangent to the cut is a tangency, not a
  * section, and emitting its three edges would scribble every interior diagonal
  * of a slab whose top happened to sit at the cut height.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Emits the precise section segment where each straddling source triangle crosses the authored cut plane.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Classifies triangle corners by signed distance, interpolates the two crossings, and suppresses coplanar tangencies.
  */
 export const autoMovieDrawingCutEdges = (
   frame: IAutoMovieDrawingFrame,
@@ -356,6 +441,9 @@ export const autoMovieDrawingCutEdges = (
  * Sutherland-Hodgman on each triangle, re-fanned into triangles. The new faces
  * lying in the plane are exactly the ones the cut linework already draws, and
  * the caller drops their silhouette so no segment is drafted twice.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Removes viewer-side material from a cutting view so projected outlines describe only geometry beyond the section plane.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Clips each facet against the far half-space, inserts plane crossings, and re-fans the surviving polygon deterministically.
  */
 export const clipAutoMovieDrawingTriangles = (
   frame: IAutoMovieDrawingFrame,
@@ -396,6 +484,9 @@ export const clipAutoMovieDrawingTriangles = (
  * Vertices are welded on the rounded output grid before edges are keyed, so two
  * triangles that meet at a shared corner are recognised as meeting there even
  * when the arithmetic that produced the corner differed by a last bit.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Extracts the visible boundary of projected source geometry without drafting its internal triangulation.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Welds rounded vertices and retains only singly owned edges or edges shared by oppositely facing facets.
  */
 export const autoMovieDrawingSilhouetteEdges = (
   frame: IAutoMovieDrawingFrame,
@@ -447,6 +538,9 @@ export const autoMovieDrawingSilhouetteEdges = (
  * square is what makes an unbounded cell detectable: a result that still
  * touches it was never bounded by the design, and the caller says so instead of
  * printing the square as a room.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Derives a logical cell's page polygon and explicitly reports when its authored half-spaces do not bound that section.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Projects each world half-space into the view plane, clips the finite seed polygon, and tests whether any seed boundary survived.
  */
 export const autoMovieDrawingCellSection = (
   frame: IAutoMovieDrawingFrame,
@@ -483,7 +577,12 @@ export const autoMovieDrawingCellSection = (
   return { polygon, bounded };
 };
 
-/** Signed doubled-area shoelace magnitude, halved: the area of a simple polygon. */
+/**
+ * Signed doubled-area shoelace magnitude, halved: the area of a simple polygon.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Measures the area enclosed by a derived page polygon directly from its ordered drawing coordinates.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Returns half the absolute shoelace sum for three or more vertices and zero for a non-polygonal input.
+ */
 export const autoMovieDrawingPolygonArea = (
   polygon: readonly IAutoMovieDrawingPoint[],
 ): number => {
@@ -506,6 +605,9 @@ export const autoMovieDrawingPolygonArea = (
  * the sum of the cones from the cell's interior point to those faces. An
  * unbounded or degenerate cell has no such vertex set and reports `null` rather
  * than a number nobody can act on.
+ *
+ * @evidence requirements/interior/deliverables-and-quantities.md#interior-drawing-views Measures a logical cell from the same half-spaces that define its drawing regions and returns no false number for an open cell.
+ * @evidence specifications/interior-space/deliverables-and-validation.md#interior-space-drawing-schedule-quantity Normalizes and deduplicates planes, solves their bounded vertices, verifies face closure, and sums interior-point cones or returns `null`.
  */
 export const autoMovieDrawingCellVolume = (
   planes: readonly IAutoMovieHalfSpacePlane[],

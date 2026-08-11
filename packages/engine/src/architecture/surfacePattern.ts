@@ -10,7 +10,14 @@ import { convexHull2D } from "../math/hull";
 import { positiveModulo } from "../math/positiveModulo";
 import { seededValue } from "../math/random";
 
-/** Greatest number of lattice cells one zone may be enumerated over. */
+/**
+ * Greatest number of lattice cells one zone may be enumerated over.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `AUTOMOVIE_MAX_PATTERN_CELLS` fixes the greatest number of lattice cells one zone may be enumerated over. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `AUTOMOVIE_MAX_PATTERN_CELLS` bounds the max pattern cells policy while the engine resolves the declared physical-module pattern deterministically.
+ * @evidence requirements/building-exterior/patterns-and-instances.md#building-exterior-instance-bounded-expansion `AUTOMOVIE_MAX_PATTERN_CELLS` hard-bounds the number of repeated facade lattice cells one zone may expand before the Engine refuses it.
+ * @evidence specifications/building-envelope/external-assets-patterns-and-instances.md#building-envelope-repeated-building-budget-failures `AUTOMOVIE_MAX_PATTERN_CELLS` provides the deterministic expansion ceiling used by the repeated-building pattern refusal.
+ */
 export const AUTOMOVIE_MAX_PATTERN_CELLS = 1_000_000;
 
 /** Domain constant separating variant draws from every other seeded decision. */
@@ -28,38 +35,98 @@ const COVERAGE_EPSILON = 1e-12;
 /** Greatest relative skew a UV transform is still counted as free of. */
 const SHEAR_EPSILON = 1e-9;
 
-/** One point on the host face, in face-local metres. */
+/**
+ * One point on the host face, in face-local metres.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternPoint` represents one point on the host face, in face-local metres. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternPoint` structures one point on the host face, in face-local metres for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternPoint {
-  /** Distance along the face's local U axis, in metres. */
+  /**
+   * Distance along the face's local U axis, in metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `u` records `IAutoMoviePatternPoint`'s distance along the face's local U axis, in metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `u` supplies `IAutoMoviePatternPoint`'s distance along the face's local U axis, in metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   u: number;
-  /** Distance along the face's local V axis, in metres. */
+  /**
+   * Distance along the face's local V axis, in metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `v` records `IAutoMoviePatternPoint`'s distance along the face's local V axis, in metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `v` supplies `IAutoMoviePatternPoint`'s distance along the face's local V axis, in metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   v: number;
 }
 
-/** One convex face-local area a pattern must leave uncovered. */
+/**
+ * One convex face-local area a pattern must leave uncovered.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternExclusion` represents one convex face-local area a pattern must leave uncovered. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternExclusion` structures one convex face-local area a pattern must leave uncovered for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternExclusion {
-  /** Stable exclusion id, unique inside one pattern. */
+  /**
+   * Stable exclusion id, unique inside one pattern.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMoviePatternExclusion`'s stable exclusion id, unique inside one pattern. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMoviePatternExclusion`'s stable exclusion id, unique inside one pattern when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Convex face-local polygon of at least three points. */
+  /**
+   * Convex face-local polygon of at least three points.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `polygon` records `IAutoMoviePatternExclusion`'s convex face-local polygon of at least three points. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `polygon` supplies `IAutoMoviePatternExclusion`'s convex face-local polygon of at least three points when the engine resolves the declared physical-module pattern deterministically.
+   */
   polygon: IAutoMoviePatternPoint[];
 }
 
-/** One module a zone's own program proposes, before any clipping. */
+/**
+ * One module a zone's own program proposes, before any clipping.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternCandidate` represents one module a zone's own program proposes, before any clipping. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternCandidate` structures one module a zone's own program proposes, before any clipping for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternCandidate {
-  /** Stable module identity, unique inside its zone. */
+  /**
+   * Stable module identity, unique inside its zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMoviePatternCandidate`'s stable module identity, unique inside its zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMoviePatternCandidate`'s stable module identity, unique inside its zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Module centre in face-local metres. */
+  /**
+   * Module centre in face-local metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `center` records `IAutoMoviePatternCandidate`'s module centre in face-local metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `center` supplies `IAutoMoviePatternCandidate`'s module centre in face-local metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   center: IAutoMoviePatternPoint;
-  /** Module footprint in metres; the joint is the gap the author leaves. */
+  /**
+   * Module footprint in metres; the joint is the gap the author leaves.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `size` records `IAutoMoviePatternCandidate`'s module footprint in metres; the joint is the gap the author leaves. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `size` supplies `IAutoMoviePatternCandidate`'s module footprint in metres; the joint is the gap the author leaves when the engine resolves the declared physical-module pattern deterministically.
+   */
   size: {
     /** Module extent along its own long axis before rotation, in metres. */
     u: number;
     /** Module extent across that axis before rotation, in metres. */
     v: number;
   };
-  /** In-plane module rotation in degrees, counter-clockwise about the normal. */
+  /**
+   * In-plane module rotation in degrees, counter-clockwise about the normal.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `rotationDeg` records `IAutoMoviePatternCandidate`'s in-plane module rotation in degrees, counter-clockwise about the normal. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `rotationDeg` supplies `IAutoMoviePatternCandidate`'s in-plane module rotation in degrees, counter-clockwise about the normal when the engine resolves the declared physical-module pattern deterministically.
+   */
   rotationDeg: number;
-  /** Material grain direction in degrees; read modulo 180. */
+  /**
+   * Material grain direction in degrees; read modulo 180.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `grainDeg` records `IAutoMoviePatternCandidate`'s material grain direction in degrees; read modulo 180. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `grainDeg` supplies `IAutoMoviePatternCandidate`'s material grain direction in degrees; read modulo 180 when the engine resolves the declared physical-module pattern deterministically.
+   */
   grainDeg: number;
   /**
    * Whether the piece is laid face-flipped, its own U axis reversed.
@@ -74,6 +141,9 @@ export interface IAutoMoviePatternCandidate {
    * It is not the grain turned. {@link grainDeg} states the direction the grain
    * runs on the surface either way, so a mirrored pair whose grain runs one way
    * is continuous grain and is not reported as a break.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `mirror` records whether the piece is laid face-flipped, its own U axis reversed for `IAutoMoviePatternCandidate`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `mirror` tells the engine whether the piece is laid face-flipped, its own U axis reversed for `IAutoMoviePatternCandidate` as it resolves the declared physical-module pattern deterministically.
    */
   mirror: boolean;
 }
@@ -90,6 +160,9 @@ export interface IAutoMoviePatternCandidate {
  * The function must be pure: the same cell must always produce the same
  * modules, or the determinism the rest of the pipeline is built on stops at
  * this boundary.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `AutoMovieSurfacePatternGenerator` represents the author's own module program, run once per lattice cell. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `AutoMovieSurfacePatternGenerator` structures the author's own module program, run once per lattice cell for the system that resolves the declared physical-module pattern deterministically.
  */
 export type AutoMovieSurfacePatternGenerator = (cell: {
   /** Integer lattice column along the face's U axis. */
@@ -107,15 +180,40 @@ export type AutoMovieSurfacePatternGenerator = (cell: {
   };
 }) => readonly IAutoMoviePatternCandidate[];
 
-/** One area of the host face filled by one module program. */
+/**
+ * One area of the host face filled by one module program.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMovieSurfacePatternZone` represents one area of the host face filled by one module program. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMovieSurfacePatternZone` structures one area of the host face filled by one module program for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMovieSurfacePatternZone {
-  /** Stable zone id, unique inside one pattern. */
+  /**
+   * Stable zone id, unique inside one pattern.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMovieSurfacePatternZone`'s stable zone id, unique inside one pattern. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMovieSurfacePatternZone`'s stable zone id, unique inside one pattern when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Convex face-local polygon of at least three points. */
+  /**
+   * Convex face-local polygon of at least three points.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `region` records `IAutoMovieSurfacePatternZone`'s convex face-local polygon of at least three points. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `region` supplies `IAutoMovieSurfacePatternZone`'s convex face-local polygon of at least three points when the engine resolves the declared physical-module pattern deterministically.
+   */
   region: IAutoMoviePatternPoint[];
-  /** Face-local metre position of lattice cell `(0, 0)`. */
+  /**
+   * Face-local metre position of lattice cell `(0, 0)`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `origin` records `IAutoMovieSurfacePatternZone`'s face-local metre position of lattice cell `(0, 0)`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `origin` supplies `IAutoMovieSurfacePatternZone`'s face-local metre position of lattice cell `(0, 0)` when the engine resolves the declared physical-module pattern deterministically.
+   */
   origin: IAutoMoviePatternPoint;
-  /** Lattice pitch in metres; the generator runs once per cell. */
+  /**
+   * Lattice pitch in metres; the generator runs once per cell.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `period` records `IAutoMovieSurfacePatternZone`'s lattice pitch in metres; the generator runs once per cell. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `period` supplies `IAutoMovieSurfacePatternZone`'s lattice pitch in metres; the generator runs once per cell when the engine resolves the declared physical-module pattern deterministically.
+   */
   period: {
     /** Cell pitch along U, strictly above zero. */
     u: number;
@@ -129,6 +227,9 @@ export interface IAutoMovieSurfacePatternZone {
    * touch the region is visited, which is only knowable if the author states
    * the reach. A module that exceeds it is refused rather than silently dropped
    * at the region's edge.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `reach` records how far in metres a generated module may reach from its cell origin for `IAutoMovieSurfacePatternZone`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `reach` tells the engine how far in metres a generated module may reach from its cell origin for `IAutoMovieSurfacePatternZone` as it resolves the declared physical-module pattern deterministically.
    */
   reach: {
     /** Greatest reach along U, strictly above zero. */
@@ -136,9 +237,19 @@ export interface IAutoMovieSurfacePatternZone {
     /** Greatest reach along V, strictly above zero. */
     v: number;
   };
-  /** {@link IAutoMovieMaterial} id this zone's modules carry, or `null`. */
+  /**
+   * {@link IAutoMovieMaterial} id this zone's modules carry, or `null`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `material` records `IAutoMovieSurfacePatternZone`'s `IAutoMovieMaterial` id this zone's modules carry, or `null`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `material` supplies `IAutoMovieSurfacePatternZone`'s `IAutoMovieMaterial` id this zone's modules carry, or `null` when the engine resolves the declared physical-module pattern deterministically.
+   */
   material: string | null;
-  /** The author's module program for this zone. */
+  /**
+   * The author's module program for this zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `generate` records `IAutoMovieSurfacePatternZone`'s author's module program for this zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `generate` supplies `IAutoMovieSurfacePatternZone`'s author's module program for this zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   generate: AutoMovieSurfacePatternGenerator;
 }
 
@@ -159,74 +270,196 @@ export interface IAutoMovieSurfacePatternZone {
  * across the border between them exactly as it does inside one zone, so a grain
  * that turns or a joint that fails to line up at the transition is reported
  * with both occurrence ids rather than being invisible.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMovieSurfacePattern` represents a deterministic module-laying program over one host face. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMovieSurfacePattern` structures a deterministic module-laying program over one host face for the system that resolves the declared physical-module pattern deterministically.
  */
 export interface IAutoMovieSurfacePattern {
-  /** Stable pattern id. */
+  /**
+   * Stable pattern id.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMovieSurfacePattern`'s stable pattern id. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMovieSurfacePattern`'s stable pattern id when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Areas of the face, each with its own module program. Never empty. */
+  /**
+   * Areas of the face, each with its own module program. Never empty.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `zones` records `IAutoMovieSurfacePattern`'s areas of the face, each with its own module program. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `zones` supplies `IAutoMovieSurfacePattern`'s areas of the face, each with its own module program when the engine resolves the declared physical-module pattern deterministically.
+   */
   zones: IAutoMovieSurfacePatternZone[];
-  /** Areas no module may cover, such as an opening or a drain. */
+  /**
+   * Areas no module may cover, such as an opening or a drain.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `exclusions` records `IAutoMovieSurfacePattern`'s areas no module may cover, such as an opening or a drain. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `exclusions` supplies `IAutoMovieSurfacePattern`'s areas no module may cover, such as an opening or a drain when the engine resolves the declared physical-module pattern deterministically.
+   */
   exclusions: IAutoMoviePatternExclusion[];
-  /** Nominal gap between neighbouring laid pieces in metres, at least zero. */
+  /**
+   * Nominal gap between neighbouring laid pieces in metres, at least zero.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `joint` records `IAutoMovieSurfacePattern`'s nominal gap between neighbouring laid pieces in metres, at least zero. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `joint` supplies `IAutoMovieSurfacePattern`'s nominal gap between neighbouring laid pieces in metres, at least zero when the engine resolves the declared physical-module pattern deterministically.
+   */
   joint: number;
-  /** Metre slack a measured gap may differ from the nominal joint by. */
+  /**
+   * Metre slack a measured gap may differ from the nominal joint by.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `jointTolerance` records `IAutoMovieSurfacePattern`'s metre slack a measured gap may differ from the nominal joint by. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `jointTolerance` supplies `IAutoMovieSurfacePattern`'s metre slack a measured gap may differ from the nominal joint by when the engine resolves the declared physical-module pattern deterministically.
+   */
   jointTolerance: number;
-  /** Greatest metre gap at which two laid pieces still count as neighbours. */
+  /**
+   * Greatest metre gap at which two laid pieces still count as neighbours.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `adjacency` records `IAutoMovieSurfacePattern`'s greatest metre gap at which two laid pieces still count as neighbours. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `adjacency` supplies `IAutoMovieSurfacePattern`'s greatest metre gap at which two laid pieces still count as neighbours when the engine resolves the declared physical-module pattern deterministically.
+   */
   adjacency: number;
-  /** Smallest acceptable surviving fraction of a module, within `(0, 1]`. */
+  /**
+   * Smallest acceptable surviving fraction of a module, within `(0, 1]`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `minimumPiece` records `IAutoMovieSurfacePattern`'s smallest acceptable surviving fraction of a module, within `(0, 1]`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `minimumPiece` supplies `IAutoMovieSurfacePattern`'s smallest acceptable surviving fraction of a module, within `(0, 1]` when the engine resolves the declared physical-module pattern deterministically.
+   */
   minimumPiece: number;
   /**
    * Greatest tolerated grain deviation between neighbours in degrees, or
    * `null`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `grainToleranceDeg` records `IAutoMovieSurfacePattern`'s greatest tolerated grain deviation between neighbours in degrees, or `null`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `grainToleranceDeg` supplies `IAutoMovieSurfacePattern`'s greatest tolerated grain deviation between neighbours in degrees, or `null` when the engine resolves the declared physical-module pattern deterministically.
    */
   grainToleranceDeg: number | null;
-  /** Non-negative safe-integer seed driving every variant draw. */
+  /**
+   * Non-negative safe-integer seed driving every variant draw.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `seed` records `IAutoMovieSurfacePattern`'s non-negative safe-integer seed driving every variant draw. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `seed` supplies `IAutoMovieSurfacePattern`'s non-negative safe-integer seed driving every variant draw when the engine resolves the declared physical-module pattern deterministically.
+   */
   seed: number;
-  /** Positive integer count of variants the seed may choose between. */
+  /**
+   * Positive integer count of variants the seed may choose between.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `variants` records `IAutoMovieSurfacePattern`'s positive integer count of variants the seed may choose between. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `variants` supplies `IAutoMovieSurfacePattern`'s positive integer count of variants the seed may choose between when the engine resolves the declared physical-module pattern deterministically.
+   */
   variants: number;
 }
 
 /**
  * One laid module occurrence: the identity geometry, finish, and take-off
  * share.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternPlacement` represents one laid module occurrence: the identity geometry, finish, and take-off share. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternPlacement` structures one laid module occurrence: the identity geometry, finish, and take-off share for the system that resolves the declared physical-module pattern deterministically.
  */
 export interface IAutoMoviePatternPlacement {
-  /** Occurrence identity, `"<zone>/<module>"`. */
+  /**
+   * Occurrence identity, `"<zone>/<module>"`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMoviePatternPlacement`'s occurrence identity, `"<zone>/<module>"`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMoviePatternPlacement`'s occurrence identity, `"<zone>/<module>"` when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** The zone that laid it. */
+  /**
+   * The zone that laid it.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `zone` records `IAutoMoviePatternPlacement`'s zone that laid it. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `zone` supplies `IAutoMoviePatternPlacement`'s zone that laid it when the engine resolves the declared physical-module pattern deterministically.
+   */
   zone: string;
-  /** The generator's own module id inside that zone. */
+  /**
+   * The generator's own module id inside that zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `module` records `IAutoMoviePatternPlacement`'s generator's own module id inside that zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `module` supplies `IAutoMoviePatternPlacement`'s generator's own module id inside that zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   module: string;
-  /** Surface material id inherited from the zone, or `null`. */
+  /**
+   * Surface material id inherited from the zone, or `null`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `material` records `IAutoMoviePatternPlacement`'s surface material id inherited from the zone, or `null`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `material` supplies `IAutoMoviePatternPlacement`'s surface material id inherited from the zone, or `null` when the engine resolves the declared physical-module pattern deterministically.
+   */
   material: string | null;
-  /** Module centre in face-local metres, as generated. */
+  /**
+   * Module centre in face-local metres, as generated.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `center` records `IAutoMoviePatternPlacement`'s module centre in face-local metres, as generated. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `center` supplies `IAutoMoviePatternPlacement`'s module centre in face-local metres, as generated when the engine resolves the declared physical-module pattern deterministically.
+   */
   center: IAutoMoviePatternPoint;
-  /** Module footprint in metres, as generated. */
+  /**
+   * Module footprint in metres, as generated.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `size` records `IAutoMoviePatternPlacement`'s module footprint in metres, as generated. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `size` supplies `IAutoMoviePatternPlacement`'s module footprint in metres, as generated when the engine resolves the declared physical-module pattern deterministically.
+   */
   size: {
     /** Extent along the module's own U axis. */
     u: number;
     /** Extent along the module's own V axis. */
     v: number;
   };
-  /** In-plane module rotation in degrees. */
+  /**
+   * In-plane module rotation in degrees.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `rotationDeg` records `IAutoMoviePatternPlacement`'s in-plane module rotation in degrees. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `rotationDeg` supplies `IAutoMoviePatternPlacement`'s in-plane module rotation in degrees when the engine resolves the declared physical-module pattern deterministically.
+   */
   rotationDeg: number;
-  /** Grain direction in degrees, read modulo 180. */
+  /**
+   * Grain direction in degrees, read modulo 180.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `grainDeg` records `IAutoMoviePatternPlacement`'s grain direction in degrees, read modulo 180. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `grainDeg` supplies `IAutoMoviePatternPlacement`'s grain direction in degrees, read modulo 180 when the engine resolves the declared physical-module pattern deterministically.
+   */
   grainDeg: number;
-  /** Whether the piece is laid face-flipped, its own U axis reversed. */
+  /**
+   * Whether the piece is laid face-flipped, its own U axis reversed.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `mirror` records whether the piece is laid face-flipped, its own U axis reversed for `IAutoMoviePatternPlacement`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `mirror` tells the engine whether the piece is laid face-flipped, its own U axis reversed for `IAutoMoviePatternPlacement` as it resolves the declared physical-module pattern deterministically.
+   */
   mirror: boolean;
-  /** Surviving area in square metres. */
+  /**
+   * Surviving area in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `area` records `IAutoMoviePatternPlacement`'s surviving area in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `area` supplies `IAutoMoviePatternPlacement`'s surviving area in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   area: number;
-  /** Surviving fraction of the module's own area, within `(0, 1]`. */
+  /**
+   * Surviving fraction of the module's own area, within `(0, 1]`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `coverage` records `IAutoMoviePatternPlacement`'s surviving fraction of the module's own area, within `(0, 1]`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `coverage` supplies `IAutoMoviePatternPlacement`'s surviving fraction of the module's own area, within `(0, 1]` when the engine resolves the declared physical-module pattern deterministically.
+   */
   coverage: number;
-  /** What reduced the module, if anything. */
+  /**
+   * What reduced the module, if anything.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `cut` records what reduced the module, if anything for `IAutoMoviePatternPlacement`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `cut` tells the engine what reduced the module, if anything for `IAutoMoviePatternPlacement` as it resolves the declared physical-module pattern deterministically.
+   */
   cut: "none" | "boundary" | "exclusion" | "both";
-  /** Seeded variant index within `[0, variants)`. */
+  /**
+   * Seeded variant index within `[0, variants)`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `variant` records `IAutoMoviePatternPlacement`'s seeded variant index within `[0, variants)`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `variant` supplies `IAutoMoviePatternPlacement`'s seeded variant index within `[0, variants)` when the engine resolves the declared physical-module pattern deterministically.
+   */
   variant: number;
   /**
    * The module clipped to its zone region, counter-clockwise.
    *
    * This, and not the module rectangle, is what a joint is measured between,
    * because a joint is read on the surface rather than on the drawing.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `outline` records `IAutoMoviePatternPlacement`'s module clipped to its zone region, counter-clockwise. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `outline` supplies `IAutoMoviePatternPlacement`'s module clipped to its zone region, counter-clockwise when the engine resolves the declared physical-module pattern deterministically.
    */
   outline: IAutoMoviePatternPoint[];
   /**
@@ -238,102 +471,281 @@ export interface IAutoMoviePatternPlacement {
    * can build it; the run reports that as its own finding rather than handing
    * back an outline that quietly covers the opening. Zero means no exclusion
    * reached the piece and the outline is the piece.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `punchedArea` records `IAutoMoviePatternPlacement`'s square metres an exclusion took out of the area `outline` draws. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `punchedArea` supplies `IAutoMoviePatternPlacement`'s square metres an exclusion took out of the area `outline` draws when the engine resolves the declared physical-module pattern deterministically.
    */
   punchedArea: number;
 }
 
-/** The take-off one pattern run produces. */
+/**
+ * The take-off one pattern run produces.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternQuantities` represents the take-off one pattern run produces. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternQuantities` structures the take-off one pattern run produces for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternQuantities {
-  /** Placed occurrences. */
+  /**
+   * Placed occurrences.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `modules` records `IAutoMoviePatternQuantities`'s placed occurrences. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `modules` supplies `IAutoMoviePatternQuantities`'s placed occurrences when the engine resolves the declared physical-module pattern deterministically.
+   */
   modules: number;
-  /** Occurrences laid whole. */
+  /**
+   * Occurrences laid whole.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `whole` records `IAutoMoviePatternQuantities`'s occurrences laid whole. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `whole` supplies `IAutoMoviePatternQuantities`'s occurrences laid whole when the engine resolves the declared physical-module pattern deterministically.
+   */
   whole: number;
-  /** Occurrences reduced by a boundary or an exclusion. */
+  /**
+   * Occurrences reduced by a boundary or an exclusion.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `cut` records `IAutoMoviePatternQuantities`'s occurrences reduced by a boundary or an exclusion. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `cut` supplies `IAutoMoviePatternQuantities`'s occurrences reduced by a boundary or an exclusion when the engine resolves the declared physical-module pattern deterministically.
+   */
   cut: number;
-  /** Surviving area laid, in square metres. */
+  /**
+   * Surviving area laid, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `coveredArea` records `IAutoMoviePatternQuantities`'s surviving area laid, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `coveredArea` supplies `IAutoMoviePatternQuantities`'s surviving area laid, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   coveredArea: number;
-  /** Full modules consumed, in square metres; a cut piece still costs one. */
+  /**
+   * Full modules consumed, in square metres; a cut piece still costs one.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `consumedArea` records `IAutoMoviePatternQuantities`'s full modules consumed, in square metres; a cut piece still costs one. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `consumedArea` supplies `IAutoMoviePatternQuantities`'s full modules consumed, in square metres; a cut piece still costs one when the engine resolves the declared physical-module pattern deterministically.
+   */
   consumedArea: number;
-  /** Offcut area, in square metres. */
+  /**
+   * Offcut area, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `wasteArea` records `IAutoMoviePatternQuantities`'s offcut area, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `wasteArea` supplies `IAutoMoviePatternQuantities`'s offcut area, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   wasteArea: number;
-  /** Offcut share of what was consumed, within `[0, 1)`. */
+  /**
+   * Offcut share of what was consumed, within `[0, 1)`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `wasteRatio` records `IAutoMoviePatternQuantities`'s offcut share of what was consumed, within `[0, 1)`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `wasteRatio` supplies `IAutoMoviePatternQuantities`'s offcut share of what was consumed, within `[0, 1)` when the engine resolves the declared physical-module pattern deterministically.
+   */
   wasteRatio: number;
-  /** Zone area net of exclusions, in square metres. */
+  /**
+   * Zone area net of exclusions, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `netRegionArea` records `IAutoMoviePatternQuantities`'s zone area net of exclusions, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `netRegionArea` supplies `IAutoMoviePatternQuantities`'s zone area net of exclusions, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   netRegionArea: number;
   /**
    * Net region area left uncovered by modules, in square metres.
    *
    * Negative states that the pieces cover more than the region has, which only
    * happens when they overlap each other; the overlap findings name the pairs.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `jointArea` records `IAutoMoviePatternQuantities`'s net region area left uncovered by modules, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `jointArea` supplies `IAutoMoviePatternQuantities`'s net region area left uncovered by modules, in square metres when the engine resolves the declared physical-module pattern deterministically.
    */
   jointArea: number;
   /**
    * Joint area divided by the nominal joint width, in metres; zero when the
    * joint is zero.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `jointLength` records `IAutoMoviePatternQuantities`'s joint area divided by the nominal joint width, in metres; zero when the joint is zero. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `jointLength` supplies `IAutoMoviePatternQuantities`'s joint area divided by the nominal joint width, in metres; zero when the joint is zero when the engine resolves the declared physical-module pattern deterministically.
    */
   jointLength: number;
-  /** The same figures per zone, in declaration order. */
+  /**
+   * The same figures per zone, in declaration order.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `zones` records `IAutoMoviePatternQuantities`'s same figures per zone, in declaration order. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `zones` supplies `IAutoMoviePatternQuantities`'s same figures per zone, in declaration order when the engine resolves the declared physical-module pattern deterministically.
+   */
   zones: IAutoMoviePatternZoneQuantities[];
 }
 
-/** One zone's share of the take-off. */
+/**
+ * One zone's share of the take-off.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternZoneQuantities` represents one zone's share of the take-off. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternZoneQuantities` structures one zone's share of the take-off for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternZoneQuantities {
-  /** The zone id. */
+  /**
+   * The zone id.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `zone` records `IAutoMoviePatternZoneQuantities`'s zone id. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `zone` supplies `IAutoMoviePatternZoneQuantities`'s zone id when the engine resolves the declared physical-module pattern deterministically.
+   */
   zone: string;
-  /** Placed occurrences in this zone. */
+  /**
+   * Placed occurrences in this zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `modules` records `IAutoMoviePatternZoneQuantities`'s placed occurrences in this zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `modules` supplies `IAutoMoviePatternZoneQuantities`'s placed occurrences in this zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   modules: number;
-  /** Occurrences laid whole in this zone. */
+  /**
+   * Occurrences laid whole in this zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `whole` records `IAutoMoviePatternZoneQuantities`'s occurrences laid whole in this zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `whole` supplies `IAutoMoviePatternZoneQuantities`'s occurrences laid whole in this zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   whole: number;
-  /** Occurrences reduced in this zone. */
+  /**
+   * Occurrences reduced in this zone.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `cut` records `IAutoMoviePatternZoneQuantities`'s occurrences reduced in this zone. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `cut` supplies `IAutoMoviePatternZoneQuantities`'s occurrences reduced in this zone when the engine resolves the declared physical-module pattern deterministically.
+   */
   cut: number;
-  /** Surviving area laid in this zone, in square metres. */
+  /**
+   * Surviving area laid in this zone, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `coveredArea` records `IAutoMoviePatternZoneQuantities`'s surviving area laid in this zone, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `coveredArea` supplies `IAutoMoviePatternZoneQuantities`'s surviving area laid in this zone, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   coveredArea: number;
-  /** Full modules consumed in this zone, in square metres. */
+  /**
+   * Full modules consumed in this zone, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `consumedArea` records `IAutoMoviePatternZoneQuantities`'s full modules consumed in this zone, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `consumedArea` supplies `IAutoMoviePatternZoneQuantities`'s full modules consumed in this zone, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   consumedArea: number;
-  /** Offcut area in this zone, in square metres. */
+  /**
+   * Offcut area in this zone, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `wasteArea` records `IAutoMoviePatternZoneQuantities`'s offcut area in this zone, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `wasteArea` supplies `IAutoMoviePatternZoneQuantities`'s offcut area in this zone, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   wasteArea: number;
-  /** This zone's region area net of exclusions, in square metres. */
+  /**
+   * This zone's region area net of exclusions, in square metres.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `netRegionArea` records `IAutoMoviePatternZoneQuantities`'s this zone's region area net of exclusions, in square metres. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `netRegionArea` supplies `IAutoMoviePatternZoneQuantities`'s this zone's region area net of exclusions, in square metres when the engine resolves the declared physical-module pattern deterministically.
+   */
   netRegionArea: number;
 }
 
-/** One structured defect or unsupported case a pattern run reports. */
+/**
+ * One structured defect or unsupported case a pattern run reports.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternFinding` represents one structured defect or unsupported case a pattern run reports. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternFinding` structures one structured defect or unsupported case a pattern run reports for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternFinding {
-  /** What the run measured and found wanting. */
+  /**
+   * What the run measured and found wanting.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-refusal `kind` records what the run measured and found wanting for `IAutoMoviePatternFinding`. This ensures invalid module layouts produce explicit findings instead of silent distortion or omission.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `kind` tells the engine what the run measured and found wanting for `IAutoMoviePatternFinding` as it resolves the declared physical-module pattern deterministically.
+   */
   kind:
     | "sliver"
     | "unsupported-piece"
     | "module-overlap"
     | "joint-deviation"
     | "grain-break";
-  /** Occurrence ids involved, in ascending placement order. */
+  /**
+   * Occurrence ids involved, in ascending placement order.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `occurrences` records `IAutoMoviePatternFinding`'s occurrence ids involved, in ascending placement order. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `occurrences` supplies `IAutoMoviePatternFinding`'s occurrence ids involved, in ascending placement order when the engine resolves the declared physical-module pattern deterministically.
+   */
   occurrences: string[];
-  /** The measured quantity, in the finding's own unit. */
+  /**
+   * The measured quantity, in the finding's own unit.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `measured` records `IAutoMoviePatternFinding`'s measured quantity, in the finding's own unit. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `measured` supplies `IAutoMoviePatternFinding`'s measured quantity, in the finding's own unit when the engine resolves the declared physical-module pattern deterministically.
+   */
   measured: number;
-  /** The limit the measurement failed against. */
+  /**
+   * The limit the measurement failed against.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `limit` records `IAutoMoviePatternFinding`'s limit the measurement failed against. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `limit` supplies `IAutoMoviePatternFinding`'s limit the measurement failed against when the engine resolves the declared physical-module pattern deterministically.
+   */
   limit: number;
-  /** A statement an author or an agent can act on. */
+  /**
+   * A statement an author or an agent can act on.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `detail` records `IAutoMoviePatternFinding`'s statement an author or an agent can act on. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `detail` supplies `IAutoMoviePatternFinding`'s statement an author or an agent can act on when the engine resolves the declared physical-module pattern deterministically.
+   */
   detail: string;
 }
 
-/** Everything one deterministic pattern run produces. */
+/**
+ * Everything one deterministic pattern run produces.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMovieSurfacePatternResult` represents everything one deterministic pattern run produces. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMovieSurfacePatternResult` structures everything one deterministic pattern run produces for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMovieSurfacePatternResult {
-  /** The pattern that produced this run. */
+  /**
+   * The pattern that produced this run.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMovieSurfacePatternResult`'s pattern that produced this run. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMovieSurfacePatternResult`'s pattern that produced this run when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Occurrences in zone, row, column, then generator order. */
+  /**
+   * Occurrences in zone, row, column, then generator order.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `placements` records `IAutoMovieSurfacePatternResult`'s occurrences in zone, row, column, then generator order. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `placements` supplies `IAutoMovieSurfacePatternResult`'s occurrences in zone, row, column, then generator order when the engine resolves the declared physical-module pattern deterministically.
+   */
   placements: IAutoMoviePatternPlacement[];
-  /** The take-off. */
+  /**
+   * The take-off.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `quantities` records `IAutoMovieSurfacePatternResult`'s take-off. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `quantities` supplies `IAutoMovieSurfacePatternResult`'s take-off when the engine resolves the declared physical-module pattern deterministically.
+   */
   quantities: IAutoMoviePatternQuantities;
-  /** Structured defects, per-occurrence ones first, then per-pair ones. */
+  /**
+   * Structured defects, per-occurrence ones first, then per-pair ones.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `findings` records `IAutoMovieSurfacePatternResult`'s structured defects, per-occurrence ones first, then per-pair ones. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `findings` supplies `IAutoMovieSurfacePatternResult`'s structured defects, per-occurrence ones first, then per-pair ones when the engine resolves the declared physical-module pattern deterministically.
+   */
   findings: IAutoMoviePatternFinding[];
 }
 
-/** The world placement of the face a pattern was laid on. */
+/**
+ * The world placement of the face a pattern was laid on.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternFaceFrame` represents the world placement of the face a pattern was laid on. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternFaceFrame` structures the world placement of the face a pattern was laid on for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternFaceFrame {
-  /** World point the face-local origin sits at. */
+  /**
+   * World point the face-local origin sits at.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `origin` records `IAutoMoviePatternFaceFrame`'s world point the face-local origin sits at. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `origin` supplies `IAutoMoviePatternFaceFrame`'s world point the face-local origin sits at when the engine resolves the declared physical-module pattern deterministically.
+   */
   origin: IAutoMovieVector3;
-  /** Unit world direction of the face-local U axis. */
+  /**
+   * Unit world direction of the face-local U axis.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `u` records `IAutoMoviePatternFaceFrame`'s unit world direction of the face-local U axis. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `u` supplies `IAutoMoviePatternFaceFrame`'s unit world direction of the face-local U axis when the engine resolves the declared physical-module pattern deterministically.
+   */
   u: IAutoMovieVector3;
-  /** Unit world direction of the face-local V axis, perpendicular to U. */
+  /**
+   * Unit world direction of the face-local V axis, perpendicular to U.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `v` records `IAutoMoviePatternFaceFrame`'s unit world direction of the face-local V axis, perpendicular to U. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `v` supplies `IAutoMoviePatternFaceFrame`'s unit world direction of the face-local V axis, perpendicular to U when the engine resolves the declared physical-module pattern deterministically.
+   */
   v: IAutoMovieVector3;
 }
 
@@ -358,21 +770,54 @@ export interface IAutoMoviePatternFaceFrame {
  * crossing a fold is authored as two zones meeting at that fold, which is what
  * the two pieces really are: the border cut already butts them on the surface,
  * and the neighbour scan already measures across it.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternFacet` represents one flat panel of a host that folds or curves, and the strip of the face it carries. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternFacet` structures one flat panel of a host that folds or curves, and the strip of the face it carries for the system that resolves the declared physical-module pattern deterministically.
  */
 export interface IAutoMoviePatternFacet {
-  /** Zone whose pieces sit on this panel. */
+  /**
+   * Zone whose pieces sit on this panel.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `zone` records `IAutoMoviePatternFacet`'s zone whose pieces sit on this panel. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `zone` supplies `IAutoMoviePatternFacet`'s zone whose pieces sit on this panel when the engine resolves the declared physical-module pattern deterministically.
+   */
   zone: string;
-  /** Face-local metre point this panel's frame origin sits at. */
+  /**
+   * Face-local metre point this panel's frame origin sits at.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `anchor` records `IAutoMoviePatternFacet`'s face-local metre point this panel's frame origin sits at. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `anchor` supplies `IAutoMoviePatternFacet`'s face-local metre point this panel's frame origin sits at when the engine resolves the declared physical-module pattern deterministically.
+   */
   anchor: IAutoMoviePatternPoint;
-  /** World placement of that point. */
+  /**
+   * World placement of that point.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `frame` records `IAutoMoviePatternFacet`'s world placement of that point. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `frame` supplies `IAutoMoviePatternFacet`'s world placement of that point when the engine resolves the declared physical-module pattern deterministically.
+   */
   frame: IAutoMoviePatternFaceFrame;
 }
 
-/** Explicit instance slots and the occurrences that cannot become one. */
+/**
+ * Explicit instance slots and the occurrences that cannot become one.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternInstancing` represents explicit instance slots and the occurrences that cannot become one. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternInstancing` structures explicit instance slots and the occurrences that cannot become one for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternInstancing {
-  /** One exact full-TRS slot per whole occurrence, in placement order. */
+  /**
+   * One exact full-TRS slot per whole occurrence, in placement order.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `transforms` records `IAutoMoviePatternInstancing`'s one exact full-TRS slot per whole occurrence, in placement order. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `transforms` supplies `IAutoMoviePatternInstancing`'s one exact full-TRS slot per whole occurrence, in placement order when the engine resolves the declared physical-module pattern deterministically.
+   */
   transforms: IAutoMovieExplicitInstanceTransform[];
-  /** Occurrence ids that were cut and therefore need their own geometry. */
+  /**
+   * Occurrence ids that were cut and therefore need their own geometry.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `cut` records `IAutoMoviePatternInstancing`'s occurrence ids that were cut and therefore need their own geometry. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `cut` supplies `IAutoMoviePatternInstancing`'s occurrence ids that were cut and therefore need their own geometry when the engine resolves the declared physical-module pattern deterministically.
+   */
   cut: string[];
 }
 
@@ -383,6 +828,9 @@ export interface IAutoMoviePatternInstancing {
  * its own image, so every piece shows the same one and the sheet travels with
  * the piece. A slab, a board, and a panel are cut out of one sheet, so where a
  * piece sits decides what it shows, and the sheet stays where the face put it.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `AutoMoviePatternTextureSheet` defines where one material's texture sheet is pinned on the face. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `AutoMoviePatternTextureSheet` structures where one material's texture sheet is pinned on the face for the system that resolves the declared physical-module pattern deterministically.
  */
 export type AutoMoviePatternTextureSheet =
   | {
@@ -399,33 +847,71 @@ export type AutoMoviePatternTextureSheet =
 /**
  * One occurrence's sampling of its material, in the PBR record's own UV
  * transform.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternTextureTransform` represents one occurrence's sampling of its material, in the PBR record's own UV transform. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternTextureTransform` structures one occurrence's sampling of its material, in the PBR record's own UV transform for the system that resolves the declared physical-module pattern deterministically.
  */
 export interface IAutoMoviePatternTextureTransform {
-  /** The occurrence this samples for. */
+  /**
+   * The occurrence this samples for.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `id` records `IAutoMoviePatternTextureTransform`'s occurrence this samples for. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `id` supplies `IAutoMoviePatternTextureTransform`'s occurrence this samples for when the engine resolves the declared physical-module pattern deterministically.
+   */
   id: string;
-  /** Normalized UV offset. */
+  /**
+   * Normalized UV offset.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `offset` records `IAutoMoviePatternTextureTransform`'s normalized UV offset. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `offset` supplies `IAutoMoviePatternTextureTransform`'s normalized UV offset when the engine resolves the declared physical-module pattern deterministically.
+   */
   offset: {
     /** Offset along the texture's own U axis. */
     x: number;
     /** Offset along the texture's own V axis. */
     y: number;
   };
-  /** Normalized UV scale; a negative `x` is the mirrored piece. */
+  /**
+   * Normalized UV scale; a negative `x` is the mirrored piece.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `scale` records `IAutoMoviePatternTextureTransform`'s normalized UV scale; a negative `x` is the mirrored piece. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `scale` supplies `IAutoMoviePatternTextureTransform`'s normalized UV scale; a negative `x` is the mirrored piece when the engine resolves the declared physical-module pattern deterministically.
+   */
   scale: {
     /** Scale along the texture's own U axis. */
     x: number;
     /** Scale along the texture's own V axis. */
     y: number;
   };
-  /** UV rotation in degrees, within `[-180, 180]`. */
+  /**
+   * UV rotation in degrees, within `[-180, 180]`.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `rotationDeg` records `IAutoMoviePatternTextureTransform`'s uV rotation in degrees, within `[-180, 180]`. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `rotationDeg` supplies `IAutoMoviePatternTextureTransform`'s uV rotation in degrees, within `[-180, 180]` when the engine resolves the declared physical-module pattern deterministically.
+   */
   rotationDeg: number;
 }
 
-/** UV transforms and the occurrences that transform cannot express. */
+/**
+ * UV transforms and the occurrences that transform cannot express.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `IAutoMoviePatternTexturing` represents uV transforms and the occurrences that transform cannot express. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `IAutoMoviePatternTexturing` structures uV transforms and the occurrences that transform cannot express for the system that resolves the declared physical-module pattern deterministically.
+ */
 export interface IAutoMoviePatternTexturing {
-  /** One transform per expressible occurrence, in placement order. */
+  /**
+   * One transform per expressible occurrence, in placement order.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `transforms` records `IAutoMoviePatternTexturing`'s one transform per expressible occurrence, in placement order. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `transforms` supplies `IAutoMoviePatternTexturing`'s one transform per expressible occurrence, in placement order when the engine resolves the declared physical-module pattern deterministically.
+   */
   transforms: IAutoMoviePatternTextureTransform[];
-  /** Occurrence ids whose sampling needs a shear the transform has no term for. */
+  /**
+   * Occurrence ids whose sampling needs a shear the transform has no term for.
+   *
+   * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `sheared` records `IAutoMoviePatternTexturing`'s occurrence ids whose sampling needs a shear the transform has no term for. This ensures authored physical-module placement and texture sampling remain under project control.
+   * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `sheared` supplies `IAutoMoviePatternTexturing`'s occurrence ids whose sampling needs a shear the transform has no term for when the engine resolves the declared physical-module pattern deterministically.
+   */
   sheared: string[];
 }
 
@@ -445,6 +931,26 @@ export interface IAutoMoviePatternTexturing {
  * was cut, and the identity that the mesh, the instance slot, the finish, and
  * the take-off all cite, so a quantity can be traced back to the exact piece it
  * counted.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `generateAutoMovieSurfacePattern` lays one pattern and measures exactly what was laid. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `generateAutoMovieSurfacePattern` performs auto movie surface pattern generation when the engine resolves the declared physical-module pattern deterministically.
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-cuts-borders `generateAutoMovieSurfacePattern` clips lattice cells against zones and exclusions, distinguishes full, cut, and unsupported pieces, enforces minimum pieces, and reports exact waste.
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-deterministic-variation `generateAutoMovieSurfacePattern` derives each occurrence variant from the stable pattern seed and stable occurrence identity instead of draw order or frame time.
+ * @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-continuity-evidence `generateAutoMovieSurfacePattern` returns each piece identity, outline, grain, mirror and variant together with measured grain-break findings.
+ * @evidence requirements/interior/joints-edges-and-transitions.md#interior-joint-repetition-exception `generateAutoMovieSurfacePattern` applies explicit zone and exclusion overrides to the repeated joint lattice without changing unaffected occurrences.
+ * @evidence requirements/interior/joints-edges-and-transitions.md#interior-joint-validation `generateAutoMovieSurfacePattern` emits overlap, joint-deviation, sliver, unsupported-piece, and grain-break findings at the exact affected occurrence.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-joint-edge-grain-continuity The result preserves piece-level grain and joint observations needed to validate the laid surface without claiming source-stock provenance.
+ * @evidence requirements/building-exterior/patterns-and-instances.md#building-exterior-pattern-continuity `generateAutoMovieSurfacePattern` lays the same developed lattice through declared exterior facets, cuts, exclusions, and stable occurrence identities.
+ * @evidence specifications/building-envelope/external-assets-patterns-and-instances.md#building-envelope-pattern-input-output The generator consumes the declared exterior pattern domain and returns deterministic pieces, cuts, variants, findings, and quantities.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-physical-module `generateAutoMovieSurfacePattern` expands the declared physical module, period, offset, reach, and host zones into measured piece geometry and quantities.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-procedural-rule `generateAutoMovieSurfacePattern` executes only the declared generator, zone, lattice, clipping, and exclusion rules rather than inferring a decorative layout.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-deterministic-variation `generateAutoMovieSurfacePattern` derives bounded variants from the stable seed and occurrence identity so traversal and frame order cannot change them.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-pattern-boundary-exception `generateAutoMovieSurfacePattern` retains clipped and excluded boundary occurrences as separately identified cut pieces or explicit unsupported findings.
+ * @evidence requirements/asset-authoring/patterns-and-procedural-composition.md#asset-pattern-local-stability `generateAutoMovieSurfacePattern` preserves every unaffected stable occurrence identity when a local zone, exclusion, or cut changes.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-procedural-pattern-inputs The generator consumes explicit module, domain, seed, boundary, and exception inputs and returns deterministic occurrence identities, geometry, variants, and findings.
+ * @evidence requirements/interior/groups-instances-and-repetition.md#interior-group-bounded-expansion `generateAutoMovieSurfacePattern` refuses a repeated surface expansion beyond its exported cell ceiling before materializing occurrences.
+ * @evidence requirements/interior/groups-instances-and-repetition.md#interior-group-identity-preservation `generateAutoMovieSurfacePattern` derives stable occurrence identities and keeps clipped boundary exceptions distinct from full repeated pieces.
+ * @evidence specifications/interior-space/external-assets-and-groups.md#interior-space-repeated-group-identity The generator implements the bounded repeated-piece identity subset without claiming arbitrary nested subject groups or room-storey repetition.
  */
 export const generateAutoMovieSurfacePattern = (props: {
   pattern: IAutoMovieSurfacePattern;
@@ -593,6 +1099,13 @@ export const generateAutoMovieSurfacePattern = (props: {
  * A host that folds at a corner or curves is one developed face standing on
  * several flat panels, so a zone may name its own {@link IAutoMoviePatternFacet}
  * and every zone that does not stays on {@link frame}.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `autoMoviePatternInstanceTransforms` turns whole occurrences into exact instance slots and names the ones that cannot be. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `autoMoviePatternInstanceTransforms` performs pattern instance transforms derivation when the engine resolves the declared physical-module pattern deterministically.
+ * @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-corner-continuity `autoMoviePatternInstanceTransforms` maps developed face coordinates back through each folded or curved facet frame so grain-bearing pieces retain their corner relation on the host.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-joint-edge-grain-continuity The instance transforms preserve the declared developed-to-host relation that carries grain and seam continuity across facets.
+ * @evidence requirements/building-exterior/patterns-and-instances.md#building-exterior-instance-exceptions `autoMoviePatternInstanceTransforms` keeps cut occurrences as separately identified exceptions while preserving exact prototype transforms for whole repeated pieces.
+ * @evidence specifications/building-envelope/external-assets-patterns-and-instances.md#building-envelope-instance-local-stability-invariant The lowering preserves stable occurrence identity and local transforms while refusing to disguise cut exceptions as ordinary instances.
  */
 export const autoMoviePatternInstanceTransforms = (props: {
   result: IAutoMovieSurfacePatternResult;
@@ -703,6 +1216,11 @@ export const autoMoviePatternInstanceTransforms = (props: {
  * turned off its grain by anything else needs a shear the transform has no term
  * for, and is reported by id rather than handed back as a transform that
  * quietly skews the image.
+ *
+ * @evidence requirements/interior/textures-patterns-and-variation.md#interior-pattern-source `autoMoviePatternTextureTransforms` says how each laid piece samples its material, in the UV transform the PBR record already carries. This ensures authored physical-module placement and texture sampling remain under project control.
+ * @evidence specifications/interior-space/patterns-tolerances-and-aging.md#interior-space-physical-module-pattern `autoMoviePatternTextureTransforms` performs pattern texture transforms derivation when the engine resolves the declared physical-module pattern deterministically.
+ * @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-bookmatch `autoMoviePatternTextureTransforms` derives each piece's mirror, grain, stable sheet offset, scale, and rotation so declared bookmatch relations survive texture sampling.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-joint-edge-grain-continuity The UV transforms retain the declared mirror and grain relation across neighboring pieces without claiming a raw-stock catalogue.
  */
 export const autoMoviePatternTextureTransforms = (props: {
   result: IAutoMovieSurfacePatternResult;

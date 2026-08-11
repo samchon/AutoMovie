@@ -51,6 +51,13 @@ const WASTE_MEDIUM = "waste-water";
  * a drain that really discharges waste.
  *
  * @author Samchon
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `validateWetZones` verifies that each wet space is fully tanked, hands over explicitly, falls toward its drains, and uses drains that discharge waste water.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `validateWetZones` resolves zone boundaries and drain nodes against the built environment and reports incomplete coverage, invalid falls, and incompatible discharge ports.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-waterproof-assembly `validateWetZones` checks that the wet-zone boundary is covered and that every service penetration declares the waterproof seal required by the assembly.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-waterproofing-finding `validateWetZones` locates uncovered boundaries, missing or invalid drains, non-falling slopes, undeclared dry thresholds, and unsealed sleeves instead of accepting incomplete waterproofing.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-wet-dry-transition `validateWetZones` enforces the declared wet-to-dry grade ordering and boundary threshold at every resolved transition.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-wet-slope-drainage `validateWetZones` requires a positive authored fall and a compatible resolved waste drain for each wet area.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-wet-zone-waterproofing `validateWetZones` enforces the supported boundary, threshold, fall, drain, and penetration-seal subset of the wet-zone waterproofing contract.
  */
 export const validateWetZones = (props: {
   network: IAutoMovieServiceNetwork;
@@ -278,6 +285,11 @@ export const validateWetZones = (props: {
  * silently conserves the wrong amount of water.
  *
  * @author Samchon
+ * @evidence requirements/interior/services-and-environment.md#interior-service-routing `lowerWetZoneDrainage` places the wet zone's declared supply demands and waste outlets onto the fluid lattice that carries the room's water.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-service-network-contract `lowerWetZoneDrainage` derives cell-aligned sources and bed-level drains from resolved service ports while rejecting unknown zones, off-grid nodes, and identifier collisions.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-wet-dry-transition `lowerWetZoneDrainage` carries the validated dry threshold and service-port relation into the bounded drainage domain.
+ * @evidence requirements/interior/wet-areas-and-waterproofing.md#interior-wet-slope-drainage `lowerWetZoneDrainage` converts the authored scalar fall, waste drain, sources, and sill into cell-aligned bed levels and fluid boundaries without claiming per-point ponding or pressure flow.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-wet-zone-waterproofing `lowerWetZoneDrainage` materializes the validated wet-zone fall, threshold, source, and drain relation as the solver input subset.
  */
 export const lowerWetZoneDrainage = (props: {
   network: IAutoMovieServiceNetwork;
