@@ -9,10 +9,12 @@ import type {
   IAutoMovieSemanticMask,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 
@@ -142,9 +144,28 @@ const throwsWith = (task: () => unknown, text: string): boolean => {
   }
 };
 
+const linkWorkspacePackage = (project: string, name: string): void => {
+  const packageRoot = path.dirname(
+    createRequire(__filename).resolve(`${name}/package.json`),
+  );
+  const target = path.join(project, "node_modules", ...name.split("/"));
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.symlinkSync(
+    packageRoot,
+    target,
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  if (!fs.statSync(target).isDirectory())
+    throw new Error(`Fixture package link did not resolve: ${name}.`);
+};
+
 /**
  * A generated render job compares actual scene counts and publishes semantic
  * mask sidecars without turning missing evidence into a pass.
+ *
+ * The generated script runs through its declared `tsx` runtime. The surrounding
+ * repository suite uses `ttsx`, whose inherited module hook is test-host state
+ * and is deliberately not part of a scaffolded project's execution boundary.
  *
  * Scenarios:
  *
@@ -156,6 +177,29 @@ const throwsWith = (task: () => unknown, text: string): boolean => {
  *    reject a conflicting resident palette.
  */
 export const test_cli_render_observation_audit = (): void => {
+  if (process.env.AUTOMOVIE_CLI_OBSERVATION_CHILD !== "1") {
+    const childEnvironment = { ...process.env };
+    delete childEnvironment.NODE_OPTIONS;
+    delete childEnvironment.TTSX_RUNTIME_MANIFEST;
+    childEnvironment.AUTOMOVIE_CLI_OBSERVATION_CHILD = "1";
+    const result = spawnSync(
+      process.execPath,
+      [
+        createRequire(__filename).resolve("tsx/cli"),
+        "--eval",
+        `import { test_cli_render_observation_audit as run } from ${JSON.stringify(pathToFileURL(__filename).href)}; run();`,
+      ],
+      {
+        encoding: "utf8",
+        env: childEnvironment,
+      },
+    );
+    if (result.status !== 0)
+      throw new Error(
+        `Generated render-observation fixture failed under its tsx runtime.\n${result.stderr || result.stdout}`,
+      );
+    return;
+  }
   const base = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-cli-render-observation-"),
   );
@@ -163,6 +207,12 @@ export const test_cli_render_observation_audit = (): void => {
   try {
     const project = path.join(base, "project");
     writeFiles(project, renderScaffold({ name: "observation-film" }));
+    for (const name of [
+      "@automovie/interface",
+      "@automovie/mcp",
+      "@automovie/render",
+    ])
+      linkWorkspacePackage(project, name);
     const module = createRequire(__filename)(
       path.join(project, "scripts", "renderObservationAudit.ts"),
     ) as IRenderObservationAuditModule;

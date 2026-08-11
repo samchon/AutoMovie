@@ -1,42 +1,177 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
+const authoringSurface = [
+  "src/bin.ts",
+  "src/renderScaffold.ts",
+  "src/renderTemplate.ts",
+  "src/templateVersions.ts",
+];
 
-/**
- * The public CLI surface answers for stable contract populations.
- *
- * Contract documents are selected by domain or by the complete layer, never by
- * individual Markdown filename. New documents therefore enter the graph
- * automatically and non-applicable units remain explicit source exclusions.
- */
+const operationsSurface = ["src/bin.ts", "src/writeFiles.ts"];
+const inspectionSurface = ["src/loadAutoMovieProjectState.ts"];
+
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "public CLI exports implement requirements",
+      name: "public CLI authoring exports implement requirements",
       type: "typescript",
-      files: publicSurface,
+      files: authoringSurface,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["requirements/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: [
+            "requirements/agent-authoring/**/README.md",
+            "requirements/product/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/agent-authoring/**/*.md",
+            "requirements/product/**/*.md",
+            "!requirements/**/README.md",
+          ],
+          symbol: ["h3"],
         },
       ],
     },
     {
-      name: "public CLI exports implement specifications",
+      name: "public CLI authoring exports implement specifications",
       type: "typescript",
-      files: publicSurface,
+      files: authoringSurface,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: ["specifications/authoring-and-authority/**/README.md"],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/authoring-and-authority/**/*.md",
+            "!specifications/**/README.md",
+          ],
+          symbol: ["h3"],
+        },
+      ],
+    },
+    {
+      name: "public CLI operational exports implement requirements",
+      type: "typescript",
+      files: operationsSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/external-inputs/**/README.md",
+            "requirements/operations-and-recovery/**/README.md",
+            "requirements/rendering/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/external-inputs/**/*.md",
+            "requirements/operations-and-recovery/**/*.md",
+            "requirements/rendering/**/*.md",
+            "!requirements/**/README.md",
+          ],
+          symbol: ["h3"],
+        },
+      ],
+    },
+    {
+      name: "public CLI operational exports implement specifications",
+      type: "typescript",
+      files: operationsSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/editorial-render-and-delivery/**/README.md",
+            "specifications/execution-and-recovery/**/README.md",
+            "specifications/interchange-and-adoption/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/editorial-render-and-delivery/**/*.md",
+            "specifications/execution-and-recovery/**/*.md",
+            "specifications/interchange-and-adoption/**/*.md",
+            "!specifications/**/README.md",
+          ],
+          symbol: ["h3"],
+        },
+      ],
+    },
+    {
+      name: "public CLI inspection exports implement requirements",
+      type: "typescript",
+      files: inspectionSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/diagnostics/**/README.md",
+            "requirements/evidence-and-provenance/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/diagnostics/**/*.md",
+            "requirements/evidence-and-provenance/**/*.md",
+            "!requirements/**/README.md",
+          ],
+          symbol: ["h3"],
+        },
+      ],
+    },
+    {
+      name: "public CLI inspection exports implement specifications",
+      type: "typescript",
+      files: inspectionSurface,
+      symbol: ["type", "function", "property"],
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/evidence-and-provenance/**/README.md",
+            "specifications/validation-and-diagnostics/**/README.md",
+          ],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/evidence-and-provenance/**/*.md",
+            "specifications/validation-and-diagnostics/**/*.md",
+            "!specifications/**/README.md",
+          ],
+          symbol: ["h3"],
         },
       ],
     },
