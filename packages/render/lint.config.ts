@@ -1,41 +1,307 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/**
- * Public render contracts answer directly for both product promises and
- * package-independent system contracts.
- */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "public render exports implement requirements",
+      name: "model export implements asset requirements",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/exportModel.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "requirements/camera/**/*.md",
-          "requirements/delivery-and-accessibility/**/*.md",
-          "requirements/editorial/**/*.md",
-          "requirements/rendering/**/*.md",
+          "requirements/asset-authoring/geometry.md",
+          "requirements/asset-authoring/materials-and-textures.md",
+          "requirements/asset-authoring/rig-and-state.md",
         ],
         symbol: ["h2", "h3"],
       },
     },
     {
-      name: "public render exports implement specifications",
+      name: "model export implements representation specifications",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/exportModel.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "specifications/camera-light-and-visibility/**/*.md",
-          "specifications/editorial-render-and-delivery/**/*.md",
-          "specifications/review-and-acceptance/**/*.md",
+          "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
+          "specifications/asset-and-representation/rig-deformation-and-state.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "screenplay rendering implements story requirements",
+      type: "typescript",
+      files: ["src/screenplay.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/story/dialogue-language-and-silence.md",
+          "requirements/story/scenes-and-observable-action.md",
+          "requirements/story/scope-and-source-of-truth.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "screenplay rendering implements narrative specifications",
+      type: "typescript",
+      files: ["src/screenplay.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/narrative-and-intent/events-causality-and-time.md",
+          "specifications/narrative-and-intent/story-authority-and-hierarchy.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "caption sidecars implement timed-text requirements",
+      type: "typescript",
+      files: ["src/caption*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
+          "requirements/delivery-and-accessibility/frame-rate-timebase-and-timecode.md",
+          "requirements/rendering/chunks-resume-and-recovery.md",
+          "requirements/rendering/frame-schedules-and-sampling.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "caption sidecars implement delivery specifications",
+      type: "typescript",
+      files: ["src/caption*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
+          "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
+          "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+          "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "pose sidecars implement control-pass requirements",
+      type: "typescript",
+      files: ["src/poseKeypoint*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/camera/projection-lens-and-sensor.md",
+          "requirements/lighting/sun-sky-and-environment.md",
+          "requirements/rendering/frame-schedules-and-sampling.md",
+          "requirements/rendering/passes-channels-and-products.md",
+          "requirements/repaint/source-frames-and-reference-locking.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "pose sidecars implement control-pass specifications",
+      type: "typescript",
+      files: ["src/poseKeypoint*.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/asset-and-representation/generated-assets-and-repaint-handoff.md",
+          "specifications/camera-light-and-visibility/camera-state-projection-and-gate.md",
+          "specifications/camera-light-and-visibility/light-source-photometry-and-environment.md",
+          "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+          "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render planning implements schedule and pass requirements",
+      type: "typescript",
+      files: ["src/guidePasses.ts", "src/plan.ts", "src/sequenceRenderPlan.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/editorial/rational-time-and-ranges.md",
+          "requirements/rendering/encoding-and-multiplexing.md",
+          "requirements/rendering/frame-schedules-and-sampling.md",
+          "requirements/rendering/passes-channels-and-products.md",
+          "requirements/rendering/scope-and-artifact-identity.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render planning implements schedule and pass specifications",
+      type: "typescript",
+      files: ["src/guidePasses.ts", "src/plan.ts", "src/sequenceRenderPlan.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
+          "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+          "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+          "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render execution implements capture and encode requirements",
+      type: "typescript",
+      files: [
+        "src/renderAndSee.ts",
+        "src/renderVideo.ts",
+        "src/sequenceRenderVideo.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/rendering/encoding-and-multiplexing.md",
+          "requirements/rendering/frame-schedules-and-sampling.md",
+          "requirements/rendering/scope-and-artifact-identity.md",
+          "requirements/rendering/validation.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render execution implements capture and encode specifications",
+      type: "typescript",
+      files: [
+        "src/renderAndSee.ts",
+        "src/renderVideo.ts",
+        "src/sequenceRenderVideo.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+          "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "chunk planning implements bounded render requirements",
+      type: "typescript",
+      files: ["src/chunkSequenceRender.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/rendering/budgets.md",
+          "requirements/rendering/chunks-resume-and-recovery.md",
+          "requirements/rendering/passes-channels-and-products.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "chunk planning implements bounded render specifications",
+      type: "typescript",
+      files: ["src/chunkSequenceRender.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+          "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "headless capture implements platform and pass requirements",
+      type: "typescript",
+      files: ["src/headlessCapture.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/rendering/headless-and-platform-determinism.md",
+          "requirements/rendering/passes-channels-and-products.md",
+          "requirements/rendering/validation.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "headless capture implements platform and pass specifications",
+      type: "typescript",
+      files: ["src/headlessCapture.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+          "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+          "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render budget evidence implements measurement requirements",
+      type: "typescript",
+      files: ["src/renderBudgetPreflight.ts", "src/renderObservationAudit.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/rendering/budgets.md",
+          "requirements/rendering/frame-identity-and-content-addressing.md",
+          "requirements/rendering/passes-channels-and-products.md",
+          "requirements/rendering/validation.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "render budget evidence implements measurement specifications",
+      type: "typescript",
+      files: ["src/renderBudgetPreflight.ts", "src/renderObservationAudit.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+          "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+          "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
         ],
         symbol: ["h2", "h3"],
       },
