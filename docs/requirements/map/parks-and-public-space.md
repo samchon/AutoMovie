@@ -8,6 +8,10 @@
 
 Lawn, grove, plaza, playground, court, path, buffer, event area와 restricted area는 물리적 경계가 없더라도 논리적 identity와 관계를 유지할 수 있어야 한다.
 
+### Circulation과 접근성 {#map-public-space-circulation-access}
+
+Entrance, path, stair, ramp, terrace, crossing와 desire line을 주변 road·path network와 연결하고 project가 선언한 traveler별 width, grade, surface, clearance와 access state를 검토할 수 있어야 한다.
+
 ### 시설과 가구 {#map-public-space-facilities}
 
 Bench, shelter, fence, monument, fountain, sign, lamp, waste facility와 play equipment는 host surface, clearance, service와 usage state를 가져야 한다.
@@ -15,6 +19,10 @@ Bench, shelter, fence, monument, fountain, sign, lamp, waste facility와 play eq
 ### 사건 수용 {#map-public-space-events}
 
 Crowd, parade, market, camp, battle formation, evacuation과 공연 같은 film event를 위해 bounded capacity, access, visibility와 temporary state를 선언할 수 있어야 한다.
+
+### 일상과 사건의 상태 분리 {#map-public-space-routine-event-state}
+
+일상 배치, scheduled use, temporary installation, crowd control, damage와 cleanup을 별도 state로 보존하여 한 event의 barrier, stall, vehicle와 litter가 다른 시간의 공원 정본에 섞이지 않게 해야 한다.
 
 ### 공원과 자연의 구분 {#map-park-nature-distinction}
 
