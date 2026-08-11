@@ -2,6 +2,7 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieClip,
   IAutoMovieTrack,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 
 /**
@@ -124,6 +125,60 @@ export interface IAutoMovieExternalModelInspection {
 }
 
 /**
+ * Canonical glTF 2.0 spatial interpretation used by motion inspection.
+ *
+ * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units Makes meter units, right-handed coordinates, and Y-up orientation explicit instead of inferred downstream.
+ * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-spatial-transform-chain Fixes the source basis at the first stage of the spatial transform chain.
+ */
+export const AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE =
+  "gltf-2.0-meter-right-handed-y-up" as const;
+
+/**
+ * One source-order node whose local rest basis was read from motion bytes.
+ *
+ * @author Samchon
+ * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Preserves the source skeleton identity and rest basis beside its motion tracks.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Exposes node identity, hierarchy, and local rest facts before any retarget decision.
+ */
+export interface IAutoMovieExternalMotionNodeInspection {
+  /**
+   * Stable source-order node identity used by normalized tracks and mappings.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Keeps every scene node distinct under a deterministic source-local key.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Emits an index-stable node inventory.
+   */
+  id: string;
+  /**
+   * Exact zero-based node index in the inspected glTF revision.
+   *
+   * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-elements-dependencies Retains the format-defined element position beside the normalized identity.
+   * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-element-dependency-identity Uses the deterministic source-order key rather than a display label.
+   */
+  index: number;
+  /**
+   * Non-empty source display name when one was declared, otherwise null.
+   *
+   * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-elements-dependencies Keeps labels separate from the stable source-local identity.
+   * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-element-dependency-identity Prevents duplicate or mutable display names from becoming element keys.
+   */
+  name: string | null;
+  /**
+   * Stable immediate parent node identity, or null for a source root.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-gltf-glb Preserves the selected source node hierarchy without flattening multiple roots.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Reports validated node parentage as an inspection fact.
+   */
+  parent: string | null;
+  /**
+   * Parent-local rest transform under the declared glTF interpretation.
+   *
+   * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units Carries finite source-local TRS values under explicit axis and unit semantics.
+   * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-spatial-transform-chain Supplies the validated local-transform stage of the source-to-project chain.
+   */
+  transform: IAutoMovieTransform;
+}
+
+/**
  * Animation facts normalized from one exact glTF, GLB, or VRM byte revision.
  *
  * @author Samchon
@@ -145,6 +200,20 @@ export interface IAutoMovieExternalMotionInspection {
    * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-original-byte-preservation Keeps normalized facts tied to the original byte count.
    */
   byteLength: number;
+  /**
+   * Fixed meter, right-handed, Y-up interpretation of every node and track.
+   *
+   * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units Declares the source coordinate and unit basis before adoption.
+   * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-spatial-transform-chain Makes the source basis an explicit transform-chain input.
+   */
+  interpretation: typeof AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE;
+  /**
+   * Source-order node identity, hierarchy, and normalized local rest facts.
+   *
+   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-motion Carries the source skeleton and rest basis with the inspected clip.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Provides the byte-grounded node inventory used by later mapping validation.
+   */
+  nodes: IAutoMovieExternalMotionNodeInspection[];
   /**
    * Stable node identities available to an explicit source-rig mapping.
    *
@@ -237,7 +306,6 @@ export type AutoMovieExternalModelIngestProfile =
  * @evidenceExclude requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-derivation-consumers The pure ingest APIs accept no credential authority and own no rights, acquisition, sensitive-data, provenance, or consumer ledger.
  * @evidenceExclude requirements/external-inputs/identity-coordinates-and-units.md#external-identity-content-provenance Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-elements-dependencies Stable source-order node identities and declared dependency URIs retain source-local correspondence.
- * @evidenceExclude requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidenceExclude requirements/external-inputs/identity-coordinates-and-units.md#external-identity-time-units Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-value-interpretation The selected versioned profile fixes accessor arity, channel path, interpolation, and quaternion interpretation.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-collision-ambiguity Invalid indices, duplicate mappings, and ambiguous target facts fail instead of selecting a candidate by order.
@@ -278,7 +346,6 @@ export type AutoMovieExternalModelIngestProfile =
  * @evidenceExclude specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility Ingest emits bounded source facts but does not own the complete asset identity graph, lifecycle ledger, consumer reachability, or replacement compatibility.
  * @evidenceExclude specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-content-provenance-identity Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-element-dependency-identity Source-order node ids and declared resource roles preserve element and dependency identity.
- * @evidenceExclude specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-spatial-transform-chain Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidenceExclude specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-time-sample-mapping Ingest preserves format-local facts but does not own the complete source/provenance identity graph or project coordinate, clock, and value interpretation.
  * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-value-interpretation-layer Versioned profiles validate path-specific value width, interpolation, and normalization semantics.
  * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-identity-ambiguity-refusal Structural ambiguity and mapping collisions fail without discovery-order resolution.
@@ -346,6 +413,8 @@ export type AutoMovieExternalModelIngestProfile =
  * @evidence specifications/interchange-and-adoption/resource-closure-and-acquisition.md#interchange-live-network-dependency-state The resolver supplies resident bytes; the inspector performs no live network access.
  * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix The closed profile and target-path sets define the supported subset.
  * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-hard-refusal-predicate Structural, resource, profile, and sample violations fail explicitly.
+ * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-external-hard-refusal Unsupported containers, structures, and source facts fail with an exact diagnostic and return no substitute artifact.
+ * @evidenceExclude specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection This glTF-family inspector accepts no drawing container and derives no drawing extent or unsupported drawing-family result.
  * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-explicit-degradation-policy This inspector never chooses or applies a degraded substitute.
  * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-partial-adoption-closure Partial element selection is a later adoption decision.
  * @evidenceExclude specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-placeholder-status-fence No placeholder or proxy result is returned.
@@ -627,7 +696,8 @@ const inspectExternalMotion = (props: {
   payloads: Uint8Array[];
 }): IAutoMovieExternalMotionInspection | undefined => {
   if (props.animations.length === 0) return undefined;
-  const nodeIds = props.nodes.map((_, index) => `node_${index}`);
+  const nodes = inspectExternalMotionNodes(props.nodes);
+  const nodeIds = nodes.map((node) => node.id);
   const takes = props.animations.map((value, animationIndex) => {
     const animation = object(value, `animations[${animationIndex}]`);
     const samplers = requiredArray(
@@ -743,7 +813,120 @@ const inspectExternalMotion = (props: {
       tracks,
     } satisfies IAutoMovieClip;
   });
-  return { path: props.path, byteLength: props.byteLength, nodeIds, takes };
+  return {
+    path: props.path,
+    byteLength: props.byteLength,
+    interpretation: AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE,
+    nodes,
+    nodeIds,
+    takes,
+  };
+};
+
+const inspectExternalMotionNodes = (
+  values: unknown[],
+): IAutoMovieExternalMotionNodeInspection[] => {
+  const parentByIndex: Array<number | undefined> = new Array(values.length);
+  values.forEach((value, parentIndex) => {
+    const node = object(value, `nodes[${parentIndex}]`);
+    optionalArray(node.children, `nodes[${parentIndex}].children`).forEach(
+      (entry) => {
+        const childIndex = entry as number;
+        const previous = parentByIndex[childIndex];
+        if (previous !== undefined)
+          throw new Error(
+            `nodes[${childIndex}] has multiple parents ${previous} and ${parentIndex}.`,
+          );
+        parentByIndex[childIndex] = parentIndex;
+      },
+    );
+  });
+
+  const state = new Uint8Array(values.length);
+  values.forEach((_value, start) => {
+    if (state[start] !== 0) return;
+    const path: number[] = [];
+    let index: number | undefined = start;
+    while (index !== undefined && state[index] === 0) {
+      state[index] = 1;
+      path.push(index);
+      index = parentByIndex[index];
+    }
+    if (index !== undefined && state[index] === 1)
+      throw new Error(`nodes[${index}] belongs to a parent cycle.`);
+    path.forEach((entry) => (state[entry] = 2));
+  });
+
+  return values.map((value, index) => {
+    const node = object(value, `nodes[${index}]`);
+    if (node.matrix !== undefined)
+      throw new Error(
+        `nodes[${index}].matrix is unsupported by the glTF motion interpretation profile; declare translation, rotation, and scale explicitly.`,
+      );
+    if (node.name !== undefined && typeof node.name !== "string")
+      throw new Error(`nodes[${index}].name must be a string.`);
+    const translation = finiteTuple(
+      node.translation,
+      `nodes[${index}].translation`,
+      [0, 0, 0],
+    );
+    const rotation = finiteTuple(
+      node.rotation,
+      `nodes[${index}].rotation`,
+      [0, 0, 0, 1],
+    );
+    const scale = finiteTuple(node.scale, `nodes[${index}].scale`, [1, 1, 1]);
+    if (scale.some((component) => component <= 0))
+      throw new Error(
+        `nodes[${index}].scale must contain only positive values.`,
+      );
+    const magnitude = Math.hypot(...rotation);
+    if (Math.abs(magnitude - 1) > 1e-4)
+      throw new Error(`nodes[${index}].rotation must be a unit quaternion.`);
+    return {
+      id: `node_${index}`,
+      index,
+      name:
+        typeof node.name === "string" && node.name.length !== 0
+          ? node.name
+          : null,
+      parent:
+        parentByIndex[index] === undefined
+          ? null
+          : `node_${parentByIndex[index]}`,
+      transform: {
+        translation: {
+          x: translation[0]!,
+          y: translation[1]!,
+          z: translation[2]!,
+        },
+        rotation: {
+          x: rotation[0]! / magnitude,
+          y: rotation[1]! / magnitude,
+          z: rotation[2]! / magnitude,
+          w: rotation[3]! / magnitude,
+        },
+        scale: { x: scale[0]!, y: scale[1]!, z: scale[2]! },
+      },
+    };
+  });
+};
+
+const finiteTuple = (
+  value: unknown,
+  path: string,
+  fallback: readonly number[],
+): number[] => {
+  if (value === undefined) return [...fallback];
+  if (Array.isArray(value) === false || value.length !== fallback.length)
+    throw new Error(
+      `${path} must contain exactly ${fallback.length} finite numbers.`,
+    );
+  return value.map((entry, index) => {
+    if (typeof entry !== "number" || Number.isFinite(entry) === false)
+      throw new Error(`${path}[${index}] must be finite.`);
+    return entry;
+  });
 };
 
 type AutoMovieMotionTargetPath =

@@ -16,13 +16,15 @@ import { namedFacts, throwsError } from "../internal/predicates";
  * Scenarios:
  *
  * 1. A motion-only glTF exposes named node tracks for LINEAR, STEP, and
- *    CUBICSPLINE samplers without requiring a render mesh.
+ *    CUBICSPLINE samplers plus its byte-grounded node hierarchy and rest basis
+ *    without requiring a render mesh.
  * 2. Repeated native adoption returns equal, defensively copied takes bound to the
  *    same source path, digest, and byte length.
  * 3. Retarget adoption accepts only an explicit source rig, node-to-bone map, and
- *    target identity, then canonicalizes the map without mutating inputs.
+ *    target identity whose mapped hierarchy and rest exactly match inspected
+ *    nodes, then canonicalizes the map without mutating inputs.
  * 4. Malformed sampler facts and every ambiguous adoption input fail with a
- *    specific diagnostic instead of a fallback take, rig, or mode.
+ *    specific diagnostic instead of a fallback take, rig, basis, or mode.
  */
 export const test_ingest_external_motion_adoption = (): void => {
   const fixture = motionFixture();
@@ -33,7 +35,43 @@ export const test_ingest_external_motion_adoption = (): void => {
   TestValidator.equals("normalized motion inventory", motion, {
     path: "public/motion/walk.gltf",
     byteLength: fixture.bytes.byteLength,
-    nodeIds: ["node_0", "node_1"],
+    interpretation: "gltf-2.0-meter-right-handed-y-up",
+    nodes: [
+      {
+        id: "node_0",
+        index: 0,
+        name: "Root",
+        parent: null,
+        transform: {
+          translation: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+      },
+      {
+        id: "node_1",
+        index: 1,
+        name: null,
+        parent: "node_0",
+        transform: {
+          translation: { x: 0, y: 0.25, z: 0 },
+          rotation: { x: 0, y: 0, z: 1, w: 0 },
+          scale: { x: 2, y: 2, z: 2 },
+        },
+      },
+      {
+        id: "node_2",
+        index: 2,
+        name: "Chest",
+        parent: "node_1",
+        transform: {
+          translation: { x: 0, y: 0.75, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 0.5, y: 0.5, z: 0.5 },
+        },
+      },
+    ],
+    nodeIds: ["node_0", "node_1", "node_2"],
     takes: [
       {
         id: "clip_0",
@@ -58,7 +96,7 @@ export const test_ingest_external_motion_adoption = (): void => {
             interpolation: "step",
           },
           {
-            channel: { kind: "node", node: "node_1", path: "rotation" },
+            channel: { kind: "node", node: "node_2", path: "rotation" },
             times: [0, 1],
             values: [0, 0, 0, 1, 0, 0, 0, 1],
             interpolation: "linear",
@@ -69,14 +107,14 @@ export const test_ingest_external_motion_adoption = (): void => {
   });
   const weightsDocument = motionDocument();
   weightsDocument.animations[0]!.channels = [
-    { sampler: 2, target: { node: 1, path: "weights" } },
+    { sampler: 2, target: { node: 2, path: "weights" } },
   ];
   weightsDocument.accessors[3]!.type = "SCALAR";
   TestValidator.equals(
     "weight tracks use scalar source samples",
     inspect(motionFixture(weightsDocument)).motion?.takes[0]?.tracks[0]
       ?.channel,
-    { kind: "node", node: "node_1", path: "weights" },
+    { kind: "node", node: "node_2", path: "weights" },
   );
   const unnamedDocument = motionDocument();
   unnamedDocument.animations[0]!.name = "";
@@ -100,7 +138,7 @@ export const test_ingest_external_motion_adoption = (): void => {
   };
   const sourceRig = skeleton();
   const mapping = [
-    { node: "node_1", bone: "chest" as const },
+    { node: "node_2", bone: "chest" as const },
     { node: "node_0", bone: "hips" as const },
   ];
   const nativeDecision = {
@@ -129,7 +167,7 @@ export const test_ingest_external_motion_adoption = (): void => {
       sourceRig,
       mapping: [
         { node: "node_0", bone: "hips" },
-        { node: "node_1", bone: "chest" },
+        { node: "node_2", bone: "chest" },
       ],
     },
   });
@@ -145,7 +183,7 @@ export const test_ingest_external_motion_adoption = (): void => {
     }).handoff.mapping,
     [
       { node: "node_0", bone: "hips" },
-      { node: "node_1", bone: "chest" },
+      { node: "node_2", bone: "chest" },
     ],
   );
 
@@ -184,6 +222,9 @@ export const test_ingest_external_motion_adoption = (): void => {
       target: retargetedAgain.handoff.target,
       chestRestY:
         retargetedAgain.handoff.sourceRig.bones[1]?.rest.translation.y,
+      chestRestRotation:
+        retargetedAgain.handoff.sourceRig.bones[1]?.rest.rotation,
+      chestRestScale: retargetedAgain.handoff.sourceRig.bones[1]?.rest.scale,
       chestFlexionMax:
         retargetedAgain.handoff.sourceRig.bones[1]?.constraint?.flexion?.max,
     },
@@ -191,11 +232,13 @@ export const test_ingest_external_motion_adoption = (): void => {
       mode: "retarget",
       mapping: [
         { node: "node_0", bone: "hips" },
-        { node: "node_1", bone: "chest" },
+        { node: "node_2", bone: "chest" },
       ],
       target: "actor/main",
       translationScale: 1.25,
-      chestRestY: 1,
+      chestRestY: -1.25,
+      chestRestRotation: { x: 0, y: 0, z: 1, w: 0 },
+      chestRestScale: { x: 1, y: 1, z: 1 },
       chestFlexionMax: 45,
     },
   );
@@ -361,7 +404,7 @@ export const test_ingest_external_motion_adoption = (): void => {
         () =>
           rejectsMutation((document) => {
             document.animations![0]!.channels = [
-              { sampler: 2, target: { node: 1, path: "weights" } },
+              { sampler: 2, target: { node: 2, path: "weights" } },
             ];
             document.accessors![3]!.type = "SCALAR";
             document.accessors![3]!.count = 3;
@@ -408,6 +451,25 @@ export const test_ingest_external_motion_adoption = (): void => {
                 decision: nativeDecision,
               }),
             'requires the "gltf-motion-v1" inspection profile',
+          ),
+      ],
+      [
+        "motionInterpretationIsRequired",
+        () =>
+          throwsError(
+            () =>
+              adoptAutoMovieExternalMotion({
+                inspection: {
+                  ...inspection,
+                  motion: {
+                    ...motion,
+                    interpretation: "unknown" as typeof motion.interpretation,
+                  },
+                },
+                source,
+                decision: nativeDecision,
+              }),
+            "interpretation",
           ),
       ],
       [
@@ -535,6 +597,97 @@ export const test_ingest_external_motion_adoption = (): void => {
           ),
       ],
       [
+        "sourceRigParentMustMatchInspectedHierarchy",
+        () =>
+          rejectsRetarget(
+            {
+              ...retargetDecision,
+              sourceRig: {
+                ...sourceRig,
+                bones: sourceRig.bones.map((bone) =>
+                  bone.bone === "chest" ? { ...bone, parent: null } : bone,
+                ),
+              },
+            },
+            "does not match inspected parent",
+          ),
+      ],
+      [
+        "sourceRigRestMustMatchInspectedTrs",
+        () =>
+          rejectsRetarget(
+            {
+              ...retargetDecision,
+              sourceRig: {
+                ...sourceRig,
+                bones: sourceRig.bones.map((bone) =>
+                  bone.bone === "chest"
+                    ? {
+                        ...bone,
+                        rest: {
+                          ...bone.rest,
+                          translation: {
+                            ...bone.rest.translation,
+                            y: 1.25,
+                          },
+                        },
+                      }
+                    : bone,
+                ),
+              },
+            },
+            "rest translation.y",
+          ),
+      ],
+      [
+        "sourceRigRotationMustMatchInspectedTrs",
+        () =>
+          rejectsRetarget(
+            {
+              ...retargetDecision,
+              sourceRig: {
+                ...sourceRig,
+                bones: sourceRig.bones.map((bone) =>
+                  bone.bone === "chest"
+                    ? {
+                        ...bone,
+                        rest: {
+                          ...bone.rest,
+                          rotation: { ...bone.rest.rotation, w: 1 },
+                        },
+                      }
+                    : bone,
+                ),
+              },
+            },
+            "rest rotation.w",
+          ),
+      ],
+      [
+        "sourceRigScaleMustMatchInspectedTrs",
+        () =>
+          rejectsRetarget(
+            {
+              ...retargetDecision,
+              sourceRig: {
+                ...sourceRig,
+                bones: sourceRig.bones.map((bone) =>
+                  bone.bone === "chest"
+                    ? {
+                        ...bone,
+                        rest: {
+                          ...bone.rest,
+                          scale: { ...bone.rest.scale, x: 2 },
+                        },
+                      }
+                    : bone,
+                ),
+              },
+            },
+            "rest scale.x",
+          ),
+      ],
+      [
         "mappingMustNotBeEmpty",
         () =>
           rejectsRetarget(
@@ -566,7 +719,7 @@ export const test_ingest_external_motion_adoption = (): void => {
               ...retargetDecision,
               mapping: [
                 { node: "node_9", bone: "hips" },
-                { node: "node_1", bone: "chest" },
+                { node: "node_2", bone: "chest" },
               ],
             },
             "not present in the inspected source",
@@ -580,7 +733,7 @@ export const test_ingest_external_motion_adoption = (): void => {
               ...retargetDecision,
               mapping: [
                 { node: "node_0", bone: "hips" },
-                { node: "node_1", bone: "leftHand" },
+                { node: "node_2", bone: "leftHand" },
               ],
             },
             "absent from source rig",
@@ -608,7 +761,7 @@ export const test_ingest_external_motion_adoption = (): void => {
               ...retargetDecision,
               mapping: [
                 { node: "node_0", bone: "hips" },
-                { node: "node_1", bone: "hips" },
+                { node: "node_2", bone: "hips" },
               ],
             },
             "duplicates bone",
@@ -633,7 +786,7 @@ export const test_ingest_external_motion_adoption = (): void => {
               ...retargetDecision,
               mapping: [
                 { node: "node_0", bone: "chest" },
-                { node: "node_1", bone: "hips" },
+                { node: "node_2", bone: "hips" },
               ],
             },
             "must map to hips",
@@ -723,6 +876,7 @@ export const test_ingest_external_motion_adoption = (): void => {
         "animationNameMustBeString",
         "missingMotion",
         "motionProfileIsRequired",
+        "motionInterpretationIsRequired",
         "blankSourcePath",
         "sourcePathMismatch",
         "nonIntegerByteLength",
@@ -736,6 +890,10 @@ export const test_ingest_external_motion_adoption = (): void => {
         "sourceRigNeedsBones",
         "sourceRigBonesMustBeUnique",
         "sourceRigNeedsHips",
+        "sourceRigParentMustMatchInspectedHierarchy",
+        "sourceRigRestMustMatchInspectedTrs",
+        "sourceRigRotationMustMatchInspectedTrs",
+        "sourceRigScaleMustMatchInspectedTrs",
         "mappingMustNotBeEmpty",
         "translationScaleMustBeFinite",
         "translationScaleMustBePositive",
@@ -855,8 +1013,22 @@ const motionDocument = () => ({
     { bufferView: 2, componentType: 5126, count: 2, type: "VEC3" },
     { bufferView: 3, componentType: 5126, count: 2, type: "VEC4" },
   ],
-  nodes: [{ name: "Root" }, { name: "Chest" }],
-  scenes: [{ nodes: [0, 1] }],
+  nodes: [
+    { name: "Root", children: [1] },
+    {
+      name: "",
+      children: [2],
+      translation: [0, 0.25, 0],
+      rotation: [0, 0, 1, 0],
+      scale: [2, 2, 2],
+    },
+    {
+      name: "Chest",
+      translation: [0, 0.75, 0],
+      scale: [0.5, 0.5, 0.5],
+    },
+  ],
+  scenes: [{ nodes: [0] }],
   animations: [
     {
       name: "Walk",
@@ -868,7 +1040,7 @@ const motionDocument = () => ({
       channels: [
         { sampler: 0, target: { node: 0, path: "rotation" } },
         { sampler: 1, target: { node: 0, path: "translation" } },
-        { sampler: 2, target: { node: 1, path: "rotation" } },
+        { sampler: 2, target: { node: 2, path: "rotation" } },
       ],
     },
   ],
@@ -891,8 +1063,8 @@ const skeleton = (): IAutoMovieSkeleton => ({
       bone: "chest",
       parent: "hips",
       rest: {
-        translation: { x: 0, y: 1, z: 0 },
-        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        translation: { x: 0, y: -1.25, z: 0 },
+        rotation: { x: 0, y: 0, z: 1, w: 0 },
         scale: { x: 1, y: 1, z: 1 },
       },
       constraint: {

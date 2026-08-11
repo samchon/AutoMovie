@@ -3,9 +3,14 @@ import type {
   AutoMovieHumanoidBone,
   IAutoMovieClip,
   IAutoMovieSkeleton,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 
-import type { IAutoMovieExternalModelInspection } from "./inspectExternalModelBytes";
+import {
+  AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE,
+  type IAutoMovieExternalModelInspection,
+  type IAutoMovieExternalMotionNodeInspection,
+} from "./inspectExternalModelBytes";
 
 /**
  * Manifest-owned identity of the exact external motion bytes selected by the
@@ -96,10 +101,11 @@ export interface IAutoMovieExternalMotionNativeDecision {
    */
   take: string;
   /**
-   * Normalized source skeleton whose rest basis the caller selected.
+   * Semantic source skeleton whose mapped hierarchy and rest reproduce the
+   * inspected node facts.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Native semantic conversion uses the explicitly declared source rest basis.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The source rig is retained as native receipt input.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Native conversion accepts only a source rest basis grounded in the inspected bytes.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The validated source rig is retained as native receipt input.
    */
   sourceRig: IAutoMovieSkeleton;
   /**
@@ -135,10 +141,11 @@ export interface IAutoMovieExternalMotionRetargetDecision {
    */
   take: string;
   /**
-   * Normalized source skeleton whose rest basis the caller selected.
+   * Semantic source skeleton whose mapped hierarchy and rest reproduce the
+   * inspected node facts.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis The declared source rig fixes the rest and hierarchy basis.
-   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The source rig is retained as retarget receipt input.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Retargeting accepts only hierarchy and rest derived from the inspected source basis.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The byte-grounded source rig is retained as retarget receipt input.
    */
   sourceRig: IAutoMovieSkeleton;
   /**
@@ -184,9 +191,9 @@ export interface IAutoMovieExternalMotionNativeHandoff {
    */
   mode: "native";
   /**
-   * Declared source skeleton, defensively copied for the handoff.
+   * Byte-grounded source skeleton, defensively copied for the handoff.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis The source rig fixes native quaternion-to-semantic conversion.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis The inspected hierarchy and rest fix native quaternion-to-semantic conversion.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff retains the validated rig revision.
    */
   sourceRig: IAutoMovieSkeleton;
@@ -217,9 +224,9 @@ export interface IAutoMovieExternalMotionRetargetHandoff {
    */
   mode: "retarget";
   /**
-   * Declared source skeleton, defensively copied for the handoff.
+   * Byte-grounded source skeleton, defensively copied for the handoff.
    *
-   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis The copied source rig fixes the handoff's rest basis.
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis The copied rig retains the inspected hierarchy and rest basis.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt The handoff retains the validated rig revision.
    */
   sourceRig: IAutoMovieSkeleton;
@@ -371,11 +378,14 @@ export interface IAutoMovieExternalMotionAdoption {
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-spacing-overlap-avoidance Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance Ingest adopts one source motion take and derives no member body bound or resolved-slot static clearance.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hero-variation-group-state Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-sounding-membership-handoff Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Ingest creates no formation membership, layout, spacing, variation, terrain, sounding, or compact-population representation.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-bounds-framing-culling-failures Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-layout-ground-validation Ingest owns no resolved formation slot, prototype bound, support surface, or ground-contact validation.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-motion-validation Ingest validates one imported clip handoff, not group cues, sparse slot exceptions, or shot-clock formation motion.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Ingest adopts one source motion take and owns no formation population, tier, instance expansion, hero override, or worst-case runtime budget admission.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Ingest performs no formation exception resolution, framing/culling bounds, population motion validation, budget, status, or replay decision.
@@ -476,6 +486,10 @@ export const adoptAutoMovieExternalMotion = (props: {
   const motion = props.inspection.motion;
   if (motion === undefined)
     throw new Error("External source has no inspected motion takes.");
+  if (motion.interpretation !== AUTOMOVIE_GLTF_MOTION_INTERPRETATION_PROFILE)
+    throw new Error(
+      `External motion interpretation "${String(motion.interpretation)}" is unsupported.`,
+    );
   if (props.source.path.trim().length === 0)
     throw new Error("External motion source path must be non-blank.");
   if (props.source.path !== motion.path)
@@ -508,7 +522,7 @@ export const adoptAutoMovieExternalMotion = (props: {
   const binding = validateMotionBinding({
     decision: props.decision,
     take,
-    nodeIds: motion.nodeIds,
+    nodes: motion.nodes,
   });
   if (props.decision.mode === "native")
     return {
@@ -531,7 +545,7 @@ const validateMotionBinding = (props: {
     | IAutoMovieExternalMotionNativeDecision
     | IAutoMovieExternalMotionRetargetDecision;
   take: IAutoMovieClip;
-  nodeIds: string[];
+  nodes: IAutoMovieExternalMotionNodeInspection[];
 }): Pick<IAutoMovieExternalMotionNativeHandoff, "sourceRig" | "mapping"> => {
   if (props.decision.sourceRig.id.trim().length === 0)
     throw new Error("External motion source rig id must be non-blank.");
@@ -553,7 +567,7 @@ const validateMotionBinding = (props: {
 
   if (props.decision.mapping.length === 0)
     throw new Error("External motion semantic mapping must not be empty.");
-  const availableNodes = new Set(props.nodeIds);
+  const availableNodes = new Map(props.nodes.map((node) => [node.id, node]));
   const nodeToBone = new Map<string, AutoMovieHumanoidBone>();
   const mappedBones = new Set<AutoMovieHumanoidBone>();
   for (const mapping of props.decision.mapping) {
@@ -576,7 +590,6 @@ const validateMotionBinding = (props: {
     nodeToBone.set(mapping.node, mapping.bone);
     mappedBones.add(mapping.bone);
   }
-
   for (const track of props.take.tracks) {
     if (track.channel.kind !== "node")
       throw new Error(
@@ -596,6 +609,12 @@ const validateMotionBinding = (props: {
         `External motion ${track.channel.path} channel for node "${track.channel.node}" is unsupported by humanoid motion conversion.`,
       );
   }
+  validateSourceRigBasis({
+    sourceRig: props.decision.sourceRig,
+    mapping: props.decision.mapping,
+    nodes: availableNodes,
+    nodeToBone,
+  });
   return {
     sourceRig: cloneSkeleton(props.decision.sourceRig),
     mapping: props.decision.mapping
@@ -603,6 +622,128 @@ const validateMotionBinding = (props: {
       .sort((left, right) => compareCodeUnits(left.node, right.node)),
   };
 };
+
+const validateSourceRigBasis = (props: {
+  sourceRig: IAutoMovieSkeleton;
+  mapping: IAutoMovieExternalMotionBoneMapping[];
+  nodes: Map<string, IAutoMovieExternalMotionNodeInspection>;
+  nodeToBone: Map<string, AutoMovieHumanoidBone>;
+}): void => {
+  const bones = new Map(props.sourceRig.bones.map((bone) => [bone.bone, bone]));
+  for (const mapping of props.mapping) {
+    const node = props.nodes.get(mapping.node)!;
+    const bone = bones.get(mapping.bone)!;
+    const expected = inspectedBoneBasis(node, props.nodes, props.nodeToBone);
+    if (bone.parent !== expected.parent)
+      throw new Error(
+        `External motion source rig bone "${mapping.bone}" parent ${JSON.stringify(bone.parent)} does not match inspected parent ${JSON.stringify(expected.parent)}.`,
+      );
+    assertTransformMatches(mapping.bone, bone.rest, expected.rest);
+  }
+};
+
+const inspectedBoneBasis = (
+  node: IAutoMovieExternalMotionNodeInspection,
+  nodes: Map<string, IAutoMovieExternalMotionNodeInspection>,
+  nodeToBone: Map<string, AutoMovieHumanoidBone>,
+): { parent: AutoMovieHumanoidBone | null; rest: IAutoMovieTransform } => {
+  const helpers: IAutoMovieExternalMotionNodeInspection[] = [];
+  let parentId = node.parent;
+  while (parentId !== null) {
+    const mappedParent = nodeToBone.get(parentId);
+    if (mappedParent !== undefined) {
+      let rest = cloneTransform(node.transform);
+      for (const helper of helpers)
+        rest = composeLocalTransform(helper.transform, rest);
+      return { parent: mappedParent, rest };
+    }
+    const parent = nodes.get(parentId)!;
+    helpers.push(parent);
+    parentId = parent.parent;
+  }
+  return { parent: null, rest: cloneTransform(node.transform) };
+};
+
+const assertTransformMatches = (
+  bone: AutoMovieHumanoidBone,
+  actual: IAutoMovieTransform,
+  expected: IAutoMovieTransform,
+): void => {
+  const components: Array<[string, number, number]> = [
+    ["translation.x", actual.translation.x, expected.translation.x],
+    ["translation.y", actual.translation.y, expected.translation.y],
+    ["translation.z", actual.translation.z, expected.translation.z],
+    ["rotation.x", actual.rotation.x, expected.rotation.x],
+    ["rotation.y", actual.rotation.y, expected.rotation.y],
+    ["rotation.z", actual.rotation.z, expected.rotation.z],
+    ["rotation.w", actual.rotation.w, expected.rotation.w],
+    ["scale.x", actual.scale.x, expected.scale.x],
+    ["scale.y", actual.scale.y, expected.scale.y],
+    ["scale.z", actual.scale.z, expected.scale.z],
+  ];
+  for (const [path, value, inspected] of components)
+    if (value !== inspected)
+      throw new Error(
+        `External motion source rig bone "${bone}" rest ${path} ${value} does not match inspected value ${inspected}.`,
+      );
+};
+
+const cloneTransform = (
+  transform: IAutoMovieTransform,
+): IAutoMovieTransform => ({
+  translation: { ...transform.translation },
+  rotation: { ...transform.rotation },
+  scale: { ...transform.scale },
+});
+
+const composeLocalTransform = (
+  parent: IAutoMovieTransform,
+  child: IAutoMovieTransform,
+): IAutoMovieTransform => {
+  const scaled = {
+    x: parent.scale.x * child.translation.x,
+    y: parent.scale.y * child.translation.y,
+    z: parent.scale.z * child.translation.z,
+  };
+  const rotated = rotateVector(parent.rotation, scaled);
+  return {
+    translation: {
+      x: parent.translation.x + rotated.x,
+      y: parent.translation.y + rotated.y,
+      z: parent.translation.z + rotated.z,
+    },
+    rotation: multiplyQuaternion(parent.rotation, child.rotation),
+    scale: {
+      x: parent.scale.x * child.scale.x,
+      y: parent.scale.y * child.scale.y,
+      z: parent.scale.z * child.scale.z,
+    },
+  };
+};
+
+const rotateVector = (
+  quaternion: IAutoMovieTransform["rotation"],
+  vector: IAutoMovieTransform["translation"],
+): IAutoMovieTransform["translation"] => {
+  const tx = 2 * (quaternion.y * vector.z - quaternion.z * vector.y);
+  const ty = 2 * (quaternion.z * vector.x - quaternion.x * vector.z);
+  const tz = 2 * (quaternion.x * vector.y - quaternion.y * vector.x);
+  return {
+    x: vector.x + quaternion.w * tx + (quaternion.y * tz - quaternion.z * ty),
+    y: vector.y + quaternion.w * ty + (quaternion.z * tx - quaternion.x * tz),
+    z: vector.z + quaternion.w * tz + (quaternion.x * ty - quaternion.y * tx),
+  };
+};
+
+const multiplyQuaternion = (
+  left: IAutoMovieTransform["rotation"],
+  right: IAutoMovieTransform["rotation"],
+): IAutoMovieTransform["rotation"] => ({
+  x: left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
+  y: left.w * right.y - left.x * right.z + left.y * right.w + left.z * right.x,
+  z: left.w * right.z + left.x * right.y - left.y * right.x + left.z * right.w,
+  w: left.w * right.w - left.x * right.x - left.y * right.y - left.z * right.z,
+});
 
 const validateRetargetDecision = (
   decision: IAutoMovieExternalMotionRetargetDecision,
