@@ -4,9 +4,17 @@
 
 Motion은 stable identity, target actor 또는 object, source, duration, clock basis, affected controls와 valid start·end state를 가져야 한다.
 
+### 모든 객체와 모든 동작 {#motion-all-objects-all-motion}
+
+동일한 motion 원칙은 skeletal actor뿐 아니라 rigid, articulated, deformable, material-driven, stateful 또는 project-defined object에도 적용되어야 하며 새 control 종류를 추가하기 위해 기존 clip, event와 timeline의 의미를 다시 쓰지 않아야 한다.
+
 ### Motion Source {#motion-source-kinds}
 
-Authored keyframe, external clip, procedural gait, path motion, physics result와 performance composition을 구분하고 어느 source가 final channel을 소유하는지 명시해야 한다.
+Authored keyframe, external clip, procedural gait, path motion, constraint result, fixed-step physics result와 performance composition을 구분하고 어느 source와 version이 final channel을 소유하는지 명시해야 한다.
+
+### Motion Variant와 선택 {#motion-variant-selection}
+
+서로 다른 take, clip, procedural rule, retarget mapping과 correction을 덮어쓰지 않는 variant로 보존하고 사용자와 저작 에이전트가 performance마다 선택한 variant만 final motion에 참여해야 한다.
 
 ### 의미와 기법 {#motion-meaning-technique}
 

@@ -10,7 +10,7 @@ Body scale, appearance, costume, pose phase, motion timing와 prop variation을 
 
 ### Double과 Representation 교체 {#actor-doubles-replacement}
 
-Stunt, distant, silhouette, stand-in와 rendering double을 같은 character performance에 연결할 수 있으나 적용 shot, capability와 visual difference를 명시해야 한다.
+Stunt, distant, silhouette, stand-in와 rendering double을 같은 character performance에 연결할 수 있으나 적용 shot과 time range, capability, contact, silhouette와 visual difference를 명시해야 한다. 교체는 user-authored policy를 따르고 story-relevant actor에게 budget만으로 자동 적용하지 않아야 한다.
 
 ### Population Budget {#actor-population-budget}
 

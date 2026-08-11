@@ -2,7 +2,7 @@
 
 ## 재현 가능한 Motion Clip {#motion-clips-keyframes}
 
-Clip은 duration, sample time, channel target, key value, interpolation와 loop 또는 clamp behavior를 선언하고 같은 input에서 같은 pose와 transform을 만들어야 한다.
+Clip은 stable source와 version, duration, sample time, channel target, key value, interpolation와 loop 또는 clamp behavior를 선언하고 같은 input에서 같은 pose, transform, morph, material와 object state를 만들어야 한다.
 
 ### Key Time {#motion-key-times}
 
@@ -10,11 +10,15 @@ Key time은 finite하고 ordered하며 clip range 안에 있어야 하고 동일
 
 ### 보간 종류 {#motion-interpolation}
 
-Step, linear, eased, cubic, quaternion와 project-defined bounded interpolation을 channel type에 맞게 선택하고 rotation을 component-wise linear 보간하지 않아야 한다.
+Step, linear, eased, cubic, quaternion와 project-defined bounded interpolation을 channel type에 맞게 선택하고 tangent, easing parameter와 shortest-path 또는 winding policy를 보존하며 rotation을 component-wise linear 보간하지 않아야 한다.
+
+### Sparse Channel과 Default {#motion-sparse-channel-default}
+
+Clip이 일부 control만 포함할 때 rest, previous state, lower layer 또는 explicit default 중 어느 값이 빈 channel을 채우는지 선언하고 source format의 implicit fallback이 target pose를 몰래 바꾸지 않아야 한다.
 
 ### Loop와 Trim {#motion-loop-trim}
 
-Loop period, seam, source range, trim, hold와 time scale을 분리하여 startOffset과 film clock에서 일관되게 sample해야 한다.
+Loop period, seam pose와 event ownership, source range, trim, hold, reverse와 time scale을 분리하여 startOffset과 film clock에서 일관되게 sample해야 한다.
 
 ### Clip Refusal {#motion-clip-refusal}
 

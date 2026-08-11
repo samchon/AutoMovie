@@ -9,4 +9,5 @@ Formation은 많은 actor, vehicle, object와 repeated unit를 개별 record 나
 - [Terrain과 Route](./terrain-and-routes.md)
 - [Spacing, Overlap과 회피](./spacing-overlap-and-avoidance.md)
 - [Hero, Variation과 State](./heroes-variation-and-state.md)
+- [Resolution, Culling과 Evidence](./resolution-culling-and-evidence.md)
 - [Budget와 검증](./budgets-and-validation.md)

@@ -10,11 +10,15 @@ Layout spacing, dressing variation와 hero exception이 member bounds와 minimum
 
 ### 시간에 따른 Overlap {#formation-temporal-overlap}
 
-Move, turn, reform와 individual motion의 interior sample에서 member-member, group-group와 environment overlap을 확인해야 한다.
+Move, turn, reform와 individual motion의 interior sample에서 swept member envelope, carried object, member-member, group-group와 environment overlap을 확인해야 한다.
 
 ### Bounded Avoidance {#formation-bounded-avoidance}
 
-회피를 지원하는 경우 neighbor range, priority, speed change, route deviation, iteration와 population bound를 선언하고 story formation을 무제한 crowd simulation으로 바꾸지 않아야 한다.
+회피를 지원하는 경우 사용자와 저작 에이전트가 neighbor range, priority, speed change, route deviation, iteration와 population bound를 선언하고 story formation을 무제한 crowd simulation으로 바꾸지 않아야 한다.
+
+### Formation Integrity {#formation-avoidance-integrity}
+
+회피 correction은 slot order, hero event, route ownership, group silhouette와 reform completion 중 보존해야 할 조건과 허용 가능한 disorder를 선언하고, overlap을 없애기 위해 formation 의미를 몰래 해체하지 않아야 한다.
 
 ### Avoidance Refusal {#formation-avoidance-refusal}
 

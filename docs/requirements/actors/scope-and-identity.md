@@ -16,6 +16,14 @@ Humanoid proxy, articulated object, creature proxy와 project-defined performer�
 
 Role, scale, rig, appearance, capabilities, voice와 state는 project source가 소유하고 이름이나 model filename에서 성격과 행동을 추정하지 않아야 한다.
 
+### Identity와 Representation 수명 {#actor-identity-representation-lifetime}
+
+Actor identity는 model file, rig, costume, voice, shot instance와 render tier보다 오래 유지되어야 하며, 교체 가능한 representation과 시간에 따라 바뀌는 state를 actor 자체와 구분해야 한다.
+
+### 열린 Control Vocabulary {#actor-open-control-vocabulary}
+
+Actor는 humanoid bone 이름에 갇히지 않고 project-defined joint, morph, material, attachment와 semantic control을 가질 수 있어야 하며, 새 performer 종류를 추가할 때 기존 actor identity와 performance 의미를 다시 해석하지 않아야 한다.
+
 ### Missing Binding {#actor-missing-binding}
 
 Scene이 요구하는 character에 actor, model, required control 또는 performance가 없으면 origin pose와 default voice로 조용히 대체하지 않아야 한다.

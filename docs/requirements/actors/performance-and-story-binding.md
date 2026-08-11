@@ -8,6 +8,10 @@ Performance는 actor, story scene, character goal, semantic event, motion, pose,
 
 Static pose, default motion, scene performance와 shot-specific override가 겹칠 때 명시적이고 결정적인 precedence를 가져야 한다.
 
+### Capability Plan {#actor-performance-capability-plan}
+
+Performance가 요구하는 joint, gaze, expression, voice, contact와 prop control을 선택된 representation과 motion source가 제공하는지 사전에 비교하고, 부족한 control에 대한 proxy cue, 대체 source, omission 또는 refusal은 사용자가 선택해야 한다.
+
 ### Start Offset와 Local Clock {#actor-performance-local-clock}
 
 Actor performance의 film start, source motion start, trim, loop와 hold를 구분하여 같은 film time에서 모든 consumer가 같은 local sample을 읽어야 한다.

@@ -4,13 +4,21 @@
 
 Look, reach, plant, aim, hinge, path와 multi-joint target을 named control, chain, limit, weight, precedence와 iteration bound가 있는 constraint로 표현할 수 있어야 한다.
 
+### Range of Motion {#motion-range-of-motion}
+
+각 control의 translation, swing, twist와 dependent range는 rig와 named state가 소유해야 하며, pose, clip, retarget, IK와 procedural motion이 같은 range를 사용해야 한다. Range 밖 입력은 user-authored clamp policy가 없는 한 조용히 보정하지 않아야 한다.
+
 ### Target Space {#motion-constraint-target-space}
 
-World, actor, bone, object와 path-local target space를 구분하고 transform chain을 명시하여 같은 target을 consumer마다 다르게 해석하지 않아야 한다.
+World, actor, bone, object와 path-local target space를 구분하고 effector, pole 또는 bend hint, aim axis, up reference와 transform chain을 명시하여 같은 target을 consumer마다 다르게 해석하지 않아야 한다.
 
 ### Solve Order {#motion-constraint-solve-order}
 
 Base pose, retarget, layer, IK, contact와 secondary correction의 적용 순서를 고정하고 순서가 결과 identity와 digest에 포함되어야 한다.
+
+### Coupled Range와 Driver {#motion-coupled-range-drivers}
+
+Joint dependency, pose-space corrective, linked mechanism와 state-dependent range는 driver의 input, valid domain과 output authority를 선언하고 independent limit처럼 순서에 따라 우연히 적용되지 않아야 한다.
 
 ### Reachability {#motion-constraint-reachability}
 
