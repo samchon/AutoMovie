@@ -93,8 +93,13 @@ export interface IAutoMovieEffectSample {
  * scheduling, wall time, worker count and GPU randomness cannot change it.
  *
  * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-seek-reconstruction Derives the complete sample from absolute time without cursor history.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-arbitrary-seek Recomputes the sampled boundary, live population, and particle state solely from the requested absolute time and compiled effect.
+ * @evidence requirements/effects-and-simulation/clock-seek-and-determinism.md#effects-film-time-mapping Floors the request once onto the compiled fixed-step clock before evaluating cue or particle state.
  * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-deterministic-spawn Keys every spawned particle from compiled seed and stable particle index.
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-emitter-geometry Samples every initial particle position inside the compiled world-space emitter bounds.
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-spawn-interval-boundary Assigns each regular birth to one ordinal-derived interval boundary and counts it with the same floor rule on every seek.
  * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#arbitrary-seek-reconstruction-contract Reconstructs the same active set for repeated and out-of-order samples.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps the absolute request to its owning fixed-step boundary before any effect evaluation.
  * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#deterministic-particle-spawn-interval Uses fixed-step emission intervals and stable index-derived variation.
  */
 export const sampleCompiledEffect = (

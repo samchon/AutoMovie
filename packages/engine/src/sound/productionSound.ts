@@ -91,6 +91,7 @@ export interface IAutoMovieProductionSoundRaster {
  * one-member mass of zero radius and plans exactly as it always did.
  *
  * @evidence requirements/sound/event-cues-and-timing.md#sound-event-derived-timing Places each semantic sound occurrence on the finished-film clock.
+ * @evidence requirements/sound/scope-and-identity.md#sound-emission-presentation Keeps the semantic emission frame while an optional propagation receipt carries a separate listener-arrival frame.
  * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-kind-and-event-timing Lowers authored and event-derived sources into one ordered sound plan.
  * @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources Aggregates resolved formation members into centroid, spread, and density gain.
  * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-extended-group-source-aggregation Implements the bounded group-source reduction before mixing.
@@ -248,6 +249,16 @@ export const deriveProductionSoundPlan = (props: {
  * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-occlusion-and-propagation-failure Preserves propagation refusal rather than substituting an estimated path.
  * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Computes exact runtime, sample-frame, channel, peak, clipping, silence, and synchronization facts from final PCM.
  * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Computes exact numeric verification facts from final mixed PCM.
+ * @evidence requirements/sound/scope-and-identity.md#sound-fixed-audio-clock Converts every film-frame boundary directly through the plan FPS and declared sample rate without a mutable sample cursor.
+ * @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-loudness-peak Measures integrated loudness, sample peak, and clipping state from the exact post-limiter master samples.
+ * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-time-transform Applies cue source offset and source-to-presentation duration ratio while evaluating each output sample.
+ * @evidence requirements/sound/editing-synchronization-and-continuity.md#sound-audiovisual-duration-join Derives the final PCM length once from total picture frames, FPS, and sample rate.
+ * @evidence specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md#effect-film-time-step-boundary Maps film-frame positions directly onto the separate fixed audio sample clock.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-processing-chain-and-stable-summation Executes event, cue, dialogue, and master-limiter stages in one deterministic plan order.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-mix-automation-sample-clock Evaluates cue gain and fades from the current sample index rather than prior playback state.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-loudness-peak-and-mix-failure Computes loudness and peak facts only after the declared master limiting stage.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#sound-event-sync-and-boundary-continuity Applies each cue's declared source span to its film presentation span.
+ * @evidence specifications/simulation-effects-and-sound/mix-stems-loudness-and-av-join.md#audio-visual-duration-and-timebase-join Produces one audio sample range from the finished picture range and shared timebase.
  */
 export const renderProductionSound = (props: {
   /** Sound plan being rendered. */
@@ -319,6 +330,7 @@ export const renderProductionSound = (props: {
  * Derive a bounded frame-normalized VRM mouth sequence from Kokoro phonemes.
  *
  * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority Converts timings derived from adopted dialogue bytes into the mouth sequence.
+ * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-word-phoneme-timing Maps ordered phoneme sample ranges from the adopted source duration into bounded viseme frame intervals.
  * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-voice-consistency-and-phoneme-state Preserves ordered phoneme state while mapping it to bounded visemes.
  */
 export const productionPhonemesToVisemes = (props: {

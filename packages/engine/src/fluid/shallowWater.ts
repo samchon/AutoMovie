@@ -84,6 +84,9 @@ import {
  * into NaN frames a renderer would draw as nothing at all.
  *
  * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-seek-state Reconstructs the requested absolute step from declared initial state.
+ * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-volume-boundary Advances declared sources, drains, walls, open edges, and retained cell volume in physical volume units.
+ * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-conservation-account Returns retained volume beside cumulative source, drain, and open-boundary outflow for the same solve.
+ * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-surface-and-flow-tier Implements the bounded flux-form surface state and its explicit volume-change account.
  * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#fluid-seek-and-checkpoint-state Produces the same bounded state for repeated and out-of-order seeks.
  * @author Samchon
  */

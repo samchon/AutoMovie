@@ -27,6 +27,7 @@ const MAX_TAIL_SECONDS = 2;
  * gain.
  *
  * @evidence requirements/sound/interior-acoustics.md#sound-room-binding Preserves outdoor, same-room, different-room, and unresolved paths.
+ * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-input-revision Rejects a shared analysis request whose digest differs from the event revision and records the verified digest on every available response.
  * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#bounded-acoustic-response-and-provider-adoption Produces the bounded response for the resolved room route.
  * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-mix-consumption Reuses the shared analysis revision in audible processing.
  * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#acoustic-mix-consumption-and-claim-boundary Keeps absent analysis distinct from success.
