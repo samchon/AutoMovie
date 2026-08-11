@@ -809,6 +809,30 @@ export interface IAutoMovieExternalMotionConversionResult {
 }
 
 /**
+ * Compiler tool and protocol identity sealed into a motion conversion receipt.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires the conversion tool and version to remain bound to the receipt result.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes tool and profile versions part of deterministic receipt identity.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionCompiler {
+  /**
+   * Exact compiler package version.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Records which conversion tool build interpreted the pinned source closure.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Invalidates receipt identity when the compiler implementation version changes.
+   */
+  packageVersion: string;
+  /**
+   * Exact compiler content-protocol version.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Records the conversion protocol governing settings and canonical output.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Invalidates receipt identity when the interpretation protocol changes.
+   */
+  protocolVersion: string;
+}
+
+/**
  * Compiler-sealed receipt for one external motion conversion.
  *
  * The compiler serializes this receipt as its own generated file and lists that
@@ -827,6 +851,13 @@ export interface IAutoMovieExternalMotionConversionReceipt {
    * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Makes canonical serialization explicitly versioned.
    */
   version: 1;
+  /**
+   * Compiler tool and protocol identity that produced the conversion.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires the conversion tool and version to remain bound to the receipt result.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes tool and profile versions part of deterministic receipt identity.
+   */
+  compiler: IAutoMovieExternalMotionConversionCompiler;
   /**
    * Production-declared external motion adoption identity.
    *
