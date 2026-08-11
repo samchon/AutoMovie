@@ -5,23 +5,72 @@ import {
 } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/** Keep topic indexes in scope without selecting content-file H2 wrappers. */
+const H1_ONLY_READMES = new Set([
+  "requirements/agent-authoring/README.md",
+  "requirements/evidence-and-provenance/README.md",
+  "requirements/operations-and-recovery/README.md",
+  "requirements/product/README.md",
+  "requirements/rendering/README.md",
+]);
+
+const H2_CONTRACTS = new Set([
+  "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+  "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+]);
+
+/** Select each Markdown artifact at the heading level it actually contracts. */
 const markdownReferences = (files: string[]): ITtscEvidenceGraphReference[] => {
   const readmes = files.filter((file) => file.endsWith("/README.md"));
   const contracts = files.filter((file) => !file.endsWith("/README.md"));
+  const readmeTitles = readmes.filter((file) => H1_ONLY_READMES.has(file));
+  const readmeSections = readmes.filter(
+    (file) => H1_ONLY_READMES.has(file) === false,
+  );
+  const h2Contracts = contracts.filter((file) => H2_CONTRACTS.has(file));
+  const h3Contracts = contracts.filter(
+    (file) => H2_CONTRACTS.has(file) === false,
+  );
   return [
-    {
-      type: "markdown",
-      root: "../../docs",
-      files: readmes,
-      symbol: ["h1", "h2", "h3"],
-    },
-    {
-      type: "markdown",
-      root: "../../docs",
-      files: contracts,
-      symbol: ["h3"],
-    },
+    ...(readmeTitles.length === 0
+      ? []
+      : [
+          {
+            type: "markdown",
+            root: "../../docs",
+            files: readmeTitles,
+            symbol: ["h1"],
+          } satisfies ITtscEvidenceGraphReference,
+        ]),
+    ...(readmeSections.length === 0
+      ? []
+      : [
+          {
+            type: "markdown",
+            root: "../../docs",
+            files: readmeSections,
+            symbol: ["h1", "h2", "h3"],
+          } satisfies ITtscEvidenceGraphReference,
+        ]),
+    ...(h2Contracts.length === 0
+      ? []
+      : [
+          {
+            type: "markdown",
+            root: "../../docs",
+            files: h2Contracts,
+            symbol: ["h2"],
+          } satisfies ITtscEvidenceGraphReference,
+        ]),
+    ...(h3Contracts.length === 0
+      ? []
+      : [
+          {
+            type: "markdown",
+            root: "../../docs",
+            files: h3Contracts,
+            symbol: ["h3"],
+          } satisfies ITtscEvidenceGraphReference,
+        ]),
   ];
 };
 
@@ -45,10 +94,8 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/agent-authoring/README.md",
         "requirements/agent-authoring/capability-discovery.md",
         "requirements/agent-authoring/project-ownership.md",
-        "requirements/agent-authoring/source-owned-loop.md",
         "requirements/product/README.md",
         "requirements/product/capability-and-content.md",
-        "requirements/product/extensibility-and-compatibility.md",
       ]),
     },
     {
@@ -64,8 +111,6 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "specifications/authoring-and-authority/README.md",
         "specifications/authoring-and-authority/capability-and-content-boundary.md",
-        "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md",
-        "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
         "specifications/authoring-and-authority/source-authority-and-derivation.md",
       ]),
     },
@@ -82,7 +127,6 @@ const graph: ITtscEvidenceGraphConfig = {
         "requirements/rendering/README.md",
         "requirements/rendering/chunks-resume-and-recovery.md",
         "requirements/rendering/scope-and-artifact-identity.md",
-        "requirements/rendering/validation.md",
       ]),
     },
     {
@@ -92,7 +136,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "specifications/editorial-render-and-delivery/README.md",
-        "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+        "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
         "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
         "specifications/execution-and-recovery/README.md",
         "specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md",
@@ -131,9 +175,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "requirements/operations-and-recovery/README.md",
-        "requirements/operations-and-recovery/failure-modes-and-recovery.md",
         "requirements/operations-and-recovery/idempotency-and-side-effects.md",
-        "requirements/operations-and-recovery/partial-artifacts-and-publication.md",
       ]),
     },
     {
@@ -143,8 +185,6 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "specifications/execution-and-recovery/README.md",
-        "specifications/execution-and-recovery/artifacts-and-atomic-publication.md",
-        "specifications/execution-and-recovery/failure-reconciliation-and-disaster-recovery.md",
         "specifications/execution-and-recovery/retry-backoff-and-idempotency.md",
       ]),
     },
@@ -156,12 +196,8 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: markdownReferences([
         "requirements/diagnostics/README.md",
         "requirements/diagnostics/input-and-result-classification.md",
-        "requirements/diagnostics/partial-artifacts-and-recovery.md",
         "requirements/evidence-and-provenance/README.md",
-        "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md",
         "requirements/evidence-and-provenance/completeness-freshness-and-refusal.md",
-        "requirements/operations-and-recovery/README.md",
-        "requirements/operations-and-recovery/cache-integrity-and-dependency-loss.md",
       ]),
     },
     {
@@ -171,13 +207,9 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "function", "property"],
       reference: markdownReferences([
         "specifications/evidence-and-provenance/README.md",
-        "specifications/evidence-and-provenance/canonical-digests-and-content-identity.md",
         "specifications/evidence-and-provenance/completeness-freshness-and-refusal.md",
-        "specifications/execution-and-recovery/README.md",
-        "specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md",
         "specifications/validation-and-diagnostics/README.md",
         "specifications/validation-and-diagnostics/classification-and-causality.md",
-        "specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md",
       ]),
     },
   ],
