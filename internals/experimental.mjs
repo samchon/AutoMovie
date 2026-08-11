@@ -21,8 +21,6 @@
 // `sandboxManifest` then pins every workspace package to its tarball, and
 // `claudeSettings` approves the project's own MCP server so a non-interactive
 // session can reach it.
-import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +29,7 @@ import {
   WORKSPACE_TEMPLATE_VERSION_KEYS,
   resolveTemplateVersions,
 } from "../packages/cli/build/templateVersions.mjs";
+import { packWorkspace } from "./tgz.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
@@ -56,17 +55,6 @@ Options:
  * to a plain semver one: any member left unpacked would be resolved from the
  * public registry at a version this monorepo has never published.
  */
-const PACKAGES = Object.freeze([
-  "interface",
-  "engine",
-  "archetypes",
-  "render",
-  "ingest",
-  "viewer",
-  "mcp",
-  "cli",
-]);
-
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
  * `.gitignore` and `.npmrc` from a published package. Mirrors the rename map in
@@ -118,9 +106,6 @@ const assertPortableName = (name) => {
     throw new Error(`name "${name}" must be one portable directory segment`);
 };
 
-/** Where a sandbox keeps the tarballs it installs from. */
-const TARBALL_DIR = ".tarballs";
-
 /**
  * Pack every workspace package into `experimental/<name>/.tarballs`, returning
  * each package's `file:` specifier.
@@ -148,45 +133,6 @@ const TARBALL_DIR = ".tarballs";
  * an existing sandbox installed against stale bytes; changing the specifier is
  * what forces pnpm to resolve the new tarball.
  */
-const packWorkspace = (target) => {
-  const directory = path.join(target, TARBALL_DIR);
-  fs.rmSync(directory, { recursive: true, force: true });
-  fs.mkdirSync(directory, { recursive: true });
-
-  const specifiers = {};
-  for (const name of PACKAGES) {
-    process.stdout.write(`Packing @automovie/${name}\n`);
-    const packed = spawnSync(
-      "pnpm",
-      ["pack", "--pack-destination", directory],
-      {
-        cwd: path.join(ROOT, "packages", name),
-        stdio: ["ignore", "pipe", "inherit"],
-        encoding: "utf8",
-        shell: process.platform === "win32",
-      },
-    );
-    if (packed.status !== 0)
-      throw new Error(`pnpm pack failed for @automovie/${name}`);
-    const produced = fs
-      .readdirSync(directory)
-      .filter((entry) => entry.startsWith(`automovie-${name}-`));
-    if (produced.length !== 1)
-      throw new Error(
-        `expected one tarball for @automovie/${name}, found ${produced.length}`,
-      );
-    const original = path.join(directory, produced[0]);
-    const digest = createHash("sha256")
-      .update(fs.readFileSync(original))
-      .digest("hex")
-      .slice(0, 12);
-    const final = produced[0].replace(/\.tgz$/, `-${digest}.tgz`);
-    fs.renameSync(original, path.join(directory, final));
-    specifiers[name] = `file:./${TARBALL_DIR}/${final}`;
-  }
-  return specifiers;
-};
-
 /**
  * The scaffold rendered for a sandbox: the published version tokens, with every
  * package this monorepo publishes replaced by its working-tree tarball.
