@@ -17,7 +17,12 @@ const AXIS_EPSILON = 1e-12;
 /** A ray whose slope against a plane is under this is parallel to it. */
 const PLANE_EPSILON = 1e-12;
 
-/** The fewest half-spaces whose intersection can bound a solid in 3D. */
+/**
+ * The fewest half-spaces whose intersection can bound a solid in 3D.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `AUTOMOVIE_ANALYSIS_MIN_SOLID_PLANES` sets the minimum authored half-space count accepted for an environmental occluder.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The four-plane threshold rejects obstruction inputs that cannot enclose a three-dimensional context mass.
+ */
 export const AUTOMOVIE_ANALYSIS_MIN_SOLID_PLANES = 4;
 
 /**
@@ -28,11 +33,24 @@ export const AUTOMOVIE_ANALYSIS_MIN_SOLID_PLANES = 4;
  * either becoming the other. What a solid is _not_ is ownership: the caller
  * decides which list a solid came from, and the analysis never returns a
  * context mass as building geometry.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `IAutoMovieAnalysisSolid` represents one declared convex context mass that may block an analysis ray without becoming building geometry.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The solid contributes a stable key and an intersection of half-spaces to the shared environmental obstruction state.
  */
 export interface IAutoMovieAnalysisSolid {
-  /** Stable identity of the blocker within its own list. */
+  /**
+   * Stable identity of the blocker within its own list.
+   *
+   * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state Solid `id` keeps each environmental blocker traceable within its declared ownership list.
+   * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The stable key supports duplicate detection and prevents a context mass from aliasing a building-owned subject.
+   */
   id: string;
-  /** Half-spaces whose intersection is the solid; at least four. */
+  /**
+   * Half-spaces whose intersection is the solid; at least four.
+   *
+   * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `planes` explicitly bound the neighbouring mass used for sun, sky, and source obstruction tests.
+   * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The half-space list supplies the analytic entry and exit constraints for every ray crossing this context solid.
+   */
   planes: readonly IAutoMovieHalfSpacePlane[];
 }
 
@@ -51,6 +69,8 @@ export interface IAutoMovieAnalysisSolid {
  * make two differently-authored contexts produce the same artifact and hide an
  * authoring mistake that a reader needs to see.
  *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `validateAutoMovieEnvironmentContext` refuses physically contradictory sunlight, unstable instant order, malformed blockers, and context-to-building identity collisions.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The validator checks the shared instant, celestial, irradiance, ordering, ownership, and obstruction invariants before any consumer samples them.
  * @author Samchon
  */
 export const validateAutoMovieEnvironmentContext = (props: {
@@ -213,6 +233,9 @@ export const validateAutoMovieEnvironmentContext = (props: {
  * Shared by the context validator and by every adapter that accepts an authored
  * shading solid, so a neighbour's mass and the building's own canopy are held
  * to exactly the same standard.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `validateSolidPlanes` identifies a blocker with too few faces, a zero normal, a non-finite plane, or duplicate geometry.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The shared plane check emits ordered diagnostics for every malformed half-space in one authored context solid.
  */
 export const validateSolidPlanes = (
   planes: readonly IAutoMovieHalfSpacePlane[],
@@ -251,6 +274,9 @@ export const validateSolidPlanes = (
  * an authored shading solid has no honest result to return for a solid with no
  * faces, so it stops rather than producing one. Sharing the rule is what keeps
  * a neighbour's mass and the building's own canopy held to one standard.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `assertAutoMovieAnalysisSolids` stops an analysis adapter from accepting an unidentifiable, duplicate, or non-bounding blocker.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The assertion applies stable-id checks and the common half-space validator before a solid reaches ray evaluation.
  */
 export const assertAutoMovieAnalysisSolids = (
   solids: readonly IAutoMovieAnalysisSolid[],
@@ -287,6 +313,9 @@ export const assertAutoMovieAnalysisSolids = (
  *
  * Normals need not be normalized: the numerator and the denominator scale
  * together, so the parameter is unaffected by how long an authored normal is.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieSolidBlocks` determines whether one declared context mass interrupts a finite analysis ray.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The slab intersection narrows entry and exit parameters across every half-space and accepts only a surviving positive segment.
  */
 export const autoMovieSolidBlocks = (props: {
   /** World-space ray origin in metres. */
@@ -316,7 +345,12 @@ export const autoMovieSolidBlocks = (props: {
   return exit > 0;
 };
 
-/** Whether any of the given solids stops the ray. */
+/**
+ * Whether any of the given solids stops the ray.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieRayObstructed` reports whether any authored environmental solid blocks the queried direction before its limit.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The collection operation applies the common convex-solid test in declaration order and returns on the first obstruction.
+ */
 export const autoMovieRayObstructed = (props: {
   origin: IAutoMovieVector3;
   direction: IAutoMovieVector3;
@@ -332,7 +366,12 @@ export const autoMovieRayObstructed = (props: {
     }),
   );
 
-/** Whether a direction points into the sky rather than into the ground. */
+/**
+ * Whether a direction points into the sky rather than into the ground.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieSkyward` keeps celestial sampling above the declared reference ground instead of treating downward directions as sky.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The predicate compares a direction with the normalized ground normal to enforce the context's sky hemisphere.
+ */
 export const autoMovieSkyward = (
   direction: IAutoMovieVector3,
   ground: IAutoMovieReferenceGround,
@@ -348,6 +387,9 @@ export const autoMovieSkyward = (
  * unobstructed plane sees every one of its directions, so the estimate of an
  * isotropic sky's contribution collapses to the declared horizontal illuminance
  * with no sampling error at all, for any count.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieHemisphereDirections` supplies repeatable sky-facing sample directions around an authored measurement normal.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The Hammersley and Malley construction maps a sample count to one deterministic cosine-weighted hemisphere sequence.
  */
 export const autoMovieHemisphereDirections = (props: {
   normal: IAutoMovieVector3;
@@ -409,14 +451,24 @@ const radicalInverse2 = (index: number): number => {
   return result;
 };
 
-/** The instant of a context by id, or null when it names none. */
+/**
+ * The instant of a context by id, or null when it names none.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieEnvironmentInstant` resolves a requested time only from the context's declared calendar-and-sky states.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The lookup returns the matching explicit instant or null, leaving missing celestial input visible to the caller.
+ */
 export const autoMovieEnvironmentInstant = (
   context: IAutoMovieEnvironmentContext,
   id: string,
 ): IAutoMovieEnvironmentInstant | null =>
   context.instants.find((instant) => instant.id === id) ?? null;
 
-/** Every context occluder as an analysis solid. */
+/**
+ * Every context occluder as an analysis solid.
+ *
+ * @evidence requirements/map/weather-and-seasons.md#map-calendar-time-celestial-state `autoMovieContextSolids` projects each read-only neighbouring mass into the common analysis-blocker shape.
+ * @evidence specifications/world-and-site/ecology-weather-and-calendar.md#world-site-calendar-time-celestial-input The adapter preserves context ids and planes while furnishing the obstruction collection shared by lighting consumers.
+ */
 export const autoMovieContextSolids = (
   context: IAutoMovieEnvironmentContext,
 ): IAutoMovieAnalysisSolid[] =>

@@ -14,7 +14,12 @@ import {
  * voids that touch are one void authored twice, so separation does not.
  */
 
-/** Slack, in metres, below which two planar coordinates are the same point. */
+/**
+ * Slack, in metres, below which two planar coordinates are the same point.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `PLANAR_EPSILON` fixes slack, in metres, below which two planar coordinates are the same point. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `PLANAR_EPSILON` bounds the planar epsilon policy while the engine checks finite planar topology before consuming geometry.
+ */
 export const PLANAR_EPSILON = 1e-9;
 
 /**
@@ -27,6 +32,9 @@ export const PLANAR_EPSILON = 1e-9;
  * therefore yields a straight polygon containing the true outline, tight at
  * every extreme, and every containment or separation answer taken from it errs
  * only towards refusing.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `outlineHull` produces the straight polygon that exactly bounds a possibly arced outline. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `outlineHull` replaces arced edges with sampled points and returns their bounding straight polygon for finite topology checks.
  */
 export const outlineHull = (
   profile: IAutoMovieOpeningProfile,
@@ -52,7 +60,12 @@ export const outlineHull = (
   return hull;
 };
 
-/** Twice the signed area of a closed polygon, positive when counter-clockwise. */
+/**
+ * Twice the signed area of a closed polygon, positive when counter-clockwise.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonDoubleArea` produces twice the signed area of a closed polygon, positive when counter-clockwise. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonDoubleArea` performs area calculation when the engine checks finite planar topology before consuming geometry.
+ */
 export const polygonDoubleArea = (
   polygon: readonly IAutoMoviePlanarPoint[],
 ): number => {
@@ -64,7 +77,12 @@ export const polygonDoubleArea = (
   return sum;
 };
 
-/** The shortest edge length of a closed polygon. */
+/**
+ * The shortest edge length of a closed polygon.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonShortestEdge` produces the shortest edge length of a closed polygon. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonShortestEdge` performs shortest edge polygon calculation when the engine checks finite planar topology before consuming geometry.
+ */
 export const polygonShortestEdge = (
   polygon: readonly IAutoMoviePlanarPoint[],
 ): number =>
@@ -82,6 +100,9 @@ export const polygonShortestEdge = (
  * A self-crossing outline has no interior, so every later question about what
  * is inside it would answer arbitrarily. Adjacent edges are skipped because
  * they legitimately meet at the corner they share.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonIsSimple` produces whether a closed polygon never crosses or touches itself away from a shared corner. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonIsSimple` performs is simple polygon calculation when the engine checks finite planar topology before consuming geometry.
  */
 export const polygonIsSimple = (
   polygon: readonly IAutoMoviePlanarPoint[],
@@ -111,6 +132,9 @@ export const polygonIsSimple = (
  * Exported because the service-network validator locates a port on a boundary
  * face with it: one planar containment answer for the whole architecture graph
  * is the point of keeping these predicates in one module.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `pointInPolygon` produces whether a point is inside a simple polygon, its own boundary included. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `pointInPolygon` classifies a finite point against a simple polygon while treating its boundary as inside.
  */
 export const pointInPolygon = (
   point: IAutoMoviePlanarPoint,
@@ -145,6 +169,9 @@ export const pointInPolygon = (
  * Only a crossing counts against containment, so a void whose sill lies exactly
  * on the wall's own bottom edge is contained, while a void whose corner pokes
  * through the wall's side is not.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonInside` produces whether an inner polygon stays within an outer one, flush edges allowed. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonInside` performs inside polygon calculation when the engine checks finite planar topology before consuming geometry.
  */
 export const polygonInside = (
   inner: readonly IAutoMoviePlanarPoint[],
@@ -171,6 +198,9 @@ export const polygonInside = (
  *
  * Contact counts because two voids meeting exactly along a jamb are one void
  * written twice, and the wall between them has nothing left to be.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonsOverlap` produces whether two polygons share any point at all, contact included. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonsOverlap` detects shared interior or boundary contact between two finite polygons.
  */
 export const polygonsOverlap = (
   left: readonly IAutoMoviePlanarPoint[],
@@ -193,7 +223,12 @@ export const polygonsOverlap = (
   );
 };
 
-/** The axis-aligned bounds of a polygon in its own planar frame. */
+/**
+ * The axis-aligned bounds of a polygon in its own planar frame.
+ *
+ * @evidence requirements/asset-authoring/validation.md#asset-geometry-validation `polygonBounds` produces the axis-aligned bounds of a polygon in its own planar frame. This ensures degenerate or self-intersecting planar geometry is rejected before use.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-numeric-structure `polygonBounds` performs bounds polygon calculation when the engine checks finite planar topology before consuming geometry.
+ */
 export const polygonBounds = (
   polygon: readonly IAutoMoviePlanarPoint[],
 ): { min: IAutoMoviePlanarPoint; max: IAutoMoviePlanarPoint } => ({
