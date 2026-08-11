@@ -71,6 +71,11 @@ interface IRenderGcDescriptorFailure {
   error: unknown;
 }
 
+interface IRenderGcFileCapture {
+  entry: IRenderGcContentEntry;
+  status: fs.BigIntStats;
+}
+
 class RenderGcDescriptorCleanupError extends AggregateError {}
 
 /** Close one GC descriptor without discarding operation or cleanup failures. */
@@ -215,7 +220,10 @@ export const createRenderGcFileSnapshot = (
         `Render file "${target}" changed after descriptor publication.`,
       );
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (physicalVersion(completed) !== openedVersion)
+    if (
+      physicalVersion(completed) !== openedVersion &&
+      isMetadataSettlement(opened, completed) === false
+    )
       throw new Error(`Render file "${target}" changed while published.`);
     if (
       snapshot.base.path !== root.path ||
@@ -723,10 +731,14 @@ const captureResidentTarget = (
     throw new Error(
       `Render GC target "${absolute}" escapes renderer ownership.`,
     );
-  if (physicalVersion(physical) !== physicalVersion(status))
-    throw new Error(
-      `Render GC target "${absolute}" changed while it was resolved.`,
-    );
+  let stableStatus = status;
+  if (physicalVersion(physical) !== physicalVersion(status)) {
+    if (isMetadataSettlement(status, physical)) stableStatus = physical;
+    else
+      throw new Error(
+        `Render GC target "${absolute}" changed while it was resolved.`,
+      );
+  }
   // A file's identity has to match the entry its directory inventory records,
   // and those entries carry the file id so a pathname stat and a descriptor
   // stat agree on them. A directory keeps its device.
@@ -737,7 +749,9 @@ const captureResidentTarget = (
   let kind: "directory" | "file";
   if (status.isFile()) {
     kind = "file";
-    entries = [readFileEntry(resident, "")];
+    const captured = captureFileEntry(resident, "");
+    entries = [captured.entry];
+    stableStatus = captured.status;
   } else {
     if (status.isDirectory() === false)
       throw new Error(`Render GC target "${absolute}" is not physical.`);
@@ -745,12 +759,13 @@ const captureResidentTarget = (
     entries = captureTree(base, resident);
   }
   const completed = fs.lstatSync(absolute, { bigint: true });
-  if (
-    completed.isSymbolicLink() ||
-    physicalVersion(completed) !== physicalVersion(status) ||
-    fs.realpathSync(absolute) !== resident
-  )
+  if (completed.isSymbolicLink() || fs.realpathSync(absolute) !== resident)
     throw new Error(`Render GC target "${absolute}" changed while captured.`);
+  if (physicalVersion(completed) !== physicalVersion(stableStatus)) {
+    if (isMetadataSettlement(stableStatus, completed)) stableStatus = completed;
+    else
+      throw new Error(`Render GC target "${absolute}" changed while captured.`);
+  }
   for (const identity of ancestry)
     assertPhysicalDirectoryIdentity(identity, "render GC target ancestry");
   assertRootIdentity(base);
@@ -765,7 +780,7 @@ const captureResidentTarget = (
           path: path.relative(base.real, identity.real).replaceAll("\\", "/"),
         })),
         contentFingerprint,
-        targetVersion: physicalVersion(status),
+        targetVersion: physicalVersion(stableStatus),
       }),
     ),
   );
@@ -779,7 +794,7 @@ const captureResidentTarget = (
     namespaceFingerprint,
     target: absolute,
     targetIdentity,
-    targetVersion: physicalVersion(status),
+    targetVersion: physicalVersion(stableStatus),
   };
 };
 
@@ -816,61 +831,74 @@ const captureTree = (
   return entries;
 };
 
-const readFileEntry = (
+const readFileEntry = (file: string, relative: string): IRenderGcContentEntry =>
+  captureFileEntry(file, relative).entry;
+
+const captureFileEntry = (
   file: string,
   relative: string,
-): IRenderGcContentEntry => {
-  const linked = fs.lstatSync(file, { bigint: true });
-  if (linked.isSymbolicLink() || linked.isFile() === false)
-    throw new Error(`Render GC content "${file}" is not one physical file.`);
-  const version = physicalVersion(linked);
-  const descriptor = fs.openSync(file, "r");
-  let bytes = 0;
-  let digest: `sha256:${string}`;
-  let failure: IRenderGcDescriptorFailure | undefined;
-  try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (
-      opened.isFile() === false ||
-      physicalFileId(opened) !== physicalFileId(linked)
-    )
-      throw new Error(`Render GC content "${file}" changed before open.`);
-    const openedVersion = physicalVersion(opened);
-    const hash = createHash("sha256");
-    const chunk = Buffer.allocUnsafe(1024 * 1024);
-    for (;;) {
-      const length = fs.readSync(descriptor, chunk, 0, chunk.length, bytes);
-      if (length === 0) break;
-      hash.update(chunk.subarray(0, length));
-      bytes += length;
+): IRenderGcFileCapture => {
+  for (let attempt = 0; attempt !== 2; ++attempt) {
+    const linked = fs.lstatSync(file, { bigint: true });
+    if (linked.isSymbolicLink() || linked.isFile() === false)
+      throw new Error(`Render GC content "${file}" is not one physical file.`);
+    const version = physicalVersion(linked);
+    const descriptor = fs.openSync(file, "r");
+    let bytes = 0;
+    let digest: `sha256:${string}`;
+    let failure: IRenderGcDescriptorFailure | undefined;
+    try {
+      const opened = fs.fstatSync(descriptor, { bigint: true });
+      if (
+        opened.isFile() === false ||
+        physicalFileId(opened) !== physicalFileId(linked)
+      )
+        throw new Error(`Render GC content "${file}" changed before open.`);
+      const openedVersion = physicalVersion(opened);
+      const hash = createHash("sha256");
+      const chunk = Buffer.allocUnsafe(1024 * 1024);
+      for (;;) {
+        const length = fs.readSync(descriptor, chunk, 0, chunk.length, bytes);
+        if (length === 0) break;
+        hash.update(chunk.subarray(0, length));
+        bytes += length;
+      }
+      digest = `sha256:${hash.digest("hex")}`;
+      const completed = fs.fstatSync(descriptor, { bigint: true });
+      if (
+        completed.isFile() === false ||
+        physicalVersion(completed) !== openedVersion
+      )
+        throw new Error(`Render GC content "${file}" changed while hashed.`);
+    } catch (error) {
+      failure = { error };
+      throw error;
+    } finally {
+      closeRenderGcDescriptor(descriptor, failure, "inventoried render file");
     }
-    digest = `sha256:${hash.digest("hex")}`;
-    const completed = fs.fstatSync(descriptor, { bigint: true });
+    const resident = fs.lstatSync(file, { bigint: true });
     if (
-      completed.isFile() === false ||
-      physicalVersion(completed) !== openedVersion
+      resident.isSymbolicLink() ||
+      resident.isFile() === false ||
+      physicalFileId(resident) !== physicalFileId(linked)
     )
-      throw new Error(`Render GC content "${file}" changed while hashed.`);
-  } catch (error) {
-    failure = { error };
-    throw error;
-  } finally {
-    closeRenderGcDescriptor(descriptor, failure, "inventoried render file");
+      throw new Error(`Render GC content "${file}" changed while read.`);
+    if (physicalVersion(resident) !== version) {
+      if (attempt === 0 && isMetadataSettlement(linked, resident)) continue;
+      throw new Error(`Render GC content "${file}" changed while read.`);
+    }
+    return {
+      entry: {
+        bytes,
+        digest,
+        identity: physicalFileId(linked),
+        kind: "file",
+        path: relative,
+      },
+      status: resident,
+    };
   }
-  const resident = fs.lstatSync(file, { bigint: true });
-  if (
-    resident.isSymbolicLink() ||
-    resident.isFile() === false ||
-    physicalVersion(resident) !== version
-  )
-    throw new Error(`Render GC content "${file}" changed while read.`);
-  return {
-    bytes,
-    digest,
-    identity: physicalFileId(linked),
-    kind: "file",
-    path: relative,
-  };
+  throw new Error(`Render GC content "${file}" changed while read.`);
 };
 
 const physicalDirectory = (
@@ -955,6 +983,22 @@ const identityFileId = (identity: string): string =>
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${physicalIdentity(status)}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
+
+// Windows can publish a stable file's creation/change timestamp one pathname
+// observation after an atomic replacement becomes visible. That is harmless
+// only when identity, kind, size, and content modification time stay fixed;
+// every other version transition remains a content or namespace race.
+const isMetadataSettlement = (
+  before: fs.BigIntStats,
+  after: fs.BigIntStats,
+): boolean =>
+  before.isFile() === after.isFile() &&
+  before.isDirectory() === after.isDirectory() &&
+  (before.isFile()
+    ? physicalFileId(before) === physicalFileId(after)
+    : physicalIdentity(before) === physicalIdentity(after)) &&
+  before.size === after.size &&
+  before.mtimeNs === after.mtimeNs;
 
 const ownedRelativePath = (
   base: string,

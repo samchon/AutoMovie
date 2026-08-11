@@ -8521,6 +8521,264 @@ export const test_cli_scaffold = async (): Promise<void> => {
       renderGcCleanupRoot,
       renderGcCleanupFile,
     );
+    const shiftedChangeTime = (
+      status: fs.BigIntStats,
+      offset: bigint,
+    ): fs.BigIntStats =>
+      new Proxy(status, {
+        get: (current, property, receiver): unknown =>
+          property === "ctimeNs"
+            ? current.ctimeNs + offset
+            : Reflect.get(current, property, receiver),
+      });
+    const metadataSettlementRoot = path.join(
+      base,
+      "render-gc-metadata-settlement",
+    );
+    const metadataSettlementFile = path.join(
+      metadataSettlementRoot,
+      "captured.bin",
+    );
+    fs.mkdirSync(metadataSettlementRoot);
+    fs.writeFileSync(metadataSettlementFile, "stable metadata bytes");
+    let metadataSettlementCalls = 0;
+    let metadataSettled = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [
+        file,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (path.resolve(file.toString()) !== metadataSettlementFile)
+        return status;
+      metadataSettlementCalls += 1;
+      if (metadataSettlementCalls >= 3) metadataSettled = true;
+      return metadataSettled ? shiftedChangeTime(status, 1n) : status;
+    }) as typeof fs.lstatSync;
+    mutableFs.statSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeStat, mutableFs, [
+        file,
+        ...args,
+      ]) as fs.BigIntStats;
+      return path.resolve(file.toString()) === metadataSettlementFile &&
+        metadataSettled
+        ? shiftedChangeTime(status, 1n)
+        : status;
+    }) as typeof fs.statSync;
+    let metadataSettlementSnapshot:
+      | ReturnType<typeof renderGcModule.captureRenderGcTarget>
+      | undefined;
+    let metadataSettlementCleanupFailure: { error: unknown } | undefined;
+    try {
+      metadataSettlementSnapshot = renderGcModule.captureRenderGcTarget(
+        metadataSettlementRoot,
+        metadataSettlementFile,
+      );
+    } catch (error) {
+      metadataSettlementCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(metadataSettlementCleanupFailure, [
+        {
+          resource: "render GC metadata settlement lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "render GC metadata settlement stat hook",
+          cleanup: () => {
+            mutableFs.statSync = nativeStat;
+          },
+        },
+      ]);
+    }
+    let unstableMetadataCalls = 0;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [
+        file,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (path.resolve(file.toString()) !== metadataSettlementFile)
+        return status;
+      unstableMetadataCalls += 1;
+      return shiftedChangeTime(status, BigInt(unstableMetadataCalls));
+    }) as typeof fs.lstatSync;
+    let unstableMetadataRejected = false;
+    let unstableMetadataCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.captureRenderGcTarget(
+        metadataSettlementRoot,
+        metadataSettlementFile,
+      );
+    } catch {
+      unstableMetadataRejected = true;
+    } finally {
+      preserveCliHarnessCleanup(unstableMetadataCleanupFailure, [
+        {
+          resource: "render GC unstable metadata lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render GC tolerates one same-file metadata settlement only",
+      namedFacts([
+        [
+          "stableBytes",
+          () =>
+            metadataSettlementSnapshot?.bytes ===
+            Buffer.byteLength("stable metadata bytes"),
+        ],
+        ["retried", () => metadataSettlementCalls >= 10],
+        ["unstableRejected", () => unstableMetadataRejected],
+        ["bounded", () => unstableMetadataCalls === 5],
+      ]),
+      {
+        stableBytes: true,
+        retried: true,
+        unstableRejected: true,
+        bounded: true,
+      },
+    );
+    const publishedMetadataFile = path.join(
+      renderGcCleanupRoot,
+      "published-metadata.bin",
+    );
+    let publishedMetadataDescriptor = -1;
+    let publishedMetadataFstats = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === publishedMetadataFile &&
+        flags === "wx+"
+      )
+        publishedMetadataDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (descriptor !== publishedMetadataDescriptor) return status;
+      publishedMetadataFstats += 1;
+      return publishedMetadataFstats >= 2
+        ? shiftedChangeTime(status, 1n)
+        : status;
+    }) as typeof fs.fstatSync;
+    let publishedMetadataSnapshot:
+      | ReturnType<typeof renderGcModule.captureRenderGcTarget>
+      | undefined;
+    let publishedMetadataCleanupFailure: { error: unknown } | undefined;
+    try {
+      publishedMetadataSnapshot = renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        publishedMetadataFile,
+        Buffer.from("published metadata bytes"),
+      ) as ReturnType<typeof renderGcModule.captureRenderGcTarget>;
+    } catch (error) {
+      publishedMetadataCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(publishedMetadataCleanupFailure, [
+        {
+          resource: "render GC published metadata open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC published metadata fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    const changedPublicationFile = path.join(
+      renderGcCleanupRoot,
+      "changed-publication.bin",
+    );
+    let changedPublicationDescriptor = -1;
+    let changedPublicationFstats = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === changedPublicationFile &&
+        flags === "wx+"
+      )
+        changedPublicationDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (descriptor !== changedPublicationDescriptor) return status;
+      changedPublicationFstats += 1;
+      return changedPublicationFstats >= 2
+        ? new Proxy(status, {
+            get: (current, property, receiver): unknown =>
+              property === "mtimeNs"
+                ? current.mtimeNs + 1n
+                : Reflect.get(current, property, receiver),
+          })
+        : status;
+    }) as typeof fs.fstatSync;
+    let changedPublicationRejected = false;
+    try {
+      renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        changedPublicationFile,
+        Buffer.from("changed publication bytes"),
+      );
+    } catch {
+      changedPublicationRejected = true;
+    } finally {
+      preserveCliHarnessCleanup(undefined, [
+        {
+          resource: "render GC changed publication open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC changed publication fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render publication accepts metadata settlement but rejects content version drift",
+      namedFacts([
+        [
+          "publishedBytes",
+          () =>
+            publishedMetadataSnapshot?.bytes ===
+            Buffer.byteLength("published metadata bytes"),
+        ],
+        ["metadataObserved", () => publishedMetadataFstats >= 2],
+        ["contentRejected", () => changedPublicationRejected],
+      ]),
+      {
+        publishedBytes: true,
+        metadataObserved: true,
+        contentRejected: true,
+      },
+    );
     const standaloneRenderGcCloseFailure = new Error(
       "standalone render GC close failed",
     );
