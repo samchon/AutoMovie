@@ -6,7 +6,7 @@
 
 ### 양식은 입력이다 {#asset-style-as-input}
 
-비례, silhouette, 제작 방식, 장식, 마감, 손상과 색채가 시대와 양식을 표현하며 engine의 고정된 style 목록이 가능한 결과를 제한해서는 안 된다.
+비례, silhouette, 제작 방식, 장식, 마감, 손상과 색채가 시대와 양식을 표현하며 제품의 고정된 style 목록이 가능한 결과를 제한해서는 안 된다.
 
 ### Reference의 역할 {#asset-style-reference-role}
 

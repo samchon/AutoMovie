@@ -8,9 +8,13 @@
 
 재료의 물리적·시각적 속성과 이를 보조하는 image map은 구분되어야 하며, image가 없더라도 의미 있는 material을 선언할 수 있어야 한다.
 
+### 조합 가능한 재료 관계 {#asset-material-composition}
+
+Material은 상수, texture, procedural field, geometry property와 다른 authored input의 관계를 조합할 수 있어야 하며 특정 완성 재료 목록만으로 표현 범위를 제한하지 않아야 한다.
+
 ### Texture 좌표와 축척 {#asset-texture-coordinates-scale}
 
-Texture는 적용 surface, 좌표계, 실제 축척, 방향, 반복, clamp, seam과 channel 의미를 선언하여 같은 input에서 같은 배치를 만들어야 한다.
+Texture는 적용 surface, 좌표계, 실제 축척, 방향, 반복과 clamp, filter, seam, color space와 channel 의미를 선언하여 같은 input에서 같은 배치를 만들어야 한다.
 
 ### 사용자 제작 texture {#asset-user-authored-texture}
 

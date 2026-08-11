@@ -6,15 +6,19 @@
 
 ### 외부 3D Scene {#asset-external-gltf-scene}
 
-사용자는 자신이 선택한 서드파티 제작 도구나 생성 API에서 얻은 glTF 또는 GLB를 포함한 지원 3D 자산을 가져올 수 있어야 한다. 특정 provider, model, service와 asset catalogue를 AutoMovie의 필수 경로로 정하지 않는다.
+사용자는 자신이 선택한 서드파티 제작 도구나 생성 서비스에서 얻은 glTF 또는 GLB를 포함한 지원 3D 자산을 가져올 수 있어야 한다. 특정 provider, model, service와 asset catalogue를 필수 경로나 기본값으로 정하지 않는다.
 
 ### 채택 방식의 선택권 {#asset-external-adoption-mode}
 
-사용자와 저작 에이전트는 원본 scene graph를 유지하는 direct placement, geometry·material·rig·animation을 project-native 구조와 프로그램으로 바꾸는 conversion, 또는 원본·변환 자산을 상위 group과 assembly에 합성하는 방식을 선택할 수 있어야 한다. Engine과 MCP는 이 선택지를 지원하고 어느 하나를 몰래 대신 결정하지 않는다.
+사용자와 저작 에이전트는 원본 scene graph를 유지하는 direct placement, geometry·material·rig·animation을 project-native 구조와 프로그램으로 바꾸는 native conversion, 또는 원본·변환 자산을 상위 group과 assembly에 합성하는 방식을 선택할 수 있어야 한다. 제품은 어느 하나를 기본으로 정하거나 사용자를 대신해 몰래 선택하지 않아야 한다.
 
 ### Scene Graph 보존 {#asset-external-scene-graph-preservation}
 
 Direct placement는 선택된 scene, root와 child node, local transform, mesh reuse, material, texture, skin, morph와 animation의 지원 범위를 보존해야 하며 여러 root나 instance를 임의로 단일 mesh에 합치지 않아야 한다.
+
+### Group 합성 {#asset-external-group-composition}
+
+Group과 assembly 합성은 채택한 자산의 identity와 내부 hierarchy를 유지하면서 placement transform, parent relation, attachment, authored override와 다른 자산과의 관계를 추가할 수 있어야 한다.
 
 ### Conversion Receipt {#asset-external-conversion-receipt}
 
@@ -22,7 +26,7 @@ Native conversion은 source element와 result identity의 대응, 좌표·단위
 
 ### Provenance와 digest {#asset-external-provenance-digest}
 
-외부 자산은 source, license, digest, format, unit, coordinate convention, version과 consumer identity를 가져야 한다.
+외부 자산은 source, acquisition time, license, digest, format, unit, coordinate convention, version과 consumer identity를 가져야 한다.
 
 ### Bounded decoder {#asset-bounded-decoder}
 

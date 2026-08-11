@@ -2,11 +2,11 @@
 
 ## 사용자가 선택하는 Optional Rendition {#repaint-scope-user-choice}
 
-사용자와 `automovie-mcp`를 사용하는 저작 에이전트는 deterministic delivery를 유지하거나 external repaint·image-to-image-like service로 별도 rendition을 만들지 선택할 수 있어야 한다.
+사용자와 저작 에이전트는 deterministic delivery를 유지하거나 자신이 선택한 external repaint 또는 image transformation service로 별도 rendition을 만들지 선택할 수 있어야 한다.
 
 ### Provider 독립성 {#repaint-provider-independence}
 
-AutoMovie는 특정 third-party API, model, vendor와 account를 필수 또는 기본으로 정하지 않고 사용자 소유 도구의 결과를 contract 안에서 채택할 수 있어야 한다.
+제품은 특정 third-party API, model, vendor와 account를 필수 또는 기본으로 정하지 않고 사용자 소유 도구의 결과를 contract 안에서 채택할 수 있어야 한다.
 
 ### 구조와 Appearance {#repaint-structure-appearance}
 

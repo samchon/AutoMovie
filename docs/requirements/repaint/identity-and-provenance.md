@@ -18,4 +18,4 @@ Repaint output 변경은 rendition, sequence와 film review를 stale로 만들�
 
 ### Provenance Refusal {#repaint-provenance-refusal}
 
-Missing model version, prompt, source digest, output digest, terms와 execution boundary를 가진 result를 current rendition으로 승인하지 않아야 한다.
+Model version, prompt, source digest, output digest, terms와 execution boundary 중 하나라도 missing인 result를 current rendition으로 승인하지 않아야 한다.

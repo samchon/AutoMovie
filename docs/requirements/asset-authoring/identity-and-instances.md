@@ -19,3 +19,7 @@ Instance는 공간 소속과 별개로 formation, facade bay, furniture set, veg
 ### Override provenance {#asset-instance-override-provenance}
 
 최종 instance 값은 prototype, inheritance chain, deterministic variation과 explicit override 중 어느 사실에서 왔는지 추적할 수 있어야 한다.
+
+### Variant와 inheritance {#asset-variant-inheritance}
+
+Named variant는 원본을 복제하지 않고 geometry, material, rig, state와 representation의 차이를 선언할 수 있어야 하며, 공통 원본의 변경과 variant override의 우선순위 및 영향 범위를 추적할 수 있어야 한다.

@@ -8,6 +8,14 @@ Character, costume, prop, location, material, palette, light, weather, damage와
 
 Shared style와 character reference, model version, control policy와 critical palette를 sequence에서 고정하거나 intentional change를 명시해야 한다.
 
+### Continuity baseline과 변화 {#repaint-continuity-baseline-changes}
+
+Sequence는 continuity baseline의 version과 적용 shot 범위를 가져야 하며 costume, damage, weather, lighting과 다른 이야기상의 변화는 시작과 종료 경계를 명시하여 accidental drift와 구분해야 한다.
+
+### Drift 전파 제한 {#repaint-continuity-drift-propagation}
+
+앞선 repainted output을 다음 shot의 reference로 사용할 때 derivation과 승인 범위를 기록하고, 검토되지 않은 변화가 연쇄 reference를 통해 sequence 전체에 누적되지 않게 해야 한다.
+
 ### Temporal Artifact {#repaint-temporal-artifacts}
 
 Frame별 또는 shot별 repaint에서 flicker, identity drift, geometry warp, texture crawl와 transition mismatch를 sequence playback에서 검토해야 한다.
