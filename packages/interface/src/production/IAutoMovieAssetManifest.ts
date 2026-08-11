@@ -1,4 +1,5 @@
 import { IAutoMovieGeneratedAcquisition } from "../architecture/IAutoMovieDesignReference";
+import type { IAutoMovieTransform } from "../geometry/IAutoMovieTransform";
 import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
 import type { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
@@ -61,6 +62,54 @@ export interface IAutoMovieAssetProcessingStep {
    * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-element-consumer-links Types `parameters` for the asset spec element consumer links system contract.
    */
   parameters: Record<string, string | number | boolean | null>;
+}
+
+/**
+ * Sidecar bytes owned by one manifest-declared external motion asset.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Keeps every dependency byte in the external motion source closure.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the sidecar-to-source ownership needed by the non-destructive adoption receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieMotionResourceConsumer {
+  /**
+   * External motion sidecar consumer discriminator.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Distinguishes dependency closure from the adoption that later consumes it.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Identifies this use as source-resource ownership in the adoption receipt.
+   */
+  kind: "motion-resource";
+  /**
+   * Exact manifest path of the owning external motion asset.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Binds the sidecar to the preserved source asset identity.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Joins this dependency byte to the source digest closure.
+   */
+  id: string;
+}
+
+/**
+ * Explicit production adoption that consumes one external motion source.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Keeps source selection and adoption mode under production authority.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the source-to-adoption consumer edge recorded by the receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieMotionAdoptionConsumer {
+  /**
+   * External motion adoption consumer discriminator.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Distinguishes a chosen adoption from passive source-resource ownership.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Identifies this use as a production adoption decision.
+   */
+  kind: "motion-adoption";
+  /**
+   * Exact production-declared adoption identity.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Binds source use to the user's explicit adoption decision.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Joins the source bytes to the selected adoption receipt.
+   */
+  id: string;
 }
 
 /**
@@ -134,18 +183,8 @@ export type IAutoMovieAssetConsumer =
       /** Exact design-reference document id observing these bytes. */
       id: string;
     }
-  | {
-      /** Buffer, image, or another sidecar owned by one external-motion asset. */
-      kind: "motion-resource";
-      /** Exact manifest path of the owning external-motion asset. */
-      id: string;
-    }
-  | {
-      /** Explicit external-motion adoption that consumes this source asset. */
-      kind: "motion-adoption";
-      /** Exact adoption id declared by the production. */
-      id: string;
-    };
+  | IAutoMovieMotionResourceConsumer
+  | IAutoMovieMotionAdoptionConsumer;
 
 /**
  * One inspected animation take addressable inside an external motion asset.
@@ -196,6 +235,96 @@ export interface IAutoMovieExternalMotionTake {
 }
 
 /**
+ * One node basis inspected directly from external motion source bytes.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Requires source hierarchy and rest transforms before an adoption decision.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the byte-grounded node facts retained by the external motion receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionBasisNode {
+  /**
+   * Zero-based node index in the inspected glTF scene.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Addresses the exact source node without display-name inference.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Preserves the source container address in the receipt basis.
+   */
+  nodeIndex: number;
+  /**
+   * Stable normalized node identity used by motion channels and parent links.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Gives each source skeleton member a stable identity.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Carries the normalized source node identity into mapping and compatibility checks.
+   */
+  id: string;
+  /**
+   * Source-authored node name, or null when the node is unnamed.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes source metadata without treating name similarity as mapping authority.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Retains the observed label separately from stable node identity.
+   */
+  sourceName: string | null;
+  /**
+   * Parent normalized node identity, or null for a source root.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Records the inspected source skeleton hierarchy.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds each source node to its byte-grounded parent relation.
+   */
+  parent: string | null;
+  /**
+   * Normalized parent-local rest transform inspected from the source node.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Records the rest basis used to interpret source animation channels.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Carries the normalized local rest transform into compatibility and retarget receipts.
+   */
+  localRest: IAutoMovieTransform;
+}
+
+/**
+ * Canonical byte-grounded coordinate and hierarchy basis for external motion.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Requires units, axes, handedness, hierarchy, and rest basis to be inspected before selection.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the normalized source basis sealed into the adoption receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionBasis {
+  /**
+   * Versioned canonical basis profile.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Makes basis interpretation explicit and versioned.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Identifies the deterministic normalization protocol used by the receipt.
+   */
+  profile: "gltf-motion-basis-v1";
+  /**
+   * Canonical length unit of normalized translations.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Declares the source motion unit instead of inferring scale downstream.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals meter normalization into the source basis.
+   */
+  lengthUnit: "meter";
+  /**
+   * Canonical coordinate handedness.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Declares coordinate handedness before mapping or retargeting.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals right-handed interpretation into the source basis.
+   */
+  handedness: "right-handed";
+  /**
+   * Canonical vertical axis.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Declares the source up axis before channel interpretation.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals Y-up normalization into the source basis.
+   */
+  upAxis: "Y-up";
+  /**
+   * Inspected nodes in stable source index order.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes the complete source hierarchy and local rest basis.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Carries byte-grounded nodes into compatibility, mapping, and result receipts.
+   */
+  nodes: IAutoMovieExternalMotionBasisNode[];
+}
+
+/**
  * Byte-grounded motion facts recorded for an external animation asset.
  *
  * This is an inventory, not a take or retarget decision. Those choices remain
@@ -220,6 +349,14 @@ export interface IAutoMovieExternalMotionProvenance {
    */
   ingestProfile: "gltf-motion-v1";
   /**
+   * Canonical hierarchy and rest basis inspected from the resident source
+   * bytes.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Grounds channel interpretation in observed node hierarchy, units, axes, and rest transforms.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Retains the normalized byte basis beside source takes and digests.
+   */
+  basis: IAutoMovieExternalMotionBasis;
+  /**
    * Inspected animation takes in source index order.
    *
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes all eligible source members visible before user selection.
@@ -230,6 +367,82 @@ export interface IAutoMovieExternalMotionProvenance {
    */
   takes: IAutoMovieExternalMotionTake[];
 }
+
+/**
+ * Explicit source-node to target-semantic-bone mapping entry.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Makes automatic or authored mapping inspectable and overridable.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the mapping decision retained by external motion adoption receipts.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionMappingEntry {
+  /**
+   * Stable source node identity from the inspected byte basis.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Identifies the exact source node participating in the reviewed mapping.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Joins one byte-grounded source node to the retained mapping decision.
+   */
+  source: string;
+  /**
+   * Target normalized humanoid bone.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Exposes the selected target control for user review or override.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records the semantic target selected for the source node.
+   */
+  target: AutoMovieHumanoidBone;
+}
+
+/**
+ * Native external motion use without skeletal retargeting.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes native channel use an explicit production decision.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the native mode retained by the external motion receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionNativeMode {
+  /**
+   * Native adoption discriminator.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents silent substitution of retargeting for native use.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records native channel preservation as the selected mode.
+   */
+  kind: "native";
+}
+
+/**
+ * Explicit humanoid retargeting of external motion.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes retargeting and its scale an explicit production decision.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the retarget mode retained by the external motion receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionHumanoidRetargetMode {
+  /**
+   * Humanoid-retarget adoption discriminator.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents silent substitution of native use for retargeting.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records humanoid retargeting as the selected mode.
+   */
+  kind: "humanoid-retarget";
+  /**
+   * Explicit finite positive root-translation scale.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Makes automatic scale correction reviewable and overridable.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Retains the selected translation conversion in the receipt.
+   */
+  translationScale: number;
+}
+
+/**
+ * Closed authored choice between native use and humanoid retargeting.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Requires the user-selected adoption mode to remain explicit.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the mode union serialized by the adoption decision.
+ * @author Samchon
+ */
+export type IAutoMovieExternalMotionAdoptionMode =
+  | IAutoMovieExternalMotionNativeMode
+  | IAutoMovieExternalMotionHumanoidRetargetMode;
 
 /**
  * User-owned decision to adopt one external motion take in one shot.
@@ -298,7 +511,7 @@ export interface IAutoMovieExternalMotionAdoption {
    */
   clip: string;
   /**
-   * Inspected source hierarchy and rest transforms used for channel mapping.
+   * Authored semantic source rig reconciled with the byte-inspected basis.
    *
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Provides the source rig basis needed to interpret imported node tracks.
    * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Carries source rest hierarchy for native compatibility and retarget characterization.
@@ -316,12 +529,7 @@ export interface IAutoMovieExternalMotionAdoption {
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Exposes `mapping` as the portable data boundary for the motion external adoption mode requirement.
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `mapping` for the performance motion external adoption receipt system contract.
    */
-  mapping: Array<{
-    /** Source rig bone name. */
-    source: string;
-    /** Target humanoid bone. */
-    target: AutoMovieHumanoidBone;
-  }>;
+  mapping: IAutoMovieExternalMotionMappingEntry[];
   /**
    * Explicit native or humanoid-retarget adoption decision.
    *
@@ -330,17 +538,7 @@ export interface IAutoMovieExternalMotionAdoption {
    *
    * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `mode` for the performance motion external adoption receipt system contract.
    */
-  mode:
-    | {
-        /** Use source channels without skeletal retargeting. */
-        kind: "native";
-      }
-    | {
-        /** Apply an explicit humanoid mapping. */
-        kind: "humanoid-retarget";
-        /** Explicit finite positive translation scale. */
-        translationScale: number;
-      };
+  mode: IAutoMovieExternalMotionAdoptionMode;
 }
 
 /**

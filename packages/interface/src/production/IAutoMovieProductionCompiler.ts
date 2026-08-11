@@ -28,6 +28,12 @@ import {
   IAutoMovieSoftBodyDomain,
   IAutoMovieSoftFurnishing,
 } from "../soft";
+import type {
+  IAutoMovieExternalMotionAdoptionMode,
+  IAutoMovieExternalMotionBasis,
+  IAutoMovieExternalMotionMappingEntry,
+  IAutoMovieExternalMotionTake,
+} from "./IAutoMovieAssetManifest";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -499,6 +505,384 @@ export interface IAutoMovieProductionManifest {
     /** Relative source directory containing the untouched legacy tree. */
     sourceRoot: string;
   };
+}
+
+/**
+ * One source or dependency file sealed into an external motion receipt.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires raw source and dependency digests in the receipt input basis.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Types one path-and-digest member of the pinned source closure.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionReceiptResource {
+  /**
+   * Production-relative path of the pinned source byte file.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires each raw source or dependency to remain identifiable.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Normalizes source closure paths before receipt identity is computed.
+   */
+  path: string;
+  /**
+   * Content digest of the exact resident bytes.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Pins every source and dependency byte consumed by conversion.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes the source closure a digest-grounded deterministic input.
+   */
+  digest: AutoMovieContentDigest;
+}
+
+/**
+ * Complete byte-grounded source basis consumed by one motion conversion.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Binds source closure, selection, basis, and interpretation to the result.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Types the pinned and normalized motion input basis.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionSource {
+  /**
+   * Primary external motion asset and its exact content digest.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires the raw source identity in the receipt.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Pins the primary source bytes as a deterministic conversion input.
+   */
+  asset: IAutoMovieExternalMotionReceiptResource;
+  /**
+   * Ordered dependency files required to interpret the source asset.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires dependency digests beside the raw source.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Preserves the canonicalized source closure used by conversion.
+   */
+  closure: IAutoMovieExternalMotionReceiptResource[];
+  /**
+   * Exact animation take selected from the source bytes.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Requires the selected take to remain in the non-destructive receipt.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds conversion to the inspected source take and its range.
+   */
+  take: IAutoMovieExternalMotionTake;
+  /**
+   * Canonical coordinate, hierarchy, and local-rest basis inspected from bytes.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Requires the source skeleton, unit, axes, and rest basis before adoption.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals the byte-grounded basis into the conversion source.
+   */
+  basis: IAutoMovieExternalMotionBasis;
+  /**
+   * Canonical digest of the inspected source basis.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Binds the declared coordinate and unit interpretation to the result.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes basis equality part of deterministic receipt identity.
+   */
+  basisDigest: AutoMovieContentDigest;
+}
+
+/**
+ * Actor-bound production decision that authorizes one motion conversion.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Keeps source use, target binding, mapping, and adoption mode explicit.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the authored decision retained by the external motion receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionDecision {
+  /**
+   * Production shot that owns the adopted motion.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Keeps external motion adoption attached to the authored performance context.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records the shot-scoped destination of the conversion.
+   */
+  shot: string;
+  /**
+   * Actor identity that consumes the converted motion.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes the target performer part of the explicit adoption decision.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds the conversion result to one actor rather than an unowned clip.
+   */
+  actor: string;
+  /**
+   * Authored clip identity receiving the converted motion.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Keeps the selected adoption destination explicit.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Joins the result to the exact performance clip.
+   */
+  clip: string;
+  /**
+   * Native or humanoid-retarget conversion mode.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents the compiler from silently changing the selected adoption technique.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Retains the selected mode as receipt data.
+   */
+  mode: IAutoMovieExternalMotionAdoptionMode["kind"];
+  /**
+   * Reviewed source-node to target-bone mapping.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires automatic mapping to remain inspectable and overridable.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals the accepted mapping separately from compatibility findings.
+   */
+  mapping: IAutoMovieExternalMotionMappingEntry[];
+  /**
+   * Explicit root-translation scale, or null for native adoption.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Makes automatic scale correction reviewable and overridable.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Records the chosen translation conversion without inferring it later.
+   */
+  translationScale: number | null;
+}
+
+/**
+ * Target basis against which one external motion conversion was decided.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires compatibility to be evaluated against the chosen target controls and scale.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the target identity and basis sealed by the receipt.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionTarget {
+  /**
+   * Target production model identity.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires compatibility findings to name the selected target.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds conversion to the exact target model.
+   */
+  model: string;
+  /**
+   * Target skeleton identity within the model.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires source and target control coverage to be compared explicitly.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds mapping and retargeting to the exact target skeleton.
+   */
+  skeleton: string;
+  /**
+   * Canonical digest of the target skeleton basis.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires meaningful target interpretation changes to invalidate the receipt.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Makes the target basis a pinned conversion input.
+   */
+  basisDigest: AutoMovieContentDigest;
+}
+
+/**
+ * One ordered transformation applied while converting external motion.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires every coordinate, unit, time, resample, and retarget operation to be recorded.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Types one ordered activity in the transform ledger.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionTransformActivity {
+  /**
+   * Closed motion conversion activity discriminator.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Distinguishes the exact transformation performed on source elements.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Records normalization, retargeting, trimming, and channel conversion as explicit activities.
+   */
+  kind:
+    | "basis-normalization"
+    | "hierarchy-collapse"
+    | "retarget"
+    | "translation-scale"
+    | "time-trim"
+    | "channel-conversion"
+    | "event-remap";
+  /**
+   * Stable source element identities consumed by this activity.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires source-to-result element correspondence to remain inspectable.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Carries the source side of one transform-ledger relation.
+   */
+  source: string[];
+  /**
+   * Stable result element identities produced by this activity.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires result identities, splits, and merges to be recorded.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Carries the result side of one transform-ledger relation.
+   */
+  target: string[];
+  /**
+   * Serializable parameters that fully characterize the activity.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires the applied coordinate, unit, time, and retarget facts in the receipt.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Makes every transform replayable from ordered activity data.
+   */
+  parameters: Record<string, string | number | boolean | null>;
+}
+
+/**
+ * One source-level loss or approximation accepted by conversion.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Requires every dropped, approximated, or precision-reduced source fact and consequence.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Types one entry in the external conversion loss ledger.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionLossEntry {
+  /**
+   * Closed loss or approximation discriminator.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Distinguishes omission, approximation, precision reduction, and semantic loss.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Classifies the unsupported or altered source feature.
+   */
+  kind:
+    | "channel-dropped"
+    | "channel-approximated"
+    | "precision-loss"
+    | "semantic-loss";
+  /**
+   * Stable source elements affected by the loss.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Requires loss to be attributed element by element.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Binds a loss entry to its affected source support set.
+   */
+  source: string[];
+  /**
+   * Observable downstream consequence of the loss.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Requires every loss to state its behavioral or fidelity consequence.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Prevents successful output from implying preserved behavior.
+   */
+  consequence: string;
+  /**
+   * Whether the user explicitly accepted this loss.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires risky automatic corrections to remain reviewable, overridable, or rejectable.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Keeps user authorization distinct from the compatibility finding itself.
+   */
+  authorized: boolean;
+}
+
+/**
+ * Compatibility characterization retained separately from the user decision.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires source-target findings to stay distinct from user overrides.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the compatibility characterization sealed beside the selected mapping.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionReceiptCharacterization {
+  /**
+   * Overall result of source-to-target compatibility analysis.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires target compatibility to be inspected before adoption.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Keeps failed compatibility distinct from an authorized risky adoption.
+   */
+  status: "compatible" | "override-required" | "incompatible";
+  /**
+   * Deterministically ordered source-to-target compatibility findings.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Requires control, range, scale, contact, event, and unsupported-channel findings.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Preserves the system findings independently of the chosen mapping and overrides.
+   */
+  findings: string[];
+}
+
+/**
+ * Canonical converted motion result sealed by compiler-owned digests.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires the canonical receipt identity to bind the exact output bytes.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Types the motion identity, receipt digest, output path, and output digest relation.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionResult {
+  /**
+   * Stable project-native motion identity assigned to the result.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires meaningful result identity changes to produce a distinct receipt.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Binds canonical receipt serialization to the adopted motion identity.
+   */
+  motionId: string;
+  /**
+   * Canonical digest of the project-native motion value.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Requires the adopted motion result digest to remain linked to its source.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Seals the converted motion identity independently of file placement.
+   */
+  motionDigest: AutoMovieContentDigest;
+  /**
+   * Production-relative compiler-owned result file path.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires path notation to be normalized in the canonical result.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Identifies the generated output inventoried by the compiler manifest.
+   */
+  outputPath: string;
+  /**
+   * Content digest of the exact generated output file bytes.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires the receipt to bind the exact output digest.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Couples receipt identity to the generated output inventory digest.
+   */
+  outputDigest: AutoMovieContentDigest;
+}
+
+/**
+ * Compiler-sealed receipt for one external motion conversion.
+ *
+ * The compiler serializes this receipt as its own generated file and lists that
+ * file in {@link IAutoMovieGeneratedManifest.files}; it does not mutate or embed
+ * the preserved source bytes.
+ *
+ * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires a canonical receipt and output digest for every meaningful conversion result.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Types the compiler-owned receipt whose file identity is inventoried beside its output.
+ * @author Samchon
+ */
+export interface IAutoMovieExternalMotionConversionReceipt {
+  /**
+   * External motion conversion receipt schema version.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires meaningful schema or version changes to change receipt identity.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Makes canonical serialization explicitly versioned.
+   */
+  version: 1;
+  /**
+   * Production-declared external motion adoption identity.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Keeps every conversion attached to the explicit non-destructive adoption.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Joins source, decision, characterization, and result to one adoption.
+   */
+  adoption: string;
+  /**
+   * Pinned source closure, take, and byte-inspected basis.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-inputs Requires the full input basis to remain bound to the result.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-input-basis Types the deterministic source input of the conversion receipt.
+   */
+  source: IAutoMovieExternalMotionConversionSource;
+  /**
+   * Actor-bound authored adoption decision.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Keeps conversion mode and destination under production authority.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types the selected shot, actor, clip, mode, mapping, and scale.
+   */
+  decision: IAutoMovieExternalMotionConversionDecision;
+  /**
+   * Exact model and skeleton basis receiving the motion.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Grounds compatibility and mapping in the selected target controls.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Binds the decision to one target basis digest.
+   */
+  target: IAutoMovieExternalMotionConversionTarget;
+  /**
+   * Ordered compiler-performed transform ledger.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-mapping Requires all mapping and conversion facts in the receipt.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-element-mapping Preserves semantic transform order in canonical identity.
+   */
+  transforms: IAutoMovieExternalMotionTransformActivity[];
+  /**
+   * Ordered ledger of dropped, approximated, or altered source facts.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-loss Requires explicit element-level consequences for every loss.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-receipt-loss-ledger Types loss independently of successful result generation.
+   */
+  losses: IAutoMovieExternalMotionLossEntry[];
+  /**
+   * Source-to-target compatibility findings before user authorization.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Keeps compatibility findings separate from overrides and mapping decisions.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Preserves the compiler's characterization beside the authored decision.
+   */
+  characterization: IAutoMovieExternalMotionReceiptCharacterization;
+  /**
+   * Canonical motion and generated output identities.
+   *
+   * @evidence requirements/external-inputs/conversion-receipts-and-determinism.md#external-conversion-receipt-canonical-result Requires the receipt to bind its adopted identity and output bytes.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Seals result paths and digests into canonical receipt identity.
+   */
+  result: IAutoMovieExternalMotionConversionResult;
 }
 
 /**
