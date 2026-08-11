@@ -5,16 +5,22 @@
 ## 명세의 역할 {#specifications-role}
 
 <!-- @evidence requirements/README.md#requirements-role 이 단원은 사용자 약속과 구현 사이에서 명세가 맡는 역할을 정한다. -->
+<!-- @evidence requirements/README.md#requirements-capability-content 이 단원은 시스템 능력의 계약과 작품별 완성 콘텐츠를 구분한다. -->
 
 명세는 입력과 출력, identity, 상태 전이, 좌표와 시간, 허용 범위, 결정성, 실패와 거부, 검증 가능한 결과를 정한다.
 
 명세는 특정 package, 파일, 공개 symbol이나 내부 알고리즘을 구현 정답으로 고정하지 않는다.
 
+명세는 특정 시대, 장소, 인물이나 작품의 완성 자산을 미리 정하지 않고, 사용자가 선택한 콘텐츠를 구성·채택·검증할 수 있는 일반 능력과 그 경계를 정한다.
+
 ## 시스템 경계와 구현 독립성 {#specifications-system-boundaries}
 
 <!-- @evidence requirements/README.md#requirements-cross-cutting-boundaries 이 단원은 작품 저작 주제와 모든 주제에 걸친 계약을 시스템 경계로 분리한다. -->
+<!-- @evidence requirements/README.md#requirements-spatial-boundaries 이 단원은 세계, 건물 외피와 실내 공간이 공유하는 물리 경계를 독립 계약 사이의 join으로 정한다. -->
 
 각 폴더는 서로 대체할 수 없는 하나의 시스템 경계를 소유하며, 경계를 넘는 데이터와 상태는 양쪽 명세가 공유 identity와 불변 조건을 합의해야 한다.
+
+세계와 대지는 배치 좌표와 지형을, 건물 외피는 질량·층·개구부와 외부 표현을, 실내 공간은 그 외피 안의 공간·표면·설비·점유 조건을 소유하며, 연결된 경계는 크기와 위치를 서로 모순 없이 보존해야 한다.
 
 후속 구현은 관련 requirement와 specification을 모두 직접 인용하고, 같은 계약을 여러 구현체가 나누어 수행할 수 있으며, 하나의 구현체가 여러 계약을 수행할 수도 있다.
 
