@@ -254,10 +254,10 @@ export const test_render_budget_report = (): void => {
     {
       triangles: {
         status: "over",
-        excess: 104,
-        owner: "instance-set:windows",
-        source: 'world.instanceSets["windows"]',
-        cost: 144,
+        excess: 308,
+        owner: "light:sun",
+        source: 'scene.lights["sun"]',
+        cost: 204,
         recovers: true,
       },
       drawCalls: {
@@ -345,11 +345,11 @@ export const test_render_budget_report = (): void => {
     },
     {
       contributors: AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS,
-      omittedContributors: 50 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS,
+      omittedContributors: 51 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS,
       omittedCost:
-        (50 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS) * BOX_TRIANGLES,
-      accounted: 50 * BOX_TRIANGLES,
-      measured: 50 * BOX_TRIANGLES,
+        (51 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS) * BOX_TRIANGLES,
+      accounted: 2 * 50 * BOX_TRIANGLES,
+      measured: 2 * 50 * BOX_TRIANGLES,
       ordered: true,
     },
   );
@@ -461,7 +461,7 @@ export const test_render_budget_report = (): void => {
       status: "within",
       statuses: ["unbudgeted"],
       limits: [null],
-      measured: 5 * BOX_TRIANGLES + 12 * BOX_TRIANGLES,
+      measured: 2 * (5 * BOX_TRIANGLES + 12 * BOX_TRIANGLES),
     },
   );
 
@@ -645,7 +645,7 @@ export const test_render_budget_report = (): void => {
       fluid: [lit(true).totals.fluidCells, lit(true).totals.fluidParticles],
     },
     {
-      off: { drawCalls: 2 + 1, shadowMaps: 0 },
+      off: { drawCalls: 2 + 2 + 1, shadowMaps: 0 },
       on: { drawCalls: 2 + 2 + 1, shadowMaps: 1 },
       lights: 2,
       textures: [
@@ -894,8 +894,8 @@ export const test_render_budget_report = (): void => {
       vertices: 10 * BOX_VERTICES + 5 * 4,
       drawCalls: 2 * (2 + 1),
       materials: 2,
-      textures: 1,
-      textureBytes: null,
+      textures: 0,
+      textureBytes: 0,
       geometryBytes:
         BOX_GEOMETRY_BYTES +
         4 * (12 + 12 + 8) +
