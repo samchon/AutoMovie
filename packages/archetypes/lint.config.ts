@@ -1,20 +1,18 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const assetArchetypeFiles = [
+const genericAssetContractFiles = [
   "src/IAutoMovieModelArchetype.ts",
   "src/archetypeRegistry.ts",
   "src/parameterValues.ts",
-  "src/primitiveArchetypes.ts",
-  "src/primitivePropArchetype.ts",
-  "src/stickmanArchetype.ts",
 ];
 
-const actorArchetypeFiles = [
-  "src/IAutoMovieModelArchetype.ts",
+const primitiveModelFiles = [
   "src/primitiveArchetypes.ts",
-  "src/stickmanArchetype.ts",
+  "src/primitivePropArchetype.ts",
 ];
+
+const actorArchetypeFiles = ["src/stickmanArchetype.ts"];
 
 const gaitFiles = [
   "src/humanoidGaits.ts",
@@ -26,9 +24,9 @@ const gaitFiles = [
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "asset archetypes implement asset-authoring requirements",
+      name: "generic archetype contracts implement asset requirements",
       type: "typescript",
-      files: assetArchetypeFiles,
+      files: genericAssetContractFiles,
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
@@ -39,14 +37,15 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/asset-authoring/geometry.md",
           "requirements/asset-authoring/representations-bounds-and-lod.md",
           "requirements/asset-authoring/rig-and-state.md",
+          "requirements/asset-authoring/validation.md",
         ],
         symbol: ["h2", "h3"],
       },
     },
     {
-      name: "asset archetypes implement asset representation specifications",
+      name: "generic archetype contracts implement asset specifications",
       type: "typescript",
-      files: assetArchetypeFiles,
+      files: genericAssetContractFiles,
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
@@ -57,6 +56,37 @@ const graph: ITtscEvidenceGraphConfig = {
           "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
           "specifications/asset-and-representation/bounds-proxies-and-lod.md",
           "specifications/asset-and-representation/rig-deformation-and-state.md",
+          "specifications/asset-and-representation/fidelity-and-validation.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "primitive models implement geometry requirements",
+      type: "typescript",
+      files: primitiveModelFiles,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/asset-authoring/README.md",
+          "requirements/asset-authoring/geometry.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "primitive models implement model representation specifications",
+      type: "typescript",
+      files: primitiveModelFiles,
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/asset-and-representation/README.md",
+          "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
         ],
         symbol: ["h2", "h3"],
       },
