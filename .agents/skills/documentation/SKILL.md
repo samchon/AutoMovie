@@ -18,9 +18,13 @@ description: Defines the .wiki/ working knowledge base, package README, code JSD
 
 Each package's `README.md` is Korean and practical: what it is, why it exists, the domain folders or public surface, and the conventions a contributor needs. Point to `.wiki/` for the deeper design rather than restating it.
 
+When a README falls inside a committed requirement or specification population, its participation is owned by the [evidence graph skill](../evidence-graph/SKILL.md). Do not remove it from that population by filename while editing prose or use documentation structure alone to decide an evidence exclusion.
+
 ## Code JSDoc
 
 Source JSDoc is English, in the interia voice: state what the type or function is and the non-obvious *why* (the design intent, the constraint it carries), not a paraphrase of the signature. Close interface types with `@author Samchon`. Examples in JSDoc are direction, not contract.
+
+When a public export participates in the committed contract graph, preserve and revise its citations under the [evidence graph skill](../evidence-graph/SKILL.md). This skill owns the prose and comment form; the evidence graph skill owns the cited layers and reachability.
 
 ## Agent instructions
 

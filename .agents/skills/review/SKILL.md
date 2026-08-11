@@ -25,7 +25,7 @@ A complete round must satisfy all four rules:
 Self-Review and an unqualified review request use this solo workflow:
 
 1. Establish the complete change surface, including the pull request base-to-head diff and any uncommitted changes.
-2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API and MCP-surface compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, and the viewer-verification skill for anything visual.
+2. Perform one complete round under the Non-Negotiable Review Law. Include correctness and boundaries, numeric and quaternion behavior, determinism, Windows and POSIX behavior, state, public API and MCP-surface compatibility, test isolation and the 100% coverage mandate, CI and packaging, documentation and the `.wiki`, the [evidence graph skill](../evidence-graph/SKILL.md) for any changed requirement, specification, public citation, or graph configuration, and the viewer-verification skill for anything visual.
 3. Reproduce every suspected defect before accepting it.
 4. Apply every sound improvement and run the narrowest verification authorized by the owning workflow.
 5. If anything changed, restart at step 1 as a fresh full round.
