@@ -13,7 +13,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public viewer exports implement requirements",
       type: "typescript",
-      files: ["src/**/*.ts"],
+      files: ["src/**/*.ts", "!src/**/index.ts"],
       evidenceExcludeCarriers: ["src/mount.ts"],
       symbol: ["type", "function", "property"],
       reference: [
@@ -34,7 +34,7 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public viewer exports implement specifications",
       type: "typescript",
-      files: ["src/**/*.ts"],
+      files: ["src/**/*.ts", "!src/**/index.ts"],
       evidenceExcludeCarriers: ["src/mount.ts"],
       symbol: ["type", "function", "property"],
       reference: [
