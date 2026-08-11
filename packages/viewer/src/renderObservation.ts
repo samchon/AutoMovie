@@ -9,10 +9,10 @@ import * as THREE from "three";
  * front of you actually submits. The render package owns the pure comparison
  * that holds this observation against that report.
  *
- * "The viewer and the capture agree" is not a checked fact. No matter who
- * counts a scene, nothing holds the count against the report that cleared it:
- * the test suite is the only caller of that audit, so a scene that outdraws its
- * report is detectable rather than detected.
+ * Observation alone does not claim that the viewer and capture agree. The
+ * production capture path passes this record to the render-owned audit beside
+ * the preflight report; that comparison records breaches and unchecked metrics
+ * without turning this traversal into budget authority.
  *
  * Only DRAWN geometry counts. An object hidden by its own flag or by any
  * ancestor's submits nothing, and counting it would make a culled crowd look
@@ -20,9 +20,9 @@ import * as THREE from "three";
  * turns on what the frustum keeps, which is precisely the case that must not be
  * miscounted.
  *
- * @author Samchon
  * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Counts the actual per-frame submissions this viewer can observe.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the observed side of the render-owned budget comparison.
+ * @author Samchon
  */
 export const observeAutoMovieSceneRender = (
   scene: THREE.Scene,
