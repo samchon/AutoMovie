@@ -18,7 +18,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/camera/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -41,7 +41,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/camera-light-and-visibility/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -68,7 +68,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/lighting/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -99,7 +99,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/camera-light-and-visibility/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -129,7 +129,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/motion/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -167,7 +167,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/performance-motion-and-staging/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -195,7 +195,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/formations/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -229,7 +229,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/performance-motion-and-staging/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -256,7 +256,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/external-inputs/README.md",
             "requirements/motion/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -285,7 +285,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/interchange-and-adoption/README.md",
             "specifications/performance-motion-and-staging/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -315,7 +315,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/rendering/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -344,7 +344,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/editorial-render-and-delivery/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -353,7 +353,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
             "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
           ],
-          symbol: ["h3"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -367,7 +367,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/effects-and-simulation/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -391,7 +391,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/simulation-effects-and-sound/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -418,7 +418,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/effects-and-simulation/README.md",
             "requirements/interior/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -446,16 +446,21 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/interior-space/README.md",
             "specifications/simulation-effects-and-sound/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
           root: "../../docs",
           files: [
-            "specifications/interior-space/services-wet-and-fluid.md",
             "specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md",
           ],
           symbol: ["h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/interior-space/services-wet-and-fluid.md"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -473,7 +478,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/interior/README.md",
             "requirements/motion/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -500,16 +505,23 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/interior-space/README.md",
             "specifications/simulation-effects-and-sound/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md",
+          ],
+          symbol: ["h3"],
         },
         {
           type: "markdown",
           root: "../../docs",
           files: [
             "specifications/interior-space/elements-furnishing-and-clearance.md",
-            "specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md",
           ],
-          symbol: ["h3"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -526,7 +538,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/interior/README.md",
             "requirements/map/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -552,16 +564,23 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/interior-space/README.md",
             "specifications/world-and-site/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/world-and-site/ecology-weather-and-calendar.md",
+          ],
+          symbol: ["h3"],
         },
         {
           type: "markdown",
           root: "../../docs",
           files: [
             "specifications/interior-space/elements-furnishing-and-clearance.md",
-            "specifications/world-and-site/ecology-weather-and-calendar.md",
           ],
-          symbol: ["h3"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -582,7 +601,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/rendering/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -615,7 +634,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/editorial-render-and-delivery/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -624,7 +643,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
             "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
           ],
-          symbol: ["h3"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -643,7 +662,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/rendering/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -672,7 +691,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/editorial-render-and-delivery/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -681,7 +700,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
             "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
           ],
-          symbol: ["h3"],
+          symbol: ["h2"],
         },
       ],
     },
@@ -695,7 +714,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/staging/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -720,7 +739,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/performance-motion-and-staging/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
