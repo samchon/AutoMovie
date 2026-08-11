@@ -85,7 +85,6 @@ const graph: ITtscEvidenceGraphConfig = {
       "external-motion adoption and retarget contracts",
       [
         "src/core/IAutoMovieChannel.ts",
-        "src/core/IAutoMovieClip.ts",
         "src/core/IAutoMovieTrack.ts",
         "src/motion/IAutoMovieMotion.ts",
         "src/production/IAutoMovieAssetManifest.ts",
