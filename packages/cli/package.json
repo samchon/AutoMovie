@@ -56,8 +56,10 @@
     "typia": "catalog:samchon"
   },
   "devDependencies": {
+    "@automovie/viewer": "workspace:^",
     "@types/node": "catalog:utils",
     "rimraf": "catalog:utils",
+    "three": "catalog:three",
     "ttsc": "catalog:typescript",
     "typescript": "catalog:typescript",
     "@ttsc/lint": "catalog:typescript"
