@@ -16,7 +16,6 @@ const graph: ITtscEvidenceGraphConfig = {
       files: [
         "src/AutoMovieApplication.ts",
         "src/createAutoMovieMcpServer.ts",
-        "src/guides/**/*.ts",
         "src/production/AutoMovieProductionContext.ts",
         "src/production/AutoMovieProductionGuideService.ts",
         "src/production/AutoMovieProductionRepaintService.ts",
@@ -26,12 +25,15 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/agent-authoring/README.md",
           "requirements/agent-authoring/capability-discovery.md",
           "requirements/agent-authoring/mcp-boundary.md",
+          "requirements/product/README.md",
           "requirements/product/capability-and-content.md",
           "requirements/product/charter.md",
           "requirements/product/choice-and-external-services.md",
           "requirements/product/scope-and-exclusions.md",
+          "requirements/repaint/README.md",
           "requirements/repaint/identity-and-provenance.md",
           "requirements/repaint/providers-models-and-credentials.md",
           "requirements/repaint/scope-and-user-choice.md",
@@ -45,7 +47,6 @@ const graph: ITtscEvidenceGraphConfig = {
       files: [
         "src/AutoMovieApplication.ts",
         "src/createAutoMovieMcpServer.ts",
-        "src/guides/**/*.ts",
         "src/production/AutoMovieProductionContext.ts",
         "src/production/AutoMovieProductionGuideService.ts",
         "src/production/AutoMovieProductionRepaintService.ts",
@@ -55,6 +56,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/authoring-and-authority/README.md",
           "specifications/authoring-and-authority/capability-and-content-boundary.md",
           "specifications/authoring-and-authority/delegation-and-decision-authority.md",
           "specifications/authoring-and-authority/external-execution-and-provider-neutrality.md",
@@ -77,11 +79,13 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/acceptance/README.md",
           "requirements/acceptance/criteria-and-observables.md",
           "requirements/acceptance/evidence-and-freshness.md",
           "requirements/acceptance/profiles-and-aggregation.md",
           "requirements/acceptance/scope-targets-and-authority.md",
           "requirements/acceptance/uncertainty-and-partial-success.md",
+          "requirements/review/README.md",
           "requirements/review/criteria-and-comparison.md",
           "requirements/review/records-and-completeness.md",
           "requirements/review/reproducible-context.md",
@@ -103,6 +107,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/review-and-acceptance/README.md",
           "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md",
           "specifications/review-and-acceptance/evidence-freshness-and-completeness.md",
           "specifications/review-and-acceptance/profiles-aggregation-and-partial-results.md",
@@ -132,9 +137,11 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/agent-authoring/README.md",
           "requirements/agent-authoring/partial-work.md",
           "requirements/agent-authoring/project-ownership.md",
           "requirements/agent-authoring/source-owned-loop.md",
+          "requirements/production-design/README.md",
           "requirements/production-design/continuity-change-and-deliverables.md",
           "requirements/production-design/scope-and-source-of-truth.md",
         ],
@@ -161,8 +168,45 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/authoring-and-authority/README.md",
           "specifications/authoring-and-authority/partial-targets-and-atomic-results.md",
           "specifications/authoring-and-authority/source-authority-and-derivation.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "mcp building-interior scope requirements",
+      type: "typescript",
+      files: [
+        "src/production/AutoMovieProductionCompiler.ts",
+        "src/production/AutoMovieProductionGuideService.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/interior/README.md",
+          "requirements/interior/scope-and-host-boundary.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "mcp building-interior scope specifications",
+      type: "typescript",
+      files: [
+        "src/production/AutoMovieProductionCompiler.ts",
+        "src/production/AutoMovieProductionGuideService.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/interior-space/README.md",
+          "specifications/interior-space/scope-and-host.md",
         ],
         symbol: ["h2", "h3"],
       },
@@ -185,6 +229,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/diagnostics/README.md",
           "requirements/diagnostics/budgets-and-limits.md",
           "requirements/diagnostics/collection-fail-fast-and-determinism.md",
           "requirements/diagnostics/identity-path-and-context.md",
@@ -213,6 +258,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/validation-and-diagnostics/README.md",
           "specifications/validation-and-diagnostics/budget-and-truncation.md",
           "specifications/validation-and-diagnostics/classification-and-causality.md",
           "specifications/validation-and-diagnostics/collection-order-and-termination.md",
@@ -239,9 +285,11 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/evidence-and-provenance/README.md",
           "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md",
           "requirements/evidence-and-provenance/generation-transformation-and-derivation.md",
           "requirements/evidence-and-provenance/third-party-sources-rights-and-attribution.md",
+          "requirements/external-inputs/README.md",
           "requirements/external-inputs/adoption-modes-and-composition.md",
           "requirements/external-inputs/conversion-receipts-and-determinism.md",
           "requirements/external-inputs/credentials-rights-and-provenance.md",
@@ -268,9 +316,11 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/evidence-and-provenance/README.md",
           "specifications/evidence-and-provenance/canonical-digests-and-content-identity.md",
           "specifications/evidence-and-provenance/generation-transformation-and-derivation.md",
           "specifications/evidence-and-provenance/third-party-sources-rights-and-attribution.md",
+          "specifications/interchange-and-adoption/README.md",
           "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
           "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
           "specifications/interchange-and-adoption/identity-coordinates-and-units.md",
@@ -294,6 +344,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/operations-and-recovery/README.md",
           "requirements/operations-and-recovery/concurrent-runs-and-locking.md",
           "requirements/operations-and-recovery/failure-modes-and-recovery.md",
           "requirements/operations-and-recovery/idempotency-and-side-effects.md",
@@ -318,6 +369,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/execution-and-recovery/README.md",
           "specifications/execution-and-recovery/artifacts-and-atomic-publication.md",
           "specifications/execution-and-recovery/concurrent-ownership-and-locking.md",
           "specifications/execution-and-recovery/failure-reconciliation-and-disaster-recovery.md",
@@ -347,10 +399,12 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/operations-and-recovery/README.md",
           "requirements/operations-and-recovery/partial-artifacts-and-publication.md",
           "requirements/operations-and-recovery/resource-budgets-and-backpressure.md",
           "requirements/operations-and-recovery/retention-and-cleanup.md",
           "requirements/operations-and-recovery/scope-job-identity-and-state.md",
+          "requirements/repaint/README.md",
           "requirements/repaint/identity-and-provenance.md",
           "requirements/repaint/sequence-continuity-and-publication.md",
         ],
@@ -376,10 +430,12 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/editorial-render-and-delivery/README.md",
           "specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md",
           "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
           "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
           "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+          "specifications/execution-and-recovery/README.md",
           "specifications/execution-and-recovery/artifacts-and-atomic-publication.md",
           "specifications/execution-and-recovery/resource-budgets-and-backpressure.md",
           "specifications/execution-and-recovery/retention-cleanup-and-quarantine.md",
