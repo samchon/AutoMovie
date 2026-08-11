@@ -33,6 +33,28 @@ import { importGltfTransformCore } from "../gltfTransformCore.cjs";
  * a non-indexed triangle soup omits `NORMAL`, and glTF's mandated flat shading
  * equals what the viewer computes for a soup anyway.
  *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-semantic-preservation Serializes the bounded model representation without inventing a different asset meaning.
+ * @evidence requirements/product/scope-and-exclusions.md#product-editor-export-exclusion Limits this operation to one model artifact instead of claiming generic scene editing or export.
+ * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Preserves the product boundary while emitting a reproducible downstream fidelity artifact.
+ * @evidenceExclude requirements/asset-authoring/README.md#자산-저작-요구사항 GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-proxy-lineage GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-lod-transition-stability GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-selection GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/asset-authoring/representations-bounds-and-lod.md#asset-representation-stale-refusal GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/product/README.md#제품-계약-요구사항 GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-content-catalogue-exclusion GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-detailed-likeness-exclusion GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-exclusion-reopening GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion GLB serialization preserves a supplied bounded representation; authoring bounds, LOD policy, and product scope remain upstream.
+ * @evidenceExclude specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/README.md#저작과-권한-시스템-명세 GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant GLB serialization emits a supplied deterministic model; representation validation and authoring-policy decisions remain upstream.
  * @author Samchon
  */
 export const exportModelToGLB = async (

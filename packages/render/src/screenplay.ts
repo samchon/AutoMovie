@@ -34,6 +34,36 @@ import {
  * Same script → same bytes: iteration follows declaration order everywhere and
  * no timestamps or randomness enter the text.
  *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Serializes the authoritative screenplay prose hierarchy without replacing it with a second summary owner.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Preserves authored headings, action, and dialogue in deterministic declaration order.
+ * @evidenceExclude requirements/delivery-and-accessibility/README.md#전달과-접근성-요구사항 Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-coverage Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-presentation-form Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-reading-overlap Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-refusal Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-style-region Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-subtitle-distinction Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/README.md#이야기-저작-요구사항 Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-boundary-continuity Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-entry-exit-state Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-local-arc Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-number-soft-lock Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-observability Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-participant-modes Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-place-time Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-shot-separation Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-scene-subject-dependencies Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude requirements/story/scenes-and-observable-action.md#story-unfilmable-scene-refusal Screenplay text formatting serializes supplied scene prose and captions; delivery presentation and narrative authority remain upstream.
+ * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/README.md#narrative-intent-readme Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-logline-premise-input Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-logline-promise-closure Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-fact-authority Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unit-identity Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
+ * @evidenceExclude specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unknown-review-state Screenplay text formatting serializes supplied hierarchy and prose; causal authoring and the wider delivery system remain upstream.
  * @author Samchon
  */
 export const renderScreenplay = (script: IAutoMovieScript): string => {
@@ -131,6 +161,10 @@ const dialogueLines = (line: IAutoMovieDialogueLine): string[] => {
  * absent field), or a tree with no root to walk, yields an empty map, so every
  * span captions `null`. A node unreachable from the root is never visited:
  * commit validation owns that rejection, the join is total.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness Joins each caption and slug to its authored beat identity without creating replacement text.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues Exposes the authored text needed to build a frame-aligned selectable cue sidecar.
+ * @author Samchon
  */
 export const beatCaptions = (
   script: IAutoMovieScript,
