@@ -14,6 +14,32 @@ interface IEvidenceGroup {
   specifications: string[];
 }
 
+/** Content documents whose contract units are H2s because they carry no H3s. */
+const H2_CONTENT_FILES = new Set<string>([
+  "specifications/editorial-render-and-delivery/delivery-package-provenance-and-publication.md",
+  "specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md",
+  "specifications/editorial-render-and-delivery/delivery-validation-and-release-status.md",
+  "specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md",
+  "specifications/editorial-render-and-delivery/editorial-version-conform-and-validation.md",
+  "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
+  "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+  "specifications/editorial-render-and-delivery/render-encoding-and-validation.md",
+  "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+  "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
+  "specifications/interior-space/boundaries-openings-and-circulation.md",
+  "specifications/interior-space/construction-phases-and-alternatives.md",
+  "specifications/interior-space/deliverables-and-validation.md",
+  "specifications/interior-space/elements-furnishing-and-clearance.md",
+  "specifications/interior-space/external-assets-and-groups.md",
+  "specifications/interior-space/lighting-acoustics-and-environment.md",
+  "specifications/interior-space/materials-style-and-art.md",
+  "specifications/interior-space/patterns-tolerances-and-aging.md",
+  "specifications/interior-space/scope-and-host.md",
+  "specifications/interior-space/services-wet-and-fluid.md",
+  "specifications/interior-space/space-level-zone-topology.md",
+  "specifications/interior-space/surface-assemblies.md",
+]);
+
 /**
  * Each claim is limited to an engine computation or invariant boundary. The
  * exact document lists deliberately leave user choice, provider adoption, and
@@ -153,16 +179,29 @@ const groups: IEvidenceGroup[] = [
     ],
   },
   {
-    name: "frozen face compatibility boundary",
+    name: "face morph computation and proxy fidelity boundary",
     sources: ["src/face/**/*.ts", "src/validation/validateFace.ts"],
     requirements: [
+      "requirements/actors/README.md",
+      "requirements/actors/pose-expression-and-gaze.md",
+      "requirements/actors/representation-tiers-and-fidelity-boundary.md",
+      "requirements/actors/skeleton-rig-and-retargeting.md",
+      "requirements/asset-authoring/README.md",
+      "requirements/asset-authoring/rig-and-state.md",
+      "requirements/asset-authoring/validation.md",
       "requirements/product/README.md",
       "requirements/product/extensibility-and-compatibility.md",
       "requirements/product/scope-and-exclusions.md",
     ],
     specifications: [
+      "specifications/asset-and-representation/README.md",
+      "specifications/asset-and-representation/fidelity-and-validation.md",
+      "specifications/asset-and-representation/rig-deformation-and-state.md",
       "specifications/authoring-and-authority/README.md",
       "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
+      "specifications/performance-motion-and-staging/README.md",
+      "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
+      "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
     ],
   },
   {
@@ -202,7 +241,6 @@ const groups: IEvidenceGroup[] = [
       "src/geometry/**/*.ts",
       "src/space/**/*.ts",
       "src/validation/artifactShape.ts",
-      "src/validation/capsuleProxy.ts",
       "src/validation/readImageFacts.ts",
       "src/validation/validateMaterialParity.ts",
       "src/validation/validateMeshTopology.ts",
@@ -341,6 +379,21 @@ const groups: IEvidenceGroup[] = [
     specifications: [
       "specifications/performance-motion-and-staging/README.md",
       "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
+      "specifications/performance-motion-and-staging/motion-sampling-and-composition.md",
+      "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
+    ],
+  },
+  {
+    name: "imported node motion lowering",
+    sources: ["src/motion/importedNodeMotion.ts"],
+    requirements: [
+      "requirements/motion/README.md",
+      "requirements/motion/clips-keyframes-and-interpolation.md",
+      "requirements/motion/external-motion-inputs.md",
+      "requirements/motion/retargeting-and-scale.md",
+    ],
+    specifications: [
+      "specifications/performance-motion-and-staging/README.md",
       "specifications/performance-motion-and-staging/motion-sampling-and-composition.md",
       "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
     ],
@@ -502,6 +555,30 @@ const groups: IEvidenceGroup[] = [
     ],
   },
   {
+    name: "shared soft-body capsule validation",
+    sources: ["src/validation/capsuleProxy.ts"],
+    requirements: [
+      "requirements/effects-and-simulation/README.md",
+      "requirements/effects-and-simulation/soft-bodies-and-deformation.md",
+    ],
+    specifications: [
+      "specifications/simulation-effects-and-sound/README.md",
+      "specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md",
+    ],
+  },
+  {
+    name: "soft-body moving primary boundaries",
+    sources: ["src/soft/softBody.ts", "src/soft/wearableSoftBody.ts"],
+    requirements: [
+      "requirements/motion/README.md",
+      "requirements/motion/secondary-motion.md",
+    ],
+    specifications: [
+      "specifications/performance-motion-and-staging/README.md",
+      "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
+    ],
+  },
+  {
     name: "sound timing spatialization and mix computation",
     sources: ["src/analysis/acousticAnalysis.ts", "src/sound/**/*.ts"],
     requirements: [
@@ -557,6 +634,8 @@ const graph: ITtscEvidenceGraphConfig = {
     ) => {
       const readmes = files.filter((file) => file.endsWith("/README.md"));
       const content = files.filter((file) => !file.endsWith("/README.md"));
+      const h2Content = content.filter((file) => H2_CONTENT_FILES.has(file));
+      const h3Content = content.filter((file) => !H2_CONTENT_FILES.has(file));
       return [
         {
           name: `${group.name} exports implement ${family} topic maps`,
@@ -570,18 +649,38 @@ const graph: ITtscEvidenceGraphConfig = {
             symbol: ["h1", "h2", "h3"] as Array<"h1" | "h2" | "h3">,
           },
         },
-        {
-          name: `${group.name} exports implement ${family} contracts`,
-          type: "typescript" as const,
-          files: group.sources,
-          symbol: SYMBOLS,
-          reference: {
-            type: "markdown" as const,
-            root: "../../docs",
-            files: content,
-            symbol: ["h3"] as Array<"h3">,
-          },
-        },
+        ...(h2Content.length === 0
+          ? []
+          : [
+              {
+                name: `${group.name} exports implement ${family} section contracts`,
+                type: "typescript" as const,
+                files: group.sources,
+                symbol: SYMBOLS,
+                reference: {
+                  type: "markdown" as const,
+                  root: "../../docs",
+                  files: h2Content,
+                  symbol: ["h2"] as Array<"h2">,
+                },
+              },
+            ]),
+        ...(h3Content.length === 0
+          ? []
+          : [
+              {
+                name: `${group.name} exports implement ${family} contracts`,
+                type: "typescript" as const,
+                files: group.sources,
+                symbol: SYMBOLS,
+                reference: {
+                  type: "markdown" as const,
+                  root: "../../docs",
+                  files: h3Content,
+                  symbol: ["h3"] as Array<"h3">,
+                },
+              },
+            ]),
       ];
     };
     return [
