@@ -34,6 +34,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/asset-authoring/README.md",
           "requirements/asset-authoring/identity-and-instances.md",
           "requirements/asset-authoring/geometry.md",
           "requirements/asset-authoring/representations-bounds-and-lod.md",
@@ -51,6 +52,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/asset-and-representation/README.md",
           "specifications/asset-and-representation/identity-resources-and-lifecycle.md",
           "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
           "specifications/asset-and-representation/bounds-proxies-and-lod.md",
@@ -68,6 +70,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/actors/README.md",
           "requirements/actors/body-scale-and-landmarks.md",
           "requirements/actors/representation-tiers-and-fidelity-boundary.md",
         ],
@@ -83,7 +86,9 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/asset-and-representation/README.md",
           "specifications/asset-and-representation/fidelity-and-validation.md",
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
         ],
         symbol: ["h2", "h3"],
@@ -97,7 +102,10 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/motion/procedural-motion-and-gaits.md"],
+        files: [
+          "requirements/motion/README.md",
+          "requirements/motion/procedural-motion-and-gaits.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
@@ -110,6 +118,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
         ],
         symbol: ["h2", "h3"],
@@ -123,7 +132,10 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: ["requirements/formations/reform-and-group-motion.md"],
+        files: [
+          "requirements/formations/README.md",
+          "requirements/formations/reform-and-group-motion.md",
+        ],
         symbol: ["h2", "h3"],
       },
     },
@@ -136,6 +148,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/performance-motion-and-staging/README.md",
           "specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md",
         ],
         symbol: ["h2", "h3"],
