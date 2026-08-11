@@ -21,15 +21,22 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/taubinSmooth.ts",
       ],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "requirements/actors/README.md",
-          "requirements/actors/representation-tiers-and-fidelity-boundary.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["requirements/actors/README.md"],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "requirements/actors/representation-tiers-and-fidelity-boundary.md",
+          ],
+          symbol: "h3",
+        },
+      ],
     },
     {
       name: "face proxy modules implement actor representation specifications",
@@ -48,45 +55,64 @@ const graph: ITtscEvidenceGraphConfig = {
         "src/taubinSmooth.ts",
       ],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "specifications/performance-motion-and-staging/README.md",
-          "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/performance-motion-and-staging/README.md"],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
+          ],
+          symbol: "h3",
+        },
+      ],
     },
     {
       name: "face morph modules implement deformation requirements",
       type: "typescript",
       files: ["src/faceMorphs.ts", "src/headMorph.ts"],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "requirements/actors/README.md",
-          "requirements/actors/skeleton-rig-and-retargeting.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["requirements/actors/README.md"],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["requirements/actors/skeleton-rig-and-retargeting.md"],
+          symbol: "h3",
+        },
+      ],
     },
     {
       name: "face morph modules implement deformation specifications",
       type: "typescript",
       files: ["src/faceMorphs.ts", "src/headMorph.ts"],
       symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: [
-          "specifications/asset-and-representation/README.md",
-          "specifications/asset-and-representation/rig-deformation-and-state.md",
-        ],
-        symbol: ["h2", "h3"],
-      },
+      reference: [
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/asset-and-representation/README.md"],
+          symbol: ["h2", "h3"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: [
+            "specifications/asset-and-representation/rig-deformation-and-state.md",
+          ],
+          symbol: "h3",
+        },
+      ],
     },
   ],
 };
