@@ -18,12 +18,17 @@ import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
  * the JSDoc and are enforced at runtime by `@automovie/engine`, not by the
  * type.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state Exposes `IAutoMovieBody` as the portable data boundary for the effects rigid linear angular state requirement.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Types `IAutoMovieBody` for the rigid trajectory tier contract system contract.
  * @author Samchon
  */
 export interface IAutoMovieBody {
   /**
    * Mass in kilograms. Strictly positive. Drives momentum in a collision: a
    * heavier body deflects a lighter one more than the reverse.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state Exposes `mass` as the portable data boundary for the effects rigid linear angular state requirement.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Types `mass` for the rigid trajectory tier contract system contract.
    */
   mass: number;
 
@@ -32,18 +37,27 @@ export interface IAutoMovieBody {
    * engine derive it from the geometry (the volume-weighted centroid of the
    * primitive parts, assuming uniform density). Declare it explicitly when the
    * mass is unevenly distributed: a weighted base, a hollow shell.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state Exposes `centerOfMass` as the portable data boundary for the effects rigid linear angular state requirement.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Types `centerOfMass` for the rigid trajectory tier contract system contract.
    */
   centerOfMass: IAutoMovieVector3 | null;
 
   /**
    * Coulomb friction coefficient, `0` (frictionless) to `1` (high grip),
    * dimensionless. A hint for how much a contact resists sliding.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state Exposes `friction` as the portable data boundary for the effects rigid linear angular state requirement.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Types `friction` for the rigid trajectory tier contract system contract.
    */
   friction: number;
 
   /**
    * Coefficient of restitution, `0` (perfectly inelastic: no bounce) to `1`
    * (perfectly elastic). Shapes the rebound the engine suggests on impact.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-rigid-linear-angular-state Exposes `restitution` as the portable data boundary for the effects rigid linear angular state requirement.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Types `restitution` for the rigid trajectory tier contract system contract.
    */
   restitution: number;
 }

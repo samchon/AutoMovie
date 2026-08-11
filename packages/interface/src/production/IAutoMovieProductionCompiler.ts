@@ -339,9 +339,9 @@ export type AutoMovieDiagnosticCode =
 /**
  * Exactly one stable, versioned behavioral explanation for a diagnostic code.
  *
- * @author Samchon
  * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Makes every emitted code resolve to one versioned user-facing reference.
  * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Separates stable catalog identity from the concrete anchored knowledge path.
+ * @author Samchon
  */
 export interface IAutoMovieDiagnosticReference {
   /**
@@ -367,7 +367,12 @@ export interface IAutoMovieDiagnosticReference {
   path: `${string}.md#${string}`;
 }
 
-/** A stable production diagnostic returned by compiler, lint and MCP. */
+/**
+ * A stable production diagnostic returned by compiler, lint and MCP.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieDiagnostic` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieDiagnostic` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieDiagnostic {
   /**
    * Machine-readable diagnostic code from the shipped closed catalog.
@@ -376,51 +381,118 @@ export interface IAutoMovieDiagnostic {
    * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Uses the same key union the exhaustive catalog maps.
    */
   code: AutoMovieDiagnosticCode;
-  /** Whether the diagnostic blocks the current operation. */
+  /**
+   * Whether the diagnostic blocks the current operation.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `category` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `category` for the asset spec generation provider choice system contract.
+   */
   category: "error" | "warning";
-  /** Pipeline phase that owns the correction. */
+  /**
+   * Pipeline phase that owns the correction.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `phase` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `phase` for the asset spec generation provider choice system contract.
+   */
   phase: "project" | "design" | "source" | "compile" | "review" | "render";
-  /** Stable target identity. */
+  /**
+   * Stable target identity.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `target` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `target` for the asset spec generation provider choice system contract.
+   */
   target: string;
-  /** Project-relative file or null when no one file owns it. */
+  /**
+   * Project-relative file or null when no one file owns it.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `path` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `path` for the asset spec generation provider choice system contract.
+   */
   path: string | null;
   /**
    * Human-readable cause followed by the concrete correction owned by this
    * phase. Do not discard it and retry unchanged.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `message` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `message` for the asset spec generation provider choice system contract.
    */
   message: string;
 }
 
-/** The tracked manifest for a coding-agent production repository. */
+/**
+ * The tracked manifest for a coding-agent production repository.
+ *
+ * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `IAutoMovieProductionManifest` as the portable data boundary for the agent declared omission requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `IAutoMovieProductionManifest` for the spec authoring partial target input system contract.
+ */
 export interface IAutoMovieProductionManifest {
-  /** Production format version. */
+  /**
+   * Production format version.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `formatVersion` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `formatVersion` for the spec authoring partial target input system contract.
+   */
   formatVersion: 2;
-  /** Repository-local project identity, excluded from content fingerprints. */
+  /**
+   * Repository-local project identity, excluded from content fingerprints.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `projectId` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `projectId` for the spec authoring partial target input system contract.
+   */
   projectId: string;
   /**
    * Project-relative coding-agent-owned source directories. Shot modules must
    * resolve as real TypeScript files inside one of these roots.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `sourceRoots` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `sourceRoots` for the spec authoring partial target input system contract.
    */
   sourceRoots: string[];
   /**
    * Additional project-relative directories whose exact files affect compile
    * and render identity, such as viewer, scripts and public assets.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `contentRoots` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `contentRoots` for the spec authoring partial target input system contract.
    */
   contentRoots?: string[];
-  /** Additional project-relative files whose bytes affect compile identity. */
+  /**
+   * Additional project-relative files whose bytes affect compile identity.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `contentFiles` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `contentFiles` for the spec authoring partial target input system contract.
+   */
   contentFiles?: string[];
   /**
    * Project-global asset provenance ledger.
    *
    * When declared, compiler asset references are restricted to the byte-exact
    * paths in this manifest.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `assetManifest` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `assetManifest` for the spec authoring partial target input system contract.
    */
   assetManifest?: ".automovie/assets.json";
-  /** Compiler-owned generated root. */
+  /**
+   * Compiler-owned generated root.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `generatedRoot` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `generatedRoot` for the spec authoring partial target input system contract.
+   */
   generatedRoot: string;
-  /** Content-addressed render root. */
+  /**
+   * Content-addressed render root.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `renderRoot` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `renderRoot` for the spec authoring partial target input system contract.
+   */
   renderRoot: string;
-  /** Optional non-destructive legacy import provenance. */
+  /**
+   * Optional non-destructive legacy import provenance.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `importedLegacy` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `importedLegacy` for the spec authoring partial target input system contract.
+   */
   importedLegacy?: {
     /** Imported legacy project revision. */
     revision: number;
@@ -429,119 +501,327 @@ export interface IAutoMovieProductionManifest {
   };
 }
 
-/** One compiler-owned generated file. */
+/**
+ * One compiler-owned generated file.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `IAutoMovieGeneratedFile` as the portable data boundary for the asset generated adoption modes requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `IAutoMovieGeneratedFile` for the asset spec generation adoption output system contract.
+ */
 export interface IAutoMovieGeneratedFile {
-  /** Project-relative generated path. */
+  /**
+   * Project-relative generated path.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `path` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `path` for the asset spec generation adoption output system contract.
+   */
   path: string;
-  /** Ownership marker. */
+  /**
+   * Ownership marker.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `owner` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `owner` for the asset spec generation adoption output system contract.
+   */
   owner: "compiler";
-  /** File-byte digest. */
+  /**
+   * File-byte digest.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `digest` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `digest` for the asset spec generation adoption output system contract.
+   */
   digest: AutoMovieContentDigest;
-  /** Design or source targets that produced the file. */
+  /**
+   * Design or source targets that produced the file.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `sourceTargets` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `sourceTargets` for the asset spec generation adoption output system contract.
+   */
   sourceTargets: string[];
 }
 
-/** Manifest proving the identity and ownership of generated output. */
+/**
+ * Manifest proving the identity and ownership of generated output.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `IAutoMovieGeneratedManifest` as the portable data boundary for the asset generated adoption modes requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `IAutoMovieGeneratedManifest` for the asset spec generation adoption output system contract.
+ */
 export interface IAutoMovieGeneratedManifest {
-  /** Generated-manifest format. */
+  /**
+   * Generated-manifest format.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `version` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `version` for the asset spec generation adoption output system contract.
+   */
   version: 1;
-  /** Compiler identity. */
+  /**
+   * Compiler identity.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `compiler` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `compiler` for the asset spec generation adoption output system contract.
+   */
   compiler: {
     /** Package version. */
     packageVersion: string;
     /** Content protocol version. */
     protocolVersion: string;
   };
-  /** Ordered design and source input fingerprint. */
+  /**
+   * Ordered design and source input fingerprint.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `inputFingerprint` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `inputFingerprint` for the asset spec generation adoption output system contract.
+   */
   inputFingerprint: AutoMovieContentDigest;
-  /** Compiler-owned files. */
+  /**
+   * Compiler-owned files.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generated-adoption-modes Exposes `files` as the portable data boundary for the asset generated adoption modes requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output Types `files` for the asset spec generation adoption output system contract.
+   */
   files: IAutoMovieGeneratedFile[];
 }
 
-/** Compiler-owned registry of targets that evidence tools may resolve. */
+/**
+ * Compiler-owned registry of targets that evidence tools may resolve.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `IAutoMovieProductionRegistryManifest` as the portable data boundary for the agent narrowest valid check requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `IAutoMovieProductionRegistryManifest` for the spec authoring partial verification invariant system contract.
+ */
 export interface IAutoMovieProductionRegistryManifest {
-  /** Registry format. */
+  /**
+   * Registry format.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `version` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `version` for the spec authoring partial verification invariant system contract.
+   */
   version: 2;
-  /** Compiler protocol that produced this registry. */
+  /**
+   * Compiler protocol that produced this registry.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `compiler` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `compiler` for the spec authoring partial verification invariant system contract.
+   */
   compiler: string;
-  /** Exact production namespace. */
+  /**
+   * Exact production namespace.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `productionId` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `productionId` for the spec authoring partial verification invariant system contract.
+   */
   productionId: string;
-  /** Current aggregate compiler input fingerprint. */
+  /**
+   * Current aggregate compiler input fingerprint.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `inputFingerprint` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `inputFingerprint` for the spec authoring partial verification invariant system contract.
+   */
   inputFingerprint: AutoMovieContentDigest;
-  /** Built model/asset targets with their generated paths. */
+  /**
+   * Built model/asset targets with their generated paths.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `assets` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `assets` for the spec authoring partial verification invariant system contract.
+   */
   assets: Array<{
     /** Exact model recipe id. */
     id: string;
     /** Compiler-owned generated model path. */
     path: string;
   }>;
-  /** Built shot targets with their generated paths. */
+  /**
+   * Built shot targets with their generated paths.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `shots` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `shots` for the spec authoring partial verification invariant system contract.
+   */
   shots: Array<{
     /** Exact shot registration id. */
     id: string;
     /** Compiler-owned generated shot path. */
     path: string;
   }>;
-  /** Current compiler-owned film id, or null before film materialization. */
+  /**
+   * Current compiler-owned film id, or null before film materialization.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `film` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `film` for the spec authoring partial verification invariant system contract.
+   */
   film: string | null;
 }
 
-/** One byte-exact file proving a final production deliverable. */
+/**
+ * One byte-exact file proving a final production deliverable.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieProductionDeliverableFile` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieProductionDeliverableFile` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieProductionDeliverableFile {
-  /** Render-root-relative regular file path. */
+  /**
+   * Render-root-relative regular file path.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `path` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `path` for the asset spec generation provider choice system contract.
+   */
   path: string;
-  /** Exact file-byte digest. */
+  /**
+   * Exact file-byte digest.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `digest` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `digest` for the asset spec generation provider choice system contract.
+   */
   digest: AutoMovieContentDigest;
-  /** Exact non-zero file size. */
+  /**
+   * Exact non-zero file size.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `bytes` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `bytes` for the asset spec generation provider choice system contract.
+   */
   bytes: number;
-  /** Explicit media type, such as video/mp4 or text/vtt. */
+  /**
+   * Explicit media type, such as video/mp4 or text/vtt.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `mediaType` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `mediaType` for the asset spec generation provider choice system contract.
+   */
   mediaType: string;
 }
 
-/** One materialized production deliverable in the aggregate render ledger. */
+/**
+ * One materialized production deliverable in the aggregate render ledger.
+ *
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `IAutoMovieProductionRenderedDeliverable` as the portable data boundary for the rendering lowering ownership requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `IAutoMovieProductionRenderedDeliverable` for the spec render state isolation system contract.
+ */
 export interface IAutoMovieProductionRenderedDeliverable {
-  /** Exact id declared by production design. */
+  /**
+   * Exact id declared by production design.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `id` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `id` for the spec render state isolation system contract.
+   */
   id: string;
-  /** Exact kind declared by production design. */
+  /**
+   * Exact kind declared by production design.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `kind` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `kind` for the spec render state isolation system contract.
+   */
   kind: IAutoMovieProductionDeliverable["kind"];
-  /** Byte-exact owned output files. */
+  /**
+   * Byte-exact owned output files.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `files` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `files` for the spec render state isolation system contract.
+   */
   files: IAutoMovieProductionDeliverableFile[];
-  /** Timeline duration, or null for a still-only deliverable. */
+  /**
+   * Timeline duration, or null for a still-only deliverable.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `runtimeSeconds` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `runtimeSeconds` for the spec render state isolation system contract.
+   */
   runtimeSeconds: number | null;
-  /** Rendered frame count, or null when the kind has no video frame clock. */
+  /**
+   * Rendered frame count, or null when the kind has no video frame clock.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `frameCount` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `frameCount` for the spec render state isolation system contract.
+   */
   frameCount: number | null;
-  /** Actual codec name, or null for unencoded text/image artifacts. */
+  /**
+   * Actual codec name, or null for unencoded text/image artifacts.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `codec` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `codec` for the spec render state isolation system contract.
+   */
   codec: string | null;
   /**
    * Repaint provenance when this feature was conformed from selected visual
    * renditions. Absent for deterministic delivery and non-feature outputs.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `rendition` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `rendition` for the spec render state isolation system contract.
    */
   rendition?: IAutoMovieProductionRenditionDelivery;
 }
 
-/** One selected repaint output and its independent review chain. */
+/**
+ * One selected repaint output and its independent review chain.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenditionDeliveryShot` as the portable data boundary for the delivery caption readability profile requirement.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDeliveryShot` for the spec delivery caption readability profile system contract.
+ */
 export interface IAutoMovieProductionRenditionDeliveryShot {
-  /** Exact compiled shot id. */
+  /**
+   * Exact compiled shot id.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `shot` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shot` for the spec delivery caption readability profile system contract.
+   */
   shot: string;
-  /** Render-root-relative immutable repaint output. */
+  /**
+   * Render-root-relative immutable repaint output.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `path` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `path` for the spec delivery caption readability profile system contract.
+   */
   path: string;
-  /** Exact current repaint output digest. */
+  /**
+   * Exact current repaint output digest.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `digest` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `digest` for the spec delivery caption readability profile system contract.
+   */
   digest: AutoMovieContentDigest;
-  /** Digest of the canonical immutable repaint receipt. */
+  /**
+   * Digest of the canonical immutable repaint receipt.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `receiptDigest` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `receiptDigest` for the spec delivery caption readability profile system contract.
+   */
   receiptDigest: AutoMovieContentDigest;
-  /** Current completed deterministic source-shot review fingerprint. */
+  /**
+   * Current completed deterministic source-shot review fingerprint.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `sourceReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `sourceReviewFingerprint` for the spec delivery caption readability profile system contract.
+   */
   sourceReviewFingerprint: AutoMovieContentDigest;
-  /** Current completed visual-rendition review fingerprint. */
+  /**
+   * Current completed visual-rendition review fingerprint.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `renditionReviewFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `renditionReviewFingerprint` for the spec delivery caption readability profile system contract.
+   */
   renditionReviewFingerprint: AutoMovieContentDigest;
 }
 
-/** Review and receipt provenance for one repainted feature delivery. */
+/**
+ * Review and receipt provenance for one repainted feature delivery.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenditionDelivery` as the portable data boundary for the delivery caption readability profile requirement.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenditionDelivery` for the spec delivery caption readability profile system contract.
+ */
 export interface IAutoMovieProductionRenditionDelivery {
-  /** Explicit selected visual layer. */
+  /**
+   * Explicit selected visual layer.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `kind` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `kind` for the spec delivery caption readability profile system contract.
+   */
   kind: "repainted";
-  /** Every shot rendition consumed by the current film timeline. */
+  /**
+   * Every shot rendition consumed by the current film timeline.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `shots` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `shots` for the spec delivery caption readability profile system contract.
+   */
   shots: IAutoMovieProductionRenditionDeliveryShot[];
-  /** Current completed sequence and film reviews of the selected renditions. */
+  /**
+   * Current completed sequence and film reviews of the selected renditions.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `aggregateReviews` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `aggregateReviews` for the spec delivery caption readability profile system contract.
+   */
   aggregateReviews: Array<{
     /** Aggregate review class. */
     kind: "sequence" | "film";
@@ -552,17 +832,42 @@ export interface IAutoMovieProductionRenditionDelivery {
   }>;
 }
 
-/** Aggregate final-delivery ledger bound to one current compile. */
+/**
+ * Aggregate final-delivery ledger bound to one current compile.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieProductionRenderManifest` as the portable data boundary for the delivery caption readability profile requirement.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieProductionRenderManifest` for the spec delivery caption readability profile system contract.
+ */
 export interface IAutoMovieProductionRenderManifest {
-  /** Aggregate manifest format. */
+  /**
+   * Aggregate manifest format.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `version` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `version` for the spec delivery caption readability profile system contract.
+   */
   version: 1;
-  /** Exact compiler input that produced every listed output. */
+  /**
+   * Exact compiler input that produced every listed output.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `compileFingerprint` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `compileFingerprint` for the spec delivery caption readability profile system contract.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Materialized required and optional deliverables. */
+  /**
+   * Materialized required and optional deliverables.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `deliverables` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `deliverables` for the spec delivery caption readability profile system contract.
+   */
   deliverables: IAutoMovieProductionRenderedDeliverable[];
 }
 
-/** Parser-derived metadata for one renderer-owned output file. */
+/**
+ * Parser-derived metadata for one renderer-owned output file.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieProductionMediaProbe` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieProductionMediaProbe` for the validation derived result finding system contract.
+ */
 export type IAutoMovieProductionMediaProbe =
   | {
       /** Decoded PNG raster. */
@@ -631,40 +936,105 @@ export type IAutoMovieProductionMediaProbe =
       eventAlignmentPassed: boolean;
     };
 
-/** One file record independently derived by the renderer-owned receipt gate. */
+/**
+ * One file record independently derived by the renderer-owned receipt gate.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `IAutoMovieProductionRenderReceiptFile` as the portable data boundary for the motion external adoption receipt requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `IAutoMovieProductionRenderReceiptFile` for the performance motion external adoption receipt system contract.
+ */
 export interface IAutoMovieProductionRenderReceiptFile extends IAutoMovieProductionDeliverableFile {
-  /** Deliverable that exclusively owns this path. */
+  /**
+   * Deliverable that exclusively owns this path.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `deliverable` as the portable data boundary for the motion external adoption receipt requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `deliverable` for the performance motion external adoption receipt system contract.
+   */
   deliverable: string;
-  /** Parser-derived media facts. */
+  /**
+   * Parser-derived media facts.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `probe` as the portable data boundary for the motion external adoption receipt requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `probe` for the performance motion external adoption receipt system contract.
+   */
   probe: IAutoMovieProductionMediaProbe;
 }
 
-/** Renderer-owned aggregate receipt bound to current output bytes. */
+/**
+ * Renderer-owned aggregate receipt bound to current output bytes.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `IAutoMovieProductionRenderReceipt` as the portable data boundary for the motion external adoption receipt requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `IAutoMovieProductionRenderReceipt` for the performance motion external adoption receipt system contract.
+ */
 export interface IAutoMovieProductionRenderReceipt {
-  /** Receipt format. */
+  /**
+   * Receipt format.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `version` as the portable data boundary for the motion external adoption receipt requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `version` for the performance motion external adoption receipt system contract.
+   */
   version: 2;
-  /** Exact digest of the active production's tracked render manifest. */
+  /**
+   * Exact digest of the active production's tracked render manifest.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `manifestDigest` as the portable data boundary for the motion external adoption receipt requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `manifestDigest` for the performance motion external adoption receipt system contract.
+   */
   manifestDigest: AutoMovieContentDigest;
-  /** Exact byte and media probes in canonical path order. */
+  /**
+   * Exact byte and media probes in canonical path order.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Exposes `files` as the portable data boundary for the motion external adoption receipt requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `files` for the performance motion external adoption receipt system contract.
+   */
   files: IAutoMovieProductionRenderReceiptFile[];
 }
 
-/** Deterministic pure helpers exposed to a shot source builder. */
+/**
+ * Deterministic pure helpers exposed to a shot source builder.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieSourceOracle` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieSourceOracle` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieSourceOracle {
-  /** Euclidean distance between two points. */
+  /**
+   * Euclidean distance between two points.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `distance` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `distance` for the spec authoring source derivation state system contract.
+   */
   distance(
     left: { x: number; y: number; z: number },
     right: { x: number; y: number; z: number },
   ): number;
-  /** Height of the first matching world surface, or zero. */
+  /**
+   * Height of the first matching world surface, or zero.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `groundHeight` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `groundHeight` for the spec authoring source derivation state system contract.
+   */
   groundHeight(point: { x: number; z: number }): number;
-  /** Regenerate one exact compiler-owned formation slot without expanding it. */
+  /**
+   * Regenerate one exact compiler-owned formation slot without expanding it.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationSlot` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationSlot` for the spec authoring source derivation state system contract.
+   */
   formationSlot(formation: string, slot: number): IAutoMovieFormationSlot;
-  /** Regenerate one exact compiler-owned general instance without expanding it. */
+  /**
+   * Regenerate one exact compiler-owned general instance without expanding it.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `instanceSlot` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `instanceSlot` for the spec authoring source derivation state system contract.
+   */
   instanceSlot(instanceSet: string, slot: number): IAutoMovieInstanceSlot;
 }
 
-/** One non-negative film time authored as an exact frame or frame-grid second. */
+/**
+ * One non-negative film time authored as an exact frame or frame-grid second.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `AutoMovieFilmTime` as the portable data boundary for the formation nested frame clock requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `AutoMovieFilmTime` for the performance formation hierarchy membership command system contract.
+ */
 export type AutoMovieFilmTime =
   | {
       /** Zero-based production frame. */
@@ -675,7 +1045,12 @@ export type AutoMovieFilmTime =
       seconds: number;
     };
 
-/** A cut or bounded transition at one side of a video edit. */
+/**
+ * A cut or bounded transition at one side of a video edit.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieFilmTransition` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieFilmTransition` for the asset spec generation provider choice system contract.
+ */
 export type IAutoMovieFilmTransition =
   | {
       /** Zero-duration hard cut. */
@@ -694,75 +1069,205 @@ export type IAutoMovieFilmTransition =
       duration: AutoMovieFilmTime;
     };
 
-/** One source-shot placement on the finished-film video track. */
+/**
+ * One source-shot placement on the finished-film video track.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieVideoEdit` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieVideoEdit` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieVideoEdit {
-  /** Current compiled shot id. */
+  /**
+   * Current compiled shot id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `shot` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `shot` for the spec authoring source derivation state system contract.
+   */
   shot: string;
-  /** Inclusive source frame. */
+  /**
+   * Inclusive source frame.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `sourceIn` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `sourceIn` for the spec authoring source derivation state system contract.
+   */
   sourceIn: AutoMovieFilmTime;
-  /** Exclusive source frame. */
+  /**
+   * Exclusive source frame.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `sourceOut` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `sourceOut` for the spec authoring source derivation state system contract.
+   */
   sourceOut: AutoMovieFilmTime;
-  /** Film-global inclusive start frame. */
+  /**
+   * Film-global inclusive start frame.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `start` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `start` for the spec authoring source derivation state system contract.
+   */
   start: AutoMovieFilmTime;
-  /** Available transition material at each side of this placement. */
+  /**
+   * Available transition material at each side of this placement.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `handles` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `handles` for the spec authoring source derivation state system contract.
+   */
   handles: {
     /** Available incoming frames. */
     head: AutoMovieFilmTime;
     /** Available outgoing frames. */
     tail: AutoMovieFilmTime;
   };
-  /** Transition entering this placement. */
+  /**
+   * Transition entering this placement.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `transitionIn` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `transitionIn` for the spec authoring source derivation state system contract.
+   */
   transitionIn: IAutoMovieFilmTransition;
-  /** Transition leaving this placement. */
+  /**
+   * Transition leaving this placement.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `transitionOut` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `transitionOut` for the spec authoring source derivation state system contract.
+   */
   transitionOut: IAutoMovieFilmTransition;
 }
 
-/** One declared audio asset placement. */
+/**
+ * One declared audio asset placement.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieAudioCue` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieAudioCue` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieAudioCue {
-  /** Stable cue id. */
+  /**
+   * Stable cue id.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `id` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `id` for the asset spec generation provider choice system contract.
+   */
   id: string;
-  /** Project-relative declared render-content asset. */
+  /**
+   * Project-relative declared render-content asset.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `asset` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `asset` for the asset spec generation provider choice system contract.
+   */
   asset: string;
-  /** Declared source duration used for bounded trim validation. */
+  /**
+   * Declared source duration used for bounded trim validation.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `sourceDuration` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `sourceDuration` for the asset spec generation provider choice system contract.
+   */
   sourceDuration: AutoMovieFilmTime;
-  /** Source offset inside the asset. */
+  /**
+   * Source offset inside the asset.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `sourceOffset` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `sourceOffset` for the asset spec generation provider choice system contract.
+   */
   sourceOffset: AutoMovieFilmTime;
-  /** Film-global cue start. */
+  /**
+   * Film-global cue start.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `start` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `start` for the asset spec generation provider choice system contract.
+   */
   start: AutoMovieFilmTime;
-  /** Cue duration. */
+  /**
+   * Cue duration.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `duration` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `duration` for the asset spec generation provider choice system contract.
+   */
   duration: AutoMovieFilmTime;
-  /** Linear gain from silence through a bounded boost. */
+  /**
+   * Linear gain from silence through a bounded boost.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `gain` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `gain` for the asset spec generation provider choice system contract.
+   */
   gain: number;
-  /** Fade-in duration. */
+  /**
+   * Fade-in duration.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `fadeIn` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `fadeIn` for the asset spec generation provider choice system contract.
+   */
   fadeIn: AutoMovieFilmTime;
-  /** Fade-out duration. */
+  /**
+   * Fade-out duration.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `fadeOut` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `fadeOut` for the asset spec generation provider choice system contract.
+   */
   fadeOut: AutoMovieFilmTime;
-  /** Deterministic destination bus. */
+  /**
+   * Deterministic destination bus.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `bus` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `bus` for the asset spec generation provider choice system contract.
+   */
   bus: "dialogue" | "music" | "effects" | "ambience";
 }
 
-/** One plain-text caption cue from which renderers may derive WebVTT. */
+/**
+ * One plain-text caption cue from which renderers may derive WebVTT.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `IAutoMovieCaptionCue` as the portable data boundary for the delivery caption readability profile requirement.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `IAutoMovieCaptionCue` for the spec delivery caption readability profile system contract.
+ */
 export interface IAutoMovieCaptionCue {
-  /** Stable cue id. */
+  /**
+   * Stable cue id.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `id` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `id` for the spec delivery caption readability profile system contract.
+   */
   id: string;
-  /** Non-blank plain text. */
+  /**
+   * Non-blank plain text.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `text` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `text` for the spec delivery caption readability profile system contract.
+   */
   text: string;
-  /** Non-blank BCP-47-style language tag. */
+  /**
+   * Non-blank BCP-47-style language tag.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `language` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `language` for the spec delivery caption readability profile system contract.
+   */
   language: string;
-  /** Optional speaker id. */
+  /**
+   * Optional speaker id.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `speaker` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `speaker` for the spec delivery caption readability profile system contract.
+   */
   speaker?: string;
-  /** Film-global inclusive start. */
+  /**
+   * Film-global inclusive start.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `start` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `start` for the spec delivery caption readability profile system contract.
+   */
   start: AutoMovieFilmTime;
-  /** Film-global exclusive end. */
+  /**
+   * Film-global exclusive end.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Exposes `end` as the portable data boundary for the delivery caption readability profile requirement.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Types `end` for the spec delivery caption readability profile system contract.
+   */
   end: AutoMovieFilmTime;
 }
 
 /**
  * Effective readability measurements for one compiled caption cue.
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports grapheme, line, duration, and gap facts even when no profile can judge them.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries measurements separately from the optional verdict.
+ * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityMeasurement {
   /**
@@ -831,55 +1336,20 @@ export interface IAutoMovieCaptionReadabilityMeasurement {
  */
 export type IAutoMovieCaptionReadabilityOutcome =
   | {
-      /**
-       * Profile-backed evaluation completed.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Distinguishes an evaluated cue from measure-only operation.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Marks profile-backed comparison as completed.
-       */
+      /** Profile-backed evaluation completed. */
       status: "evaluated";
-      /**
-       * Exact production profile id.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the threshold set that judged the cue.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the verdict reproducible against one profile.
-       */
+      /** Exact production profile id. */
       profile: string;
-      /**
-       * Requested segmentation algorithm and version used for measurement.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Binds the evaluated result to the selected segmentation identity.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the measurement algorithm and revision explicit in the report.
-       */
+      /** Requested segmentation algorithm and version used for measurement. */
       segmentation: {
-        /**
-         * Requested algorithm identity.
-         *
-         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Carries the production-selected segmentation algorithm.
-         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Identifies the algorithm that produced grapheme measurements.
-         */
+        /** Requested algorithm identity. */
         algorithm: string;
-        /**
-         * Requested algorithm or segmentation-data revision.
-         *
-         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Carries the production-selected segmentation revision.
-         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Binds measurements to one algorithm revision.
-         */
+        /** Requested algorithm or segmentation-data revision. */
         version: string;
       };
-      /**
-       * Whether every profile-declared boundary passed.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the aggregate result of declared comparisons.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Does not infer success when evaluation was not run.
-       */
+      /** Whether every profile-declared boundary passed. */
       passed: boolean;
-      /**
-       * Stable names of boundaries exceeded by this cue.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies which production-owned constraints need correction.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Exposes per-boundary evaluation results.
-       */
+      /** Stable names of boundaries exceeded by this cue. */
       breaches: Array<
         | "graphemes-per-second"
         | "lines-per-cue"
@@ -889,41 +1359,16 @@ export type IAutoMovieCaptionReadabilityOutcome =
       >;
     }
   | {
-      /**
-       * No production profile judged the measurement.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Prevents absent thresholds from becoming an implicit pass.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Records measure-only operation explicitly.
-       */
+      /** No production profile judged the measurement. */
       status: "not-run";
-      /**
-       * Requested segmentation identity, or null when no profile was declared.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the exact unsupported production choice without substituting a fallback.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Preserves requested algorithm and revision on non-evaluation.
-       */
+      /** Requested segmentation identity, or null when no profile was declared. */
       segmentation: {
-        /**
-         * Requested algorithm identity.
-         *
-         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the unsupported production-selected algorithm.
-         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents fallback algorithm inference.
-         */
+        /** Requested algorithm identity. */
         algorithm: string;
-        /**
-         * Requested algorithm or segmentation-data revision.
-         *
-         * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the unsupported production-selected revision.
-         * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents fallback revision inference.
-         */
+        /** Requested algorithm or segmentation-data revision. */
         version: string;
       } | null;
-      /**
-       * Exact reason a verdict was not computed.
-       *
-       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Explains profile absence instead of inventing a default.
-       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the non-evaluation cause machine-readable.
-       */
+      /** Exact reason a verdict was not computed. */
       reason:
         | "caption-readability-profile-not-declared"
         | "caption-grapheme-segmentation-unsupported";
@@ -932,9 +1377,9 @@ export type IAutoMovieCaptionReadabilityOutcome =
 /**
  * Readability report kept outside the byte-stable compiled edit.
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports metrics without modifying legacy caption output when no profile exists.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to its evaluated or not-run outcome.
+ * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityReport {
   /**
@@ -951,54 +1396,114 @@ export interface IAutoMovieCaptionReadabilityReport {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins measurements and outcomes without modifying the edit.
    */
   cues: Array<{
-    /**
-     * Effective cue measurements.
-     *
-     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Preserves measured facts even without a profile.
-     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Keeps measurement separate from judgment.
-     */
+    /** Effective cue measurements. */
     measurement: IAutoMovieCaptionReadabilityMeasurement;
-    /**
-     * Profile-backed verdict or explicit measure-only outcome.
-     *
-     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Distinguishes evaluated failure, evaluated pass, and profile absence.
-     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to exactly one outcome state.
-     */
+    /** Profile-backed verdict or explicit measure-only outcome. */
     outcome: IAutoMovieCaptionReadabilityOutcome;
   }>;
 }
 
-/** One bounded reference to a registered deterministic world effect zone. */
+/**
+ * One bounded reference to a registered deterministic world effect zone.
+ *
+ * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `IAutoMovieEffectCue` as the portable data boundary for the effects authoring control requirement.
+ * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `IAutoMovieEffectCue` for the effect tier state machine system contract.
+ */
 export interface IAutoMovieEffectCue {
-  /** Stable cue id. */
+  /**
+   * Stable cue id.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `id` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `id` for the effect tier state machine system contract.
+   */
   id: string;
-  /** Supported compiler-owned recipe family. */
+  /**
+   * Supported compiler-owned recipe family.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `recipe` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `recipe` for the effect tier state machine system contract.
+   */
   recipe: "world-zone";
-  /** Existing world effect-zone id. */
+  /**
+   * Existing world effect-zone id.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `zone` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `zone` for the effect tier state machine system contract.
+   */
   zone: string;
-  /** Film-global cue start. */
+  /**
+   * Film-global cue start.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `start` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `start` for the effect tier state machine system contract.
+   */
   start: AutoMovieFilmTime;
-  /** Cue duration. */
+  /**
+   * Cue duration.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `duration` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `duration` for the effect tier state machine system contract.
+   */
   duration: AutoMovieFilmTime;
-  /** Bounded normalized strength. */
+  /**
+   * Bounded normalized strength.
+   *
+   * @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-authoring-control Exposes `intensity` as the portable data boundary for the effects authoring control requirement.
+   * @evidence specifications/simulation-effects-and-sound/scope-tiers-and-identities.md#effect-tier-state-machine Types `intensity` for the effect tier state machine system contract.
+   */
   intensity: number;
 }
 
-/** Explicit narrative-shot omission disposition. */
+/**
+ * Explicit narrative-shot omission disposition.
+ *
+ * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `IAutoMovieFilmOmission` as the portable data boundary for the agent declared omission requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Types `IAutoMovieFilmOmission` for the spec authoring partial omission failure system contract.
+ */
 export interface IAutoMovieFilmOmission {
-  /** Current shot contract intentionally absent from the edit. */
+  /**
+   * Current shot contract intentionally absent from the edit.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `shot` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Types `shot` for the spec authoring partial omission failure system contract.
+   */
   shot: string;
-  /** Auditable non-blank reason. */
+  /**
+   * Auditable non-blank reason.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `reason` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Types `reason` for the spec authoring partial omission failure system contract.
+   */
   reason: string;
 }
 
-/** Coding-agent-authored finished-film edit before frame normalization. */
+/**
+ * Coding-agent-authored finished-film edit before frame normalization.
+ *
+ * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `IAutoMovieFilmEdit` as the portable data boundary for the agent declared omission requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `IAutoMovieFilmEdit` for the spec authoring partial target input system contract.
+ */
 export interface IAutoMovieFilmEdit {
-  /** Stable film id, equal to production id. */
+  /**
+   * Stable film id, equal to production id.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `id` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `id` for the spec authoring partial target input system contract.
+   */
   id: string;
-  /** Explicit accounting for intentionally unused shot contracts. */
+  /**
+   * Explicit accounting for intentionally unused shot contracts.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `omissions` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `omissions` for the spec authoring partial target input system contract.
+   */
   omissions: IAutoMovieFilmOmission[];
-  /** Narrow deterministic edit tracks. */
+  /**
+   * Narrow deterministic edit tracks.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-declared-omission Exposes `tracks` as the portable data boundary for the agent declared omission requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `tracks` for the spec authoring partial target input system contract.
+   */
   tracks: {
     /** Ordered source-shot placements. */
     video: IAutoMovieVideoEdit[];
@@ -1011,33 +1516,93 @@ export interface IAutoMovieFilmEdit {
   };
 }
 
-/** Frozen design and ownership facts available to the film source builder. */
+/**
+ * Frozen design and ownership facts available to the film source builder.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieFilmBuildContext` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieFilmBuildContext` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieFilmBuildContext {
-  /** Current production design. */
+  /**
+   * Current production design.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `production` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `production` for the spec authoring source derivation state system contract.
+   */
   production: IAutoMovieProductionDesign;
-  /** Current shot contracts keyed by id. */
+  /**
+   * Current shot contracts keyed by id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `shots` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `shots` for the spec authoring source derivation state system contract.
+   */
   shots: Readonly<Record<string, IAutoMovieShotContract>>;
-  /** Declared, present render-content paths. */
+  /**
+   * Declared, present render-content paths.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `assets` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `assets` for the spec authoring source derivation state system contract.
+   */
   assets: readonly string[];
-  /** Current registered deterministic effect zones. */
+  /**
+   * Current registered deterministic effect zones.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `effectZones` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `effectZones` for the spec authoring source derivation state system contract.
+   */
   effectZones: Readonly<IAutoMovieWorldDesign["effectZones"]>;
 }
 
-/** Coding-agent-owned deterministic film module export. */
+/**
+ * Coding-agent-owned deterministic film module export.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieFilmSource` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieFilmSource` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieFilmSource {
-  /** Build one finished-film edit from frozen compiler context. */
+  /**
+   * Build one finished-film edit from frozen compiler context.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `build` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `build` for the spec authoring source derivation state system contract.
+   */
   build(context: IAutoMovieFilmBuildContext): IAutoMovieFilmEdit;
 }
 
-/** Compiler-owned envelope preserving the exact validated authored edit. */
+/**
+ * Compiler-owned envelope preserving the exact validated authored edit.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `IAutoMovieCompiledFilmEdit` as the portable data boundary for the agent narrowest valid check requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `IAutoMovieCompiledFilmEdit` for the spec authoring partial verification invariant system contract.
+ */
 export interface IAutoMovieCompiledFilmEdit {
-  /** Generated edit format. */
+  /**
+   * Generated edit format.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `version` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `version` for the spec authoring partial verification invariant system contract.
+   */
   version: 1;
-  /** Compiler protocol that validated the edit. */
+  /**
+   * Compiler protocol that validated the edit.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `compiler` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `compiler` for the spec authoring partial verification invariant system contract.
+   */
   compiler: string;
-  /** Exact aggregate compile input. */
+  /**
+   * Exact aggregate compile input.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `inputFingerprint` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `inputFingerprint` for the spec authoring partial verification invariant system contract.
+   */
   inputFingerprint: AutoMovieContentDigest;
-  /** Film source provenance. */
+  /**
+   * Film source provenance.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `source` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `source` for the spec authoring partial verification invariant system contract.
+   */
   source: {
     /** Project-relative module path. */
     path: string;
@@ -1046,57 +1611,167 @@ export interface IAutoMovieCompiledFilmEdit {
     /** Digest of normalized TypeScript source. */
     digest: AutoMovieContentDigest;
   };
-  /** Strict authored edit returned by the deterministic sandbox. */
+  /**
+   * Strict authored edit returned by the deterministic sandbox.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-narrowest-valid-check Exposes `edit` as the portable data boundary for the agent narrowest valid check requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Types `edit` for the spec authoring partial verification invariant system contract.
+   */
   edit: IAutoMovieFilmEdit;
 }
 
-/** One frame-normalized video segment in the canonical film timeline. */
+/**
+ * One frame-normalized video segment in the canonical film timeline.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `IAutoMovieFilmTimelineSegment` as the portable data boundary for the formation nested frame clock requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieFilmTimelineSegment` for the performance formation hierarchy membership command system contract.
+ */
 export interface IAutoMovieFilmTimelineSegment {
-  /** Current compiled shot id. */
+  /**
+   * Current compiled shot id.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `shot` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `shot` for the performance formation hierarchy membership command system contract.
+   */
   shot: string;
-  /** Inclusive source frame. */
+  /**
+   * Inclusive source frame.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `sourceInFrame` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `sourceInFrame` for the performance formation hierarchy membership command system contract.
+   */
   sourceInFrame: number;
-  /** Exclusive source frame. */
+  /**
+   * Exclusive source frame.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `sourceOutFrame` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `sourceOutFrame` for the performance formation hierarchy membership command system contract.
+   */
   sourceOutFrame: number;
-  /** Film-global inclusive start frame. */
+  /**
+   * Film-global inclusive start frame.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `startFrame` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `startFrame` for the performance formation hierarchy membership command system contract.
+   */
   startFrame: number;
-  /** Film-global exclusive end frame. */
+  /**
+   * Film-global exclusive end frame.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `endFrame` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `endFrame` for the performance formation hierarchy membership command system contract.
+   */
   endFrame: number;
-  /** Available incoming handle frames. */
+  /**
+   * Available incoming handle frames.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `headHandleFrames` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `headHandleFrames` for the performance formation hierarchy membership command system contract.
+   */
   headHandleFrames: number;
-  /** Available outgoing handle frames. */
+  /**
+   * Available outgoing handle frames.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `tailHandleFrames` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `tailHandleFrames` for the performance formation hierarchy membership command system contract.
+   */
   tailHandleFrames: number;
-  /** Normalized incoming transition. */
+  /**
+   * Normalized incoming transition.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `transitionIn` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `transitionIn` for the performance formation hierarchy membership command system contract.
+   */
   transitionIn:
     | { kind: "cut" }
     | { kind: "dissolve" | "fade"; durationFrames: number };
-  /** Normalized outgoing transition. */
+  /**
+   * Normalized outgoing transition.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-nested-frame-clock Exposes `transitionOut` as the portable data boundary for the formation nested frame clock requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `transitionOut` for the performance formation hierarchy membership command system contract.
+   */
   transitionOut:
     | { kind: "cut" }
     | { kind: "dissolve" | "fade"; durationFrames: number };
 }
 
-/** Canonical global timeline consumed by review, oracle and render layers. */
+/**
+ * Canonical global timeline consumed by review, oracle and render layers.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieFilmTimeline` as the portable data boundary for the story time state review scope requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieFilmTimeline` for the narrative intent temporal state handoff system contract.
+ */
 export interface IAutoMovieFilmTimeline {
-  /** Generated timeline format. */
+  /**
+   * Generated timeline format.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `version` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `version` for the narrative intent temporal state handoff system contract.
+   */
   version: 1;
-  /** Compiler protocol that derived the timeline. */
+  /**
+   * Compiler protocol that derived the timeline.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `compiler` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `compiler` for the narrative intent temporal state handoff system contract.
+   */
   compiler: string;
-  /** Exact aggregate compile input. */
+  /**
+   * Exact aggregate compile input.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `inputFingerprint` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `inputFingerprint` for the narrative intent temporal state handoff system contract.
+   */
   inputFingerprint: AutoMovieContentDigest;
-  /** Digest of normalized `src/film.ts` bytes. */
+  /**
+   * Digest of normalized `src/film.ts` bytes.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `sourceDigest` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `sourceDigest` for the narrative intent temporal state handoff system contract.
+   */
   sourceDigest: AutoMovieContentDigest;
-  /** Stable finished-film id. */
+  /**
+   * Stable finished-film id.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `id` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `id` for the narrative intent temporal state handoff system contract.
+   */
   id: string;
-  /** Production frame rate. */
+  /**
+   * Production frame rate.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `fps` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `fps` for the narrative intent temporal state handoff system contract.
+   */
   fps: number;
-  /** Exact target and derived timeline duration. */
+  /**
+   * Exact target and derived timeline duration.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `totalFrames` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `totalFrames` for the narrative intent temporal state handoff system contract.
+   */
   totalFrames: number;
-  /** Ordered global-to-shot mapping. */
+  /**
+   * Ordered global-to-shot mapping.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `segments` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `segments` for the narrative intent temporal state handoff system contract.
+   */
   segments: IAutoMovieFilmTimelineSegment[];
-  /** Explicitly omitted current narrative shots. */
+  /**
+   * Explicitly omitted current narrative shots.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `omissions` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `omissions` for the narrative intent temporal state handoff system contract.
+   */
   omissions: IAutoMovieFilmOmission[];
-  /** Frame-normalized non-video tracks. */
+  /**
+   * Frame-normalized non-video tracks.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `tracks` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `tracks` for the narrative intent temporal state handoff system contract.
+   */
   tracks: {
     /** Ordered audio placements. */
     audio: Array<{
@@ -1132,11 +1807,26 @@ export interface IAutoMovieFilmTimeline {
   };
 }
 
-/** Frozen input available to a coding-agent-owned shot source builder. */
+/**
+ * Frozen input available to a coding-agent-owned shot source builder.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieShotBuildContext` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieShotBuildContext` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieShotBuildContext {
-  /** Current shot contract. */
+  /**
+   * Current shot contract.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `contract` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `contract` for the spec authoring source derivation state system contract.
+   */
   contract: IAutoMovieShotContract;
-  /** Current model recipes keyed by id. */
+  /**
+   * Current model recipes keyed by id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `models` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `models` for the spec authoring source derivation state system contract.
+   */
   models: Readonly<Record<string, IAutoMovieModelRecipe>>;
   /**
    * The production's story-clock light sources, when it declares any.
@@ -1146,103 +1836,316 @@ export interface IAutoMovieShotBuildContext {
    * through {@link IAutoMovieProductionShotProgram.lightMotions}. Absent when
    * the production declares no lighting, which is exactly the context a source
    * saw before the field existed.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `lighting` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `lighting` for the spec authoring source derivation state system contract.
    */
   lighting?: IAutoMovieProductionLighting;
-  /** Current world design. */
+  /**
+   * Current world design.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `world` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `world` for the spec authoring source derivation state system contract.
+   */
   world: IAutoMovieWorldDesign;
-  /** Current formations keyed by id. */
+  /**
+   * Current formations keyed by id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formations` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formations` for the spec authoring source derivation state system contract.
+   */
   formations: Readonly<Record<string, IAutoMovieFormationDesign>>;
-  /** Compiler-generated primitive runtime models keyed by recipe id. */
+  /**
+   * Compiler-generated primitive runtime models keyed by recipe id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `runtimeModels` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `runtimeModels` for the spec authoring source derivation state system contract.
+   */
   runtimeModels: Readonly<Record<string, IAutoMovieModel>>;
-  /** Compact compiler-derived formation runtimes keyed by formation id. */
+  /**
+   * Compact compiler-derived formation runtimes keyed by formation id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationRuntime` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationRuntime` for the spec authoring source derivation state system contract.
+   */
   formationRuntime: Readonly<Record<string, IAutoMovieCompiledFormation>>;
-  /** Compact compiler-derived general instance runtimes keyed by set id. */
+  /**
+   * Compact compiler-derived general instance runtimes keyed by set id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `instanceSetRuntime` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `instanceSetRuntime` for the spec authoring source derivation state system contract.
+   */
   instanceSetRuntime: Readonly<Record<string, IAutoMovieCompiledInstanceSet>>;
-  /** Deterministic geometry helpers. */
+  /**
+   * Deterministic geometry helpers.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `engine` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `engine` for the spec authoring source derivation state system contract.
+   */
   engine: IAutoMovieSourceOracle;
 }
 
-/** One deterministic formation member materialized from compact design. */
+/**
+ * One deterministic formation member materialized from compact design.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieFormationSlot` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieFormationSlot` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieFormationSlot {
-  /** Zero-based deterministic slot index. */
+  /**
+   * Zero-based deterministic slot index.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `slot` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `slot` for the performance formation layout slot assignment system contract.
+   */
   slot: number;
-  /** Compiler-owned scene-node id. */
+  /**
+   * Compiler-owned scene-node id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `node` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `node` for the performance formation layout slot assignment system contract.
+   */
   node: string;
-  /** Named hero actor at this slot, or null. */
+  /**
+   * Named hero actor at this slot, or null.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `actor` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `actor` for the performance formation layout slot assignment system contract.
+   */
   actor: string | null;
-  /** Runtime model recipe id. */
+  /**
+   * Runtime model recipe id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `modelRecipe` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `modelRecipe` for the performance formation layout slot assignment system contract.
+   */
   modelRecipe: string;
-  /** Compiler-derived world position in meters. */
+  /**
+   * Compiler-derived world position in meters.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `position` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `position` for the performance formation layout slot assignment system contract.
+   */
   position: IAutoMovieVector3;
-  /** Compiler-derived world-space heading in degrees. */
+  /**
+   * Compiler-derived world-space heading in degrees.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `facingDeg` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `facingDeg` for the performance formation layout slot assignment system contract.
+   */
   facingDeg: number;
-  /** Stable normalized phase used by bounded instance motion. */
+  /**
+   * Stable normalized phase used by bounded instance motion.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `motionPhase` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `motionPhase` for the performance formation layout slot assignment system contract.
+   */
   motionPhase: number;
 }
 
-/** Axis-aligned world-space bounds of a compact formation range. */
+/**
+ * Axis-aligned world-space bounds of a compact formation range.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `IAutoMovieFormationBounds` as the portable data boundary for the formation membership requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieFormationBounds` for the performance formation hierarchy membership command system contract.
+ */
 export interface IAutoMovieFormationBounds {
-  /** Minimum world-space corner. */
+  /**
+   * Minimum world-space corner.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `min` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `min` for the performance formation hierarchy membership command system contract.
+   */
   min: IAutoMovieVector3;
-  /** Maximum world-space corner. */
+  /**
+   * Maximum world-space corner.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `max` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `max` for the performance formation hierarchy membership command system contract.
+   */
   max: IAutoMovieVector3;
 }
 
-/** One bounded slot range regenerated independently by viewer workers. */
+/**
+ * One bounded slot range regenerated independently by viewer workers.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieFormationChunk` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieFormationChunk` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieFormationChunk {
-  /** Zero-based stable chunk index. */
+  /**
+   * Zero-based stable chunk index.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `index` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `index` for the performance formation layout slot assignment system contract.
+   */
   index: number;
-  /** Inclusive first slot. */
+  /**
+   * Inclusive first slot.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `start` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `start` for the performance formation layout slot assignment system contract.
+   */
   start: number;
-  /** Number of slots in this chunk. */
+  /**
+   * Number of slots in this chunk.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `count` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `count` for the performance formation layout slot assignment system contract.
+   */
   count: number;
-  /** Anonymous slots rendered through instancing after hero exclusion. */
+  /**
+   * Anonymous slots rendered through instancing after hero exclusion.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `anonymousCount` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `anonymousCount` for the performance formation layout slot assignment system contract.
+   */
   anonymousCount: number;
-  /** Exact world-space range bounds. */
+  /**
+   * Exact world-space range bounds.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `bounds` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `bounds` for the performance formation layout slot assignment system contract.
+   */
   bounds: IAutoMovieFormationBounds;
-  /** Exact arithmetic centroid of the range. */
+  /**
+   * Exact arithmetic centroid of the range.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `centroid` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `centroid` for the performance formation layout slot assignment system contract.
+   */
   centroid: IAutoMovieVector3;
 }
 
-/** One slot promoted out of anonymous batches into an explicit scene node. */
+/**
+ * One slot promoted out of anonymous batches into an explicit scene node.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieCompiledFormationHero` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieCompiledFormationHero` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieCompiledFormationHero {
-  /** Exact promoted slot. */
+  /**
+   * Exact promoted slot.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `slot` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `slot` for the performance formation layout slot assignment system contract.
+   */
   slot: number;
-  /** Named explicit scene-node id. */
+  /**
+   * Named explicit scene-node id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `actor` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `actor` for the performance formation layout slot assignment system contract.
+   */
   actor: string;
-  /** Compiler-owned base transform before source-authored performance. */
+  /**
+   * Compiler-owned base transform before source-authored performance.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `transform` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `transform` for the performance formation layout slot assignment system contract.
+   */
   transform: IAutoMovieTransform;
 }
 
-/** One camera-selected runtime representation for anonymous formation slots. */
+/**
+ * One camera-selected runtime representation for anonymous formation slots.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `IAutoMovieCompiledFormationLod` as the portable data boundary for the formation layout selection parameters requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieCompiledFormationLod` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieCompiledFormationLod {
-  /** Semantic near-to-far tier. */
+  /**
+   * Semantic near-to-far tier.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `tier` as the portable data boundary for the formation layout selection parameters requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `tier` for the performance formation layout slot assignment system contract.
+   */
   tier: "hero" | "near" | "far";
-  /** Positive maximum distance, or null only for the final tier. */
+  /**
+   * Positive maximum distance, or null only for the final tier.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `maxDistance` as the portable data boundary for the formation layout selection parameters requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `maxDistance` for the performance formation layout slot assignment system contract.
+   */
   maxDistance: number | null;
-  /** Design recipe id. */
+  /**
+   * Design recipe id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `recipe` as the portable data boundary for the formation layout selection parameters requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `recipe` for the performance formation layout slot assignment system contract.
+   */
   recipe: string;
-  /** Exact current recipe digest, including geometry and palette parameters. */
+  /**
+   * Exact current recipe digest, including geometry and palette parameters.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `recipeDigest` as the portable data boundary for the formation layout selection parameters requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `recipeDigest` for the performance formation layout slot assignment system contract.
+   */
   recipeDigest: AutoMovieContentDigest;
-  /** Compiler-owned runtime model id. */
+  /**
+   * Compiler-owned runtime model id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `model` as the portable data boundary for the formation layout selection parameters requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `model` for the performance formation layout slot assignment system contract.
+   */
   model: string;
 }
 
-/** Compact generated formation runtime; it never stores every anonymous slot. */
+/**
+ * Compact generated formation runtime; it never stores every anonymous slot.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieCompiledFormation` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieCompiledFormation` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieCompiledFormation {
-  /** Generated formation format. */
+  /**
+   * Generated formation format.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `version` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `version` for the performance formation layout slot assignment system contract.
+   */
   version: 1;
-  /** Stable formation design id. */
+  /**
+   * Stable formation design id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `id` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `id` for the performance formation layout slot assignment system contract.
+   */
   id: string;
-  /** Exact designed slot count. */
+  /**
+   * Exact designed slot count.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `count` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `count` for the performance formation layout slot assignment system contract.
+   */
   count: number;
-  /** Count remaining in instance batches after hero exclusion. */
+  /**
+   * Count remaining in instance batches after hero exclusion.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `anonymousCount` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `anonymousCount` for the performance formation layout slot assignment system contract.
+   */
   anonymousCount: number;
-  /** Base design recipe. */
+  /**
+   * Base design recipe.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `modelRecipe` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `modelRecipe` for the performance formation layout slot assignment system contract.
+   */
   modelRecipe: string;
-  /** Exact compact layout algorithm and parameters. */
+  /**
+   * Exact compact layout algorithm and parameters.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `layout` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `layout` for the performance formation layout slot assignment system contract.
+   */
   layout: IAutoMovieFormationDesign["layout"];
-  /** World-space origin. */
+  /**
+   * World-space origin.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `anchor` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `anchor` for the performance formation layout slot assignment system contract.
+   */
   anchor: IAutoMovieVector3;
   /**
    * World terrain under this formation, snapshotted at compile time.
@@ -1255,23 +2158,66 @@ export interface IAutoMovieCompiledFormation {
    * declared order is preserved because the first surface containing a point is
    * the one a member stands on. Empty when the world declared no terrain under
    * the unit, which places every member at the anchor's height.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `ground` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `ground` for the performance formation layout slot assignment system contract.
    */
   ground: IAutoMovieWorldDesign["surfaces"];
-  /** World-space base heading in degrees. */
+  /**
+   * World-space base heading in degrees.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `facingDeg` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `facingDeg` for the performance formation layout slot assignment system contract.
+   */
   facingDeg: number;
-  /** Full safe-integer design seed. */
+  /**
+   * Full safe-integer design seed.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `seed` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `seed` for the performance formation layout slot assignment system contract.
+   */
   seed: number;
-  /** Exact bounds of all slots. */
+  /**
+   * Exact bounds of all slots.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `bounds` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `bounds` for the performance formation layout slot assignment system contract.
+   */
   bounds: IAutoMovieFormationBounds;
-  /** Exact arithmetic centroid of all slots. */
+  /**
+   * Exact arithmetic centroid of all slots.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `centroid` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `centroid` for the performance formation layout slot assignment system contract.
+   */
   centroid: IAutoMovieVector3;
-  /** Compiler-derived representative member radius used by LOD projection. */
+  /**
+   * Compiler-derived representative member radius used by LOD projection.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `projectionRadius` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `projectionRadius` for the performance formation layout slot assignment system contract.
+   */
   projectionRadius: number;
-  /** Bounded independently regenerable slot ranges. */
+  /**
+   * Bounded independently regenerable slot ranges.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `chunks` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `chunks` for the performance formation layout slot assignment system contract.
+   */
   chunks: IAutoMovieFormationChunk[];
-  /** Explicit hero promotions, ordered by slot. */
+  /**
+   * Explicit hero promotions, ordered by slot.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `heroes` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `heroes` for the performance formation layout slot assignment system contract.
+   */
   heroes: IAutoMovieCompiledFormationHero[];
-  /** Ordered automatic LOD representations. */
+  /**
+   * Ordered automatic LOD representations.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `lod` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `lod` for the performance formation layout slot assignment system contract.
+   */
   lod: IAutoMovieCompiledFormationLod[];
   /**
    * Deterministic per-slot phase generator contract.
@@ -1281,121 +2227,362 @@ export interface IAutoMovieCompiledFormation {
    * so a compiled cycle length would be a second answer to a question the cue
    * already answers, and a seeded one would be unrelated to what the unit
    * does.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `phase` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `phase` for the performance formation layout slot assignment system contract.
    */
   phase: {
     /** Domain-separated safe-integer seed. */
     seed: number;
   };
-  /** Digest of every field above except this digest. */
+  /**
+   * Digest of every field above except this digest.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `digest` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `digest` for the performance formation layout slot assignment system contract.
+   */
   digest: AutoMovieContentDigest;
 }
 
-/** One exactly regenerated member of a non-formation instance set. */
+/**
+ * One exactly regenerated member of a non-formation instance set.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieInstanceSlot` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieInstanceSlot` for the performance formation layout slot assignment system contract.
+ */
 export interface IAutoMovieInstanceSlot {
-  /** Zero-based deterministic slot index. */
+  /**
+   * Zero-based deterministic slot index.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `slot` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `slot` for the performance formation layout slot assignment system contract.
+   */
   slot: number;
-  /** Compiler-owned stable instance id. */
+  /**
+   * Compiler-owned stable instance id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `node` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `node` for the performance formation layout slot assignment system contract.
+   */
   node: string;
-  /** Runtime model recipe id. */
+  /**
+   * Runtime model recipe id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `modelRecipe` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `modelRecipe` for the performance formation layout slot assignment system contract.
+   */
   modelRecipe: string;
-  /** Selected prototype id; omitted for a legacy single-prototype set. */
+  /**
+   * Selected prototype id; omitted for a legacy single-prototype set.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `prototype` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `prototype` for the performance formation layout slot assignment system contract.
+   */
   prototype?: string;
-  /** Compiler-derived world position in meters. */
+  /**
+   * Compiler-derived world position in meters.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `position` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `position` for the performance formation layout slot assignment system contract.
+   */
   position: IAutoMovieVector3;
-  /** Compiler-derived world-space heading in degrees. */
+  /**
+   * Compiler-derived world-space heading in degrees.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `facingDeg` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `facingDeg` for the performance formation layout slot assignment system contract.
+   */
   facingDeg: number;
-  /** Positive uniform scale. */
+  /**
+   * Positive uniform scale.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `scale` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `scale` for the performance formation layout slot assignment system contract.
+   */
   scale: number;
-  /** Exact full rotation for an enhanced set. */
+  /**
+   * Exact full rotation for an enhanced set.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `rotation` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `rotation` for the performance formation layout slot assignment system contract.
+   */
   rotation?: IAutoMovieQuaternion;
-  /** Exact non-uniform scale for an enhanced set. */
+  /**
+   * Exact non-uniform scale for an enhanced set.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `scale3` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `scale3` for the performance formation layout slot assignment system contract.
+   */
   scale3?: IAutoMovieVector3;
-  /** Explicit or seeded visibility for an enhanced set. */
+  /**
+   * Explicit or seeded visibility for an enhanced set.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `visible` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `visible` for the performance formation layout slot assignment system contract.
+   */
   visible?: boolean;
-  /** Selected exact sRGB palette value. */
+  /**
+   * Selected exact sRGB palette value.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `palette` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `palette` for the performance formation layout slot assignment system contract.
+   */
   palette: string;
-  /** Seed-derived numeric traits keyed by declared name. */
+  /**
+   * Seed-derived numeric traits keyed by declared name.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `traits` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `traits` for the performance formation layout slot assignment system contract.
+   */
   traits: Record<string, number>;
 }
 
-/** One independently regenerable range of a general instance set. */
+/**
+ * One independently regenerable range of a general instance set.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieInstanceChunk` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieInstanceChunk` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieInstanceChunk {
-  /** Zero-based stable chunk index. */
+  /**
+   * Zero-based stable chunk index.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `index` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `index` for the asset spec generation provider choice system contract.
+   */
   index: number;
-  /** Inclusive first slot. */
+  /**
+   * Inclusive first slot.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `start` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `start` for the asset spec generation provider choice system contract.
+   */
   start: number;
-  /** Number of slots in this chunk. */
+  /**
+   * Number of slots in this chunk.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `count` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `count` for the asset spec generation provider choice system contract.
+   */
   count: number;
-  /** Exact world-space range bounds. */
+  /**
+   * Exact world-space range bounds.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `bounds` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `bounds` for the asset spec generation provider choice system contract.
+   */
   bounds: IAutoMovieFormationBounds;
-  /** Exact arithmetic centroid of the range. */
+  /**
+   * Exact arithmetic centroid of the range.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `centroid` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `centroid` for the asset spec generation provider choice system contract.
+   */
   centroid: IAutoMovieVector3;
 }
 
-/** Compact generated runtime for a non-formation instance set. */
+/**
+ * Compact generated runtime for a non-formation instance set.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `IAutoMovieCompiledInstanceSet` as the portable data boundary for the formation membership requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieCompiledInstanceSet` for the performance formation hierarchy membership command system contract.
+ */
 export interface IAutoMovieCompiledInstanceSet {
-  /** Generated instance-set format. */
+  /**
+   * Generated instance-set format.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `version` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `version` for the performance formation hierarchy membership command system contract.
+   */
   version: 1;
-  /** Stable world-design id. */
+  /**
+   * Stable world-design id.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `id` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `id` for the performance formation hierarchy membership command system contract.
+   */
   id: string;
-  /** Exact designed slot count. */
+  /**
+   * Exact designed slot count.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `count` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `count` for the performance formation hierarchy membership command system contract.
+   */
   count: number;
-  /** Base design recipe. */
+  /**
+   * Base design recipe.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `modelRecipe` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `modelRecipe` for the performance formation hierarchy membership command system contract.
+   */
   modelRecipe: string;
-  /** Resolved prototype runtimes; omitted for a legacy single-prototype set. */
+  /**
+   * Resolved prototype runtimes; omitted for a legacy single-prototype set.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `prototypes` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `prototypes` for the performance formation hierarchy membership command system contract.
+   */
   prototypes?: IAutoMovieCompiledInstancePrototype[];
-  /** Exact compact placement law. */
+  /**
+   * Exact compact placement law.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `layout` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `layout` for the performance formation hierarchy membership command system contract.
+   */
   layout: IAutoMovieInstanceSetDesign["layout"];
   /**
    * Resolved route geometry for `along-route`, or null for local layouts.
    *
    * The viewer and source oracle regenerate slots from this snapshot without
    * consulting mutable world design.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `route` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `route` for the performance formation hierarchy membership command system contract.
    */
   route: IAutoMovieWorldDesign["routes"][number] | null;
-  /** World-space origin for local layouts. */
+  /**
+   * World-space origin for local layouts.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `anchor` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `anchor` for the performance formation hierarchy membership command system contract.
+   */
   anchor: IAutoMovieVector3;
-  /** World-space base heading in degrees. */
+  /**
+   * World-space base heading in degrees.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `facingDeg` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `facingDeg` for the performance formation hierarchy membership command system contract.
+   */
   facingDeg: number;
-  /** Full safe-integer design seed. */
+  /**
+   * Full safe-integer design seed.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `seed` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `seed` for the performance formation hierarchy membership command system contract.
+   */
   seed: number;
-  /** Exact seed-derived visual and semantic variation law. */
+  /**
+   * Exact seed-derived visual and semantic variation law.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `variation` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `variation` for the performance formation hierarchy membership command system contract.
+   */
   variation: IAutoMovieInstanceSetDesign["variation"];
-  /** Exact bounds of all generated slots. */
+  /**
+   * Exact bounds of all generated slots.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `bounds` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `bounds` for the performance formation hierarchy membership command system contract.
+   */
   bounds: IAutoMovieFormationBounds;
-  /** Exact arithmetic centroid of all generated slots. */
+  /**
+   * Exact arithmetic centroid of all generated slots.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `centroid` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `centroid` for the performance formation hierarchy membership command system contract.
+   */
   centroid: IAutoMovieVector3;
-  /** Compiler-derived representative radius used by viewer culling. */
+  /**
+   * Compiler-derived representative radius used by viewer culling.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `projectionRadius` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `projectionRadius` for the performance formation hierarchy membership command system contract.
+   */
   projectionRadius: number;
-  /** Bounded independently regenerable slot ranges. */
+  /**
+   * Bounded independently regenerable slot ranges.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `chunks` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `chunks` for the performance formation hierarchy membership command system contract.
+   */
   chunks: IAutoMovieInstanceChunk[];
-  /** Ordered automatic LOD representations. */
+  /**
+   * Ordered automatic LOD representations.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `lod` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `lod` for the performance formation hierarchy membership command system contract.
+   */
   lod: IAutoMovieCompiledFormationLod[];
-  /** Digest of every field above except this digest. */
+  /**
+   * Digest of every field above except this digest.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `digest` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `digest` for the performance formation hierarchy membership command system contract.
+   */
   digest: AutoMovieContentDigest;
 }
 
-/** One compiler-resolved reusable prototype in a general instance set. */
+/**
+ * One compiler-resolved reusable prototype in a general instance set.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `IAutoMovieCompiledInstancePrototype` as the portable data boundary for the asset prototype and instance requirement.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `IAutoMovieCompiledInstancePrototype` for the asset prototype and instance system contract.
+ */
 export interface IAutoMovieCompiledInstancePrototype {
-  /** Stable source prototype id. */
+  /**
+   * Stable source prototype id.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `id` as the portable data boundary for the asset prototype and instance requirement.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `id` for the asset prototype and instance system contract.
+   */
   id: string;
-  /** Source model recipe. */
+  /**
+   * Source model recipe.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `modelRecipe` as the portable data boundary for the asset prototype and instance requirement.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `modelRecipe` for the asset prototype and instance system contract.
+   */
   modelRecipe: string;
-  /** Positive deterministic selection weight. */
+  /**
+   * Positive deterministic selection weight.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `weight` as the portable data boundary for the asset prototype and instance requirement.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `weight` for the asset prototype and instance system contract.
+   */
   weight: number;
-  /** Ordered automatic LOD representations for this prototype. */
+  /**
+   * Ordered automatic LOD representations for this prototype.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `lod` as the portable data boundary for the asset prototype and instance requirement.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `lod` for the asset prototype and instance system contract.
+   */
   lod: IAutoMovieCompiledFormationLod[];
-  /** Conservative source-model radius before per-slot scaling. */
+  /**
+   * Conservative source-model radius before per-slot scaling.
+   *
+   * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance Exposes `projectionRadius` as the portable data boundary for the asset prototype and instance requirement.
+   * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance Types `projectionRadius` for the asset prototype and instance system contract.
+   */
   projectionRadius: number;
 }
 
-/** One compact formation-level transform state relative to its designed base. */
+/**
+ * One compact formation-level transform state relative to its designed base.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `IAutoMovieFormationMotionState` as the portable data boundary for the formation membership requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieFormationMotionState` for the performance formation hierarchy membership command system contract.
+ */
 export interface IAutoMovieFormationMotionState {
-  /** World-space translation added to the designed formation anchor. */
+  /**
+   * World-space translation added to the designed formation anchor.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `translation` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `translation` for the performance formation hierarchy membership command system contract.
+   */
   translation: IAutoMovieVector3;
-  /** Heading offset added around the designed anchor, in degrees. */
+  /**
+   * Heading offset added around the designed anchor, in degrees.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `facingOffsetDeg` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `facingOffsetDeg` for the performance formation hierarchy membership command system contract.
+   */
   facingOffsetDeg: number;
-  /** Positive lateral and depth scale for bounded density deformation. */
+  /**
+   * Positive lateral and depth scale for bounded density deformation.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `spacingScale` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `spacingScale` for the performance formation hierarchy membership command system contract.
+   */
   spacingScale: {
     /** Left-to-right spacing multiplier. */
     lateral: number;
@@ -1409,13 +2596,31 @@ export interface IAutoMovieFormationMotionState {
  *
  * Capability labels do not grant this motion. The source explicitly authors
  * each cue, while arbitrary per-slot curves remain outside the public shape.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `IAutoMovieFormationMotion` as the portable data boundary for the motion external source basis requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `IAutoMovieFormationMotion` for the performance motion external adoption receipt system contract.
  */
 export interface IAutoMovieFormationMotion {
-  /** Stable cue id, unique inside one shot. */
+  /**
+   * Stable cue id, unique inside one shot.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `id` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `id` for the performance motion external adoption receipt system contract.
+   */
   id: string;
-  /** Participating compiled formation id. */
+  /**
+   * Participating compiled formation id.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `formation` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `formation` for the performance motion external adoption receipt system contract.
+   */
   formation: string;
-  /** Review-facing action expressed by this exact cue. */
+  /**
+   * Review-facing action expressed by this exact cue.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `action` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `action` for the performance motion external adoption receipt system contract.
+   */
   action: AutoMovieFormationCapability;
   /**
    * Which of the unit figure's declared gaits its members perform here.
@@ -1430,6 +2635,9 @@ export interface IAutoMovieFormationMotion {
    * Omitted, the cue's `action` label is tried as a gait name, and the figure's
    * first declared gait performs when nothing carries that name. A named gait
    * no figure of the unit declares is refused rather than silently replaced.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `gait` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `gait` for the performance motion external adoption receipt system contract.
    */
   gait?: string;
 
@@ -1451,17 +2659,45 @@ export interface IAutoMovieFormationMotion {
    *
    * Omitted, the unit keeps the arrangement it is already in, and the compiled
    * cue is byte-identical to one authored before this channel existed.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `layout` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `layout` for the performance motion external adoption receipt system contract.
    */
   layout?: IAutoMovieFormationDesign["layout"];
-  /** Inclusive shot-local cue start. */
+  /**
+   * Inclusive shot-local cue start.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `start` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `start` for the performance motion external adoption receipt system contract.
+   */
   start: number;
-  /** Exclusive shot-local cue end. */
+  /**
+   * Exclusive shot-local cue end.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `end` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `end` for the performance motion external adoption receipt system contract.
+   */
   end: number;
-  /** State at cue start. */
+  /**
+   * State at cue start.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `from` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `from` for the performance motion external adoption receipt system contract.
+   */
   from: IAutoMovieFormationMotionState;
-  /** State at cue end. */
+  /**
+   * State at cue end.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `to` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `to` for the performance motion external adoption receipt system contract.
+   */
   to: IAutoMovieFormationMotionState;
-  /** Deterministic interpolation curve. */
+  /**
+   * Deterministic interpolation curve.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes `easing` as the portable data boundary for the motion external source basis requirement.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-external-adoption-receipt Types `easing` for the performance motion external adoption receipt system contract.
+   */
   easing: "linear" | "easeIn" | "easeOut" | "easeInOut" | "step";
 }
 
@@ -1473,6 +2709,9 @@ export interface IAutoMovieFormationMotion {
  * its layout put it, and how far it has turned out of the heading its unit
  * holds. The offset and the heading are stated in the unit's own frame, so a
  * member that steps left keeps stepping left after its unit turns.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `IAutoMovieFormationSlotState` as the portable data boundary for the formation unit local variation requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieFormationSlotState` for the performance formation hierarchy membership command system contract.
  */
 export interface IAutoMovieFormationSlotState {
   /**
@@ -1483,11 +2722,24 @@ export interface IAutoMovieFormationSlotState {
    * the drawn. Its unit's designed count, bounds and centroid are unchanged,
    * because those describe the unit that was designed rather than the members
    * standing at one instant.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `present` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `present` for the performance formation hierarchy membership command system contract.
    */
   present: boolean;
-  /** Displacement from the member's designed place, in unit-local meters. */
+  /**
+   * Displacement from the member's designed place, in unit-local meters.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `offset` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `offset` for the performance formation hierarchy membership command system contract.
+   */
   offset: IAutoMovieVector3;
-  /** Heading added to the member's placed heading, in degrees. */
+  /**
+   * Heading added to the member's placed heading, in degrees.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `facingOffsetDeg` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `facingOffsetDeg` for the performance formation hierarchy membership command system contract.
+   */
   facingOffsetDeg: number;
 }
 
@@ -1509,173 +2761,500 @@ export interface IAutoMovieFormationSlotState {
  * A named slot stays an instanced member. Promotion to a named actor is the
  * other, dearer thing: it exists, it is capped, and this is deliberately not
  * it.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `IAutoMovieFormationSlotMotion` as the portable data boundary for the formation slot identity requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieFormationSlotMotion` for the performance formation layout slot assignment system contract.
  */
 export interface IAutoMovieFormationSlotMotion {
-  /** Stable cue id, unique inside one shot. */
+  /**
+   * Stable cue id, unique inside one shot.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `id` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `id` for the performance formation layout slot assignment system contract.
+   */
   id: string;
-  /** Participating compiled formation id. */
+  /**
+   * Participating compiled formation id.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `formation` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `formation` for the performance formation layout slot assignment system contract.
+   */
   formation: string;
   /**
    * Zero-based slots this exception names, unique and below the unit's count.
    *
    * Several slots share one cue when the same thing happens to each of them at
    * the same time; a member that needs its own timing gets its own cue.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `slots` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `slots` for the performance formation layout slot assignment system contract.
    */
   slots: number[];
-  /** Inclusive shot-local cue start. */
+  /**
+   * Inclusive shot-local cue start.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `start` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `start` for the performance formation layout slot assignment system contract.
+   */
   start: number;
-  /** Exclusive shot-local cue end. */
+  /**
+   * Exclusive shot-local cue end.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `end` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `end` for the performance formation layout slot assignment system contract.
+   */
   end: number;
-  /** Member state at cue start. */
+  /**
+   * Member state at cue start.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `from` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `from` for the performance formation layout slot assignment system contract.
+   */
   from: IAutoMovieFormationSlotState;
-  /** Member state at cue end. */
+  /**
+   * Member state at cue end.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `to` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `to` for the performance formation layout slot assignment system contract.
+   */
   to: IAutoMovieFormationSlotState;
-  /** Deterministic interpolation curve. */
+  /**
+   * Deterministic interpolation curve.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-slot-identity Exposes `easing` as the portable data boundary for the formation slot identity requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `easing` for the performance formation layout slot assignment system contract.
+   */
   easing: IAutoMovieFormationMotion["easing"];
 }
 
-/** One source-authored shot-local effect activation. */
+/**
+ * One source-authored shot-local effect activation.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieShotEffectCue` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieShotEffectCue` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieShotEffectCue {
-  /** Stable cue id, unique inside one shot. */
+  /**
+   * Stable cue id, unique inside one shot.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `id` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `id` for the spec authoring source derivation state system contract.
+   */
   id: string;
-  /** Existing world effect-zone id. */
+  /**
+   * Existing world effect-zone id.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `zone` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `zone` for the spec authoring source derivation state system contract.
+   */
   zone: string;
-  /** Inclusive shot-local start in seconds. */
+  /**
+   * Inclusive shot-local start in seconds.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `start` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `start` for the spec authoring source derivation state system contract.
+   */
   start: number;
-  /** Exclusive shot-local end in seconds. */
+  /**
+   * Exclusive shot-local end in seconds.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `end` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `end` for the spec authoring source derivation state system contract.
+   */
   end: number;
-  /** Bounded intensity envelope. */
+  /**
+   * Bounded intensity envelope.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `intensity` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `intensity` for the spec authoring source derivation state system contract.
+   */
   intensity: {
     /** Intensity at cue start. */
     from: number;
     /** Intensity at cue end. */
     to: number;
   };
-  /** Optional authoritative shot event that must realize inside this cue. */
+  /**
+   * Optional authoritative shot event that must realize inside this cue.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `event` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `event` for the spec authoring source derivation state system contract.
+   */
   event?: string;
 }
 
-/** Compiler-owned deterministic effect runtime consumed by viewer and oracle. */
+/**
+ * Compiler-owned deterministic effect runtime consumed by viewer and oracle.
+ *
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `IAutoMovieCompiledEffect` as the portable data boundary for the rendering runtime build order requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `IAutoMovieCompiledEffect` for the spec render state isolation system contract.
+ */
 export interface IAutoMovieCompiledEffect {
-  /** Generated effect format. */
+  /**
+   * Generated effect format.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `version` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `version` for the spec render state isolation system contract.
+   */
   version: 1;
-  /** Stable source cue id. */
+  /**
+   * Stable source cue id.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `id` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `id` for the spec render state isolation system contract.
+   */
   id: string;
-  /** Existing world zone id. */
+  /**
+   * Existing world zone id.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `zone` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `zone` for the spec render state isolation system contract.
+   */
   zone: string;
-  /** Supported primitive effect family. */
+  /**
+   * Supported primitive effect family.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `kind` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `kind` for the spec render state isolation system contract.
+   */
   kind: IAutoMovieEffectRecipe["kind"];
-  /** Exact world-space emitter bounds. */
+  /**
+   * Exact world-space emitter bounds.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `bounds` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `bounds` for the spec render state isolation system contract.
+   */
   bounds: IAutoMovieWorldDesign["effectZones"][number]["bounds"];
-  /** Domain-separated deterministic stream seed. */
+  /**
+   * Domain-separated deterministic stream seed.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `seed` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `seed` for the spec render state isolation system contract.
+   */
   seed: number;
-  /** Exact current recipe. */
+  /**
+   * Exact current recipe.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `recipe` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `recipe` for the spec render state isolation system contract.
+   */
   recipe: IAutoMovieEffectRecipe;
-  /** Inclusive shot-local cue start. */
+  /**
+   * Inclusive shot-local cue start.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `start` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `start` for the spec render state isolation system contract.
+   */
   start: number;
-  /** Exclusive shot-local cue end. */
+  /**
+   * Exclusive shot-local cue end.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `end` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `end` for the spec render state isolation system contract.
+   */
   end: number;
-  /** Bounded cue intensity envelope. */
+  /**
+   * Bounded cue intensity envelope.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `intensity` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `intensity` for the spec render state isolation system contract.
+   */
   intensity: IAutoMovieShotEffectCue["intensity"];
-  /** Bound authoritative event, when present. */
+  /**
+   * Bound authoritative event, when present.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `event` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `event` for the spec render state isolation system contract.
+   */
   event?: string;
-  /** Production frame-clock simulation step. */
+  /**
+   * Production frame-clock simulation step.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `fixedStepSeconds` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `fixedStepSeconds` for the spec render state isolation system contract.
+   */
   fixedStepSeconds: number;
-  /** Digest of every field above except this digest. */
+  /**
+   * Digest of every field above except this digest.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-build-order Exposes `digest` as the portable data boundary for the rendering runtime build order requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `digest` for the spec render state isolation system contract.
+   */
   digest: AutoMovieContentDigest;
 }
 
-/** Engine-compiled shot source before production materialization is added. */
+/**
+ * Engine-compiled shot source before production materialization is added.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieShotSourceOutput` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieShotSourceOutput` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieShotSourceOutput {
-  /** Source-owned generated models retained for materialization and evidence. */
+  /**
+   * Source-owned generated models retained for materialization and evidence.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `authoredModels` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `authoredModels` for the spec authoring source derivation state system contract.
+   */
   authoredModels?: IAutoMovieModel[];
-  /** Source-owned production props retained with their semantic contracts. */
+  /**
+   * Source-owned production props retained with their semantic contracts.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `props` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `props` for the spec authoring source derivation state system contract.
+   */
   props?: IAutoMoviePropSpec[];
-  /** Structured buildings retained for spatial queries and evidence. */
+  /**
+   * Structured buildings retained for spatial queries and evidence.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `builtEnvironments` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `builtEnvironments` for the spec authoring source derivation state system contract.
+   */
   builtEnvironments?: IAutoMovieBuiltEnvironment[];
-  /** Observation documents the building source read, kept as provenance. */
+  /**
+   * Observation documents the building source read, kept as provenance.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `designReferences` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `designReferences` for the spec authoring source derivation state system contract.
+   */
   designReferences?: IAutoMovieDesignReference[];
-  /** Citations from authored design members back to those observations. */
+  /**
+   * Citations from authored design members back to those observations.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `designEvidence` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `designEvidence` for the spec authoring source derivation state system contract.
+   */
   designEvidence?: IAutoMovieDesignEvidence[];
-  /** Phase, alternative and change-impact lineage over those identities. */
+  /**
+   * Phase, alternative and change-impact lineage over those identities.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `designLineages` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `designLineages` for the spec authoring source derivation state system contract.
+   */
   designLineages?: IAutoMovieDesignLineage[];
-  /** Independent deterministic fluid domains this shot's source declares. */
+  /**
+   * Independent deterministic fluid domains this shot's source declares.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `fluidDomains` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `fluidDomains` for the spec authoring source derivation state system contract.
+   */
   fluidDomains?: IAutoMovieFluidDomain[];
-  /** Bindings that make those domains a building's own water features. */
+  /**
+   * Bindings that make those domains a building's own water features.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `waterFeatures` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `waterFeatures` for the spec authoring source derivation state system contract.
+   */
   waterFeatures?: IAutoMovieWaterFeature[];
-  /** Cloth and cushion domains this shot's source declares. */
+  /**
+   * Cloth and cushion domains this shot's source declares.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `softBodyDomains` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `softBodyDomains` for the spec authoring source derivation state system contract.
+   */
   softBodyDomains?: IAutoMovieSoftBodyDomain[];
-  /** Bindings that hang those domains on a building's own elements. */
+  /**
+   * Bindings that hang those domains on a building's own elements.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `softFurnishings` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `softFurnishings` for the spec authoring source derivation state system contract.
+   */
   softFurnishings?: IAutoMovieSoftFurnishing[];
-  /** Growth recipes for the planting this shot's source declares. */
+  /**
+   * Growth recipes for the planting this shot's source declares.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `plantingDomains` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `plantingDomains` for the spec authoring source derivation state system contract.
+   */
   plantingDomains?: IAutoMoviePlantingDomain[];
-  /** Arrangements those recipes are grown into. */
+  /**
+   * Arrangements those recipes are grown into.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `plantingClusters` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `plantingClusters` for the spec authoring source derivation state system contract.
+   */
   plantingClusters?: IAutoMoviePlantingCluster[];
-  /** Bindings that plant those clusters in a building's own spaces. */
+  /**
+   * Bindings that plant those clusters in a building's own spaces.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `plantingInstallations` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `plantingInstallations` for the spec authoring source derivation state system contract.
+   */
   plantingInstallations?: IAutoMoviePlantingInstallation[];
-  /** Port networks that serve the buildings this shot stages. */
+  /**
+   * Port networks that serve the buildings this shot stages.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `serviceNetworks` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `serviceNetworks` for the spec authoring source derivation state system contract.
+   */
   serviceNetworks?: IAutoMovieServiceNetwork[];
-  /** Event sample times selected inside authoritative event windows. */
+  /**
+   * Event sample times selected inside authoritative event windows.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `eventSamples` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `eventSamples` for the spec authoring source derivation state system contract.
+   */
   eventSamples: Array<{
     /** Exact event-contract id. */
     id: string;
     /** Shot-local time at which the compiler evaluates its predicates. */
     time: number;
   }>;
-  /** Scene derived by staging the source-authored program. */
+  /**
+   * Scene derived by staging the source-authored program.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `scene` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `scene` for the spec authoring source derivation state system contract.
+   */
   scene: IAutoMovieScene;
-  /** Deterministic motions synthesized and assembled by the engine. */
+  /**
+   * Deterministic motions synthesized and assembled by the engine.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `motions` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `motions` for the spec authoring source derivation state system contract.
+   */
   motions: IAutoMovieMotion[];
   /**
    * Optional compact formation-level cues. The compiler materializes an empty
    * list when omitted; source never emits arbitrary per-member curves.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationMotions` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationMotions` for the spec authoring source derivation state system contract.
    */
   formationMotions?: IAutoMovieFormationMotion[];
   /**
    * Optional sparse per-member exceptions inside compact formations. The
    * compiler materializes an empty list when omitted; the cost is the number of
    * exceptions, never the number of members.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationSlotMotions` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationSlotMotions` for the spec authoring source derivation state system contract.
    */
   formationSlotMotions?: IAutoMovieFormationSlotMotion[];
-  /** Optional bounded shot-local deterministic effect cues. */
+  /**
+   * Optional bounded shot-local deterministic effect cues.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `effectCues` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `effectCues` for the spec authoring source derivation state system contract.
+   */
   effectCues?: IAutoMovieShotEffectCue[];
-  /** Engine-compiled shot choreography. */
+  /**
+   * Engine-compiled shot choreography.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `shot` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `shot` for the spec authoring source derivation state system contract.
+   */
   shot: IAutoMovieShot;
 }
 
-/** Fully compiler-owned shot artifact consumed by render and oracle services. */
+/**
+ * Fully compiler-owned shot artifact consumed by render and oracle services.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieCompiledShotSource` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieCompiledShotSource` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieCompiledShotSource extends IAutoMovieShotSourceOutput {
-  /** Models required by this shot. */
+  /**
+   * Models required by this shot.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `models` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `models` for the spec authoring source derivation state system contract.
+   */
   models: IAutoMovieModel[];
-  /** Compact formation runtimes required by this shot. */
+  /**
+   * Compact formation runtimes required by this shot.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formations` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formations` for the spec authoring source derivation state system contract.
+   */
   formations: IAutoMovieCompiledFormation[];
-  /** Compact general instance runtimes placed by the production world. */
+  /**
+   * Compact general instance runtimes placed by the production world.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `instanceSets` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `instanceSets` for the spec authoring source derivation state system contract.
+   */
   instanceSets: IAutoMovieCompiledInstanceSet[];
-  /** Validated compact formation-level cues, empty when source omitted them. */
+  /**
+   * Validated compact formation-level cues, empty when source omitted them.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationMotions` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationMotions` for the spec authoring source derivation state system contract.
+   */
   formationMotions: IAutoMovieFormationMotion[];
-  /** Validated sparse per-member exceptions, empty when source omitted them. */
+  /**
+   * Validated sparse per-member exceptions, empty when source omitted them.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `formationSlotMotions` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `formationSlotMotions` for the spec authoring source derivation state system contract.
+   */
   formationSlotMotions: IAutoMovieFormationSlotMotion[];
-  /** Compiler-owned deterministic effect runtimes. */
+  /**
+   * Compiler-owned deterministic effect runtimes.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `effects` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `effects` for the spec authoring source derivation state system contract.
+   */
   effects: IAutoMovieCompiledEffect[];
 }
 
-/** One scalar predicate and the value measured by the compiler. */
+/**
+ * One scalar predicate and the value measured by the compiler.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieCompiledPredicateResult` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieCompiledPredicateResult` for the validation derived result finding system contract.
+ */
 export interface IAutoMovieCompiledPredicateResult {
-  /** Exact authoritative predicate. */
+  /**
+   * Exact authoritative predicate.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `predicate` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `predicate` for the validation derived result finding system contract.
+   */
   predicate: IAutoMovieShotPredicate;
-  /** Actual sampled value, or null when the operand could not be resolved. */
+  /**
+   * Actual sampled value, or null when the operand could not be resolved.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `actual` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `actual` for the validation derived result finding system contract.
+   */
   actual: number | null;
-  /** Whether the authoritative comparison passed. */
+  /**
+   * Whether the authoritative comparison passed.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `passed` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `passed` for the validation derived result finding system contract.
+   */
   passed: boolean;
 }
 
-/** Compiler-derived realization of one shot contract. */
+/**
+ * Compiler-derived realization of one shot contract.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieCompiledContractRealization` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieCompiledContractRealization` for the validation derived result finding system contract.
+ */
 export interface IAutoMovieCompiledContractRealization {
-  /** Realization format. */
+  /**
+   * Realization format.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `version` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `version` for the validation derived result finding system contract.
+   */
   version: 1;
-  /** Exact compiled shot id. */
+  /**
+   * Exact compiled shot id.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `shot` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `shot` for the validation derived result finding system contract.
+   */
   shot: string;
-  /** Opening-state outcomes sampled at time zero. */
+  /**
+   * Opening-state outcomes sampled at time zero.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `opening` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `opening` for the validation derived result finding system contract.
+   */
   opening: Array<{
     /** Exact state id. */
     id: string;
@@ -1684,7 +3263,12 @@ export interface IAutoMovieCompiledContractRealization {
     /** Whether every predicate passed. */
     passed: boolean;
   }>;
-  /** Closing-state outcomes sampled at the shot duration. */
+  /**
+   * Closing-state outcomes sampled at the shot duration.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `closing` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `closing` for the validation derived result finding system contract.
+   */
   closing: Array<{
     /** Exact state id. */
     id: string;
@@ -1693,7 +3277,12 @@ export interface IAutoMovieCompiledContractRealization {
     /** Whether every predicate passed. */
     passed: boolean;
   }>;
-  /** Semantic event outcomes sampled inside their declared windows. */
+  /**
+   * Semantic event outcomes sampled inside their declared windows.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `events` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `events` for the validation derived result finding system contract.
+   */
   events: Array<{
     /** Exact event id. */
     id: string;
@@ -1704,7 +3293,12 @@ export interface IAutoMovieCompiledContractRealization {
     /** Whether timing and every predicate passed. */
     passed: boolean;
   }>;
-  /** Camera root-projection checks at authoritative review times. */
+  /**
+   * Camera root-projection checks at authoritative review times.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `camera` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `camera` for the validation derived result finding system contract.
+   */
   camera: Array<{
     /** Shot-local sample time. */
     time: number;
@@ -1717,7 +3311,12 @@ export interface IAutoMovieCompiledContractRealization {
     /** Whether every required root point is readable. */
     passed: boolean;
   }>;
-  /** Compiler-materialized formation summaries. */
+  /**
+   * Compiler-materialized formation summaries.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `formations` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `formations` for the validation derived result finding system contract.
+   */
   formations: Array<{
     /** Exact formation id. */
     id: string;
@@ -1732,51 +3331,118 @@ export interface IAutoMovieCompiledContractRealization {
   }>;
 }
 
-/** One realized shot event placed on the production story clock. */
+/**
+ * One realized shot event placed on the production story clock.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `IAutoMovieStorySyncPoint` as the portable data boundary for the story simultaneous events requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `IAutoMovieStorySyncPoint` for the narrative intent story synchronization system contract.
+ */
 export interface IAutoMovieStorySyncPoint {
-  /** Owning shot id. */
+  /**
+   * Owning shot id.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `shot` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `shot` for the narrative intent story synchronization system contract.
+   */
   shot: string;
-  /** Exact event id. */
+  /**
+   * Exact event id.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `event` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `event` for the narrative intent story synchronization system contract.
+   */
   event: string;
   /**
    * Compiler-realized shot-local time in seconds, or null when the owning shot
    * has no current realization for the event.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `localSeconds` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `localSeconds` for the narrative intent story synchronization system contract.
    */
   localSeconds: number | null;
   /**
    * Story-clock time in seconds, or null when the local time is unavailable or
    * the owning shot carries no story-clock pin.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `storySeconds` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `storySeconds` for the narrative intent story synchronization system contract.
    */
   storySeconds: number | null;
 }
 
-/** Measured verdict of one cross-shot story-clock simultaneity claim. */
+/**
+ * Measured verdict of one cross-shot story-clock simultaneity claim.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `IAutoMovieStorySyncOutcome` as the portable data boundary for the story simultaneous events requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `IAutoMovieStorySyncOutcome` for the narrative intent story synchronization system contract.
+ */
 export interface IAutoMovieStorySyncOutcome {
-  /** Every addressed event and where it landed on the story clock. */
+  /**
+   * Every addressed event and where it landed on the story clock.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `points` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `points` for the narrative intent story synchronization system contract.
+   */
   points: IAutoMovieStorySyncPoint[];
   /**
    * Widest gap between two addressed story times in seconds, or null when any
    * operand failed to resolve.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `spreadSeconds` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `spreadSeconds` for the narrative intent story synchronization system contract.
    */
   spreadSeconds: number | null;
-  /** Required tolerance in story seconds. */
+  /**
+   * Required tolerance in story seconds.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `toleranceSeconds` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `toleranceSeconds` for the narrative intent story synchronization system contract.
+   */
   toleranceSeconds: number;
-  /** Whether every point resolved and the widest gap is within tolerance. */
+  /**
+   * Whether every point resolved and the widest gap is within tolerance.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `passed` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `passed` for the narrative intent story synchronization system contract.
+   */
   passed: boolean;
   /**
    * Deterministic one-line account of the measurement, naming the two events
    * that produced the widest gap or the first operand that failed to resolve.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-simultaneous-events Exposes `summary` as the portable data boundary for the story simultaneous events requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-story-synchronization Types `summary` for the narrative intent story synchronization system contract.
    */
   summary: string;
 }
 
-/** Coding-agent-owned module export compiled in a deterministic sandbox. */
+/**
+ * Coding-agent-owned module export compiled in a deterministic sandbox.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `IAutoMovieShotSource` as the portable data boundary for the agent source result link requirement.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `IAutoMovieShotSource` for the spec authoring source derivation state system contract.
+ */
 export interface IAutoMovieShotSource {
-  /** Exact registered shot id selected by the design source pointer. */
+  /**
+   * Exact registered shot id selected by the design source pointer.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `id` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `id` for the spec authoring source derivation state system contract.
+   */
   id: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["id"];
-  /** Exact staged-scene id the returned program must author. */
+  /**
+   * Exact staged-scene id the returned program must author.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `scene` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `scene` for the spec authoring source derivation state system contract.
+   */
   scene: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["scene"];
-  /** Measurable source-owned contract, checked against the design contract. */
+  /**
+   * Measurable source-owned contract, checked against the design contract.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `contract` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `contract` for the spec authoring source derivation state system contract.
+   */
   contract: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["contract"];
   /**
    * Build a thin stage/block/performance program.
@@ -1784,6 +3450,9 @@ export interface IAutoMovieShotSource {
    * The production host, not source code, supplies rig capabilities and runs
    * the engine pipeline that lowers this program into scene, motion, and shot
    * artifacts.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `build` as the portable data boundary for the agent source result link requirement.
+   * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `build` for the spec authoring source derivation state system contract.
    */
   build(context: IAutoMovieShotBuildContext): IAutoMovieProductionShotProgram;
 }
@@ -1793,19 +3462,33 @@ export interface IAutoMovieShotSource {
  *
  * Formation and effect cues remain declarative compiler inputs; dense actor
  * motion, scene, and shot artifacts are deliberately absent.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `IAutoMovieProductionShotProgram` as the portable data boundary for the formation membership requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieProductionShotProgram` for the performance formation hierarchy membership command system contract.
  */
 export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
   /**
    * Source-owned generated models assembled by ordinary TypeScript. Imported
    * assets remain compiler-owned production inputs rather than sandbox output.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `models` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `models` for the performance formation hierarchy membership command system contract.
    */
   models?: IAutoMovieModel[];
-  /** Source-owned semantic props whose model and behavior are validated. */
+  /**
+   * Source-owned semantic props whose model and behavior are validated.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `props` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `props` for the performance formation hierarchy membership command system contract.
+   */
   props?: IAutoMoviePropSpec[];
   /**
    * Code-authored buildings used by the shot. They remain structured in the
    * compiled artifact; visible placements and support space are staged from the
    * same record rather than transcribed into a second design.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `builtEnvironments` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `builtEnvironments` for the performance formation hierarchy membership command system contract.
    */
   builtEnvironments?: IAutoMovieBuiltEnvironment[];
   /**
@@ -1814,33 +3497,89 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * A reading is never promoted into the design. They are here so the compiler
    * can hold each document against the bytes it claims to have observed and
    * refuse a citation whose file has moved on.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `designReferences` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `designReferences` for the performance formation hierarchy membership command system contract.
    */
   designReferences?: IAutoMovieDesignReference[];
-  /** Citations from authored design members back to those observations. */
+  /**
+   * Citations from authored design members back to those observations.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `designEvidence` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `designEvidence` for the performance formation hierarchy membership command system contract.
+   */
   designEvidence?: IAutoMovieDesignEvidence[];
-  /** Phase, alternative and change-impact lineage over those identities. */
+  /**
+   * Phase, alternative and change-impact lineage over those identities.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `designLineages` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `designLineages` for the performance formation hierarchy membership command system contract.
+   */
   designLineages?: IAutoMovieDesignLineage[];
-  /** Independent deterministic fluid domains this shot's source declares. */
+  /**
+   * Independent deterministic fluid domains this shot's source declares.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `fluidDomains` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `fluidDomains` for the performance formation hierarchy membership command system contract.
+   */
   fluidDomains?: IAutoMovieFluidDomain[];
-  /** Bindings that make those domains a building's own water features. */
+  /**
+   * Bindings that make those domains a building's own water features.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `waterFeatures` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `waterFeatures` for the performance formation hierarchy membership command system contract.
+   */
   waterFeatures?: IAutoMovieWaterFeature[];
-  /** Cloth and cushion domains this shot's source declares. */
+  /**
+   * Cloth and cushion domains this shot's source declares.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `softBodyDomains` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `softBodyDomains` for the performance formation hierarchy membership command system contract.
+   */
   softBodyDomains?: IAutoMovieSoftBodyDomain[];
-  /** Bindings that hang those domains on a building's own elements. */
+  /**
+   * Bindings that hang those domains on a building's own elements.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `softFurnishings` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `softFurnishings` for the performance formation hierarchy membership command system contract.
+   */
   softFurnishings?: IAutoMovieSoftFurnishing[];
-  /** Growth recipes for the planting this shot's source declares. */
+  /**
+   * Growth recipes for the planting this shot's source declares.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `plantingDomains` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `plantingDomains` for the performance formation hierarchy membership command system contract.
+   */
   plantingDomains?: IAutoMoviePlantingDomain[];
-  /** Arrangements those recipes are grown into. */
+  /**
+   * Arrangements those recipes are grown into.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `plantingClusters` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `plantingClusters` for the performance formation hierarchy membership command system contract.
+   */
   plantingClusters?: IAutoMoviePlantingCluster[];
-  /** Bindings that plant those clusters in a building's own spaces. */
+  /**
+   * Bindings that plant those clusters in a building's own spaces.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `plantingInstallations` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `plantingInstallations` for the performance formation hierarchy membership command system contract.
+   */
   plantingInstallations?: IAutoMoviePlantingInstallation[];
-  /** Port networks that serve the buildings this shot stages. */
+  /**
+   * Port networks that serve the buildings this shot stages.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `serviceNetworks` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `serviceNetworks` for the performance formation hierarchy membership command system contract.
+   */
   serviceNetworks?: IAutoMovieServiceNetwork[];
   /**
    * Optional source-computed clips cited only by explicit `enact` actions.
    *
    * The host still masks, layers, ROM-checks, and assembles these clips through
    * `performShot`; they are not precompiled shot output.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `clips` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `clips` for the performance formation hierarchy membership command system contract.
    */
   clips?: IAutoMovieMotion[];
   /**
@@ -1853,6 +3592,9 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * the host carries them onto the compiled shot's `lightMotions`. Omitted, the
    * shot's lighting is constant and its compiled artifact is byte-identical to
    * one compiled before this field existed.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `lightMotions` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `lightMotions` for the performance formation hierarchy membership command system contract.
    */
   lightMotions?: IAutoMovieClip[];
   /**
@@ -1876,47 +3618,135 @@ export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
    * shot's own clock, and a driven prop joint must stay inside the travel that
    * prop's profile declares. Omitted, the compiled shot carries exactly the
    * clips the engine baked, as it always did.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `objectMotions` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `objectMotions` for the performance formation hierarchy membership command system contract.
    */
   objectMotions?: IAutoMovieClip[];
-  /** Optional compact formation-level cues. */
+  /**
+   * Optional compact formation-level cues.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `formationMotions` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `formationMotions` for the performance formation hierarchy membership command system contract.
+   */
   formationMotions?: IAutoMovieFormationMotion[];
-  /** Optional sparse per-member exceptions inside compact formations. */
+  /**
+   * Optional sparse per-member exceptions inside compact formations.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `formationSlotMotions` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `formationSlotMotions` for the performance formation hierarchy membership command system contract.
+   */
   formationSlotMotions?: IAutoMovieFormationSlotMotion[];
-  /** Optional bounded shot-local deterministic effect cues. */
+  /**
+   * Optional bounded shot-local deterministic effect cues.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-membership Exposes `effectCues` as the portable data boundary for the formation membership requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `effectCues` for the performance formation hierarchy membership command system contract.
+   */
   effectCues?: IAutoMovieShotEffectCue[];
 }
 
-/** Compact inventory returned by project inspection. */
+/**
+ * Compact inventory returned by project inspection.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieProductionDesignInventory` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieProductionDesignInventory` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieProductionDesignInventory {
-  /** Whether the active production design exists. */
+  /**
+   * Whether the active production design exists.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `production` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `production` for the asset spec generation provider choice system contract.
+   */
   production: boolean;
-  /** Model recipe ids. */
+  /**
+   * Model recipe ids.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `models` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `models` for the asset spec generation provider choice system contract.
+   */
   models: string[];
-  /** Whether the project-shared world design exists. */
+  /**
+   * Whether the project-shared world design exists.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `world` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `world` for the asset spec generation provider choice system contract.
+   */
   world: boolean;
-  /** Formation ids. */
+  /**
+   * Formation ids.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `formations` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `formations` for the asset spec generation provider choice system contract.
+   */
   formations: string[];
-  /** Shot contract ids. */
+  /**
+   * Shot contract ids.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `shots` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `shots` for the asset spec generation provider choice system contract.
+   */
   shots: string[];
-  /** Acceptance scenario ids. */
+  /**
+   * Acceptance scenario ids.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `acceptance` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `acceptance` for the asset spec generation provider choice system contract.
+   */
   acceptance: string[];
 }
 
-/** One discovered renderer-owned evidence bundle. */
+/**
+ * One discovered renderer-owned evidence bundle.
+ *
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `IAutoMovieProductionRenderStatus` as the portable data boundary for the rendering lowering ownership requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `IAutoMovieProductionRenderStatus` for the spec render state isolation system contract.
+ */
 export interface IAutoMovieProductionRenderStatus {
-  /** Project-relative bundle manifest. */
+  /**
+   * Project-relative bundle manifest.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `path` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `path` for the spec render state isolation system contract.
+   */
   path: string;
-  /** Whether the bundle matches current target-local inputs. */
+  /**
+   * Whether the bundle matches current target-local inputs.
+   *
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Exposes `current` as the portable data boundary for the rendering lowering ownership requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Types `current` for the spec render state isolation system contract.
+   */
   current: boolean;
 }
 
-/** Compact project status for CLI and lint consumers. */
+/**
+ * Compact project status for CLI and lint consumers.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieProductionInspection` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieProductionInspection` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieProductionInspection {
-  /** Current project revision. */
+  /**
+   * Current project revision.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `revision` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `revision` for the asset spec generation provider choice system contract.
+   */
   revision: number;
-  /** Typed design inventory. */
+  /**
+   * Typed design inventory.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `design` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `design` for the asset spec generation provider choice system contract.
+   */
   design: IAutoMovieProductionDesignInventory;
-  /** Coding-agent and compiler ownership status. */
+  /**
+   * Coding-agent and compiler ownership status.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `source` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `source` for the asset spec generation provider choice system contract.
+   */
   source: {
     /** Bound source modules that currently exist. */
     bound: string[];
@@ -1925,11 +3755,26 @@ export interface IAutoMovieProductionInspection {
     /** Files under generated absent from its manifest. */
     unownedGenerated: string[];
   };
-  /** Current structural and ownership diagnostics. */
+  /**
+   * Current structural and ownership diagnostics.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `diagnostics` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `diagnostics` for the asset spec generation provider choice system contract.
+   */
   diagnostics: IAutoMovieDiagnostic[];
-  /** Current review ledger projection. */
+  /**
+   * Current review ledger projection.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `reviews` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `reviews` for the asset spec generation provider choice system contract.
+   */
   reviews: IAutoMovieReviewQueue;
-  /** Discovered render manifests. */
+  /**
+   * Discovered render manifests.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `renders` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `renders` for the asset spec generation provider choice system contract.
+   */
   renders: IAutoMovieProductionRenderStatus[];
   /**
    * Current caption readability measurements and outcomes for the film edit.
@@ -1942,61 +3787,157 @@ export interface IAutoMovieProductionInspection {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Keeps measure-only status explicit at the inspection boundary.
    */
   captionReadability: IAutoMovieCaptionReadabilityReport;
-  /** Ordered concrete corrections. */
+  /**
+   * Ordered concrete corrections.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `nextActions` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `nextActions` for the asset spec generation provider choice system contract.
+   */
   nextActions: IAutoMovieProductionNextAction[];
 }
 
-/** One action that moves the production toward a clean compile. */
+/**
+ * One action that moves the production toward a clean compile.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieProductionNextAction` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieProductionNextAction` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieProductionNextAction {
-  /** Owning surface. */
+  /**
+   * Owning surface.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `owner` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `owner` for the asset spec generation provider choice system contract.
+   */
   owner: "design" | "source" | "compile" | "review" | "render";
-  /** Exact package API or coding-agent command to run. */
+  /**
+   * Exact package API or coding-agent command to run.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `action` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `action` for the asset spec generation provider choice system contract.
+   */
   action: string;
-  /** Exact target or artifact to correct. */
+  /**
+   * Exact target or artifact to correct.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `target` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `target` for the asset spec generation provider choice system contract.
+   */
   target: string;
-  /** Why this action is next. */
+  /**
+   * Why this action is next.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `reason` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `reason` for the asset spec generation provider choice system contract.
+   */
   reason: string;
 }
 
-/** Consequences computed before one design mutation is committed. */
+/**
+ * Consequences computed before one design mutation is committed.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieDesignMutationConsequences` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieDesignMutationConsequences` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieDesignMutationConsequences {
-  /** Review targets that become stale. */
+  /**
+   * Review targets that become stale.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `staleReviews` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `staleReviews` for the asset spec generation provider choice system contract.
+   */
   staleReviews: IAutoMovieReviewTarget[];
-  /** Render bundle ids that become stale. */
+  /**
+   * Render bundle ids that become stale.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `staleRenders` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `staleRenders` for the asset spec generation provider choice system contract.
+   */
   staleRenders: string[];
-  /** Generated paths invalidated by the mutation. */
+  /**
+   * Generated paths invalidated by the mutation.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `removedGenerated` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `removedGenerated` for the asset spec generation provider choice system contract.
+   */
   removedGenerated: string[];
 }
 
-/** Result shared by the one-artifact design setters and eraser. */
+/**
+ * Result shared by the one-artifact design setters and eraser.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieDesignMutationOutput` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieDesignMutationOutput` for the validation derived result finding system contract.
+ */
 export interface IAutoMovieDesignMutationOutput {
-  /** Whether the complete mutation was atomically committed. */
+  /**
+   * Whether the complete mutation was atomically committed.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `accepted` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `accepted` for the validation derived result finding system contract.
+   */
   accepted: boolean;
-  /** Current monotonic project revision. */
+  /**
+   * Current monotonic project revision.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `revision` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `revision` for the validation derived result finding system contract.
+   */
   revision: number;
-  /** Exact addressed target. */
+  /**
+   * Exact addressed target.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `target` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `target` for the validation derived result finding system contract.
+   */
   target: IAutoMovieDesignTarget;
-  /** Current target digest, or null when refused or erased. */
+  /**
+   * Current target digest, or null when refused or erased.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `fingerprint` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `fingerprint` for the validation derived result finding system contract.
+   */
   fingerprint: AutoMovieContentDigest | null;
   /**
    * Downstream review, render and generated artifacts made stale or removed by
    * the accepted mutation, or predicted for a refused mutation.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `consequences` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `consequences` for the validation derived result finding system contract.
    */
   consequences: IAutoMovieDesignMutationConsequences;
   /**
    * Validation, reference and downstream diagnostics. A refused mutation never
    * changes tracked state; accepted warnings must be corrected before compile.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `diagnostics` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `diagnostics` for the validation derived result finding system contract.
    */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
-/** One materialized compiler file and its write status. */
+/**
+ * One materialized compiler file and its write status.
+ *
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `IAutoMovieMaterializedFile` as the portable data boundary for the asset generation provider independence requirement.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `IAutoMovieMaterializedFile` for the asset spec generation provider choice system contract.
+ */
 export interface IAutoMovieMaterializedFile extends IAutoMovieGeneratedFile {
-  /** Whether bytes were first created, updated, or already current. */
+  /**
+   * Whether bytes were first created, updated, or already current.
+   *
+   * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-provider-independence Exposes `status` as the portable data boundary for the asset generation provider independence requirement.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-provider-choice Types `status` for the asset spec generation provider choice system contract.
+   */
   status: "created" | "updated" | "unchanged";
 }
 
-/** A compile request with progressively stricter gates. */
+/**
+ * A compile request with progressively stricter gates.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Exposes `IAutoMovieCompileProjectInput` as the portable data boundary for the diagnostics input finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Types `IAutoMovieCompileProjectInput` for the validation input finding system contract.
+ */
 export interface IAutoMovieCompileProjectInput {
   /**
    * Highest atomic gate to enforce. `design` validates the tracked graph only;
@@ -2004,33 +3945,67 @@ export interface IAutoMovieCompileProjectInput {
    * generated artifacts; `review` additionally requires every current review
    * target complete; `final` additionally verifies required renderer-owned
    * deliverables, byte receipts and parsed media facts.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-input-finding Exposes `scope` as the portable data boundary for the diagnostics input finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-input-finding Types `scope` for the validation input finding system contract.
    */
   scope: "design" | "source" | "review" | "final";
 }
 
-/** Result of an atomic production compile. */
+/**
+ * Result of an atomic production compile.
+ *
+ * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `IAutoMovieCompileProjectOutput` as the portable data boundary for the diagnostics derived result finding requirement.
+ * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `IAutoMovieCompileProjectOutput` for the validation derived result finding system contract.
+ */
 export interface IAutoMovieCompileProjectOutput {
   /**
    * Whether every error-level check through the requested scope passed. False
    * means no partial generated publication occurred.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `success` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `success` for the validation derived result finding system contract.
    */
   success: boolean;
-  /** Current project revision. */
+  /**
+   * Current project revision.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `revision` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `revision` for the validation derived result finding system contract.
+   */
   revision: number;
-  /** Compiler and input identity. */
+  /**
+   * Compiler and input identity.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `compiler` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `compiler` for the validation derived result finding system contract.
+   */
   compiler: {
     /** Compiler package version. */
     version: string;
     /** Current design and source fingerprint. */
     inputFingerprint: AutoMovieContentDigest;
   };
-  /** Ordered diagnostics. */
+  /**
+   * Ordered diagnostics.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `diagnostics` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `diagnostics` for the validation derived result finding system contract.
+   */
   diagnostics: IAutoMovieDiagnostic[];
-  /** Current review queue. */
+  /**
+   * Current review queue.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `reviews` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `reviews` for the validation derived result finding system contract.
+   */
   reviews: IAutoMovieReviewQueue;
   /**
    * Compiler-owned files created, updated or already current. Empty for design
    * scope and for every refused atomic compile.
+   *
+   * @evidence requirements/diagnostics/input-and-result-classification.md#diagnostics-derived-result-finding Exposes `materialized` as the portable data boundary for the diagnostics derived result finding requirement.
+   * @evidence specifications/validation-and-diagnostics/classification-and-causality.md#validation-derived-result-finding Types `materialized` for the validation derived result finding system contract.
    */
   materialized: IAutoMovieMaterializedFile[];
 }
@@ -2038,6 +4013,9 @@ export interface IAutoMovieCompileProjectOutput {
 /**
  * Review target forward declaration kept here to avoid requiring callers to
  * import a second module for mutation consequences.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewTarget` as the portable data boundary for the story time state review scope requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewTarget` for the narrative intent temporal state handoff system contract.
  */
 export type IAutoMovieReviewTarget =
   | {
@@ -2083,20 +4061,55 @@ export type IAutoMovieReviewTarget =
       id: string;
     };
 
-/** One target and its derived review state. */
+/**
+ * One target and its derived review state.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueueEntry` as the portable data boundary for the story time state review scope requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueueEntry` for the narrative intent temporal state handoff system contract.
+ */
 export interface IAutoMovieReviewQueueEntry {
-  /** Review target. */
+  /**
+   * Review target.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `target` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `target` for the narrative intent temporal state handoff system contract.
+   */
   target: IAutoMovieReviewTarget;
-  /** Current queue state. */
+  /**
+   * Current queue state.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `state` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `state` for the narrative intent temporal state handoff system contract.
+   */
   state: "missing" | "stale" | "incomplete" | "revise" | "complete";
-  /** Current target fingerprint. */
+  /**
+   * Current target fingerprint.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `currentFingerprint` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `currentFingerprint` for the narrative intent temporal state handoff system contract.
+   */
   currentFingerprint: AutoMovieContentDigest | null;
-  /** Stored review fingerprint when a record exists. */
+  /**
+   * Stored review fingerprint when a record exists.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `storedFingerprint` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `storedFingerprint` for the narrative intent temporal state handoff system contract.
+   */
   storedFingerprint: AutoMovieContentDigest | null;
 }
 
-/** Current review states in deterministic target order. */
+/**
+ * Current review states in deterministic target order.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieReviewQueue` as the portable data boundary for the story time state review scope requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieReviewQueue` for the narrative intent temporal state handoff system contract.
+ */
 export interface IAutoMovieReviewQueue {
-  /** One entry per required review target. */
+  /**
+   * One entry per required review target.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `entries` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `entries` for the narrative intent temporal state handoff system contract.
+   */
   entries: IAutoMovieReviewQueueEntry[];
 }

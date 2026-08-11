@@ -9,12 +9,24 @@
  * so `ingest` fills it straight from the file and the engine's `morphFace`
  * consumes it without further shaping.
  *
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `IAutoMovieFaceTemplate` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `IAutoMovieFaceTemplate` as a coarse proxy parameter under the representation-fidelity ceiling.
  * @author Samchon
  */
 export interface IAutoMovieFaceTemplate {
-  /** Resting vertex positions, xyz triples. */
+  /**
+   * Resting vertex positions, xyz triples.
+   *
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `positions` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `positions` as a coarse proxy parameter under the representation-fidelity ceiling.
+   */
   positions: number[];
 
-  /** Morph-target deltas by parameter name, each `positions.length` long. */
+  /**
+   * Morph-target deltas by parameter name, each `positions.length` long.
+   *
+   * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `targets` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `targets` as a coarse proxy parameter under the representation-fidelity ceiling.
+   */
   targets: Record<string, number[]>;
 }

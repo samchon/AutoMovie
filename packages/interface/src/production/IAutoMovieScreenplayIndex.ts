@@ -5,34 +5,80 @@
  * needs evidence; {@link scene} then names the stable locked production fact. A
  * continuity claim may be cited as additional traceability, but only its
  * declared verification owner can prove it.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieSceneEvidence` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieSceneEvidence` for the narrative intent scene prose index system contract.
  */
 export interface IAutoMovieSceneEvidence {
-  /** Why this downstream record depends on the cited scene. */
+  /**
+   * Why this downstream record depends on the cited scene.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `reason` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `reason` for the narrative intent scene prose index system contract.
+   */
   reason: string;
-  /** Existing screenplay scene id. */
+  /**
+   * Existing screenplay scene id.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `scene` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `scene` for the narrative intent scene prose index system contract.
+   */
   scene: string;
-  /** Existing continuity claim id, or null when no canon claim is cited. */
+  /**
+   * Existing continuity claim id, or null when no canon claim is cited.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `claim` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `claim` for the narrative intent scene prose index system contract.
+   */
   claim?: string;
 }
 
-/** One exact prose beat promised by the treatment. */
+/**
+ * One exact prose beat promised by the treatment.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieTreatmentBeat` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieTreatmentBeat` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieTreatmentBeat {
-  /** Stable beat id used for diagnosis and human navigation. */
+  /**
+   * Stable beat id used for diagnosis and human navigation.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `id` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `id` for the narrative intent scene prose index system contract.
+   */
   id: string;
   /**
    * Exact non-blank prose copied by a scene's `covers` entry.
    *
    * Verbatim matching keeps the machine layer from pretending that a nearby
    * label proves the dramatic promise was actually carried forward.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `text` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `text` for the narrative intent scene prose index system contract.
    */
   text: string;
 }
 
-/** One ordered treatment sequence and its causal beat promises. */
+/**
+ * One ordered treatment sequence and its causal beat promises.
+ *
+ * @evidence requirements/story/treatment-and-sequences.md#story-treatment-coverage Exposes `IAutoMovieTreatmentSequence` as the portable data boundary for the story treatment coverage requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Types `IAutoMovieTreatmentSequence` for the narrative intent sequence refinement system contract.
+ */
 export interface IAutoMovieTreatmentSequence {
-  /** Stable sequence id. */
+  /**
+   * Stable sequence id.
+   *
+   * @evidence requirements/story/treatment-and-sequences.md#story-treatment-coverage Exposes `id` as the portable data boundary for the story treatment coverage requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Types `id` for the narrative intent sequence refinement system contract.
+   */
   id: string;
-  /** Human-readable sequence title. */
+  /**
+   * Human-readable sequence title.
+   *
+   * @evidence requirements/story/treatment-and-sequences.md#story-treatment-coverage Exposes `title` as the portable data boundary for the story treatment coverage requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Types `title` for the narrative intent sequence refinement system contract.
+   */
   title: string;
   /**
    * Project-relative document holding this sequence's prose, when the treatment
@@ -43,40 +89,96 @@ export interface IAutoMovieTreatmentSequence {
    * needs a per-unit address because a folder is only a population of units if
    * each unit is its own file, and the beats of a later sequence are not in the
    * first sequence's file.
+   *
+   * @evidence requirements/story/treatment-and-sequences.md#story-treatment-coverage Exposes `path` as the portable data boundary for the story treatment coverage requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Types `path` for the narrative intent sequence refinement system contract.
    */
   path?: string;
-  /** Ordered beats the screenplay must cover. */
+  /**
+   * Ordered beats the screenplay must cover.
+   *
+   * @evidence requirements/story/treatment-and-sequences.md#story-treatment-coverage Exposes `beats` as the portable data boundary for the story treatment coverage requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-sequence-refinement Types `beats` for the narrative intent sequence refinement system contract.
+   */
   beats: IAutoMovieTreatmentBeat[];
 }
 
-/** One treatment beat cited verbatim by a screenplay scene. */
+/**
+ * One treatment beat cited verbatim by a screenplay scene.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieSceneBeatCoverage` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieSceneBeatCoverage` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieSceneBeatCoverage {
-  /** Why this scene is responsible for the cited dramatic beat. */
+  /**
+   * Why this scene is responsible for the cited dramatic beat.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `reason` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `reason` for the narrative intent scene prose index system contract.
+   */
   reason: string;
-  /** Exact {@link IAutoMovieTreatmentBeat.text} value. */
+  /**
+   * Exact {@link IAutoMovieTreatmentBeat.text} value.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `beat` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `beat` for the narrative intent scene prose index system contract.
+   */
   beat: string;
 }
 
-/** Explicit scene omission in a phase-local coverage ledger. */
+/**
+ * Explicit scene omission in a phase-local coverage ledger.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `IAutoMovieSceneDisposition` as the portable data boundary for the story scene local arc requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieSceneDisposition` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieSceneDisposition {
-  /** Workflow phase whose output intentionally omits the scene. */
+  /**
+   * Workflow phase whose output intentionally omits the scene.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `phase` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `phase` for the narrative intent scene prose index system contract.
+   */
   phase: "screenplay" | "production" | "edit";
-  /** Auditable reason the scene does not require a realized shot in this phase. */
+  /**
+   * Auditable reason the scene does not require a realized shot in this phase.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `reason` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `reason` for the narrative intent scene prose index system contract.
+   */
   reason: string;
 }
 
-/** One indexed screenplay scene whose prose remains in Markdown. */
+/**
+ * One indexed screenplay scene whose prose remains in Markdown.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieScreenplayScene` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieScreenplayScene` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieScreenplayScene {
   /**
    * Stable scene number, such as `SCN-010`.
    *
    * After lock, inserted scenes use the `SCN-A11` form and existing ids remain
    * forever addressable.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `id` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `id` for the narrative intent scene prose index system contract.
    */
   id: string;
-  /** Human title following the exact id token in the Markdown heading. */
+  /**
+   * Human title following the exact id token in the Markdown heading.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `title` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `title` for the narrative intent scene prose index system contract.
+   */
   title: string;
-  /** Active prose scene or retained deletion tombstone. */
+  /**
+   * Active prose scene or retained deletion tombstone.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `status` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `status` for the narrative intent scene prose index system contract.
+   */
   status: "active" | "OMITTED";
   /**
    * Project-relative document holding this scene's prose, when the screenplay
@@ -85,38 +187,94 @@ export interface IAutoMovieScreenplayScene {
    * Omit it while the screenplay is a single document; the index's
    * `screenplay.path` is then the address. An `OMITTED` tombstone has no prose
    * to hold, so it carries no path either.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `path` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `path` for the narrative intent scene prose index system contract.
    */
   path?: string;
-  /** Exact treatment promises this scene realizes. */
+  /**
+   * Exact treatment promises this scene realizes.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `covers` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `covers` for the narrative intent scene prose index system contract.
+   */
   covers: IAutoMovieSceneBeatCoverage[];
-  /** Existing location catalog id for an active scene. */
+  /**
+   * Existing location catalog id for an active scene.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `location` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `location` for the narrative intent scene prose index system contract.
+   */
   location: string | null;
-  /** Explicit local exemption from shot realization, or null when required. */
+  /**
+   * Explicit local exemption from shot realization, or null when required.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `disposition` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `disposition` for the narrative intent scene prose index system contract.
+   */
   disposition: IAutoMovieSceneDisposition | null;
 }
 
-/** Stable lock ledger retained after shooting-oriented downstream work starts. */
+/**
+ * Stable lock ledger retained after shooting-oriented downstream work starts.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieScreenplayLock` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieScreenplayLock` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieScreenplayLock {
-  /** Actor that intentionally activated the soft lock. */
+  /**
+   * Actor that intentionally activated the soft lock.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `activatedBy` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `activatedBy` for the narrative intent scene prose index system contract.
+   */
   activatedBy: "user" | "agent-before-first-shot";
-  /** Why stable numbering is now required by downstream work. */
+  /**
+   * Why stable numbering is now required by downstream work.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `reason` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `reason` for the narrative intent scene prose index system contract.
+   */
   reason: string;
   /**
    * Every scene id present when locked.
    *
    * Entries never disappear. Deleted scenes remain as `OMITTED` scene records;
    * newly inserted scenes use the alpha-prefixed insertion form.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `sceneIds` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `sceneIds` for the narrative intent scene prose index system contract.
    */
   sceneIds: string[];
 }
 
-/** One discovered character, faction, or location grounded in scene evidence. */
+/**
+ * One discovered character, faction, or location grounded in scene evidence.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieScreenplayCatalogEntry` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieScreenplayCatalogEntry` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieScreenplayCatalogEntry {
-  /** Stable catalog identity consumed by downstream design. */
+  /**
+   * Stable catalog identity consumed by downstream design.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `id` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `id` for the narrative intent scene prose index system contract.
+   */
   id: string;
-  /** Human-readable canonical name. */
+  /**
+   * Human-readable canonical name.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `name` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `name` for the narrative intent scene prose index system contract.
+   */
   name: string;
-  /** At least one authored scene proving this subject exists in the film. */
+  /**
+   * At least one authored scene proving this subject exists in the film.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `evidence` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `evidence` for the narrative intent scene prose index system contract.
+   */
   evidence: IAutoMovieSceneEvidence[];
   /**
    * Production-scoped joins to shared downstream design.
@@ -125,6 +283,9 @@ export interface IAutoMovieScreenplayCatalogEntry {
    * location entries bind world landmarks. Keeping these joins in the
    * screenplay index lets two productions cast the same shared design
    * differently.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `bindings` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `bindings` for the narrative intent scene prose index system contract.
    */
   bindings: Array<{
     /** Downstream design family allowed by this catalog section. */
@@ -134,7 +295,12 @@ export interface IAutoMovieScreenplayCatalogEntry {
   }>;
 }
 
-/** Exact evidence owner and selector that alone may prove a continuity claim. */
+/**
+ * Exact evidence owner and selector that alone may prove a continuity claim.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieContinuityProof` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieContinuityProof` for the narrative intent scene prose index system contract.
+ */
 export type IAutoMovieContinuityProof =
   | {
       /** Compiler-measured named contract outcome. */
@@ -162,17 +328,47 @@ export type IAutoMovieContinuityProof =
       scenario: string;
     };
 
-/** One canon fact and the only evidence family allowed to prove it. */
+/**
+ * One canon fact and the only evidence family allowed to prove it.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieContinuityClaim` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieContinuityClaim` for the narrative intent scene prose index system contract.
+ */
 export interface IAutoMovieContinuityClaim {
-  /** Stable claim identity cited by downstream evidence. */
+  /**
+   * Stable claim identity cited by downstream evidence.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `id` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `id` for the narrative intent scene prose index system contract.
+   */
   id: string;
-  /** Human-readable canon fact, such as handedness or persistent weather. */
+  /**
+   * Human-readable canon fact, such as handedness or persistent weather.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `text` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `text` for the narrative intent scene prose index system contract.
+   */
   text: string;
-  /** Evidence family that alone can discharge this claim. */
+  /**
+   * Evidence family that alone can discharge this claim.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `verification` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `verification` for the narrative intent scene prose index system contract.
+   */
   verification: "frame-review" | "geometry" | "acceptance";
-  /** Exact claim-specific evidence selected inside that family. */
+  /**
+   * Exact claim-specific evidence selected inside that family.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `proof` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `proof` for the narrative intent scene prose index system contract.
+   */
   proof: IAutoMovieContinuityProof;
-  /** Authored scenes in which the canon fact must hold. */
+  /**
+   * Authored scenes in which the canon fact must hold.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `evidence` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `evidence` for the narrative intent scene prose index system contract.
+   */
   evidence: IAutoMovieSceneEvidence[];
 }
 
@@ -182,20 +378,43 @@ export interface IAutoMovieContinuityClaim {
  * Markdown remains the human-authored source. This record owns only stable
  * identity, exact coverage, lock history, catalogs and traceability facts that
  * project lint can compare without judging dramatic quality.
+ *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `IAutoMovieScreenplayIndex` as the portable data boundary for the story screenplay index prose requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieScreenplayIndex` for the narrative intent scene prose index system contract.
  */
 export interface IAutoMovieScreenplayIndex {
-  /** Screenplay-index format. */
+  /**
+   * Screenplay-index format.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `version` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `version` for the narrative intent scene prose index system contract.
+   */
   version: 1;
-  /** Exact active production id. */
+  /**
+   * Exact active production id.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `production` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `production` for the narrative intent scene prose index system contract.
+   */
   production: string;
-  /** Project-relative Markdown treatment path. */
+  /**
+   * Project-relative Markdown treatment path.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `treatment` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `treatment` for the narrative intent scene prose index system contract.
+   */
   treatment: {
     /** Human-owned treatment document. */
     path: string;
     /** Ordered sequence and beat promises indexed from that document. */
     sequences: IAutoMovieTreatmentSequence[];
   };
-  /** Project-relative Markdown screenplay and its stable scene ledger. */
+  /**
+   * Project-relative Markdown screenplay and its stable scene ledger.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `screenplay` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `screenplay` for the narrative intent scene prose index system contract.
+   */
   screenplay: {
     /** Human-owned screenplay document. */
     path: string;
@@ -204,7 +423,12 @@ export interface IAutoMovieScreenplayIndex {
     /** Ordered active scenes and `OMITTED` tombstones. */
     scenes: IAutoMovieScreenplayScene[];
   };
-  /** Discovered story identities grounded in authored scene evidence. */
+  /**
+   * Discovered story identities grounded in authored scene evidence.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `catalog` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `catalog` for the narrative intent scene prose index system contract.
+   */
   catalog: {
     /** Characters, independent of model or rig convenience. */
     characters: IAutoMovieScreenplayCatalogEntry[];
@@ -213,6 +437,11 @@ export interface IAutoMovieScreenplayIndex {
     /** Canonical story locations. */
     locations: IAutoMovieScreenplayCatalogEntry[];
   };
-  /** Canon facts with exactly one proof owner each. */
+  /**
+   * Canon facts with exactly one proof owner each.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Exposes `continuity` as the portable data boundary for the story screenplay index prose requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `continuity` for the narrative intent scene prose index system contract.
+   */
   continuity: IAutoMovieContinuityClaim[];
 }

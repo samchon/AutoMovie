@@ -16,25 +16,57 @@ import { IAutoMovieSpace } from "./IAutoMovieSpace";
  * world transforms of its visible elements here, while actors and props remain
  * ordinary scene nodes in that same frame.
  *
+ * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `IAutoMovieScene` as the portable data boundary for the map host scene placement requirement.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `IAutoMovieScene` for the world site host placement failure system contract.
  * @author Samchon
  */
 export interface IAutoMovieScene {
-  /** Stable id. */
+  /**
+   * Stable id.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `id` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `id` for the world site host placement failure system contract.
+   */
   id: string;
 
-  /** Human / LLM readable name. Null if unnamed. */
+  /**
+   * Human / LLM readable name. Null if unnamed.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `name` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `name` for the world site host placement failure system contract.
+   */
   name: string | null;
 
-  /** Placed characters and what each is doing. */
+  /**
+   * Placed characters and what each is doing.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `nodes` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `nodes` for the world site host placement failure system contract.
+   */
   nodes: IAutoMovieSceneNode[];
 
-  /** Cameras; the first is the default render viewpoint when unspecified. */
+  /**
+   * Cameras; the first is the default render viewpoint when unspecified.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `cameras` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `cameras` for the world site host placement failure system contract.
+   */
   cameras: IAutoMovieCamera[];
 
-  /** Scene lights. */
+  /**
+   * Scene lights.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `lights` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `lights` for the world site host placement failure system contract.
+   */
   lights: IAutoMovieLight[];
 
-  /** Optional physical render environment; omitted preserves legacy output. */
+  /**
+   * Optional physical render environment; omitted preserves legacy output.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `environment` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `environment` for the world site host placement failure system contract.
+   */
   environment?: IAutoMovieSceneEnvironment | null;
 
   /**
@@ -47,6 +79,9 @@ export interface IAutoMovieScene {
    * Staging authors it ({@link IAutoMovieStage.space}) and the viewer draws it:
    * each surface becomes a real mesh, so the ground reaches the structural
    * guide passes instead of leaving actors over a void (#1173).
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `space` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `space` for the world site host placement failure system contract.
    */
   space?: IAutoMovieSpace | null;
 
@@ -67,6 +102,9 @@ export interface IAutoMovieScene {
    * Structural guide passes suspend it: a depth or mask pass describes
    * geometry, and fogging it would tint the very channel the pass exists to
    * state exactly.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-host-scene-placement Exposes `fog` as the portable data boundary for the map host scene placement requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-host-placement-failure Types `fog` for the world site host placement failure system contract.
    */
   fog?: IAutoMovieFog | null;
 }

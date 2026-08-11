@@ -5,7 +5,12 @@ import {
 } from "../IAutoMovieProductionCompiler";
 import { AutoMovieContentDigest } from "../IAutoMovieProductionDesign";
 
-/** One compiler-registry target accepted by the evidence capture tool. */
+/**
+ * One compiler-registry target accepted by the evidence capture tool.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `AutoMovieCaptureTarget` as the portable data boundary for the agent mcp host evidence requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `AutoMovieCaptureTarget` for the spec authoring host evidence output system contract.
+ */
 export type AutoMovieCaptureTarget =
   | {
       /** Current compiled shot frame. */
@@ -36,37 +41,112 @@ export type AutoMovieCaptureTarget =
       pass?: AutoMovieGuidePass;
     };
 
-/** Persisted provenance returned for one verified capture. */
+/**
+ * Persisted provenance returned for one verified capture.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `IAutoMovieCaptureReceipt` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `IAutoMovieCaptureReceipt` for the spec authoring knowledge request output system contract.
+ */
 export interface IAutoMovieCaptureReceipt {
-  /** Receipt format. */
+  /**
+   * Receipt format.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `version` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `version` for the spec authoring knowledge request output system contract.
+   */
   version: 1;
-  /** Production namespace used to resolve the registry target. */
+  /**
+   * Production namespace used to resolve the registry target.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `productionId` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `productionId` for the spec authoring knowledge request output system contract.
+   */
   productionId: string;
-  /** Exact evidence target. */
+  /**
+   * Exact evidence target.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `target` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `target` for the spec authoring knowledge request output system contract.
+   */
   target: AutoMovieCaptureTarget;
-  /** Current compiler-owned target registry fingerprint. */
+  /**
+   * Current compiler-owned target registry fingerprint.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `compileFingerprint` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `compileFingerprint` for the spec authoring knowledge request output system contract.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Target-local render fingerprint from the verified bundle manifest. */
+  /**
+   * Target-local render fingerprint from the verified bundle manifest.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `targetFingerprint` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `targetFingerprint` for the spec authoring knowledge request output system contract.
+   */
   targetFingerprint: AutoMovieContentDigest;
-  /** Canonical structured capture-runtime identity. */
+  /**
+   * Canonical structured capture-runtime identity.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `rendererIdentity` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `rendererIdentity` for the spec authoring knowledge request output system contract.
+   */
   rendererIdentity: string;
-  /** Content-addressed project-relative render bundle. */
+  /**
+   * Content-addressed project-relative render bundle.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `bundle` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `bundle` for the spec authoring knowledge request output system contract.
+   */
   bundle: string;
-  /** Verified PNG digest. */
+  /**
+   * Verified PNG digest.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `outputDigest` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `outputDigest` for the spec authoring knowledge request output system contract.
+   */
   outputDigest: AutoMovieContentDigest;
 }
 
-/** Result of producing one actual current evidence frame. */
+/**
+ * Result of producing one actual current evidence frame.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `IAutoMovieCaptureFrame` as the portable data boundary for the agent mcp host evidence requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `IAutoMovieCaptureFrame` for the spec authoring host evidence output system contract.
+ */
 export interface IAutoMovieCaptureFrame {
-  /** True only after decoded pixels and their receipt are atomically committed. */
+  /**
+   * True only after decoded pixels and their receipt are atomically committed.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `captured` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `captured` for the spec authoring host evidence output system contract.
+   */
   captured: boolean;
-  /** Production namespace used for the attempt. */
+  /**
+   * Production namespace used for the attempt.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `productionId` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `productionId` for the spec authoring host evidence output system contract.
+   */
   productionId: string;
-  /** Review surface whose current evidence changed, when captured. */
+  /**
+   * Review surface whose current evidence changed, when captured.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `reviewTarget` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `reviewTarget` for the spec authoring host evidence output system contract.
+   */
   reviewTarget: IAutoMovieReviewTarget | null;
-  /** Verified receipt, or null on refusal. */
+  /**
+   * Verified receipt, or null on refusal.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `receipt` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `receipt` for the spec authoring host evidence output system contract.
+   */
   receipt: IAutoMovieCaptureReceipt | null;
-  /** Verified current PNG, or null on refusal. */
+  /**
+   * Verified current PNG, or null on refusal.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `frame` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `frame` for the spec authoring host evidence output system contract.
+   */
   frame: {
     /** Snapped frame index. */
     index: number;
@@ -83,18 +163,43 @@ export interface IAutoMovieCaptureFrame {
     /** Decoded pixel height. */
     height: number;
   } | null;
-  /** Exact refusal diagnostics, empty on success. */
+  /**
+   * Exact refusal diagnostics, empty on success.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `diagnostics` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `diagnostics` for the spec authoring host evidence output system contract.
+   */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
 export namespace IAutoMovieCaptureFrame {
-  /** One actual evidence-frame request. */
+  /**
+   * One actual evidence-frame request.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `IProps` as the portable data boundary for the agent mcp host evidence requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `IProps` for the spec authoring host evidence output system contract.
+   */
   export interface IProps {
-    /** Compiler-registry target and its frame identity. */
+    /**
+     * Compiler-registry target and its frame identity.
+     *
+     * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `target` as the portable data boundary for the agent mcp host evidence requirement.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `target` for the spec authoring host evidence output system contract.
+     */
     target: AutoMovieCaptureTarget;
-    /** Optional positive integer width no larger than production width. */
+    /**
+     * Optional positive integer width no larger than production width.
+     *
+     * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `width` as the portable data boundary for the agent mcp host evidence requirement.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `width` for the spec authoring host evidence output system contract.
+     */
     width?: number;
-    /** Optional positive integer height no larger than production height. */
+    /**
+     * Optional positive integer height no larger than production height.
+     *
+     * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `height` as the portable data boundary for the agent mcp host evidence requirement.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `height` for the spec authoring host evidence output system contract.
+     */
     height?: number;
   }
 }

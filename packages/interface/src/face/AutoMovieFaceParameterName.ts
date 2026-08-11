@@ -13,6 +13,8 @@
  * deliberately low-dimensional and human-readable, the same design bet as
  * {@link AutoMovieArkitChannel} for expression, applied to face _shape_.
  *
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `AutoMovieFaceParameterName` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `AutoMovieFaceParameterName` as a coarse proxy parameter under the representation-fidelity ceiling.
  * @author Samchon
  */
 export type AutoMovieFaceParameterName =

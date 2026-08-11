@@ -13,12 +13,17 @@ import { AutoMovieHumanoidBone } from "./AutoMovieHumanoidBone";
  * position and orientation together. The engine's `resolveAttachment` computes
  * the child root world transform each frame from the parent's posed skeleton.
  *
+ * @evidence requirements/actors/appearance-costume-and-attachments.md#actor-attachment-contact Exposes `IAutoMovieAttachment` as the portable data boundary for the actor attachment contact requirement.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment Types `IAutoMovieAttachment` for the performance actor appearance costume attachment system contract.
  * @author Samchon
  */
 export interface IAutoMovieAttachment {
   /**
    * The bone on the **parent** skeleton the child rides (e.g. a horse's `chest`
    * standing in for the saddle).
+   *
+   * @evidence requirements/actors/appearance-costume-and-attachments.md#actor-attachment-contact Exposes `parentBone` as the portable data boundary for the actor attachment contact requirement.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment Types `parentBone` for the performance actor appearance costume attachment system contract.
    */
   parentBone: AutoMovieHumanoidBone;
 
@@ -26,6 +31,9 @@ export interface IAutoMovieAttachment {
    * The child root's offset within that bone's local frame: where the seat is
    * relative to the bone origin (translation) and how the child is oriented on
    * it (rotation). Composed onto the bone's world transform.
+   *
+   * @evidence requirements/actors/appearance-costume-and-attachments.md#actor-attachment-contact Exposes `offset` as the portable data boundary for the actor attachment contact requirement.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment Types `offset` for the performance actor appearance costume attachment system contract.
    */
   offset: IAutoMovieTransform;
 }

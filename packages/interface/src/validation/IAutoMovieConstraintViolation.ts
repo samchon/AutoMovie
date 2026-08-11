@@ -14,10 +14,17 @@ import { AutoMovieViolationKind } from "./AutoMovieViolationKind";
  * This object _is_ how a rejected fact or a physics warning becomes an
  * actionable signal rather than a silent failure.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `IAutoMovieConstraintViolation` as the portable data boundary for the diagnostics correction and recheck requirement.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `IAutoMovieConstraintViolation` for the validation diagnostic correction revalidation system contract.
  * @author Samchon
  */
 export interface IAutoMovieConstraintViolation {
-  /** Which tier/category failed; routes the correction. */
+  /**
+   * Which tier/category failed; routes the correction.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `kind` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `kind` for the validation diagnostic correction revalidation system contract.
+   */
   kind: AutoMovieViolationKind;
 
   /**
@@ -30,6 +37,9 @@ export interface IAutoMovieConstraintViolation {
    * it rides the same envelope so the build can surface it and the author (or
    * an action's `physicsIntent` marker) can accept or dismiss it. `"warning"`
    * is the compiler's word for this level, not "advisory".
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `severity` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `severity` for the validation diagnostic correction revalidation system contract.
    */
   severity: "error" | "warning";
 
@@ -37,6 +47,9 @@ export interface IAutoMovieConstraintViolation {
    * JSON path to the offending value, in typia's `$input...` notation (e.g.
    * `$input.joints[3].flexion`). This is the anchor the `// ❌` comment attaches
    * to.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `path` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `path` for the validation diagnostic correction revalidation system contract.
    */
   path: string;
 
@@ -44,6 +57,9 @@ export interface IAutoMovieConstraintViolation {
    * Human / LLM readable statement of what was required, precise enough to act
    * on (e.g. `"leftLowerArm flexion must be within [0, 150]° (anatomical ROM),
    * but was 175"`).
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `expected` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `expected` for the validation diagnostic correction revalidation system contract.
    */
   expected: string;
 
@@ -51,6 +67,9 @@ export interface IAutoMovieConstraintViolation {
    * The actual offending value, carried verbatim for the feedback comment.
    * `unknown` because a violation can occur at any field type; this is the one
    * deliberate `unknown` at the validation boundary.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `value` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `value` for the validation diagnostic correction revalidation system contract.
    */
   value: unknown;
 
@@ -60,6 +79,9 @@ export interface IAutoMovieConstraintViolation {
    * against a 150° max → `25`). Present only for numeric overshoots; lets a
    * corrector judge severity (a 2° graze vs a 90° break) and the `// ❌` comment
    * quote the gap. Absent for non-numeric or non-magnitude violations.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `overshoot` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `overshoot` for the validation diagnostic correction revalidation system contract.
    */
   overshoot?: number;
 
@@ -72,6 +94,9 @@ export interface IAutoMovieConstraintViolation {
    * beat's staging, or the scene's intent; the agent decides which level to
    * fix. Absent when no screenplay tree exists or the feedback is not
    * beat-scoped.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Exposes `node` as the portable data boundary for the diagnostics correction and recheck requirement.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Types `node` for the validation diagnostic correction revalidation system contract.
    */
   node?: string;
 }

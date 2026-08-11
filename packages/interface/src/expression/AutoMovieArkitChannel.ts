@@ -16,6 +16,8 @@
  * Reference: Apple ARKit `ARFaceAnchor.blendShapes`
  * (https://developer.apple.com/documentation/arkit/arfaceanchor/blendshapes).
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-expression-channels Exposes `AutoMovieArkitChannel` as the portable data boundary for the actor expression channels requirement.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Types `AutoMovieArkitChannel` for the performance actor pose gaze expression state system contract.
  * @author Samchon
  */
 export type AutoMovieArkitChannel =

@@ -26,6 +26,8 @@
  *   spray never exceeds it and distance thinning cuts it further.
  * - `textureBytes` and `geometryBytes` are estimated device bytes.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Exposes `AutoMovieRenderMetric` as the portable data boundary for the rendering geometry memory budget requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Types `AutoMovieRenderMetric` for the spec render budget preflight system contract.
  * @author Samchon
  */
 export type AutoMovieRenderMetric =
@@ -52,6 +54,9 @@ export type AutoMovieRenderMetric =
  * as a tuple type and the engine derives its single runtime constant from it.
  * Report order is fixed so two reports of the same production diff line by
  * line.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Exposes `AutoMovieRenderMetricOrder` as the portable data boundary for the rendering runtime budget enforcement requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Types `AutoMovieRenderMetricOrder` for the spec render budget preflight system contract.
  */
 export type AutoMovieRenderMetricOrder = [
   "triangles",
@@ -83,5 +88,8 @@ export type AutoMovieRenderMetricOrder = [
  *
  * Neither is ever collapsed into zero, and neither is ever collapsed into
  * `within`.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-texture-decode Exposes `AutoMovieRenderAnalysisStatus` as the portable data boundary for the rendering texture decode requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `AutoMovieRenderAnalysisStatus` for the spec render material color system contract.
  */
 export type AutoMovieRenderAnalysisStatus = "unsupported" | "not-run";

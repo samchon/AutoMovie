@@ -8,7 +8,12 @@ import {
 } from "./IAutoMovieProductionCompiler";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
-/** A point, actor or named world anchor used by geometry queries. */
+/**
+ * A point, actor or named world anchor used by geometry queries.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `IAutoMovieGeometrySelector` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `IAutoMovieGeometrySelector` for the spec authoring knowledge request output system contract.
+ */
 export type IAutoMovieGeometrySelector =
   | {
       /** Explicit world-space point. */
@@ -31,7 +36,12 @@ export type IAutoMovieGeometrySelector =
       landmark: string;
     };
 
-/** One compact query over the current compiled production. */
+/**
+ * One compact query over the current compiled production.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `AutoMovieGeometryQuery` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `AutoMovieGeometryQuery` for the spec authoring knowledge request output system contract.
+ */
 export type AutoMovieGeometryQuery =
   | {
       /** Distance query. */
@@ -126,17 +136,28 @@ export type AutoMovieGeometryQuery =
  * MCP controllers require one non-union object parameter; the nested request
  * preserves discriminator validation without widening mutually exclusive fields
  * into optional properties.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `IAutoMovieQueryGeometryInput` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `IAutoMovieQueryGeometryInput` for the spec authoring knowledge request output system contract.
  */
 export interface IAutoMovieQueryGeometryInput {
   /**
    * Exact compact query over the current source compile. Selectors refer to
    * compiled node, formation or world identities, not caller-supplied
    * geometry.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `request` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `request` for the spec authoring knowledge request output system contract.
    */
   request: AutoMovieGeometryQuery;
 }
 
-/** Geometry result intentionally remains compact and query-specific. */
+/**
+ * Geometry result intentionally remains compact and query-specific.
+ *
+ * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `IAutoMovieGeometryResult` as the portable data boundary for the agent partial result control requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `IAutoMovieGeometryResult` for the spec authoring partial result checkpoint system contract.
+ */
 export type IAutoMovieGeometryResult =
   | {
       /** Distance in meters. */
@@ -161,22 +182,50 @@ export type IAutoMovieGeometryResult =
       values: Record<string, number | string | boolean>;
     };
 
-/** Result of one geometry query. */
+/**
+ * Result of one geometry query.
+ *
+ * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `IAutoMovieQueryGeometryOutput` as the portable data boundary for the agent partial result control requirement.
+ * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `IAutoMovieQueryGeometryOutput` for the spec authoring partial result checkpoint system contract.
+ */
 export interface IAutoMovieQueryGeometryOutput {
-  /** Echoed query family. */
+  /**
+   * Echoed query family.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `query` as the portable data boundary for the agent partial result control requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `query` for the spec authoring partial result checkpoint system contract.
+   */
   query: AutoMovieGeometryQuery["query"];
-  /** Current compile fingerprint or null before a successful compile. */
+  /**
+   * Current compile fingerprint or null before a successful compile.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `compileFingerprint` as the portable data boundary for the agent partial result control requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `compileFingerprint` for the spec authoring partial result checkpoint system contract.
+   */
   compileFingerprint: AutoMovieContentDigest | null;
   /**
    * Engine-derived result, or null when compilation is missing or stale, a
    * selector is ambiguous, or the requested fact cannot be measured.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `result` as the portable data boundary for the agent partial result control requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `result` for the spec authoring partial result checkpoint system contract.
    */
   result: IAutoMovieGeometryResult | null;
-  /** Exact refusal diagnostics and the correction required before retrying. */
+  /**
+   * Exact refusal diagnostics and the correction required before retrying.
+   *
+   * @evidence requirements/agent-authoring/partial-work.md#agent-partial-result-control Exposes `diagnostics` as the portable data boundary for the agent partial result control requirement.
+   * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Types `diagnostics` for the spec authoring partial result checkpoint system contract.
+   */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
-/** Request one actual current preview frame. */
+/**
+ * Request one actual current preview frame.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `IAutoMoviePreviewFrameInput` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `IAutoMoviePreviewFrameInput` for the spec authoring knowledge request output system contract.
+ */
 export interface IAutoMoviePreviewFrameInput {
   /**
    * Exact shot or isolated compiled-model target.
@@ -184,6 +233,9 @@ export interface IAutoMoviePreviewFrameInput {
    * Whole-film and sequence review compose current shot frames. Asset review
    * supplies the server-required turntable view so the capture receipt proves
    * which angle and pose was inspected.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `target` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `target` for the spec authoring knowledge request output system contract.
    */
   target:
     | {
@@ -208,34 +260,71 @@ export interface IAutoMoviePreviewFrameInput {
    * Finite non-negative shot-local time no later than shot duration. The oracle
    * snaps it to the nearest current production frame. Asset targets derive the
    * canonical turntable time from `angleDeg`, so this field is ignored there.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `time` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `time` for the spec authoring knowledge request output system contract.
    */
   time: number;
-  /** Requested render pass, beauty by default. */
+  /**
+   * Requested render pass, beauty by default.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `pass` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `pass` for the spec authoring knowledge request output system contract.
+   */
   pass?: AutoMovieGuidePass;
   /**
    * Optional positive integer width, no larger than production width. Width
    * times height may not exceed 16,777,216 pixels.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `width` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `width` for the spec authoring knowledge request output system contract.
    */
   width?: number;
   /**
    * Optional positive integer height, no larger than production height. Width
    * times height may not exceed 16,777,216 pixels.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `height` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `height` for the spec authoring knowledge request output system contract.
    */
   height?: number;
 }
 
-/** An actual PNG frame bound to a compile and render bundle. */
+/**
+ * An actual PNG frame bound to a compile and render bundle.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `IAutoMoviePreviewFrameOutput` as the portable data boundary for the agent mcp contract guidance requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `IAutoMoviePreviewFrameOutput` for the spec authoring knowledge request output system contract.
+ */
 export interface IAutoMoviePreviewFrameOutput {
   /**
    * True only after current decodable, dimension-matching PNG bytes with
    * visible pixel variance are verified and committed to a render bundle.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `captured` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `captured` for the spec authoring knowledge request output system contract.
    */
   captured: boolean;
-  /** Current compile fingerprint. */
+  /**
+   * Current compile fingerprint.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `compileFingerprint` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `compileFingerprint` for the spec authoring knowledge request output system contract.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Project-relative content-addressed render bundle, or null on any refusal. */
+  /**
+   * Project-relative content-addressed render bundle, or null on any refusal.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `renderBundle` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `renderBundle` for the spec authoring knowledge request output system contract.
+   */
   renderBundle: string | null;
-  /** Verified frame metadata or null on refusal. */
+  /**
+   * Verified frame metadata or null on refusal.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `frame` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `frame` for the spec authoring knowledge request output system contract.
+   */
   frame: {
     /** Zero-based frame index. */
     index: number;
@@ -254,22 +343,47 @@ export interface IAutoMoviePreviewFrameOutput {
     /** Pixel height. */
     height: number;
   } | null;
-  /** Exact capture refusal diagnostics and correction, empty on success. */
+  /**
+   * Exact capture refusal diagnostics and correction, empty on success.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Exposes `diagnostics` as the portable data boundary for the agent mcp contract guidance requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Types `diagnostics` for the spec authoring knowledge request output system contract.
+   */
   diagnostics: IAutoMovieDiagnostic[];
 }
 
-/** Versioned, comparable identity of the host capture runtime. */
+/**
+ * Versioned, comparable identity of the host capture runtime.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `IAutoMovieCaptureRuntimeIdentity` as the portable data boundary for the rendering identity mask channels requirement.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `IAutoMovieCaptureRuntimeIdentity` for the spec render pass products system contract.
+ */
 export interface IAutoMovieCaptureRuntimeIdentity {
-  /** Capture identity schema and semantics. */
+  /**
+   * Capture identity schema and semantics.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `protocolVersion` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `protocolVersion` for the spec render pass products system contract.
+   */
   protocolVersion: "automovie.capture-runtime.v1";
-  /** Exact Playwright package that selected and launched the browser. */
+  /**
+   * Exact Playwright package that selected and launched the browser.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `playwright` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `playwright` for the spec render pass products system contract.
+   */
   playwright: {
     /** Package name. */
     package: "playwright";
     /** Installed package version. */
     version: string;
   };
-  /** Exact browser executable provenance. */
+  /**
+   * Exact browser executable provenance.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `browser` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `browser` for the spec render pass products system contract.
+   */
   browser: {
     /** Browser product family. */
     product: "chromium" | "chrome" | "msedge";
@@ -282,21 +396,36 @@ export interface IAutoMovieCaptureRuntimeIdentity {
     /** SHA-256 of the executable, unavailable only for a system channel. */
     executableDigest: AutoMovieContentDigest | null;
   };
-  /** Host operating-system boundary. */
+  /**
+   * Host operating-system boundary.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `platform` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `platform` for the spec render pass products system contract.
+   */
   platform: {
     /** Node platform name. */
     os: string;
     /** Node architecture name. */
     arch: string;
   };
-  /** Browser launch and raster mode. */
+  /**
+   * Browser launch and raster mode.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `mode` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `mode` for the spec render pass products system contract.
+   */
   mode: {
     /** Explicit headless implementation. */
     headless: "chromium";
     /** Exact viewport scale. */
     deviceScaleFactor: number;
   };
-  /** Requested and actual WebGL identity. */
+  /**
+   * Requested and actual WebGL identity.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Exposes `graphics` as the portable data boundary for the rendering identity mask channels requirement.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Types `graphics` for the spec render pass products system contract.
+   */
   graphics: {
     /** Requested ANGLE/backend selection. */
     requestedBackend: string;
@@ -309,11 +438,26 @@ export interface IAutoMovieCaptureRuntimeIdentity {
   };
 }
 
-/** Content-addressed manifest for preview and production frames. */
+/**
+ * Content-addressed manifest for preview and production frames.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `IAutoMovieRenderBundleManifest` as the portable data boundary for the agent mcp content supply refusal requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `IAutoMovieRenderBundleManifest` for the spec authoring tool content side effect invariant system contract.
+ */
 export interface IAutoMovieRenderBundleManifest {
-  /** Bundle manifest format. */
+  /**
+   * Bundle manifest format.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `version` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `version` for the spec authoring tool content side effect invariant system contract.
+   */
   version: 3;
-  /** Asset, shot, sequence, or film render target. */
+  /**
+   * Asset, shot, sequence, or film render target.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `target` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `target` for the spec authoring tool content side effect invariant system contract.
+   */
   target:
     | {
         /** Isolated compiled model turntable. */
@@ -345,20 +489,43 @@ export interface IAutoMovieRenderBundleManifest {
         /** Film id. */
         id: string;
       };
-  /** Compile fingerprint whose bytes were rendered. */
+  /**
+   * Compile fingerprint whose bytes were rendered.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `compileFingerprint` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `compileFingerprint` for the spec authoring tool content side effect invariant system contract.
+   */
   compileFingerprint: AutoMovieContentDigest;
-  /** Canonical JSON encoding of one validated capture runtime identity. */
+  /**
+   * Canonical JSON encoding of one validated capture runtime identity.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `rendererIdentity` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `rendererIdentity` for the spec authoring tool content side effect invariant system contract.
+   */
   rendererIdentity: string;
   /**
    * Target-local render identity. Unlike the aggregate compile fingerprint,
    * this changes only when this target's compiled bytes or declared viewer,
    * capture, configuration, or asset inputs change. `rendererIdentity`
    * separately distinguishes the browser and graphics backend.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `targetFingerprint` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `targetFingerprint` for the spec authoring tool content side effect invariant system contract.
    */
   targetFingerprint: AutoMovieContentDigest;
-  /** Deterministic render specification. */
+  /**
+   * Deterministic render specification.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `renderSpec` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `renderSpec` for the spec authoring tool content side effect invariant system contract.
+   */
   renderSpec: IAutoMovieRenderSpec;
-  /** Verified PNG frames in the bundle. */
+  /**
+   * Verified PNG frames in the bundle.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal Exposes `frames` as the portable data boundary for the agent mcp content supply refusal requirement.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Types `frames` for the spec authoring tool content side effect invariant system contract.
+   */
   frames: Array<{
     /** Zero-based frame index. */
     index: number;
@@ -385,42 +552,30 @@ export interface IAutoMovieRenderBundleManifest {
  *
  * @evidence requirements/rendering/validation.md#rendering-validation-status Distinguishes available evidence from an explicitly unperformed observation.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves whether the selected host could produce the requested capture observation.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `AutoMovieCaptureObservation` as the portable data boundary for the agent mcp host evidence requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `AutoMovieCaptureObservation` for the spec authoring host evidence output system contract.
  */
 export type AutoMovieCaptureObservation<T> =
   | {
-      /**
-       * The host produced the observation.
-       *
-       * @evidence requirements/rendering/validation.md#rendering-validation-status Records a positive observation state.
-       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Carries a host-produced observation without changing it.
-       */
+      /** The host produced the observation. */
       status: "available";
-      /**
-       * Host-produced observation value.
-       *
-       * @evidence requirements/rendering/validation.md#rendering-validation-status Carries the evidence associated with the available state.
-       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves the observation returned by the selected capture host.
-       */
+      /** Host-produced observation value. */
       value: T;
     }
   | {
-      /**
-       * The host did not perform the observation.
-       *
-       * @evidence requirements/rendering/validation.md#rendering-validation-status Records non-execution instead of treating it as a pass.
-       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Preserves an unavailable host observation as an explicit state.
-       */
+      /** The host did not perform the observation. */
       status: "not-run";
-      /**
-       * Non-blank reason the observation was not performed.
-       *
-       * @evidence requirements/rendering/validation.md#rendering-validation-status Makes the absent observation auditable.
-       * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Carries the host boundary that prevented observation.
-       */
+      /** Non-blank reason the observation was not performed. */
       reason: string;
     };
 
-/** Host-owned adapter that captures a current compiled production frame. */
+/**
+ * Host-owned adapter that captures a current compiled production frame.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Exposes `AutoMovieProductionFrameCapture` as the portable data boundary for the agent mcp host evidence requirement.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Types `AutoMovieProductionFrameCapture` for the spec authoring host evidence output system contract.
+ */
 export type AutoMovieProductionFrameCapture = (
   input: IAutoMoviePreviewFrameInput & {
     /** Active project root. */
@@ -442,17 +597,11 @@ export type AutoMovieProductionFrameCapture = (
   /**
    * Counts observed from the same drawn shot frame, or an explicit reason the
    * selected capture path could not obtain them.
-   *
-   * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Carries actual-frame cost evidence alongside the captured pixels.
-   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the observation used to audit the planned render report.
    */
   observation: AutoMovieCaptureObservation<IAutoMovieRenderObservation>;
   /**
    * Semantic mask palette sidecar for the same shot capture, or an explicit
    * reason it was not produced.
-   *
-   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Carries the identity map beside the frame whose colors it explains.
-   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Joins the mask product with its semantic sidecar.
    */
   maskSidecar: AutoMovieCaptureObservation<IAutoMovieSemanticMask>;
 }>;

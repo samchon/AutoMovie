@@ -17,43 +17,92 @@
  * The engine ships no substances. Names, classifications, and values are the
  * production's to author, because a catalogue of real-world materials is
  * content, and content is the customer's.
+ *
+ * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `IAutoMovieMaterialSubstance` as the portable data boundary for the interior surface substance product requirement.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `IAutoMovieMaterialSubstance` for the interior space surface assembly region system contract.
  */
 export interface IAutoMovieMaterialSubstance {
-  /** Stable id so a layer can cite this substance. */
+  /**
+   * Stable id so a layer can cite this substance.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `id` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `id` for the interior space surface assembly region system contract.
+   */
   id: string;
 
-  /** Human / LLM readable label, or `null` when unnamed. */
+  /**
+   * Human / LLM readable label, or `null` when unnamed.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `name` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `name` for the interior space surface assembly region system contract.
+   */
   name: string | null;
 
   /**
    * Open classification such as `stone`, `timber`, `metal`, `board`, or a
    * production-specific family. Open on purpose: an era, a fiction, or a
    * speculative building brings its own families.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `classification` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `classification` for the interior space surface assembly region system contract.
    */
   classification: string;
 
-  /** Bulk density in kg/m³, strictly above zero, or `null` when unmeasured. */
+  /**
+   * Bulk density in kg/m³, strictly above zero, or `null` when unmeasured.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `density` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `density` for the interior space surface assembly region system contract.
+   */
   density: number | null;
 
-  /** Thermal conductivity in W/(m·K), non-negative, or `null`. */
+  /**
+   * Thermal conductivity in W/(m·K), non-negative, or `null`.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `thermalConductivity` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `thermalConductivity` for the interior space surface assembly region system contract.
+   */
   thermalConductivity: number | null;
 
-  /** Specific heat capacity in J/(kg·K), strictly above zero, or `null`. */
+  /**
+   * Specific heat capacity in J/(kg·K), strictly above zero, or `null`.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `specificHeat` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `specificHeat` for the interior space surface assembly region system contract.
+   */
   specificHeat: number | null;
 
-  /** Fractional sound absorption in `[0, 1]`, or `null`. */
+  /**
+   * Fractional sound absorption in `[0, 1]`, or `null`.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `soundAbsorption` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `soundAbsorption` for the interior space surface assembly region system contract.
+   */
   soundAbsorption: number | null;
 
   /**
    * Dimensionless water-vapour resistance factor (µ), at least `1`, or `null`.
    * `1` is still air; a vapour barrier is in the tens of thousands.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `vapourResistance` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `vapourResistance` for the interior space surface assembly region system contract.
    */
   vapourResistance: number | null;
 
-  /** Expected service life in years, strictly above zero, or `null`. */
+  /**
+   * Expected service life in years, strictly above zero, or `null`.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `serviceLife` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `serviceLife` for the interior space surface assembly region system contract.
+   */
   serviceLife: number | null;
 
-  /** {@link IAutoMovieMaterial} id this substance is shown with, or `null`. */
+  /**
+   * {@link IAutoMovieMaterial} id this substance is shown with, or `null`.
+   *
+   * @evidence requirements/interior/surface-assemblies.md#interior-surface-substance-product Exposes `surface` as the portable data boundary for the interior surface substance product requirement.
+   * @evidence specifications/interior-space/surface-assemblies.md#interior-space-surface-assembly-region Types `surface` for the interior space surface assembly region system contract.
+   */
   surface: string | null;
 }
 
@@ -64,9 +113,17 @@ export interface IAutoMovieMaterialSubstance {
  * layer, whether the layer is meant to be seen, and whether it continues around
  * the reveal of an opening cut through the host, because those three facts are
  * what decide the finished dimension a performer actually touches.
+ *
+ * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `IAutoMovieMaterialLayer` as the portable data boundary for the interior material visual physical requirement.
+ * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `IAutoMovieMaterialLayer` for the interior space material facts analysis boundary system contract.
  */
 export interface IAutoMovieMaterialLayer {
-  /** Stable id, unique inside one assembly. */
+  /**
+   * Stable id, unique inside one assembly.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `id` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `id` for the interior space material facts analysis boundary system contract.
+   */
   id: string;
 
   /**
@@ -74,6 +131,9 @@ export interface IAutoMovieMaterialLayer {
    * `finish`. Roles are matched across a junction to decide which layers
    * continue and which stop, so the same word must mean the same thing on both
    * sides of that junction; nothing else reads it.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `role` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `role` for the interior space material facts analysis boundary system contract.
    */
   role: string;
 
@@ -84,13 +144,26 @@ export interface IAutoMovieMaterialLayer {
    * ventilated air gap: it has thickness and deliberately no substance. A
    * `membrane` is a continuous sheet whose job is to be unbroken rather than
    * thick, so it carries a substance and may measure zero.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `substance` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `substance` for the interior space material facts analysis boundary system contract.
    */
   substance: "solid" | "cavity" | "membrane";
 
-  /** Layer thickness in metres along the assembly's stacking axis. */
+  /**
+   * Layer thickness in metres along the assembly's stacking axis.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `thickness` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `thickness` for the interior space material facts analysis boundary system contract.
+   */
   thickness: number;
 
-  /** {@link IAutoMovieMaterialSubstance} id, or `null` for a cavity. */
+  /**
+   * {@link IAutoMovieMaterialSubstance} id, or `null` for a cavity.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `material` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `material` for the interior space material facts analysis boundary system contract.
+   */
   material: string | null;
 
   /**
@@ -99,6 +172,9 @@ export interface IAutoMovieMaterialLayer {
    * A finish must be reachable from an exposed end of the stack. A finish
    * buried behind another layer is a defect, not a decoration, and so is a
    * second finish laid over the first.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `finish` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `finish` for the interior space material facts analysis boundary system contract.
    */
   finish: boolean;
 
@@ -111,6 +187,9 @@ export interface IAutoMovieMaterialLayer {
    * Wrapping is a run that starts at a face: a layer cannot turn the corner
    * into the reveal from behind one that already ended at the jamb, so setting
    * this on a buried layer is a defect rather than a deeper lining.
+   *
+   * @evidence requirements/interior/materials-and-physical-properties.md#interior-material-visual-physical Exposes `wrapsOpening` as the portable data boundary for the interior material visual physical requirement.
+   * @evidence specifications/interior-space/materials-style-and-art.md#interior-space-material-facts-analysis-boundary Types `wrapsOpening` for the interior space material facts analysis boundary system contract.
    */
   wrapsOpening: boolean;
 }
@@ -134,20 +213,41 @@ export interface IAutoMovieMaterialLayer {
  *
  * The engine ships no build-ups. A layered wall, a tiled floor, and a coffered
  * ceiling are all the same record with the production's own layers in it.
+ *
+ * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `IAutoMovieMaterialAssembly` as the portable data boundary for the building exterior assembly quantity representation requirement.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `IAutoMovieMaterialAssembly` for the building envelope material assembly failures system contract.
  */
 export interface IAutoMovieMaterialAssembly {
-  /** Stable assembly id. */
+  /**
+   * Stable assembly id.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `id` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `id` for the building envelope material assembly failures system contract.
+   */
   id: string;
 
-  /** Host-local axis the layers stack along. */
+  /**
+   * Host-local axis the layers stack along.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `axis` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `axis` for the building envelope material assembly failures system contract.
+   */
   axis: "x" | "y" | "z";
 
-  /** Whether layer order advances along the axis (`positive`) or against it. */
+  /**
+   * Whether layer order advances along the axis (`positive`) or against it.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `sense` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `sense` for the building envelope material assembly failures system contract.
+   */
   sense: "positive" | "negative";
 
   /**
    * Signed metre offset from the host's reference plane to the outer face of
    * the first layer. Zero puts the stack's first face on the reference plane.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `offset` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `offset` for the building envelope material assembly failures system contract.
    */
   offset: number;
 
@@ -157,6 +257,9 @@ export interface IAutoMovieMaterialAssembly {
    * `first` is the face the first layer presents, `last` the face the final
    * layer presents. An exposed end must be finished and a concealed end must
    * not be, which is how a missing finish and a wasted one are both caught.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `faces` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `faces` for the building envelope material assembly failures system contract.
    */
   faces: {
     /** Exposure of the face the first layer presents. */
@@ -165,6 +268,11 @@ export interface IAutoMovieMaterialAssembly {
     last: "exposed" | "concealed";
   };
 
-  /** Ordered layers, the first one at the reference face. Never empty. */
+  /**
+   * Ordered layers, the first one at the reference face. Never empty.
+   *
+   * @evidence requirements/building-exterior/materials-and-assemblies.md#building-exterior-assembly-quantity-representation Exposes `layers` as the portable data boundary for the building exterior assembly quantity representation requirement.
+   * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-material-assembly-failures Types `layers` for the building envelope material assembly failures system contract.
+   */
   layers: IAutoMovieMaterialLayer[];
 }

@@ -10,6 +10,8 @@
  * Recording the origin as a discriminated value keeps that branch explicit
  * rather than inferred from whether a mesh happens to be present.
  *
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-gltf-scene Exposes whether a model was authored locally or adopted as an external 3D scene.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives Types the explicit generated-versus-imported pipeline branch.
  * @author Samchon
  */
 export type AutoMovieAssetOrigin =

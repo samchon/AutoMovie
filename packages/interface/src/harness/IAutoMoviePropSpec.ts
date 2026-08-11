@@ -17,6 +17,8 @@ import { IAutoMovieModel } from "../model/IAutoMovieModel";
  * {@link bindProfile}), and its drivers couple them (a handle that mirrors the
  * hinge). A prop with no moving parts leaves the whole articulation `null`.
  *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `IAutoMoviePropArticulation` as the portable data boundary for the motion object authored vocabulary requirement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `IAutoMoviePropArticulation` for the performance interaction attachment object handoff system contract.
  * @author Samchon
  */
 export interface IAutoMoviePropArticulation {
@@ -34,15 +36,26 @@ export interface IAutoMoviePropArticulation {
    * of this prop's own parts and refuses a part claimed by two joints, since a
    * part rides one frame. A joint that only positions other joints leaves it
    * `null`.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `nodes` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `nodes` for the performance interaction attachment object handoff system contract.
    */
   nodes: IAutoMovieNode[];
 
-  /** The declared capability: limits and drivers over the joint nodes. */
+  /**
+   * The declared capability: limits and drivers over the joint nodes.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `profile` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `profile` for the performance interaction attachment object handoff system contract.
+   */
   profile: IAutoMovieProfile;
 
   /**
    * The application of that profile onto this prop's nodes: every semantic key
    * the profile references maps to one of {@link nodes} via `boneMap`.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `binding` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `binding` for the performance interaction attachment object handoff system contract.
    */
   binding: IAutoMovieProfileBinding;
 }
@@ -61,10 +74,17 @@ export interface IAutoMoviePropArticulation {
  * articulation, when present, must bind its profile onto the declared nodes
  * without a dangling reference.
  *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `IAutoMoviePropSpec` as the portable data boundary for the motion object authored vocabulary requirement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `IAutoMoviePropSpec` for the performance interaction attachment object handoff system contract.
  * @author Samchon
  */
 export interface IAutoMoviePropSpec {
-  /** The scene node this prop will occupy (the staging join key). */
+  /**
+   * The scene node this prop will occupy (the staging join key).
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `node` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `node` for the performance interaction attachment object handoff system contract.
+   */
   node: string;
 
   /**
@@ -73,16 +93,27 @@ export interface IAutoMoviePropSpec {
    * `"generated"` for a prop drawn from those parts and `"imported"` for one
    * drawing a registered external appearance, which {@link modelRef} names and
    * gates.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `model` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `model` for the performance interaction attachment object handoff system contract.
    */
   model: IAutoMovieModel;
 
-  /** Self-declared moving parts, or `null` for a rigid prop. */
+  /**
+   * Self-declared moving parts, or `null` for a rigid prop.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `articulation` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `articulation` for the performance interaction attachment object handoff system contract.
+   */
   articulation: IAutoMoviePropArticulation | null;
 
   /**
    * Optional semantic placement constraints checked beside the staged node.
    * Omission preserves the original prop contract: the prop is forged and
    * staged without claiming a building relation or a keep-out volume.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `placement` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `placement` for the performance interaction attachment object handoff system contract.
    */
   placement?: IAutoMoviePropPlacement;
 
@@ -135,6 +166,9 @@ export interface IAutoMoviePropSpec {
    * performer and goes through `forgeCast`. Whether those digests match bytes
    * on disk, and whether the reference resolves to a registration at all, are
    * the compiler's own gates, where the registry and the files are.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Exposes `modelRef` as the portable data boundary for the motion object authored vocabulary requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `modelRef` for the performance interaction attachment object handoff system contract.
    */
   modelRef?: string | null;
 }
@@ -148,6 +182,8 @@ export interface IAutoMoviePropSpec {
  * without changing the result. A staged set piece supplies the prop's world
  * TRS, and every model-local box below is read through that same transform.
  *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `IAutoMoviePropPlacement` as the portable data boundary for the story scene local arc requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMoviePropPlacement` for the narrative intent scene prose index system contract.
  * @author Samchon
  */
 export interface IAutoMoviePropPlacement {
@@ -158,6 +194,9 @@ export interface IAutoMoviePropPlacement {
    * `fill-opening` relation may be declared, because a prop occupies one
    * logical space and fills one passage; every other kind may repeat (a cabinet
    * standing against two walls, a rail socketed into three posts).
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `relations` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `relations` for the narrative intent scene prose index system contract.
    */
   relations: IAutoMoviePropRelation[];
 
@@ -169,10 +208,18 @@ export interface IAutoMoviePropPlacement {
    * exact bound of the prop's own parts. Declaring one states a use volume the
    * geometry does not show (a chair needs the room its seat sweeps back into)
    * or trims a decorative overhang that is not really in the way.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `footprint` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `footprint` for the narrative intent scene prose index system contract.
    */
   footprint: IAutoMoviePropBox | null;
 
-  /** Model-local keep-out boxes for doors, drawers, service, and use. */
+  /**
+   * Model-local keep-out boxes for doors, drawers, service, and use.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `clearance` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `clearance` for the narrative intent scene prose index system contract.
+   */
   clearance: IAutoMovieClearanceBox[];
 }
 
@@ -204,16 +251,33 @@ export interface IAutoMoviePropPlacement {
  * a socket or a hook, so they are checked as citations and left unmeasured
  * rather than judged against a frame that never said where the contact is.
  *
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `IAutoMoviePropRelation` as the portable data boundary for the camera depth of field boundary requirement.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `IAutoMoviePropRelation` for the clv focus intent appearance boundary system contract.
  * @author Samchon
  */
 export interface IAutoMoviePropRelation {
-  /** Which contact semantics this relation asserts. */
+  /**
+   * Which contact semantics this relation asserts.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `kind` as the portable data boundary for the camera depth of field boundary requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `kind` for the clv focus intent appearance boundary system contract.
+   */
   kind: AutoMoviePropRelationKind;
-  /** The stable spatial, element, or affordance id the relation cites. */
+  /**
+   * The stable spatial, element, or affordance id the relation cites.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `target` as the portable data boundary for the camera depth of field boundary requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `target` for the clv focus intent appearance boundary system contract.
+   */
   target: IAutoMoviePropRelationTarget;
 }
 
-/** The closed set of contact semantics a prop placement can assert. */
+/**
+ * The closed set of contact semantics a prop placement can assert.
+ *
+ * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-contact-contract Exposes `AutoMoviePropRelationKind` as the portable data boundary for the staging interaction contact contract requirement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `AutoMoviePropRelationKind` for the performance interaction attachment object handoff system contract.
+ */
 export type AutoMoviePropRelationKind =
   | "in-space"
   | "on-support"
@@ -229,6 +293,8 @@ export type AutoMoviePropRelationKind =
  * building graph owns spaces, elements, boundaries, openings, and support
  * patches, and a prop spec owns its affordances.
  *
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-refusal Exposes `IAutoMoviePropRelationTarget` as the portable data boundary for the camera target refusal requirement.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-diagnostics-refusal Types `IAutoMoviePropRelationTarget` for the clv focus diagnostics refusal system contract.
  * @author Samchon
  */
 export type IAutoMoviePropRelationTarget =
@@ -239,63 +305,183 @@ export type IAutoMoviePropRelationTarget =
   | IAutoMoviePropRelationTarget.ISurface
   | IAutoMoviePropRelationTarget.IPropAffordance;
 export namespace IAutoMoviePropRelationTarget {
-  /** A logical space of a built environment. */
+  /**
+   * A logical space of a built environment.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `ISpace` as the portable data boundary for the camera focus distance requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `ISpace` for the clv focus intent appearance boundary system contract.
+   */
   export interface ISpace {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `kind` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `kind` for the clv focus intent appearance boundary system contract.
+     */
     kind: "space";
-    /** Built environment id. */
+    /**
+     * Built environment id.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `environment` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `environment` for the clv focus intent appearance boundary system contract.
+     */
     environment: string;
-    /** Logical space id inside that environment. */
+    /**
+     * Logical space id inside that environment.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `space` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `space` for the clv focus intent appearance boundary system contract.
+     */
     space: string;
   }
 
-  /** A visible or grouping element of a built environment. */
+  /**
+   * A visible or grouping element of a built environment.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `IElement` as the portable data boundary for the camera focus distance requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `IElement` for the clv focus intent appearance boundary system contract.
+   */
   export interface IElement {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `kind` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `kind` for the clv focus intent appearance boundary system contract.
+     */
     kind: "element";
-    /** Built environment id. */
+    /**
+     * Built environment id.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `environment` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `environment` for the clv focus intent appearance boundary system contract.
+     */
     environment: string;
-    /** Element id inside that environment. */
+    /**
+     * Element id inside that environment.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `element` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `element` for the clv focus intent appearance boundary system contract.
+     */
     element: string;
   }
 
-  /** A separation between spaces, such as a wall, floor, or ceiling. */
+  /**
+   * A separation between spaces, such as a wall, floor, or ceiling.
+   *
+   * @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-voice-text-separation Exposes `IBoundary` as the portable data boundary for the story dialogue voice text separation requirement.
+   * @evidence specifications/narrative-and-intent/dialogue-language-theme-and-meaning.md#narrative-intent-dialogue-voice-text-boundary Types `IBoundary` for the narrative intent dialogue voice text boundary system contract.
+   */
   export interface IBoundary {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-voice-text-separation Exposes `kind` as the portable data boundary for the story dialogue voice text separation requirement.
+     * @evidence specifications/narrative-and-intent/dialogue-language-theme-and-meaning.md#narrative-intent-dialogue-voice-text-boundary Types `kind` for the narrative intent dialogue voice text boundary system contract.
+     */
     kind: "boundary";
-    /** Built environment id. */
+    /**
+     * Built environment id.
+     *
+     * @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-voice-text-separation Exposes `environment` as the portable data boundary for the story dialogue voice text separation requirement.
+     * @evidence specifications/narrative-and-intent/dialogue-language-theme-and-meaning.md#narrative-intent-dialogue-voice-text-boundary Types `environment` for the narrative intent dialogue voice text boundary system contract.
+     */
     environment: string;
-    /** Boundary id inside that environment. */
+    /**
+     * Boundary id inside that environment.
+     *
+     * @evidence requirements/story/dialogue-language-and-silence.md#story-dialogue-voice-text-separation Exposes `boundary` as the portable data boundary for the story dialogue voice text separation requirement.
+     * @evidence specifications/narrative-and-intent/dialogue-language-theme-and-meaning.md#narrative-intent-dialogue-voice-text-boundary Types `boundary` for the narrative intent dialogue voice text boundary system contract.
+     */
     boundary: string;
   }
 
-  /** A passage cut through a boundary. */
+  /**
+   * A passage cut through a boundary.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `IOpening` as the portable data boundary for the camera depth of field boundary requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `IOpening` for the clv focus intent appearance boundary system contract.
+   */
   export interface IOpening {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `kind` as the portable data boundary for the camera depth of field boundary requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `kind` for the clv focus intent appearance boundary system contract.
+     */
     kind: "opening";
-    /** Built environment id. */
+    /**
+     * Built environment id.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `environment` as the portable data boundary for the camera depth of field boundary requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `environment` for the clv focus intent appearance boundary system contract.
+     */
     environment: string;
-    /** Opening id inside that environment. */
+    /**
+     * Opening id inside that environment.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-depth-of-field-boundary Exposes `opening` as the portable data boundary for the camera depth of field boundary requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `opening` for the clv focus intent appearance boundary system contract.
+     */
     opening: string;
   }
 
-  /** A support patch assigned to a logical space. */
+  /**
+   * A support patch assigned to a logical space.
+   *
+   * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `ISurface` as the portable data boundary for the camera focus distance requirement.
+   * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `ISurface` for the clv focus intent appearance boundary system contract.
+   */
   export interface ISurface {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `kind` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `kind` for the clv focus intent appearance boundary system contract.
+     */
     kind: "surface";
-    /** Built environment id. */
+    /**
+     * Built environment id.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `environment` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `environment` for the clv focus intent appearance boundary system contract.
+     */
     environment: string;
-    /** Support surface id inside that environment. */
+    /**
+     * Support surface id inside that environment.
+     *
+     * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-focus-distance Exposes `surface` as the portable data boundary for the camera focus distance requirement.
+     * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Types `surface` for the clv focus intent appearance boundary system contract.
+     */
     surface: string;
   }
 
-  /** A contact point declared by another prop's model. */
+  /**
+   * A contact point declared by another prop's model.
+   *
+   * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-contact-contract Exposes `IPropAffordance` as the portable data boundary for the staging interaction contact contract requirement.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `IPropAffordance` for the performance interaction attachment object handoff system contract.
+   */
   export interface IPropAffordance {
-    /** Discriminator. */
+    /**
+     * Discriminator.
+     *
+     * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-contact-contract Exposes `kind` as the portable data boundary for the staging interaction contact contract requirement.
+     * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `kind` for the performance interaction attachment object handoff system contract.
+     */
     kind: "prop-affordance";
-    /** Scene node id of the supporting or hosting prop. */
+    /**
+     * Scene node id of the supporting or hosting prop.
+     *
+     * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-contact-contract Exposes `prop` as the portable data boundary for the staging interaction contact contract requirement.
+     * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `prop` for the performance interaction attachment object handoff system contract.
+     */
     prop: string;
-    /** Affordance id declared by that prop's model. */
+    /**
+     * Affordance id declared by that prop's model.
+     *
+     * @evidence requirements/staging/interactions-and-choreography.md#staging-interaction-contact-contract Exposes `affordance` as the portable data boundary for the staging interaction contact contract requirement.
+     * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Types `affordance` for the performance interaction attachment object handoff system contract.
+     */
     affordance: string;
   }
 }
@@ -307,12 +493,24 @@ export namespace IAutoMoviePropRelationTarget {
  * (translation, unit quaternion, per-axis scale) and takes the world bounds of
  * the result, so a rotated box widens rather than being silently re-fitted.
  *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `IAutoMoviePropBox` as the portable data boundary for the story scene local arc requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMoviePropBox` for the narrative intent scene prose index system contract.
  * @author Samchon
  */
 export interface IAutoMoviePropBox {
-  /** Local minimum corner. */
+  /**
+   * Local minimum corner.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `min` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `min` for the narrative intent scene prose index system contract.
+   */
   min: IAutoMovieVector3;
-  /** Local maximum corner, strictly greater on every axis. */
+  /**
+   * Local maximum corner, strictly greater on every axis.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `max` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `max` for the narrative intent scene prose index system contract.
+   */
   max: IAutoMovieVector3;
 }
 
@@ -322,9 +520,16 @@ export interface IAutoMoviePropBox {
  * The validator compares the transformed keep-out volume against the
  * transformed occupancy of every other uniquely staged, valid prop.
  *
+ * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `IAutoMovieClearanceBox` as the portable data boundary for the story scene local arc requirement.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `IAutoMovieClearanceBox` for the narrative intent scene prose index system contract.
  * @author Samchon
  */
 export interface IAutoMovieClearanceBox extends IAutoMoviePropBox {
-  /** Stable clearance identity, unique within the prop. */
+  /**
+   * Stable clearance identity, unique within the prop.
+   *
+   * @evidence requirements/story/scenes-and-observable-action.md#story-scene-local-arc Exposes `id` as the portable data boundary for the story scene local arc requirement.
+   * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Types `id` for the narrative intent scene prose index system contract.
+   */
   id: string;
 }

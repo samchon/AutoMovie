@@ -30,6 +30,8 @@ import { IAutoMovieMeasureDistanceRequest } from "./IAutoMovieMeasureDistanceReq
  * any depth, not a fixed pipeline step. Keeping them explicit and exhaustible
  * stops the model inventing context it could have asked the engine for.
  *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Restricts context and geometry reads to explicit requests against the host's current project state.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Defines the request side of the host-produced context and resolved-geometry evidence boundary.
  * @author Samchon
  */
 export type IAutoMovieContextRequest =

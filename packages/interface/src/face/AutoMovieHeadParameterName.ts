@@ -13,6 +13,8 @@
  * MediaPipe-topology vocabulary; this set targets the full-head topology and is
  * the one the head editor exposes.
  *
+ * @evidence requirements/actors/representation-tiers-and-fidelity-boundary.md#actor-direct-authoring-ceiling Keeps `AutoMovieHeadParameterName` inside the bounded direct-authoring proxy surface instead of claiming realistic likeness.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-representation-fidelity-boundary Types `AutoMovieHeadParameterName` as a coarse proxy parameter under the representation-fidelity ceiling.
  * @author Samchon
  */
 export type AutoMovieHeadParameterName =

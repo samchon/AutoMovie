@@ -31,13 +31,25 @@ import { IAutoMovieLight } from "./IAutoMovieLight";
  * which to read a story-clock source, and inventing one (the epoch, say) would
  * put every unpinned shot under the same light and call it a fact.
  *
+ * @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Exposes `IAutoMovieProductionLighting` as the portable data boundary for the lighting link resolution requirement.
+ * @evidence specifications/camera-light-and-visibility/practical-shaping-and-linking.md#clv-light-link-resolution Types `IAutoMovieProductionLighting` for the clv light link resolution system contract.
  * @author Samchon
  */
 export interface IAutoMovieProductionLighting {
-  /** Stable id. */
+  /**
+   * Stable id.
+   *
+   * @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Exposes `id` as the portable data boundary for the lighting link resolution requirement.
+   * @evidence specifications/camera-light-and-visibility/practical-shaping-and-linking.md#clv-light-link-resolution Types `id` for the clv light link resolution system contract.
+   */
   id: string;
 
-  /** Human / LLM readable name. Null if unnamed. */
+  /**
+   * Human / LLM readable name. Null if unnamed.
+   *
+   * @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Exposes `name` as the portable data boundary for the lighting link resolution requirement.
+   * @evidence specifications/camera-light-and-visibility/practical-shaping-and-linking.md#clv-light-link-resolution Types `name` for the clv light link resolution system contract.
+   */
   name: string | null;
 
   /**
@@ -49,6 +61,9 @@ export interface IAutoMovieProductionLighting {
    * that already reads, validates, renders or exports an {@link IAutoMovieLight}
    * reads this one too, and a source can be promoted from a scene to the
    * production or demoted back without changing shape.
+   *
+   * @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Exposes `lights` as the portable data boundary for the lighting link resolution requirement.
+   * @evidence specifications/camera-light-and-visibility/practical-shaping-and-linking.md#clv-light-link-resolution Types `lights` for the clv light link resolution system contract.
    */
   lights: IAutoMovieLight[];
 
@@ -64,6 +79,9 @@ export interface IAutoMovieProductionLighting {
    * Empty means the production declares sources that never change, which is
    * still worth stating: every shot then inherits one agreed source instead of
    * restaging its own.
+   *
+   * @evidence requirements/lighting/shape-filters-and-linking.md#lighting-link-resolution Exposes `motions` as the portable data boundary for the lighting link resolution requirement.
+   * @evidence specifications/camera-light-and-visibility/practical-shaping-and-linking.md#clv-light-link-resolution Types `motions` for the clv light link resolution system contract.
    */
   motions: IAutoMovieClip[];
 }

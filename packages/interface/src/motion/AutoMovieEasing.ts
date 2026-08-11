@@ -10,6 +10,8 @@
  * The named curves cover the common ergonomic cases; `cubicBezier` is the
  * escape hatch for an explicit curve (control points carried on the keyframe).
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Exposes `AutoMovieEasing` as the portable data boundary for the motion interpolation requirement.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Types `AutoMovieEasing` for the performance motion clip keytime interpolation system contract.
  * @author Samchon
  */
 export type AutoMovieEasing =

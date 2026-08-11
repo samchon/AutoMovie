@@ -20,18 +20,40 @@ import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
  * (equivalent to 0, and the only valid value for an axis the joint cannot move;
  * the ROM verifier rejects a non-null angle on a `null` constraint axis).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `IAutoMovieJointPose` as the portable data boundary for the actor joint range constraints requirement.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `IAutoMovieJointPose` for the performance rig rom control driver graph system contract.
  * @author Samchon
  */
 export interface IAutoMovieJointPose {
-  /** Which bone this articulation applies to. */
+  /**
+   * Which bone this articulation applies to.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `bone` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `bone` for the performance rig rom control driver graph system contract.
+   */
   bone: AutoMovieHumanoidBone;
 
-  /** Sagittal angle: flexion (+) / extension (−). `null` = unchanged. */
+  /**
+   * Sagittal angle: flexion (+) / extension (−). `null` = unchanged.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `flexion` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `flexion` for the performance rig rom control driver graph system contract.
+   */
   flexion: number | null;
 
-  /** Frontal angle: abduction (+) / adduction (−). `null` = unchanged. */
+  /**
+   * Frontal angle: abduction (+) / adduction (−). `null` = unchanged.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `abduction` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `abduction` for the performance rig rom control driver graph system contract.
+   */
   abduction: number | null;
 
-  /** Axial angle: external (+) / internal (−) rotation. `null` = unchanged. */
+  /**
+   * Axial angle: external (+) / internal (−) rotation. `null` = unchanged.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `twist` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `twist` for the performance rig rom control driver graph system contract.
+   */
   twist: number | null;
 }

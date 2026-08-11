@@ -7,6 +7,8 @@
  * enum does; new kinds (stairs beyond the ramp approximation, water, …) are
  * additive.
  *
+ * @evidence requirements/interior/floors-and-raised-floors.md#interior-floor-finish-regions Exposes `AutoMovieSurfaceKind` as the portable data boundary for the interior floor finish regions requirement.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-floor-raised-floor-contract Types `AutoMovieSurfaceKind` for the interior space floor raised floor contract system contract.
  * @author Samchon
  */
 export type AutoMovieSurfaceKind = "floor" | "platform" | "ramp";

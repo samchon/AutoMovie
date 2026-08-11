@@ -16,14 +16,34 @@ import type {
 } from "./IAutoMovieProductionSound";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
-/** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
+/**
+ * A SHA-256 value computed by AutoMovie from authoritative project bytes.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `AutoMovieContentDigest` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `AutoMovieContentDigest` for the narrative intent story design ownership system contract.
+ */
 export type AutoMovieContentDigest = `sha256:${string}`;
 
-/** One deliverable the production must eventually materialize. */
+/**
+ * One deliverable the production must eventually materialize.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieProductionDeliverable` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieProductionDeliverable` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieProductionDeliverable {
-  /** Non-blank id, unique within this production. */
+  /**
+   * Non-blank id, unique within this production.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Output class. */
+  /**
+   * Output class.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `kind` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `kind` for the narrative intent story design ownership system contract.
+   */
   kind: "preview" | "feature" | "guide-pass" | "captions" | "audio-mix";
   /**
    * Structural render pass owned by a guide-pass deliverable.
@@ -31,9 +51,17 @@ export interface IAutoMovieProductionDeliverable {
    * Omitted only for legacy production records, which retain the pose default.
    * New production contracts declare one pass per guide deliverable so depth,
    * normal, mask, outline, and pose outputs have distinct typed ownership.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `pass` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `pass` for the narrative intent story design ownership system contract.
    */
   pass?: Exclude<AutoMovieGuidePass, "beauty">;
-  /** Whether final compilation requires the deliverable. */
+  /**
+   * Whether final compilation requires the deliverable.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `required` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `required` for the narrative intent story design ownership system contract.
+   */
   required: boolean;
 }
 
@@ -49,21 +77,42 @@ export interface IAutoMovieProductionDeliverable {
  *
  * Declaring the clock is what makes shot pins and cross-shot criteria legal. A
  * production that asserts nothing about story time omits it and is unaffected.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieStoryClock` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieStoryClock` for the narrative intent story design ownership system contract.
  */
 export interface IAutoMovieStoryClock {
-  /** Story-clock unit. */
+  /**
+   * Story-clock unit.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `units` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `units` for the narrative intent story design ownership system contract.
+   */
   units: "second";
-  /** Non-blank statement of what story time zero denotes. */
+  /**
+   * Non-blank statement of what story time zero denotes.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `epoch` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `epoch` for the narrative intent story design ownership system contract.
+   */
   epoch: string;
 }
 
-/** Where one shot sits on the production story clock. */
+/**
+ * Where one shot sits on the production story clock.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotStoryTime` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotStoryTime` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieShotStoryTime {
   /**
    * Finite story-clock time in seconds at shot-local time zero.
    *
    * Two shots sharing an origin open on the same story moment however far apart
    * the cut places them, and a shot cut later may carry the smaller origin.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `originSeconds` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `originSeconds` for the narrative intent story design ownership system contract.
    */
   originSeconds: number;
   /**
@@ -72,6 +121,9 @@ export interface IAutoMovieShotStoryTime {
    *
    * A shot that stretches or compresses time still maps onto the clock: the
    * story time of shot-local `t` is `originSeconds + t * rate`.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `rate` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `rate` for the narrative intent story design ownership system contract.
    */
   rate?: number;
 }
@@ -83,9 +135,9 @@ export interface IAutoMovieShotStoryTime {
  * language, segmentation revision, and every boundary; omission means metrics
  * may be reported but no readability verdict may be inferred.
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes readability thresholds a production-owned, opt-in decision.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries the versioned segmentation and numeric boundaries used by validation.
+ * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityProfile {
   /**
@@ -116,19 +168,9 @@ export interface IAutoMovieCaptionReadabilityProfile {
    * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes grapheme measurement reproducible without hardcoding one Unicode family.
    */
   segmentation: {
-    /**
-     * Non-blank algorithm identity supported by the selected validator.
-     *
-     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Leaves segmentation selection to the production.
-     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Identifies the measurement algorithm used by validation.
-     */
+    /** Non-blank algorithm identity supported by the selected validator. */
     algorithm: string;
-    /**
-     * Exact algorithm or segmentation-data revision.
-     *
-     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Prevents an unversioned segmentation rule from changing results.
-     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Binds measurements to the declared segmentation revision.
-     */
+    /** Exact algorithm or segmentation-data revision. */
     version: string;
   };
   /**
@@ -171,9 +213,9 @@ export interface IAutoMovieCaptionReadabilityProfile {
 /**
  * One production-owned numeric caption boundary.
  *
- * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes equality behavior part of the declared threshold.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries each numeric value with inclusive or exclusive semantics.
+ * @author Samchon
  */
 export interface IAutoMovieCaptionReadabilityBoundary {
   /**
@@ -192,17 +234,40 @@ export interface IAutoMovieCaptionReadabilityBoundary {
   inclusive: boolean;
 }
 
-/** Global frame and art-direction invariants for one production. */
+/**
+ * Global frame and art-direction invariants for one production.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Defines the typed production-design root as authored project source rather than treating references or renders as design authority.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-authority-boundary Provides the public boundary for the production's canonical design decisions and their downstream consumers.
+ */
 export interface IAutoMovieProductionDesign {
-  /** Non-blank stable production id; film-level acceptance targets use it. */
+  /**
+   * Non-blank stable production id; film-level acceptance targets use it.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `id` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `id` for the narrative intent graphics style exceptions system contract.
+   */
   id: string;
-  /** Non-blank human-facing title. */
+  /**
+   * Non-blank human-facing title.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `title` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `title` for the narrative intent graphics style exceptions system contract.
+   */
   title: string;
-  /** Non-blank one-sentence narrative promise. */
+  /**
+   * Non-blank one-sentence narrative promise.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `logline` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `logline` for the narrative intent graphics style exceptions system contract.
+   */
   logline: string;
   /**
    * Finite intended finished runtime in seconds, strictly above zero and on the
    * production frame clock.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `targetRuntimeSeconds` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `targetRuntimeSeconds` for the narrative intent graphics style exceptions system contract.
    */
   targetRuntimeSeconds: number;
   /**
@@ -212,6 +277,9 @@ export interface IAutoMovieProductionDesign {
    * delivery keeps that output as technical truth and additionally requires a
    * required feature plus a receipt-bound rendition review for every delivered
    * shot.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `visualDelivery` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `visualDelivery` for the narrative intent graphics style exceptions system contract.
    */
   visualDelivery: "deterministic" | "repainted";
   /**
@@ -219,6 +287,9 @@ export interface IAutoMovieProductionDesign {
    *
    * Omitted means the production asserts nothing about story time; shots may
    * then carry no pin and no cross-shot criterion is admissible.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `storyClock` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `storyClock` for the narrative intent graphics style exceptions system contract.
    */
   storyClock?: IAutoMovieStoryClock;
   /**
@@ -236,6 +307,9 @@ export interface IAutoMovieProductionDesign {
    * ({@link IAutoMovieShotStoryTime}); a shot still states its own local light
    * on top. Optional and purely additive: a production declaring none is
    * unaffected in every respect, and so is any shot carrying no story pin.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `lighting` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `lighting` for the narrative intent graphics style exceptions system contract.
    */
   lighting?: IAutoMovieProductionLighting;
   /**
@@ -250,6 +324,9 @@ export interface IAutoMovieProductionDesign {
    * render job checks an artifact against the one it targets. Optional and
    * purely additive: a production declaring none behaves exactly as it did
    * before the field existed.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `renderBudgets` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `renderBudgets` for the narrative intent graphics style exceptions system contract.
    */
   renderBudgets?: IAutoMovieRenderBudget[];
   /**
@@ -260,7 +337,10 @@ export interface IAutoMovieProductionDesign {
    * the legacy source-computed motion path.
    *
    * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes every external-motion adoption decision explicit and optional.
-   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Carries the selected source, member, target, and mode into compilation.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-selection-override-resolution Carries the selected source, member, target, and mode into compilation.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `externalMotions` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `externalMotions` for the narrative intent graphics style exceptions system contract.
    */
   externalMotions?: IAutoMovieExternalMotionAdoption[];
   /**
@@ -283,19 +363,9 @@ export interface IAutoMovieProductionDesign {
    * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Carries only selected bounded models into deterministic planning.
    */
   sound?: {
-    /**
-     * Selected direct-path propagation model.
-     *
-     * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Declares sound speed, distance gain, spectral treatment, and cut policy together.
-     * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Supplies the deterministic emitter-to-listener calculation inputs.
-     */
+    /** Selected direct-path propagation model. */
     propagation?: IAutoMovieSoundPropagationProfile;
-    /**
-     * Selected bounded derived or externally adopted room-response source.
-     *
-     * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-provider-neutrality Leaves derived-versus-adopted response selection to the production.
-     * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#bounded-acoustic-response-and-provider-adoption Carries explicit adopted-byte and room-mapping provenance when selected.
-     */
+    /** Selected bounded derived or externally adopted room-response source. */
     acousticResponse?: IAutoMovieAcousticResponseProfile;
   };
   /**
@@ -311,9 +381,17 @@ export interface IAutoMovieProductionDesign {
    * wall is a mass the building would appear to own. Optional and purely
    * additive: a production declaring none runs no analysis and is otherwise
    * unaffected.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `environmentContext` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `environmentContext` for the narrative intent graphics style exceptions system contract.
    */
   environmentContext?: IAutoMovieEnvironmentContext;
-  /** Deterministic frame clock and raster format. */
+  /**
+   * Deterministic frame clock and raster format.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `frameFormat` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `frameFormat` for the narrative intent graphics style exceptions system contract.
+   */
   frameFormat: {
     /**
      * Integer pixel width from 16 through 16,384. Width times height may not
@@ -330,7 +408,12 @@ export interface IAutoMovieProductionDesign {
     /** Output color space. */
     colorSpace: "srgb";
   };
-  /** Bounded visual grammar rather than screenplay prose. */
+  /**
+   * Bounded visual grammar rather than screenplay prose.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `artDirection` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `artDirection` for the narrative intent graphics style exceptions system contract.
+   */
   artDirection: {
     /** Foundation visual style. */
     style: "primitive-3d";
@@ -341,7 +424,12 @@ export interface IAutoMovieProductionDesign {
     /** Non-blank rules for conveying scale with primitive geometry. */
     scaleGrammar: string;
   };
-  /** At least one output, with every deliverable id unique. */
+  /**
+   * At least one output, with every deliverable id unique.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-exceptions Exposes `deliverables` as the portable data boundary for the production design art direction exceptions requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-graphics-style-exceptions Types `deliverables` for the narrative intent graphics style exceptions system contract.
+   */
   deliverables: IAutoMovieProductionDeliverable[];
 }
 
@@ -352,24 +440,55 @@ export interface IAutoMovieProductionDesign {
  * viewer automatically selects anonymous formation tiers from distance and
  * projected contribution with hysteresis; ordinary scene nodes do not yet
  * switch model tiers automatically.
+ *
+ * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-reference-realization Exposes `IAutoMovieModelLodRecipe` as the portable data boundary for the production design reference realization requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-reference-realization Types `IAutoMovieModelLodRecipe` for the narrative intent design reference realization system contract.
  */
 export interface IAutoMovieModelLodRecipe {
-  /** Detail tier. */
+  /**
+   * Detail tier.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-reference-realization Exposes `tier` as the portable data boundary for the production design reference realization requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-reference-realization Types `tier` for the narrative intent design reference realization system contract.
+   */
   tier: "hero" | "near" | "far";
   /**
    * Positive maximum viewing distance in meters, strictly increasing between
    * tiers, or null only on the final unbounded tier.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-reference-realization Exposes `maxDistance` as the portable data boundary for the production design reference realization requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-reference-realization Types `maxDistance` for the narrative intent design reference realization system contract.
    */
   maxDistance: number | null;
-  /** Existing recipe id used at this tier; self-reference is allowed. */
+  /**
+   * Existing recipe id used at this tier; self-reference is allowed.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-reference-realization Exposes `recipe` as the portable data boundary for the production design reference realization requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-reference-realization Types `recipe` for the narrative intent design reference realization system contract.
+   */
   recipe: string;
 }
 
-/** A bounded primitive model recipe compiled into deterministic model data. */
+/**
+ * A bounded primitive model recipe compiled into deterministic model data.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieModelRecipe` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieModelRecipe` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieModelRecipe {
-  /** Non-blank stable recipe id, unique under portable case folding. */
+  /**
+   * Non-blank stable recipe id, unique under portable case folding.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Production role. */
+  /**
+   * Production role.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `role` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `role` for the narrative intent story design ownership system contract.
+   */
   role: "performer" | "mount" | "prop" | "set";
   /**
    * Non-blank id of the registered archetype that builds this recipe.
@@ -378,12 +497,18 @@ export interface IAutoMovieModelRecipe {
    * production registers and refuses a recipe naming nothing registered. It is
    * opaque here on purpose: which archetypes exist is a decision of that
    * catalogue, not of this contract.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `archetype` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `archetype` for the narrative intent story design ownership system contract.
    */
   archetype: string;
   /**
    * Registered external appearance asset, or omitted for compiler-generated
    * primitive geometry. The active production asset ledger must carry one
    * matching `model-recipe` use for this exact recipe id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `asset` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `asset` for the narrative intent story design ownership system contract.
    */
   asset?: string;
   /**
@@ -393,17 +518,26 @@ export interface IAutoMovieModelRecipe {
    * are accepted at all, and the value kind and range of each. Read
    * `MODEL_RECIPE`, then the definition itself; an unsupported key is refused
    * rather than stored.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `parameters` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `parameters` for the narrative intent story design ownership system contract.
    */
   parameters: Record<string, number | string | boolean>;
   /**
    * Exactly one named six-digit `#RRGGBB` material color in the foundation
    * compiler. Multiple semantic part materials remain unsupported and are
    * refused instead of silently discarded.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `palette` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `palette` for the narrative intent story design ownership system contract.
    */
   palette: Record<string, string>;
   /**
    * Non-empty unique tiers ordered `hero`, `near`, `far`, with increasing
    * positive distances and an optional unbounded tier only at the end.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `lod` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `lod` for the narrative intent story design ownership system contract.
    */
   lod: IAutoMovieModelLodRecipe[];
   /**
@@ -412,6 +546,9 @@ export interface IAutoMovieModelRecipe {
    * The registered archetype decides which labels are meaningful and the
    * compiler refuses any other; declaring one it does implement still leaves
    * source to author the motion that earns it.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `capabilities` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `capabilities` for the narrative intent story design ownership system contract.
    */
   capabilities: string[];
   /**
@@ -420,6 +557,9 @@ export interface IAutoMovieModelRecipe {
    * A bone is accepted only when the registered archetype's builder actually
    * materializes it, so an archetype without a compiler-owned skeleton accepts
    * none. The materializer does not create attached scene nodes automatically.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `attachments` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `attachments` for the narrative intent story design ownership system contract.
    */
   attachments: Array<{
     /** Non-blank attachment id, unique within the recipe. */
@@ -431,11 +571,19 @@ export interface IAutoMovieModelRecipe {
    * Declarative capability profiles copied onto the compiler-owned runtime
    * model. Omitted means that trait-gated engine verbs such as mounting are
    * unavailable.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `profiles` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `profiles` for the narrative intent story design ownership system contract.
    */
   profiles?: IAutoMovieProfile[];
 }
 
-/** Compact deterministic placement algorithm for a general instance set. */
+/**
+ * Compact deterministic placement algorithm for a general instance set.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieInstanceSetLayout` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieInstanceSetLayout` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieInstanceSetLayout =
   | {
       /** Rectangular grid. */
@@ -480,53 +628,153 @@ export type IAutoMovieInstanceSetLayout =
       transforms: IAutoMovieExplicitInstanceTransform[];
     };
 
-/** One exact source-authored instance transform and sparse override. */
+/**
+ * One exact source-authored instance transform and sparse override.
+ *
+ * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `IAutoMovieExplicitInstanceTransform` as the portable data boundary for the map coordinate transform precision requirement.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `IAutoMovieExplicitInstanceTransform` for the world site transform lineage precision system contract.
+ */
 export interface IAutoMovieExplicitInstanceTransform {
-  /** Stable non-blank identity unique inside the set. */
+  /**
+   * Stable non-blank identity unique inside the set.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `id` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `id` for the world site transform lineage precision system contract.
+   */
   id: string;
-  /** Translation relative to the set anchor, in meters. */
+  /**
+   * Translation relative to the set anchor, in meters.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `translation` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `translation` for the world site transform lineage precision system contract.
+   */
   translation: IAutoMovieVector3;
-  /** Exact unit quaternion in glTF `(x, y, z, w)` order. */
+  /**
+   * Exact unit quaternion in glTF `(x, y, z, w)` order.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `rotation` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `rotation` for the world site transform lineage precision system contract.
+   */
   rotation: IAutoMovieQuaternion;
-  /** Strictly positive scale on each local axis. */
+  /**
+   * Strictly positive scale on each local axis.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `scale` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `scale` for the world site transform lineage precision system contract.
+   */
   scale: IAutoMovieVector3;
-  /** Optional prototype id; omitted selects the set's default prototype. */
+  /**
+   * Optional prototype id; omitted selects the set's default prototype.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `prototype` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `prototype` for the world site transform lineage precision system contract.
+   */
   prototype?: string;
-  /** Omitted means visible. */
+  /**
+   * Omitted means visible.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `visible` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `visible` for the world site transform lineage precision system contract.
+   */
   visible?: boolean;
-  /** Optional exact `#RRGGBB` palette override. */
+  /**
+   * Optional exact `#RRGGBB` palette override.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `palette` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `palette` for the world site transform lineage precision system contract.
+   */
   palette?: string;
-  /** Optional exact overrides for declared numeric traits. */
+  /**
+   * Optional exact overrides for declared numeric traits.
+   *
+   * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `traits` as the portable data boundary for the map coordinate transform precision requirement.
+   * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `traits` for the world site transform lineage precision system contract.
+   */
   traits?: Record<string, number>;
 }
 
-/** One reusable model prototype selectable by slots in a logical set. */
+/**
+ * One reusable model prototype selectable by slots in a logical set.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieInstancePrototypeDesign` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieInstancePrototypeDesign` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieInstancePrototypeDesign {
-  /** Stable non-blank id unique inside the set. */
+  /**
+   * Stable non-blank id unique inside the set.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Existing model recipe used by this prototype. */
+  /**
+   * Existing model recipe used by this prototype.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `modelRecipe` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `modelRecipe` for the narrative intent story design ownership system contract.
+   */
   modelRecipe: string;
-  /** Positive deterministic selection weight. */
+  /**
+   * Positive deterministic selection weight.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `weight` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `weight` for the narrative intent story design ownership system contract.
+   */
   weight: number;
 }
 
-/** Seed-derived per-instance visual and semantic variation. */
+/**
+ * Seed-derived per-instance visual and semantic variation.
+ *
+ * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `IAutoMovieInstanceVariation` as the portable data boundary for the production design consistency variation requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `IAutoMovieInstanceVariation` for the narrative intent visual language variation system contract.
+ */
 export interface IAutoMovieInstanceVariation {
-  /** Inclusive uniform scale range, both strictly above zero. */
+  /**
+   * Inclusive uniform scale range, both strictly above zero.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `scale` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `scale` for the narrative intent visual language variation system contract.
+   */
   scale: { min: number; max: number };
-  /** Optional independent scale ranges per local axis. */
+  /**
+   * Optional independent scale ranges per local axis.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `scale3` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `scale3` for the narrative intent visual language variation system contract.
+   */
   scale3?: { min: IAutoMovieVector3; max: IAutoMovieVector3 };
-  /** Optional seeded XYZ Euler offsets in degrees, applied after facing. */
+  /**
+   * Optional seeded XYZ Euler offsets in degrees, applied after facing.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `rotationDeg` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `rotationDeg` for the narrative intent visual language variation system contract.
+   */
   rotationDeg?: {
     x: { min: number; max: number };
     y: { min: number; max: number };
     z: { min: number; max: number };
   };
-  /** Seeded probability that a procedural slot is visible. */
+  /**
+   * Seeded probability that a procedural slot is visible.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `visibleProbability` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `visibleProbability` for the narrative intent visual language variation system contract.
+   */
   visibleProbability?: number;
-  /** Non-empty exact `#RRGGBB` palette choices applied per instance. */
+  /**
+   * Non-empty exact `#RRGGBB` palette choices applied per instance.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `palette` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `palette` for the narrative intent visual language variation system contract.
+   */
   palette: string[];
-  /** Named bounded numeric traits regenerated from seed and slot. */
+  /**
+   * Named bounded numeric traits regenerated from seed and slot.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `traits` as the portable data boundary for the production design consistency variation requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `traits` for the narrative intent visual language variation system contract.
+   */
   traits: Array<{
     /** Stable trait name unique in this set. */
     name: string;
@@ -537,47 +785,135 @@ export interface IAutoMovieInstanceVariation {
   }>;
 }
 
-/** A compact non-formation crowd, vegetation, prop, or debris set. */
+/**
+ * A compact non-formation crowd, vegetation, prop, or debris set.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieInstanceSetDesign` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieInstanceSetDesign` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieInstanceSetDesign {
-  /** Stable id unique within the world. */
+  /**
+   * Stable id unique within the world.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Existing model recipe rendered by every member. */
+  /**
+   * Existing model recipe rendered by every member.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `modelRecipe` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `modelRecipe` for the narrative intent story design ownership system contract.
+   */
   modelRecipe: string;
-  /** Optional weighted prototype table; `modelRecipe` remains the default. */
+  /**
+   * Optional weighted prototype table; `modelRecipe` remains the default.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `prototypes` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `prototypes` for the narrative intent story design ownership system contract.
+   */
   prototypes?: IAutoMovieInstancePrototypeDesign[];
-  /** Integer slot count from one through 100,000. */
+  /**
+   * Integer slot count from one through 100,000.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `count` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `count` for the narrative intent story design ownership system contract.
+   */
   count: number;
-  /** Compact deterministic placement law. */
+  /**
+   * Compact deterministic placement law.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `layout` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `layout` for the narrative intent story design ownership system contract.
+   */
   layout: IAutoMovieInstanceSetLayout;
-  /** World-space origin for grid and scatter layouts. */
+  /**
+   * World-space origin for grid and scatter layouts.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `anchor` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `anchor` for the narrative intent story design ownership system contract.
+   */
   anchor: IAutoMovieVector3;
-  /** Finite base heading in degrees. */
+  /**
+   * Finite base heading in degrees.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `facingDeg` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `facingDeg` for the narrative intent story design ownership system contract.
+   */
   facingDeg: number;
-  /** Full non-negative safe-integer seed. */
+  /**
+   * Full non-negative safe-integer seed.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `seed` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `seed` for the narrative intent story design ownership system contract.
+   */
   seed: number;
-  /** Seed-derived per-slot differences. */
+  /**
+   * Seed-derived per-slot differences.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `variation` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `variation` for the narrative intent story design ownership system contract.
+   */
   variation: IAutoMovieInstanceVariation;
 }
 
-/** A named point in the production world. */
+/**
+ * A named point in the production world.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieWorldLandmark` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieWorldLandmark` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieWorldLandmark {
-  /** Stable landmark id. */
+  /**
+   * Stable landmark id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Center in meters. */
+  /**
+   * Center in meters.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `position` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `position` for the narrative intent story design ownership system contract.
+   */
   position: IAutoMovieVector3;
-  /** Finite selection and clearance radius in meters, strictly above zero. */
+  /**
+   * Finite selection and clearance radius in meters, strictly above zero.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `radius` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `radius` for the narrative intent story design ownership system contract.
+   */
   radius: number;
-  /** Non-blank narrative or tactical meaning. */
+  /**
+   * Non-blank narrative or tactical meaning.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `meaning` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `meaning` for the narrative intent story design ownership system contract.
+   */
   meaning: string;
 }
 
-/** A bounded horizontal polygon with a deterministic height function. */
+/**
+ * A bounded horizontal polygon with a deterministic height function.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieWorldSurface` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieWorldSurface` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieWorldSurface {
-  /** Stable surface id. */
+  /**
+   * Stable surface id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
   /**
    * At least three distinct finite XZ vertices forming a simple,
    * non-self-intersecting polygon with non-zero area.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `polygon` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `polygon` for the narrative intent story design ownership system contract.
    */
   polygon: Array<{
     /** World X in meters. */
@@ -585,44 +921,114 @@ export interface IAutoMovieWorldSurface {
     /** World Z in meters. */
     z: number;
   }>;
-  /** Surface height function. */
+  /**
+   * Surface height function.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `height` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `height` for the narrative intent story design ownership system contract.
+   */
   height: IAutoMovieHeightRule;
-  /** Whether performers may traverse the surface. */
+  /**
+   * Whether performers may traverse the surface.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `walkable` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `walkable` for the narrative intent story design ownership system contract.
+   */
   walkable: boolean;
 }
 
-/** A named route whose width constrains formations. */
+/**
+ * A named route whose width constrains formations.
+ *
+ * @evidence requirements/map/movement-and-visibility.md#map-route-connectivity Exposes `IAutoMovieWorldRoute` as the portable data boundary for the map route connectivity requirement.
+ * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-route-connectivity-time-state Types `IAutoMovieWorldRoute` for the world site route connectivity time state system contract.
+ */
 export interface IAutoMovieWorldRoute {
-  /** Stable route id. */
+  /**
+   * Stable route id.
+   *
+   * @evidence requirements/map/movement-and-visibility.md#map-route-connectivity Exposes `id` as the portable data boundary for the map route connectivity requirement.
+   * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-route-connectivity-time-state Types `id` for the world site route connectivity time state system contract.
+   */
   id: string;
-  /** At least two finite ordered centerline points in world XZ coordinates. */
+  /**
+   * At least two finite ordered centerline points in world XZ coordinates.
+   *
+   * @evidence requirements/map/movement-and-visibility.md#map-route-connectivity Exposes `waypoints` as the portable data boundary for the map route connectivity requirement.
+   * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-route-connectivity-time-state Types `waypoints` for the world site route connectivity time state system contract.
+   */
   waypoints: Array<{
     /** World X in meters. */
     x: number;
     /** World Z in meters. */
     z: number;
   }>;
-  /** Finite maximum formation width in meters, strictly above zero. */
+  /**
+   * Finite maximum formation width in meters, strictly above zero.
+   *
+   * @evidence requirements/map/movement-and-visibility.md#map-route-connectivity Exposes `allowedFormationWidth` as the portable data boundary for the map route connectivity requirement.
+   * @evidence specifications/world-and-site/traversal-and-visibility.md#world-site-route-connectivity-time-state Types `allowedFormationWidth` for the world site route connectivity time state system contract.
+   */
   allowedFormationWidth: number;
 }
 
-/** An axis-aligned world-space effect volume. */
+/**
+ * An axis-aligned world-space effect volume.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieWorldBounds` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieWorldBounds` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieWorldBounds {
-  /** Minimum corner. */
+  /**
+   * Minimum corner.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `min` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `min` for the narrative intent story design ownership system contract.
+   */
   min: IAutoMovieVector3;
-  /** Maximum corner. */
+  /**
+   * Maximum corner.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `max` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `max` for the narrative intent story design ownership system contract.
+   */
   max: IAutoMovieVector3;
 }
 
-/** One bounded deterministic environmental-effect emitter recipe. */
+/**
+ * One bounded deterministic environmental-effect emitter recipe.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieEffectRecipe` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieEffectRecipe` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieEffectRecipe {
-  /** Stable recipe id. */
+  /**
+   * Stable recipe id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Supported primitive effect family. */
+  /**
+   * Supported primitive effect family.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `kind` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `kind` for the narrative intent story design ownership system contract.
+   */
   kind: "fog" | "smoke" | "dust";
-  /** Explicit deterministic recipe seed. */
+  /**
+   * Explicit deterministic recipe seed.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `seed` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `seed` for the narrative intent story design ownership system contract.
+   */
   seed: number;
-  /** Bounded deterministic emission. */
+  /**
+   * Bounded deterministic emission.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `emission` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `emission` for the narrative intent story design ownership system contract.
+   */
   emission: {
     /** Particles emitted per second. */
     rate: number;
@@ -631,7 +1037,12 @@ export interface IAutoMovieEffectRecipe {
     /** Maximum emitting duration in seconds. */
     duration: number;
   };
-  /** Bounded billboard appearance. */
+  /**
+   * Bounded billboard appearance.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `particle` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `particle` for the narrative intent story design ownership system contract.
+   */
   particle: {
     /** Inclusive lifetime range in seconds. */
     lifetime: { min: number; max: number };
@@ -642,7 +1053,12 @@ export interface IAutoMovieEffectRecipe {
     /** Inclusive alpha range from zero through one. */
     opacity: { min: number; max: number };
   };
-  /** Bounded deterministic transport. */
+  /**
+   * Bounded deterministic transport.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `motion` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `motion` for the narrative intent story design ownership system contract.
+   */
   motion: {
     /** World-space meters per second. */
     wind: IAutoMovieVector3;
@@ -651,49 +1067,127 @@ export interface IAutoMovieEffectRecipe {
     /** Maximum seeded lateral velocity deviation. */
     turbulence: number;
   };
-  /** Hard runtime and LOD budgets. */
+  /**
+   * Hard runtime and LOD budgets.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `budget` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `budget` for the narrative intent story design ownership system contract.
+   */
   budget: {
     /** Maximum live billboard instances. */
     maxParticles: number;
     /** Distance beyond which deterministic thinning applies. */
     lodDistance: number;
   };
-  /** Only supported transparency law. */
+  /**
+   * Only supported transparency law.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `blend` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `blend` for the narrative intent story design ownership system contract.
+   */
   blend: "alpha";
 }
 
-/** An axis-aligned world-space effect volume. */
+/**
+ * An axis-aligned world-space effect volume.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieWorldEffectZone` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieWorldEffectZone` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieWorldEffectZone {
-  /** Stable zone id. */
+  /**
+   * Stable zone id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Existing deterministic effect recipe id. */
+  /**
+   * Existing deterministic effect recipe id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `recipe` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `recipe` for the narrative intent story design ownership system contract.
+   */
   recipe: string;
-  /** World-space volume. */
+  /**
+   * World-space volume.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `bounds` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `bounds` for the narrative intent story design ownership system contract.
+   */
   bounds: IAutoMovieWorldBounds;
-  /** Explicit deterministic zone seed. */
+  /**
+   * Explicit deterministic zone seed.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `seed` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `seed` for the narrative intent story design ownership system contract.
+   */
   seed: number;
 }
 
-/** Named spatial constraints and semantic anchors for a production. */
+/**
+ * Named spatial constraints and semantic anchors for a production.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieWorldDesign` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieWorldDesign` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieWorldDesign {
-  /** Non-blank stable world id. */
+  /**
+   * Non-blank stable world id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** World unit. */
+  /**
+   * World unit.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `units` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `units` for the narrative intent story design ownership system contract.
+   */
   units: "meter";
-  /** Named tactical or narrative landmarks. */
+  /**
+   * Named tactical or narrative landmarks.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `landmarks` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `landmarks` for the narrative intent story design ownership system contract.
+   */
   landmarks: IAutoMovieWorldLandmark[];
-  /** Queryable surfaces. */
+  /**
+   * Queryable surfaces.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `surfaces` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `surfaces` for the narrative intent story design ownership system contract.
+   */
   surfaces: IAutoMovieWorldSurface[];
-  /** Named formation routes. */
+  /**
+   * Named formation routes.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `routes` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `routes` for the narrative intent story design ownership system contract.
+   */
   routes: IAutoMovieWorldRoute[];
-  /** Bounded deterministic environmental-effect recipes. */
+  /**
+   * Bounded deterministic environmental-effect recipes.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `effectRecipes` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `effectRecipes` for the narrative intent story design ownership system contract.
+   */
   effectRecipes: IAutoMovieEffectRecipe[];
-  /** Deterministic effect regions bound to recipes. */
+  /**
+   * Deterministic effect regions bound to recipes.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `effectZones` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `effectZones` for the narrative intent story design ownership system contract.
+   */
   effectZones: IAutoMovieWorldEffectZone[];
   /**
    * Compact non-formation instance sets such as civilians, trees, or debris.
    *
    * Omitted is equivalent to an empty list for backwards compatibility.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `instanceSets` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `instanceSets` for the narrative intent story design ownership system contract.
    */
   instanceSets?: IAutoMovieInstanceSetDesign[];
 }
@@ -703,6 +1197,9 @@ export interface IAutoMovieWorldDesign {
  *
  * The compiler does not infer or restrict source motion from these labels.
  * Observable shot predicates and review evidence remain authoritative.
+ *
+ * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Exposes `AutoMovieFormationCapability` as the portable data boundary for the formation motion validation requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation Types `AutoMovieFormationCapability` for the performance formation geometry layout motion validation system contract.
  */
 export type AutoMovieFormationCapability =
   | "hold"
@@ -712,7 +1209,12 @@ export type AutoMovieFormationCapability =
   | "break"
   | "retreat";
 
-/** A compact formation layout; individual members are derived slots. */
+/**
+ * A compact formation layout; individual members are derived slots.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Exposes `IAutoMovieFormationLayout` as the portable data boundary for the formation layout selection parameters requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Types `IAutoMovieFormationLayout` for the performance formation layout slot assignment system contract.
+ */
 export type IAutoMovieFormationLayout =
   | {
       /** Rectangular line. */
@@ -846,38 +1348,82 @@ export type IAutoMovieFormationLayout =
       seed: number;
     };
 
-/** A unit-level formation whose members are deterministic derived slots. */
+/**
+ * A unit-level formation whose members are deterministic derived slots.
+ *
+ * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `IAutoMovieFormationDesign` as the portable data boundary for the formation unit local variation requirement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `IAutoMovieFormationDesign` for the performance formation hierarchy membership command system contract.
+ */
 export interface IAutoMovieFormationDesign {
-  /** Non-blank stable formation id, unique under portable case folding. */
+  /**
+   * Non-blank stable formation id, unique under portable case folding.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `id` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `id` for the performance formation hierarchy membership command system contract.
+   */
   id: string;
-  /** Existing model recipe id enforced on every derived slot, including heroes. */
+  /**
+   * Existing model recipe id enforced on every derived slot, including heroes.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `modelRecipe` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `modelRecipe` for the performance formation hierarchy membership command system contract.
+   */
   modelRecipe: string;
   /**
    * Integer number of derived slots from 1 through 100,000. Generated output
    * stores bounded chunks and hero exceptions; anonymous slots are regenerated
    * from index and seed and rendered through instancing.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `count` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `count` for the performance formation hierarchy membership command system contract.
    */
   count: number;
   /**
    * Compact layout with only the parameters its algorithm consumes. Line,
    * column and wedge own explicit spacing; arc separation follows radius and
    * angle, while scatter density follows count and radius.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `layout` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `layout` for the performance formation hierarchy membership command system contract.
    */
   layout: IAutoMovieFormationLayout;
-  /** Formation origin in world space. */
+  /**
+   * Formation origin in world space.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `anchor` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `anchor` for the performance formation hierarchy membership command system contract.
+   */
   anchor: IAutoMovieVector3;
-  /** Finite world-space heading in degrees. */
+  /**
+   * Finite world-space heading in degrees.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `facingDeg` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `facingDeg` for the performance formation hierarchy membership command system contract.
+   */
   facingDeg: number;
-  /** Integer deterministic seed from zero through `MAX_SAFE_INTEGER`. */
+  /**
+   * Integer deterministic seed from zero through `MAX_SAFE_INTEGER`.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `seed` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `seed` for the performance formation hierarchy membership command system contract.
+   */
   seed: number;
   /**
    * Unique intended formation behaviors for source/review coordination.
    *
    * These labels are not a compiler permission boundary and do not prove that
    * source implemented or avoided a motion.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `capabilities` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `capabilities` for the performance formation hierarchy membership command system contract.
    */
   capabilities: AutoMovieFormationCapability[];
-  /** Slots promoted to named hero actors. */
+  /**
+   * Slots promoted to named hero actors.
+   *
+   * @evidence requirements/formations/hierarchies-and-units.md#formation-unit-local-variation Exposes `heroOverrides` as the portable data boundary for the formation unit local variation requirement.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-hierarchy-membership-command Types `heroOverrides` for the performance formation hierarchy membership command system contract.
+   */
   heroOverrides: Array<{
     /** Unique zero-based slot strictly below this formation's count. */
     slot: number;
@@ -886,21 +1432,44 @@ export interface IAutoMovieFormationDesign {
   }>;
 }
 
-/** A named opening or closing state required by a shot. */
+/**
+ * A named opening or closing state required by a shot.
+ *
+ * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `IAutoMovieNamedState` as the portable data boundary for the story time state review scope requirement.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `IAutoMovieNamedState` for the narrative intent temporal state handoff system contract.
+ */
 export interface IAutoMovieNamedState {
-  /** Stable state id. */
+  /**
+   * Stable state id.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `id` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `id` for the narrative intent temporal state handoff system contract.
+   */
   id: string;
-  /** Non-blank human-readable state contract; it is never proof by itself. */
+  /**
+   * Non-blank human-readable state contract; it is never proof by itself.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `description` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `description` for the narrative intent temporal state handoff system contract.
+   */
   description: string;
   /**
    * Machine-checkable facts sampled from compiled pose and transform output.
    *
    * Descriptive prose never discharges a state contract by itself.
+   *
+   * @evidence requirements/story/story-clock-and-state.md#story-time-state-review-scope Exposes `predicates` as the portable data boundary for the story time state review scope requirement.
+   * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-temporal-state-handoff Types `predicates` for the narrative intent temporal state handoff system contract.
    */
   predicates: IAutoMovieShotPredicate[];
 }
 
-/** A spatial operand measured from one compiled shot. */
+/**
+ * A spatial operand measured from one compiled shot.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotSpatialSelector` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotSpatialSelector` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieShotSpatialSelector =
   | {
       /** One compiled scene node. */
@@ -927,17 +1496,42 @@ export type IAutoMovieShotSpatialSelector =
       position: IAutoMovieVector3;
     };
 
-/** A scalar comparison evaluated by the deterministic compiler. */
+/**
+ * A scalar comparison evaluated by the deterministic compiler.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieScalarPredicate` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieScalarPredicate` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieScalarPredicate {
-  /** Numeric comparison. */
+  /**
+   * Numeric comparison.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `operator` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `operator` for the narrative intent story design ownership system contract.
+   */
   operator: "<=" | ">=" | "==";
-  /** Finite expected value in the unit implied by the selected predicate. */
+  /**
+   * Finite expected value in the unit implied by the selected predicate.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `value` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `value` for the narrative intent story design ownership system contract.
+   */
   value: number;
-  /** Finite non-negative absolute comparison tolerance. */
+  /**
+   * Finite non-negative absolute comparison tolerance.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `tolerance` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `tolerance` for the narrative intent story design ownership system contract.
+   */
   tolerance: number;
 }
 
-/** One compiler-evaluable state or event fact. */
+/**
+ * One compiler-evaluable state or event fact.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotPredicate` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotPredicate` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieShotPredicate =
   | (IAutoMovieScalarPredicate & {
       /** Sample one articulated joint angle. */
@@ -966,7 +1560,12 @@ export type IAutoMovieShotPredicate =
       to: IAutoMovieShotSpatialSelector;
     });
 
-/** An actor or formation required by a shot. */
+/**
+ * An actor or formation required by a shot.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotParticipant` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotParticipant` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieShotParticipant =
   | {
       /** Named actor participant. */
@@ -981,32 +1580,82 @@ export type IAutoMovieShotParticipant =
       id: string;
     };
 
-/** A time-bounded event the shot source must implement. */
+/**
+ * A time-bounded event the shot source must implement.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotEventContract` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotEventContract` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieShotEventContract {
-  /** Stable event id. */
+  /**
+   * Stable event id.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Event family. */
+  /**
+   * Event family.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `kind` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `kind` for the narrative intent story design ownership system contract.
+   */
   kind: "contact" | "arrival" | "break" | "reveal" | "transition";
-  /** Inclusive finite event window inside the owning shot's duration. */
+  /**
+   * Inclusive finite event window inside the owning shot's duration.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `window` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `window` for the narrative intent story design ownership system contract.
+   */
   window: {
     /** Earliest valid time. */
     from: number;
     /** Latest valid time. */
     to: number;
   };
-  /** Non-empty unique actor, formation or object ids involved. */
+  /**
+   * Non-empty unique actor, formation or object ids involved.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `subjects` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `subjects` for the narrative intent story design ownership system contract.
+   */
   subjects: string[];
-  /** Non-empty machine-checkable facts required at the realized event time. */
+  /**
+   * Non-empty machine-checkable facts required at the realized event time.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `predicates` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `predicates` for the narrative intent story design ownership system contract.
+   */
   predicates: IAutoMovieShotPredicate[];
 }
 
-/** A frame time and guide passes required for shot review. */
+/**
+ * A frame time and guide passes required for shot review.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Exposes `IAutoMovieShotReviewFrame` as the portable data boundary for the effects per frame shot budget requirement.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Types `IAutoMovieShotReviewFrame` for the budget frame shot sequence composition system contract.
+ */
 export interface IAutoMovieShotReviewFrame {
-  /** Stable frame-contract id. */
+  /**
+   * Stable frame-contract id.
+   *
+   * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Exposes `id` as the portable data boundary for the effects per frame shot budget requirement.
+   * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Types `id` for the budget frame shot sequence composition system contract.
+   */
   id: string;
-  /** Time inside the owning shot, snapped exactly to the production frame clock. */
+  /**
+   * Time inside the owning shot, snapped exactly to the production frame clock.
+   *
+   * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Exposes `time` as the portable data boundary for the effects per frame shot budget requirement.
+   * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Types `time` for the budget frame shot sequence composition system contract.
+   */
   time: number;
-  /** Non-empty unique passes that must be captured. */
+  /**
+   * Non-empty unique passes that must be captured.
+   *
+   * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Exposes `passes` as the portable data boundary for the effects per frame shot budget requirement.
+   * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Types `passes` for the budget frame shot sequence composition system contract.
+   */
   passes: AutoMovieGuidePass[];
 }
 
@@ -1015,6 +1664,9 @@ export interface IAutoMovieShotReviewFrame {
  *
  * Pure geometric facts remain measurable; this marker records why a director
  * chose to keep one otherwise questionable edit.
+ *
+ * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-style-drift Exposes `AutoMovieGrammarStyleIntent` as the portable data boundary for the production design style drift requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-reference-realization Types `AutoMovieGrammarStyleIntent` for the narrative intent design reference realization system contract.
  */
 export type AutoMovieGrammarStyleIntent =
   | "axis-cross"
@@ -1023,13 +1675,33 @@ export type AutoMovieGrammarStyleIntent =
   | "tight-reestablish"
   | "rhythmic-pacing";
 
-/** A code-bound shot contract, not a dense keyframe list. */
+/**
+ * A code-bound shot contract, not a dense keyframe list.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieShotContract` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieShotContract` for the narrative intent story design ownership system contract.
+ */
 export interface IAutoMovieShotContract {
-  /** Non-blank stable shot id, unique under portable case folding. */
+  /**
+   * Non-blank stable shot id, unique under portable case folding.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `id` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `id` for the narrative intent story design ownership system contract.
+   */
   id: string;
-  /** Non-blank narrative beat id owned by the coding-agent treatment. */
+  /**
+   * Non-blank narrative beat id owned by the coding-agent treatment.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `beat` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `beat` for the narrative intent story design ownership system contract.
+   */
   beat: string;
-  /** Coding-agent-owned source export. */
+  /**
+   * Coding-agent-owned source export.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `source` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `source` for the narrative intent story design ownership system contract.
+   */
   source: {
     /**
      * Canonical project-relative POSIX TypeScript path. Backslashes, absolute
@@ -1043,11 +1715,17 @@ export interface IAutoMovieShotContract {
    * Screenplay scenes and optional canon claims this shot intends to realize.
    *
    * Project lint requires this field once a screenplay index is resident.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `evidence` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `evidence` for the narrative intent story design ownership system contract.
    */
   evidence?: IAutoMovieSceneEvidence[];
   /**
    * Finite shot runtime in seconds, strictly above zero and on the production
    * frame clock.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `durationSeconds` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `durationSeconds` for the narrative intent story design ownership system contract.
    */
   durationSeconds: number;
   /**
@@ -1058,20 +1736,46 @@ export interface IAutoMovieShotContract {
    * a cross-shot criterion may only compare events in pinned shots. Pinning is
    * independent of the edit: the pin says when the shot happened, never where
    * it is cut.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `storyTime` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `storyTime` for the narrative intent story design ownership system contract.
    */
   storyTime?: IAutoMovieShotStoryTime;
   /**
    * Unique deliberate film-grammar exceptions. Each value suppresses only its
    * corresponding heuristic diagnostic; unrelated facts remain visible.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `styleIntent` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `styleIntent` for the narrative intent story design ownership system contract.
    */
   styleIntent?: AutoMovieGrammarStyleIntent[];
-  /** Unique required actor and formation ids; formations must already exist. */
+  /**
+   * Unique required actor and formation ids; formations must already exist.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `participants` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `participants` for the narrative intent story design ownership system contract.
+   */
   participants: IAutoMovieShotParticipant[];
-  /** Required opening states. */
+  /**
+   * Required opening states.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `opening` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `opening` for the narrative intent story design ownership system contract.
+   */
   opening: IAutoMovieNamedState[];
-  /** Required closing states. */
+  /**
+   * Required closing states.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `closing` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `closing` for the narrative intent story design ownership system contract.
+   */
   closing: IAutoMovieNamedState[];
-  /** Camera readability constraints. */
+  /**
+   * Camera readability constraints.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `camera` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `camera` for the narrative intent story design ownership system contract.
+   */
   camera: {
     /** Non-blank creative camera intent. */
     intent: string;
@@ -1089,13 +1793,28 @@ export interface IAutoMovieShotContract {
      */
     maxOcclusionRatio: number;
   };
-  /** Timed semantic events. */
+  /**
+   * Timed semantic events.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `events` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `events` for the narrative intent story design ownership system contract.
+   */
   events: IAutoMovieShotEventContract[];
-  /** At least one required visual-review frame. */
+  /**
+   * At least one required visual-review frame.
+   *
+   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `reviewFrames` as the portable data boundary for the production design story boundary requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `reviewFrames` for the narrative intent story design ownership system contract.
+   */
   reviewFrames: IAutoMovieShotReviewFrame[];
 }
 
-/** A measurable acceptance criterion. */
+/**
+ * A measurable acceptance criterion.
+ *
+ * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `IAutoMovieAcceptanceCriterion` as the portable data boundary for the production design art direction acceptance requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `IAutoMovieAcceptanceCriterion` for the narrative intent visual language acceptance system contract.
+ */
 export type IAutoMovieAcceptanceCriterion =
   | {
       /** Visual frame criterion. */
@@ -1167,18 +1886,36 @@ export type IAutoMovieAcceptanceCriterion =
       expectation: string;
     };
 
-/** A required or optional acceptance scenario for a shot or film. */
+/**
+ * A required or optional acceptance scenario for a shot or film.
+ *
+ * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `IAutoMovieAcceptanceScenario` as the portable data boundary for the production design art direction acceptance requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `IAutoMovieAcceptanceScenario` for the narrative intent visual language acceptance system contract.
+ */
 export interface IAutoMovieAcceptanceScenario {
-  /** Non-blank stable scenario id, unique under portable case folding. */
+  /**
+   * Non-blank stable scenario id, unique under portable case folding.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `id` as the portable data boundary for the production design art direction acceptance requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `id` for the narrative intent visual language acceptance system contract.
+   */
   id: string;
   /**
    * Screenplay scenes and optional canon claims this observable check verifies.
    *
    * Traceability is valid for every claim, but only a matching claim
    * verification owner can discharge that claim.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `evidence` as the portable data boundary for the production design art direction acceptance requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `evidence` for the narrative intent visual language acceptance system contract.
    */
   evidence?: IAutoMovieSceneEvidence[];
-  /** Scenario target. */
+  /**
+   * Scenario target.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `target` as the portable data boundary for the production design art direction acceptance requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `target` for the narrative intent visual language acceptance system contract.
+   */
   target:
     | {
         /** Shot target. */
@@ -1195,16 +1932,27 @@ export interface IAutoMovieAcceptanceScenario {
   /**
    * Observable frame, compiled event or runtime metric criterion. Film-level
    * frame and event criteria also name their owning shot.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `criterion` as the portable data boundary for the production design art direction acceptance requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `criterion` for the narrative intent visual language acceptance system contract.
    */
   criterion: IAutoMovieAcceptanceCriterion;
   /**
    * Whether current review and final compilation require exact passing evidence
    * for this scenario.
+   *
+   * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance Exposes `required` as the portable data boundary for the production design art direction acceptance requirement.
+   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-acceptance Types `required` for the narrative intent visual language acceptance system contract.
    */
   required: boolean;
 }
 
-/** An addressable design artifact. */
+/**
+ * An addressable design artifact.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieDesignTarget` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieDesignTarget` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieDesignTarget =
   | {
       /** Active production design. */
@@ -1239,7 +1987,12 @@ export type IAutoMovieDesignTarget =
       id: string;
     };
 
-/** Union of every addressable production design value. */
+/**
+ * Union of every addressable production design value.
+ *
+ * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `IAutoMovieDesignArtifact` as the portable data boundary for the production design story boundary requirement.
+ * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `IAutoMovieDesignArtifact` for the narrative intent story design ownership system contract.
+ */
 export type IAutoMovieDesignArtifact =
   | IAutoMovieProductionDesign
   | IAutoMovieModelRecipe

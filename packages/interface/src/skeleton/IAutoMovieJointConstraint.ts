@@ -38,24 +38,35 @@ import { IAutoMovieAngleRange } from "./IAutoMovieAngleRange";
  * Reference: clinical goniometry / joint ROM norms (AAOS, Norkin & White,
  * _Measurement of Joint Motion_).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `IAutoMovieJointConstraint` as the portable data boundary for the actor joint range constraints requirement.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `IAutoMovieJointConstraint` for the performance rig rom control driver graph system contract.
  * @author Samchon
  */
 export interface IAutoMovieJointConstraint {
   /**
    * Sagittal-plane range: flexion (+) / extension (−). `null` if the joint does
    * not flex/extend.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `flexion` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `flexion` for the performance rig rom control driver graph system contract.
    */
   flexion: IAutoMovieAngleRange | null;
 
   /**
    * Frontal-plane range: abduction (+) / adduction (−). `null` for a pure hinge
    * joint that does not abduct/adduct.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `abduction` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `abduction` for the performance rig rom control driver graph system contract.
    */
   abduction: IAutoMovieAngleRange | null;
 
   /**
    * Transverse-plane range: external (+) / internal (−) axial rotation. `null`
    * if the joint does not twist.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `twist` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `twist` for the performance rig rom control driver graph system contract.
    */
   twist: IAutoMovieAngleRange | null;
 
@@ -75,6 +86,9 @@ export interface IAutoMovieJointConstraint {
    * only bites when set strictly below the per-axis maxima's combined reach, as
    * the hip's 120° is. Reference: joint sinus / reach-cone ROM models (Herda et
    * al.).
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Exposes `swingDeg` as the portable data boundary for the actor joint range constraints requirement.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Types `swingDeg` for the performance rig rom control driver graph system contract.
    */
   swingDeg?: number | null;
 }
