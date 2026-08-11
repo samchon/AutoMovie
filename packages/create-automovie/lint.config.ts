@@ -16,8 +16,10 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/agent-authoring/README.md",
           "requirements/agent-authoring/project-ownership.md",
           "requirements/agent-authoring/source-owned-loop.md",
+          "requirements/product/README.md",
           "requirements/product/charter.md",
         ],
         symbol: ["h2", "h3"],
@@ -32,6 +34,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/authoring-and-authority/README.md",
           "specifications/authoring-and-authority/capability-and-content-boundary.md",
           "specifications/authoring-and-authority/source-authority-and-derivation.md",
         ],
