@@ -39,6 +39,12 @@ Scene surface는 participant, entry와 exit state, event와 cue를, sequence sur
 
 ## Criterion과 Evidence {#narrative-intent-story-criterion-evidence}
 
+### Story-sync criterion {#narrative-intent-story-sync-criterion}
+
+<!-- @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance Cross-shot event criterion을 exact authored events와 current realizations에 결합하게 한다. -->
+
+Story-sync helper는 authored cross-shot criterion만 선택하고 current realized event times를 declared tolerance로 측정한다. 다른 sequence나 film review surface를 대신하지 않으며 optional failure도 deterministic finding으로 보존한다.
+
 ### Positive, Negative와 Boundary {#narrative-intent-story-criterion-cases}
 
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance story criterion에 대상, 시간, observable state와 실패 조건을 요구한다. -->

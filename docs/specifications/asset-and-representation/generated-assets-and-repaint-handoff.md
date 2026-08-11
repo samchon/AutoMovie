@@ -59,6 +59,25 @@ request는 변하지 않는 의도와 입력의 identity이고, attempt는 한 �
 
 재도색은 승인된 결정론적 장면의 구조를 source로 삼아 appearance만 새로 해석하는 독립 rendition이다. 시스템은 재도색을 렌더 경로의 자동 단계나 source 구조 오류의 우회로로 사용하지 않으며, 원본 장면과 재도색 결과를 각각 보존하고 사용자가 delivery별 포함 여부를 선택하게 한다.
 
+### 명시적 재도색 경로 선택 {#asset-spec-repaint-manual-routing}
+
+<!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-no-automatic-routing 재도색을 명시적으로 선택한 delivery에서만 외부 handoff를 준비하게 한다. -->
+
+Runtime은 결정론적 render나 review 완료를 재도색 실행 요청으로 해석하지 않는다. 선택한 production delivery가 재도색을 요구할 때만 관련 guide와 adapter 경로를 노출하며, 그 선택이 없으면 결정론적 artifact를 그대로 유지한다.
+
+### 실행 자격과 입력 결속 {#asset-spec-repaint-execution-eligibility}
+
+<!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-provider-independence Host가 선택한 provider adapter만 실행하게 한다. -->
+<!-- @evidence requirements/repaint/identity-and-provenance.md#repaint-source-review-freshness Source와 rendition review의 freshness를 각각 추적하게 한다. -->
+<!-- @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-source-failure-first Source compile 또는 structural review 실패를 외부 실행보다 먼저 반환하게 한다. -->
+<!-- @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence Current source frame, review와 fingerprint 증거를 실행 전제에 포함하게 한다. -->
+<!-- @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-refusal 불완전한 자격을 구체적 refusal로 반환하게 한다. -->
+<!-- @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-project-relative-references Reference를 manifest-owned project asset으로 해석하게 한다. -->
+<!-- @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-control-alignment Source와 structural control frame의 manifest alignment를 검증하게 한다. -->
+<!-- @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-refusal 누락되거나 stale, misaligned 또는 digest-mismatched reference를 거절하게 한다. -->
+
+Repaint executor는 caller가 제공한 adapter identity와 current deterministic source closure만 사용한다. Source compile, structural review, frame·control alignment와 project-relative reference digest를 모두 검증하고, 실패한 exact prerequisite를 외부 요청 전에 반환한다.
+
 <!-- @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-prerequisites current deterministic source와 구조 review 이후에만 재도색할 수 있어야 한다. -->
 <!-- @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-source-reference-lock production, shot, 시간, frame, camera와 pass identity를 고정해야 한다. -->
 
@@ -99,6 +118,13 @@ sequence 기록은 character, costume, prop, location, material, palette, light,
 <!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact 재도색 결과를 원본과 독립된 artifact로 보존해야 한다. -->
 
 rendition 출력은 새 identity와 digest, source와 review revision, 제공자·model·version과 실행 환경, request·attempt identity, prompt·control·reference digest, seed 의미, 권리·조건, 구조 비교와 continuity 상태를 가진다. 출력은 원본 frame이나 자산을 덮어쓰지 않고 derivation edge로 연결되며, source가 바뀌면 새 rendition으로 재평가한다.
+
+### Derivation 검증과 refusal {#asset-spec-repaint-derivation-validation}
+
+<!-- @evidence requirements/repaint/identity-and-provenance.md#repaint-derivation-chain Deterministic source부터 request, candidate와 adopted rendition까지의 derivation을 닫게 한다. -->
+<!-- @evidence requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal Provider, model, request, reference 또는 output identity가 불완전한 결과를 채택하지 않게 한다. -->
+
+Rendition identity helper는 source, runtime, request, reference, control과 output digest를 canonical derivation으로 결합한다. 필수 identity가 비어 있거나 protocol과 맞지 않으면 output 또는 receipt path를 만들지 않고 거절한다.
 
 ### 실패와 publication 호환성 {#asset-spec-repaint-failure-publication}
 

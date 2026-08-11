@@ -117,7 +117,12 @@ interface IReviewReadContext {
   >;
 }
 
-/** Required review criteria in their canonical submission order. */
+/**
+ * Required review criteria in their canonical submission order.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the complete ordered criterion vocabulary for typed review worksheet producers and validators.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes review criterion ordering as code data shared by review services rather than session-owned knowledge.
+ */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
   asset: [
     "silhouette-and-proportion",
@@ -176,6 +181,8 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * freshness, then stores the external agent's worksheet as a tracked record.
  *
  * @evidence requirements/review/scope-and-authority.md#review-validation-decision-boundary Validates evidence while leaving the review outcome with the external reviewer.
+ * @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Preserves submitted criterion outcomes without manufacturing a human verdict.
+ * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Keeps deterministic worksheet validation separate from reviewer judgment.
  * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary Refuses invalid worksheets without making the aesthetic judgment itself.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories Worksheets carry criterion observations, not a defect category taxonomy.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary The service has no defect-versus-accepted-variation classification record.
@@ -507,6 +514,7 @@ export class AutoMovieProductionReviewService {
    * formed its input fingerprint instead of opening a second filesystem scan.
    *
    * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes missing, stale, incomplete, revise, and complete review state.
+   * @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Compares required queue entries with the actual current review records.
    * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Reports the queue state without implying a verdict.
    */
   public queue(

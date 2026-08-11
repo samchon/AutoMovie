@@ -40,6 +40,18 @@ Input fingerprint, canonical pixel·channel content digest와 encoded file byte 
 
 같은 identity에 다른 content가 연결되거나 다른 identity가 같은 final destination을 요구하면 publication을 멈춘다. Corrupt entry와 partial bytes는 격리할 수 있지만 이름이나 크기로 복구하지 않는다. Canonicalization failure, missing digest, unsafe path, numeric unsupported value와 receipt-byte mismatch는 해당 frame을 거절하고 independent valid cache만 보존한다.
 
+### Target fingerprint protocol {#spec-render-target-fingerprint-protocol}
+
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Target-local fingerprint가 versioned canonical field encoding을 사용하게 한다. -->
+
+Target fingerprint protocol은 canonical field ordering과 encoding revision을 identity input에 포함한다. Protocol revision 없이 serialization meaning을 바꾸거나 human-readable suffix를 fingerprint로 대신하지 않는다.
+
+### Target dependency fingerprint {#spec-render-target-dependency-fingerprint}
+
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure Target 결과를 바꿀 수 있는 generated payload와 declared render content만 fingerprint closure에 포함하게 한다. -->
+
+Target dependency fingerprint는 target-owned generated payload와 명시된 render content bytes를 canonical role로 결합한다. 관계없는 source 변경은 target identity를 무효화하지 않으며, 영향을 주는 dependency는 closure에서 빠질 수 없다.
+
 ### Chunk partition, resume와 atomic result {#spec-render-chunk-recovery}
 <!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunks-resume-recovery Bounded chunk 작업 단위를 정밀화한다. -->
 <!-- @evidence requirements/rendering/chunks-resume-and-recovery.md#rendering-chunk-partition Deterministic partition을 정밀화한다. -->

@@ -123,7 +123,7 @@ export class AutoMovieProductionRepaintService {
     )
       return failure(
         "repaint-source-review-incomplete",
-        `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect and approve the current source frames, then retry.`,
+        `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect the current source frames, record the delegated review worksheet as complete, then retry.`,
       );
     const sourceReviewFingerprint = sourceReview.fingerprint;
     const attemptId = randomUUID();

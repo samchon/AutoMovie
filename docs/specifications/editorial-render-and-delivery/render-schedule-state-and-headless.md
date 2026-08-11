@@ -56,6 +56,12 @@ Lowering은 compiled model, instance, actor, rig, formation, camera, light, envi
 
 Lowering receipt는 source closure, runtime ownership graph, resource별 ready·missing·unsupported 관측과 lowering phase를 제공한다. Independent verified subtree는 source identity가 같은 retry에서 재사용할 수 있지만 required scene closure가 깨지면 renderable state는 partial이다. Unknown model, missing required material, hierarchy cycle, duplicate owner, non-finite state, incompatible capability와 cleanup failure는 거절하고 affected subtree와 safe retry 여부를 보고한다.
 
+### Capture runtime identity {#spec-render-capture-runtime-identity}
+
+<!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Capture 결과가 browser, executable, platform, graphics와 mode의 exact runtime closure를 기록하게 한다. -->
+
+Capture runtime identity는 versioned schema로 검증되고 canonical encoding을 가져야 한다. 누락되거나 noncanonical한 identity는 current pixel evidence에 사용할 수 없다.
+
 ### Headless와 supported platform determinism {#spec-render-headless-platform}
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-headless-platform-determinism Headless와 interactive 실행의 공통 계약을 정밀화한다. -->
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-runtime-identity Runtime identity closure를 정밀화한다. -->

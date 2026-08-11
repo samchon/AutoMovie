@@ -70,6 +70,12 @@ Reference permission은 production과 design observation, asset ingest, model in
 
 Observation과 interpretation은 authority, confidence, uncertainty와 disagreement를 가진다. Reference replacement는 새 identity와 explicit supersession relation을 만들고 과거 reading을 자동 이식하지 않으며 unreadable range, unknown scale, ambiguous candidate, missing rights, unsupported analysis와 not-run attempt는 삭제하지 않고 withheld 또는 skipped 상태로 출력한다.
 
+### Reference manifest closure {#narrative-intent-reference-manifest-closure}
+
+<!-- @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure Design reference가 exact source bytes, declared frame와 lineage로 재구성되게 한다. -->
+
+Reference manifest 진단은 각 adopted reference의 source identity, frame, digest와 consumer relation이 닫혔는지 검사하고, 누락된 manifest fact를 human review가 끝났다는 주장으로 대체하지 않는다.
+
 ### Manifest Closure와 Review {#narrative-intent-reference-manifest-review}
 
 <!-- @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure accepted design이 exact source bytes와 lineage로 재구성되게 한다. -->

@@ -64,7 +64,12 @@ import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import { materializeFormationSlot } from "./materializeProduction";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 
-/** Read-only current compiler status used to refuse stale oracle answers. */
+/**
+ * Read-only current compiler status used to refuse stale oracle answers.
+ *
+ * @evidence requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence Prevents historical compile state from supplying a current observation.
+ * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#acceptance-system-current-historical-evidence Supplies the current source/artifact status checked before observation.
+ */
 export type AutoMovieCompileStatusProvider =
   () => IAutoMovieCompileProjectOutput;
 
@@ -75,15 +80,28 @@ export type AutoMovieCompileStatusProvider =
  * accepting a caller-supplied film graph. Preview delegates pixels to a
  * project-fixed host adapter, decodes the PNG, binds it to the current compile
  * fingerprint and atomically records a content-addressed render bundle.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Returns current measurements or host-produced pixels without claiming an unobserved result.
+ * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Fixes the project namespace used by every oracle operation.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Binds read-only evidence to the current production identity.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Keeps measurement and capture within one opened production namespace.
  */
 export class AutoMovieProductionOracleService {
+  /** Bind current project state and optional host evidence adapters. */
   public constructor(
     private readonly project: AutoMovieProductionProject,
     private readonly capture?: AutoMovieProductionFrameCapture,
     private readonly compileStatus?: AutoMovieCompileStatusProvider,
   ) {}
 
-  /** Measure one compact geometry question against the current compile. */
+  /**
+   * Measure one compact geometry question against the current compile.
+   *
+   * @evidence requirements/acceptance/criteria-and-observables.md#acceptance-numeric-observable Returns bounded measurements with explicit units rather than a subjective verdict.
+   * @evidence requirements/acceptance/criteria-and-observables.md#acceptance-structural-observable Returns relationship and reachability observations from the compiled structure.
+   * @evidence specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#acceptance-system-numeric-observable Computes declared numeric observations from current compiled state.
+   * @evidence specifications/review-and-acceptance/criteria-tolerance-and-comparison.md#acceptance-system-structural-observable Computes declared structural observations from current compiled state.
+   */
   public query(
     input: IAutoMovieQueryGeometryInput,
   ): IAutoMovieQueryGeometryOutput {
@@ -792,7 +810,12 @@ export class AutoMovieProductionOracleService {
     }
   }
 
-  /** Capture and verify one actual PNG frame from the current compile. */
+  /**
+   * Capture and verify one actual PNG frame from the current compile.
+   *
+   * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Returns verified host pixels and their current source identity.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Preserves the host-produced frame as evidence instead of claiming the agent saw it.
+   */
   public async preview(
     input: IAutoMoviePreviewFrameInput,
   ): Promise<IAutoMoviePreviewFrameOutput> {

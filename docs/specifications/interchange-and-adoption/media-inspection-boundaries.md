@@ -41,6 +41,12 @@ Motion inspection은 clip과 track identity, target skeleton 또는 semantic rol
 
 Spatial inspection은 geometry 또는 sample kind, coordinate reference와 version, horizontal·vertical datum, local origin, axis와 unit, extent, resolution 또는 level, no-data semantics, feature와 attribute schema, timestamp 또는 epoch, accuracy와 uncertainty를 산출한다. Reference가 없는 자료는 local-unresolved로 남고 지리 좌표나 높이 기준을 추정하지 않는다.
 
+### Design drawing inspection {#interchange-design-drawing-inspection}
+
+<!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Drawing reference의 container, source-space extent와 unsupported facts를 bytes에서 검사하게 한다. -->
+
+Design drawing inspector는 등록된 drawing family를 bytes에서 판별하고 source-space extent를 측정하거나 unsupported reason을 반환한다. 이 bounded observation은 map adoption이나 geospatial placement를 주장하지 않는다.
+
 ### Text와 Metadata Inspection {#interchange-text-metadata-inspection}
 
 <!-- @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata Text와 metadata의 encoding, schema, reference와 instruction 경계를 검사한다. -->

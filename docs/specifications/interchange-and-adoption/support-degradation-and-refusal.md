@@ -19,6 +19,12 @@ Media profile은 container version과 feature identifiers를 consumer capability
 
 Required closure 누락, digest mismatch, identity ambiguity, invalid coordinate·clock, unsafe active content, credential exposure, rights conflict, non-finite value와 resource budget exceed가 selected result의 truth를 깨면 hard refusal이 된다. Refusal은 blocked revision과 consumers를 반환하고 origin object, generic mesh, black frame, silence, empty metadata 또는 alternate provider result를 생성하지 않는다.
 
+### External input hard refusal {#interchange-external-hard-refusal}
+
+<!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure 신뢰, 안전 또는 identity를 깨는 external input을 대체 결과 없이 거절하게 한다. -->
+
+Inspector와 decoder는 거절한 exact source와 지원 경계를 반환하고, unknown container나 invalid payload를 placeholder, silence 또는 다른 provider 결과로 치환하지 않는다.
+
 ### Explicit Degradation Policy {#interchange-explicit-degradation-policy}
 
 <!-- @evidence requirements/external-inputs/unsupported-and-degradation.md#external-user-chosen-degradation Optional feature의 제거, approximation, proxy와 source 교체를 사용자 승인 정책으로 제한한다. -->

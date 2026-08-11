@@ -34,6 +34,12 @@ Source snapshot은 revision과 모든 채택 input digest로 식별된다. 파�
 
 Source 변경은 영향받는 자산, shot, interval, 분석, review와 delivery identity를 계산해 그 결과를 `stale`로 전이시켜야 한다. 영향받지 않은 결과는 동일 identity를 유지하며 관련 없는 artifact를 재생성해서는 안 된다.
 
+### 변경 영향 보고 {#spec-authoring-change-impact-report}
+
+<!-- @evidence requirements/agent-authoring/source-owned-loop.md#agent-change-impact-visibility 변경 결과가 영향받는 downstream target과 evidence를 정확히 열거하게 한다. -->
+
+변경 결과는 실제로 무효화한 target과 유지한 target을 구분하고, caller가 후속 compile, review와 delivery 작업을 선택할 수 있는 안정된 식별자를 반환한다.
+
 ### 소유권과 identity 실패 {#spec-authoring-source-ownership-failure}
 
 <!-- @evidence requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal 이 실패가 source, license, digest 또는 consumer가 불명확한 입력 채택을 막는다. -->

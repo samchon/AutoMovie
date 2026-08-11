@@ -1,7 +1,60 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
+const publicSurface = [
+  "src/AutoMovieApplication.ts",
+  "src/convert.ts",
+  "src/createAutoMovieMcpServer.ts",
+  "src/dto.ts",
+  "src/project/AutoMovieProject.ts",
+  "src/project/commitLock.ts",
+  "src/production/acceptanceScope.ts",
+  "src/production/assetAcquisition.ts",
+  "src/production/AutoMovieLegacyImporter.ts",
+  "src/production/AutoMovieProductionCompiler.ts",
+  "src/production/AutoMovieProductionContext.ts",
+  "src/production/AutoMovieProductionGuideService.ts",
+  "src/production/AutoMovieProductionOracleService.ts",
+  "src/production/AutoMovieProductionProject.ts",
+  "src/production/AutoMovieProductionReviewService.ts",
+  "src/production/captureRuntimeIdentity.ts",
+  "src/production/contentIdentity.ts",
+  "src/production/decodeProductionAudioAsset.ts",
+  "src/production/designReferenceDiagnostics.ts",
+  "src/production/diagnosticCatalog.ts",
+  "src/production/filmGrammarDiagnostics.ts",
+  "src/production/filmTimeline.ts",
+  "src/production/inspectDesignReferenceAsset.ts",
+  "src/production/linkProductionSource.ts",
+  "src/production/materializeProduction.ts",
+  "src/production/muxProductionFeatureMp4.ts",
+  "src/production/openAutoMovieProduction.ts",
+  "src/production/probeProductionMedia.ts",
+  "src/production/productionArchetypes.ts",
+  "src/production/productionPublicationSnapshot.ts",
+  "src/production/productionRegistry.ts",
+  "src/production/productionRenderGc.ts",
+  "src/production/productionRenderJob.ts",
+  "src/production/renditionIdentity.ts",
+  "src/production/renderIdentity.ts",
+  "src/production/rootNamespaceLock.ts",
+  "src/production/sandboxEngineBridge.ts",
+  "src/production/sandboxEngineSurface.ts",
+  "src/production/storySyncDiagnostics.ts",
+  "src/production/trimProductionAudioPresentation.ts",
+  "src/production/validateProductionDesign.ts",
+];
+
+const requirementReadmes = ["requirements/**/README.md"];
+const requirementContent = [
+  "requirements/**/*.md",
+  "!requirements/**/README.md",
+];
+const specificationReadmes = ["specifications/**/README.md"];
+const specificationContent = [
+  "specifications/**/*.md",
+  "!specifications/**/README.md",
+];
 
 /**
  * The public MCP surface answers for stable contract populations.
@@ -21,8 +74,14 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: ["requirements/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: requirementReadmes,
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: requirementContent,
+          symbol: "h3",
         },
       ],
     },
@@ -35,8 +94,14 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: specificationReadmes,
+          symbol: "h1",
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: specificationContent,
+          symbol: "h3",
         },
       ],
     },

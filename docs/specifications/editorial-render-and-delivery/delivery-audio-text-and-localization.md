@@ -47,6 +47,12 @@ Edit trim·retime·reorder, dialogue replacement와 language revision은 affecte
 
 ## Audio description, transcript와 navigation {#spec-delivery-description-alternatives-group}
 
+### Caption readability measurement {#spec-delivery-caption-readability-measurement}
+
+<!-- @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Grapheme segmentation, cue duration, line length, reading rate와 gap measurement를 profile-owned threshold와 결합하게 한다. -->
+
+Readability evaluator는 exact film cue에서 측정값을 항상 반환하고, matching language profile과 supported segmentation revision이 있을 때만 verdict를 계산한다. Profile이 없거나 지원되지 않으면 측정값을 유지한 `not-run`을 반환하며 임의 threshold를 채택하지 않는다.
+
 ### Audio description, transcript와 navigation {#spec-delivery-description-alternatives}
 
 <!-- @evidence requirements/delivery-and-accessibility/audio-description-and-alternatives.md#delivery-audio-description-alternatives Visual information의 시간 기반 대체를 정밀화한다. -->

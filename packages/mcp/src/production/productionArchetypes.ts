@@ -17,6 +17,9 @@ export { AUTOMOVIE_PRIMITIVE_ARCHETYPES, createAutoMovieArchetypeRegistry };
  * registry to `AutoMovieProductionProject.open`, and every recipe naming
  * something outside it is refused with a diagnostic rather than silently
  * built.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the actual registered archetype set so typed production hosts can replace or extend the catalogue explicitly.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes catalogue registration a code seam consumed by compiler and materializer rather than a hidden tool inventory.
  */
 export const AUTOMOVIE_REGISTERED_ARCHETYPES: AutoMovieModelArchetypeRegistry =
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES);

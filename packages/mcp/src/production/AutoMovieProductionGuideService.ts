@@ -13,7 +13,12 @@ const MCP_VERSION = (
   }
 ).version;
 
-/** Exact guide names served by the five-tool application. */
+/**
+ * Exact guide names served by the five-tool application.
+ *
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Enumerates the stable topic names an author can request.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Enumerates the exact topic document identities served as knowledge output.
+ */
 export const AUTOMOVIE_PRODUCTION_GUIDE_NAMES = [
   "AUTOMOVIE_OVERALL",
   "PRODUCTION_DESIGN",
@@ -47,9 +52,19 @@ export const AUTOMOVIE_PRODUCTION_GUIDE_NAMES = [
   "DEBUGGING",
 ] as const satisfies readonly AutoMovieProductionGuideName[];
 
-/** Exact packaged guide lookup for the production coordinator. */
+/**
+ * Exact packaged guide lookup for the production coordinator.
+ *
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Delivers packaged contract guidance without modifying a production.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Keeps knowledge lookup read-only and versioned.
+ */
 export class AutoMovieProductionGuideService {
-  /** Serve one production guide by exact name. */
+  /**
+   * Serve one production guide by exact name.
+   *
+   * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Resolves only one exact discoverable guide identity.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Returns the selected packaged document and version.
+   */
   public get(name: AutoMovieProductionGuideName): IAutoMovieGetGuideDocument {
     const content: string | undefined = AUTOMOVIE_GUIDE_CONSTANT[name];
     if (content === undefined)

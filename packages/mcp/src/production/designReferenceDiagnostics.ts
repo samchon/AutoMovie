@@ -45,6 +45,9 @@ const SINGLE_PAGE_MEDIA = new Set(["image/png", "image/jpeg", "image/svg+xml"]);
  * scale. An unmeasurable container (a PDF page, a DXF drawing) simply leaves
  * the frame unverified instead of being approximated into agreement, because a
  * gate that invents the number it is checking is not a gate.
+ *
+ * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure Requires every cited observation to remain bound to exact authorized bytes.
+ * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-closure Refuses stale, dangling, unsupported, or unreviewable reference relations without interpreting the design.
  */
 export const designReferenceDiagnostics = (props: {
   /** Project-relative ledger path reported as each diagnostic's file. */

@@ -16,7 +16,12 @@ import {
 } from "./probeProductionMedia";
 import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
-/** Mux one parser-verified H.264 stream and one exact-runtime audio stream. */
+/**
+ * Mux one parser-verified H.264 stream and one exact-runtime audio stream.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets a source workflow assemble parser-verified video and exact-runtime audio into final feature bytes.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Executes track copying and ISO timing construction as deterministic media code.
+ */
 export const muxProductionFeatureMp4 = (props: {
   video: Uint8Array;
   audio: Uint8Array;
@@ -84,6 +89,9 @@ export const muxProductionFeatureMp4 = (props: {
  * Repaint delivery deliberately refuses transitions, trims, transformed
  * presentation metadata, and changing codec configuration: silently falling
  * back to deterministic pixels would misrepresent the selected product.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets delivery code splice reviewed repaint shots into the declared continuous timeline without regenerating pixels.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces cut-only sample-level conformance through a package function rather than a tool-side transformation.
  */
 export const conformProductionRenditionVideoMp4 = (props: {
   timeline: IAutoMovieFilmTimeline;
@@ -162,6 +170,9 @@ export const conformProductionRenditionVideoMp4 = (props: {
  * One chunk covering the whole film is returned verbatim: it already is the
  * film's video, so an assembly that spans a single chunk is byte-identical to
  * encoding that chunk.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets chunked render workflows concatenate validated H.264 chunks with payload bytes and timing preserved.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns lossless sample retiming and assembly as deterministic source logic.
  */
 export const assembleProductionChunkVideoMp4 = (props: {
   /** Encoded chunk MP4s in play order, read once. */
@@ -253,6 +264,9 @@ export const assembleProductionChunkVideoMp4 = (props: {
 /**
  * Refuse repaint bytes that cannot be conformed without decoding or changing
  * their reviewed presentation.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source pipelines a reusable proof that one repaint clip is deliverable without decoding or alteration.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs codec, timing, and presentation refusal checks in typed validation code.
  */
 export const assertProductionRenditionClipDelivery = (props: {
   bytes: Uint8Array;
@@ -279,7 +293,12 @@ export const assertProductionRenditionClipDelivery = (props: {
     );
 };
 
-/** Validate a complete repaint cut without materializing another MP4 copy. */
+/**
+ * Validate a complete repaint cut without materializing another MP4 copy.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows delivery code to validate complete clip coverage of one film timeline without building a second MP4.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Runs full-cut conformance as deterministic package validation over immutable bytes.
+ */
 export const assertProductionRenditionTimelineDelivery = (props: {
   timeline: IAutoMovieFilmTimeline;
   clips: ReadonlyMap<string, Uint8Array>;
@@ -290,6 +309,9 @@ export const assertProductionRenditionTimelineDelivery = (props: {
 /**
  * Prove a feature directly against immutable repaint clips without rebuilding
  * the expected full-length video in memory.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets publication code prove final feature samples came from selected shot clips while streaming comparisons.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps sample provenance verification in bounded source logic instead of MCP-held evidence.
  */
 export const assertProductionFeatureUsesRenditionClips = (props: {
   feature: Uint8Array;
@@ -388,7 +410,12 @@ export const assertProductionFeatureUsesRenditionClips = (props: {
   }
 };
 
-/** Prove a muxed feature carries exactly the selected rendition video samples. */
+/**
+ * Prove a muxed feature carries exactly the selected rendition video samples.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets callers compare a muxed feature track against the exact selected rendition bytes.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements track and sample equality proof as package-level byte validation.
+ */
 export const assertProductionFeatureUsesRenditionVideo = (props: {
   feature: Uint8Array;
   renditionVideo: Uint8Array;

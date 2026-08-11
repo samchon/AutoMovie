@@ -5,6 +5,9 @@
  * table keyed by the surface is complete by construction: a member added here
  * turns an incomplete table into a compile error instead of a silent hole that
  * only the ten-minute byte-parity gate would notice.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets authoring source name only the engine exports the sandbox deliberately exposes.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes additions to the sandbox vocabulary trigger compile-time completeness checks.
  */
 export type AutoMovieSandboxEngineExport =
   | "AutoMovieSubject"
@@ -60,6 +63,9 @@ export type AutoMovieSandboxEngineExport =
  *
  * Sorted, because the order is a published fact the guide and the refusal
  * message read back to an author.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the sorted runtime export inventory used by guides, refusals, bridges, and stand-ins.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps runtime parity validation anchored to one code-owned list rather than session memory.
  */
 export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineExport[] =
   [

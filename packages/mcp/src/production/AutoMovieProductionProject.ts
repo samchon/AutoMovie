@@ -69,39 +69,95 @@ import {
   validateAutoMovieProductionGraph,
 } from "./validateProductionDesign";
 
-/** Summary returned when a production repository is opened. */
+/**
+ * Summary returned when a production repository is opened.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Returns the production repository identity and revision as typed state ordinary code can retain and compare.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines repository-open results in the package contract rather than encoding them as MCP response-only knowledge.
+ */
 export interface IAutoMovieProductionProjectSummary {
-  /** Absolute active root. */
+  /**
+   * Absolute active root.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Identifies the physical project root whose ordinary source files remain the authoring authority.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries the resolved repository boundary in typed output instead of relying on a tool session's working directory.
+   */
   root: string;
-  /** Exact active production inside the project. */
+  /**
+   * Exact active production inside the project.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Names the exact production whose tracked records and authored modules ordinary code is operating on.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes active-production selection explicit package data rather than implicit MCP conversational context.
+   */
   productionId: string;
-  /** Every registered production, in portable code-unit order. */
+  /**
+   * Every registered production, in portable code-unit order.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes every registered production in deterministic order for code-level discovery and selection.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Places production enumeration in the repository record instead of teaching one MCP client a private catalogue.
+   */
   productions: string[];
-  /** Production manifest format. */
+  /**
+   * Production manifest format.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reports the resident manifest schema version so ordinary code can reason about the files it reads.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps format compatibility in typed repository metadata rather than hiding migration state behind a tool call.
+   */
   formatVersion: number;
-  /** Current monotonic revision. */
+  /**
+   * Current monotonic revision.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives code a monotonic fence for detecting whether authored production state changed between operations.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Publishes concurrency identity as repository data shared by MCP and non-MCP callers.
+   */
   revision: number;
-  /** True when this call initialized a fresh production manifest. */
+  /**
+   * True when this call initialized a fresh production manifest.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Tells ordinary code whether opening this repository created a new visible production contract.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Distinguishes package initialization from reopening without depending on an MCP handler's narration.
+   */
   initialized: boolean;
 }
 
-/** One declared coding-agent input whose bytes enter compile identity. */
+/**
+ * One declared coding-agent input whose bytes enter compile identity.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Represents each declared repository file whose exact presence and bytes determine a coding-agent build.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives compiler identity a typed content record independent of the five-tool transport.
+ */
 export interface IAutoMovieProductionContentInput {
-  /** Project-relative normalized path. */
+  /**
+   * Project-relative normalized path.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves the visible repository-relative identity of an authored or declared compiler input.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries input identity as portable package data rather than an absolute path captured by a tool host.
+   */
   path: string;
   /**
    * Whether the file belongs to a coding-agent source root. Source text uses
    * the same BOM/EOL normalization as a bound shot module before
    * fingerprinting.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Marks bytes that belong to coding-agent source and therefore enter normalized source fingerprinting.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Records source-root membership in the compiler input model rather than inferring it inside an MCP tool.
    */
   source: boolean;
   /**
    * Whether the file was explicitly declared through `contentRoots` or
    * `contentFiles` as a renderer/configuration/asset input. One path may be
    * both source and render content when declarations overlap.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Marks renderer, configuration, or asset bytes explicitly declared by the authoring repository as build inputs.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Preserves render-input membership in a reusable package record even when it overlaps source ownership.
    */
   render: boolean;
-  /** Exact bytes, or null for one declared optional file that is absent. */
+  /**
+   * Exact bytes, or null for one declared optional file that is absent.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Carries the exact resident file bytes, including an explicit absence value for an optional declared input.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Lets package compilation fingerprint content without an MCP layer interpreting file presence.
+   */
   bytes: Uint8Array | null;
 }
 
@@ -112,10 +168,20 @@ interface IAutoMovieActiveRepaintReceipt {
   output: string;
 }
 
-/** A guarded production commit no longer matches its input snapshot. */
+/**
+ * A guarded production commit no longer matches its input snapshot.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary code a precise refusal when authored inputs change after the snapshot it intends to commit.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encodes the optimistic input fence as a package error shared by compilation and persistence paths.
+ */
 export class AutoMovieProductionInputRaceError extends Error {}
 
-/** Structured source-read failure used by the compiler diagnostic boundary. */
+/**
+ * Structured source-read failure used by the compiler diagnostic boundary.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reports which author-owned source path failed and why without collapsing the failure into session prose.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Supplies structured source-read diagnostics to the compiler independently of MCP result formatting.
+ */
 export class AutoMovieProductionSourcePathError extends Error {
   public constructor(
     /**
@@ -168,9 +234,17 @@ const closeRenderFileDescriptor = (
  * `generated/<production>` is compiler owned and `renders/<production>` is
  * content addressed. Every one-artifact mutation is staged before an optimistic
  * revision check and one short production-scoped commit lock.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes tracked design, authored source, generated output, review records, and renders available as one code-addressable repository.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Centralizes production ownership and revision rules in the package so the MCP application remains a thin evidence boundary.
  */
 export class AutoMovieProductionProject {
-  /** Active production selected inside the project repository. */
+  /**
+   * Active production selected inside the project repository.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Anchors every code-level read and mutation to the author's explicitly selected production.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Stores active-production context on the package object rather than as ambient MCP-session state.
+   */
   public readonly productionId: string;
   private readonly rootReal: string;
   private readonly rootDevice: string;
@@ -215,6 +289,9 @@ export class AutoMovieProductionProject {
     /**
      * The archetype catalogue every design record in this project is judged
      * against, and the one its compiler builds from.
+     *
+     * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets code validate and compile author-owned design records against the same explicit archetype registry.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Injects catalogue policy through the package constructor instead of allowing an MCP client to invent supported models.
      */
     public readonly archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
   ) {
@@ -718,7 +795,12 @@ export class AutoMovieProductionProject {
     this.assertProjectRootIdentity();
   }
 
-  /** Open or initialize one production inside a project repository. */
+  /**
+   * Open or initialize one production inside a project repository.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code create or reopen the tracked production records that become shared project memory.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps repository initialization and migration in the package lifecycle rather than an MCP-only setup path.
+   */
   public static open(
     rootDirectory: string,
     productionId?: string,
@@ -749,6 +831,9 @@ export class AutoMovieProductionProject {
   /**
    * Open one fully initialized production without creating, migrating, or
    * repairing any project-resident path.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows diagnostics and review code to inspect existing authoring state without mutating the repository.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Provides a package-level read-only boundary instead of giving observation tools hidden repair authority.
    */
   public static openReadOnly(
     rootDirectory: string,
@@ -777,7 +862,12 @@ export class AutoMovieProductionProject {
     }
   }
 
-  /** Read registered production ids without creating project state. */
+  /**
+   * Read registered production ids without creating project state.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets source-level clients discover resident productions without initializing or altering author-owned files.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Separates pure production discovery from MCP transport and from repository creation side effects.
+   */
   public static registeredProductionIds(rootDirectory: string): string[] {
     const root = path.resolve(rootDirectory);
     const rootReal = fs.realpathSync(root);
@@ -788,13 +878,23 @@ export class AutoMovieProductionProject {
     ).productions;
   }
 
-  /** Current manifest with unknown future fields preserved. */
+  /**
+   * Current manifest with unknown future fields preserved.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Returns the tracked production contract to ordinary code without discarding fields authored by a newer version.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps forward-compatible manifest reading in the package model rather than filtering state through an MCP schema.
+   */
   public manifest(): IAutoMovieProductionManifest {
     this.refreshRevision();
     return structuredClone(this.manifest_);
   }
 
-  /** Read byte-exact project-wide records under the current state fence. */
+  /**
+   * Read byte-exact project-wide records under the current state fence.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the exact shared records that participate in current project identity to code-level consumers.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Reads fenced shared state beneath the tool layer so compilers and diagnostics fingerprint identical bytes.
+   */
   public projectStateRecords(): {
     incarnation: Uint8Array;
     manifest: Uint8Array;
@@ -815,7 +915,12 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Every registered production in this project. */
+  /**
+   * Every registered production in this project.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the repository's production registry directly available for ordinary code to enumerate.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives production membership from tracked state rather than from a list remembered by an MCP client.
+   */
   public productionIds(): string[] {
     this.refreshRevision();
     return [
@@ -826,7 +931,12 @@ export class AutoMovieProductionProject {
     ];
   }
 
-  /** Enumerate declared source, viewer, script and asset inputs safely. */
+  /**
+   * Enumerate declared source, viewer, script and asset inputs safely.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Collects the exact author-declared files ordinary code must bind into production identity and compilation.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves and classifies compiler inputs in package code, leaving MCP responsible only for presenting results.
+   */
   public contentInputs(): IAutoMovieProductionContentInput[] {
     this.assertProjectRootIdentity();
     const readContent = (physicalRoot: string, file: string): Uint8Array =>
@@ -969,7 +1079,12 @@ export class AutoMovieProductionProject {
       .sort((left, right) => compareCodeUnits(left.path, right.path));
   }
 
-  /** Current open summary. */
+  /**
+   * Current open summary.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Projects resident repository identity into a stable summary any source client can inspect.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps open-state reporting derived from package records instead of from tool-session bookkeeping.
+   */
   public summary(): IAutoMovieProductionProjectSummary {
     this.refreshRevision();
     return {
@@ -982,13 +1097,23 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Current monotonic revision. */
+  /**
+   * Current monotonic revision.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary callers the current resident-state fence used to reject stale authoring commits.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Exposes revision identity through the repository API instead of retaining it inside an MCP request lifecycle.
+   */
   public revision(): number {
     this.refreshRevision();
     return this.lastReadRevision_;
   }
 
-  /** Compact deterministic design inventory. */
+  /**
+   * Compact deterministic design inventory.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets authoring code discover which tracked design records exist without consulting hidden agent memory.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives a deterministic design inventory in the package for reuse by guides, compilers, and tools.
+   */
   public inventory(): IAutoMovieProductionDesignInventory {
     const graph = this.graph();
     return {
@@ -1001,7 +1126,12 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Load every current design artifact and validate its stored shape. */
+  /**
+   * Load every current design artifact and validate its stored shape.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reconstructs the complete production design graph from visible, validated repository records for ordinary code.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes graph loading and stored-shape enforcement package invariants rather than MCP handler logic.
+   */
   public graph(): IAutoMovieProductionDesignGraph {
     this.refreshRevision();
     return this.loadGraph();
@@ -1040,7 +1170,12 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Read one exact design artifact, returning null when absent. */
+  /**
+   * Read one exact design artifact, returning null when absent.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary code direct, exact access to the selected author-visible design record and its absence.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves typed design targets below the MCP surface so all clients share one artifact identity rule.
+   */
   public design(target: IAutoMovieDesignTarget): unknown {
     const graph = this.graph();
     switch (target.kind) {
@@ -1059,7 +1194,12 @@ export class AutoMovieProductionProject {
     }
   }
 
-  /** Upsert the active production's design. */
+  /**
+   * Upsert the active production's design.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Persists the production-level design as an explicit repository artifact ordinary authoring code can revise.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces production-design validation and revision semantics in the package rather than a tool-specific mutation.
+   */
   public setProductionDesign(
     design: IAutoMovieProductionDesign,
   ): IAutoMovieDesignMutationOutput {
@@ -1098,7 +1238,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Upsert exactly one model recipe. */
+  /**
+   * Upsert exactly one model recipe.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Commits one inspectable model recipe without replacing sibling recipes authored in the same project.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns targeted recipe persistence and registry validation beneath any MCP authoring adapter.
+   */
   public setModelRecipe(
     design: IAutoMovieModelRecipe,
   ): IAutoMovieDesignMutationOutput {
@@ -1109,7 +1254,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Upsert the project-shared world design. */
+  /**
+   * Upsert the project-shared world design.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Stores the shared world contract as project memory that ordinary code and every production can reuse.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps cross-production world ownership in repository code instead of duplicating it in a tool session.
+   */
   public setWorldDesign(
     design: IAutoMovieWorldDesign,
   ): IAutoMovieDesignMutationOutput {
@@ -1120,7 +1270,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Upsert exactly one formation. */
+  /**
+   * Upsert exactly one formation.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Writes one named formation as a reviewable design record while preserving other authored formations.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies formation validation and scoped persistence in the package boundary shared by all clients.
+   */
   public setFormationDesign(
     design: IAutoMovieFormationDesign,
   ): IAutoMovieDesignMutationOutput {
@@ -1131,7 +1286,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Upsert exactly one code-bound shot contract. */
+  /**
+   * Upsert exactly one code-bound shot contract.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Persists the explicit contract that binds a tracked shot identity to coding-agent-owned source.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps shot-to-module binding and validation in reusable repository code, not MCP state.
+   */
   public setShotContract(
     design: IAutoMovieShotContract,
   ): IAutoMovieDesignMutationOutput {
@@ -1142,7 +1302,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Upsert exactly one acceptance scenario. */
+  /**
+   * Upsert exactly one acceptance scenario.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Records one author-defined acceptance scenario beside the production so ordinary code can evaluate it repeatedly.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes acceptance-scenario persistence a typed repository capability rather than a transient tool instruction.
+   */
   public setAcceptanceScenario(
     design: IAutoMovieAcceptanceScenario,
   ): IAutoMovieDesignMutationOutput {
@@ -1153,7 +1318,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Remove exactly one unreferenced design artifact. */
+  /**
+   * Remove exactly one unreferenced design artifact.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code retire one obsolete design record while preserving referenced authoring state.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces reference-aware deletion at the package boundary instead of trusting an MCP caller to protect graph integrity.
+   */
   public eraseDesignArtifact(
     target: IAutoMovieDesignTarget,
     reason = "direct project API erase",
@@ -1256,6 +1426,9 @@ export class AutoMovieProductionProject {
   /**
    * Remove the active production namespace without touching shared assets or
    * any sibling production.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Removes one complete production's visible records while protecting shared and sibling author-authored material.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encapsulates namespace-scoped erasure and its audit reason in repository code beneath tool transport.
    */
   public eraseProduction(reason: string): {
     erased: boolean;
@@ -1516,7 +1689,12 @@ export class AutoMovieProductionProject {
     };
   }
 
-  /** Resolve and read one coding-agent-owned source module. */
+  /**
+   * Resolve and read one coding-agent-owned source module.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reads the actual author-owned module bytes that remain authoritative for production behavior.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps source acquisition and ownership checks in compiler-facing package code rather than MCP payload handling.
+   */
   public readSource(relativePath: string): Uint8Array {
     const file = this.resolveSourcePath(relativePath);
     if (fs.existsSync(file) === false)
@@ -1537,7 +1715,12 @@ export class AutoMovieProductionProject {
     });
   }
 
-  /** Resolve a project-relative source path and enforce source-root ownership. */
+  /**
+   * Resolve a project-relative source path and enforce source-root ownership.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Constrains authored module references to portable TypeScript paths inside declared source roots.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes source ownership and extension policy a reusable package check, not MCP request validation.
+   */
   public resolveSourcePath(relativePath: string): string {
     this.assertProjectRootIdentity();
     if (path.isAbsolute(relativePath))
@@ -1563,7 +1746,12 @@ export class AutoMovieProductionProject {
     return resolved;
   }
 
-  /** Load the generated ownership manifest if one exists. */
+  /**
+   * Load the generated ownership manifest if one exists.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code distinguish compiler-owned outputs from files the author continues to own.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Reads generated ownership from tracked package state rather than an MCP client's memory of a compile.
+   */
   public generatedManifest(): IAutoMovieGeneratedManifest | null {
     this.refreshRevision();
     return this.loadGeneratedManifest();
@@ -1578,7 +1766,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Read one active-production state file without following an escaping link. */
+  /**
+   * Read one active-production state file without following an escaping link.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary code byte-exact access to one production record while refusing linked or replaced state.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Centralizes incarnation and physical-file checks beneath every review or compiler consumer.
+   */
   public readTrackedStateFile(relativePath: string): Uint8Array | null {
     this.assertIncarnation();
     const file = this.trackedStatePath(relativePath);
@@ -1592,13 +1785,23 @@ export class AutoMovieProductionProject {
     });
   }
 
-  /** Absolute path of one active-production tracked state record. */
+  /**
+   * Absolute path of one active-production tracked state record.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Maps a visible production-relative record to its guarded resident location for code-level operations.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps containment and incarnation enforcement in repository path resolution rather than tool code.
+   */
   public trackedStatePath(relativePath: string): string {
     this.assertIncarnation();
     return resolveInside(this.productionStateRoot, relativePath);
   }
 
-  /** Project-relative path of the generated root. */
+  /**
+   * Project-relative path of the generated root.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Identifies the production-scoped compiler output root without confusing it with author-owned source.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives generated ownership from manifest configuration inside the package, independent of MCP routing.
+   */
   public generatedRoot(): string {
     this.assertIncarnation();
     return resolveInside(
@@ -1607,7 +1810,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Read one compiler-owned file without following an escaping link. */
+  /**
+   * Read one compiler-owned file without following an escaping link.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes generated bytes to ordinary verification code while preserving the boundary around authored modules.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies compiler-root containment and link refusal in one package read shared by all clients.
+   */
   public readGeneratedFile(relativePath: string): Uint8Array {
     const root = this.generatedRoot();
     const file = resolveInside(root, relativePath);
@@ -1642,6 +1850,9 @@ export class AutoMovieProductionProject {
    * returns `null` rather than throwing, because the screenplay checks report a
    * missing document as their own diagnostic and would otherwise turn one
    * authoring mistake into a crash.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reads the author's screenplay prose from the repository while treating a missing or escaping path as inspectable absence.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps untrusted prose-path resolution in the compiler-facing package instead of relying on an MCP host filesystem view.
    */
   public readProseDocument(relativePath: string): string | null {
     this.assertIncarnation();
@@ -1664,7 +1875,12 @@ export class AutoMovieProductionProject {
     ).toString("utf8");
   }
 
-  /** Project-relative path of the render root. */
+  /**
+   * Project-relative path of the render root.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives code the configured production-specific location of materialized render evidence.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves render ownership from repository configuration below the MCP presentation layer.
+   */
   public renderRoot(): string {
     this.assertIncarnation();
     return resolveInside(
@@ -1673,7 +1889,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Read one render-owned regular file without following a link. */
+  /**
+   * Read one render-owned regular file without following a link.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary review code consume resident render bytes only after their physical identity remains stable through the read.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements link, ancestry, and descriptor-race defenses once in the render repository boundary.
+   */
   public readRenderFile(relativePath: string): Uint8Array {
     const root = this.renderRoot();
     const file = resolveInside(root, relativePath);
@@ -1741,6 +1962,9 @@ export class AutoMovieProductionProject {
    * A capture caller may supply `inputCurrent`; the commit lock invokes it
    * immediately before and after applying files and rolls back when either
    * observation no longer matches the captured production snapshot.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Commits deterministic render evidence as repository files only while its authoring input snapshot stays current.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns content-address validation, receipt creation, and rollback below any frame-capture tool adapter.
    */
   public commitRenderBundle(
     relativeBundle: string,
@@ -1778,7 +2002,12 @@ export class AutoMovieProductionProject {
     return this.commitFiles(writes, inputCurrent);
   }
 
-  /** Atomically commit one parsed repaint clip and its immutable receipt. */
+  /**
+   * Atomically commit one parsed repaint clip and its immutable receipt.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Stores the repaint bytes and their immutable provenance together as inspectable production evidence.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps rendition schema validation and atomic receipt publication in package persistence, not provider-facing MCP logic.
+   */
   public commitRepaintRendition(
     receipt: IAutoMovieRepaintReceipt,
     bytes: Uint8Array,
@@ -1820,6 +2049,9 @@ export class AutoMovieProductionProject {
    *
    * Invalid, stale, linked, or forged records are omitted; review preparation
    * treats an omitted required shot as missing rendition evidence.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives review code only repaint renditions whose tracked receipts and resident bytes still verify against current inputs.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs rendition evidence validation in the package so MCP review cannot bless stale or forged provider output.
    */
   public verifiedRepaintRenditions(
     shots: readonly string[],
@@ -2046,6 +2278,9 @@ export class AutoMovieProductionProject {
    * and is byte-bound to a receipt written atomically by commitRenderBundle.
    * Every declared PNG must also remain inside that bundle and match its
    * recorded digest and raster before the manifest is considered current.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code trust a render only after its canonical path, receipt, frame bytes, digests, and rasters agree.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps render-evidence verification in repository code so MCP review cannot substitute an unbound manifest.
    */
   public verifiedRenderManifest(
     manifestPath: string,
@@ -2115,7 +2350,12 @@ export class AutoMovieProductionProject {
     }
   }
 
-  /** Atomically write the exact aggregate production-delivery ledger. */
+  /**
+   * Atomically write the exact aggregate production-delivery ledger.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Persists the complete production delivery inventory as a typed, reviewable ledger in the repository.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns strict aggregate-manifest validation and atomic storage below any delivery-facing client.
+   */
   public commitProductionRenderManifest(
     manifest: IAutoMovieProductionRenderManifest,
   ): number {
@@ -2194,6 +2434,9 @@ export class AutoMovieProductionProject {
    * restores the previous valid publication if any write, guard, final gate, or
    * post-commit byte assertion fails. A replaced physical root or state
    * incarnation is the exception: stale paths are abandoned without rollback.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes authoring-derived delivery bytes only when the file inventory, parser receipts, revision, and final compiler gate remain coherent.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encapsulates staged publication, final validation, and rollback in package persistence rather than an MCP workflow.
    */
   public commitProductionPublication(props: {
     files: ReadonlyMap<string, Uint8Array>;
@@ -2342,6 +2585,9 @@ export class AutoMovieProductionProject {
    * Returned paths are rooted below the active production's
    * `renders/<production>/deliverables/<encoded-id>` slot and can be copied
    * verbatim into the aggregate production render manifest.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Materializes one declared deliverable into a stable production-owned slot ordinary code can ledger exactly.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Assigns deliverable paths and atomic byte persistence in the package instead of in tool-specific renderer glue.
    */
   public commitProductionDeliverableFiles(
     deliverableId: string,
@@ -2389,6 +2635,9 @@ export class AutoMovieProductionProject {
   /**
    * Atomically commit generated files while an optional compiler input guard
    * remains current before and after every staged write.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Commits compiler-owned artifacts and their ownership manifest only against the unchanged authoring snapshot that produced them.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps generated-file staging, stale-input refusal, and revision control in the compiler package boundary.
    */
   public commitGenerated(
     files: ReadonlyMap<string, Uint8Array>,
@@ -2451,6 +2700,9 @@ export class AutoMovieProductionProject {
    * The guard runs twice so a coding-agent input cannot change while a
    * non-materializing diagnostic, design or lint response is being published.
    * No file or revision is written.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Fences a read-only diagnostic result against concurrent source edits without manufacturing a repository write.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Provides snapshot confirmation as a package concurrency primitive shared by design, lint, and diagnostic publishers.
    */
   public confirmCurrentSnapshot(
     inputCurrent: () => boolean,
@@ -2476,7 +2728,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Read one stored review record. */
+  /**
+   * Read one stored review record.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Returns persisted review evidence to ordinary code from the same tracked repository the author can inspect.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Validates stored review shape in the package instead of treating an MCP response as the review record.
+   */
   public review(target: IAutoMovieReviewTarget): IAutoMovieStoredReview | null {
     this.refreshRevision();
     return readOwnedTypedJson(
@@ -2486,7 +2743,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Read the current production's optional screenplay/treatment index. */
+  /**
+   * Read the current production's optional screenplay/treatment index.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the repository-authored mapping from screenplay stages to prose documents for repeatable code-level checks.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Loads and validates screenplay indexing below the MCP layer so document identity is not conversational.
+   */
   public screenplayIndex(): IAutoMovieScreenplayIndex | null {
     this.refreshRevision();
     return this.loadScreenplayIndex();
@@ -2503,7 +2765,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Store one already validated review record under an optional input fence. */
+  /**
+   * Store one already validated review record under an optional input fence.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Persists validated review evidence only while the authoring inputs it judges remain current.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps review-file identity and guarded commitment in repository code beneath any submission tool.
+   */
   public commitReview(
     review: IAutoMovieStoredReview,
     inputCurrent?: () => boolean,
@@ -2519,7 +2786,12 @@ export class AutoMovieProductionProject {
     );
   }
 
-  /** Absolute path for a current review target. */
+  /**
+   * Absolute path for a current review target.
+   *
+   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Maps each typed review subject to the visible production record that preserves its verdict.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Centralizes collision-safe review addressing in the package rather than constructing paths in MCP handlers.
+   */
   public reviewPath(target: IAutoMovieReviewTarget): string {
     this.assertIncarnation();
     switch (target.kind) {
@@ -4205,7 +4477,12 @@ const isInside = (root: string, candidate: string): boolean => {
 const pathsOverlap = (left: string, right: string): boolean =>
   isInside(left, right) || isInside(right, left);
 
-/** Canonical render-root-relative bundle path for one manifest identity. */
+/**
+ * Canonical render-root-relative bundle path for one manifest identity.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Derives a portable repository path from the exact target, renderer, input fingerprint, and render specification ordinary code can reproduce.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines content-addressed render placement in a pure package helper shared by capture and verification callers.
+ */
 export const productionRenderBundleRelativePath = (
   manifest: Pick<
     IAutoMovieRenderBundleManifest,

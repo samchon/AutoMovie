@@ -32,7 +32,12 @@ import {
 
 import { AutoMovieSandboxEngineExport } from "./sandboxEngineSurface";
 
-/** What one bridged engine call produced, or why it produced nothing. */
+/**
+ * What one bridged engine call produced, or why it produced nothing.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source modules a serializable success-or-refusal result for isolated engine calls.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines the realm-crossing response shape as code data without sharing host objects.
+ */
 export type IAutoMovieSandboxEngineAnswer =
   | { ok: true; value: unknown }
   | { ok: false; message: string };
@@ -55,6 +60,9 @@ export type IAutoMovieSandboxEngineAnswer =
  * the other: the sandbox asks it once per placed slot, so bridging it would
  * serialise a whole terrain record per crowd member, and the copy stays inside
  * the sandbox where the byte-parity gate reads it.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes which engine calls cross the sandbox boundary so source validation can prove parity with stand-ins.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Pins the JSON-safe bridge subset in a typed constant reviewed alongside the sandbox.
  */
 export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandboxEngineExport[] =
   [
@@ -168,6 +176,9 @@ const finiteOnly = (key: string, value: unknown): unknown => {
  * A refusal the engine raises is carried as a message rather than as an error
  * object, for the same reason: an `Error` from this realm handed to sandbox
  * code is a live reference to this realm.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets sandboxed production source invoke an approved engine operation through JSON-only arguments and results.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces the realm boundary and finite serialization in a deterministic host bridge.
  */
 export const callAutoMovieSandboxEngine = (
   name: string,

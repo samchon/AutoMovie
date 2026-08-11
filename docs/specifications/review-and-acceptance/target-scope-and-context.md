@@ -15,6 +15,12 @@
 
 범위 선택은 포함되는 대상, 시간, frame, view, language, channel, pass, rendition과 delivery를 열거하거나 결정적인 선택 규칙으로 정의하고 제외 범위와 이유를 함께 가진다. 좁은 선택의 verdict는 선택 결과를 포함하는 더 넓은 범위로 자동 전파되지 않는다.
 
+### Criterion dependency scope {#review-system-criterion-dependency-scope}
+
+<!-- @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion Criterion이 직접 target하거나 읽는 shot dependency를 중복 없이 계산하게 한다. -->
+
+Criterion dependency scope는 explicit target과 criterion이 읽는 shot을 별도 inclusion route로 계산한다. Cross-shot criterion의 모든 referenced shot은 invalidation dependency이며, helper가 verdict authority나 requestable review unit을 새로 정하지 않는다.
+
 ### Source와 Artifact 결속 {#review-system-source-artifact-binding}
 
 <!-- @evidence requirements/review/reproducible-context.md#review-context-source-artifact-identity Binds review to exact source, asset, take, edit, render and delivery identities. -->

@@ -38,7 +38,7 @@ const PROJECT_MARKERS = [
  * unsupported and never evaluated through a substitute profile.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes the supported segmentation revision explicit without supplying thresholds.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Binds evaluation to the installed Unicode and ICU segmentation data.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Binds evaluation to the installed Unicode and ICU segmentation data.
  */
 export const AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION = Object.freeze({
   algorithm: "intl-segmenter-grapheme",
@@ -83,7 +83,7 @@ export const findAutoMovieProjectRoot = (
  * Open the non-MCP compiler, oracle, review, and project runtime.
  *
  * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Keeps the requested production distinct from the opened effective namespace.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-record-input-output Binds all returned services to the same project and production input.
+ * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Binds all returned services to the same requested and effective project-production identity.
  */
 export const openAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -147,9 +147,11 @@ export const compileAutoMovieProduction = (props: {
  * Project status projection for CLI/lint consumers, never an MCP tool.
  *
  * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Reports current state without converting missing work into success.
+ * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Distinguishes planned render targets from materialized current manifests in inspection.
  * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation Keeps inspection facts separate from operation state.
+ * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-terminal-outcome Preserves incomplete work as a non-success terminal outcome.
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Includes measure-only caption outcomes only for the current compiled timeline.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Delivers caption measurements and supported-profile verdicts in inspection.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Delivers caption measurements and supported-profile verdicts in inspection.
  */
 export const inspectAutoMovieProduction = (
   services: IAutoMovieProductionServices,
@@ -246,7 +248,7 @@ export const inspectAutoMovieProduction = (
  * measure-only facts but is never substituted to produce a verdict.
  *
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Always reports cue metrics and reserves thresholds and verdict authority for the production.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Separates measurement, segmentation support, boundary comparison, and not-run outcomes.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Separates measurement, segmentation support, boundary comparison, and not-run outcomes.
  */
 export const inspectAutoMovieCaptionReadability = (
   timeline: IAutoMovieFilmTimeline,

@@ -15,6 +15,12 @@ Source 입력은 stable asset identity, immutable bytes, byte digest, media fact
 
 Decode input은 source bytes와 declared/observed media facts이고 output은 정수 sample rate, 유한 channel layout, ordered samples, duration과 decoder revision이다. Derived source는 parent digest, exact transform, transform revision과 output digest를 가진다. Unsupported containerㆍcodec, contradictory facts, nonfinite sample, duration overflow, channel ambiguity는 source identity를 포함한 거절이다.
 
+### Decode contract {#sound-decoder-input-contract}
+
+<!-- @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract 지원 container, sample encoding, channel, rate와 decode resource bound를 명시하게 한다. -->
+
+Decoder는 exact input bytes에서 관찰한 source facts와 bounded decoded sample buffer를 분리하고, 지원하지 않거나 손상된 입력을 silence 또는 대체 source로 바꾸지 않고 거절한다.
+
 ### Source choice와 provider boundary {#sound-source-choice-provider-and-secret-boundary}
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-choice 이 절은 source 선택의 author authority와 대체 규칙을 고정한다. -->
 <!-- @evidence requirements/sound/sources-and-external-assets.md#sound-source-provider-adapter-boundary 이 절은 provider metadata를 adoption 경계 밖 runtime 입력으로 쓰지 못하게 한다. -->

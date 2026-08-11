@@ -31,6 +31,9 @@ import {
  * {@link Quaternion.fromEuler}, and an omitted/`null` rotation is identity, so
  * the LLM authors placements in degrees it understands and never emits a raw
  * quaternion. Translation and scale pass through unchanged.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets production TypeScript lower human-readable Euler placement into the engine quaternion while retaining authored translation and scale.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements that deterministic placement conversion as a reusable source helper rather than an interactive MCP mutation.
  */
 export const toEngineTransform = (
   transform: IAutoMovieMcpTransform,
@@ -46,7 +49,7 @@ export const toEngineTransform = (
 /**
  * Project engine motion into the writable MCP production-design shape.
  *
- * @evidence requirements/production-design/continuity-change-and-deliverables.md#production-design-deliverable-source-authority Keeps the engine motion authoritative while changing only representation.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Keeps the engine motion and its writable projection joined as two representations of one source-owned result.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Treats the MCP form as a derived projection of the same authored motion.
  */
 export const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
@@ -60,8 +63,8 @@ export const toMcpMotion = (motion: IAutoMovieMotion): IAutoMovieMcpMotion => ({
 /**
  * Project one engine Bezier tuple into named MCP control points.
  *
- * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-authority Preserves the source curve rather than selecting new interpolation.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Keeps this named shape derived from the tuple source.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Preserves the source curve's identity while projecting its tuple into named control points.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Keeps this named shape derived from the tuple source.
  */
 export const toMcpBezier = (
   bezier: IAutoMovieKeyframe["bezier"],
@@ -78,8 +81,8 @@ export const toMcpBezier = (
 /**
  * Lower one writable MCP motion into the deterministic engine contract.
  *
- * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Consumes the caller-authored motion without replacing its content.
- * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Makes the MCP record an explicit deterministic lowering input.
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Consumes the caller-authored motion as ordinary typed source without replacing its content.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Converts named Bezier controls into the engine tuple shape in deterministic source code.
  */
 export const toEngineMotion = (
   motion: IAutoMovieMcpMotion,
@@ -104,6 +107,9 @@ export const toEngineMotion = (
  * driven drivers' named `{from, to}` ranges become the engine's `[from, to]`
  * pairs, and the gait-less MCP profile becomes a plain profile (a prop does not
  * locomote, so `gaits` is simply absent).
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets authored prop records move from the writable MCP shape into engine tuples without hidden state.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs the prop-profile and driven-range lowering entirely in deterministic package code.
  */
 export const toEnginePropSpec = (
   spec: IAutoMovieMcpPropSpec,
