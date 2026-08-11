@@ -46,7 +46,7 @@ const readSandbox = (relative: string): string =>
  * around `link:` resolving to untransformed `src/*.ts`.
  *
  * The pack itself is not exercised here: it runs nine package builds and would
- * dominate this suite. `pnpm run e2e:tgz` covers the equivalent guarantee that
+ * dominate this suite. Package build tests cover the equivalent guarantee that
  * a packed chain resolves and serves, and creating a real sandbox covers the
  * rest.
  *
