@@ -31,8 +31,10 @@ Output identity는 job identity와 해당 output role 및 deterministic compatib
 
 <!-- @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Succeeded, published와 retained를 독립된 출력 사실로 표현한다. -->
 <!-- @evidence requirements/diagnostics/localization-and-machine-results.md#diagnostics-machine-readable-result 실행 상태와 완전성을 자유 문구 없이 소비할 수 있는 정규 출력을 요구한다. -->
+<!-- @evidence requirements/operations-and-recovery/partial-artifacts-and-publication.md#operations-artifact-state-ownership Artifact completeness, integrity, validation과 publication을 독립된 정규 출력으로 보존한다. -->
+<!-- @evidence requirements/diagnostics/partial-artifacts-and-recovery.md#diagnostics-preserve-prior-success 과거 성공 evidence를 현재 freshness와 publication 여부가 덮어쓰지 않게 한다. -->
 
-정규 실행 record는 versioned machine-readable data이며 입력 identity, state, completeness, publication status와 retention status를 독립 field로 전달해야 한다. Human message는 이 정규 의미를 보조하며 record를 읽지 못하는 consumer는 unknown version을 success나 empty result로 해석해서는 안 된다.
+정규 실행 record는 versioned machine-readable data이며 입력 identity, execution state, artifact별 materialization과 completeness, integrity와 validation, freshness와 compatibility, publication selection과 generation, availability와 quarantine, retention status, domain verdict와 phase를 독립 field로 전달해야 한다. 과거 성공 receipt는 새 snapshot이 stale, incompatible, superseded, unavailable 또는 quarantined가 되어도 이력으로 보존하고, human message는 이 정규 의미를 보조하며 record를 읽지 못하는 consumer는 unknown version을 success나 empty result로 해석해서는 안 된다.
 
 ### Domain Result와 운영 상태의 분리 {#execution-domain-result-separation}
 

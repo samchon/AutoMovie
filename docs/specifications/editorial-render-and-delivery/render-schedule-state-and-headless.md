@@ -1,6 +1,6 @@
 # Render schedule, state와 headless 실행
 
-## Render artifact lifecycle {#spec-render-artifact-lifecycle}
+## Render phase와 공통 Artifact 축 {#spec-render-artifact-lifecycle}
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-scope-artifact-identity Render artifact의 complete identity를 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Compile과 render 책임을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized 계획과 materialization 상태를 정밀화한다. -->
@@ -9,13 +9,18 @@
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-artifact-invalidation Artifact invalidation을 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-partial-artifact Partial artifact 상태를 정밀화한다. -->
 <!-- @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-missing-artifact-refusal Missing artifact의 거절 조건을 정밀화한다. -->
+<!-- @evidence requirements/rendering/validation.md#rendering-validation-status Render phase, materialization, validation, freshness와 failure classification을 한 상태값으로 합치지 않고 모두 구분한다. -->
+<!-- @evidence requirements/rendering/validation.md#rendering-validation-recovery Independent prior success evidence와 현재 partial verdict를 함께 보존한다. -->
+<!-- @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-current-stale Current publication selection과 expected input에 대한 freshness를 독립적으로 판정한다. -->
 <!-- @evidence requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact Optional rendition이 deterministic artifact와 별도 identity를 가져야 한다. -->
 
 Render request는 production과 compiled revision, selected edit, film range, camera·view, schedule, products, dimensions, color, runtime profile, external dependency closure와 requested destination을 고정한다. Compilation이 확정한 scene·timeline truth만 소비하며 missing structure, source 또는 camera를 render 단계의 placeholder로 보완하지 않는다. Deterministic product와 optional external rendition은 source, identity, receipt, validation과 publication을 공유하지 않는다.
 
-Lifecycle은 requested, planned, scheduled, lowering, rendering, partially-materialized, materialized, probed, reviewed, failed, unsupported와 stale을 구분한다. 각 전이는 expected predecessor identity와 새 evidence를 요구하고, path·plan·process success·과거 receipt는 materialized 또는 current를 의미하지 않는다. Product 하나의 성공은 다른 pass, view, audio-related product나 encode의 성공으로 승격되지 않는다.
+각 render product는 [독립 Artifact 상태 축 계약](../execution-and-recovery/artifacts-and-atomic-publication.md#execution-artifact-lifecycle-contract)의 같은 다섯 축 snapshot을 소비하고 render-specific phase record만 추가한다. Phase record는 requested, planned, scheduled, lowering, rendering, probing, reviewing과 finished position 및 active, succeeded, failed, unsupported 또는 not-run outcome을 가지며 expected predecessor와 새 evidence에 결속된다. Requirement의 partially-materialized와 materialized는 materialization 및 completeness 축에, probed와 reviewed는 validation evidence와 method receipt에, stale은 freshness에 남기므로 phase, path, plan, process success와 과거 receipt가 artifact truth나 current publication을 대신하지 않는다.
 
-Input 변경은 dependency relation에 따라 정확한 product와 downstream encode·review를 stale로 만든다. Verified independent output은 expected identity, byte digest와 receipt가 일치할 때만 partial set에 보존한다. Missing identity, ambiguous scope, compile contradiction, stale cache와 zero-byte 또는 unverified output은 materialized 상태를 거절하고 missing closure와 safe retry 범위를 반환한다.
+Input 변경은 dependency relation에 따라 정확한 product와 downstream encode·review의 freshness를 stale로 바꾸고 consumer 또는 runtime profile 변화는 compatibility를 별도로 다시 판정하며, 이미 관측한 materialization coverage, integrity와 과거 validation receipt를 지우지 않는다. 이전 성공 product는 complete, integrity verified와 당시 validation passed evidence를 유지하면서 현재 expected input에는 stale, 현재 runtime에는 incompatible, publication에는 current 또는 superseded, storage에는 unavailable, policy에는 quarantined일 수 있으며 이 조합을 새 render success로 확대하지 않는다.
+
+Product 하나의 성공은 다른 pass, view, audio-related product나 encode의 성공으로 승격되지 않는다. Verified independent output은 expected identity, byte digest와 receipt가 일치할 때 자기 축 snapshot과 함께 보존한다. Missing identity, ambiguous scope, compile contradiction, stale cache와 zero-byte 또는 unverified output은 확인된 materialization과 completeness, integrity와 artifact-scoped validation, freshness와 compatibility, publication selection과 generation, availability와 quarantine 및 safe retry 범위를 각각 반환하고 materialization complete 또는 current publication을 주장하지 않는다.
 
 ## Exact frame schedule과 direct seek {#spec-render-frame-schedule}
 <!-- @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-schedule-sampling Rational timeline의 frame schedule을 정밀화한다. -->
@@ -47,7 +52,7 @@ Lowering은 compiled model, instance, actor, rig, formation, camera, light, envi
 
 각 frame·view·pass evaluation은 clean state snapshot에서 declared film time을 직접 적용한다. Camera, pass override, temporary visibility, animation accumulator, random state와 capture setting은 작업 단위마다 격리하고, prior frame이나 failed pass의 mutation을 관찰 가능한 결과에 남기지 않는다. Resources와 listener는 acquisition, replacement, ownership과 release를 추적하며 cancellation이나 retry 뒤 stale callback이 다음 작업에 참여하지 않는다.
 
-Lowering receipt는 source closure, runtime ownership graph, ready·missing·unsupported resources와 lifecycle status를 제공한다. Independent verified subtree는 source identity가 같은 retry에서 재사용할 수 있지만 required scene closure가 깨지면 renderable state는 partial이다. Unknown model, missing required material, hierarchy cycle, duplicate owner, non-finite state, incompatible capability와 cleanup failure는 거절하고 affected subtree와 safe retry 여부를 보고한다.
+Lowering receipt는 source closure, runtime ownership graph, resource별 ready·missing·unsupported 관측과 lowering phase를 제공한다. Independent verified subtree는 source identity가 같은 retry에서 재사용할 수 있지만 required scene closure가 깨지면 renderable state는 partial이다. Unknown model, missing required material, hierarchy cycle, duplicate owner, non-finite state, incompatible capability와 cleanup failure는 거절하고 affected subtree와 safe retry 여부를 보고한다.
 
 ## Headless와 supported platform determinism {#spec-render-headless-platform}
 <!-- @evidence requirements/rendering/headless-and-platform-determinism.md#rendering-headless-platform-determinism Headless와 interactive 실행의 공통 계약을 정밀화한다. -->
