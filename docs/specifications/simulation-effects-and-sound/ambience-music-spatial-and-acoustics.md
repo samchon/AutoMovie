@@ -45,6 +45,13 @@ Music source는 bytes digest, media facts, origin, rights scope, territory 또�
 
 Spatial input은 emitter identity/path, listener identity/path, shared coordinate basis, presentation sample range와 world snapshot revisions다. Path pose는 sample 또는 declared control interval에서 결정적으로 평가하고 interpolation rule을 identity에 포함한다. Output은 sample/block별 relative direction, distance, radial velocity proxy와 path receipt다.
 
+### Extended group source aggregation {#spatial-extended-group-source-aggregation}
+<!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources 이 절은 current formation 또는 instance-set state를 들리는 확장 음원의 공간ㆍ에너지 상태로 파생한다. -->
+
+Extended-source input은 exact current formation 또는 instance-set revision, cue와 event identity, sounding member identities와 count, member별 world position과 resolved spatial extent, motionㆍreform state, listener state와 versioned aggregation profile이다. 같은 presentation sample에서 출력되는 state는 weighted acoustic center, listener-relative direction과 spatial span, effective distance, aggregate energy와 source-state receipt를 포함하며 sounding member를 제외한 designed population이나 culled display count를 대신 사용하지 않는다.
+
+Aggregation profile은 center weighting, effective-distance measure, count와 level의 결합, normalization과 channel-spread mapping을 고정하고 result identity에 포함한다. Sequential mix, arbitrary seek와 chunked mix는 같은 group revision과 sample에서 같은 결과를 만들며 motion 또는 reform은 center, span, distance와 energy를 함께 갱신한다. Missing 또는 duplicate member, declared count와 sounding membership의 불일치, stale revision, non-finite position, unresolved extent와 unsupported aggregation은 `unsupported` 또는 refusal diagnostic을 반환하고 centroid point source나 임의 gain으로 대체하지 않는다.
+
 ### Direct path와 output mapping {#spatial-direct-path-and-output-mapping}
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path 이 절은 distance, delay와 attenuation의 bounded direct model을 정한다. -->
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-spatial-output-mapping 이 절은 listener-relative result를 target channel layout으로 명시적으로 매핑한다. -->
