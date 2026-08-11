@@ -1,59 +1,45 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+const publicSurface = ["src/index.ts"];
+
 /**
- * Public create-automovie contracts answer directly for both product promises
- * and package-independent system contracts.
+ * The public create-automovie surface answers for stable contract populations.
+ *
+ * Contract documents are selected by domain or by the complete layer, never by
+ * individual Markdown filename. New documents therefore enter the graph
+ * automatically and non-applicable units remain explicit source exclusions.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
       name: "public create-automovie exports implement requirements",
       type: "typescript",
-      files: ["src/bin.ts"],
+      files: publicSurface,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/agent-authoring/README.md",
-            "requirements/product/README.md",
+            "requirements/agent-authoring/**/*.md",
+            "requirements/product/**/*.md",
           ],
           symbol: ["h1", "h2", "h3"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "requirements/agent-authoring/project-ownership.md",
-            "requirements/agent-authoring/source-owned-loop.md",
-            "requirements/product/charter.md",
-          ],
-          symbol: "h3",
         },
       ],
     },
     {
       name: "public create-automovie exports implement specifications",
       type: "typescript",
-      files: ["src/bin.ts"],
+      files: publicSurface,
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/authoring-and-authority/README.md"],
+          files: ["specifications/authoring-and-authority/**/*.md"],
           symbol: ["h1", "h2", "h3"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/authoring-and-authority/capability-and-content-boundary.md",
-            "specifications/authoring-and-authority/source-authority-and-derivation.md",
-          ],
-          symbol: "h3",
         },
       ],
     },
