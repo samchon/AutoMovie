@@ -418,7 +418,6 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/rendering/frame-identity-and-content-addressing.md",
           "requirements/rendering/frame-schedules-and-sampling.md",
           "requirements/rendering/headless-and-platform-determinism.md",
-          "requirements/rendering/scene-lowering-and-runtime-state.md",
           "requirements/rendering/scope-and-artifact-identity.md",
           "requirements/rendering/validation.md",
         ],
