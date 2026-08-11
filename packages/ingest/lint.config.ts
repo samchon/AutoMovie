@@ -99,7 +99,6 @@ const graph: ITtscEvidenceGraphConfig = {
           "requirements/asset-authoring/external-assets.md",
           "requirements/external-inputs/adoption-modes-and-composition.md",
           "requirements/motion/clips-keyframes-and-interpolation.md",
-          "requirements/motion/validation-and-determinism.md",
         ],
         symbol: ["h3"],
       },
@@ -238,10 +237,7 @@ const graph: ITtscEvidenceGraphConfig = {
       reference: {
         type: "markdown",
         root: "../../docs",
-        files: [
-          "requirements/asset-authoring/rig-and-state.md",
-          "requirements/motion/retargeting-and-scale.md",
-        ],
+        files: ["requirements/asset-authoring/rig-and-state.md"],
         symbol: ["h3"],
       },
     },
