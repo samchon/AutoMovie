@@ -383,10 +383,22 @@ export interface IAutoMovieModelProxyAsset {
   measurement?: IAutoMovieGeneratedMeasurementProxy;
 }
 
-/** Explicit ingest and proxy choices for an external 3D model. */
+/**
+ * Explicit ingest and proxy choices for an external 3D model.
+ *
+ * @author Samchon
+ */
 export interface IAutoMovieExternalModelProvenance {
-  /** Stable ingest normalization profile applied to the source model. */
-  ingestProfile: string;
+  /**
+   * Stable model-only normalization profile applied to the source model.
+   *
+   * Motion-only `gltf-motion-v1` provenance belongs to
+   * {@link IAutoMovieExternalMotionProvenance} and cannot enter this record.
+   *
+   * @evidence requirements/asset-authoring/external-assets.md#asset-external-adoption-mode Keeps external model adoption distinct from motion adoption.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-gltf-glb-inspection Restricts model provenance to the supported glTF/VRM scene inspection profiles.
+   */
+  ingestProfile: "gltf-static-v1" | "gltf-humanoid-v1" | "vrm-humanoid-v1";
   /** Explicit LOD members rather than an inferred filename convention. */
   lod: Array<{
     /** Closed near-to-far level identity. */
