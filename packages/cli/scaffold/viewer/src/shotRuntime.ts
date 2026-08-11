@@ -522,10 +522,7 @@ export const createCompiledShotRuntime = async (
       );
     const frames: IAutoMovieWearableSoftFrame[] = [];
     for (let index = 0; index <= step; ++index) {
-      applyPrimaryState(
-        index * selection.domain.solver.fixedStepSeconds,
-        false,
-      );
+      applyPrimaryState(index * selection.domain.solver.fixedStepSeconds, false);
       frames.push(wearableFrame(index));
     }
     return simulateAutoMovieWearableSoftBody({

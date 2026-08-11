@@ -42,18 +42,29 @@ export function auditAutoMovieRenderObservation(props: {
     ["shadowMaps", "shadowMaps"],
     ["instanceSlots", "instanceSlots"],
   ];
-  const measured = new Map(
-    props.report.findings.map((finding) => [finding.metric, finding.measured]),
-  );
+  const measured = new Map<AutoMovieRenderMetric, number | null>();
+  const duplicate = new Set<AutoMovieRenderMetric>();
+  for (const finding of props.report.findings) {
+    if (measured.has(finding.metric)) duplicate.add(finding.metric);
+    else measured.set(finding.metric, finding.measured);
+  }
   const breaches: IAutoMovieRenderObservationBreach[] = [];
   const unchecked: AutoMovieRenderMetric[] = [];
   for (const [metric, field] of observable) {
     const bound = measured.get(metric) ?? null;
-    if (bound === null) {
+    const observed = props.observed[field];
+    if (
+      duplicate.has(metric) ||
+      bound === null ||
+      Number.isFinite(bound) === false ||
+      bound < 0 ||
+      observed === null ||
+      Number.isFinite(observed) === false ||
+      observed < 0
+    ) {
       unchecked.push(metric);
       continue;
     }
-    const observed = props.observed[field];
     if (observed > bound) breaches.push({ metric, bound, observed });
   }
   return {

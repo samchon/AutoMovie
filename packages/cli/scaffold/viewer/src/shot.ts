@@ -11,7 +11,7 @@ import {
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,
-  observeAutoMovieSceneRender,
+  observeAutoMovieRendererFrame,
 } from "@automovie/viewer";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
@@ -76,10 +76,12 @@ const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
 });
 mounted.renderer.setClearColor(0x11151b, 1);
 
-/** What the scene submitted for the frame the last seek drew. */
+let lastObservation: IAutoMovieShotObservation;
+
+/** What the renderer submitted for the frame the last seek drew. */
 const observe = (): IAutoMovieShotObservation => ({
   shot: compiled.shot.id,
-  observed: observeAutoMovieSceneRender(runtime.scene),
+  observed: lastObservation.observed,
   coverage,
 });
 
@@ -88,19 +90,26 @@ const seek = (
   pass: AutoMovieGuidePass,
   globalFrame?: number | null,
 ): void => {
-  const drawn = runtime.render(
-    mounted.renderer,
-    time,
-    pass,
-    globalFrame ??
-      uniqueFilmFrameForShotTime(productionRuntime.dialogue, shotId, time),
+  const frame = observeAutoMovieRendererFrame(mounted.renderer, () =>
+    runtime.render(
+      mounted.renderer,
+      time,
+      pass,
+      globalFrame ??
+        uniqueFilmFrameForShotTime(productionRuntime.dialogue, shotId, time),
+    ),
   );
+  lastObservation = {
+    shot: compiled.shot.id,
+    observed: frame.observed,
+    coverage,
+  };
   // The live viewer reads the frame through the SAME call the capture hook
   // answers with, so an operator watching this line and a render job reading
   // the hook are looking at one measurement of one scene.
-  const { observed } = observe();
+  const { observed } = lastObservation;
   status.textContent =
-    `${drawn}  D${observed.drawCalls}/T${observed.triangles}/M${observed.materials}` +
+    `${frame.output}  D${observed.drawCalls}/T${observed.triangles}` +
     (coverage.unresolved.length === 0
       ? ""
       : `  UNDRAWN ${coverage.unresolved.join(",")}`) +

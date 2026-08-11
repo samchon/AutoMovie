@@ -14,7 +14,7 @@ import {
   attachAutoMovieSemanticMask,
   auditAutoMovieSemanticMaskScene,
   mountViewer,
-  observeAutoMovieSceneRender,
+  observeAutoMovieRendererFrame,
   renderCrossDissolveFrames,
 } from "@automovie/viewer";
 import type { WebGLRenderer } from "three";
@@ -100,6 +100,7 @@ if (first === undefined) throw new Error("Compiled film has no playable shot.");
 // cut, and evidence read off a scene this frame never drew would be evidence
 // about a different frame.
 let drawnShot = first;
+let lastObservation: IAutoMovieShotObservation;
 let frozen = false;
 const viewerRendererRef = {
   current: undefined as WebGLRenderer | undefined,
@@ -151,23 +152,29 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
     Math.floor(time * timeline.fps),
   );
   const layers = sampleFilmFrame(timeline, frame);
-  if (pass !== "beauty" || layers.length === 1) {
-    const dominant = layers.reduce((selected, candidate) =>
-      candidate.weight >= selected.weight ? candidate : selected,
-    );
-    renderLayer(dominant, pass, frame);
-  } else {
-    const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
-    const renderer = viewerRendererRef.current;
-    if (renderer === undefined)
-      throw new Error("Film renderer is not mounted.");
-    renderCrossDissolveFrames(
-      renderer,
-      () => void renderLayer(outgoing, pass, frame),
-      () => void renderLayer(incoming, pass, frame),
-      incoming.weight,
-    );
-  }
+  const renderer = viewerRendererRef.current;
+  if (renderer === undefined) throw new Error("Film renderer is not mounted.");
+  const measured = observeAutoMovieRendererFrame(renderer, () => {
+    if (pass !== "beauty" || layers.length === 1) {
+      const dominant = layers.reduce((selected, candidate) =>
+        candidate.weight >= selected.weight ? candidate : selected,
+      );
+      renderLayer(dominant, pass, frame);
+    } else {
+      const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
+      renderCrossDissolveFrames(
+        renderer,
+        () => void renderLayer(outgoing, pass, frame),
+        () => void renderLayer(incoming, pass, frame),
+        incoming.weight,
+      );
+    }
+  });
+  lastObservation = {
+    shot: drawnShot.runtime.id,
+    observed: measured.observed,
+    coverage: drawnShot.coverage,
+  };
   status.textContent =
     `${timeline.id}  frame=${frame}/${timeline.totalFrames - 1}  ${pass}` +
     (drawnShot.coverage.unresolved.length === 0
@@ -184,11 +191,7 @@ window.__automovieCapture = {
     frozen = true;
     renderFilm(time, pass);
   },
-  observe: () => ({
-    shot: drawnShot.runtime.id,
-    observed: observeAutoMovieSceneRender(drawnShot.runtime.scene),
-    coverage: drawnShot.coverage,
-  }),
+  observe: () => lastObservation,
   sidecar: () => renderAutoMovieSemanticMaskSidecar(drawnShot.mask),
 };
 renderFilm(0, "beauty");

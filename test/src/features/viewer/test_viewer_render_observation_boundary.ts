@@ -3,62 +3,68 @@ import type {
   IAutoMovieRenderReport,
 } from "@automovie/interface";
 import { auditAutoMovieRenderObservation } from "@automovie/render";
-import { observeAutoMovieSceneRender } from "@automovie/viewer";
+import { observeAutoMovieRendererFrame } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
-import * as THREE from "three";
+import type * as THREE from "three";
 
 /**
- * The viewer owns scene traversal while the render package owns the pure
- * comparison with a preflight report.
+ * Renderer counters, rather than scene membership, own live render evidence.
  *
  * Scenarios:
  *
- * 1. A visible unindexed triangle is counted as one mesh, draw call, material, and
- *    triangle without inventing textures, lights, shadows, or instances.
- * 2. The render-owned audit accepts that interface observation, checks the one
- *    measured bound, and reports every absent report metric as unchecked.
+ * 1. Multiple render passes accumulate draw calls and triangles after one
+ *    frame reset, and the renderer's reset policy is restored afterward.
+ * 2. Dimensions the renderer cannot measure stay null and therefore unchecked.
  */
 export const test_viewer_render_observation_boundary = (): void => {
-  const scene = new THREE.Scene();
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3),
-  );
-  const material = new THREE.MeshBasicMaterial();
-  scene.add(new THREE.Mesh(geometry, material));
-
-  const observed: IAutoMovieRenderObservation =
-    observeAutoMovieSceneRender(scene);
-  TestValidator.equals("viewer observes one drawn triangle", observed, {
-    meshes: 1,
-    drawCalls: 1,
-    triangles: 1,
-    materials: 1,
-    textures: 0,
-    lights: 0,
-    shadowMaps: 0,
-    instanceSlots: 0,
+  const render = { calls: 41, triangles: 99 };
+  const info = {
+    autoReset: true,
+    render,
+    reset: () => {
+      render.calls = 0;
+      render.triangles = 0;
+    },
+  };
+  const renderer = { info } as unknown as THREE.WebGLRenderer;
+  const frame = observeAutoMovieRendererFrame(renderer, () => {
+    render.calls += 2;
+    render.triangles += 12;
+    render.calls += 1;
+    render.triangles += 2;
+    return "drawn";
   });
+  TestValidator.equals("all passes are accumulated", frame, {
+    output: "drawn",
+    observed: {
+      meshes: null,
+      drawCalls: 3,
+      triangles: 14,
+      materials: null,
+      textures: null,
+      lights: null,
+      shadowMaps: null,
+      instanceSlots: null,
+    },
+  });
+  TestValidator.equals("renderer reset policy is restored", info.autoReset, true);
 
   const report: IAutoMovieRenderReport = {
     version: 1,
     protocol: "automovie.render-report.v1",
     tier: "boundary-test",
     status: "within",
-    findings: [
-      {
-        metric: "triangles",
-        status: "within",
-        measured: 1,
-        limit: 1,
-        excess: 0,
-        contributors: [],
-        omittedContributors: 0,
-        omittedCost: 0,
-        recovery: null,
-      },
-    ],
+    findings: ["triangles", "drawCalls"].map((metric) => ({
+      metric: metric as "triangles" | "drawCalls",
+      status: "within" as const,
+      measured: metric === "triangles" ? 14 : 3,
+      limit: 14,
+      excess: 0,
+      contributors: [],
+      omittedContributors: 0,
+      omittedCost: 0,
+      recovery: null,
+    })),
     mask: "sha256:mask",
     target: {
       protocol: "automovie.render-target.v1",
@@ -78,13 +84,15 @@ export const test_viewer_render_observation_boundary = (): void => {
     digest: "sha256:report",
   };
   TestValidator.equals(
-    "render audit consumes the interface observation without claiming unchecked agreement",
-    auditAutoMovieRenderObservation({ report, observed }),
+    "unobservable metrics cannot claim agreement",
+    auditAutoMovieRenderObservation({
+      report,
+      observed: frame.observed as IAutoMovieRenderObservation,
+    }),
     {
       agrees: false,
       breaches: [],
       unchecked: [
-        "drawCalls",
         "materials",
         "textures",
         "lights",
@@ -93,7 +101,4 @@ export const test_viewer_render_observation_boundary = (): void => {
       ],
     },
   );
-
-  geometry.dispose();
-  material.dispose();
 };
