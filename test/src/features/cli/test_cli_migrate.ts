@@ -89,6 +89,24 @@ export const test_cli_migrate = (): void => {
       },
     );
 
+    const manifestPath = path.join(root, ".automovie", "manifest.json");
+    const manifestBytes = fs.readFileSync(manifestPath);
+    fs.appendFileSync(manifestPath, "\n");
+    const refusedRollback = captureCli(["migrate", root, "--rollback"]);
+    TestValidator.equals(
+      "CLI rollback refuses changed imported state without removing it",
+      namedFacts([
+        ["status", () => refusedRollback.status === 1],
+        [
+          "diagnostic",
+          () => refusedRollback.stderr.includes("changed after import"),
+        ],
+        ["preserved", () => fs.existsSync(path.join(root, ".automovie"))],
+      ]),
+      { status: true, diagnostic: true, preserved: true },
+    );
+    fs.writeFileSync(manifestPath, manifestBytes);
+
     const rolledBack = captureCli(["migrate", root, "--rollback"]);
     const rollbackOutput = JSON.parse(rolledBack.stdout) as { status: string };
     TestValidator.equals(
