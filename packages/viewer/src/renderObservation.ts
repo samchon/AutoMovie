@@ -1,43 +1,13 @@
-import {
-  AutoMovieRenderMetric,
-  IAutoMovieRenderReport,
-} from "@automovie/interface";
+import type { IAutoMovieRenderObservation } from "@automovie/interface";
 import * as THREE from "three";
-
-/** What a built scene actually draws, read from the scene graph itself. */
-export interface IAutoMovieRenderObservation {
-  /** Visible mesh objects. */
-  meshes: number;
-
-  /** Draw submissions: one per visible mesh, per material group it uses. */
-  drawCalls: number;
-
-  /** Triangles submitted, counting every live instance of a batch. */
-  triangles: number;
-
-  /** Distinct material objects bound by visible meshes. */
-  materials: number;
-
-  /** Distinct texture objects bound by those materials. */
-  textures: number;
-
-  /** Visible lights. */
-  lights: number;
-
-  /** Visible lights whose `castShadow` is set. */
-  shadowMaps: number;
-
-  /** Live instances across every visible instanced batch. */
-  instanceSlots: number;
-}
 
 /**
  * Read what a built scene draws right now.
  *
  * This is the live half of the evidence pair. The compiled report states an
  * upper bound before a renderer exists; this states what the scene graph in
- * front of you actually submits, and {@link auditAutoMovieRenderObservation} is
- * where the two are held against each other instead of trusted separately.
+ * front of you actually submits. The render package owns the pure comparison
+ * that holds this observation against that report.
  *
  * "The viewer and the capture agree" is not a checked fact. No matter who
  * counts a scene, nothing holds the count against the report that cleared it:
@@ -51,6 +21,8 @@ export interface IAutoMovieRenderObservation {
  * miscounted.
  *
  * @author Samchon
+ * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Counts the actual per-frame submissions this viewer can observe.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the observed side of the render-owned budget comparison.
  */
 export const observeAutoMovieSceneRender = (
   scene: THREE.Scene,
@@ -95,73 +67,6 @@ export const observeAutoMovieSceneRender = (
   observation.materials = materials.size;
   observation.textures = textures.size;
   return observation;
-};
-
-/** One breach of a report's upper bound by what the scene actually draws. */
-export interface IAutoMovieRenderObservationBreach {
-  /** Metric whose bound was exceeded. */
-  metric: AutoMovieRenderMetric;
-
-  /** The report's measured upper bound. */
-  bound: number;
-
-  /** What the scene actually submits. */
-  observed: number;
-}
-
-/**
- * Check a live scene against the report that cleared it.
- *
- * The report's numbers are upper bounds, so the only defect this can find is an
- * observation ABOVE one: a scene drawing more than the compiled artifact
- * committed to means the report is not describing the frame, and a budget
- * verdict about a different frame is worthless. Drawing less is normal and
- * expected, because culling and level-of-detail selection exist.
- *
- * Metrics the report never measured are returned as `unchecked` rather than
- * silently passed. A consumer that treats an empty breach list as agreement
- * would be reading "we did not look" as "we agree", which is the exact
- * confusion the report's `unsupported` and `not-run` states exist to prevent.
- */
-export const auditAutoMovieRenderObservation = (props: {
-  /** The report that cleared the artifact. */
-  report: IAutoMovieRenderReport;
-  /** What the scene in front of the consumer draws. */
-  observed: IAutoMovieRenderObservation;
-}): {
-  /** Whether every checkable bound holds. */
-  agrees: boolean;
-  /** Every exceeded bound, in report order. */
-  breaches: IAutoMovieRenderObservationBreach[];
-  /** Metrics the report carried no number for, in report order. */
-  unchecked: AutoMovieRenderMetric[];
-} => {
-  const observable: ReadonlyArray<
-    [AutoMovieRenderMetric, keyof IAutoMovieRenderObservation]
-  > = [
-    ["triangles", "triangles"],
-    ["drawCalls", "drawCalls"],
-    ["materials", "materials"],
-    ["textures", "textures"],
-    ["lights", "lights"],
-    ["shadowMaps", "shadowMaps"],
-    ["instanceSlots", "instanceSlots"],
-  ];
-  const measured = new Map(
-    props.report.findings.map((finding) => [finding.metric, finding.measured]),
-  );
-  const breaches: IAutoMovieRenderObservationBreach[] = [];
-  const unchecked: AutoMovieRenderMetric[] = [];
-  for (const [metric, field] of observable) {
-    const bound = measured.get(metric) ?? null;
-    if (bound === null) {
-      unchecked.push(metric);
-      continue;
-    }
-    const observed = props.observed[field];
-    if (observed > bound) breaches.push({ metric, bound, observed });
-  }
-  return { agrees: breaches.length === 0, breaches, unchecked };
 };
 
 /** Whether an object and every ancestor above it is visible. */

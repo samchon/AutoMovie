@@ -172,6 +172,8 @@ const PRESET_CHANNELS: Partial<
  * case-insensitive matching names; generated primitive models simply no-op.
  *
  * @author Samchon
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Restricts this surface to the expression channels resolved for the frame.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Materializes those channels at the expression and attention boundary.
  */
 export const applyExpression = (
   target: IAutoMovieModelObject,

@@ -10,11 +10,11 @@ import {
   sealAutoMovieRenderTarget,
 } from "@automovie/engine";
 import { IAutoMovieScene, IAutoMovieSemanticMask } from "@automovie/interface";
+import { auditAutoMovieRenderObservation } from "@automovie/render";
 import {
   IAutoMovieFormationCycle,
   SPACE_GROUP_NAME,
   applyAutoMovieSemanticMask,
-  auditAutoMovieRenderObservation,
   buildFluidSurfaceObject,
   buildPlantingObject,
   buildSoftBodyObject,

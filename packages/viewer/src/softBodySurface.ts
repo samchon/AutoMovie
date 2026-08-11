@@ -4,9 +4,20 @@ import {
 } from "@automovie/interface";
 import * as THREE from "three";
 
-/** A viewer-owned cloth panel bound to one soft-body domain. */
+/**
+ * A viewer-owned cloth panel bound to one soft-body domain.
+ *
+ * @author Samchon
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
+ */
 export interface IAutoMovieSoftBodyObject {
-  /** Add this mesh to the current scene. */
+  /**
+   * Add this mesh to the current scene.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
+   */
   object: THREE.Mesh;
 
   /**
@@ -17,13 +28,21 @@ export interface IAutoMovieSoftBodyObject {
    * budget stops inside the cut is `solved` early and `not-run` later, and an
    * update that carried only geometry would leave the earlier claim standing
    * over the later panel.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
    */
   update: (props: {
     surface: IAutoMovieSoftBodySurface;
     status: AutoMovieSoftAnalysisStatus;
   }) => void;
 
-  /** Release the geometry, and the material when this object created it. */
+  /**
+   * Release the geometry, and the material when this object created it.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
+   */
   dispose: () => void;
 }
 
@@ -52,6 +71,8 @@ export interface IAutoMovieSoftBodyObject {
  * value here would be the cheapest way to reintroduce it.
  *
  * @author Samchon
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-external-result Displays this surface from an externally resolved deformation result.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-external-deformation-adoption Adopts that result without running a second soft-body solver.
  */
 export const buildSoftBodyObject = (props: {
   surface: IAutoMovieSoftBodySurface;

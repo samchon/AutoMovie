@@ -13,6 +13,9 @@ import * as THREE from "three";
  * The resolved texture is configured here (equirectangular mapping and the
  * decoding its own storage implies), so the caller hands over a texture object
  * this scene owns, never one a material is also writing sampling state onto.
+ *
+ * @evidence requirements/lighting/sun-sky-and-environment.md#lighting-image-based-environment Applies the declared environment image, rotation, and intensity to the scene.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-environment-image-spatial-variation Implements the corresponding image, background, and spatial-orientation state.
  */
 export const applySceneEnvironment = (
   scene: THREE.Scene,
@@ -73,9 +76,24 @@ const environmentColorSpace = (texture: THREE.Texture): THREE.ColorSpace =>
     ? THREE.SRGBColorSpace
     : THREE.LinearSRGBColorSpace;
 
-/** A reversible renderer configuration for one beauty or structural pass. */
+/**
+ * A reversible renderer configuration for one beauty or structural pass.
+ *
+ * @author Samchon
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Keeps this surface on the declared scene-to-display color boundary.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Restores the declared scene-to-display color boundary after the pass.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-state-isolation Prevents one pass's renderer overrides from leaking into the next.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements reversible pass-local renderer state.
+ */
 export interface IAutoMovieRendererEnvironmentHandle {
-  /** Restore every renderer property touched by the configuration. */
+  /**
+   * Restore every renderer property touched by the configuration.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Keeps this surface on the declared scene-to-display color boundary.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Restores the declared scene-to-display color boundary after the pass.
+   * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-state-isolation Prevents one pass's renderer overrides from leaking into the next.
+   * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements reversible pass-local renderer state.
+   */
   restore: () => void;
 }
 
@@ -91,6 +109,11 @@ export interface IAutoMovieRendererEnvironmentHandle {
  * own curve, exposure and shadow policy exactly as it found them: a caller that
  * knows no delivery curve states none rather than imposing `none`, which is how
  * a pre-environment production keeps rendering what it always rendered.
+ *
+ * @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-display-transform Applies the one effective tone-mapping and exposure state for a beauty pass.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-color-effective-ownership Implements single-owner display transformation while structural passes bypass it.
+ * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Applies the scene's declared shadow enablement and supported map type.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-shadow-state-sampling Implements that resolved shadow state at the render boundary.
  */
 export const applyRendererEnvironment = (
   renderer: THREE.WebGLRenderer,

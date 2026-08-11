@@ -1,8 +1,6 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/index.ts"];
-
 /**
  * The public viewer surface answers for stable contract populations.
  *
@@ -15,28 +13,42 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "public viewer exports implement requirements",
       type: "typescript",
-      files: publicSurface,
+      files: ["src/**/*.ts"],
+      evidenceExcludeCarriers: ["src/mount.ts"],
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["requirements/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: ["requirements/**/README.md"],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["requirements/**/*.md", "!requirements/**/README.md"],
+          symbol: ["h3"],
         },
       ],
     },
     {
       name: "public viewer exports implement specifications",
       type: "typescript",
-      files: publicSurface,
+      files: ["src/**/*.ts"],
+      evidenceExcludeCarriers: ["src/mount.ts"],
       symbol: ["type", "function", "property"],
       reference: [
         {
           type: "markdown",
           root: "../../docs",
-          files: ["specifications/**/*.md"],
-          symbol: ["h1", "h2", "h3"],
+          files: ["specifications/**/README.md"],
+          symbol: ["h1"],
+        },
+        {
+          type: "markdown",
+          root: "../../docs",
+          files: ["specifications/**/*.md", "!specifications/**/README.md"],
+          symbol: ["h3"],
         },
       ],
     },

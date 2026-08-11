@@ -32,6 +32,8 @@ import { applyTransform } from "./buildModel";
  * rather than holding wherever the previous frame left it.
  *
  * @author Samchon
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-time-sampling Writes this light surface from the exact sampled source state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal Implements the fixed-time source sampling and refusal boundary.
  */
 export const applyLightState = (
   target: THREE.Light,
@@ -83,6 +85,8 @@ export const applyLightState = (
  * here unresolved is a host that built a subset of the scene.
  *
  * @author Samchon
+ * @evidence requirements/lighting/sources-and-photometry.md#lighting-source-time-sampling Writes this light surface from the exact sampled source state.
+ * @evidence specifications/camera-light-and-visibility/light-source-photometry-and-environment.md#clv-source-sampling-refusal Implements the fixed-time source sampling and refusal boundary.
  */
 export const applyLightMotion = (
   lights: readonly IAutoMovieLight[],

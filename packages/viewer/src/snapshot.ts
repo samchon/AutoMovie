@@ -1,10 +1,26 @@
 import * as THREE from "three";
 
-/** Minimal renderer shape needed to capture one deterministic viewer frame. */
+/**
+ * Minimal renderer shape needed to capture one deterministic viewer frame.
+ *
+ * @author Samchon
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ */
 export interface IAutoMovieViewerSnapshotRenderer {
-  /** Render the scene from the camera before the canvas is read. */
+  /**
+   * Render the scene from the camera before the canvas is read.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   render: (scene: THREE.Scene, camera: THREE.Camera) => void;
-  /** Canvas-like element owned by the renderer. */
+  /**
+   * Canvas-like element owned by the renderer.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   domElement: {
     width: number;
     height: number;
@@ -12,23 +28,65 @@ export interface IAutoMovieViewerSnapshotRenderer {
   };
 }
 
-/** Options for reading one rendered viewer frame as an inline image. */
+/**
+ * Options for reading one rendered viewer frame as an inline image.
+ *
+ * @author Samchon
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ */
 export interface IAutoMovieViewerSnapshotOptions {
-  /** Image MIME type. Defaults to `image/png`. */
+  /**
+   * Image MIME type. Defaults to `image/png`.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   mimeType?: string;
-  /** Encoder quality for formats that support it. */
+  /**
+   * Encoder quality for formats that support it.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   quality?: number;
 }
 
-/** Captured viewer frame. */
+/**
+ * Captured viewer frame.
+ *
+ * @author Samchon
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+ */
 export interface IAutoMovieViewerSnapshot {
-  /** Canvas pixel width. */
+  /**
+   * Canvas pixel width.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   width: number;
-  /** Canvas pixel height. */
+  /**
+   * Canvas pixel height.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   height: number;
-  /** MIME type requested for the snapshot. */
+  /**
+   * MIME type requested for the snapshot.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   mimeType: string;
-  /** Inline image payload returned by the renderer canvas. */
+  /**
+   * Inline image payload returned by the renderer canvas.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
+   */
   dataUrl: string;
 }
 
@@ -40,6 +98,8 @@ export interface IAutoMovieViewerSnapshot {
  * browser globals.
  *
  * @author Samchon
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Captures this surface with explicit product dimensions and view.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the capture as one render-product observation.
  */
 export const captureViewerSnapshot = (
   renderer: IAutoMovieViewerSnapshotRenderer,

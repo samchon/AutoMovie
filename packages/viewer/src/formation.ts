@@ -43,7 +43,13 @@ export type {
   IAutoMovieFormationLodSelection,
 } from "@automovie/engine";
 
-/** Per-frame bounded debug summary for one formation. */
+/**
+ * Per-frame bounded debug summary for one formation.
+ *
+ * @author Samchon
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Reports visible, culled, removed, and promoted populations separately.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements bounded logical-to-display accounting for a formation.
+ */
 export interface IAutoMovieFormationViewerStats {
   /**
    * Slots currently drawn per tier after chunk culling.
@@ -54,9 +60,17 @@ export interface IAutoMovieFormationViewerStats {
    * anonymous LOD list. Anonymous accounting is therefore the sum of `near`,
    * `far`, `culled` and `removed`, and the hero count belongs beside it rather
    * than inside it.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Counts the visible slots selected for each display tier.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Reports the logical-to-display tier selection.
    */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
-  /** Anonymous slots rejected by camera-frustum chunk culling. */
+  /**
+   * Anonymous slots rejected by camera-frustum chunk culling.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Counts slots rejected by the active camera-frustum policy separately.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Reports the culling side of logical-to-display resolution.
+   */
   culled: number;
   /**
    * Anonymous slots a per-member cue has taken out of the shot at this time.
@@ -64,19 +78,49 @@ export interface IAutoMovieFormationViewerStats {
    * Counted apart from `culled`, because the two are different claims: a culled
    * member is off camera and would be drawn if the camera turned, while a
    * removed one is not in the shot at all.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Separates authored removal from camera culling and drawn tiers.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Keeps removed logical members out of display-tier counts.
    */
   removed: number;
-  /** Named heroes kept outside instance batches. */
+  /**
+   * Named heroes kept outside instance batches.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity Separates named heroes from anonymous display tiers.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Preserves hero display identity outside anonymous LOD accounting.
+   */
   heroes: number;
 }
 
-/** Built instance runtime consumed by a viewer host. */
+/**
+ * Built instance runtime consumed by a viewer host.
+ *
+ * @author Samchon
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Exposes the selected display representation and its bounded accounting.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display formation boundary.
+ */
 export interface IAutoMovieFormationViewerObject {
-  /** Add this group to the current scene. */
+  /**
+   * Add this group to the current scene.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Holds the formation's selected display representations.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Materializes the logical formation as viewer-owned display objects.
+   */
   object: THREE.Group;
-  /** Current LOD and culling summary. */
+  /**
+   * Current LOD and culling summary.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Reports the active LOD and culling selection.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Reports bounded logical-to-display accounting.
+   */
   stats: IAutoMovieFormationViewerStats;
-  /** Recompute chunk visibility for the current camera. */
+  /**
+   * Recompute chunk visibility for the current camera.
+   *
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Re-evaluates the declared display policy for the current camera.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Selects the bounded display representation for each visible chunk.
+   * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-transition Preserves the prior tier so threshold crossings use the declared hysteresis transition.
+   */
   update(
     camera: THREE.PerspectiveCamera,
     viewportHeight: number,
@@ -133,6 +177,11 @@ interface ISlotException {
  * that changes action changes table. Nothing about that is per member: the
  * instance buffers are the same size they were, and a frame advances the whole
  * unit by writing two floats.
+ *
+ * @evidence requirements/formations/reform-and-group-motion.md#formation-group-motion-model-selection Displays this surface from the selected formation motion model.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Materializes the same group-motion and reform state in the viewer.
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-transition Carries the prior tier into each camera-driven LOD selection.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements stable logical-to-display tier transitions.
  */
 export const buildInstancedFormation = (input: {
   formation: IAutoMovieCompiledFormation;
@@ -559,6 +608,9 @@ export const buildInstancedFormation = (input: {
  * and it is how a crowd on a rise would come to be drawn flat. What stays here
  * is only what a compiled record spells differently from a design: heroes are
  * promoted slots rather than overrides.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-layout-selection-parameters Regenerates the compiled layout's exact slot placement.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Implements deterministic slot generation and assignment for that layout.
  */
 export const regenerateFormationSlot = (
   formation: IAutoMovieCompiledFormation,
@@ -592,6 +644,9 @@ export const regenerateFormationSlot = (
  * Passing `bake` additionally bakes the model's whole repertoire
  * ({@link bakeFormationCycle}); a model that declares no gait, or carries no
  * skeleton to move, returns a null cycle and renders exactly as before.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Flattens the generated model into the representation selected for instanced display.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display representation boundary.
  */
 export const flattenInstancedModel = (
   model: IAutoMovieModel,
@@ -626,7 +681,12 @@ export const flattenInstancedModel = (
   };
 };
 
-/** Flatten one already-loaded rigid generated or imported model prototype. */
+/**
+ * Flatten one already-loaded rigid generated or imported model prototype.
+ *
+ * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Flattens the loaded model into the representation selected for instanced display.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display representation boundary.
+ */
 export const flattenInstancedObject = (
   built: IAutoMovieModelObject,
   owner = "Loaded instanced runtime model",

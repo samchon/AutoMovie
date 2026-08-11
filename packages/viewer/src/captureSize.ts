@@ -13,6 +13,8 @@
  * the responsive CSS size.
  *
  * @author Samchon
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-multiview-products Binds this surface to the requested product dimensions.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements those dimensions as part of the render-product identity.
  */
 export const applyCaptureCanvasSize = (
   canvas: HTMLCanvasElement,

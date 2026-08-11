@@ -12,6 +12,8 @@ import * as THREE from "three";
  * parametric primitive (via the engine) or uploading raw mesh arrays.
  *
  * @author Samchon
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Lowers compiled geometry into a viewer-owned runtime buffer object.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
  */
 export const buildGeometry = (
   geometry: IAutoMovieGeometry,
@@ -64,17 +66,30 @@ export const buildGeometry = (
  * The host may cache decoded image bytes, but it must return a distinct texture
  * object because this layer writes the binding's UV, sampler, and color-space
  * state onto that object.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
  */
 export type IAutoMovieTextureResolver = (
   binding: AutoMovieTextureBinding,
 ) => THREE.Texture | undefined;
 
-/** The asset id a legacy or structured binding names. */
+/**
+ * The asset id a legacy or structured binding names.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
+ */
 export const textureBindingAsset = (
   binding: AutoMovieTextureBinding,
 ): string => (typeof binding === "string" ? binding : binding.asset);
 
-/** Every texture binding one material declares, in slot order, nulls dropped. */
+/**
+ * Every texture binding one material declares, in slot order, nulls dropped.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
+ */
 export const materialTextureBindings = (
   material: IAutoMovieMaterial,
 ): AutoMovieTextureBinding[] =>
@@ -89,7 +104,12 @@ export const materialTextureBindings = (
       value !== null && value !== undefined,
   );
 
-/** Decode one project texture asset. Host-owned: the viewer has no I/O. */
+/**
+ * Decode one project texture asset. Host-owned: the viewer has no I/O.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
+ */
 export type IAutoMovieTextureLoader = (asset: string) => Promise<THREE.Texture>;
 
 /**
@@ -115,6 +135,9 @@ export type IAutoMovieTextureLoader = (asset: string) => Promise<THREE.Texture>;
  * every source it decoded, exactly once however many times it is called, and a
  * cache that has been disposed refuses further work rather than quietly
  * decoding into a bucket nobody will empty.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
  */
 export class AutoMovieTextureCache {
   private readonly pending = new Map<string, Promise<THREE.Texture>>();
@@ -145,6 +168,9 @@ export class AutoMovieTextureCache {
    * {@link buildMaterial} stay a pure function of a material. A binding whose
    * asset fails to decode rejects here, naming every asset that failed, rather
    * than surfacing later as a silently untextured surface.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
    */
   public async prime(
     bindings: Iterable<AutoMovieTextureBinding | null | undefined>,
@@ -175,6 +201,9 @@ export class AutoMovieTextureCache {
    * "this project ships no such map", and answering it for an asset the
    * material DOES declare would render a floor with no tile and call that
    * success.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
    */
   public readonly resolve: IAutoMovieTextureResolver;
 
@@ -189,6 +218,9 @@ export class AutoMovieTextureCache {
    * In-flight decodes are awaited before release, so a host that tears a shot
    * down mid-load frees what it started rather than leaking whatever landed
    * after the teardown.
+   *
+   * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
    */
   public async dispose(): Promise<void> {
     if (this.disposed) return;
@@ -219,7 +251,12 @@ export class AutoMovieTextureCache {
   }
 }
 
-/** Build a `three.js` physical PBR material from an automovie material. */
+/**
+ * Build a `three.js` physical PBR material from an automovie material.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
+ */
 export const buildMaterial = (
   material: IAutoMovieMaterial,
   resolveTexture?: IAutoMovieTextureResolver,
@@ -343,7 +380,12 @@ const minFilter = (
   }
 };
 
-/** Fallback material for parts that cite no material. */
+/**
+ * Fallback material for parts that cite no material.
+ *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves this public surface into the declared render material.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Implements the material and color binding at the render boundary.
+ */
 export const defaultMaterial = (): THREE.MeshStandardMaterial =>
   new THREE.MeshStandardMaterial({
     color: new THREE.Color(0.8, 0.8, 0.8),

@@ -64,6 +64,10 @@ const restoreDissolveRendererState = (
 
 const states = new WeakMap<THREE.WebGLRenderer, IDissolveState>();
 
+/**
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Samples this public surface at the caller's exact render time.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Implements that sampling on the package-independent frame schedule.
+ */
 export const renderCrossDissolveFrames = (
   renderer: THREE.WebGLRenderer,
   renderOutgoing: () => void,
@@ -141,7 +145,12 @@ export const renderCrossDissolveFrames = (
   }
 };
 
-/** Cross-dissolve two poses of one scene, optionally wrapping each guide pass. */
+/**
+ * Cross-dissolve two poses of one scene, optionally wrapping each guide pass.
+ *
+ * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Samples this public surface at the caller's exact render time.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Implements that sampling on the package-independent frame schedule.
+ */
 export const renderCrossDissolve = (
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
@@ -176,6 +185,9 @@ export const renderCrossDissolve = (
  * geometry/material). Call alongside the renderer's own disposal, exactly as a
  * render-mode handle's `restore()` (#1050). Safe to call when nothing was
  * created; the next dissolve on the same renderer re-initializes lazily.
+ *
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-lifecycle Releases viewer-owned dissolve targets and materials with the renderer lifecycle.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Closes the dissolve's pass-local runtime state without leaking it to another renderer lifecycle.
  */
 export const disposeCrossDissolve = (renderer: THREE.WebGLRenderer): void => {
   const state = states.get(renderer);

@@ -14,29 +14,82 @@ import {
   defaultMaterial,
 } from "./geometry";
 
-/** Expression sink supplied by imported runtimes such as VRM managers. */
+/**
+ * Expression sink supplied by imported runtimes such as VRM managers.
+ *
+ * @author Samchon
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Accepts only the resolved expression channels owned by the sampled frame.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Implements the runtime expression sink for those resolved channels.
+ */
 export interface IAutoMovieExpressionTarget {
-  /** Set one normalized expression channel or preset to a weight in `[0, 1]`. */
+  /**
+   * Set one normalized expression channel or preset to a weight in `[0, 1]`.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Accepts one resolved expression channel and its normalized weight.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Applies that channel at the runtime expression boundary.
+   */
   setExpressionValue: (name: string, weight: number) => void;
 }
 
-/** The deterministic state an {@link AutoMoviePlayer} just wrote this frame. */
+/**
+ * The deterministic state an {@link AutoMoviePlayer} just wrote this frame.
+ *
+ * @author Samchon
+ * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Carries the state sampled at one exact playback boundary.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps time, pose, and expression on the same motion-clock sample.
+ */
 export interface IAutoMovieViewerFrame {
-  /** Absolute clip time, in seconds. */
+  /**
+   * Absolute clip time, in seconds.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Records the exact absolute playback boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Expresses that boundary on the shared motion clock.
+   */
   seconds: number;
-  /** Non-negative time since the previous player update, in seconds. */
+  /**
+   * Non-negative time since the previous player update, in seconds.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Records the non-negative interval from the prior playback boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps that interval on the same motion-clock sample.
+   */
   deltaSeconds: number;
-  /** Pose applied to the model after clamping and secondary motion. */
+  /**
+   * Pose applied to the model after clamping and secondary motion.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Carries the pose resolved for this exact playback boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps the pose on the frame's shared motion-clock sample.
+   */
   pose: IAutoMoviePose;
-  /** Expression sampled for the same frame, or `null`. */
+  /**
+   * Expression sampled for the same frame, or `null`.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Carries the expression resolved for this exact playback boundary.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps the expression on the frame's shared motion-clock sample.
+   */
   expression: IAutoMovieExpression | null;
 }
 
-/** A built model: its `three.js` root object and a lookup of its bones. */
+/**
+ * A built model: its `three.js` root object and a lookup of its bones.
+ *
+ * @author Samchon
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
+ */
 export interface IAutoMovieModelObject {
-  /** Root group; add this to a scene (or a node group) to display the model. */
+  /**
+   * Root group; add this to a scene (or a node group) to display the model.
+   *
+   * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model root in the compiled transform hierarchy.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes that hierarchy for render visibility and culling.
+   */
   object: THREE.Group;
-  /** Bones by humanoid slot, for posing. Empty for a non-rigged object. */
+  /**
+   * Bones by humanoid slot, for posing. Empty for a non-rigged object.
+   *
+   * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Preserves the compiled bone hierarchy for pose playback.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes that hierarchy as runtime bone objects.
+   */
   bones: ReadonlyMap<AutoMovieHumanoidBone, THREE.Object3D>;
   /**
    * Parts by {@link IAutoMovieModelPart.id}, for a caller that has to move one.
@@ -46,15 +99,33 @@ export interface IAutoMovieModelObject {
    * joint's own object. Found by id rather than by traversing for a name,
    * because a part's `name` is optional and a model may carry two parts sharing
    * one, so a name search would move whichever it reached first.
+   *
+   * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
    */
   parts: ReadonlyMap<string, THREE.Object3D>;
-  /** Optional expression sinks: morph managers, VRM expression managers, etc. */
+  /**
+   * Optional expression sinks: morph managers, VRM expression managers, etc.
+   *
+   * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Exposes the expression sinks that own resolved expression channels.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Materializes those channels at the runtime expression boundary.
+   */
   expressionTargets?: readonly IAutoMovieExpressionTarget[];
-  /** Optional imported-runtime flush after pose and expression are written. */
+  /**
+   * Optional imported-runtime flush after pose and expression are written.
+   *
+   * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Flushes imported runtime state only after the exact frame sample is written.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Keeps the imported runtime on the frame's shared motion-clock sample.
+   */
   afterAutoMovieFrame?: (frame: IAutoMovieViewerFrame) => void;
 }
 
-/** Apply a automovie TRS transform onto a `three.js` object. */
+/**
+ * Apply a automovie TRS transform onto a `three.js` object.
+ *
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
+ */
 export const applyTransform = (
   obj: THREE.Object3D,
   t: IAutoMovieTransform,
@@ -90,6 +161,10 @@ export const applyTransform = (
  * and two slots sharing one object would fight over one repeat.
  *
  * @author Samchon
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Keeps this model surface in the compiled transform hierarchy.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Materializes the same hierarchy for render visibility and culling.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Keeps compiled model identity distinct from viewer-owned runtime objects.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the runtime ownership side of isolated scene lowering.
  */
 export const buildModel = (
   model: IAutoMovieModel,

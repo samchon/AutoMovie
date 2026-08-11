@@ -12,11 +12,20 @@ interface IJointRest {
   scale: THREE.Vector3;
 }
 
-/** The articulation subtrees one scene's props contribute. */
+/**
+ * The articulation subtrees one scene's props contribute.
+ *
+ * @author Samchon
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Limits this articulation surface to authored object-motion channels.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Materializes those channels at the attachment and interaction boundary.
+ */
 export interface IAutoMovieBuiltPropArticulation {
   /**
    * Every lowered joint by its scene id (`<placement>/<joint>`), which is the
    * name a shot's `objectMotions` track addresses it by.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Limits this articulation surface to authored object-motion channels.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Materializes those channels at the attachment and interaction boundary.
    */
   joints: ReadonlyMap<string, THREE.Object3D>;
 
@@ -28,6 +37,9 @@ export interface IAutoMovieBuiltPropArticulation {
    * engine's own resolver falls back to rest instead, so a host that seeks
    * backwards past a clip's first key would otherwise keep whatever the last
    * draw left behind.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Limits this articulation surface to authored object-motion channels.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Materializes those channels at the attachment and interaction boundary.
    */
   restore: () => void;
 }
@@ -77,6 +89,8 @@ export interface IAutoMovieBuiltPropArticulation {
  * states for every other object it drives.
  *
  * @author Samchon
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary Limits this articulation surface to authored object-motion channels.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Materializes those channels at the attachment and interaction boundary.
  */
 export const buildPropArticulation = (props: {
   /** The compiled scene whose placements are already built. */
