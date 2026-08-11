@@ -16,6 +16,12 @@ Diagnostic identity는 하나의 판정 조건, classification과 correction 의
 
 기존 identity를 다른 원인에 재사용하거나 여러 원인을 하나의 generic identity로 축약하지 않는다. 새 소비자가 알지 못하는 identity도 레코드의 원래 값으로 보존되며, unknown code를 success나 무시 가능한 정보로 해석하지 않는다.
 
+### Code catalog와 behavioral reference {#validation-diagnostic-code-catalog-reference}
+
+<!-- @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference 진단 code의 닫힌 목록과 사용자 행동 참조가 같은 version으로 전달되게 한다. -->
+
+Diagnostic protocol revision은 발생 가능한 code의 canonical ordered catalog를 출력하고 각 code를 판정 조건, parameter 의미, 영향 범위와 correction을 설명하는 정확히 하나의 behavioral reference identity와 revision에 연결한다. Delivery receipt는 catalog revision, reference-set digest와 code-to-reference mapping을 결속하며 emitted code 누락, 하나의 code에 대한 reference 부재 또는 중복, catalog에 없는 code와 revision 불일치를 complete delivery로 승인하지 않는다.
+
 ### 발견 경로와 영향 범위 {#validation-diagnostic-path-scope}
 
 <!-- @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope 발견 위치와 더 넓을 수 있는 무효화 범위를 독립 필드로 보존한다. -->
