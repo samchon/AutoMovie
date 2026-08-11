@@ -837,6 +837,8 @@ export const designLineageDecisionComparisons = (
  * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-derivation-consumer-reachability The reverse walk exposes reachable derived consumers and the unaffected complement without claiming upstream acquisition or rights provenance.
  * @evidence requirements/external-inputs/refresh-version-pinning-and-offline.md#external-refresh-impact-staleness `designLineageImpact` turns a refreshed source identity into the stable set of direct and transitive derived artifacts requiring replacement or review.
  * @evidence specifications/interchange-and-adoption/revision-refresh-and-offline-cache.md#interchange-refresh-staleness-propagation The impact result implements dependency-based staleness propagation inside Engine lineage while leaving refresh acquisition and adoption transactions upstream.
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-replacement `designLineageImpact` reports the exact direct and transitive derived consumers invalidated when an external asset identity is replaced, together with the unaffected complement.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-identity-failure-compatibility The reverse dependency walk implements the replacement-impact subset by refusing unknown identities and naming affected consumers without claiming adoption authority.
  */
 export const designLineageImpact = (
   lineage: IAutoMovieDesignLineage,

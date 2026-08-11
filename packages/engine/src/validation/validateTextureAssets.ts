@@ -179,6 +179,7 @@ export interface IAutoMovieTextureClosureInput {
  * be a second copy of a rule with an owner. What this adds is the reason that
  * gate applies at all: an image nobody registered is an image nobody digests.
  *
+ * @author Samchon
  * @evidence requirements/asset-authoring/validation.md#asset-surface-validation Verifies every sampled texture is registered with matching image facts and intent.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Rejects missing, unused, mismatched, and multiply interpreted surface resources before model output is accepted.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-value-interpretation `validateTextureAssets` keeps sRGB color slots, linear measurement slots, and Radiance environment intent explicit and rejects one image used under contradictory interpretations.
@@ -189,7 +190,12 @@ export interface IAutoMovieTextureClosureInput {
  * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix The texture gate evaluates byte-proven container type against the selected Engine consumer's accepted image subset instead of treating parser recognition as universal support.
  * @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-collision-ambiguity `validateTextureAssets` rejects a shared image whose material and environment bindings demand competing color-space interpretations rather than selecting one by traversal order.
  * @evidence specifications/interchange-and-adoption/identity-coordinates-and-units.md#interchange-identity-ambiguity-refusal The validator reports every conflicting binding path and blocks the ambiguous image interpretation without choosing a silent winner.
- * @author Samchon
+ * @evidence requirements/asset-authoring/materials-and-textures.md#asset-user-authored-texture `validateTextureAssets` accepts project-registered image resources through explicit material texture bindings and validates the exact consumers that sample them.
+ * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-provenance `validateTextureAssets` requires every sampled texture to resolve through the production asset ledger and rejects stale or missing consumer-use records.
+ * @evidence specifications/asset-and-representation/fidelity-and-validation.md#asset-spec-validation-surface-visual The validator implements the material-slot, channel-intent, color-space, media-type, and byte-observed extent subset of surface validation without claiming frame review.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-model-resource-separation Material records retain independent texture resource identities, and the validator checks those bindings without collapsing image bytes into model identity.
+ * @evidence specifications/asset-and-representation/identity-resources-and-lifecycle.md#asset-spec-element-consumer-links The validator derives model-material and scene-environment consumer paths and checks each against its exact ledger authorization.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure The validator closes every sampled texture through ledger ownership, declared use, byte-proven image facts, and compatible interpretation.
  */
 export const validateTextureAssets = (
   props: IAutoMovieTextureClosureInput,

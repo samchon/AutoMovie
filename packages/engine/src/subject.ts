@@ -215,6 +215,11 @@ export abstract class AutoMovieSubject<TDesign> {
  * of its own (a banner, a dust cue, a shared route) overrides `render` and
  * merges its own contribution with `super.render`, rather than replacing what
  * its members said.
+ *
+ * @evidence requirements/asset-authoring/external-assets.md#asset-external-group-composition `AutoMovieSubjectGroup` composes external and local subject contributions under one explicit parent while preserving each member's authored payload and stable order.
+ * @evidence requirements/external-inputs/adoption-modes-and-composition.md#external-adoption-group-composition `AutoMovieSubjectGroup` preserves member identity and contribution boundaries when imported and project-native subjects are composed into a higher-level group.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-external-adoption-alternatives The group supplies the composition subset of external adoption without flattening member outputs or choosing an adoption mode.
+ * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-group-composition-boundary Stable member traversal and contribution merging implement the normalized group-composition boundary without parsing external containers.
  */
 export abstract class AutoMovieSubjectGroup<
   TDesign,

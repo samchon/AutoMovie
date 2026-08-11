@@ -491,6 +491,12 @@ export const validateDesignReference = (props: {
  * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-nondeterministic-generation-boundary The validator distinguishes recorded output identity from request replay and does not imply that provider execution is bit-deterministic.
  * @evidence requirements/external-inputs/credentials-rights-and-provenance.md#external-provenance-acquisition-activity `validateGeneratedAcquisition` checks the provider, model, request, prompt digest, input paths, seed boundary, and output digest captured for one acquisition.
  * @evidence specifications/interchange-and-adoption/provenance-rights-and-secrets.md#interchange-generated-acquisition-snapshot The Engine validates the generated-acquisition snapshot fields it consumes while leaving credentials, rights, and network execution outside this boundary.
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-reproducibility-boundary `validateGeneratedAcquisition` distinguishes a recorded reproducibility claim and seed from the fixed digest of the adopted bytes without claiming provider reruns are deterministic.
+ * @evidence requirements/asset-authoring/generated-assets.md#asset-generation-fixed-output `validateGeneratedAcquisition` binds the adopted generation record to its output digest and rejects a different current byte digest.
+ * @evidence requirements/external-inputs/refresh-version-pinning-and-offline.md#external-provider-tool-version-pinning `validateGeneratedAcquisition` requires the generator provider and model identities that this Engine record can pin, without inventing unavailable dataset or tool versions.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-reproducibility The validator enforces the seed-and-claim subset while keeping request replay distinct from fixed output identity.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-generation-adoption-output The current-byte digest comparison implements the fixed adopted-output subset without claiming selection or publication authority.
+ * @evidence specifications/interchange-and-adoption/revision-refresh-and-offline-cache.md#interchange-external-version-snapshot The generated acquisition retains its explicit provider and model snapshot and leaves version dimensions absent from the record unclaimed.
  */
 export const validateGeneratedAcquisition = (props: {
   acquisition: IAutoMovieGeneratedAcquisition;
@@ -577,6 +583,8 @@ export const validateGeneratedAcquisition = (props: {
  *
  * @evidence requirements/production-design/references-and-provenance.md#production-design-reference-manifest-closure `validateDesignEvidence` rejects consumer citations whose reference document or observed candidates do not resolve in the adopted manifest.
  * @evidence specifications/narrative-and-intent/fidelity-references-and-provenance.md#narrative-intent-reference-manifest-closure `validateDesignEvidence` closes each design consumer relation by resolving its document and candidate ids against the recorded references.
+ * @evidence requirements/asset-authoring/era-and-style.md#asset-style-reference-role `validateDesignEvidence` binds each authored consumer to explicit reference candidates and a non-blank rationale, preserving the declared reference role without treating the observation as geometry.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-era-style-inputs The evidence relation supplies the explicit consumer, selected observations, and rationale subset for applying a style reference without inferring scope from proximity.
  */
 export const validateDesignEvidence = (props: {
   references: readonly IAutoMovieDesignReference[];
