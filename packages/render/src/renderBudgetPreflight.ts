@@ -252,7 +252,11 @@ export interface IAutoMovieRenderBudgetAssessment {
  * @evidence requirements/rendering/budgets.md#rendering-budget-decision `assessAutoMovieRenderBudget` carries the conservative measurement basis and deterministic budget decision.
  * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Measures the lowered render inventory, including expanded geometry and resident resource costs, before evaluating its limits.
  * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Measures the materialized subject inventory so bounded instances and procedural expansion are charged to the report.
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Seals the renderer, settings, protocol revision, and ordered dependency fields into the target returned with the assessment.
+ * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure Binds every caller-declared frame dependency path and exact byte digest into the assessed render target.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight `assessAutoMovieRenderBudget` exposes that responsibility through the package-independent system contract.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-dependency-fingerprint Canonicalizes the declared render-content dependencies through the versioned target sealer before publishing the budget verdict.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-fingerprint-protocol Returns the target whose digest includes the protocol revision and canonical ordered field encoding.
  * @author Samchon
  */
 export const assessAutoMovieRenderBudget = (props: {

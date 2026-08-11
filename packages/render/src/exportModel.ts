@@ -33,7 +33,6 @@ import { importGltfTransformCore } from "../gltfTransformCore.cjs";
  * a non-indexed triangle soup omits `NORMAL`, and glTF's mandated flat shading
  * equals what the viewer computes for a soup anyway.
  *
- * @author Samchon
  * @evidence requirements/product/scope-and-exclusions.md#product-editor-export-exclusion Limits this operation to one model artifact instead of claiming generic scene editing or export.
  * @evidence specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Preserves the product boundary while emitting a reproducible downstream fidelity artifact.
  * @evidenceExclude requirements/asset-authoring/README.md#자산-저작-요구사항 GLB serialization preserves a supplied bounded model; asset acquisition, creation, editing, and validation remain with their owning authoring layer.
@@ -229,11 +228,13 @@ import { importGltfTransformCore } from "../gltfTransformCore.cjs";
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report GLB serialization emits bytes for one supplied model snapshot; it does not compare source revisions or report which downstream targets and evidence became stale.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility GLB serialization converts a supplied bounded model; authoring authority, delegation, and production control remain with their owning layer.
+ * @author Samchon
  */
 export const exportModelToGLB = async (
   model: IAutoMovieModel,
