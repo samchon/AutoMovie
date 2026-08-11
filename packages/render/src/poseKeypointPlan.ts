@@ -43,17 +43,9 @@ import {
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *
+ * @author Samchon
  * @evidence requirements/repaint/source-frames-and-reference-locking.md#repaint-control-alignment `planPoseKeypointSidecar` preserves frame-aligned structural guidance as a separate render product.
  * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products `planPoseKeypointSidecar` exposes that responsibility through the package-independent system contract.
- * @evidenceExclude requirements/rendering/README.md#rendering-요구사항 Pose sidecars project supplied keypoints; arbitrary products, identity masks, and repaint lineage remain separate responsibilities.
- * @evidenceExclude requirements/repaint/README.md#repaint-요구사항 Pose sidecars project supplied keypoints; arbitrary products, identity masks, and repaint lineage remain separate responsibilities.
- * @evidenceExclude requirements/repaint/source-frames-and-reference-locking.md#repaint-project-relative-references Pose sidecars project supplied keypoints; arbitrary products, identity masks, and repaint lineage remain separate responsibilities.
- * @evidenceExclude requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-refusal Pose sidecars project supplied keypoints; arbitrary products, identity masks, and repaint lineage remain separate responsibilities.
- * @evidenceExclude requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles Pose sidecars project supplied keypoints; arbitrary products, identity masks, and repaint lineage remain separate responsibilities.
- * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications Pose sidecars emit structural coordinates; material color and visibility-product authoring remain outside this planner.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Pose sidecars emit structural coordinates; material color and visibility-product authoring remain outside this planner.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Pose sidecars emit structural coordinates; material color and visibility-product authoring remain outside this planner.
- * @author Samchon
  */
 export const planPoseKeypointSidecar = (props: {
   /** The cut being rendered. */

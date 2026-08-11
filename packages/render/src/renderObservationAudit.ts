@@ -14,16 +14,11 @@ import type {
  * which the report produced no number remains `unchecked`; absence of a breach
  * never turns an analysis that did not run into agreement.
  *
+ * @author Samchon
  * @evidence requirements/rendering/budgets.md#rendering-runtime-budget-enforcement Distinguishes the report's exact or conservative preflight estimate from the measured scene-graph actual and refuses agreement when a runtime measurement is absent.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Compares the actual draw inventory with the preflight bound without changing the requested tier.
- * @evidenceExclude requirements/rendering/README.md#rendering-요구사항 Budget preflight and runtime observation enforce declared measured bounds; film-total accounting and topic-wide rendering policy remain separate.
- * @evidenceExclude requirements/rendering/budgets.md#rendering-frame-total-budget Budget preflight and runtime observation enforce declared measured bounds; film-total accounting and topic-wide rendering policy remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications Budget observation compares actual counts with preflight bounds; frame identity, chunk recovery, and the wider delivery system remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Budget observation compares actual counts with preflight bounds; frame identity, chunk recovery, and the wider delivery system remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Budget observation compares actual counts with preflight bounds; frame identity, chunk recovery, and the wider delivery system remain separate.
- * @author Samchon
  */
-export const auditAutoMovieRenderObservation = (props: {
+export function auditAutoMovieRenderObservation(props: {
   /** The report that cleared the artifact. */
   report: IAutoMovieRenderReport;
   /** What the captured scene actually submits. */
@@ -35,7 +30,7 @@ export const auditAutoMovieRenderObservation = (props: {
   breaches: IAutoMovieRenderObservationBreach[];
   /** Observable metrics for which the report produced no number. */
   unchecked: AutoMovieRenderMetric[];
-} => {
+} {
   const observable: ReadonlyArray<
     [AutoMovieRenderMetric, keyof IAutoMovieRenderObservation]
   > = [
@@ -66,4 +61,4 @@ export const auditAutoMovieRenderObservation = (props: {
     breaches,
     unchecked,
   };
-};
+}

@@ -24,32 +24,12 @@ import { beatCaptions } from "./screenplay";
  *
  * Planning only: the host writes the file ({@link renderCaptionSidecar}).
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness `planCaptionSidecar` preserves deterministic cue-to-frame mapping in the timed-text sidecar.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues `planCaptionSidecar` exposes that responsibility through the package-independent system contract.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-boundary-convention Uses start-inclusive, end-exclusive frame spans on the render clock.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-frame-number-time Resolves each output frame at its deterministic global sample time.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Applies the same frame schedule and direct-seek convention as sequence rendering.
- * @evidenceExclude requirements/delivery-and-accessibility/README.md#전달과-접근성-요구사항 Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-coverage Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-presentation-form Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-reading-overlap Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-refusal Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-style-region Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-subtitle-distinction Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-text-language Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/rendering/README.md#rendering-요구사항 Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-audio-cues Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/rendering/frame-schedules-and-sampling.md#rendering-schedule-refusal Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/rendering/frame-schedules-and-sampling.md#rendering-shutter-samples Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude requirements/rendering/frame-schedules-and-sampling.md#rendering-state-sampling Caption sidecars map supplied cues to deterministic frames; presentation, completeness, and render-job lifecycle remain outside this planner.
- * @evidenceExclude specifications/editorial-render-and-delivery/README.md#editorial-render와-delivery-system-specifications Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Caption sidecars serialize deterministic cue timing; render budgets, artifact lifecycle, and headless execution remain separate.
- * @author Samchon
  */
 export const planCaptionSidecar = (props: {
   /** The script whose tree carries captions and slugs. */

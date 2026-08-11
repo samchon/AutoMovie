@@ -10,11 +10,12 @@ import {
  * carries its own caption track. (The caption side of what review finding #644
  * asks for guide passes.)
  *
+ * @author Samchon
  * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-cue-freshness `sliceCaptionSidecar` preserves deterministic cue-to-frame mapping in the timed-text sidecar.
  * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-cues `sliceCaptionSidecar` exposes that responsibility through the package-independent system contract.
  * @evidence requirements/rendering/frame-schedules-and-sampling.md#rendering-subrange-stability Clips and rebases a chunk without changing which global frames each cue covers.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery Preserves deterministic sidecar content at chunk boundaries.
- * @author Samchon
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-frame-schedule Applies the system's stable subrange rule to the caption frame schedule.
  */
 export const sliceCaptionSidecar = (
   sidecar: IAutoMovieCaptionSidecar,
