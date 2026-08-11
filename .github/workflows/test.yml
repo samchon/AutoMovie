@@ -29,18 +29,12 @@ on:
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
-      - 'internals/config/**'
+      # Shared compiler/lint policy is a direct test input.
+      - 'config/**'
       - 'internals/*.mjs'
       - 'test/**'
-      # Root tooling configuration, by shape (#1335). This list is deliberately
-      # identical to build.yml's, now with no exception at all, since #1397
-      # put both workflow filenames in both files. The two have drifted once
-      # each, and keeping them identical is what makes the next drift visible
-      # in review; `test_workspace_ci_triggers` now fails on it outright.
-      # GitHub cannot share a `paths:` block between workflow files, so the
-      # alternative is one workflow with two jobs, which would rename both
-      # required checks; not worth doing while a rename cannot be confirmed
-      # without merging it.
+      # Root tooling configuration directly affects test installation and
+      # execution (#1335).
       - '*.js'
       - '*.json'
       - '*.yaml'

@@ -10,6 +10,10 @@
 
 같은 종류의 상태가 여러 위치에서 발생하면 종류 identity를 재사용하되 각 발생의 경로, 입력과 영향 범위는 독립적으로 남겨야 한다. 서로 다른 원인을 하나의 일반 오류 identity로 합쳐 사용자의 교정 판단을 막지 않아야 한다.
 
+### 진단 Code 목록과 행동 참조 {#diagnostics-code-catalog-reference}
+
+각 호환성 version은 발생 가능한 diagnostic code의 열거 가능한 목록을 제공하고, 각 code는 판정 조건, 관찰 값, 영향과 교정 행동을 설명하는 정확히 하나의 versioned behavioral reference에 연결되어야 한다. 각 reference는 사용자가 이용하는 지식 표면에서 code로 조회할 수 있어야 하며, 조회 결과는 source를 대신 수정하지 않고 사용자가 위임한 저작 에이전트가 적용할 교정과 재검증 범위를 설명해야 한다. 실제 전달된 code와 reference 목록은 같은 revision에 답해야 하며 누락, 중복, 알 수 없는 code 또는 stale reference가 있으면 진단 문서 집합을 complete로 표시해서는 안 된다.
+
 ### 경로와 영향 범위 {#diagnostics-path-and-scope}
 
 진단은 문제가 발견된 값, 관계, 문서 구간 또는 산출물까지 모호하지 않은 경로를 제공하고, 그 경로의 기준이 되는 project, 장면, 요청 또는 외부 입력을 함께 밝혀야 한다.
