@@ -12,7 +12,7 @@ Relation은 `supports`, `contradicts`, `interprets`, `evaluates`와 `supersedes`
 
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-observation-conditions 직접 관찰의 대상, 조건, 방법과 실제 결과를 재검토 가능한 record로 만든다. -->
 
-Observation 입력은 exact subject revision, 시간 또는 frame range, view나 channel, method identity와 version, 실행 조건, unit과 observed value 또는 artifact reference를 포함해야 한다. 출력은 입력을 그대로 결속한 record와 측정 성공, partial, failed, unsupported 또는 not-run outcome이며 관찰하지 않은 값과 원인 추정은 포함하지 않아야 한다.
+Observation 입력은 exact subject revision, 시간 또는 frame range, view나 channel, method identity와 version, 실행 조건, unit과 observed value 또는 artifact reference를 포함해야 한다. 출력은 입력을 그대로 결속한 record와 local measurement status인 success, partial, failed, unsupported, not-run 또는 cancelled를 가지며, canonical outcome으로 정규화할 때 success는 pass, failed는 error, partial은 관찰된 child scope와 누락 scope를 분리하고 전체 completeness를 partial로 유지해야 한다. 관찰하지 않은 값과 원인 추정은 포함하지 않아야 한다.
 
 Range, unit, method 또는 subject가 모호하거나 observed artifact digest가 맞지 않으면 observation을 current로 만들지 않아야 한다. Method version이 바뀌어도 이전 observation은 보존하고 새 실행을 별도 record로 만들어 비교할 수 있어야 한다.
 
@@ -28,7 +28,7 @@ Claim 입력은 proposition, scope, supporting 또는 contradicting record ids, 
 
 <!-- @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary 자동 검사 결과와 설명 또는 심각도 추정을 분리하는 출력 구조를 정의한다. -->
 
-Automated finding 입력은 rule identity와 version, subject revision, checked scope, expected condition과 execution identity다. 출력은 observed result, outcome, severity, affected scope와 diagnostic context를 독립 field로 제공해야 하며 outcome은 pass, fail, warning, unsupported, not-run 또는 error를 구분해야 한다.
+Automated finding 입력은 rule identity와 version, subject revision, checked scope, expected condition과 execution identity다. 출력은 observed result, canonical outcome, severity, affected scope와 diagnostic context를 독립 field로 제공해야 하며 outcome은 pass, fail, unsupported, not-run, cancelled 또는 error를 구분해야 한다. Warning은 outcome이 아니라 severity이고 criterion이 충족되면 pass, 충족되지 않으면 fail과 결합하므로 경고가 만족 여부를 대신하지 않는다.
 
 Rule을 실행하지 않았거나 execution이 중단되면 pass를 출력할 수 없고, severity 변경은 observed result를 바꾸지 않아야 한다. 표시 문구와 locale 변화도 rule identity, observed result와 outcome을 바꾸어서는 안 된다.
 

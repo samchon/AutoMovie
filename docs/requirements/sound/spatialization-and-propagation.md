@@ -20,7 +20,7 @@ Membership, count, position, extent 또는 revision이 불완전하거나 서로
 
 ### Direct Path {#sound-direct-path}
 
-Declared sound speed, representative source path, distance, optional air-like attenuation와 arrival time을 bounded deterministic model로 계산할 수 있어야 한다.
+Declared sound speed, representative source path, distance, atmospheric condition assumptions, attenuation와 arrival time을 하나의 bounded deterministic propagation model에서 계산할 수 있어야 한다. Spectral propagation을 선택한 경우 거리가 늘수록 고역 에너지가 저역보다 먼저 감소하는 frequency-dependent absorption과 broadband distance gain을 분리해 보고하고, 지원하지 않는 spectral model을 단순 gain으로 대체해 성공이라고 해서는 안 된다.
 
 ### Spatial Output Mapping {#sound-spatial-output-mapping}
 

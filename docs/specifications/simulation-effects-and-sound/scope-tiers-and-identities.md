@@ -27,8 +27,9 @@ Effect identity는 production, shot, instance, causal event, tier, parameter rev
 ### 외부 결과와 provider 중립성 {#external-result-provider-neutrality}
 <!-- @evidence requirements/effects-and-simulation/scope-and-simulation-tiers.md#effects-external-provider-neutrality 이 절은 외부 effect 결과를 provider가 아닌 채택 artifact로 식별한다. -->
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-provider-neutrality 이 절은 sound source와 timing을 provider product에 종속시키지 않는다. -->
+<!-- @evidence requirements/external-inputs/identity-coordinates-and-units.md#external-identity-content-provenance 동일 content와 서로 다른 source provenance를 합치지 않는 identity 경계를 유지한다. -->
 
-외부 생성 또는 해석은 입력 snapshot hash, provider-neutral 설정, 도구ㆍ모델 revision, 출력 byte digest, unitsㆍbasisㆍclock, license와 receipt를 가진 immutable adopted result로만 들어온다. Runtime 계약은 provider 이름, remote job handle, credential에 의존하지 않는다. 같은 bytes와 metadata는 출처와 무관하게 같은 입력이고, bytes나 해석 metadata가 바뀌면 새 revision이다.
+외부 생성 또는 해석은 입력 snapshot hash, provider-neutral 설정, 도구ㆍ모델 revision, 출력 byte digest, unitsㆍbasisㆍclock, license와 receipt를 가진 immutable adopted result로만 들어온다. Runtime 계약은 provider 이름, remote job handle, credential에 의존하지 않는다. 같은 bytes와 해석 metadata는 같은 simulation evaluation content identity를 공유할 수 있지만 source, acquisition, provenance, rights와 adoption revision은 각각 보존하며 하나의 adopted result로 합치지 않는다. Bytes나 해석 metadata가 바뀌면 새 evaluation content revision이고 provenance 또는 rights가 바뀌면 content가 같아도 새 adoption revision이다.
 
 ### 침묵과 누락 상태 {#authored-silence-and-missing-state}
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-authored-silence 이 절은 의도된 침묵을 명시적 상태로 보존한다. -->

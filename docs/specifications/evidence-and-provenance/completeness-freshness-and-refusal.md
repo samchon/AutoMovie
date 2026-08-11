@@ -20,7 +20,7 @@ Output path 존재, 생성 시각과 이전 success는 current 판정의 충분�
 
 <!-- @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run unsupported, not-run, error, fail과 pass를 서로 대체할 수 없는 결과로 정의한다. -->
 
-검사 outcome은 pass, fail, error, unsupported, not-run과 cancelled를 구분하고 severity, execution completeness와 artifact availability를 별도 축으로 가져야 한다. Aggregation은 pass만 satisfied evidence로 계산하고 나머지 outcome의 원인과 scope를 보존해야 한다.
+모든 검사 record의 canonical outcome은 pass, fail, error, unsupported, not-run과 cancelled를 구분하고 severity, execution completeness와 artifact availability를 별도 축으로 가져야 한다. Observation의 success는 pass, failed는 error로 정규화하고 partial은 관찰된 child scope의 pass와 누락 scope의 not-run을 보존한 채 전체 completeness를 partial로 둔다. Automated finding의 warning은 outcome이 아니라 severity이며 criterion 충족 여부에 따라 pass 또는 fail과 결합한다. Aggregation은 complete pass만 satisfied evidence로 계산하고 나머지 outcome의 원인과 scope를 보존해야 한다.
 
 Unsupported를 not-run으로, error를 fail로, 빈 output을 pass로 바꾸어서는 안 된다. 새로운 outcome을 모르는 consumer는 pass로 default하지 않고 unresolved로 처리해야 한다.
 

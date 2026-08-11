@@ -69,7 +69,7 @@ Missing 또는 duplicate member identity, declared count와 sounding set의 불�
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path 이 절은 distance, delay와 attenuation의 bounded direct model을 정한다. -->
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-spatial-output-mapping 이 절은 listener-relative result를 target channel layout으로 명시적으로 매핑한다. -->
 
-Direct model은 nonnegative propagation delay, declared attenuation curve, optional bounded Doppler proxy와 minimum/maximum distance를 가진다. Spatial result는 target channel layout, pan/energy rule와 stable channel order에 따라 presentation samples로 매핑된다. Layout 변환은 channel을 조용히 버리지 않고 matrix와 normalization rule을 receipt에 남긴다.
+Direct model은 같은 source-listener path와 atmospheric snapshot에서 nonnegative propagation delay, broadband distance attenuation와 frequency-dependent absorption을 함께 파생하고 optional bounded Doppler proxy와 minimum/maximum distance를 가진다. Spectral absorption profile은 temperature, humidity, pressure처럼 사용한 atmospheric inputs와 assumptions, frequency bands와 coefficient revision을 식별하고 거리가 늘수록 고역 band의 에너지가 더 먼저 감소하는 declared behavior를 보존한다. 요청한 spectral model을 지원하지 않거나 필요한 atmospheric input이 없으면 generic gain으로 대체하지 않고 unsupported 또는 not-run을 반환한다. Spatial result는 target channel layout, pan/energy rule와 stable channel order에 따라 presentation samples로 매핑된다. Layout 변환은 channel을 조용히 버리지 않고 matrix와 normalization rule을 receipt에 남긴다.
 
 ### Occlusion과 propagation failure {#spatial-occlusion-and-propagation-failure}
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-occlusion-obstacle 이 절은 obstacle과 opening state를 shared world snapshot에서 읽게 한다. -->
