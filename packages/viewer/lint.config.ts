@@ -74,12 +74,9 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/lighting/budgets-and-representation.md",
             "requirements/lighting/color-exposure-and-display-boundary.md",
-            "requirements/lighting/shadows-reflections-and-transmission.md",
             "requirements/lighting/sources-and-photometry.md",
             "requirements/lighting/sun-sky-and-environment.md",
-            "requirements/lighting/temporal-state-and-continuity.md",
           ],
           symbol: ["h3"],
         },
@@ -107,7 +104,6 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "specifications/camera-light-and-visibility/light-source-photometry-and-environment.md",
             "specifications/camera-light-and-visibility/light-transport-color-and-budget.md",
-            "specifications/camera-light-and-visibility/temporal-state-and-continuity.md",
           ],
           symbol: ["h3"],
         },
@@ -135,17 +131,10 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/motion/channels-controls-and-drivers.md",
-            "requirements/motion/clips-keyframes-and-interpolation.md",
-            "requirements/motion/constraints-and-inverse-kinematics.md",
-            "requirements/motion/contact-weight-and-support.md",
             "requirements/motion/layers-blends-and-transitions.md",
             "requirements/motion/object-motion-and-interaction.md",
             "requirements/motion/root-motion-and-trajectories.md",
-            "requirements/motion/scope-and-identity.md",
-            "requirements/motion/secondary-motion.md",
             "requirements/motion/timing-and-semantic-events.md",
-            "requirements/motion/validation-and-determinism.md",
           ],
           symbol: ["h3"],
         },
@@ -175,7 +164,6 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
             "specifications/performance-motion-and-staging/motion-sampling-and-composition.md",
-            "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
           ],
           symbol: ["h3"],
         },
@@ -201,15 +189,8 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/formations/budgets-and-validation.md",
-            "requirements/formations/heroes-variation-and-state.md",
-            "requirements/formations/hierarchies-and-units.md",
-            "requirements/formations/layouts-and-slots.md",
             "requirements/formations/reform-and-group-motion.md",
             "requirements/formations/resolution-culling-and-evidence.md",
-            "requirements/formations/scope-and-identity.md",
-            "requirements/formations/spacing-overlap-and-avoidance.md",
-            "requirements/formations/terrain-and-routes.md",
           ],
           symbol: ["h3"],
         },
@@ -235,7 +216,6 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md",
             "specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md",
           ],
           symbol: ["h3"],
@@ -264,7 +244,6 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "requirements/asset-authoring/external-assets.md",
             "requirements/external-inputs/adoption-modes-and-composition.md",
-            "requirements/external-inputs/identity-coordinates-and-units.md",
             "requirements/motion/retargeting-and-scale.md",
           ],
           symbol: ["h3"],
@@ -292,9 +271,7 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "specifications/asset-and-representation/alternatives-instances-and-groups.md",
-            "specifications/asset-and-representation/identity-resources-and-lifecycle.md",
             "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
-            "specifications/interchange-and-adoption/identity-coordinates-and-units.md",
             "specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md",
             "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
           ],
@@ -325,7 +302,6 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "requirements/rendering/geometry-visibility-and-culling.md",
             "requirements/rendering/materials-lighting-and-color.md",
-            "requirements/rendering/scene-lowering-and-runtime-state.md",
           ],
           symbol: ["h3"],
         },
@@ -353,7 +329,6 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
-            "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
           ],
           symbol: ["h2"],
         },
@@ -375,8 +350,6 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "requirements/effects-and-simulation/budgets-and-bounded-work.md",
-            "requirements/effects-and-simulation/clock-seek-and-determinism.md",
             "requirements/effects-and-simulation/particles-and-emission.md",
           ],
           symbol: ["h3"],
@@ -399,8 +372,6 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
-            "specifications/simulation-effects-and-sound/budget-admission.md",
-            "specifications/simulation-effects-and-sound/clocks-ordering-seek-and-checkpoints.md",
             "specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md",
           ],
           symbol: ["h3"],
@@ -425,12 +396,7 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: [
-            "requirements/effects-and-simulation/clock-seek-and-determinism.md",
-            "requirements/effects-and-simulation/environment-coupling.md",
-            "requirements/effects-and-simulation/fluids-and-water.md",
-            "requirements/interior/water-and-fluid-features.md",
-          ],
+          files: ["requirements/effects-and-simulation/fluids-and-water.md"],
           symbol: ["h3"],
         },
       ],
@@ -458,12 +424,6 @@ const graph: ITtscEvidenceGraphConfig = {
           ],
           symbol: ["h3"],
         },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: ["specifications/interior-space/services-wet-and-fluid.md"],
-          symbol: ["h2"],
-        },
       ],
     },
     {
@@ -487,8 +447,6 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "requirements/effects-and-simulation/soft-bodies-and-deformation.md",
-            "requirements/interior/soft-materials-plants-and-deformation.md",
-            "requirements/motion/secondary-motion.md",
           ],
           symbol: ["h3"],
         },
@@ -517,14 +475,6 @@ const graph: ITtscEvidenceGraphConfig = {
           ],
           symbol: ["h3"],
         },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/interior-space/elements-furnishing-and-clearance.md",
-          ],
-          symbol: ["h2"],
-        },
       ],
     },
     {
@@ -545,10 +495,7 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: [
-            "requirements/interior/soft-materials-plants-and-deformation.md",
-            "requirements/map/vegetation-and-ecology.md",
-          ],
+          files: ["requirements/map/vegetation-and-ecology.md"],
           symbol: ["h3"],
         },
       ],
@@ -575,14 +522,6 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/world-and-site/ecology-weather-and-calendar.md",
           ],
           symbol: ["h3"],
-        },
-        {
-          type: "markdown",
-          root: "../../docs",
-          files: [
-            "specifications/interior-space/elements-furnishing-and-clearance.md",
-          ],
-          symbol: ["h2"],
         },
       ],
     },
@@ -613,7 +552,6 @@ const graph: ITtscEvidenceGraphConfig = {
             "requirements/rendering/headless-and-platform-determinism.md",
             "requirements/rendering/materials-lighting-and-color.md",
             "requirements/rendering/passes-channels-and-products.md",
-            "requirements/rendering/validation.md",
           ],
           symbol: ["h3"],
         },
@@ -672,7 +610,6 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "requirements/rendering/budgets.md",
             "requirements/rendering/passes-channels-and-products.md",
-            "requirements/rendering/validation.md",
           ],
           symbol: ["h3"],
         },
@@ -721,12 +658,7 @@ const graph: ITtscEvidenceGraphConfig = {
         {
           type: "markdown",
           root: "../../docs",
-          files: [
-            "requirements/staging/marks-zones-and-blocking.md",
-            "requirements/staging/scope-and-source-of-truth.md",
-            "requirements/staging/subjects-and-object-staging.md",
-            "requirements/staging/visibility-and-readability.md",
-          ],
+          files: ["requirements/staging/scope-and-source-of-truth.md"],
           symbol: ["h3"],
         },
       ],
