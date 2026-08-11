@@ -404,6 +404,18 @@ const graph: ITtscEvidenceGraphConfig = {
       ],
     }),
     ...responsibilityClaims({
+      name: "caption readability inspection",
+      files: ["src/production/openAutoMovieProduction.ts"],
+      requirements: [
+        "requirements/delivery-and-accessibility/README.md",
+        "requirements/delivery-and-accessibility/captions-subtitles-and-cues.md",
+      ],
+      specifications: [
+        "specifications/editorial-render-and-delivery/README.md",
+        "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
+      ],
+    }),
+    ...responsibilityClaims({
       name: "project namespace locking",
       files: [
         "src/project/commitLock.ts",
