@@ -1639,6 +1639,37 @@ const SANDBOX_BOOTSTRAP = `
           : Math.floor(slot / layout.ranks);
       x = (file - (layout.files - 1) / 2) * layout.spacing.lateral;
       z = rank * layout.spacing.depth;
+    } else if (layout.kind === "perimeter") {
+      // Mirrors perimeterSlotPoint in the engine: the ring is walked from the
+      // front-left corner along the front, down the right side, back along the
+      // rear and up the left, corners belonging to the lateral sides, and
+      // members that outlast one ring continue into the next one inward.
+      // No backticks in here: this whole block is a template literal.
+      let index = slot;
+      let ring = 0;
+      for (; ring < layout.thickness - 1; ++ring) {
+        const capacity =
+          2 * (layout.files - 2 * ring) + 2 * (layout.ranks - 2 * ring) - 4;
+        if (index < capacity) break;
+        index -= capacity;
+      }
+      const files = layout.files - 2 * ring;
+      const ranks = layout.ranks - 2 * ring;
+      const half = (files - 1) / 2;
+      const side = ranks - 2;
+      if (index < files) {
+        x = (index - half) * layout.spacing.lateral;
+        z = ring * layout.spacing.depth;
+      } else if (index < files + side) {
+        x = half * layout.spacing.lateral;
+        z = (ring + index - files + 1) * layout.spacing.depth;
+      } else if (index < 2 * files + side) {
+        x = (2 * files + side - 1 - index - half) * layout.spacing.lateral;
+        z = (ring + ranks - 1) * layout.spacing.depth;
+      } else {
+        x = -half * layout.spacing.lateral;
+        z = (ring + 2 * files + 2 * side - index) * layout.spacing.depth;
+      }
     } else if (layout.kind === "wedge") {
       const row = Math.floor(Math.sqrt(slot));
       x = (slot - row * row - row) * layout.spacing.lateral;

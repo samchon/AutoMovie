@@ -1314,6 +1314,68 @@ export type IAutoMovieFormationLayout =
       };
     }
   | {
+      /**
+       * Closed hollow perimeter: a rectangular ring around an empty middle.
+       *
+       * A `line` fills its rectangle and an `arc` closes only a circle, so the
+       * arrangement a group takes when it faces outward around something —
+       * a square, a cordon, a ring of seats, spectators lining an enclosure —
+       * had no spelling. Four separate units are not the same thing: a unit
+       * that has to re-form out of this arrangement and back into it must be
+       * one unit throughout, with one identity and one slot order.
+       *
+       * Members fill the outer ring first, walking it from the front-left
+       * corner along the front, down the right side, back along the rear and up
+       * the left, then continue into the next ring inward. A ring short of
+       * members is left open at its end rather than redistributed, which is
+       * what a body that has not finished closing actually looks like.
+       */
+      kind: "perimeter";
+      /**
+       * Integer members along each lateral side, from 2 through count.
+       *
+       * Corners belong to the lateral sides, so a side of `files` members and a
+       * side of `ranks` members close into a ring of `2 * files + 2 * ranks - 4`
+       * rather than of their sum.
+       */
+      files: number;
+      /** Integer members along each depth side, from 2 through count. */
+      ranks: number;
+      /**
+       * Integer rings the wall is thick, from 1.
+       *
+       * One ring is a cordon; several is a formed body. Each ring inward is two
+       * members shorter on every side, so a thickness that would drive either
+       * side below two has no ring to place and is refused.
+       */
+      thickness: number;
+      /** Finite inter-slot spacing in meters, strictly above zero. */
+      spacing: {
+        /** Left-to-right spacing between members along a side. */
+        lateral: number;
+        /** Front-to-back spacing between rings and along a depth side. */
+        depth: number;
+      };
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same crowd.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
+    }
+  | {
       /** Arc layout. */
       kind: "arc";
       /** Finite arc radius in meters, strictly above zero. */

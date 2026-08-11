@@ -606,11 +606,72 @@ const dressedFormationPoint = (
   };
 };
 
+/**
+ * Where one member of a closed hollow perimeter stands, in unit-local meters.
+ *
+ * The ring is walked from the front-left corner: along the front, down the
+ * right side, back along the rear, and up the left, with the corners belonging
+ * to the lateral sides so no member is placed twice. A ring therefore seats
+ * `2 * files + 2 * ranks - 4` members rather than their sum. Members that
+ * outlast the outer ring continue into the next one inward, which is two
+ * shorter on every side and one spacing further in on both axes.
+ *
+ * The ring a slot belongs to is found by walking outward-in rather than by
+ * inverting the cumulative capacity, which would need a square root at a
+ * boundary where its rounding decides which ring a member stands in. Thickness
+ * is a small number by construction, and the loop cannot outrun it.
+ *
+ * The local frame is the one every formed layout uses: `x` centered on the
+ * unit's own axis, `z` growing from the front rank rearward.
+ */
+const perimeterSlotPoint = (
+  layout: Extract<IAutoMovieFormationDesign["layout"], { kind: "perimeter" }>,
+  slot: number,
+): { x: number; z: number } => {
+  let index = slot;
+  let ring = 0;
+  for (; ring < layout.thickness - 1; ++ring) {
+    const capacity =
+      2 * (layout.files - 2 * ring) + 2 * (layout.ranks - 2 * ring) - 4;
+    if (index < capacity) break;
+    index -= capacity;
+  }
+  const files = layout.files - 2 * ring;
+  const ranks = layout.ranks - 2 * ring;
+  const half = (files - 1) / 2;
+  const side = ranks - 2;
+  if (index < files)
+    return {
+      x: (index - half) * layout.spacing.lateral,
+      z: ring * layout.spacing.depth,
+    };
+  if (index < files + side)
+    return {
+      x: half * layout.spacing.lateral,
+      z: (ring + index - files + 1) * layout.spacing.depth,
+    };
+  if (index < 2 * files + side)
+    return {
+      x: (2 * files + side - 1 - index - half) * layout.spacing.lateral,
+      z: (ring + ranks - 1) * layout.spacing.depth,
+    };
+  return {
+    x: -half * layout.spacing.lateral,
+    z: (ring + 2 * files + 2 * side - index) * layout.spacing.depth,
+  };
+};
+
 const localFormationPoint = (
   formation: IAutoMovieFormationPlacement,
   slot: number,
   layout: IAutoMovieFormationDesign["layout"] = formation.layout,
 ): { x: number; z: number } => {
+  if (layout.kind === "perimeter")
+    return dressedFormationPoint(
+      formation,
+      slot,
+      perimeterSlotPoint(layout, slot),
+    );
   if (layout.kind === "line" || layout.kind === "column") {
     const rank =
       layout.kind === "line"

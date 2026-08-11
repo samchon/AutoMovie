@@ -2807,6 +2807,26 @@ const dressedInterval = (
     );
 };
 
+/**
+ * How many members a closed hollow perimeter seats.
+ *
+ * Each ring seats its four sides less the four corners they share, and each
+ * ring inward is two members shorter on every side. Stated as the sum rather
+ * than as a closed form so that the number a refusal quotes is arrived at the
+ * same way the placement walks the rings.
+ *
+ * Only called where the innermost ring is already known to be at least two by
+ * two, so no term of the sum is a ring that cannot be stood in.
+ */
+const perimeterCapacity = (
+  layout: Extract<IAutoMovieFormationDesign["layout"], { kind: "perimeter" }>,
+): number => {
+  let total = 0;
+  for (let ring = 0; ring < layout.thickness; ++ring)
+    total += 2 * (layout.files - 2 * ring) + 2 * (layout.ranks - 2 * ring) - 4;
+  return total;
+};
+
 const validateFormationLayout = (
   diagnostics: IAutoMovieDiagnostic[],
   formation: IAutoMovieFormationDesign,
@@ -2859,6 +2879,73 @@ const validateFormationLayout = (
         target,
         file,
         `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in the tracked formation design record.`,
+      );
+  } else if (layout.kind === "perimeter") {
+    bounded(
+      diagnostics,
+      layout.spacing.lateral,
+      Number.EPSILON,
+      10_000,
+      target,
+      file,
+      "layout.spacing.lateral",
+    );
+    bounded(
+      diagnostics,
+      layout.spacing.depth,
+      Number.EPSILON,
+      10_000,
+      target,
+      file,
+      "layout.spacing.depth",
+    );
+    // Two is the smallest side that still has an inside. A perimeter one
+    // member wide is a line, and the design that meant a line should say so
+    // rather than arrive here as a ring with nothing in it.
+    integer(
+      diagnostics,
+      layout.files,
+      2,
+      formation.count,
+      target,
+      file,
+      "layout.files",
+    );
+    integer(
+      diagnostics,
+      layout.ranks,
+      2,
+      formation.count,
+      target,
+      file,
+      "layout.ranks",
+    );
+    integer(
+      diagnostics,
+      layout.thickness,
+      1,
+      formation.count,
+      target,
+      file,
+      "layout.thickness",
+    );
+    const innermostFiles = layout.files - 2 * (layout.thickness - 1);
+    const innermostRanks = layout.ranks - 2 * (layout.thickness - 1);
+    if (innermostFiles < 2 || innermostRanks < 2)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Thickness ${layout.thickness} leaves an innermost ring of ${innermostFiles} by ${innermostRanks}, and a ring needs at least 2 by 2 to have an inside. Reduce layout.thickness, or widen layout.files and layout.ranks, in the tracked formation design record.`,
+      );
+    else if (perimeterCapacity(layout) < formation.count)
+      invalid(
+        diagnostics,
+        "design-range-invalid",
+        target,
+        file,
+        `Perimeter capacity ${perimeterCapacity(layout)} is below count ${formation.count}. Widen layout.files or layout.ranks, or add a ring with layout.thickness, in the tracked formation design record.`,
       );
   } else if (layout.kind === "wedge") {
     bounded(
