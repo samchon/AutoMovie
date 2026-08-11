@@ -1,40 +1,117 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/**
- * Public ingest contracts answer directly for both product promises and
- * package-independent system contracts.
- */
+/** Public ingest modules cite only the contract families they materialize. */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "public ingest exports implement requirements",
+      name: "external byte inspection implements requirements",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/inspectExternalModelBytes.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "requirements/asset-authoring/**/*.md",
-          "requirements/external-inputs/**/*.md",
-          "requirements/motion/**/*.md",
+          "requirements/asset-authoring/validation.md",
+          "requirements/external-inputs/media-families-and-declared-facts.md",
+          "requirements/external-inputs/resource-closure-and-acquisition.md",
+          "requirements/external-inputs/unsupported-and-degradation.md",
+          "requirements/external-inputs/validation-and-quarantine.md",
         ],
         symbol: ["h2", "h3"],
       },
     },
     {
-      name: "public ingest exports implement specifications",
+      name: "external byte inspection implements specifications",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: ["src/inspectExternalModelBytes.ts"],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "specifications/asset-and-representation/**/*.md",
-          "specifications/interchange-and-adoption/**/*.md",
-          "specifications/performance-motion-and-staging/**/*.md",
+          "specifications/asset-and-representation/fidelity-and-validation.md",
+          "specifications/asset-and-representation/model-geometry-and-surface-facts.md",
+          "specifications/interchange-and-adoption/media-inspection-boundaries.md",
+          "specifications/interchange-and-adoption/resource-closure-and-acquisition.md",
+          "specifications/interchange-and-adoption/support-degradation-and-refusal.md",
+          "specifications/interchange-and-adoption/validation-and-quarantine.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "selected external scene and motion normalization implements requirements",
+      type: "typescript",
+      files: ["src/ingestDocument.ts", "src/externalMotion.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/asset-authoring/external-assets.md",
+          "requirements/external-inputs/adoption-modes-and-composition.md",
+          "requirements/motion/clips-keyframes-and-interpolation.md",
+          "requirements/motion/external-motion-inputs.md",
+          "requirements/motion/validation-and-determinism.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "selected external scene and motion normalization implements specifications",
+      type: "typescript",
+      files: ["src/ingestDocument.ts", "src/externalMotion.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/asset-and-representation/alternatives-instances-and-groups.md",
+          "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
+          "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
+          "specifications/performance-motion-and-staging/motion-sampling-and-composition.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "rig and morph normalization implements requirements",
+      type: "typescript",
+      files: [
+        "src/humanoidSkeleton.ts",
+        "src/ingestFaceTemplate.ts",
+        "src/inspectExternalModelBytes.ts",
+        "src/externalMotion.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "requirements/asset-authoring/rig-and-state.md",
+          "requirements/motion/retargeting-and-scale.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "rig and morph normalization implements specifications",
+      type: "typescript",
+      files: [
+        "src/humanoidSkeleton.ts",
+        "src/ingestFaceTemplate.ts",
+        "src/inspectExternalModelBytes.ts",
+        "src/externalMotion.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/asset-and-representation/rig-deformation-and-state.md",
+          "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
         ],
         symbol: ["h2", "h3"],
       },
