@@ -79,6 +79,14 @@ export const test_render_simulated_budget = (): void => {
   const BRANCH_BYTES =
     BRANCH.vertices * (12 + 12 + 8) + BRANCH.triangles * 3 * 4;
   const LEAF_BYTES = LEAF.vertices * (12 + 12 + 8) + LEAF.triangles * 3 * 4;
+  // Opaque geometry is submitted more than once in a frame, and the inventory
+  // reports the conservative one-frame peak rather than the beauty pass alone.
+  // These scenes light nothing, so no shadow map re-submits the geometry and
+  // the outline guide pass is the frame-wide peak instead: one further
+  // complete pass over every opaque draw. Resident cost is not multiplied,
+  // because vertices, memory, nodes and instance slots are allocated once and
+  // reused by each pass.
+  const PASSES = 2;
 
   const target = sealAutoMovieRenderTarget({
     renderer: { api: "webgl2", vendor: "test", device: "swiftshader" },
@@ -142,12 +150,16 @@ export const test_render_simulated_budget = (): void => {
     inventory.totals,
     {
       triangles:
-        PANEL_TRIANGLES + BRANCH_INSTANCES * BRANCH.triangles + WATER_TRIANGLES,
+        PASSES *
+        (PANEL_TRIANGLES +
+          BRANCH_INSTANCES * BRANCH.triangles +
+          WATER_TRIANGLES),
       vertices:
         PANEL_VERTICES + BRANCH_INSTANCES * BRANCH.vertices + WATER_VERTICES,
-      // One panel mesh, one branch batch, one water surface. Six ferns are not
-      // six draws, which is the whole reason a bed is affordable.
-      drawCalls: 3,
+      // One panel mesh, one branch batch, one water surface, each drawn once
+      // per pass. Six ferns are not six draws, which is the whole reason a bed
+      // is affordable.
+      drawCalls: PASSES * 3,
       // One named fabric plus the two materials the renderer creates for the
       // batch and the surface that named none.
       materials: 3,
@@ -171,6 +183,14 @@ export const test_render_simulated_budget = (): void => {
       .map((entry) => [entry.owner, entry.source, entry.cost]),
     [
       ["planting:atrium-bed", 'plantings["atrium-bed"]', BRANCH_INSTANCES * 24],
+      // The extra pass is charged to the pass rather than smeared back over
+      // the drawables, so a reader can tell what the room costs from what
+      // drawing it twice costs.
+      [
+        "render-pass:outline",
+        "render.pass.outline",
+        PANEL_TRIANGLES + BRANCH_INSTANCES * BRANCH.triangles + WATER_TRIANGLES,
+      ],
       ["soft-body:panel", 'softBodies["panel"]', PANEL_TRIANGLES],
       ["water-body:atrium-pool", 'waterBodies["atrium-pool"]', WATER_TRIANGLES],
     ],
@@ -314,7 +334,9 @@ export const test_render_simulated_budget = (): void => {
         "incomplete",
       ],
       counted: [2048, 64],
-      countedDraws: 2,
+      // The panel and the branch batch, each once per pass. A hand-counted
+      // pool states cells without a surface to draw, so it adds none.
+      countedDraws: PASSES * 2,
     },
   );
 
@@ -347,22 +369,27 @@ export const test_render_simulated_budget = (): void => {
       fluidCells: twin("fluidCells", inventory, 5),
     },
     {
+      // The extra pass draws every opaque triangle again, so it outweighs any
+      // one drawable and leads the ranking for the two metrics a pass
+      // multiplies. Instance slots and fluid cells are resident rather than
+      // submitted, so their ranking still names the drawable that owns them.
       triangles: {
         status: "over",
         excess:
-          PANEL_TRIANGLES +
-          BRANCH_INSTANCES * BRANCH.triangles +
-          WATER_TRIANGLES -
+          PASSES *
+            (PANEL_TRIANGLES +
+              BRANCH_INSTANCES * BRANCH.triangles +
+              WATER_TRIANGLES) -
           100,
-        owner: "planting:atrium-bed",
-        source: 'plantings["atrium-bed"]',
+        owner: "render-pass:outline",
+        source: "render.pass.outline",
         recovers: true,
       },
       drawCalls: {
         status: "over",
-        excess: 1,
-        owner: "planting:atrium-bed",
-        source: 'plantings["atrium-bed"]',
+        excess: PASSES * 3 - 2,
+        owner: "render-pass:outline",
+        source: "render.pass.outline",
         recovers: true,
       },
       instanceSlots: {
@@ -471,7 +498,10 @@ export const test_render_simulated_budget = (): void => {
       triangles: null,
       vertices: null,
       geometryBytes: null,
-      drawCalls: 1,
+      // The one branch batch, submitted once per pass. An unmeasured prototype
+      // costs an unknown number of triangles, never an unknown number of
+      // draws: the batch is submitted whatever it turns out to contain.
+      drawCalls: PASSES * 1,
       instanceSlots: BRANCH_INSTANCES,
       nodes: 1,
       gaps: [
@@ -588,15 +618,17 @@ export const test_render_simulated_budget = (): void => {
     },
     {
       leafy: {
-        drawCalls: 2,
+        // A branch batch and a leaf batch, each submitted once per pass.
+        drawCalls: PASSES * 2,
         instanceSlots: BRANCH_INSTANCES + leaves,
         triangles:
-          BRANCH_INSTANCES * BRANCH.triangles + leaves * LEAF.triangles,
+          PASSES *
+          (BRANCH_INSTANCES * BRANCH.triangles + leaves * LEAF.triangles),
         vertices: BRANCH_INSTANCES * BRANCH.vertices + leaves * LEAF.vertices,
         geometryBytes: BRANCH_BYTES + LEAF_BYTES,
         materials: 2,
       },
-      bare: { drawCalls: 1, materials: 1 },
+      bare: { drawCalls: PASSES * 1, materials: 1 },
       bearing: true,
     },
   );

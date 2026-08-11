@@ -111,20 +111,27 @@ export const test_render_budget_preflight_evidence = (): void => {
     });
   };
 
-  // Five staged boxes of twelve triangles each; the tight twin is one triangle
-  // under that, which is the smallest input that must fail.
+  // Five staged boxes of twelve triangles each. That is what the shot stages,
+  // and it is deliberately not the number a limit is compared against: the
+  // budget is a conservative one-frame peak, and the spec keeps `passes` and
+  // the per-frame peak as dimensions of that bound rather than counting the
+  // beauty pass alone. The fixture lights one shadow caster, and a shadow map
+  // re-submits every opaque draw as its own depth pass, so the peak frame
+  // draws this geometry twice.
   const staged = 5 * BOX_TRIANGLES;
+  const peak = staged * 2;
   const cleared = assess({
     budget: renderBudgetFixture({
       tier: "review",
-      limits: { triangles: staged },
+      limits: { triangles: peak },
     }),
     textures: true,
   });
+  // One triangle under the peak, which is the smallest input that must fail.
   const exceeded = assess({
     budget: renderBudgetFixture({
       tier: "review",
-      limits: { triangles: staged - 1 },
+      limits: { triangles: peak - 1 },
     }),
     textures: true,
   });
@@ -153,15 +160,18 @@ export const test_render_budget_preflight_evidence = (): void => {
       cleared: {
         status: "within",
         finding: "within",
-        measured: staged,
+        measured: peak,
         excess: 0,
       },
       exceeded: {
         status: "over",
         finding: "over",
-        measured: staged,
+        measured: peak,
         excess: 1,
-        owner: "node:lantern",
+        // The depth pass is charged to the light that induced it, and one
+        // pass over every staged box outweighs any single staged node, so the
+        // caster is the dominant contributor rather than the largest mesh.
+        owner: "light:sun",
       },
     },
   );
@@ -169,7 +179,7 @@ export const test_render_budget_preflight_evidence = (): void => {
   const unmeasured = assess({
     budget: renderBudgetFixture({
       tier: "review",
-      limits: { triangles: staged },
+      limits: { triangles: peak },
     }),
   });
   TestValidator.equals(
@@ -313,8 +323,8 @@ export const test_render_budget_preflight_evidence = (): void => {
       refused: refusal !== null,
       shot: refusal?.includes("opening"),
       tier: refusal?.includes('Render tier "review"'),
-      owner: refusal?.includes('the largest owner is "node:lantern"'),
-      excess: refusal?.includes(`${staged} against a limit of ${staged - 1}`),
+      owner: refusal?.includes('the largest owner is "light:sun"'),
+      excess: refusal?.includes(`${peak} against a limit of ${peak - 1}`),
     },
     { refused: true, shot: true, tier: true, owner: true, excess: true },
   );
