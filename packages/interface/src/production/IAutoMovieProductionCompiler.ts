@@ -43,10 +43,338 @@ import {
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
 
+/**
+ * Closed diagnostic identities currently emitted by compiler, lint, and MCP.
+ *
+ * This tuple is the canonical registry key set. A user-facing behavioral
+ * catalog must exhaustively map it, and producers may not invent an unlisted
+ * string. Update the tuple only together with that catalog.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Requires one enumerable code catalog shared by actual delivery.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Makes the shipped tuple the exhaustive key set for behavioral references.
+ */
+export const AUTOMOVIE_DIAGNOSTIC_CODES = [
+  "acceptance-story-sync-failed",
+  "asset-bytes-missing",
+  "asset-digest-mismatch",
+  "asset-manifest-invalid",
+  "asset-manifest-missing",
+  "asset-manifest-order",
+  "asset-model-ingest-invalid",
+  "asset-model-instancing-unsupported",
+  "asset-model-lod-dangling",
+  "asset-model-lod-incompatible",
+  "asset-model-material-unsupported",
+  "asset-model-provenance-missing",
+  "asset-model-proxy-dangling",
+  "asset-model-resource-unbound",
+  "asset-model-rig-incompatible",
+  "asset-motion-ingest-invalid",
+  "asset-motion-provenance-missing",
+  "asset-path-invalid",
+  "asset-processing-missing",
+  "asset-provenance-incomplete",
+  "asset-review-incomplete",
+  "asset-review-missing",
+  "asset-review-revise",
+  "asset-review-stale",
+  "asset-texture-unclosed",
+  "asset-use-dangling",
+  "asset-use-duplicate",
+  "asset-use-missing",
+  "asset-use-stale",
+  "blocking-invalid",
+  "builder-failed",
+  "capture-failed",
+  "capture-host-unavailable",
+  "capture-input-changed",
+  "capture-png-blank",
+  "capture-png-invalid",
+  "capture-production-invalid",
+  "capture-production-unregistered",
+  "capture-receipt-invalid",
+  "capture-registry-unavailable",
+  "capture-renderer-identity-invalid",
+  "capture-size-mismatch",
+  "capture-target-missing",
+  "compile-current-invalid",
+  "compile-input-changed",
+  "compile-missing",
+  "content-input-unsafe",
+  "contract-mismatch",
+  "contract-realization-failed",
+  "design-attachment-unsupported",
+  "design-budget-exceeded",
+  "design-capability-duplicate",
+  "design-capability-unsupported",
+  "design-collection-cardinality-invalid",
+  "design-collection-empty",
+  "design-color-invalid",
+  "design-deliverable-pass-invalid",
+  "design-downstream-invalidated",
+  "design-duplicate-id",
+  "design-enum-invalid",
+  "design-frame-clock-invalid",
+  "design-id-collision",
+  "design-id-reserved",
+  "design-identity-mismatch",
+  "design-lineage-unbound",
+  "design-missing",
+  "design-polygon-invalid",
+  "design-quaternion-invalid",
+  "design-range-invalid",
+  "design-reference-active",
+  "design-reference-asset-missing",
+  "design-reference-duplicate",
+  "design-reference-evidence-dangling",
+  "design-reference-frame-bounds-mismatch",
+  "design-reference-frame-page-missing",
+  "design-reference-invalid",
+  "design-reference-media-mismatch",
+  "design-reference-media-unsupported",
+  "design-reference-missing",
+  "design-reference-stale",
+  "design-reference-use-dangling",
+  "design-reference-use-unbound",
+  "design-repaint-feature-required",
+  "design-route-invalid",
+  "design-schema-invalid",
+  "design-source-path-collision",
+  "design-source-path-invalid",
+  "design-story-clock-absent",
+  "design-story-pin-missing",
+  "design-story-sync-unsatisfiable",
+  "design-target-invalid",
+  "design-text-empty",
+  "engine-validation-failed",
+  "environment-context-invalid",
+  "film-audio-cue-invalid",
+  "film-caption-cue-invalid",
+  "film-effect-cue-invalid",
+  "film-global-order-invalid",
+  "film-id-mismatch",
+  "film-runtime-mismatch",
+  "film-shot-accounting-invalid",
+  "film-shot-not-compiled",
+  "film-shot-unaccounted",
+  "film-shot-unknown",
+  "film-source-range-invalid",
+  "film-state-handoff-mismatch",
+  "film-state-handoff-unverifiable",
+  "film-time-off-grid",
+  "film-transition-handle-missing",
+  "film-transition-invalid",
+  "film-transition-mismatch",
+  "film-video-empty",
+  "generated-manifest-missing",
+  "generated-manifest-stale",
+  "generated-path-outside",
+  "generated-stale",
+  "generated-stale-output",
+  "generated-tampered",
+  "generated-unowned",
+  "geometry-selector-invalid",
+  "grammar-axis-crossed",
+  "grammar-eyeline",
+  "grammar-jump-cut",
+  "grammar-pacing",
+  "grammar-reestablish",
+  "grammar-screen-direction",
+  "grammar-shot-size",
+  "grammar-style-intent-unmatched",
+  "legacy-art-direction-defaulted",
+  "legacy-asset-missing",
+  "legacy-camera-subject-reconstruction-required",
+  "legacy-design-reconstruction-required",
+  "legacy-edit-reconstruction-required",
+  "legacy-frame-format-defaulted",
+  "legacy-source-unrecoverable",
+  "model-archetype-unregistered",
+  "model-lod-order-invalid",
+  "model-parameter-invalid",
+  "model-parameter-missing",
+  "model-parameter-unsupported",
+  "performance-invalid",
+  "pipeline-failed",
+  "preview-input-invalid",
+  "preview-target-missing",
+  "production-address-mismatch",
+  "registration-invalid",
+  "render-bundle-invalid",
+  "render-bundle-legacy",
+  "render-bundle-unowned",
+  "render-deliverable-incomplete",
+  "render-deliverable-invalid",
+  "render-deliverable-media-mismatch",
+  "render-deliverable-missing",
+  "render-deliverable-stale",
+  "render-deliverable-unowned",
+  "render-frame-invalid",
+  "render-rendition-provenance-invalid",
+  "repaint-commit-refused",
+  "repaint-compile-stale",
+  "repaint-delivery-disabled",
+  "repaint-failed",
+  "repaint-host-unavailable",
+  "repaint-input-changed",
+  "repaint-input-invalid",
+  "repaint-output-invalid",
+  "repaint-production-invalid",
+  "repaint-production-unregistered",
+  "repaint-reference-invalid",
+  "repaint-reference-manifest-invalid",
+  "repaint-reference-manifest-missing",
+  "repaint-registry-unavailable",
+  "repaint-source-evidence-invalid",
+  "repaint-source-evidence-missing",
+  "repaint-source-review-incomplete",
+  "repaint-target-missing",
+  "review-acceptance-coverage-incomplete",
+  "review-acceptance-coverage-misplaced",
+  "review-asset-view-coverage-incomplete",
+  "review-checklist-incomplete",
+  "review-completion-basis-empty",
+  "review-completion-basis-incomplete",
+  "review-correction-empty",
+  "review-evidence-empty",
+  "review-evidence-missing",
+  "review-evidence-region-invalid",
+  "review-evidence-reused",
+  "review-evidence-selector-invalid",
+  "review-evidence-stale",
+  "review-evidence-target-mismatch",
+  "review-high-risk-not-passed",
+  "review-incomplete",
+  "review-missing",
+  "review-observation-copied",
+  "review-observation-empty",
+  "review-outcome-missing",
+  "review-rendition-coverage-incomplete",
+  "review-rendition-delivery-invalid",
+  "review-rendition-missing",
+  "review-rendition-source-unapproved",
+  "review-required-criterion-not-passed",
+  "review-revise",
+  "review-selector-truncated",
+  "review-self-contradiction",
+  "review-source-compile-blocked",
+  "review-source-missing",
+  "review-stale",
+  "review-target-missing",
+  "review-target-raced",
+  "review-worksheet-stale",
+  "screenplay-beat-id-repeated",
+  "screenplay-beat-prose-repeated",
+  "screenplay-beat-uncovered",
+  "screenplay-beat-unnamed",
+  "screenplay-beat-unwritten",
+  "screenplay-catalog-claim-absent",
+  "screenplay-catalog-repeated",
+  "screenplay-catalog-scene-absent",
+  "screenplay-catalog-ungrounded",
+  "screenplay-catalog-unnamed",
+  "screenplay-citation-claim-absent",
+  "screenplay-citation-scene-absent",
+  "screenplay-claim-misowned",
+  "screenplay-claim-repeated",
+  "screenplay-claim-scene-absent",
+  "screenplay-claim-unfounded",
+  "screenplay-cover-unpromised",
+  "screenplay-cover-unreasoned",
+  "screenplay-disposition-realized",
+  "screenplay-document-absent",
+  "screenplay-heading-absent",
+  "screenplay-heading-repeated",
+  "screenplay-heading-retitled",
+  "screenplay-heading-unindexed",
+  "screenplay-index-missing",
+  "screenplay-lock-orphaned",
+  "screenplay-lock-renumbered",
+  "screenplay-lock-repeated",
+  "screenplay-lock-unreasoned",
+  "screenplay-scene-id-noncanonical",
+  "screenplay-scene-id-repeated",
+  "screenplay-scene-location-absent",
+  "screenplay-scene-unobserved",
+  "screenplay-scene-unplaced",
+  "screenplay-scene-unrealized",
+  "screenplay-scene-untitled",
+  "screenplay-scene-unwritten",
+  "screenplay-scenes-empty",
+  "screenplay-sequence-beatless",
+  "screenplay-sequence-unnamed",
+  "screenplay-tombstone-realized",
+  "screenplay-tombstone-titled",
+  "screenplay-treatment-empty",
+  "source-actor-runtime-invalid",
+  "source-capability-forbidden",
+  "source-clip-invalid",
+  "source-execution-failed",
+  "source-execution-timeout",
+  "source-export-invalid",
+  "source-export-missing",
+  "source-import-unresolved",
+  "source-import-unsupported",
+  "source-motion-adoption-invalid",
+  "source-motion-retarget-invalid",
+  "source-nondeterministic",
+  "source-path-missing",
+  "source-path-outside-root",
+  "source-registration-mismatch",
+  "source-scene-content-invalid",
+  "source-template-sentinel",
+  "source-transpile-failed",
+  "stage-invalid",
+] as const;
+
+/**
+ * One code from the shipped diagnostic catalog.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Prevents producers from emitting codes absent from the enumerable catalog.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Lets catalog construction prove exhaustive code coverage.
+ */
+export type AutoMovieDiagnosticCode =
+  (typeof AUTOMOVIE_DIAGNOSTIC_CODES)[number];
+
+/**
+ * Exactly one stable, versioned behavioral explanation for a diagnostic code.
+ *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Makes every emitted code resolve to one versioned user-facing reference.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Separates stable catalog identity from the concrete anchored knowledge path.
+ */
+export interface IAutoMovieDiagnosticReference {
+  /**
+   * Positive catalog revision shipped with this reference set.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Detects stale code-to-reference joins across catalog revisions.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Carries the catalog revision used by actual delivery.
+   */
+  catalogRevision: number;
+  /**
+   * Stable behavioral-reference identity within the catalog revision.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Gives a diagnostic exactly one reference identity.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Keys the exhaustive catalog entry independently of prose location.
+   */
+  id: string;
+  /**
+   * User-facing Markdown path and stable anchor for the explanation.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Makes the behavioral reference resolvable by the user's knowledge surface.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Links the code to cause, affected parameter, impact, and correction guidance.
+   */
+  path: `${string}.md#${string}`;
+}
+
 /** A stable production diagnostic returned by compiler, lint and MCP. */
 export interface IAutoMovieDiagnostic {
-  /** Machine-readable diagnostic code. */
-  code: string;
+  /**
+   * Machine-readable diagnostic code from the shipped closed catalog.
+   *
+   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Restricts actual delivery to one enumerable code set.
+   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Uses the same key union the exhaustive catalog maps.
+   */
+  code: AutoMovieDiagnosticCode;
   /** Whether the diagnostic blocks the current operation. */
   category: "error" | "warning";
   /** Pipeline phase that owns the correction. */
@@ -426,6 +754,169 @@ export interface IAutoMovieCaptionCue {
   start: AutoMovieFilmTime;
   /** Film-global exclusive end. */
   end: AutoMovieFilmTime;
+}
+
+/**
+ * Effective readability measurements for one compiled caption cue.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports grapheme, line, duration, and gap facts even when no profile can judge them.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries measurements separately from the optional verdict.
+ */
+export interface IAutoMovieCaptionReadabilityMeasurement {
+  /**
+   * Exact caption cue id.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Joins measurements to one authored cue.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Keeps per-cue outcomes traceable.
+   */
+  cue: string;
+  /**
+   * Canonical cue language.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Selects the production's language profile when present.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Separates language-specific measurement populations.
+   */
+  language: string;
+  /**
+   * Displayed grapheme-cluster count after markup removal.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the effective text count used for rate checks.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Measures displayed clusters with the declared segmentation revision.
+   */
+  graphemes: number;
+  /**
+   * Authored line count.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the cue's effective line population.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the line-count comparison input.
+   */
+  lines: number;
+  /**
+   * Largest displayed grapheme count among authored lines.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the longest effective line.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the line-length comparison input.
+   */
+  maxLineGraphemes: number;
+  /**
+   * Exact cue duration on the production frame clock.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Measures duration on declared production time.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the frame-exact duration comparison input.
+   */
+  durationFrames: number;
+  /**
+   * Gap from the preceding cue in the same language, or null for the first.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports an inter-cue gap only when one exists.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the same-language gap comparison input.
+   */
+  gapBeforeFrames: number | null;
+  /**
+   * Displayed graphemes per second on the production frame clock.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports effective reading rate independent of a verdict.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Derives rate from displayed clusters and frame-exact duration.
+   */
+  graphemesPerSecond: number;
+}
+
+/**
+ * Profile-backed verdict or explicit measure-only outcome for one caption cue.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Keeps missing profile separate from a passing verdict.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Evaluates only a production-selected profile and otherwise records `not-run`.
+ */
+export type IAutoMovieCaptionReadabilityOutcome =
+  | {
+      /**
+       * Profile-backed evaluation completed.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Distinguishes an evaluated cue from measure-only operation.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Marks profile-backed comparison as completed.
+       */
+      status: "evaluated";
+      /**
+       * Exact production profile id.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies the threshold set that judged the cue.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the verdict reproducible against one profile.
+       */
+      profile: string;
+      /**
+       * Whether every profile-declared boundary passed.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports the aggregate result of declared comparisons.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Does not infer success when evaluation was not run.
+       */
+      passed: boolean;
+      /**
+       * Stable names of boundaries exceeded by this cue.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Identifies which production-owned constraints need correction.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Exposes per-boundary evaluation results.
+       */
+      breaches: Array<
+        | "graphemes-per-second"
+        | "lines-per-cue"
+        | "graphemes-per-line"
+        | "duration-frames"
+        | "gap-frames"
+      >;
+    }
+  | {
+      /**
+       * No production profile judged the measurement.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Prevents absent thresholds from becoming an implicit pass.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Records measure-only operation explicitly.
+       */
+      status: "not-run";
+      /**
+       * Exact reason a verdict was not computed.
+       *
+       * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Explains profile absence instead of inventing a default.
+       * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes the non-evaluation cause machine-readable.
+       */
+      reason: "caption-readability-profile-not-declared";
+    };
+
+/**
+ * Readability report kept outside the byte-stable compiled edit.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports metrics without modifying legacy caption output when no profile exists.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to its evaluated or not-run outcome.
+ */
+export interface IAutoMovieCaptionReadabilityReport {
+  /**
+   * Caption-readability report schema.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Versions the measurement and outcome record.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes report interpretation explicit.
+   */
+  version: 1;
+  /**
+   * Cue reports in canonical film and cue order.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports every measured cue in deterministic order.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins measurements and outcomes without modifying the edit.
+   */
+  cues: Array<{
+    /**
+     * Effective cue measurements.
+     *
+     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Preserves measured facts even without a profile.
+     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Keeps measurement separate from judgment.
+     */
+    measurement: IAutoMovieCaptionReadabilityMeasurement;
+    /**
+     * Profile-backed verdict or explicit measure-only outcome.
+     *
+     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Distinguishes evaluated failure, evaluated pass, and profile absence.
+     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each measurement to exactly one outcome state.
+     */
+    outcome: IAutoMovieCaptionReadabilityOutcome;
+  }>;
 }
 
 /** One bounded reference to a registered deterministic world effect zone. */
@@ -1391,6 +1882,17 @@ export interface IAutoMovieProductionInspection {
   reviews: IAutoMovieReviewQueue;
   /** Discovered render manifests. */
   renders: IAutoMovieProductionRenderStatus[];
+  /**
+   * Current caption readability measurements and outcomes for the film edit.
+   *
+   * This report is outside the generated edit so a production declaring no
+   * profile retains byte-identical compiled output while still exposing a
+   * measure-only result.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Reports measurement without inventing a missing profile verdict.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Keeps measure-only status explicit at the inspection boundary.
+   */
+  captionReadability: IAutoMovieCaptionReadabilityReport;
   /** Ordered concrete corrections. */
   nextActions: IAutoMovieProductionNextAction[];
 }

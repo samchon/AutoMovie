@@ -1,4 +1,6 @@
 import { IAutoMovieGeneratedAcquisition } from "../architecture/IAutoMovieDesignReference";
+import { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
+import type { IAutoMovieSkeleton } from "../skeleton/IAutoMovieSkeleton";
 import { AutoMovieContentDigest } from "./IAutoMovieProductionDesign";
 
 /** License identity shipped with one distributable project asset. */
@@ -86,7 +88,201 @@ export type IAutoMovieAssetConsumer =
       kind: "design-reference";
       /** Exact design-reference document id observing these bytes. */
       id: string;
+    }
+  | {
+      /**
+       * Explicit external-motion adoption that consumes this source asset.
+       *
+       * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Registers motion bytes only after the production names their downstream adoption.
+       * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Makes the selected adoption, rather than a provider convention, the consumer identity.
+       */
+      kind: "motion-adoption";
+      /**
+       * Exact adoption id declared by the production.
+       *
+       * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Joins asset provenance to the user's explicit adoption choice.
+       * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Identifies the decision record that consumes these bytes.
+       */
+      id: string;
     };
+
+/**
+ * One inspected animation take addressable inside an external motion asset.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes exact takes so the user or authoring agent can choose one without filename inference.
+ * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Carries inspected media facts without selecting a take.
+ */
+export interface IAutoMovieExternalMotionTake {
+  /**
+   * Stable take id within this asset record.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Makes each inspected source member independently selectable.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Preserves source-order member identity without selecting it.
+   */
+  id: string;
+  /**
+   * Zero-based glTF animation index.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Addresses the exact source animation rather than guessing by name.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Reports the inspected container member address.
+   */
+  animationIndex: number;
+  /**
+   * Source-authored animation name, or null when unnamed.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Retains source metadata without requiring it for identity.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Distinguishes an unnamed member from an invented label.
+   */
+  sourceName: string | null;
+  /**
+   * Inspected finite duration in seconds.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Exposes the take's source time extent before adoption.
+   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-motion-inspection Records inspected timing without conforming it.
+   */
+  durationSeconds: number;
+}
+
+/**
+ * Byte-grounded motion facts recorded for an external animation asset.
+ *
+ * This is an inventory, not a take or retarget decision. Those choices remain
+ * in {@link IAutoMovieExternalMotionAdoption}.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Makes external motion bytes declarable and digest-bound.
+ * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Records the deterministic ingest identity and inspected take set.
+ */
+export interface IAutoMovieExternalMotionProvenance {
+  /**
+   * Versioned ingest normalization profile selected for these bytes.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Declares how the motion container was inspected.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Binds inspected facts to one deterministic conversion profile.
+   */
+  ingestProfile: "gltf-motion-v1";
+  /**
+   * Inspected animation takes in source index order.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Makes all eligible source members visible before user selection.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Retains the canonical inspected result set.
+   */
+  takes: IAutoMovieExternalMotionTake[];
+}
+
+/**
+ * User-owned decision to adopt one external motion take in one shot.
+ *
+ * The engine validates and applies this record. It does not select the asset,
+ * take, target actor, adoption mode, or retarget mapping.
+ *
+ * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes native use and retargeting explicit user choices.
+ * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Carries the selected source member, target, and composition mode.
+ */
+export interface IAutoMovieExternalMotionAdoption {
+  /**
+   * Stable adoption identity.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Gives the adoption a production-owned receipt identity.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Identifies this exact source-to-target decision.
+   */
+  id: string;
+  /**
+   * Manifest-owned external motion asset path.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Joins the decision to digest-bound source bytes.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Names the adopted source identity.
+   */
+  asset: string;
+  /**
+   * Take id from the asset's inspected motion record.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes source-member selection explicit.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Selects one inspected member without provider inference.
+   */
+  take: string;
+  /**
+   * Shot contract in which the adoption is available.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Bounds use to one authored shot decision.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Identifies the composition scope.
+   */
+  shot: string;
+  /**
+   * Actor participant that performs the adopted take.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Leaves target selection to the production.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Identifies the selected target participant.
+   */
+  actor: string;
+  /**
+   * Stable clip id exposed to the shot source after successful adoption.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-receipt Gives downstream composition a stable adopted-result identity.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-identity-source-selection Preserves motion identity at the source boundary.
+   */
+  clip: string;
+  /**
+   * Inspected source hierarchy and rest transforms used for channel mapping.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Provides the source rig basis needed to interpret imported node tracks.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Carries source rest hierarchy for native compatibility and retarget characterization.
+   */
+  sourceRig: IAutoMovieSkeleton;
+  /**
+   * Explicit source-node to target-semantic-bone mappings.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Makes imported channel interpretation explicit in both adoption modes.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Carries the characterized node-to-semantic mapping.
+   */
+  mapping: Array<{
+    /**
+     * Source rig bone name.
+     *
+     * @evidence requirements/motion/external-motion-inputs.md#motion-external-source-basis Identifies the exact source channel owner.
+     * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Names the characterized source joint.
+     */
+    source: string;
+    /**
+     * Target humanoid bone.
+     *
+     * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Records the explicit semantic mapping target.
+     * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Names the semantic destination joint.
+     */
+    target: AutoMovieHumanoidBone;
+  }>;
+  /**
+   * Explicit native or humanoid-retarget adoption decision.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Prevents the engine from choosing retargeting on the user's behalf.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Records the selected adoption mode and its parameters.
+   */
+  mode:
+    | {
+        /**
+         * Use source channels without skeletal retargeting.
+         *
+         * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Represents the user's native-use choice.
+         * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Keeps native adoption distinct from retargeting.
+         */
+        kind: "native";
+      }
+    | {
+        /**
+         * Apply an explicit humanoid mapping.
+         *
+         * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Represents the user's retarget choice.
+         * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Selects characterized retargeting rather than native playback.
+         */
+        kind: "humanoid-retarget";
+        /**
+         * Explicit finite positive translation scale.
+         *
+         * @evidence requirements/motion/external-motion-inputs.md#motion-external-compatibility-override Makes spatial conversion an authored decision.
+         * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-external-adoption-retarget-characterization Carries the retarget scale characterization.
+         */
+        translationScale: number;
+      };
+}
 
 /** One downstream purpose that makes an asset part of one production. */
 export interface IAutoMovieAssetUse {
@@ -226,6 +422,14 @@ export interface IAutoMovieAssetProvenance {
    * Non-model assets omit it.
    */
   model?: IAutoMovieExternalModelProvenance;
+  /**
+   * Inspected motion facts when these bytes are adopted as animation input.
+   * Omitted for non-motion assets; presence never selects a take.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-inputs-adoption Brings motion bytes into the manifest's digest and provenance boundary.
+   * @evidence specifications/interchange-and-adoption/conversion-receipts-and-determinism.md#interchange-canonical-receipt-result Records the deterministic ingest identity without making an adoption decision.
+   */
+  motion?: IAutoMovieExternalMotionProvenance;
 }
 
 /** Project-global asset provenance and license ledger. */

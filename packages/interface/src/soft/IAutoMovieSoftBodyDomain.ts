@@ -1,4 +1,6 @@
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
+import type { AutoMovieHumanoidBone } from "../skeleton/AutoMovieHumanoidBone";
+import type { IAutoMovieCapsuleProxy } from "../validation/IAutoMovieCapsuleProxy";
 
 /**
  * One independent deterministic soft-body computation domain: a curtain, a
@@ -192,7 +194,78 @@ export interface IAutoMovieSoftAnchor {
    * carries, where a typo would silently pre-stretch the panel.
    */
   position: IAutoMovieVector3 | null;
+
+  /**
+   * Optional moving owner whose local point replaces the static position at
+   * each fixed-step boundary. When present, validation requires `position` to
+   * be null; the engine never silently combines the two frames.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Distinguishes world anchors from object and actor-bone anchors.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Reads one immutable evaluated owner pose before the soft solve.
+   */
+  binding?: IAutoMovieSoftAnchorBinding;
 }
+
+/**
+ * Moving subject-local point that drives one soft anchor.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Makes object and actor-bone ownership explicit.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Resolves the local point once at the fixed-step boundary.
+ */
+export type IAutoMovieSoftAnchorBinding =
+  | {
+      /**
+       * Bind to a production scene node.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Supports a moving object attachment without converting it to a world anchor.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Names the moving subject whose evaluated pose drives the anchor.
+       */
+      kind: "node";
+      /**
+       * Stable scene-node identity.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Keeps a missing target distinguishable from an origin attachment.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Makes target resolution a pre-solve validation step.
+       */
+      node: string;
+      /**
+       * Node-local anchor offset in meters.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Declares the attachment point in its owning frame.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Transforms the declared local point through the evaluated node pose.
+       */
+      offset: IAutoMovieVector3;
+    }
+  | {
+      /**
+       * Bind to a humanoid bone on an actor.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Supports an actor-bone anchor as a distinct moving boundary.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Reads the actor pose before secondary motion advances.
+       */
+      kind: "actor-bone";
+      /**
+       * Stable actor participant identity.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Keeps a missing actor distinguishable from a world-space fallback.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Makes actor resolution an explicit pre-solve join.
+       */
+      actor: string;
+      /**
+       * Humanoid bone that owns the local point.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Declares the skeletal attachment instead of inferring one.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Selects the evaluated bone transform consumed by the anchor.
+       */
+      bone: AutoMovieHumanoidBone;
+      /**
+       * Bone-local anchor offset in meters.
+       *
+       * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Declares the attachment point in the bone frame.
+       * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Transforms the declared local point through the evaluated bone pose.
+       */
+      offset: IAutoMovieVector3;
+    };
 
 /** One named configuration of a panel's anchors. */
 export interface IAutoMovieSoftNamedState {
@@ -225,7 +298,8 @@ export interface IAutoMovieSoftAnchorPose {
 export type IAutoMovieSoftCollider =
   | IAutoMovieSoftCollider.IPlane
   | IAutoMovieSoftCollider.ISphere
-  | IAutoMovieSoftCollider.IBox;
+  | IAutoMovieSoftCollider.IBox
+  | IAutoMovieSoftCollider.IBodyCapsule;
 export namespace IAutoMovieSoftCollider {
   /** A half-space: the floor, a wall, a table top extended to infinity. */
   export interface IPlane {
@@ -261,6 +335,43 @@ export namespace IAutoMovieSoftCollider {
     min: IAutoMovieVector3;
     /** Maximum corner, strictly greater on every axis. */
     max: IAutoMovieVector3;
+  }
+
+  /**
+   * Shared capsule following one actor's evaluated humanoid pose.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Reuses the body capsule representation for soft contact.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Resolves moving capsule geometry before ordered collision projection.
+   */
+  export interface IBodyCapsule {
+    /**
+     * Body-following capsule discriminator.
+     *
+     * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Distinguishes a moving body proxy from static world primitives.
+     * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Selects evaluated-pose capsule resolution.
+     */
+    kind: "body-capsule";
+    /**
+     * Stable collider identity within the domain.
+     *
+     * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Gives the shared collider a traceable identity.
+     * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Preserves deterministic collider ordering.
+     */
+    id: string;
+    /**
+     * Stable actor participant whose pose places the capsule.
+     *
+     * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Refuses a missing body target instead of inventing an origin collider.
+     * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Joins the shared proxy to one evaluated actor pose.
+     */
+    actor: string;
+    /**
+     * Actor-local capsule shared with body validation and contact systems.
+     *
+     * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Uses one representation across body and soft collision.
+     * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Supplies the bounded segment and radius for projection.
+     */
+    capsule: IAutoMovieCapsuleProxy;
   }
 }
 

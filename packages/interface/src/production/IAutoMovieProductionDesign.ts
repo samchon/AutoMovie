@@ -9,6 +9,11 @@ import {
 import { IAutoMovieRenderBudget } from "../render/IAutoMovieRenderBudget";
 import { IAutoMovieProductionLighting } from "../scene/IAutoMovieProductionLighting";
 import { AutoMovieHumanoidBone } from "../skeleton";
+import type { IAutoMovieExternalMotionAdoption } from "./IAutoMovieAssetManifest";
+import type {
+  IAutoMovieAcousticResponseProfile,
+  IAutoMovieSoundPropagationProfile,
+} from "./IAutoMovieProductionSound";
 import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
 /** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
@@ -71,6 +76,120 @@ export interface IAutoMovieShotStoryTime {
   rate?: number;
 }
 
+/**
+ * Production-owned caption readability thresholds for one language.
+ *
+ * AutoMovie ships no threshold preset. The user or authoring agent chooses the
+ * language, segmentation revision, and every boundary; omission means metrics
+ * may be reported but no readability verdict may be inferred.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes readability thresholds a production-owned, opt-in decision.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries the versioned segmentation and numeric boundaries used by validation.
+ */
+export interface IAutoMovieCaptionReadabilityProfile {
+  /**
+   * Stable profile identity within the production.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes the selected threshold set addressable.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Joins each verdict to the exact production profile.
+   */
+  id: string;
+  /**
+   * Production-controlled schema revision.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Versions the declared threshold semantics.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents results from silently crossing profile revisions.
+   */
+  version: number;
+  /**
+   * Canonical language tag whose cues this profile evaluates.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Keeps thresholds language-specific and production-owned.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Selects which cue population the profile evaluates.
+   */
+  language: string;
+  /**
+   * Production-selected versioned grapheme segmentation rule.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Requires segmentation identity alongside numeric thresholds.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Makes grapheme measurement reproducible without hardcoding one Unicode family.
+   */
+  segmentation: {
+    /**
+     * Non-blank algorithm identity supported by the selected validator.
+     *
+     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Leaves segmentation selection to the production.
+     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Identifies the measurement algorithm used by validation.
+     */
+    algorithm: string;
+    /**
+     * Exact algorithm or segmentation-data revision.
+     *
+     * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Prevents an unversioned segmentation rule from changing results.
+     * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Binds measurements to the declared segmentation revision.
+     */
+    version: string;
+  };
+  /**
+   * Maximum displayed graphemes per second and its boundary semantics.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares rate and equality behavior together.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the explicit rate comparison boundary.
+   */
+  maxGraphemesPerSecond: IAutoMovieCaptionReadabilityBoundary;
+  /**
+   * Maximum authored lines in one cue and its boundary semantics.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares line-count and equality behavior together.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the explicit line-count comparison boundary.
+   */
+  maxLinesPerCue: IAutoMovieCaptionReadabilityBoundary;
+  /**
+   * Maximum displayed graphemes in one line and its boundary semantics.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares line-length and equality behavior together.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the explicit line-length comparison boundary.
+   */
+  maxGraphemesPerLine: IAutoMovieCaptionReadabilityBoundary;
+  /**
+   * Minimum cue duration in frames and its boundary semantics.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares duration and equality behavior together.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the explicit duration comparison boundary.
+   */
+  minDurationFrames: IAutoMovieCaptionReadabilityBoundary;
+  /**
+   * Minimum inter-cue gap in frames and its boundary semantics.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares gap and equality behavior together.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the explicit gap comparison boundary.
+   */
+  minGapFrames: IAutoMovieCaptionReadabilityBoundary;
+}
+
+/**
+ * One production-owned numeric caption boundary.
+ *
+ * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes equality behavior part of the declared threshold.
+ * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Carries each numeric value with inclusive or exclusive semantics.
+ */
+export interface IAutoMovieCaptionReadabilityBoundary {
+  /**
+   * Finite non-negative threshold value.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Carries the production's numeric threshold.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Supplies the value used by deterministic comparison.
+   */
+  value: number;
+  /**
+   * Whether equality satisfies this boundary.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Declares inclusive versus exclusive equality semantics.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Prevents validators from assuming one boundary convention.
+   */
+  inclusive: boolean;
+}
+
 /** Global frame and art-direction invariants for one production. */
 export interface IAutoMovieProductionDesign {
   /** Non-blank stable production id; film-level acceptance targets use it. */
@@ -131,6 +250,52 @@ export interface IAutoMovieProductionDesign {
    * before the field existed.
    */
   renderBudgets?: IAutoMovieRenderBudget[];
+  /**
+   * User-selected external motion adoptions, unique by id and clip.
+   *
+   * The compiler validates and applies these records but does not choose an
+   * asset, take, actor, adoption mode, or retarget mapping. Omission preserves
+   * the legacy source-computed motion path.
+   *
+   * @evidence requirements/motion/external-motion-inputs.md#motion-external-adoption-mode Makes every external-motion adoption decision explicit and optional.
+   * @evidence specifications/interchange-and-adoption/adoption-decisions-and-composition.md#interchange-adoption-decision-identity Carries the selected source, member, target, and mode into compilation.
+   */
+  externalMotions?: IAutoMovieExternalMotionAdoption[];
+  /**
+   * Production-owned caption readability profiles, unique by language.
+   *
+   * Omission provides no implicit thresholds: measurements may be reported, but
+   * their verdict is `not-run` and existing compiled output is unchanged.
+   *
+   * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Gives the production sole ownership of language-specific thresholds.
+   * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-profile Distinguishes measure-only operation from profile-backed evaluation.
+   */
+  captionReadabilityProfiles?: IAutoMovieCaptionReadabilityProfile[];
+  /**
+   * Optional production-owned propagation and room-response choices.
+   *
+   * Omission preserves the legacy dry path. The engine does not choose a
+   * physical profile, external provider, adopted asset, or room mapping.
+   *
+   * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Makes propagation an explicit production input rather than an engine default.
+   * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Carries only selected bounded models into deterministic planning.
+   */
+  sound?: {
+    /**
+     * Selected direct-path propagation model.
+     *
+     * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Declares sound speed, distance gain, spectral treatment, and cut policy together.
+     * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Supplies the deterministic emitter-to-listener calculation inputs.
+     */
+    propagation?: IAutoMovieSoundPropagationProfile;
+    /**
+     * Selected bounded derived or externally adopted room-response source.
+     *
+     * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-provider-neutrality Leaves derived-versus-adopted response selection to the production.
+     * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#bounded-acoustic-response-and-provider-adoption Carries explicit adopted-byte and room-mapping provenance when selected.
+     */
+    acousticResponse?: IAutoMovieAcousticResponseProfile;
+  };
   /**
    * Read-only site context every environmental analysis is measured against.
    *
