@@ -94,6 +94,22 @@ Variation profile은 allowed appearance·scale·phase·behavior property, distri
 
 Continuity handoff는 group transform, active layout, reform progress, command phase, shared gait phase law, removed·moved exceptions, hero actor state를 포함한다. Cut에서 시간을 건너뛰면 change cause를 기록하고, 아무 근거 없이 original layout·full count·default seed로 reset하지 않는다.
 
+### 가청 member 집합 handoff {#performance-formation-sounding-membership-handoff}
+
+<!-- @evidence requirements/formations/scope-and-identity.md#formation-group-member-identity 가청 member도 compact 표현과 무관한 stable identity를 갖게 한다. -->
+<!-- @evidence requirements/formations/hierarchies-and-units.md#formation-membership 한 시점의 physical membership을 중복 없는 가청 집합으로 전달한다. -->
+<!-- @evidence requirements/formations/reform-and-group-motion.md#formation-reform-slot-assignment reform 중에도 stable member와 slot의 대응을 보존한다. -->
+<!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity audible count와 그 근거 population을 분리해 보고한다. -->
+<!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-transition 표현 전환이 member assignment와 state를 바꾸지 않게 한다. -->
+<!-- @evidence requirements/formations/budgets-and-validation.md#formation-determinism enumeration과 seek 순서가 가청 member 결과를 바꾸지 않게 한다. -->
+<!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources 확장 음원이 exact current sounding membership에서 계산되게 한다. -->
+
+Formation을 extended group source로 내보낼 때 sounding membership은 exact formation revision과 film sample에 속한 unique stable member identity의 집합이다. 각 identity에는 같은 revision에서 해석한 world position, spatial extent, member sound state와 source contribution이 keyed state로 결합된다. 배열 위치, slot traversal, chunk 번호와 worker 반환 순서는 membership 의미가 아니며, 같은 identity 집합은 어떤 열거 순서에서도 같은 입력으로 취급한다.
+
+Audible count는 집합의 cardinality에서 파생한다. 별도로 전달된 declared audible count가 cardinality와 다르거나 identity가 비어 있거나 해석되지 않거나 canonical identity가 중복되거나 member state revision이 formation revision과 다르면 handoff를 거부한다. 중복 항목을 하나로 합치거나 missing identity에 배열 index를 배정하거나 logical, designed, visible 또는 culled count를 audible count로 대신하지 않는다.
+
+Sounding set은 explicit sound policy, member activation과 join·leave event로만 바뀐다. Compact와 expanded representation의 전환, render culling, LOD, chunk 재분할은 집합을 바꾸지 않으며 reform은 동일 identity의 위치와 extent state만 갱신한다. Membership 변화는 cause event와 새 revision을 가져야 하고, output receipt는 formation revision, film sample, sound policy identity, canonical member-set digest, cardinality와 member-state digest를 기록한다.
+
 ### Compact representation 호환성 {#performance-formation-compact-representation-compatibility}
 
 <!-- @evidence requirements/formations/scope-and-identity.md#formation-authoring-mode-selection compact와 explicit 결과가 같은 story identity를 공유하게 한다. -->

@@ -47,10 +47,23 @@ Spatial input은 emitter identity/path, listener identity/path, shared coordinat
 
 ### Extended group source aggregation {#spatial-extended-group-source-aggregation}
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources 이 절은 current formation 또는 instance-set state를 들리는 확장 음원의 공간ㆍ에너지 상태로 파생한다. -->
+<!-- @evidence requirements/formations/scope-and-identity.md#formation-group-member-identity 이 절은 compact member의 stable identity를 공간 집계의 leaf identity로 보존한다. -->
+<!-- @evidence requirements/formations/hierarchies-and-units.md#formation-membership 이 절은 physical membership 중복이 aggregate energy를 중복 계산하지 않게 한다. -->
+<!-- @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-evidence-quantity 이 절은 audible membership을 logical, visible과 culled population에서 구분한다. -->
+<!-- @evidence requirements/formations/budgets-and-validation.md#formation-determinism 이 절은 enumeration, seek와 platform에 독립적인 집계 결과를 정의한다. -->
+<!-- @evidence requirements/sound/validation-and-delivery.md#sound-seek-chunk-equivalence 이 절은 sequential, seek와 서로 다른 chunk 경계의 audio 결과를 일치시킨다. -->
 
-Extended-source input은 exact current formation 또는 instance-set revision, cue와 event identity, sounding member identities와 count, member별 world position과 resolved spatial extent, motionㆍreform state, listener state와 versioned aggregation profile이다. 같은 presentation sample에서 출력되는 state는 weighted acoustic center, listener-relative direction과 spatial span, effective distance, aggregate energy와 source-state receipt를 포함하며 sounding member를 제외한 designed population이나 culled display count를 대신 사용하지 않는다.
+Extended-source input은 exact current formation 또는 instance-set revision, cue와 event identity, sounding member identity set, member별 world positionㆍresolved spatial extentㆍsource contribution, motionㆍreform state, listener state와 versioned aggregation profile이다. Sounding membership은 배열이 아니라 unique stable identity set이며 count는 set cardinality에서 파생한다. Logical, designed, visible 또는 culled population을 sounding set이나 count 대신 사용하지 않는다.
 
-Aggregation profile은 center weighting, effective-distance measure, count와 level의 결합, normalization과 channel-spread mapping을 고정하고 result identity에 포함한다. Sequential mix, arbitrary seek와 chunked mix는 같은 group revision과 sample에서 같은 결과를 만들며 motion 또는 reform은 center, span, distance와 energy를 함께 갱신한다. Missing 또는 duplicate member, declared count와 sounding membership의 불일치, stale revision, non-finite position, unresolved extent와 unsupported aggregation은 `unsupported` 또는 refusal diagnostic을 반환하고 centroid point source나 임의 gain으로 대체하지 않는다.
+집계 전에 profile이 정한 canonical identity encoding과 total order로 member leaf를 정렬한다. Canonicalization 뒤 duplicate가 생기거나 identity가 없거나 set 밖의 state가 있거나 set member의 state가 빠지거나 separately declared count가 cardinality와 다르면 거부한다. 정렬은 합산 순서를 정할 뿐 membership 의미를 바꾸지 않으며 duplicate를 deduplicate하거나 missing identity를 배열 index로 보충하지 않는다.
+
+Aggregation profile은 stable profile identity와 version에 center weighting, effective-distance measure, count와 level의 결합, normalization, channel-spread mapping, canonical identity encoding과 order, leaf numeric encoding, accumulation precision, rounding mode와 rounding point, non-finiteㆍoverflow 처리, reduction-tree 규칙을 고정한다. Leaf는 canonical order로 놓고 고정 arity의 인접 leaf를 profile이 정한 순서로 결합하며, 홀수 leaf의 승격 방식과 각 combine 뒤 반올림도 profile에 포함한다. Weighted positionㆍenergyㆍextent moment와 effective-distance sufficient state는 이 하나의 tree에서 축적하고, profile이 고정한 divisionㆍsquare-rootㆍvector-normalization 의미와 반올림으로 acoustic center, listener-relative direction과 spatial span, effective distance와 aggregate energy를 파생한다.
+
+Chunk와 worker는 canonical leaf 또는 그 tree에서 정확히 대응하는 subtree만 반환하고 chunk-local enumeration 순서로 임의 partial sum을 만들지 않는다. Global combine은 worker 수, chunk boundary, completion order, sequential mix와 arbitrary seek에 관계없이 같은 canonical tree를 재구성한다. Compactㆍexpanded 표현, render LOD와 culling은 sounding set과 tree를 바꾸지 않으며 motion 또는 reform은 같은 identity leaf의 position과 extent만 갱신한다.
+
+Output receipt는 source revision과 sample, canonical ordered identity-set digest와 cardinality, aggregation profile identityㆍversion, tree-shape와 leaf-state digest, numeric precisionㆍrounding identity와 result digest를 포함한다. Cached 또는 distributed partial의 profile identity나 version이 active profile과 다르거나 treeㆍprecisionㆍrounding metadata가 빠지면 profile mismatch로 거부하고 재해석하지 않는다. 집계 법칙이나 arithmetic semantics가 바뀌면 새 profile version과 compatibility decision이 필요하다.
+
+Missing 또는 duplicate member identity, declared count와 sounding set의 불일치, stale revision, non-finite positionㆍextentㆍsource contribution, unresolved extent, profile mismatch와 unsupported aggregation은 원인 identity를 포함한 `unsupported` 또는 refusal diagnostic이다. 실패를 centroid point source, 임의 gain, worker-local sum이나 다른 profile 결과로 대체하지 않는다.
 
 ### Direct path와 output mapping {#spatial-direct-path-and-output-mapping}
 <!-- @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path 이 절은 distance, delay와 attenuation의 bounded direct model을 정한다. -->
