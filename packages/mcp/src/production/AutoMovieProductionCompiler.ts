@@ -7454,12 +7454,16 @@ const materializeGeneratedFiles = (
         `External motion conversion "${adoption}" has no materialized shot output "${outputPath}".`,
       );
     const { motion, ...receipt } = draft;
-    const resultMotion = compiled
-      .get(draft.decision.shot)
-      ?.motions.find((candidate) => candidate.id === motion.id);
+    const compiledShot = compiled.get(draft.decision.shot);
+    const resultMotionId = compiledShot?.shot.performances.find(
+      (performance) => performance.node === draft.decision.actor,
+    )?.motion;
+    const resultMotion = compiledShot?.motions.find(
+      (candidate) => candidate.id === resultMotionId,
+    );
     if (resultMotion === undefined)
       throw new Error(
-        `External motion conversion "${adoption}" has no canonical motion "${motion.id}" in materialized shot "${draft.decision.shot}".`,
+        `External motion conversion "${adoption}" for actor "${draft.decision.actor}" has no canonical enacted performance in materialized shot "${draft.decision.shot}".`,
       );
     const value: IAutoMovieExternalMotionConversionReceipt = {
       ...receipt,

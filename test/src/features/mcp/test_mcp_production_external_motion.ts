@@ -138,7 +138,7 @@ export const test_mcp_production_external_motion = (): void => {
         sourceRig,
         mapping: [
           { source: "node_0", target: "hips" },
-          { source: "node_2", target: "rightUpperArm" },
+          { source: "node_2", target: "leftUpperArm" },
         ],
         mode: { kind: "native" },
       },
@@ -215,13 +215,15 @@ export const test_mcp_production_external_motion = (): void => {
         [
           "compiled motion is enacted",
           () =>
-            compiled?.motions.some((entry) => entry.id === "imported-cue") ===
-            true,
+            compiled?.shot.performances.some(
+              (entry) =>
+                entry.node === "soloist" && entry.motion === "perform:soloist",
+            ) === true,
         ],
         [
           "compiled motion targets actor rig",
           () =>
-            compiled?.motions.find((entry) => entry.id === "imported-cue")
+            compiled?.motions.find((entry) => entry.id === "perform:soloist")
               ?.skeleton === "automovie:skeleton:soloist",
         ],
         ["compiled bytes are stable", () => firstBytes.equals(secondBytes)],
@@ -258,12 +260,12 @@ export const test_mcp_production_external_motion = (): void => {
             firstReceipt?.result.outputPath === "shots/opening.json" &&
             firstReceipt.result.outputDigest ===
               digestAutoMovieBytes(firstBytes) &&
-            firstReceipt.result.motionId === "imported-cue" &&
+            firstReceipt.result.motionId === "perform:soloist" &&
             firstReceipt.result.motionDigest ===
               digestAutoMovieBytes(
                 canonicalAutoMovieJsonBytes(
                   compiled?.motions.find(
-                    (motion) => motion.id === "imported-cue",
+                    (motion) => motion.id === "perform:soloist",
                   ),
                 ),
               ),
@@ -323,7 +325,7 @@ export const test_mcp_production_external_motion = (): void => {
       productionCompileSucceeded("external motion retarget", retargeted) &&
         retargetedSource?.motions.some(
           (entry) =>
-            entry.id === "imported-cue" &&
+            entry.id === "perform:soloist" &&
             entry.skeleton === "automovie:skeleton:soloist",
         ) === true &&
         retargetedReceipt?.decision.mode === "humanoid-retarget" &&
@@ -447,7 +449,7 @@ export const test_mcp_production_external_motion = (): void => {
 
     production.externalMotions[0]!.mapping = [
       { source: "node_missing", target: "hips" },
-      { source: "node_2", target: "rightUpperArm" },
+      { source: "node_2", target: "leftUpperArm" },
     ];
     fs.writeFileSync(
       productionPath,
@@ -468,11 +470,9 @@ export const test_mcp_production_external_motion = (): void => {
 
     production.externalMotions[0]!.mapping = [
       { source: "node_0", target: "hips" },
-      { source: "node_2", target: "rightUpperArm" },
+      { source: "node_2", target: "leftUpperArm" },
     ];
-    production.externalMotions[0]!.clip =
-      compiled?.motions.find((entry) => entry.id !== "imported-cue")?.id ??
-      "opening-cue";
+    production.externalMotions[0]!.clip = "opening-cue";
     fs.writeFileSync(
       productionPath,
       `${JSON.stringify(production, null, 2)}\n`,
@@ -584,11 +584,11 @@ const externalSourceRig = (): IAutoMovieSkeleton => ({
       constraint: null,
     },
     {
-      bone: "rightUpperArm",
+      bone: "leftUpperArm",
       parent: "hips",
       rest: {
         translation: {
-          x: -1.8 * 0.125,
+          x: 1.8 * 0.125,
           y: 1.8 * 0.18 + 1.8 * 0.15,
           z: 0,
         },
@@ -627,10 +627,10 @@ const externalMotionBasis = (): IAutoMovieExternalMotionBasis => ({
     {
       nodeIndex: 2,
       id: "node_2",
-      sourceName: "RightUpperArm",
+      sourceName: "LeftUpperArm",
       parent: "node_1",
       localRest: {
-        translation: { x: -1.8 * 0.125, y: 1.8 * 0.15, z: 0 },
+        translation: { x: 1.8 * 0.125, y: 1.8 * 0.15, z: 0 },
         rotation: { x: 0, y: 0, z: 0, w: 1 },
         scale: { x: 1, y: 1, z: 1 },
       },
@@ -642,12 +642,26 @@ const externalMotionFixture = (): {
   document: Buffer;
   payload: Buffer;
 } => {
-  const halfAngle = Math.PI / 12;
+  const loweredHalfAngle = -Math.PI / 4;
+  const raisedHalfAngle = Math.PI / 12;
   const payload = Buffer.concat(
     [
-      [0, 6],
-      [0, 0, 0, 1, 0, 0, 0, 1],
-      [0, 0, 0, 1, 0, 0, Math.sin(halfAngle), Math.cos(halfAngle)],
+      [0, 2, 6],
+      [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+      [
+        0,
+        0,
+        Math.sin(loweredHalfAngle),
+        Math.cos(loweredHalfAngle),
+        0,
+        0,
+        Math.sin(raisedHalfAngle),
+        Math.cos(raisedHalfAngle),
+        0,
+        0,
+        Math.sin(raisedHalfAngle),
+        Math.cos(raisedHalfAngle),
+      ],
     ].map((values) => Buffer.from(new Float32Array(values).buffer)),
   );
   const document = Buffer.from(
@@ -655,14 +669,14 @@ const externalMotionFixture = (): {
       asset: { version: "2.0" },
       buffers: [{ byteLength: payload.byteLength, uri: "imported-cue.bin" }],
       bufferViews: [
-        { buffer: 0, byteOffset: 0, byteLength: 8 },
-        { buffer: 0, byteOffset: 8, byteLength: 32 },
-        { buffer: 0, byteOffset: 40, byteLength: 32 },
+        { buffer: 0, byteOffset: 0, byteLength: 12 },
+        { buffer: 0, byteOffset: 12, byteLength: 48 },
+        { buffer: 0, byteOffset: 60, byteLength: 48 },
       ],
       accessors: [
-        { bufferView: 0, componentType: 5126, count: 2, type: "SCALAR" },
-        { bufferView: 1, componentType: 5126, count: 2, type: "VEC4" },
-        { bufferView: 2, componentType: 5126, count: 2, type: "VEC4" },
+        { bufferView: 0, componentType: 5126, count: 3, type: "SCALAR" },
+        { bufferView: 1, componentType: 5126, count: 3, type: "VEC4" },
+        { bufferView: 2, componentType: 5126, count: 3, type: "VEC4" },
       ],
       nodes: [
         {
@@ -676,8 +690,8 @@ const externalMotionFixture = (): {
           children: [2],
         },
         {
-          name: "RightUpperArm",
-          translation: [-1.8 * 0.125, 1.8 * 0.15, 0],
+          name: "LeftUpperArm",
+          translation: [1.8 * 0.125, 1.8 * 0.15, 0],
         },
       ],
       scenes: [{ nodes: [0] }],
