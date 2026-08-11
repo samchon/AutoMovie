@@ -335,6 +335,7 @@ const graph: ITtscEvidenceGraphConfig = {
       type: "typescript",
       files: [
         "src/project/**/*.ts",
+        "src/production/AutoMovieLegacyImporter.ts",
         "src/production/AutoMovieProductionProject.ts",
         "src/production/openAutoMovieProduction.ts",
         "src/production/rootNamespaceLock.ts",
@@ -360,6 +361,7 @@ const graph: ITtscEvidenceGraphConfig = {
       type: "typescript",
       files: [
         "src/project/**/*.ts",
+        "src/production/AutoMovieLegacyImporter.ts",
         "src/production/AutoMovieProductionProject.ts",
         "src/production/openAutoMovieProduction.ts",
         "src/production/rootNamespaceLock.ts",
