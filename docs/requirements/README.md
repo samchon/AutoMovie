@@ -36,5 +36,17 @@
 - [맵과 세계](./map/README.md)
 - [건물 외관](./building-exterior/README.md)
 - [실내 공간](./interior/README.md)
+- [외부 입력](./external-inputs/README.md)
+- [Acceptance](./acceptance/README.md)
+- [Review](./review/README.md)
+- [Evidence와 Provenance](./evidence-and-provenance/README.md)
+- [진단](./diagnostics/README.md)
+- [운영과 복구](./operations-and-recovery/README.md)
 
-Acceptance, review, 증거, provenance, 진단, 외부 입력과 운영 복구는 각각 독립 주제 폴더로 이어서 정의한다.
+## 공간 주제의 경계 {#requirements-spatial-boundaries}
+
+맵은 지형과 수계, 생태, 기반 시설과 건물 배치의 세계 좌표를 소유하고, 건물 외관은 건물의 대지 배치와 외피, 질량, 층과 개구부를 소유하며, 실내 공간은 그 건물 경계 안의 공간과 표면, 설비, 가구와 점유 조건을 소유한다. 내부가 없는 배경 건물은 건물 외관만으로 완결할 수 있고, 내부가 있는 건물은 외관의 물리적 크기와 층별 조건을 실내가 위반하지 않아야 한다.
+
+## 교차 주제의 경계 {#requirements-cross-cutting-boundaries}
+
+외부 입력은 사용자가 가져온 자료의 채택 선택과 경계를, acceptance와 review는 결과 판정과 사람의 의사결정을, evidence와 provenance는 결과와 입력의 계보를, 진단은 거부와 부분 성공의 설명을, 운영과 복구는 장시간 작업의 상태와 실패 이후 진행을 소유한다. 각 교차 주제는 영화 저작 주제의 내용을 대신 정의하지 않고 모든 주제가 따라야 할 사용자 관찰 가능한 약속을 정의한다.

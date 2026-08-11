@@ -23,4 +23,3 @@ Logical, resolved, visible, animated, collidable, audible, culled와 evidence-sa
 ### Culling Refusal {#formation-resolution-culling-refusal}
 
 Budget 초과, unsupported tier와 missing proxy를 member drop, count 변경, hero 교체 또는 stale evidence로 숨기지 않고 사용자가 규모, shot, policy 또는 asset을 바꿀 수 있는 finding으로 보고해야 한다.
-
