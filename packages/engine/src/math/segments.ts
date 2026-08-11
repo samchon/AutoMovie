@@ -24,7 +24,12 @@ const closestPointOnSegment = (
   return Vector3.lerp(start, end, t);
 };
 
-/** Distance from `point` to segment `[start, end]`. */
+/**
+ * Distance from `point` to segment `[start, end]`.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Measures a contact point's shortest residual to a bounded support or collider segment.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Measures a contact point's shortest residual to a bounded support or collider segment.
+ */
 export const pointSegmentDistance = (
   point: IAutoMovieVector3,
   start: IAutoMovieVector3,
@@ -111,6 +116,8 @@ const closestSegmentPair = (
  * {@link closestPointsBetweenSegments}, so a contact normal derived from those
  * points always agrees with the distance that flagged the contact.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Measures the minimum separation between two bounded contact features.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Measures the minimum separation between two bounded contact features.
  * @author Samchon
  */
 export const segmentSegmentDistance = (
@@ -126,13 +133,31 @@ export const segmentSegmentDistance = (
 /**
  * The closest pair of points between segments `a→b` and `c→d`, and their
  * distance.
+ *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Carries the paired contact witnesses and their shared separation measurement.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Defines the paired geometric witnesses behind a reported contact separation.
  */
 export interface IAutoMovieClosestSegmentPoints {
-  /** Point on the first segment. */
+  /**
+   * Point on the first segment.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Records the closest witness on the first contact feature.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Records the closest witness on the first contact feature.
+   */
   pointA: IAutoMovieVector3;
-  /** Point on the second segment. */
+  /**
+   * Point on the second segment.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Records the closest witness on the second contact feature.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Records the closest witness on the second contact feature.
+   */
   pointB: IAutoMovieVector3;
-  /** Distance between the two points. */
+  /**
+   * Distance between the two points.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Records the separation computed from the two closest contact witnesses.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Records the separation computed from the two closest contact witnesses.
+   */
   distance: number;
 }
 
@@ -142,6 +167,8 @@ export interface IAutoMovieClosestSegmentPoints {
  * {@link segmentSegmentDistance} measures, so a contact normal derived from the
  * pair agrees with the distance that flagged the contact.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Returns the two witnesses that explain the measured separation between contact features.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Returns the two witnesses that explain the measured separation between contact features.
  * @author Samchon
  */
 export const closestPointsBetweenSegments = (

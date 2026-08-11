@@ -5,6 +5,9 @@
  * derivatives per second, so the segment `span` scales them before the Hermite
  * basis is applied. The sampler and every range proof share this evaluator: a
  * validator proving a different polynomial than playback uses is no proof.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Evaluates the declared cubic key values and time-scaled tangents used by playback and validation.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Evaluates the declared cubic key values and time-scaled tangents used by playback and validation.
  */
 export const cubicHermiteValue = (
   left: number,

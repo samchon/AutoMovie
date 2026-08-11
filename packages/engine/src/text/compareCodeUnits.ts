@@ -10,6 +10,8 @@
  * host. This comparator is a pure function of the code units, so it is
  * reproducible everywhere and returns `0` only for genuinely equal strings.
  *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-stable-order Orders diagnostic identities by raw UTF-16 code units so locale and host settings cannot reorder findings.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-canonical-diagnostic-order Orders diagnostic identities by raw UTF-16 code units so locale and host settings cannot reorder findings.
  * @author Samchon
  */
 export const compareCodeUnits = (a: string, b: string): number =>
