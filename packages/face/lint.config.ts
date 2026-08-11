@@ -1,35 +1,83 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/**
- * Public face contracts answer directly for both product promises and
- * package-independent system contracts.
- */
+/** Dormant face modules answer only for the actor contracts they implement. */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
     {
-      name: "public face exports implement requirements",
+      name: "face proxy modules implement actor representation requirements",
       type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
-      symbol: ["type", "function", "property"],
-      reference: {
-        type: "markdown",
-        root: "../../docs",
-        files: ["requirements/actors/**/*.md", "requirements/motion/**/*.md"],
-        symbol: ["h2", "h3"],
-      },
-    },
-    {
-      name: "public face exports implement specifications",
-      type: "typescript",
-      files: ["src/**/*.ts", "src/**/*.tsx"],
+      files: [
+        "src/canonicalFace.ts",
+        "src/eyeShells.ts",
+        "src/faceMorphs.ts",
+        "src/hairShell.ts",
+        "src/hairTails.ts",
+        "src/headMorph.ts",
+        "src/parameters.ts",
+        "src/profileAmplitude.ts",
+        "src/silhouetteBands.ts",
+        "src/similarity2.ts",
+        "src/taubinSmooth.ts",
+      ],
       symbol: ["type", "function", "property"],
       reference: {
         type: "markdown",
         root: "../../docs",
         files: [
-          "specifications/asset-and-representation/**/*.md",
-          "specifications/performance-motion-and-staging/**/*.md",
+          "requirements/actors/representation-tiers-and-fidelity-boundary.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "face proxy modules implement actor representation specifications",
+      type: "typescript",
+      files: [
+        "src/canonicalFace.ts",
+        "src/eyeShells.ts",
+        "src/faceMorphs.ts",
+        "src/hairShell.ts",
+        "src/hairTails.ts",
+        "src/headMorph.ts",
+        "src/parameters.ts",
+        "src/profileAmplitude.ts",
+        "src/silhouetteBands.ts",
+        "src/similarity2.ts",
+        "src/taubinSmooth.ts",
+      ],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
+        ],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "face morph modules implement deformation requirements",
+      type: "typescript",
+      files: ["src/faceMorphs.ts", "src/headMorph.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: ["requirements/actors/skeleton-rig-and-retargeting.md"],
+        symbol: ["h2", "h3"],
+      },
+    },
+    {
+      name: "face morph modules implement deformation specifications",
+      type: "typescript",
+      files: ["src/faceMorphs.ts", "src/headMorph.ts"],
+      symbol: ["type", "function", "property"],
+      reference: {
+        type: "markdown",
+        root: "../../docs",
+        files: [
+          "specifications/asset-and-representation/rig-deformation-and-state.md",
         ],
         symbol: ["h2", "h3"],
       },
