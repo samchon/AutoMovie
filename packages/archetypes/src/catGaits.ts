@@ -62,6 +62,8 @@ const tail = (
  * a quadruped rig whose arm bones are front legs and leg bones are hind legs.
  *
  * @author Samchon
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Owns cat periods, phases, duties, amplitudes, root bob, and style as declared gait data.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Supplies compact deterministic quadruped rules for engine sampling.
  */
 export const CAT_GAITS: Record<"walk" | "leap" | "stalk", IAutoMovieGait> = {
   walk: {
@@ -168,6 +170,8 @@ export const CAT_GAITS: Record<"walk" | "leap" | "stalk", IAutoMovieGait> = {
  * importing playground TypeScript clips.
  *
  * @author Samchon
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection Packages the named gait table as a host-selectable cat profile.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Keeps reusable gait choice in profile data rather than a hard-coded engine list.
  */
 export const CAT_PROFILE: IAutoMovieProfile = {
   id: "cat",

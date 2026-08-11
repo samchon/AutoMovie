@@ -25,6 +25,20 @@ import { IAutoMovieGait, IAutoMovieProfile } from "@automovie/interface";
  * head-only look, but correctly conflicts with a simultaneous arm gesture.
  *
  * @author Samchon
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Owns period, phase, duty, amplitude, and limb relationships as declared humanoid gait data.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Supplies the compact deterministic rule data sampled by the motion engine.
+ * @evidenceExclude requirements/motion/README.md#동작-요구사항 Static gait tables implement procedural locomotion data, not the complete clip, root, contact, IK, interaction, timing, and validation family.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control These tables describe locomotion gaits only; project-defined machine and object controls use their own profiles.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-procedural-variation The shipped tables contain fixed values and no seeded subject variation law.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Gait data has no ground query, slope solve, or terrain-support decision.
+ * @evidenceExclude requirements/motion/procedural-motion-and-gaits.md#motion-procedural-bound Finite table entries do not declare solver search, terrain, speed, turn, or population bounds.
+ * @evidenceExclude specifications/performance-motion-and-staging/README.md#퍼포먼스-모션과-스테이징-시스템-명세 Gait data is one kinematics input and not the complete performance, formation, or staging system.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Limb duty is a waveform phase, not a world contact identity, support set, load share, or weight solve.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention The gait table drives limbs and does not solve gaze, facial expression, or attention ownership.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff Static gait samples do not create attachment, handoff, ownership, or object-interaction events.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice The tables contain no secondary-motion domain, moving boundary, solver, or bake policy.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-retarget-scale-contact Profiles are selectable data but do not compute rig mapping, scale retarget, or contact re-resolution.
+ * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-determinism-compatibility Deterministic interaction receipts and compatibility statuses belong to the sampling and interaction pipeline.
  */
 export const HUMANOID_GAITS: Record<
   "walk" | "run" | "sprint" | "sneak" | "march",
@@ -194,6 +208,8 @@ export const HUMANOID_GAITS: Record<
  * it onto any humanoid skeleton without hand-authored TypeScript clips.
  *
  * @author Samchon
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-procedural-rule-selection Packages the named table as a host-selectable humanoid profile.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Keeps the reusable rule vocabulary in profile data rather than engine heuristics.
  */
 export const HUMANOID_PROFILE: IAutoMovieProfile = {
   id: "humanoid",
