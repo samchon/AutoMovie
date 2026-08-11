@@ -36,16 +36,6 @@ const DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
  * @evidence requirements/asset-authoring/geometry.md#asset-degenerate-geometry-refusal Refuses an unsupported shape discriminator instead of substituting a catalogue default.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Maps each shape to exactly the dimensions it consumes.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-model-output-failures Reports an unsupported shape before model output is built.
- * @evidenceExclude requirements/asset-authoring/README.md#자산-저작-요구사항 A single primitive builder covers geometry only, not the complete asset-authoring topic family.
- * @evidenceExclude requirements/asset-authoring/geometry.md#asset-geometry-topology A single primitive has no authored face, edge, loop, opening, or named-region topology contract.
- * @evidenceExclude requirements/asset-authoring/geometry.md#asset-composable-geometry-operations This archetype builds one shape and deliberately does not provide an operation stack.
- * @evidenceExclude specifications/asset-and-representation/README.md#자산과-표현-시스템-사양 This file implements primitive geometry, not the full asset and representation specification family.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-era-style-inputs Primitive shape construction has no era or style-reference input.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Each build emits one primitive part and no composable operation or topology lineage.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations The builder attaches a resolved material id but does not author its channels, textures, or sampling.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-states-substitution The primitive result has one material binding and no named surface-state replacement.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-procedural-pattern-inputs One explicitly selected shape is not a seeded procedural pattern.
- * @evidenceExclude specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-resource-closure Primitive parameters and a material id contain no external resource closure or provenance.
  */
 export const PRIMITIVE_PROP_ARCHETYPE: IAutoMovieModelArchetype = {
   id: "primitive-prop",
