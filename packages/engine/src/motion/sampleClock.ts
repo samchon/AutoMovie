@@ -22,7 +22,14 @@
  * @author Samchon
  */
 
-/** The sampling grid over `[start, end]`, see the module contract. */
+/**
+ * The sampling grid over `[start, end]`, see the module contract.
+ *
+ * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Includes both requested endpoints and every fixed-rate interior inspection instant.
+ * @evidence requirements/motion/validation-and-determinism.md#motion-interior-sample-validation Enumerates the deterministic interior instants at which downstream artifact validation samples the motion.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Applies one deterministic boundary law to an arbitrary sampling window.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-deterministic-sampling-validation Supplies the endpoint-inclusive fixed-rate grid used to validate motion between authored boundaries.
+ */
 export const windowSampleTimes = (
   start: number,
   end: number,
@@ -40,6 +47,11 @@ export const windowSampleTimes = (
   return times;
 };
 
-/** The sampling grid over `[0, duration]`, see the module contract. */
+/**
+ * The sampling grid over `[0, duration]`, see the module contract.
+ *
+ * @evidence requirements/motion/timing-and-semantic-events.md#motion-boundary-sampling Produces the endpoint-inclusive inspection instants for a complete clip duration.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clock-semantic-event Normalizes the shared window clock to a clip-local zero origin.
+ */
 export const sampleTimes = (duration: number, sampleRate: number): number[] =>
   windowSampleTimes(0, duration, sampleRate);

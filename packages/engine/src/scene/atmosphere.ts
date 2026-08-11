@@ -28,6 +28,8 @@ import { IAutoMovieFog } from "@automovie/interface";
  * exactly `1`: nothing is taken from the subject, which is what makes the whole
  * feature invisible to every production that never mentions it.
  *
+ * @evidence requirements/staging/visibility-and-readability.md#staging-occlusion-relations Evaluates declared fog density at camera-space depth as the atmosphere contribution to resolved subject visibility.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-occlusion-image-metrics Computes the exponential transmittance term used to treat fog at one pixel-depth sample in the occlusion metric.
  * @author Samchon
  */
 export const sceneFogTransmittance = (

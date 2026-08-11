@@ -8,12 +8,27 @@ import { solveTwoBoneIK } from "./solveTwoBoneIK";
 /** World-down, the pole a natural elbow or knee bends away from. */
 const POLE: IAutoMovieVector3 = { x: 0, y: -1, z: 0 };
 
-/** The world position and orientation of one resolved chain bone. */
+/**
+ * The world position and orientation of one resolved chain bone.
+ *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space Carries a chain joint in the world frame used by the reach target.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Supplies the resolved frame from which chain reachability is measured.
+ */
 export interface IAutoMovieChainBone {
-  /** World-space bone origin. */
+  /**
+   * World-space bone origin.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space Places the chain joint in the same space as its target.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Anchors world-space endpoint measurement for the chain solve.
+   */
   worldPosition: IAutoMovieVector3;
 
-  /** World-space bone orientation. */
+  /**
+   * World-space bone orientation.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-target-space Relates the world-space solution back to the bone's local articulation frame.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Lowers the selected world correction into the chain joint's local basis.
+   */
   worldRotation: IAutoMovieQuaternion;
 }
 
@@ -21,12 +36,25 @@ export interface IAutoMovieChainBone {
  * The two bone-local articulation deltas a two-bone solve produces: apply
  * `upper` on the chain-root joint and `lower` on the mid joint (each lowered
  * into clinical angles by the caller's own axes/rest-frame conventions).
+ *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Encodes the bone-local correction pair produced by FK-to-IK lowering.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Carries the local two-joint result of the bounded chain solve.
  */
 export interface IAutoMovieTwoBoneArticulation {
-  /** Bone-local articulation delta for the chain-root joint. */
+  /**
+   * Bone-local articulation delta for the chain-root joint.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Preserves the root correction before the mid-joint articulation is applied.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Carries the local rotation that aims the upper link into the bend plane.
+   */
   upper: IAutoMovieQuaternion;
 
-  /** Bone-local articulation delta for the mid joint. */
+  /**
+   * Bone-local articulation delta for the mid joint.
+   *
+   * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Preserves the mid-joint correction after the upper link has been placed.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Carries the local rotation that closes the remaining endpoint distance.
+   */
   lower: IAutoMovieQuaternion;
 }
 
@@ -55,6 +83,8 @@ export interface IAutoMovieTwoBoneArticulation {
  * clinical axes/rest frames decompose the deltas stay the CALLER's. This is the
  * geometry, not the rig policy.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-reachability Lowers a measured two-link chain onto a target while retaining its reachable-shell boundary.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Converts the analytic distance result into deterministic bone-local articulations.
  * @author Samchon
  */
 export const twoBoneChainArticulation = (props: {

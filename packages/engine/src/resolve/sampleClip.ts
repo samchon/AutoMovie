@@ -14,12 +14,28 @@ import {
 } from "../validation/clipTrackShape";
 import { channelIsRotation, channelKey } from "./channel";
 
-/** One channel's value sampled at an instant, with the channel it targets. */
+/**
+ * One channel's value sampled at an instant, with the channel it targets.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Carries the typed interpolation result together with its addressed channel.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Defines the per-channel output of clip sampling.
+ * @author Samchon
+ */
 export interface IAutoMovieSampledChannel {
-  /** The channel this value belongs to. */
+  /**
+   * The channel this value belongs to.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Preserves which typed channel selected the interpolation rule for this value.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Keeps each sampled result attached to its source track channel.
+   */
   channel: IAutoMovieChannel;
 
-  /** The sampled value, one number per channel component. */
+  /**
+   * The sampled value, one number per channel component.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Carries the value produced by the channel-appropriate interpolation rule.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Emits the dense channel value resolved from sparse clip keys.
+   */
   value: number[];
 }
 
@@ -38,6 +54,8 @@ export interface IAutoMovieSampledChannel {
  * `duration` when the clip `loop`s. A track with a single keyframe (or sampled
  * before its first / after its last key) yields that key's value verbatim.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Evaluates each track with its declared interpolation mode.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Samples sparse keys deterministically at the normalized clip time.
  * @author Samchon
  */
 export const sampleClip = (
@@ -67,6 +85,8 @@ export const sampleClip = (
  * nothing, instead of letting {@link sampleClip}'s before-first-key clamp
  * overwrite the authority that is currently in effect.
  *
+ * @evidence requirements/motion/layers-blends-and-transitions.md#motion-layer-channel-ownership Selects one explicit time-qualified owner for every channel across the clip sequence.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-layer-mask-transition-composition Implements channel authority across ordered temporal layers without future-key leakage.
  * @author Samchon
  */
 export const sampleClipSequence = (

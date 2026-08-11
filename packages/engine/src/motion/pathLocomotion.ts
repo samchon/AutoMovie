@@ -20,6 +20,9 @@ const DEFAULT_TURN_WINDOW = 0.5;
  * heightfield callback `(x, z) → y` (a slope, stairs approximated as a ramp).
  * Real surface geometry is #605; this is the scalar/callback seam it will
  * refine.
+ *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Lets the gait sample the authored ground height along its route.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Defines the deterministic terrain input consumed by path gait baking.
  */
 export type AutoMoviePathGround = number | ((x: number, z: number) => number);
 
@@ -28,16 +31,38 @@ export type AutoMoviePathGround = number | ((x: number, z: number) => number);
  * and which way it faces, the per-time data a later pass (a camera follow, a
  * foot-planting pass) consumes without re-deriving the path math.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Records the terrain-adjusted position and facing derived at one gait sample.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Exposes the resolved path state beside the compact gait output.
  * @author Samchon
  */
 export interface IAutoMoviePathFrame {
-  /** Seconds into the baked clip. */
+  /**
+   * Seconds into the baked clip.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Locates the resolved path frame on the gait cycle's baked clock.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Aligns path state with the corresponding procedural motion sample.
+   */
   time: number;
-  /** World path point: XZ on the polyline, `y` from the ground source. */
+  /**
+   * World path point: XZ on the polyline, `y` from the ground source.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Combines route progress with the declared terrain height.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Reports the terrain-adapted root position produced by the gait rule.
+   */
   position: IAutoMovieVector3;
-  /** Facing about +Y in degrees (0 = +Z, +90 = +X), corner-blended. */
+  /**
+   * Facing about +Y in degrees (0 = +Z, +90 = +X), corner-blended.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Makes corner steering an explicit output of the path controller.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Carries the bounded facing derived from the authored route.
+   */
   yawDeg: number;
-  /** Unit horizontal facing direction (`y` = 0), matching `yawDeg`. */
+  /**
+   * Unit horizontal facing direction (`y` = 0), matching `yawDeg`.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Provides the normalized steering result used by downstream motion controls.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Preserves the resolved route direction independently of display angles.
+   */
   tangent: IAutoMovieVector3;
 }
 
@@ -45,18 +70,45 @@ export interface IAutoMoviePathFrame {
  * A gait baked along a path, plus the per-keyframe path frames, mirroring how
  * the ground-IK pass returns its plants (#596).
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Returns the terrain-adjusted gait together with the route samples that produced it.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Couples a compact gait bake to its deterministic path-resolution record.
  * @author Samchon
  */
 export interface IAutoMoviePathLocomotion {
-  /** The baked non-looping clip. */
+  /**
+   * The baked non-looping clip.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Preserves the declared limb cycle while carrying it along the route.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Materializes the compact gait as a finite path performance.
+   */
   motion: IAutoMovieMotion;
-  /** One path frame per output keyframe, in time order. */
+  /**
+   * One path frame per output keyframe, in time order.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Retains each terrain and steering decision at the output key time.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Makes the gait bake's resolved route samples inspectable.
+   */
   frames: IAutoMoviePathFrame[];
-  /** Total horizontal (XZ) arc length of the path, meters. */
+  /**
+   * Total horizontal (XZ) arc length of the path, meters.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Measures the authored route that bounds the procedural controller.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Records the distance used to size the gait bake.
+   */
   length: number;
-  /** Effective speed after cycle snapping, m/s (`length / duration`). */
+  /**
+   * Effective speed after cycle snapping, m/s (`length / duration`).
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Reports the pace resulting from whole-cycle gait quantization.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Makes the compact gait rule's resolved timing explicit.
+   */
   speed: number;
-  /** Whole gait cycles baked. */
+  /**
+   * Whole gait cycles baked.
+   *
+   * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-gait-table Counts the complete gait periods used to preserve phase continuity.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Records how the compact cycle was expanded along the route.
+   */
   cycles: number;
 }
 
@@ -106,6 +158,9 @@ interface ISegment {
  * Pathfinding and obstacle avoidance are out of scope: the path is authored
  * (blocking / #605's navigable space provide it).
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-terrain-adaptation Samples the authored route and ground source while preserving gait phase through corners.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Bakes a compact gait deterministically into terrain-adjusted path motion and frame records.
+ * @evidence requirements/motion/root-motion-and-trajectories.md#motion-root-ground-clearance Samples the declared ground height at each path position into the emitted root translation.
  * @author Samchon
  */
 export const followPathMotion = (props: {

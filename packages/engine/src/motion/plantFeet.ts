@@ -26,14 +26,31 @@ const DEFAULT_TOLERANCE = 0.02;
  * The leg chain that plants one foot: the foot end-effector and its upper/lower
  * segments (hip→knee, knee→ankle).
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Declares the articulated chain whose foot is judged against the ground contact.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Defines one support limb for stance detection and correction.
  * @author Samchon
  */
 export interface IAutoMovieFootLeg {
-  /** Foot end-effector bone (the ground-contact point that is pinned). */
+  /**
+   * Foot end-effector bone (the ground-contact point that is pinned).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the bone whose world position is constrained to the ground target.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Selects the effector that supplies and receives support.
+   */
   foot: AutoMovieHumanoidBone;
-  /** Upper leg segment (thigh): the chain root. */
+  /**
+   * Upper leg segment (thigh): the chain root.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Anchors the leg correction at its declared proximal segment.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Establishes the first link that transfers the planted support.
+   */
   upper: AutoMovieHumanoidBone;
-  /** Lower leg segment (shin). */
+  /**
+   * Lower leg segment (shin).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Identifies the hinge segment adjusted to keep the foot on its target.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Establishes the second articulated link in the support solve.
+   */
   lower: AutoMovieHumanoidBone;
 }
 
@@ -54,16 +71,38 @@ const DEFAULT_LEGS: readonly IAutoMovieFootLeg[] = HUMANOID_LEG_CHAINS.map(
  * the ground from `start` to `end` and its world position was held at
  * `position` (its `y` snapped to the ground plane).
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Records one contiguous planted phase and its authoritative support point.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Makes the detected support interval and target inspectable.
  * @author Samchon
  */
 export interface IAutoMovieFootPlant {
-  /** The planted foot bone. */
+  /**
+   * The planted foot bone.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Associates the planted phase with its contacting effector.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Identifies which support limb owns the interval.
+   */
   foot: AutoMovieHumanoidBone;
-  /** Inclusive stance-run start, seconds. */
+  /**
+   * Inclusive stance-run start, seconds.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Marks the sample at which the foot enters its planted phase.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Uses this instant as the inclusive lower boundary of support sampling.
+   */
   start: number;
-  /** Inclusive stance-run end, seconds. */
+  /**
+   * Inclusive stance-run end, seconds.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Marks the last sample owned by the planted phase before release.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Includes this final instant in the planted phase before release.
+   */
   end: number;
-  /** Pinned world foot position held across the run (`y` = ground height). */
+  /**
+   * Pinned world foot position held across the run (`y` = ground height).
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Carries the authoritative world target and its ground height.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Defines the support point held throughout the planted interval.
+   */
   position: IAutoMovieVector3;
 }
 
@@ -71,12 +110,24 @@ export interface IAutoMovieFootPlant {
  * A foot-corrected motion plus the stance runs that were pinned, the plant data
  * a later continuous-state pass (#597) can hand off between beats.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Couples corrected motion to the planted intervals it must preserve.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Returns the resolved performance and its support record together.
  * @author Samchon
  */
 export interface IAutoMoviePlantedFeet {
-  /** The corrected clip: dense keyframes at the pass sample rate. */
+  /**
+   * The corrected clip: dense keyframes at the pass sample rate.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Bakes each planted phase into the articulated pose sequence.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Provides the motion after support constraints are resolved.
+   */
   motion: IAutoMovieMotion;
-  /** Every pinned stance run, in detection order. */
+  /**
+   * Every pinned stance run, in detection order.
+   *
+   * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Preserves the ordered contact intervals detected on the fixed sample grid.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Exposes the support history that explains the corrected clip.
+   */
   plants: IAutoMovieFootPlant[];
 }
 
@@ -107,6 +158,9 @@ export interface IAutoMoviePlantedFeet {
  * {@link spaceGround} (#605). Path/turning locomotion is #599; the shared
  * two-bone lowering could be factored out of {@link reachPose} (follow-up).
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Detects stance against the declared ground and tolerance, then pins each run to its contact target.
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-refusal Bounds an unreachable stance correction at the limb's reachable shell instead of emitting non-finite motion.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Resolves planted support into ROM-bounded dense motion and an explicit contact record.
  * @author Samchon
  */
 export const plantStanceFeet = (props: {

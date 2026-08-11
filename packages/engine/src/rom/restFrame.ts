@@ -11,16 +11,54 @@ import {
  * axis whose positive direction is flipped per side (a right arm abducts with
  * negative rotation in the rig); `neutral` is the clinical angle the rig sits
  * at when at rest (a T-pose arm is already ~90° abducted).
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Defines the affine conversion from rig-relative rotation to one clinical control.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Makes the rest-frame conversion explicit for an authored joint axis.
  */
 export interface IAutoMovieAxisFrame {
+  /**
+   * Axis direction relative to the clinical convention.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Defines the polarity of the clinical-to-rig angle conversion.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the axis-orientation conversion from the declared rest basis.
+   */
   sign: 1 | -1;
+  /**
+   * Clinical angle represented by the rig's rest orientation.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Declares the semantic control value encoded by the rig's zero articulation.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the rest-pose offset of the clinical-to-rig conversion.
+   */
   neutral: number;
 }
 
-/** A bone's per-axis rest frame; an omitted axis is the identity (sign 1, 0). */
+/**
+ * A bone's per-axis rest frame; an omitted axis is the identity (sign 1, 0).
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Groups the semantic control conversions owned by one bone rest frame.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Represents the optional rest-basis mapping supplied with rig input.
+ */
 export interface IAutoMovieRestFrame {
+  /**
+   * Rest-frame mapping for the flexion axis.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Reconciles the named flexion control with its rest-relative rig value.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the optional flexion rest-basis conversion.
+   */
   flexion?: IAutoMovieAxisFrame;
+  /**
+   * Rest-frame mapping for the abduction axis.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Reconciles the named abduction control with its rest-relative rig value.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the optional abduction rest-basis conversion.
+   */
   abduction?: IAutoMovieAxisFrame;
+  /**
+   * Rest-frame mapping for the twist axis.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Reconciles the named twist control with its rest-relative rig value.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Carries the optional twist rest-basis conversion.
+   */
   twist?: IAutoMovieAxisFrame;
 }
 
@@ -42,6 +80,9 @@ const assertAxisFrame = (
  * **rest-relative** angle the rig actually rotates by: `r = (clinical −
  * neutral) / sign`. The inverse of {@link toClinicalAngle}. An undefined frame
  * (or a `null` angle) is the identity, so non-mirrored axes pass through.
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Lowers a clinical control value into the declared rig rest basis.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Applies the declared affine rest-frame conversion.
  */
 export const toRigAngle = (
   clinical: number | null,
@@ -57,6 +98,9 @@ export const toRigAngle = (
 /**
  * The **rest-relative** angle the rig rotates by → the **clinical** angle:
  * `clinical = sign · r + neutral`. The inverse of {@link toRigAngle}.
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Lifts a rig-relative rotation back into its named clinical control value.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-inputs Reconstructs the semantic angle from the declared rest-frame conversion.
  */
 export const toClinicalAngle = (
   rig: number | null,
@@ -97,6 +141,8 @@ const shift = (
  * since `validateJointRom`/`clampJointRom` gate the cone on `swingDeg !=
  * null`.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Re-expresses clinical range limits in the joint's actual rest-relative frame.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Expresses effective ROM in the same rig basis used by articulation.
  * @author Samchon
  */
 export const restRelativeConstraint = (
@@ -116,6 +162,8 @@ export const restRelativeConstraint = (
  * is future work). Bones omitted need no shift (legs/spine rest at clinical
  * neutral).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Declares the non-identity rest conversion for canonical humanoid shoulder bones.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Preserves the T-pose basis needed to interpret shoulder articulation consistently.
  * @author Samchon
  */
 export const HUMANOID_REST_FRAME: Partial<

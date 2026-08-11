@@ -20,32 +20,75 @@ type AutoMovieJointAxis = (typeof JOINT_AXES)[number];
  * pointing along its local X) declare which local axis flexion / abduction /
  * twist each swing, so "flexion" stays anatomically sagittal instead of rolling
  * the bone along its length.
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Represents the local basis behind the rig's named articulation controls.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Defines how semantic controls enter the rig's rotation graph.
  */
 export interface IAutoMovieJointAxes {
-  /** Axis `flexion` rotates about (sagittal). */
+  /**
+   * Axis `flexion` rotates about (sagittal).
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Names the local axis assigned to the flexion control.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Binds flexion input to its bone-local rotation axis.
+   */
   flexion: IAutoMovieVector3;
-  /** Axis `abduction` rotates about (frontal). */
+  /**
+   * Axis `abduction` rotates about (frontal).
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Names the local axis assigned to the abduction control.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Binds abduction input to its bone-local rotation axis.
+   */
   abduction: IAutoMovieVector3;
-  /** Axis `twist` rotates about (the bone's long axis). */
+  /**
+   * Axis `twist` rotates about (the bone's long axis).
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Names the local axis assigned to the twist control.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Binds twist input to its bone-local rotation axis.
+   */
   twist: IAutoMovieVector3;
 }
 
-/** The default clinical basis: flexion→X, abduction→Z, twist→Y. */
+/**
+ * The default clinical basis: flexion→X, abduction→Z, twist→Y.
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Supplies a stable fallback basis for rigs without per-bone overrides.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Keeps semantic controls deterministic when a rig omits an axis table.
+ */
 export const DEFAULT_JOINT_AXES: IAutoMovieJointAxes = {
   flexion: { x: 1, y: 0, z: 0 },
   abduction: { x: 0, y: 0, z: 1 },
   twist: { x: 0, y: 1, z: 0 },
 };
 
-/** A field-located malformed joint-axis basis issue. */
+/**
+ * A field-located malformed joint-axis basis issue.
+ *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Represents an actionable refusal for an unusable joint basis.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Encodes a field-located correction for one rejected rig basis.
+ */
 export interface IAutoMovieJointAxesIssue {
-  /** JSON-ish path to the offending axis field. */
+  /**
+   * JSON-ish path to the offending axis field.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Locates the exact invalid control basis rather than falling back silently.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Identifies the rig field responsible for the validation failure.
+   */
   path: string;
 
-  /** Human-readable correction requirement. */
+  /**
+   * Human-readable correction requirement.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal States the basis invariant that the rejected rig must satisfy.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Makes the rig refusal actionable for a correction round.
+   */
   expected: string;
 
-  /** Offending value. */
+  /**
+   * Offending value.
+   *
+   * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Retains the invalid axis data that caused refusal.
+   * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Returns the rejected input beside its field-located diagnosis.
+   */
   value: unknown;
 }
 
@@ -69,6 +112,8 @@ const readAngle = (
  * finite, non-zero, and mutually orthogonal so clinical angles form a real
  * basis instead of silently skewing FK/IK.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-invalid-rig-refusal Refuses any control-axis set that cannot form a finite orthogonal articulation basis.
+ * @evidence specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures Produces field-located failures for malformed rig bases.
  * @author Samchon
  */
 export const validateJointAxesBasis = (
@@ -125,6 +170,8 @@ export const validateJointAxesBasis = (
 /**
  * Validate and normalize a joint-axis basis for quaternion math.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Converts an accepted control basis into stable unit axes without changing their semantic identity.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Prepares the declared basis for deterministic control evaluation.
  * @author Samchon
  */
 export const normalizeJointAxes = (
@@ -177,6 +224,8 @@ const normalizeAxis = (axis: IAutoMovieVector3): IAutoMovieVector3 =>
  * arm) and the per-side rest frame reconciles it. Omit it for angles already in
  * the rig's own space.
  *
+ * @evidence requirements/asset-authoring/rig-and-state.md#asset-rig-basis-controls Composes the declared semantic controls in their rig-local basis.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Composes semantic joint controls into the quaternion consumed by forward kinematics.
  * @author Samchon
  */
 export const jointToQuaternion = (

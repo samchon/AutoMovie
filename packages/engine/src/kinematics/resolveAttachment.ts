@@ -36,6 +36,8 @@ import { resolvePose } from "./resolvePose";
  * authored in clinical space; otherwise a prop would ride raw rig-space FK
  * while the visible parent is read through its clinical frame.
  *
+ * @evidence requirements/actors/appearance-costume-and-attachments.md#actor-attachment-contact Keeps the child root rigidly registered to its authored parent-bone contact frame.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-appearance-costume-attachment Resolves rigid attachment state against the parent's current posed frame.
  * @author Samchon
  */
 export const resolveAttachment = (

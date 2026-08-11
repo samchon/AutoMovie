@@ -17,12 +17,24 @@ import { Vector3 } from "../math/Vector3";
  * steps every spring driver inside the frame pass (S2). Without a state and a
  * `dt` the per-frame resolve has no memory, so springs defer.
  *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Holds the solver-owned cross-frame state separately from authored spring parameters.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Defines the deterministic live-state record for the selected secondary-motion path.
  * @author Samchon
  */
 export interface IAutoMovieSpringState {
-  /** Joint id → its world position last step (empty on the first step). */
+  /**
+   * Joint id → its world position last step (empty on the first step).
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Stores the prior joint positions owned by the live secondary solver.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Supplies the previous-step state needed for deterministic spring integration.
+   */
   prev: Map<string, IAutoMovieVector3>;
-  /** Center node id -> its world position last step for center-relative inertia. */
+  /**
+   * Center node id -> its world position last step for center-relative inertia.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Tracks the prior position of each moving attachment boundary.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Keeps spring inertia relative to the sampled moving center.
+   */
   centers: Map<string, IAutoMovieVector3>;
   /**
    * Joint id → its **post-spring** world position last step, what a host loop
@@ -30,11 +42,19 @@ export interface IAutoMovieSpringState {
    * scene fresh every frame, so it seeds each chain joint from here before
    * stepping; that is what lets the in-frame spring accumulate sag across
    * frames exactly like the host-loop harness.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Preserves the solver-produced joint state carried into the next fixed step.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Carries live secondary output across freshly composed frames.
    */
   sprung: Map<string, IAutoMovieVector3>;
 }
 
-/** A fresh, empty spring state. */
+/**
+ * A fresh, empty spring state.
+ *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Creates the explicit initial state owned by the live spring solver.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Initializes the deterministic live-secondary evaluation path.
+ */
 export const createSpringState = (): IAutoMovieSpringState => ({
   prev: new Map(),
   centers: new Map(),
@@ -47,12 +67,24 @@ export const createSpringState = (): IAutoMovieSpringState => ({
  * the driver's own `hitRadius` (the joint's physical thickness), completing the
  * VRM SpringBone collision semantics that `hitRadius` always declared.
  *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Represents a sampled world-space collision boundary for secondary motion.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Defines the collider input used by the live moving-boundary solve.
  * @author Samchon
  */
 export interface IAutoMovieSpringSphere {
-  /** Sphere center in world space. */
+  /**
+   * Sphere center in world space.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Locates the current collision boundary in the spring's world frame.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Supplies the sampled center against which secondary joints collide.
+   */
   center: IAutoMovieVector3;
-  /** Sphere radius, meters. Strictly positive. */
+  /**
+   * Sphere radius, meters. Strictly positive.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Bounds the collision volume that the secondary chain must remain outside.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Supplies the physical extent of the sampled secondary-motion boundary.
+   */
   radius: number;
 }
 
@@ -100,6 +132,8 @@ const readLocal = (
  * constraint (the VRM SpringBone order), so a collision can stretch the bone by
  * up to the push distance for that step rather than tunnel through a body.
  *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-author-solver Advances only the solver-owned live spring state under fixed authored parameters.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Implements deterministic live secondary motion against sampled moving boundaries.
  * @author Samchon
  */
 export const stepSpring = (

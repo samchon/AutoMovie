@@ -26,6 +26,8 @@ const VECTOR_AXES = ["x", "y", "z"] as const;
  * perpendicular (the `|a.x| < 0.9` axis split) so it never divides by a zero
  * cross product.
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-gaze-attention Turns a declared target direction into the bone rotation that realizes gaze.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-gaze-expression-attention Implements the target-tracking rotation primitive used by the bounded gaze solve.
  * @author Samchon
  */
 export const aimRotation = (

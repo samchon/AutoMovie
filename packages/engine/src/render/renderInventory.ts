@@ -32,6 +32,9 @@ import { autoMovieSemanticMaskNodeIndex } from "./semanticMask";
  * carries all of them, which is what makes its length independent of the
  * production and what stops an unmeasured cost from disappearing instead of
  * being reported as unmeasured.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Enumerates every geometry, memory, light, instance, and simulation metric that a render budget must account for.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Fixes the complete metric order used by the worst-case preflight inventory and report.
  */
 export const AUTOMOVIE_RENDER_METRICS: Readonly<AutoMovieRenderMetricOrder> = [
   "triangles",
@@ -51,25 +54,53 @@ export const AUTOMOVIE_RENDER_METRICS: Readonly<AutoMovieRenderMetricOrder> = [
   "fluidParticles",
 ];
 
-/** Device bytes of one vertex position: three 32-bit floats. */
+/**
+ * Device bytes of one vertex position: three 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the position-buffer component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed position stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_POSITION_BYTES = 12;
 
-/** Device bytes of one vertex normal: three 32-bit floats. */
+/**
+ * Device bytes of one vertex normal: three 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the normal-buffer component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed normal stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_NORMAL_BYTES = 12;
 
-/** Device bytes of one texture coordinate pair: two 32-bit floats. */
+/**
+ * Device bytes of one texture coordinate pair: two 32-bit floats.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for the texture-coordinate component of geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed UV stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_UV_BYTES = 8;
 
-/** Device bytes of one triangle index: one 32-bit unsigned integer. */
+/**
+ * Device bytes of one triangle index: one 32-bit unsigned integer.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Accounts for indexed-triangle storage in geometry memory.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the fixed index stride used by worst-case geometry accounting.
+ */
 export const AUTOMOVIE_INDEX_BYTES = 4;
 
 /**
  * Device bytes of one vertex's skin binding: four 16-bit joint indices and four
  * 32-bit weights, the glTF four-influence convention the mesh type documents.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Includes joint and weight attributes in skinned-geometry memory rather than counting only positions.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the declared four-influence stride for conservative geometry accounting.
  */
 export const AUTOMOVIE_SKIN_BYTES = 24;
 
-/** Device bytes of one RGBA8 texel. */
+/**
+ * Device bytes of one RGBA8 texel.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Converts decoded RGBA8 dimensions into the texture-memory budget.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the texel stride used by texture closure accounting.
+ */
 export const AUTOMOVIE_TEXEL_BYTES = 4;
 
 /**
@@ -78,6 +109,9 @@ export const AUTOMOVIE_TEXEL_BYTES = 4;
  * A drawn water surface carries this attribute beside position, normal and
  * texture coordinate, and a ripple shader scrolls along it. Leaving it out
  * would understate the one buffer a pond has that a wall does not.
+ *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Includes the water-only flow attribute in geometry memory instead of undercounting simulated surfaces.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Supplies the explicit free-surface flow stride for worst-case preflight accounting.
  */
 export const AUTOMOVIE_FLOW_BYTES = 8;
 
@@ -112,6 +146,18 @@ export const AUTOMOVIE_FLOW_BYTES = 8;
  * in the mask name the same thing. Shared resources that draw no pixels of
  * their own carry a `material:`, `texture:` or `light:` identity instead.
  *
+ * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Measures geometry, decoded texture memory, lights, instances, fluids, and simulated drawables into one complete inventory.
+ * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Reports the conservative one-frame peak per metric and its semantic owner without substituting an average or whole-film total.
+ * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Charges each enabled shadow map and its opaque depth passes to the stable id of the light that casts them.
+ * @evidence requirements/lighting/budgets-and-representation.md#lighting-budget-cost-model Separates light population, shadow-map allocation, and the additional opaque draws induced by each shadow source.
+ * @evidence requirements/production-design/budgets-and-feasibility.md#production-design-worst-case-budget Computes conservative one-frame geometry, population, simulation, memory, light, shadow, and draw costs instead of averaging them over the film.
+ * @evidence requirements/production-design/budgets-and-feasibility.md#production-design-budget-measurement-status Separates exact or conservative totals from explicit unsupported and not-run gaps rather than counting an unmeasured cost as zero.
+ * @evidence requirements/operations-and-recovery/resource-budgets-and-backpressure.md#operations-budget-admission-estimate Produces the exact or conservative one-frame resource totals, dominant semantic owners, and explicit unmeasured gaps needed before render admission.
+ * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Produces exact counts or stated conservative upper bounds and explicit unsupported or not-run gaps for preflight.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-shadow-state-sampling Preserves the casting source identity in the staged branch of shadow-cost accounting.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-light-budget-selection Accounts for lights and their downstream shadow passes as distinct bounded cost dimensions.
+ * @evidence specifications/narrative-and-intent/budgets-continuity-and-deliverables.md#narrative-intent-budget-measurement-worst-case Produces the one-frame conservative render-cost observation and explicit analysis-gap subset of worst-case budget measurement.
+ * @evidence specifications/execution-and-recovery/resource-budgets-and-backpressure.md#execution-budget-admission-estimate Implements the render-domain estimate subset without claiming queue, concurrency, or runtime enforcement ownership.
  * @author Samchon
  */
 export const measureAutoMovieRenderInventory = (props: {

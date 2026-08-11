@@ -23,6 +23,9 @@ type IAutoMoviePointerChannel = Extract<IAutoMovieChannel, { kind: "pointer" }>;
  * Canonical key for a channel. Node channels and pointer channels live in
  * disjoint namespaces (`node:…` vs `ptr:…`) so they can never alias even if a
  * pointer string happened to look like a node path.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Assigns each addressed channel one canonical identity for dependency evaluation.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Implements stable channel addressing for driver-graph edges.
  */
 export const channelKey = (channel: IAutoMovieChannel): string => {
   switch (channel.kind) {
@@ -41,6 +44,9 @@ export const channelKey = (channel: IAutoMovieChannel): string => {
  * Whether a channel carries a rotation (a quaternion), which the sample pass
  * must interpolate with slerp rather than component-wise lerp, the glTF rule
  * for LINEAR rotation tracks.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Preserves quaternion semantics when evaluating a rotation channel.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Classifies graph channels so rotation values retain their declared evaluation rule.
  */
 export const channelIsRotation = (channel: IAutoMovieChannel): boolean => {
   switch (channel.kind) {

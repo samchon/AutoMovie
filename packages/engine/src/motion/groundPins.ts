@@ -13,6 +13,8 @@ import { IAutoMovieFootLeg, IAutoMovieFootPlant } from "./plantFeet";
  * ground-IK pass, while the retarget contact pass reads it frame by frame to
  * decide which frames carry a contact worth preserving.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-authority-tolerance Applies the declared ground source and tolerance to decide contact frames.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Produces the shared stance mask used by planting and retargeting.
  * @author Samchon
  */
 export const contactMask = (props: {
@@ -38,6 +40,8 @@ export const contactMask = (props: {
  * stance runs, and pin each run to its start contact. Returns the plants plus
  * the per-frame solve targets the re-key stage consumes.
  *
+ * @evidence requirements/motion/contact-weight-and-support.md#motion-contact-phases Groups touching samples into explicit planted intervals and releases.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Converts stance runs into stable support targets on the declared ground.
  * @author Samchon
  */
 export const pinStanceTargets = (props: {

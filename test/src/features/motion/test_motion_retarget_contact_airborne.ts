@@ -104,6 +104,6 @@ export const test_motion_retarget_contact_airborne = (): void => {
   );
   TestValidator.predicate(
     "the keyframe count is reported as a temporal violation",
-    hasViolation(lone.validation, "temporal", "$input.keyframes"),
+    hasViolation(lone.validation, "temporal", "$input.motion.keyframes"),
   );
 };

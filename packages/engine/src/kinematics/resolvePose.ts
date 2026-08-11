@@ -17,26 +17,51 @@ const ROOT_PARENT = "__root__";
 /**
  * A resolved bone transform after forward kinematics: the bone's local rotation
  * (rest ∘ articulation) and its world position.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Captures one bone transform after composing its declared rest-space articulation.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Carries one hierarchy-composed bone result.
  */
 export interface IAutoMovieResolvedBone {
-  /** The bone this transform belongs to. */
+  /**
+   * The bone this transform belongs to.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Retains the stable bone identity whose rest transform was evaluated.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Associates each resolved frame with its declared skeleton node.
+   */
   bone: AutoMovieHumanoidBone;
   /**
    * Local rotation to set on the bone (rest rotation composed with
    * articulation).
+   *
+   * @evidence requirements/actors/pose-expression-and-gaze.md#actor-pose-space-authority Keeps articulation in the bone-local space that owns the pose control.
+   * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Carries the local pose state applied to the resolved bone.
    */
   localRotation: IAutoMovieQuaternion;
-  /** Bone origin in world/model space, after walking the hierarchy. */
+  /**
+   * Bone origin in world/model space, after walking the hierarchy.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Resolves the declared parent-local offsets into the bone's current world position.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Stores the hierarchy-composed world origin used for spatial queries.
+   */
   worldPosition: IAutoMovieVector3;
   /**
    * Bone orientation in world/model space (parent world rotation ∘ local). This
    * is what an **attachment** rides. Fixing a child body's frame in this bone's
    * frame (e.g. a rider in a horse's saddle) parents the two the way a physics
    * joint does.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Accumulates rest and articulation rotations through the declared parent chain.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Stores the hierarchy-composed world orientation of the bone.
    */
   worldRotation: IAutoMovieQuaternion;
 }
 
+/**
+ * Bone name or sentinel used to index skeleton roots by parent.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Distinguishes declared parent bones from the hierarchy's null-parent roots.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Provides the key space for the skeleton's parent-child walk.
+ */
 export type AutoMovieSkeletonParentKey = AutoMovieHumanoidBone | "__root__";
 
 /**
@@ -47,22 +72,36 @@ export type AutoMovieSkeletonParentKey = AutoMovieHumanoidBone | "__root__";
  * call path intentionally rebuilds the index from the current skeleton object,
  * so callers that mutate `skeleton.bones` never get a hidden stale cache.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Indexes the stable hierarchy used to compose every bone from its parent-local rest transform.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Holds the reusable traversal state derived from a skeleton.
  * @author Samchon
  */
 export interface IAutoMovieSkeletonTopology {
-  /** Bones grouped by parent (`__root__` for null-parent roots). */
+  /**
+   * Bones grouped by parent (`__root__` for null-parent roots).
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Retains each parent-local relationship used by forward kinematics.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Supplies a deterministic child order for the hierarchy walk.
+   */
   readonly childrenByParent: ReadonlyMap<
     AutoMovieSkeletonParentKey,
     readonly IAutoMovieBone[]
   >;
 
-  /** The exact bone names the FK root walk can reach. */
+  /**
+   * The exact bone names the FK root walk can reach.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-refusal Marks exactly the declared bones connected to a hierarchy root.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure Exposes the reachable set used to report malformed rig topology.
+   */
   readonly reachableBones: ReadonlySet<AutoMovieHumanoidBone>;
 }
 
 /**
  * Index a skeleton's parent-child topology once for repeated FK work.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Builds the parent-first traversal required to compose rest transforms consistently.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Builds deterministic parent-first traversal metadata from declared hierarchy links.
  * @author Samchon
  */
 export const indexSkeletonTopology = (
@@ -134,6 +173,8 @@ export const indexSkeletonTopology = (
  * {@link indexSkeletonTopology}. Omit it for one-off calls, especially if the
  * skeleton object may have been mutated since a prior resolve.
  *
+ * @evidence requirements/actors/pose-expression-and-gaze.md#actor-pose-space-authority Composes each bone-local authored pose through its declared parent hierarchy into one resolved state.
+ * @evidence specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md#performance-actor-pose-gaze-expression-state Evaluates the current body pose into deterministic per-bone transforms.
  * @author Samchon
  */
 export const resolvePose = (
@@ -198,6 +239,8 @@ export const resolvePose = (
  * declared-set membership check alone would read a bone the FK result never
  * contains. This is the query that names the reachable set explicitly.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-refusal Returns the bones connected to a declared root before consumers read FK output.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-retarget-preservation-failure Returns the exact connected topology used to diagnose an unusable rig chain.
  * @author Samchon
  */
 export const reachableBoneNames = (

@@ -7,7 +7,12 @@ import {
 
 import { easingProgress, lerp, transformFormationPoint } from "./formation";
 
-/** The state a member holds when nothing has happened to it in particular. */
+/**
+ * The state a member holds when nothing has happened to it in particular.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Defines the neutral sparse-member exception as present, undisplaced, and unturned relative to group state.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Provides the identity member channel used when no slot-specific cue applies.
+ */
 export const IDENTITY_FORMATION_SLOT_STATE: IAutoMovieFormationSlotState = {
   present: true,
   offset: { x: 0, y: 0, z: 0 },
@@ -32,6 +37,9 @@ export const IDENTITY_FORMATION_SLOT_STATE: IAutoMovieFormationSlotState = {
  *
  * Cost is the number of cues that name this slot, which is why the channel is
  * sparse: a crowd of a hundred thousand pays for the three exceptions it has.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Resolves one slot's sparse presence, offset, and facing exception without expanding the formation into per-member tracks.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Retains the latest member exception and interpolates its active cue on the same shot-local clock as group motion.
  */
 export const sampleFormationSlotMotion = (
   motions: readonly IAutoMovieFormationSlotMotion[],
@@ -90,6 +98,9 @@ export const sampleFormationSlotMotion = (
  * whole world placement passes the unit's designed heading plus the offset its
  * cue has turned it by, while a renderer whose scene graph already carries the
  * cue's rotation passes only the designed heading.
+ *
+ * @evidence requirements/formations/layouts-and-slots.md#formation-local-frame Rotates a slot exception from the unit's local lateral-depth axes into the formation's current world heading.
+ * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Preserves unit-local offset meaning when the formation faces or turns in world space.
  */
 export const rotateFormationLocalOffset = (
   offset: IAutoMovieVector3,
@@ -105,13 +116,33 @@ export const rotateFormationLocalOffset = (
   };
 };
 
-/** Where one member of a unit really stands, and whether it is there at all. */
+/**
+ * Where one member of a unit really stands, and whether it is there at all.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Carries the resolved presence and world transform after group state and one sparse member exception are composed.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Defines the placement result shared by rendering, measurement, and validation for one exception slot.
+ */
 export interface IAutoMovieFormationSlotPlacement {
-  /** Whether this member is drawn, measured and counted at this time. */
+  /**
+   * Whether this member is drawn, measured and counted at this time.
+   *
+   * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Applies the member exception's retained presence state to drawing, measurement, and quantity.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Exposes removal and return as an explicit sparse-member outcome.
+   */
   present: boolean;
-  /** World-space position in meters. */
+  /**
+   * World-space position in meters.
+   *
+   * @evidence requirements/formations/layouts-and-slots.md#formation-local-frame Reports the world position obtained after rotating the member's local exception with the unit.
+   * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-layout-slot-assignment Preserves the slot's local-frame assignment through group and member motion composition.
+   */
   position: IAutoMovieVector3;
-  /** World-space heading in degrees. */
+  /**
+   * World-space heading in degrees.
+   *
+   * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Combines designed facing, group turn, and the member's retained facing exception.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Reports the resolved orientation of the sparse member channel.
+   */
   facingDeg: number;
 }
 
@@ -123,6 +154,9 @@ export interface IAutoMovieFormationSlotPlacement {
  * with the gate that passed it. The unit's cue places the member exactly as it
  * always did; the member's own cue then displaces and turns it inside the
  * unit.
+ *
+ * @evidence requirements/formations/heroes-variation-and-state.md#formation-group-state Composes group placement with one member's sparse presence, offset, and facing exception into the authoritative slot result.
+ * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event Gives renderer, oracle, measurement, and validation one shared member-exception composition.
  */
 export const placeFormationSlot = (props: {
   /** Designed world-space position of this member at rest. */

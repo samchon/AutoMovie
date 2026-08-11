@@ -55,6 +55,8 @@ const FALLBACK_DIR: IAutoMovieVector3 = { x: 1, y: 0, z: 0 };
  * `influence`, and, matching the two-bone convention, the tip's subtree
  * recomposes.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-constraint-solve-order Runs a declared IK chain in fixed constraint order.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Runs the selected bounded iterative solver during the constraint stage.
  * @author Samchon
  */
 export const applyIterativeIK = (

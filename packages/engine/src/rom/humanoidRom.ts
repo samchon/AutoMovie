@@ -60,6 +60,8 @@ const FINGER = constraint(range(-20, 100), null, null);
  * is possible without rejecting canonical overhead poses. The value documents
  * the sourced anatomical bound rather than gating anything.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Defines the canonical humanoid joint-limit graph.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Supplies the fallback ROM graph used when a rig provides no bone override.
  * @author Samchon
  */
 export const DEFAULT_HUMANOID_ROM: Partial<
@@ -152,6 +154,9 @@ export const DEFAULT_HUMANOID_ROM: Partial<
  * The effective ROM constraint for a bone: the skeleton's per-bone override if
  * present, otherwise the default-table fallback, otherwise `null`
  * (unconstrained).
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Resolves the authored bone constraint before the normalized humanoid fallback.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Selects the effective limit node evaluated by ROM consumers.
  */
 export const getConstraint = (
   bone: AutoMovieHumanoidBone,

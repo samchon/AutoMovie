@@ -20,6 +20,9 @@ import {
 /**
  * Colours the mask may assign: the exact 8-bit RGB space minus `#000000`, which
  * is reserved for background.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Reserves black for background and exposes the exact non-background palette available to semantic identities.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Defines the bounded RGB channel space used by the structural identity-mask product.
  */
 export const AUTOMOVIE_SEMANTIC_MASK_COLORS = 0xffffff;
 
@@ -31,6 +34,9 @@ export const AUTOMOVIE_SEMANTIC_MASK_COLORS = 0xffffff;
  * enough that the palette can never run out of colours: with at most this many
  * claims in a space of {@link AUTOMOVIE_SEMANTIC_MASK_COLORS}, a free colour
  * always exists, so the allocator has no failure path to hide a defect in.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Bounds how many semantic entities one exact 24-bit mask can address without dropping an identity.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps the structural pass finite while guaranteeing a distinct non-background colour for every admitted entry.
  */
 export const AUTOMOVIE_SEMANTIC_MASK_MAX_ENTRIES = 65536;
 
@@ -65,6 +71,10 @@ export const AUTOMOVIE_SEMANTIC_MASK_MAX_ENTRIES = 65536;
  * address. Silently dropping the excess would make a mask that segments a
  * different world than the one drawn.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Assigns stable collision-resolved colours to every drawable and retains its semantic ownership chain.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Derives a structural identity product from semantic drawables and ownership rather than reusing beauty colours as object identity.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-pass-refusal Rejects duplicate semantic claimants or a mask population above the bounded palette instead of emitting an ambiguous structural pass.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Builds the complete structural mask product independently of scene traversal order.
  * @author Samchon
  */
 export const deriveAutoMovieSemanticMask = (
@@ -115,6 +125,8 @@ export const deriveAutoMovieSemanticMask = (
  * colours off today's pixels. The bytes are the same convention the caption and
  * pose-keypoint sidecars use, so a host writes all three the same way.
  *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Serializes the palette that makes each rendered mask colour resolvable to its semantic entity.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Produces the deterministic sidecar paired with the identity-mask frames.
  * @author Samchon
  */
 export const renderAutoMovieSemanticMaskSidecar = (
@@ -251,6 +263,9 @@ const collectClaims = (subject: IAutoMovieRenderSubject): IClaim[] => {
  * viewer, and the mask has to be derivable without a renderer, so the one
  * constant both sides agree on is asserted by the test suite rather than shared
  * through a dependency that would invert the package layering.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Gives standable ground a stable node key shared by semantic derivation and rendering.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Joins the structural pass's space entry to the viewer group that actually paints it.
  */
 export const AUTOMOVIE_SEMANTIC_MASK_SPACE_NODE = "__automovie_space";
 
@@ -396,11 +411,26 @@ const collectSlotClaims = (
   return { claims, unaddressed };
 };
 
-/** A mask entry with the complete ownership chain above it. */
+/**
+ * A mask entry with the complete ownership chain above it.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Returns both the pixel-owning identity and the semantic containers that make it editable.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Defines the resolved structural-pass answer for one sampled mask colour.
+ */
 export interface IAutoMovieSemanticMaskResolution {
-  /** The entry that owns the colour. */
+  /**
+   * The entry that owns the colour.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Identifies the exact drawable assigned to the sampled colour.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Preserves the leaf identity emitted by the structural pass.
+   */
   entry: IAutoMovieSemanticMaskEntry;
-  /** Owners from the tightest container outward; empty for a root entry. */
+  /**
+   * Owners from the tightest container outward; empty for a root entry.
+   *
+   * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Connects a mask pixel to the opening, boundary, space, and building identities above its drawable.
+   * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Retains the semantic hierarchy needed to interpret and edit a structural-pass observation.
+   */
   ancestors: IAutoMovieSemanticMaskEntry[];
 }
 
@@ -414,6 +444,9 @@ export interface IAutoMovieSemanticMaskResolution {
  * every one of those is a stable id the design can be edited by.
  *
  * An unknown or malformed colour returns `null` rather than a guess.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Resolves one pixel colour to its stable drawable identity and complete ownership chain.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Interprets the structural pass through its paired sidecar and refuses unknown palette values.
  */
 export const resolveAutoMovieSemanticMask = (
   mask: IAutoMovieSemanticMask,
@@ -443,6 +476,9 @@ export const resolveAutoMovieSemanticMask = (
  * The viewer holds objects, not semantics; this is the join it uses. Built as
  * one map rather than searched per mesh, because a structural pass touches
  * every drawable in the scene once per frame.
+ *
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-identity-mask-channels Joins each renderer node name to the semantic entry whose colour it must paint.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Supplies the per-drawable lookup that projects semantic identities into the structural mask channel.
  */
 export const autoMovieSemanticMaskNodeIndex = (
   mask: IAutoMovieSemanticMask,

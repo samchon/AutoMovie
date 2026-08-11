@@ -2,27 +2,69 @@ import { IAutoMovieChannelLimit } from "@automovie/interface";
 
 import { channelKey } from "./channel";
 
-/** One component of a channel value that exceeded its bound and was clamped. */
+/**
+ * One component of a channel value that exceeded its bound and was clamped.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Makes each applied channel-range correction visible instead of silently accepting it.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Defines the per-component result emitted when the constraint pass clamps a channel.
+ * @author Samchon
+ */
 export interface IAutoMovieClampViolation {
-  /** Index of the offending component within the channel value vector. */
+  /**
+   * Index of the offending component within the channel value vector.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Identifies the exact constrained degree of freedom that crossed its range.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Locates the corrected component in the channel constraint result.
+   */
   component: number;
 
-  /** Which bound was crossed. */
+  /**
+   * Which bound was crossed.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Distinguishes a lower-range breach from an upper-range breach.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Reports which side of the declared ROM constrained the value.
+   */
   bound: "min" | "max";
 
-  /** The bound value the component was clamped to. */
+  /**
+   * The bound value the component was clamped to.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Preserves the declared numeric limit that resolved the invalid component.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Emits the applied constraint boundary beside the correction.
+   */
   limit: number;
 
-  /** The component's value before clamping. */
+  /**
+   * The component's value before clamping.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Keeps the requested out-of-range value available for diagnosis.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Records the requested component value before correction.
+   */
   actual: number;
 }
 
-/** The clamped value plus the list of bounds it crossed (empty if in range). */
+/**
+ * The clamped value plus the list of bounds it crossed (empty if in range).
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Pairs a constrained channel value with its explicit correction receipt.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Defines the public result of one channel constraint pass.
+ * @author Samchon
+ */
 export interface IAutoMovieClampOutcome {
-  /** The value after clamping, same length as the input. */
+  /**
+   * The value after clamping, same length as the input.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Carries the channel value after every declared component range is enforced.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Emits the resolved channel state produced by the constraint pass.
+   */
   value: number[];
 
-  /** Every component/bound that was exceeded, in component order. */
+  /**
+   * Every component/bound that was exceeded, in component order.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Preserves one receipt for every applied component correction.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Emits constraint findings in component order.
+   */
   violations: IAutoMovieClampViolation[];
 }
 
@@ -37,6 +79,8 @@ export interface IAutoMovieClampOutcome {
  * one-per-component matching the channel width
  * ({@link IAutoMovieChannelLimit}).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Enforces each declared component range while retaining the requested value in a violation.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Emits the clamped channel with per-component correction receipts.
  * @author Samchon
  */
 export const applyChannelLimit = (

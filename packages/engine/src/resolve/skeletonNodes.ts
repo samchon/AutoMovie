@@ -5,6 +5,9 @@ import { IAutoMovieNode, IAutoMovieSkeleton } from "@automovie/interface";
  * root transform. `"root"` is not a humanoid bone name (the closed
  * `AutoMovieHumanoidBone` union has no such member), so it can never collide
  * with a lowered bone node id.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Reserves the node that separates motion-root state from the skeleton's rest hierarchy.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Defines the non-colliding root identity used to preserve the deformation basis.
  */
 export const MOTION_ROOT_NODE_ID = "root";
 
@@ -31,6 +34,8 @@ const IDENTITY = {
  * `rootParent` seats the synthetic root under an existing node (a scene
  * placement group); `null` (the default) keeps it a graph root.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rest-bind-deformation Preserves every bone's declared rest transform while lowering the rig into executable nodes.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-skin-rigid-morph-deformation Implements the rest-basis hierarchy used by deformation resolution.
  * @author Samchon
  */
 export const lowerSkeletonNodes = (props: {

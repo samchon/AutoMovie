@@ -8,6 +8,8 @@ import { AutoMovieEasing } from "@automovie/interface";
  * separately by {@link cubicBezierEasing} since it needs the keyframe's control
  * points; passing `"cubicBezier"` here falls back to linear.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Evaluates each supported named interpolation law over normalized segment progress.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Produces the curve parameter used to sample a clip segment.
  * @author Samchon
  */
 export const ease = (curve: AutoMovieEasing, t: number): number => {
@@ -36,6 +38,8 @@ export const ease = (curve: AutoMovieEasing, t: number): number => {
  * Solves the parametric x(s) = t for the curve parameter `s` (Newton with a
  * bisection fallback), then returns y(s). Endpoints are fixed at (0,0)–(1,1).
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Evaluates an authored cubic curve while preserving its fixed endpoints.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Resolves cubic control points into deterministic segment progress.
  * @author Samchon
  */
 export const cubicBezierEasing = (

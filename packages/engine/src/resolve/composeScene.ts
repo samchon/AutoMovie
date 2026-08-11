@@ -37,6 +37,13 @@ const indexNodes = (
  * concatenation, so a non-uniformly scaled parent rotating a child shears
  * correctly instead of approximately.
  *
+ * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Composes every parent-local transform in a fixed order without silently approximating matrix products.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-hierarchical-transforms Resolves every node from its declared parent-local matrix chain before exposing the node's world transform.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-ownership Preserves each lowered node id as the key that owns its composed world matrix.
+ * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-lowering-refusal Rejects duplicate node ids, missing parents, and parent cycles instead of composing an ambiguous graph.
+ * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Implements the ordered transform chain from local scene nodes to resolved world matrices.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Produces the deterministic world-transform hierarchy consumed by visibility and culling decisions.
+ * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Keeps graph ownership explicit and refuses structurally ambiguous lowering before runtime state is composed.
  * @author Samchon
  */
 export const composeScene = (

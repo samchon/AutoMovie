@@ -13,6 +13,8 @@
  *
  * Inputs are in degrees; the result is in degrees, always within `[0, 360)`.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-range-of-motion Measures coupled planar swing beyond independent axis checks.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Evaluates the ball-joint cone used by constrained solve validation.
  * @author Samchon
  */
 export const swingConeAngle = (flexion: number, abduction: number): number =>
@@ -45,6 +47,8 @@ export const swingConeAngle = (flexion: number, abduction: number): number =>
  * `validateModel` rejects a constraint whose box and cone do not intersect,
  * which is exactly the condition that no such anchor exists.
  *
+ * @evidence requirements/motion/constraints-and-inverse-kinematics.md#motion-range-of-motion Finds the farthest cone-legal interpolation from an allowed anchor toward a candidate.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support Produces the deterministic cone correction used to keep a constrained pose reachable.
  * @author Samchon
  */
 export const swingConeBlend = (

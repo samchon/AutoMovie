@@ -6,7 +6,12 @@ import {
   IAutoMoviePose,
 } from "@automovie/interface";
 
-/** The postural/expressive gestures the reference synthesiser can author. */
+/**
+ * The postural/expressive gestures the reference synthesiser can author.
+ *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Defines the bounded gesture vocabulary accepted by this procedural controller.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Keeps non-gait procedural controls explicit and reproducible.
+ */
 export type AutoMovieGenericGesture =
   | "bow"
   | "nod"
@@ -315,6 +320,8 @@ function jumpPose(
  * frame at render. `strike` (a targeted jab) needs reach content and returns
  * `null` here, left to the richer synthesiser.
  *
+ * @evidence requirements/motion/procedural-motion-and-gaits.md#motion-general-procedural-control Synthesizes a declared gesture into bounded clinical-angle keyframes.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule Applies the same deterministic compact-rule model to whole-body gestures.
  * @author Samchon
  */
 export const gestureMotion = (

@@ -12,27 +12,60 @@ import {
  * optional placement prefix a bridged actor's nodes carry
  * (`sceneToNodes`/`motionToClip` naming: `"actor/"` turns `hips` into
  * `actor/hips`).
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Applies one reusable control profile to a concrete rig subtree.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Defines one concrete profile-application request.
+ * @author Samchon
  */
 export interface IAutoMovieProfileApplication {
-  /** The profile being applied. */
+  /**
+   * The profile being applied.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Supplies the reusable control profile selected for this application.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Carries the unbound profile graph.
+   */
   profile: IAutoMovieProfile;
 
-  /** Where it lives this time (`boneMap`: semantic key → concrete node id). */
+  /**
+   * Where it lives this time (`boneMap`: semantic key → concrete node id).
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Maps each semantic node reference onto the selected concrete rig.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Supplies the binding that turns profile graph edges into executable node references.
+   */
   binding: IAutoMovieProfileBinding;
 
   /**
    * Placement prefix prepended to every mapped node id, matching the
    * `nodePrefix` the scene bridge lowered the subtree with. Defaults to `""`.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Keeps bound driver nodes in the placed subtree's concrete namespace.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Resolves semantic graph references against their scene-bridge node prefix.
    */
   nodePrefix?: string;
 }
 
-/** A profile's declared limits/drivers, resolved onto concrete node ids. */
+/**
+ * A profile's declared limits/drivers, resolved onto concrete node ids.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Carries the executable profile produced by semantic binding.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Defines the concrete graph output consumed by frame resolution.
+ * @author Samchon
+ */
 export interface IAutoMovieBoundProfile {
-  /** The profile's limits with every node reference made concrete. */
+  /**
+   * The profile's limits with every node reference made concrete.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Materializes every profile limit on its bound concrete node channel.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Supplies the bound ROM constraints for the frame constraint pass.
+   */
   limits: IAutoMovieChannelLimit[];
 
-  /** The profile's drivers with every node reference made concrete. */
+  /**
+   * The profile's drivers with every node reference made concrete.
+   *
+   * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Materializes every declared driver edge on concrete node channels.
+   * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Supplies the bound deterministic driver graph for evaluation.
+   */
   drivers: IAutoMovieDriver[];
 }
 
@@ -51,6 +84,10 @@ export interface IAutoMovieBoundProfile {
  * would un-constrain the rig without a trace, the exact silent drop the engine
  * refuses everywhere else ({@link motionToClip}, sampled channel validation).
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Resolves each semantic profile reference to its concrete rig channel.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Materializes an executable bound profile for deterministic evaluation.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-driver-refusal Rejects a profile application when a required semantic node has no concrete binding.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Applies driver refusal at the semantic-to-concrete binding boundary.
  * @author Samchon
  */
 export const bindProfile = (
@@ -158,6 +195,9 @@ const mapDriver = (
  * fields; pointer channels excluded), deduplicated in first-reference order, so
  * a gate (forgeProp) can report **every** missing mapping in one correction
  * round instead of surfacing bindProfile's first throw at a time.
+ *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-rig-control-drivers Enumerates every semantic node required by the profile graph.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Exposes the complete dependency-key set needed to validate a concrete driver graph.
  */
 export const profileSemanticKeys = (profile: IAutoMovieProfile): string[] => {
   const keys: string[] = [];

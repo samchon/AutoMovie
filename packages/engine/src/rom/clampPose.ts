@@ -33,6 +33,8 @@ const clampAxis = (
  * just as a physics hinge refuses the disallowed degrees of freedom. A `null`
  * angle (axis left at rest) stays `null`.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Projects one joint into its declared effective ROM.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Enforces the validator's effective ROM graph during projection.
  * @author Samchon
  */
 export const clampJointRom = (
@@ -96,6 +98,8 @@ const nearestNeutral = (allowed: IAutoMovieAngleRange | null): number =>
  * the joints it derived (a retarget contact correction) must not clamp the
  * authored joints it left alone.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Applies the bone override before the canonical fallback when enforcing joint limits.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Projects one skeleton joint into its effective ROM.
  * @author Samchon
  */
 export const clampJointToSkeleton = (
@@ -117,6 +121,8 @@ export const clampJointToSkeleton = (
  * (e.g. raw LLM output) through `clampPose` and it can no longer exceed each
  * joint's gamut, the same bounds {@link validateJointRom} reports `// ❌` for.
  *
+ * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Enforces every declared pose joint against the skeleton's effective ranges.
+ * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Applies the rig's ROM graph across a complete pose without altering root authority.
  * @author Samchon
  */
 export const clampPose = (

@@ -16,9 +16,27 @@ import { Vector3 } from "../math/Vector3";
 import { segmentIndex } from "../math/bisect";
 import { cubicBezierEasing, ease } from "./easing";
 
-/** A pose plus optional expression sampled at one instant of a clip. */
+/**
+ * A pose plus optional expression sampled at one instant of a clip.
+ *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Returns the body and expression state produced by the clip's declared segment law.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Couples every sampled channel at the same resolved clip time.
+ * @author Samchon
+ */
 export interface IAutoMovieMotionSample {
+  /**
+   * Interpolated body pose at the sampled instant.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Interpolates root transforms and clinical joint axes with their typed laws.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Exposes the articulated state resolved between the surrounding keys.
+   */
   pose: IAutoMoviePose;
+  /**
+   * Interpolated expression, or `null` when the motion has none.
+   *
+   * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-sparse-channel-default Blends an authored expression against explicit neutral while preserving an entirely absent channel as null.
+   * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Resolves expression retention and interpolation on the same segment progress as the pose.
+   */
   expression: IAutoMovieExpression | null;
 }
 
@@ -41,6 +59,8 @@ const IDENTITY_TRANSFORM: IAutoMovieTransform = {
  * the clip `loop`s. Before the first / after the last keyframe the nearest
  * keyframe is returned verbatim.
  *
+ * @evidence requirements/motion/clips-keyframes-and-interpolation.md#motion-interpolation Applies the interpolation law appropriate to each sampled channel type between ordered keys.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Resolves clamped or looped time into one deterministic pose and expression sample.
  * @author Samchon
  */
 export const sampleMotion = (

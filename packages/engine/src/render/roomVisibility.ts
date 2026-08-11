@@ -53,6 +53,10 @@ const EXTERIOR = " exterior";
  *   Proving a closed door would hide more, and proving it belongs to the
  *   openings issue rather than to a guess made here.
  *
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-room-region-culling Computes conservative leaf-space visibility through declared openings, connectors, and the exterior graph node.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-visibility-state Returns the exact visible-space set and the resolved camera space for the current declared environment state.
+ * @evidence requirements/rendering/geometry-visibility-and-culling.md#rendering-culling-refusal Falls back to all spaces when camera containment or a leaf-space extent is ambiguous, so an unproved occlusion never hides geometry.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-visibility-culling Refuses unsafe room culling when camera containment or a leaf-space extent is unresolved.
  * @author Samchon
  */
 export const autoMovieRoomVisibility = (props: {
