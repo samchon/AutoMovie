@@ -124,6 +124,7 @@ import { run } from "@automovie/cli";
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Feeds explicit target identity and options into the canonical versioned template without editor cache or session memory.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage No compile, render, review, or delivery artifact with source snapshot and output digest is produced.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant The adapter materializes an initial tree and owns no later source-change invalidation or selective regeneration.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Initial publication changes no existing production revision, so there are no invalidated or retained downstream targets or follow-up actions to report.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-ownership-failure Target-path refusal does not validate an adopted input's source, license, digest, consumer, or snapshot identity.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-resume-compatibility Leaves all continued authoring state in public generated-project files rather than launcher session state.
  * @author Samchon
