@@ -38,6 +38,8 @@ const JITTER_Z = 0x7370727a;
  * never had — and when the camera distance is not a real number, which would
  * otherwise thin the live set to nothing and read as a fountain that stopped.
  *
+ * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-flow-spray Projects the declared flow as a bounded spray population.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Produces the spray output of an independently declared water-feature domain.
  * @author Samchon
  */
 export const sampleFluidSpray = (props: {

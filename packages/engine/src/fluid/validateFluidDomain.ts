@@ -6,19 +6,44 @@ import {
 import { ViolationCollector } from "../validation/violation";
 import { fluidCourantNumber } from "./shallowWater";
 
-/** Cells one domain may hold, so a lattice cannot silently cost a gigabyte. */
+/**
+ * Cells one domain may hold, so a lattice cannot silently cost a gigabyte.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-refusal Bounds lattice admission with an explicit cell ceiling.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-refusal-and-compatibility Defines the compatible maximum accepted lattice population.
+ */
 export const FLUID_MAX_CELLS = 65_536;
 
-/** Absolute steps one seek may integrate. */
+/**
+ * Absolute steps one seek may integrate.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-refusal Bounds seek reconstruction before unbounded integration begins.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-refusal-and-compatibility Defines the compatible maximum seek workload.
+ */
 export const FLUID_MAX_STEPS = 100_000;
 
-/** Sources, and separately drains, one domain may declare. */
+/**
+ * Sources, and separately drains, one domain may declare.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-refusal Bounds declared flow work before execution.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-refusal-and-compatibility Fixes the supported source and drain population ceiling.
+ */
 export const FLUID_MAX_FLOWS = 256;
 
-/** Spray emitters one domain may declare. */
+/**
+ * Spray emitters one domain may declare.
+ *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-refusal Bounds decorative emitter work independently of the conserved solve.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-refusal-and-compatibility Fixes the supported spray-emitter population ceiling.
+ */
 export const FLUID_MAX_SPRAYS = 32;
 
-/** Simultaneously live particles one emitter may hold. */
+/**
+ * Simultaneously live particles one emitter may hold.
+ *
+ * @evidence requirements/effects-and-simulation/particles-and-emission.md#effects-particle-refusal Refuses an emitter whose live population exceeds the bounded tier.
+ * @evidence specifications/simulation-effects-and-sound/particles-fire-and-atmosphere.md#particle-fire-refusal-and-claim-boundary Defines the maximum supported decorative spray population.
+ */
 export const FLUID_MAX_SPRAY_PARTICLES = 4_096;
 
 const BOUNDARY_KINDS = new Set(["wall", "open"]);
@@ -35,6 +60,8 @@ const EDGES = ["xMin", "xMax", "zMin", "zMax"] as const;
  * path of every offending field, never quietly clamped — a clamped basin is a
  * basin whose author was told nothing and whose frames changed anyway.
  *
+ * @evidence requirements/effects-and-simulation/fluids-and-water.md#effects-fluid-refusal Refuses invalid lattice, stability, boundary, and flow declarations explicitly.
+ * @evidence specifications/simulation-effects-and-sound/fluids-water-and-world-coupling.md#world-coupling-invalidation-and-refusal Produces addressed failures before a fluid domain joins the world solve.
  * @author Samchon
  */
 export const validateFluidDomain = (props: {

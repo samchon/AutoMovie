@@ -73,6 +73,8 @@ const SALT_PLACE_SCALE = 0x73636c00;
  * Throws when the derivation would exceed the recipe's own declared branch or
  * leaf cap: a budget that can be silently overrun is not a budget.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-plant-placement-state Derives the declared planting state reproducibly from its growth recipe.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Implements the bounded procedural structure of an interior planting.
  * @author Samchon
  */
 export const growPlanting = (
@@ -218,6 +220,8 @@ export const growPlanting = (
  * which is exactly what GPU instancing consumes. Nothing is reduced to a yaw
  * angle or one uniform number on the way out.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-plant-placement-state Resolves a declared planting population into bounded member placements.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Produces the deterministic arrangement consumed by interior planting placement.
  * @author Samchon
  */
 export const arrangePlantingCluster = (
@@ -325,6 +329,8 @@ export const arrangePlantingCluster = (
  * and only measures once it is in range, which is the order any other caller
  * follows too.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Prices the worst-case branch, leaf, and member work before derivation.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Supplies the bounded-work account of an interior planting.
  * @author Samchon
  */
 export const plantingBudget = (props: {
@@ -369,6 +375,8 @@ export const plantingBudget = (props: {
  * re-derivation or a second machine reproduced the reference plant rather than
  * merely a similar one.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-plant-placement-state Records exact equality of a deterministically derived planting state.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Provides the repeatability receipt for the generated planting structure.
  * @author Samchon
  */
 export const plantingStateDigest = (state: IAutoMoviePlantingState): string => {

@@ -10,10 +10,33 @@ import { Vector3 } from "../math/Vector3";
 import { clampJointRom } from "../rom/clampPose";
 import { getConstraint } from "../rom/humanoidRom";
 
-/** A reactive deflection (degrees) the impact pushes a joint toward. */
+/**
+ * A reactive deflection (degrees) the impact pushes a joint toward.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Converts contact impulse into an authored-facing joint reaction cue.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the bounded reaction derived from the contact output.
+ */
 export interface IAutoMovieRecoilPush {
+  /**
+   * Flexion deflection in degrees.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Drives the dominant bend response to an impact.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries one joint-axis component of the contact reaction.
+   */
   flexion?: number;
+  /**
+   * Abduction deflection in degrees.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Allows the contact reaction to push the joint laterally.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the lateral joint-axis component of the reaction.
+   */
   abduction?: number;
+  /**
+   * Twist deflection in degrees.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Allows the contact reaction to rotate the joint axially.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Carries the axial joint component of the reaction.
+   */
   twist?: number;
 }
 
@@ -26,6 +49,8 @@ export interface IAutoMovieRecoilPush {
  * (one dominant flexion axis): it is an AI hint, not a solved contact
  * response.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Maps the computed impulse magnitude into a deterministic recoil cue.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Bridges the contact output to its bounded pose reaction.
  * @author Samchon
  */
 export const impulseToRecoilPush = (
@@ -82,6 +107,8 @@ const readPushAxis = (
  * The caller maps an {@link IAutoMovieImpact}'s impulse to the `push`
  * magnitude.
  *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-impact-consequence Applies the contact reaction without exceeding declared joint range.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#collision-proxy-and-world-contact-output Produces the ROM-bounded pose consequence of world contact.
  * @author Samchon
  */
 export const impactRecoil = (

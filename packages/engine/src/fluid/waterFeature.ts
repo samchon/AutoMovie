@@ -49,6 +49,8 @@ const FEATURE_MODES = new Set(["static", "flowing", "simulated"]);
  * unusable grid has no lattice to place, and reporting where its cells fell
  * would be a second answer derived from the first bad one.
  *
+ * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-refusal Refuses unresolved basin, rim, and domain bindings before lowering.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Validates the join between a water feature and its independent fluid domain.
  * @author Samchon
  */
 export const validateWaterFeatures = (props: {
@@ -222,18 +224,43 @@ export const validateWaterFeatures = (props: {
   return out.toValidation();
 };
 
-/** One frame of a bound water feature: the state, its surface, and its spray. */
+/**
+ * One frame of a bound water feature: the state, its surface, and its spray.
+ *
+ * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-initial-boundary-record Carries the exact solved state and its declared feature identity.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Exposes one coherent frame of the independent fluid domain.
+ */
 export interface IAutoMovieWaterFeatureFrame {
-  /** Identity of the feature the frame belongs to. */
+  /**
+   * Identity of the feature the frame belongs to.
+   *
+   * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-initial-boundary-record Preserves which authored water feature owns the computed frame.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Keeps the feature-to-domain result join addressable.
+   */
   feature: string;
 
-  /** The conserved fluid state the frame projects. */
+  /**
+   * The conserved fluid state the frame projects.
+   *
+   * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-initial-boundary-record Records the computed state derived from the declared initial conditions.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Carries the independent domain state used by both surface and spray.
+   */
   state: IAutoMovieFluidState;
 
-  /** Free-surface geometry derived from that state. */
+  /**
+   * Free-surface geometry derived from that state.
+   *
+   * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-flow-spray Exposes the visible flow surface without inventing another solve.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Projects the independent domain into feature geometry.
+   */
   surface: IAutoMovieFluidSurface;
 
-  /** Bounded decorative spray sampled at the same step. */
+  /**
+   * Bounded decorative spray sampled at the same step.
+   *
+   * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-flow-spray Carries the declared spray population at the surface's step.
+   * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Keeps spray and surface on one coherent fluid-domain frame.
+   */
   spray: IAutoMovieFluidSpraySample;
 }
 
@@ -248,6 +275,8 @@ export interface IAutoMovieWaterFeatureFrame {
  * solve — two features over the same domain must never disagree about where the
  * water is.
  *
+ * @evidence requirements/interior/water-and-fluid-features.md#interior-fluid-flow-spray Lowers the authored water mode to state, surface, and bounded spray.
+ * @evidence specifications/interior-space/services-wet-and-fluid.md#interior-space-water-feature-fluid-domain Produces the renderer-ready result of the feature's independent fluid domain.
  * @author Samchon
  */
 export const lowerWaterFeature = (props: {

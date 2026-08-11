@@ -1,4 +1,4 @@
-import {
+import type {
   IAutoMovieSoftBodyBudget,
   IAutoMovieSoftBodyDomain,
   IAutoMovieSoftBodyState,
@@ -33,6 +33,96 @@ const NEIGHBOURS: ReadonlyArray<
   [0, -2, 2],
   [0, 2, 2],
 ];
+
+/**
+ * One hard anchor target resolved on the soft solver's fixed step.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Samples moving anchors on the same deterministic clock as cloth.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Carries an already resolved anchor boundary into one step.
+ */
+export interface IAutoMovieSoftBodyResolvedAnchor {
+  /**
+   * Anchored row-major particle index.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Keeps the authored cloth attachment identity.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Identifies the hard boundary particle.
+   */
+  particle: number;
+  /**
+   * World-space target sampled for this step.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Derives cloth motion from the resolved primary motion.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Supplies the selected moving boundary without inventing it.
+   */
+  position: IAutoMovieVector3;
+}
+
+/**
+ * One resolved capsule using the validation proxy's segment-and-radius meaning.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Reuses the shared body collider representation.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Resolves cloth against a bounded moving capsule.
+ */
+export interface IAutoMovieSoftBodyResolvedCapsule {
+  /**
+   * Stable source capsule identity.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Keeps collider identity inspectable.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Preserves collider state across steps.
+   */
+  id: string;
+  /**
+   * First resolved segment endpoint.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Uses the current body proxy endpoint.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Supplies one moving capsule endpoint.
+   */
+  from: IAutoMovieVector3;
+  /**
+   * Second resolved segment endpoint.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Uses the current body proxy endpoint.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Supplies the other moving capsule endpoint.
+   */
+  to: IAutoMovieVector3;
+  /**
+   * Shared proxy radius in metres.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Does not create a second body volume.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Reuses the validation capsule radius.
+   */
+  radius: number;
+}
+
+/**
+ * Complete moving boundary for one absolute fixed step.
+ *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Aligns primary-motion and secondary-motion samples.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Defines the per-step boundary handoff.
+ */
+export interface IAutoMovieSoftBodyBoundarySample {
+  /**
+   * Absolute solver step.
+   *
+   * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Fixes which primary-motion sample is consumed.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Keeps seek deterministic.
+   */
+  step: number;
+  /**
+   * Resolved hard anchors for this step.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Drives attachments from declared motion.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Separates static and moving inputs.
+   */
+  anchors: readonly IAutoMovieSoftBodyResolvedAnchor[];
+  /**
+   * Resolved body capsules for this step.
+   *
+   * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-colliders Shares validation collision geometry.
+   * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Applies current collider state.
+   */
+  capsules: readonly IAutoMovieSoftBodyResolvedCapsule[];
+}
 
 /**
  * Integrate a soft-body domain to one **absolute** step of its fixed clock.
@@ -136,12 +226,121 @@ const NEIGHBOURS: ReadonlyArray<
  * rather than quietly turning into NaN frames a renderer would draw as
  * nothing.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Reconstructs the complete soft-body state at a declared absolute step.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Implements the bounded fixed-step transition of the soft solver.
  * @author Samchon
  */
 export const simulateSoftBody = (
   domain: IAutoMovieSoftBodyDomain,
   step: number,
   state: string | null = null,
+): IAutoMovieSoftBodyState => {
+  if (domain.colliders.some((collider) => collider.kind === "body-capsule"))
+    throw new Error(
+      `soft body "${domain.id}" needs resolved moving boundaries for body capsules`,
+    );
+  return simulateSoftBodyCore(domain, step, state, null);
+};
+
+/**
+ * Integrate cloth against a complete sequence of fixed-step moving boundaries.
+ *
+ * Samples must cover step zero through the requested step without gaps. Static
+ * domain anchors and colliders remain valid and are combined with the moving
+ * boundary, so omitting this API preserves the original curtain path byte for
+ * byte.
+ *
+ * @evidence requirements/motion/secondary-motion.md#motion-secondary-moving-boundary Samples the actor boundary on the cloth fixed clock.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-secondary-motion-boundary-choice Implements the explicitly selected moving-boundary path.
+ */
+export const simulateSoftBodyWithBoundaries = (
+  domain: IAutoMovieSoftBodyDomain,
+  step: number,
+  boundaries: readonly IAutoMovieSoftBodyBoundarySample[],
+  state: string | null = null,
+): IAutoMovieSoftBodyState => {
+  if (boundaries.length !== step + 1)
+    throw new Error(
+      `soft body "${domain.id}" needs one moving boundary for every step from 0 through ${step}`,
+    );
+  const movingAnchorParticles = new Set(
+    domain.anchors
+      .filter((anchor) => anchor.binding !== undefined)
+      .map((anchor) => anchor.particle),
+  );
+  const bodyCapsuleIds = new Set(
+    domain.colliders
+      .filter((collider) => collider.kind === "body-capsule")
+      .map((collider) => collider.id),
+  );
+  for (let index = 0; index < boundaries.length; ++index) {
+    const boundary = boundaries[index]!;
+    if (boundary.step !== index)
+      throw new Error(
+        `soft body "${domain.id}" moving boundary[${index}] must name absolute step ${index}`,
+      );
+    const particles = new Set<number>();
+    for (const anchor of boundary.anchors) {
+      if (
+        !Number.isSafeInteger(anchor.particle) ||
+        anchor.particle < 0 ||
+        anchor.particle >= domain.lattice.columns * domain.lattice.rows
+      )
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] has an invalid anchor particle`,
+        );
+      if (!movingAnchorParticles.has(anchor.particle))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] particle ${anchor.particle} is not an authored moving anchor`,
+        );
+      if (particles.has(anchor.particle))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] repeats anchor particle ${anchor.particle}`,
+        );
+      particles.add(anchor.particle);
+      assertVector(anchor.position, `moving boundary[${index}] anchor`);
+    }
+    for (const particle of movingAnchorParticles)
+      if (!particles.has(particle))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] is missing authored moving anchor particle ${particle}`,
+        );
+    const capsules = new Set<string>();
+    for (const capsule of boundary.capsules) {
+      if (capsule.id.trim().length === 0)
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] capsule id must not be blank`,
+        );
+      if (capsules.has(capsule.id))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] repeats capsule "${capsule.id}"`,
+        );
+      if (!bodyCapsuleIds.has(capsule.id))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] capsule "${capsule.id}" is not an authored body capsule`,
+        );
+      capsules.add(capsule.id);
+      assertVector(capsule.from, `moving boundary[${index}] capsule from`);
+      assertVector(capsule.to, `moving boundary[${index}] capsule to`);
+      if (!Number.isFinite(capsule.radius) || capsule.radius <= 0)
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] capsule radius must be finite and positive`,
+        );
+    }
+    for (const id of bodyCapsuleIds)
+      if (!capsules.has(id))
+        throw new Error(
+          `soft body "${domain.id}" moving boundary[${index}] is missing authored body capsule "${id}"`,
+        );
+  }
+  return simulateSoftBodyCore(domain, step, state, boundaries);
+};
+
+const simulateSoftBodyCore = (
+  domain: IAutoMovieSoftBodyDomain,
+  step: number,
+  state: string | null,
+  boundaries: readonly IAutoMovieSoftBodyBoundarySample[] | null,
 ): IAutoMovieSoftBodyState => {
   if (!Number.isInteger(step) || step < 0)
     throw new Error(
@@ -166,6 +365,8 @@ export const simulateSoftBody = (
   // Anchors are resolved once: a named state is a boundary condition held for
   // the whole solve, not a keyframe that moves while it is being integrated.
   const position = restConfiguration(domain, state);
+  if (boundaries !== null)
+    applyResolvedAnchors(position, boundaries[0]!.anchors);
   const velocity = new Float64Array(count * 3);
   const predicted = new Float64Array(count * 3);
   const correction = new Float64Array(count * 3);
@@ -200,15 +401,20 @@ export const simulateSoftBody = (
   let contacts = 0;
 
   for (let index = 0; index < step; ++index) {
+    const boundary = boundaries?.[index + 1] ?? null;
+    if (boundary !== null) applyResolvedAnchors(position, boundary.anchors);
     const gust = windAcceleration(domain, index * dt);
     contacts = 0;
 
     for (let particle = 0; particle < count; ++particle) {
       const base = particle * 3;
       if (inverseMass[particle] === 0) {
-        predicted[base] = position[base];
-        predicted[base + 1] = position[base + 1];
-        predicted[base + 2] = position[base + 2];
+        const moving = boundary?.anchors.find(
+          (anchor) => anchor.particle === particle,
+        );
+        predicted[base] = moving?.position.x ?? position[base];
+        predicted[base + 1] = moving?.position.y ?? position[base + 1];
+        predicted[base + 2] = moving?.position.z ?? position[base + 2];
         continue;
       }
       velocity[base] =
@@ -240,6 +446,12 @@ export const simulateSoftBody = (
     for (let particle = 0; particle < count; ++particle) {
       if (inverseMass[particle] === 0) continue;
       contacts += resolveContacts(domain.colliders, predicted, particle);
+      if (boundary !== null)
+        contacts += resolveCapsuleContacts(
+          boundary.capsules,
+          predicted,
+          particle,
+        );
     }
 
     for (let particle = 0; particle < count; ++particle) {
@@ -248,6 +460,9 @@ export const simulateSoftBody = (
         velocity[base] = 0;
         velocity[base + 1] = 0;
         velocity[base + 2] = 0;
+        position[base] = predicted[base];
+        position[base + 1] = predicted[base + 1];
+        position[base + 2] = predicted[base + 2];
         continue;
       }
       velocity[base] = (predicted[base] - position[base]) / dt;
@@ -326,6 +541,8 @@ export const simulateSoftBody = (
  * Throws when `state` names a state the domain does not declare, exactly as
  * {@link simulateSoftBody} does.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-anchors Applies the declared anchor constraints to the selected rest configuration.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-static-moving-anchor-input Resolves the step-zero state from static anchor inputs.
  * @author Samchon
  */
 export const softBodyRestConfiguration = (
@@ -347,6 +564,8 @@ export const softBodyRestConfiguration = (
  * than throw — a lowering answering for a whole shot — can ask which step a
  * second wants before asking whether the declared budget reaches it.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Maps shot time to the soft solver's absolute fixed-step state.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Selects the exact transition boundary without advancing hidden state.
  * @author Samchon
  */
 export const softBodyStepAt = (
@@ -361,6 +580,8 @@ export const softBodyStepAt = (
 /**
  * Sample a soft-body domain at a shot second, snapping down to its fixed step.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Returns the repeatable state at the requested shot time.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Applies the bounded transition sequence through the snapped step.
  * @author Samchon
  */
 export const sampleSoftBody = (
@@ -385,6 +606,8 @@ export const sampleSoftBody = (
  * step on the author's behalf. A lattice with no constraint at all — a single
  * particle — has nothing to cross and returns `0`.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-fidelity-boundary Measures whether the declared step can honor the bounded no-tunneling tier.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-failure-and-fidelity-boundary Supplies the numeric condition used to refuse unsupported soft motion.
  * @author Samchon
  */
 export const softBodyTravelNumber = (
@@ -405,6 +628,8 @@ export const softBodyTravelNumber = (
  * panel before the first solve, and the same numbers ride into the compiler's
  * report so a reviewer sees what the fabric cost.
  *
+ * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-per-frame-shot-budget Prices soft-body work across the declared shot horizon.
+ * @evidence specifications/simulation-effects-and-sound/budget-admission.md#budget-frame-shot-sequence-composition Supplies the particle, constraint, and iteration cost for composition.
  * @author Samchon
  */
 export const softBodyBudget = (
@@ -447,6 +672,8 @@ export const softBodyBudget = (
  * or a second machine reproduced the reference state rather than merely a close
  * one.
  *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-solver-state Records exact equality of one computed soft-body state.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-collider-and-solver-transition Provides the repeatability receipt for a fixed-step transition result.
  * @author Samchon
  */
 export const softBodyStateDigest = (state: IAutoMovieSoftBodyState): string => {
@@ -479,6 +706,9 @@ export const softBodyStateDigest = (state: IAutoMovieSoftBodyState): string => {
  * claiming a billion columns would otherwise be walked a billion times by the
  * very validator that exists to refuse it, and by every budget report anybody
  * asked for on the way. The length mismatch is refused on its own path.
+ *
+ * @evidence requirements/effects-and-simulation/soft-bodies-and-deformation.md#effects-soft-fidelity-boundary Measures the spatial bound that makes the fixed-step tier supportable.
+ * @evidence specifications/simulation-effects-and-sound/soft-bodies-and-deformation.md#soft-failure-and-fidelity-boundary Returns no fabricated length when the authored lattice is inconsistent.
  */
 export const shortestRestLength = (
   domain: IAutoMovieSoftBodyDomain,
@@ -665,7 +895,7 @@ const resolveContacts = (
     if (collider.kind === "plane") escapePlane(collider, predicted, base);
     else if (collider.kind === "sphere")
       escapeSphere(collider, predicted, base);
-    else escapeBox(collider, predicted, base);
+    else if (collider.kind === "box") escapeBox(collider, predicted, base);
     if (
       predicted[base] !== wasX ||
       predicted[base + 1] !== wasY ||
@@ -674,6 +904,108 @@ const resolveContacts = (
       ++resolved;
   }
   return resolved;
+};
+
+/** Write resolved hard targets into the working position buffer. */
+const applyResolvedAnchors = (
+  position: Float64Array,
+  anchors: readonly IAutoMovieSoftBodyResolvedAnchor[],
+): void => {
+  for (const anchor of anchors) {
+    const base = anchor.particle * 3;
+    position[base] = anchor.position.x;
+    position[base + 1] = anchor.position.y;
+    position[base + 2] = anchor.position.z;
+  }
+};
+
+/** Push one particle out of every resolved body capsule. */
+const resolveCapsuleContacts = (
+  capsules: readonly IAutoMovieSoftBodyResolvedCapsule[],
+  predicted: Float64Array,
+  particle: number,
+): number => {
+  const base = particle * 3;
+  let resolved = 0;
+  for (const capsule of capsules) {
+    const wasX = predicted[base];
+    const wasY = predicted[base + 1];
+    const wasZ = predicted[base + 2];
+    escapeCapsule(capsule, predicted, base);
+    if (
+      predicted[base] !== wasX ||
+      predicted[base + 1] !== wasY ||
+      predicted[base + 2] !== wasZ
+    )
+      ++resolved;
+  }
+  return resolved;
+};
+
+/** Project one point to the surface of a resolved segment-and-radius capsule. */
+const escapeCapsule = (
+  capsule: IAutoMovieSoftBodyResolvedCapsule,
+  predicted: Float64Array,
+  base: number,
+): void => {
+  const sx = capsule.to.x - capsule.from.x;
+  const sy = capsule.to.y - capsule.from.y;
+  const sz = capsule.to.z - capsule.from.z;
+  const span = sx * sx + sy * sy + sz * sz;
+  const along =
+    span === 0
+      ? 0
+      : Math.max(
+          0,
+          Math.min(
+            1,
+            ((predicted[base] - capsule.from.x) * sx +
+              (predicted[base + 1] - capsule.from.y) * sy +
+              (predicted[base + 2] - capsule.from.z) * sz) /
+              span,
+          ),
+        );
+  const closestX = capsule.from.x + sx * along;
+  const closestY = capsule.from.y + sy * along;
+  const closestZ = capsule.from.z + sz * along;
+  let dx = predicted[base] - closestX;
+  let dy = predicted[base + 1] - closestY;
+  let dz = predicted[base + 2] - closestZ;
+  let distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (distance >= capsule.radius) return;
+  if (distance === 0) {
+    if (span === 0) {
+      dx = 0;
+      dy = 1;
+      dz = 0;
+    } else {
+      // Cross the segment with the least-aligned cardinal axis, so the escape
+      // direction is radial even for a vertical capsule.
+      const length = Math.sqrt(span);
+      const nx = sx / length;
+      const ny = sy / length;
+      const nz = sz / length;
+      if (Math.abs(nx) <= Math.abs(ny) && Math.abs(nx) <= Math.abs(nz)) {
+        dx = 0;
+        dy = nz;
+        dz = -ny;
+      } else if (Math.abs(ny) <= Math.abs(nz)) {
+        dx = -nz;
+        dy = 0;
+        dz = nx;
+      } else {
+        dx = ny;
+        dy = -nx;
+        dz = 0;
+      }
+      distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    distance = distance === 0 ? 1 : distance;
+  }
+  const factor = capsule.radius / distance;
+  predicted[base] = closestX + dx * factor;
+  predicted[base + 1] = closestY + dy * factor;
+  predicted[base + 2] = closestZ + dz * factor;
 };
 
 /** Keep a particle on the allowed side of a half-space. */
@@ -795,6 +1127,16 @@ const windAcceleration = (
   return (
     wind.acceleration + wind.gustAcceleration * (4 * Math.abs(phase - 0.5) - 1)
   );
+};
+
+/** Refuse a non-finite resolved moving-boundary vector. */
+const assertVector = (value: IAutoMovieVector3, label: string): void => {
+  if (
+    !Number.isFinite(value.x) ||
+    !Number.isFinite(value.y) ||
+    !Number.isFinite(value.z)
+  )
+    throw new Error(`${label} must contain finite coordinates`);
 };
 
 /** Whether every value of the array is a real number. */

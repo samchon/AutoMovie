@@ -8,22 +8,52 @@ import {
 import { ViolationCollector } from "../validation/violation";
 import { plantingBudget } from "./planting";
 
-/** Recursion depth one planting recipe may declare. */
+/**
+ * Recursion depth one planting recipe may declare.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Bounds recursive planting derivation before it executes.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the supported depth of an interior planting recipe.
+ */
 export const PLANTING_MAX_LEVELS = 12;
 
-/** Children one branch may bear. */
+/**
+ * Children one branch may bear.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Bounds the branching factor of generated planting structure.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the supported child population of one branch.
+ */
 export const PLANTING_MAX_CHILDREN = 16;
 
-/** Branch segments one recipe may cap itself at. */
+/**
+ * Branch segments one recipe may cap itself at.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Caps the total structural work of planting derivation.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the maximum accepted branch population.
+ */
 export const PLANTING_MAX_BRANCHES = 100_000;
 
-/** Leaf occurrences one recipe may cap itself at. */
+/**
+ * Leaf occurrences one recipe may cap itself at.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Caps the total foliage work of planting derivation.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the maximum accepted leaf population.
+ */
 export const PLANTING_MAX_LEAVES = 1_000_000;
 
-/** Members one cluster may place. */
+/**
+ * Members one cluster may place.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Bounds the installation population before placement begins.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the maximum accepted cluster membership.
+ */
 export const PLANTING_MAX_MEMBERS = 10_000;
 
-/** Seeded placement attempts one member may cost. */
+/**
+ * Seeded placement attempts one member may cost.
+ *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Bounds rejection sampling for every cluster member.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Defines the maximum placement work per member.
+ */
 export const PLANTING_MAX_ATTEMPTS = 64;
 
 /**
@@ -39,6 +69,8 @@ export const PLANTING_MAX_ATTEMPTS = 64;
  * clamped plant is a plant whose author was told nothing and whose frames
  * changed anyway.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-soft-simulation-bound Refuses a planting recipe whose structure or work exceeds the bounded tier.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Validates the procedural structure before interior planting derivation.
  * @author Samchon
  */
 export const validatePlantingDomain = (props: {
@@ -332,6 +364,8 @@ export const validatePlantingDomain = (props: {
  * arrangement here is what keeps {@link arrangePlantingCluster} from silently
  * returning fewer members than an author believed they had asked for.
  *
+ * @evidence requirements/interior/soft-materials-plants-and-deformation.md#interior-plant-placement-state Refuses impossible member counts, regions, spacing, and variation before placement.
+ * @evidence specifications/interior-space/elements-furnishing-and-clearance.md#interior-space-soft-furnishing-planting Validates the bounded arrangement half of an interior planting.
  * @author Samchon
  */
 export const validatePlantingCluster = (props: {

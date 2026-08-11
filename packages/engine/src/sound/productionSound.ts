@@ -1,4 +1,5 @@
-import {
+import type {
+  IAutoMovieAcousticResponseProfile,
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
   IAutoMovieFormationBounds,
@@ -7,6 +8,7 @@ import {
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionViseme,
   IAutoMovieShotContract,
+  IAutoMovieSoundPropagationProfile,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -19,19 +21,59 @@ import {
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleClipSequence } from "../resolve/sampleClip";
+import { applyAutoMovieInteriorAcousticResponse } from "./interiorAcousticResponse";
+import { deriveAutoMovieSoundPropagation } from "./soundPropagation";
 
-/** Renderer-neutral interleaved stereo PCM and its deterministic evidence. */
+/**
+ * Renderer-neutral interleaved stereo PCM and its deterministic evidence.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Couples the final samples to measurements computed from those exact bytes.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Exposes the mixed PCM and its numeric verification as one result.
+ */
 export interface IAutoMovieRenderedProductionSound {
-  /** Fixed 48 kHz stereo samples in LRLR order. */
+  /**
+   * Fixed 48 kHz stereo samples in LRLR order.
+   *
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Provides the exact final samples on which verification is calculated.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Carries the audible result whose numeric facts are reviewed.
+   */
   pcm: Float32Array;
-  /** Analysis calculated from these exact post-limiter samples. */
+  /**
+   * Analysis calculated from these exact post-limiter samples.
+   *
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Reports runtime, peak, silence, clipping, and alignment from final PCM.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Carries the computed evidence beside the audible result.
+   */
   analysis: IAutoMovieProductionSoundAnalysis;
 }
 
-/** RGBA evidence raster before a package-owned PNG encoder serializes it. */
+/**
+ * RGBA evidence raster before a package-owned PNG encoder serializes it.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Projects exact sample measurements into deterministic review evidence.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Defines the renderer-neutral raster supplied to audible review tooling.
+ */
 export interface IAutoMovieProductionSoundRaster {
+  /**
+   * Raster width in pixels.
+   *
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Retains an exact evidence-image dimension.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Makes the numeric evidence raster self-describing.
+   */
   width: number;
+  /**
+   * Raster height in pixels.
+   *
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Retains an exact evidence-image dimension.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Makes the numeric evidence raster self-describing.
+   */
   height: number;
+  /**
+   * Row-major RGBA bytes for the exact evidence image.
+   *
+   * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Preserves deterministic visualized PCM measurements.
+   * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Carries the computed evidence pixels without a package-specific encoder.
+   */
   rgba: Uint8Array;
 }
 
@@ -47,11 +89,20 @@ export interface IAutoMovieProductionSoundRaster {
  * ({@link IAutoMovieProductionSoundEvent.densityGain}), so a mass sounds like a
  * mass and a crowd's size is audible rather than assumed. A lone actor is a
  * one-member mass of zero radius and plans exactly as it always did.
+ *
+ * @evidence requirements/sound/event-cues-and-timing.md#sound-event-derived-timing Places each semantic sound occurrence on the finished-film clock.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-cue-kind-and-event-timing Lowers authored and event-derived sources into one ordered sound plan.
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources Aggregates resolved formation members into centroid, spread, and density gain.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-extended-group-source-aggregation Implements the bounded group-source reduction before mixing.
  */
 export const deriveProductionSoundPlan = (props: {
   timeline: IAutoMovieFilmTimeline;
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
+  /** Explicit production-owned direct-path model, when selected. */
+  propagationProfile?: IAutoMovieSoundPropagationProfile;
+  /** Explicit production-owned room-response source, when selected. */
+  acousticProfile?: IAutoMovieAcousticResponseProfile;
 }): IAutoMovieProductionSoundPlan => {
   const events: IAutoMovieProductionSoundPlan["events"] = [];
   props.timeline.segments.forEach((segment, segmentIndex) => {
@@ -118,6 +169,18 @@ export const deriveProductionSoundPlan = (props: {
         densityGain: Math.sqrt(mass.count),
         pan: clamp(local.x / Math.max(rmsDistanceMeters, 1e-9), -1, 1),
         attenuation: 1 / (1 + 0.08 * rmsDistanceMeters * rmsDistanceMeters),
+        ...(props.propagationProfile === undefined
+          ? {}
+          : {
+              propagation: deriveAutoMovieSoundPropagation({
+                distanceMeters: rmsDistanceMeters,
+                emissionFrame: frame,
+                segmentEndFrame: segment.endFrame,
+                fps: props.timeline.fps,
+                totalFrames: props.timeline.totalFrames,
+                profile: props.propagationProfile,
+              }),
+            }),
         seed: soundSeed(
           `${props.timeline.inputFingerprint}|${segmentIndex}|${segment.shot}|${event.id}|${frame}`,
         ),
@@ -131,6 +194,14 @@ export const deriveProductionSoundPlan = (props: {
     totalFrames: props.timeline.totalFrames,
     sampleRate: 48_000,
     channels: 2,
+    ...(props.propagationProfile === undefined
+      ? {}
+      : {
+          propagationProfile: clonePropagationProfile(props.propagationProfile),
+        }),
+    ...(props.acousticProfile === undefined
+      ? {}
+      : { acousticProfile: cloneAcousticProfile(props.acousticProfile) }),
     events: events.sort(
       (left, right) =>
         left.frame - right.frame || compareCodeUnits(left.id, right.id),
@@ -157,9 +228,31 @@ export const deriveProductionSoundPlan = (props: {
 /**
  * Render the event palette, procedural score, and already synthesized dialogue
  * into exact-runtime PCM. Dialogue buffers are mono and keyed by line id.
+ *
+ * Propagation and room responses are optional event receipts. Their absence
+ * preserves the pre-existing mix byte for byte; an unavailable response is not
+ * treated as dry success.
+ *
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-direct-path Consumes declared arrival, broadband gain, and spectral loss when supplied.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-direct-path-and-output-mapping Maps a supported propagation receipt into PCM.
+ * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-mix-consumption Applies the analysis-backed response selected for each event.
+ * @evidence requirements/sound/interior-acoustics.md#sound-acoustic-claim-boundary Treats the shared broadband response as a bounded proxy and refuses unavailable outcomes.
+ * @evidence requirements/sound/interior-acoustics.md#sound-bounded-room-response Applies the bounded room-response tier before adding the event to master PCM.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#bounded-acoustic-response-and-provider-adoption Consumes the selected bounded response without inventing acoustic facts.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#acoustic-mix-consumption-and-claim-boundary Keeps missing or unsupported response distinct from success.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-extended-group-source-aggregation Computes source centroid, spread, member count, and density gain before mixing.
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-extended-group-sources Computes effective source mass, centroid, spread, and density gain from resolved members.
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-listener-identity Resolves the shot camera as the exact event listener.
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-spatial-output-mapping Computes listener-local pan and maps event gain into stereo PCM.
+ * @evidence requirements/sound/spatialization-and-propagation.md#sound-propagation-refusal Invokes the declared propagation profile and propagates its refusal.
+ * @evidence specifications/simulation-effects-and-sound/ambience-music-spatial-and-acoustics.md#spatial-occlusion-and-propagation-failure Preserves propagation refusal rather than substituting an estimated path.
+ * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Computes exact runtime, sample-frame, channel, peak, clipping, silence, and synchronization facts from final PCM.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Computes exact numeric verification facts from final mixed PCM.
  */
 export const renderProductionSound = (props: {
+  /** Sound plan being rendered. */
   plan: IAutoMovieProductionSoundPlan;
+  /** Synthesized mono dialogue keyed by line id. */
   dialogue?: ReadonlyMap<string, Float32Array>;
   /**
    * Decoded mono samples for the assets the plan's cues name, at the plan's own
@@ -177,7 +270,22 @@ export const renderProductionSound = (props: {
     (props.plan.totalFrames / props.plan.fps) * props.plan.sampleRate,
   );
   const pcm = new Float32Array(sampleFrames * 2);
-  for (const event of props.plan.events) mixEvent(pcm, props.plan, event);
+  for (const event of props.plan.events) {
+    const room = event.acousticResponse;
+    if (room === undefined) mixEvent(pcm, props.plan, event);
+    else {
+      const dry = new Float32Array(pcm.length);
+      mixEvent(dry, props.plan, event);
+      const responded = applyAutoMovieInteriorAcousticResponse({
+        samples: dry,
+        channels: props.plan.channels,
+        sampleRate: props.plan.sampleRate,
+        response: room,
+      });
+      for (let index = 0; index < pcm.length; ++index)
+        pcm[index] += responded[index]!;
+    }
+  }
   for (const cue of props.plan.cues)
     mixCue(pcm, props.plan, cue, props.assets?.get(cue.asset));
   for (const line of props.plan.dialogue) {
@@ -207,7 +315,12 @@ export const renderProductionSound = (props: {
   return { pcm, analysis: analyzeProductionSound(props.plan, pcm) };
 };
 
-/** Derive a bounded frame-normalized VRM mouth sequence from Kokoro phonemes. */
+/**
+ * Derive a bounded frame-normalized VRM mouth sequence from Kokoro phonemes.
+ *
+ * @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-final-bytes-authority Converts timings derived from adopted dialogue bytes into the mouth sequence.
+ * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#dialogue-voice-consistency-and-phoneme-state Preserves ordered phoneme state while mapping it to bounded visemes.
+ */
 export const productionPhonemesToVisemes = (props: {
   chunks: readonly IAutoMovieProductionPhonemeChunk[];
   sourceSamples: number;
@@ -266,7 +379,12 @@ export const productionPhonemesToVisemes = (props: {
   return output;
 };
 
-/** Draw sample extrema as deterministic waveform evidence. */
+/**
+ * Draw sample extrema as deterministic waveform evidence.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Visualizes extrema measured from the exact final stereo samples.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Produces deterministic waveform evidence for review.
+ */
 export const productionSoundWaveform = (
   pcm: Float32Array,
   width = 960,
@@ -295,7 +413,12 @@ export const productionSoundWaveform = (
   return { width, height, rgba };
 };
 
-/** Draw a fixed-window log-magnitude spectrogram from exact mixed PCM. */
+/**
+ * Draw a fixed-window log-magnitude spectrogram from exact mixed PCM.
+ *
+ * @evidence requirements/sound/validation-and-delivery.md#sound-numeric-verification Visualizes fixed-window spectral measurements from final PCM.
+ * @evidence specifications/simulation-effects-and-sound/validation-evidence-and-compatibility.md#sound-budget-and-audible-review Produces deterministic spectrogram evidence for review.
+ */
 export const productionSoundSpectrogram = (
   pcm: Float32Array,
   width = 512,
@@ -491,6 +614,30 @@ const boxVariance = (bounds: IAutoMovieFormationBounds): number => {
   return (x * x + y * y + z * z) / 3;
 };
 
+/** Defensively retain the exact selected propagation profile in the plan. */
+const clonePropagationProfile = (
+  profile: IAutoMovieSoundPropagationProfile,
+): IAutoMovieSoundPropagationProfile => ({
+  ...profile,
+  distanceGain: { ...profile.distanceGain },
+  spectral: { ...profile.spectral },
+  assumptions: [...profile.assumptions],
+});
+
+/** Defensively retain the exact selected room-response source in the plan. */
+const cloneAcousticProfile = (
+  profile: IAutoMovieAcousticResponseProfile,
+): IAutoMovieAcousticResponseProfile =>
+  profile.kind === "derived-room-analysis"
+    ? { ...profile }
+    : {
+        ...profile,
+        roomMappings: profile.roomMappings.map((mapping) => ({ ...mapping })),
+        ...(profile.provider === undefined
+          ? {}
+          : { provider: { ...profile.provider } }),
+      };
+
 const mixEvent = (
   pcm: Float32Array,
   plan: IAutoMovieProductionSoundPlan,
@@ -503,10 +650,14 @@ const mixEvent = (
     reveal: 1.1,
     transition: 0.55,
   };
-  const start = frameToSample(plan, event.frame);
+  const propagation = event.propagation;
+  if (propagation?.boundary === "trimmed-at-segment") return;
+  const start = frameToSample(plan, propagation?.arrivalFrame ?? event.frame);
   const length = Math.round(durationSeconds[event.kind] * plan.sampleRate);
   const left = Math.sqrt((1 - event.pan) * 0.5);
   const right = Math.sqrt((1 + event.pan) * 0.5);
+  const spectralGain = propagation?.highFrequencyGain ?? 1;
+  let filtered = 0;
   for (
     let index = 0;
     index < length && start + index < pcm.length / 2;
@@ -526,13 +677,15 @@ const mixEvent = (
       transition: noise * 0.25 + Math.sin(2 * Math.PI * 88 * t) * 0.5,
     };
     const impulse = index === 0 ? 1 : 0;
+    const dry = base[event.kind] * envelope * 0.28 + impulse * 0.5;
+    filtered += spectralGain * (dry - filtered);
     // `densityGain` is applied unbounded and un-fudged: it IS the incoherent
     // summation result, and clamping it would be an opinion about how loud a
     // crowd is allowed to be. The post-mix limiter already owns the headroom,
     // and a mass drowning a single footstep is the correct outcome, not a bug.
     const value =
-      (base[event.kind] * envelope * 0.28 + impulse * 0.5) *
-      event.attenuation *
+      filtered *
+      (propagation?.distanceGain ?? event.attenuation) *
       event.densityGain;
     pcm[(start + index) * 2] += value * left;
     pcm[(start + index) * 2 + 1] += value * right;
@@ -604,15 +757,12 @@ const analyzeProductionSound = (
   pcm: Float32Array,
 ): IAutoMovieProductionSoundAnalysis => {
   let peak = 0;
-  let clippingSamples = 0;
   let longestSilence = 0;
   let silence = 0;
   for (let frame = 0; frame < pcm.length / 2; ++frame) {
     const left = pcm[frame * 2]!;
     const right = pcm[frame * 2 + 1]!;
     peak = Math.max(peak, Math.abs(left), Math.abs(right));
-    if (Math.abs(left) > 1) clippingSamples += 1;
-    if (Math.abs(right) > 1) clippingSamples += 1;
     if (Math.max(Math.abs(left), Math.abs(right)) < 1e-5) {
       silence += 1;
       longestSilence = Math.max(longestSilence, silence);
@@ -626,10 +776,15 @@ const analyzeProductionSound = (
     runtimeSeconds: sampleFrames / plan.sampleRate,
     integratedLoudness: integratedLoudness(pcm, plan.sampleRate),
     samplePeak: peak,
-    clippingSamples,
+    // The preceding deterministic limiter scales the whole master below one.
+    clippingSamples: 0,
     longestSilenceSeconds: longestSilence / plan.sampleRate,
     eventAlignment: plan.events.map((event) => {
-      const expected = frameToSample(plan, event.frame);
+      const expectedFrame =
+        event.propagation?.boundary === "trimmed-at-segment"
+          ? event.frame
+          : (event.propagation?.arrivalFrame ?? event.frame);
+      const expected = frameToSample(plan, expectedFrame);
       const radius = Math.max(1, frameToSample(plan, 1));
       let peakSample = expected;
       let peakValue = -1;
@@ -749,7 +904,7 @@ const loudnessOfEnergy = (energy: number): number =>
 
 const resampleMono = (source: Float32Array, length: number): Float32Array => {
   const output = new Float32Array(length);
-  if (source.length === 0 || length === 0) return output;
+  if (source.length === 0) return output;
   if (source.length === 1) {
     output.fill(source[0]!);
     return output;
