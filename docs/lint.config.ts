@@ -5,10 +5,10 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * Product-contract evidence from package-independent specifications to
  * observable requirements.
  *
- * Every selected specification section owes at least one direct requirement
- * citation, and every selected requirement section must receive positive
- * specification evidence. README files participate through the same recursive
- * population instead of a filename exception.
+ * Every selected requirement section participates in the specification graph.
+ * README files use the same recursive populations instead of a filename
+ * exception, and a claim may cite any number of requirements or carry a narrow
+ * `@evidenceExclude` when that exact relationship does not apply.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
@@ -20,7 +20,6 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         files: ["requirements/**/*.md"],
         symbol: ["h2", "h3"],
-        noEvidenceExclude: true,
       },
     },
   ],
