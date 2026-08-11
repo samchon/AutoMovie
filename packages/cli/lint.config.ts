@@ -21,9 +21,11 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/agent-authoring/README.md",
           "requirements/agent-authoring/capability-discovery.md",
           "requirements/agent-authoring/project-ownership.md",
           "requirements/agent-authoring/source-owned-loop.md",
+          "requirements/product/README.md",
           "requirements/product/capability-and-content.md",
           "requirements/product/extensibility-and-compatibility.md",
         ],
@@ -44,6 +46,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/authoring-and-authority/README.md",
           "specifications/authoring-and-authority/capability-and-content-boundary.md",
           "specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md",
           "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
@@ -61,6 +64,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/operations-and-recovery/README.md",
           "requirements/operations-and-recovery/failure-modes-and-recovery.md",
           "requirements/operations-and-recovery/idempotency-and-side-effects.md",
           "requirements/operations-and-recovery/partial-artifacts-and-publication.md",
@@ -77,6 +81,7 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/execution-and-recovery/README.md",
           "specifications/execution-and-recovery/artifacts-and-atomic-publication.md",
           "specifications/execution-and-recovery/failure-reconciliation-and-disaster-recovery.md",
           "specifications/execution-and-recovery/retry-backoff-and-idempotency.md",
@@ -93,10 +98,13 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "requirements/diagnostics/README.md",
           "requirements/diagnostics/input-and-result-classification.md",
           "requirements/diagnostics/partial-artifacts-and-recovery.md",
+          "requirements/evidence-and-provenance/README.md",
           "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md",
           "requirements/evidence-and-provenance/completeness-freshness-and-refusal.md",
+          "requirements/operations-and-recovery/README.md",
           "requirements/operations-and-recovery/cache-integrity-and-dependency-loss.md",
         ],
         symbol: ["h2", "h3"],
@@ -111,9 +119,12 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         root: "../../docs",
         files: [
+          "specifications/evidence-and-provenance/README.md",
           "specifications/evidence-and-provenance/canonical-digests-and-content-identity.md",
           "specifications/evidence-and-provenance/completeness-freshness-and-refusal.md",
+          "specifications/execution-and-recovery/README.md",
           "specifications/execution-and-recovery/checkpoints-resume-cache-and-dependencies.md",
+          "specifications/validation-and-diagnostics/README.md",
           "specifications/validation-and-diagnostics/classification-and-causality.md",
           "specifications/validation-and-diagnostics/partial-artifacts-and-refusal.md",
         ],
