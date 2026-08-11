@@ -26,7 +26,9 @@ Author는 source identity 또는 명시된 candidate set과 selection rule을 �
 <!-- @evidence requirements/sound/scope-and-identity.md#sound-emission-presentation 이 절은 emission과 presentation을 서로 다른 시간으로 보존한다. -->
 <!-- @evidence requirements/motion/timing-and-semantic-events.md#motion-event-identity-payload 이 절은 cue의 causal identity가 motion event payload를 그대로 보존하게 한다. -->
 
-Cue identity는 production, event identity, cue role, emitter identity와 local ordinal의 합성이다. Cue 상태는 source 또는 procedural recipe, emission time, propagation으로 얻은 arrival time, edit/mix가 배치한 presentation time과 duration을 가진다. Deduplication은 identity equality로만 수행하며 이름이나 가까운 시간이라는 이유로 다른 사건을 합치지 않는다.
+Cue identity는 production, event identity, cue role, emitter identity와 stable local ordinal의 합성이다. Cue가 adopted source 또는 procedural layer를 presentation에 놓을 때마다 cue identity, source-layer role과 stable occurrence ordinal에서 presentation source instance identity를 만들고, source revision, source range, presentation rangeㆍtime transform, emitter와 gain state를 그 instance revision에 결속한다. 같은 asset 또는 derived source를 여러 cue나 layer가 재사용해도 presentation instance identity는 서로 달라야 하며 입력 배열 순서, decode cache key와 source digest가 occurrence identity를 대신하지 않는다.
+
+Cue 상태는 emission time, propagation으로 얻은 arrival time, edit/mix가 배치한 presentation time과 duration을 가진다. Deduplication은 cue와 presentation instance의 각 identity equality로만 수행하며 이름, 같은 source bytes 또는 가까운 시간이라는 이유로 다른 occurrence를 합치지 않는다.
 
 ### One-shot, sustained, event timing {#sound-cue-kind-and-event-timing}
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-one-shot-sustained 이 절은 순간 cue와 lifecycle source의 상태를 분리한다. -->
@@ -43,7 +45,7 @@ Emission과 presentation film-time은 fixed audio clock의 정수 sample index�
 ### Cue failure {#sound-cue-failure-contract}
 <!-- @evidence requirements/sound/event-cues-and-timing.md#sound-cue-refusal 이 절은 사건ㆍsourceㆍtime이 불완전한 cue를 실패시킨다. -->
 
-Missing event, 중복 cue identity, unbounded sustained source, 음수 duration, unresolved emitter, 범위 밖 sample, arrival before emission, source 없는 cue는 거절한다. 실패한 cue를 silence나 zero-length clip으로 만들어 complete mix에 넣지 않는다.
+Missing event, 중복 cue 또는 presentation source instance identity, unbounded sustained source, 음수 duration, unresolved emitter, 범위 밖 sample, arrival before emission, source 없는 cue는 거절한다. 실패한 cue를 silence나 zero-length clip으로 만들어 complete mix에 넣지 않는다.
 
 ## Dialogue bytes와 timing authority {#dialogue-bytes-and-timing-authority}
 <!-- @evidence requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-voice-visemes 이 절은 발화 audio와 lip timing을 하나의 performance record로 연결한다. -->

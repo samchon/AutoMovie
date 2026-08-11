@@ -3,14 +3,17 @@
 ## Mix graph와 bus priority {#sound-mix-graph-and-bus-priority}
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-mix-hierarchy-loudness 이 절은 의미 source에서 delivery master까지 추적 가능한 mix를 정의한다. -->
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-bus-priority 이 절은 dialogue, effects, ambience, music 등의 bus와 priority를 명시한다. -->
+<!-- @evidence requirements/sound/event-cues-and-timing.md#sound-cue-identity-deduplication 이 절은 같은 source를 재사용하는 cue occurrence와 route를 독립 identity로 보존한다. -->
 
-Mix input은 presentation sample ranges를 가진 source instances, stable bus graph, channel layouts, gain/automation, acoustic response와 delivery target이다. Graph는 acyclic이고 각 source는 하나 이상의 명시 route를 가지며 priority는 sidechain/ducking 또는 author decision에만 사용한다. Output은 bus stems, master, routing receipt와 sample range다.
+Mix input은 presentation sample ranges와 stable unique identity를 가진 presentation source instances, stable bus graph, channel layouts, gain/automation, acoustic response와 delivery target이다. 각 directed route는 source instance 또는 upstream bus identity, destination bus 또는 output identity, route role과 stable route ordinal에서 고유한 identity를 만들고 gain, processing split와 active range를 route revision에 결속한다. Graph는 acyclic이고 각 source instance는 하나 이상의 명시 route를 가지며 같은 source instance가 여러 destination에 기여하면 route identity도 각각 달라야 한다. Priority는 sidechain/ducking 또는 author decision에만 사용한다. Output은 bus stems, master, routing receipt와 sample range다.
 
 ### Processing chain과 stable summation {#sound-processing-chain-and-stable-summation}
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-processing-chain 이 절은 processing의 순서와 parameter revision을 결과 identity로 만든다. -->
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-deterministic-summation 이 절은 worker와 입력 열거 순서가 sample 합에 영향을 주지 않게 한다. -->
 
-각 route는 decode/resample, trim/envelope, spatial/acoustic processing, gain/automation, bus processing, master processing의 선언된 순서를 가진다. 같은 sample에 기여하는 항목은 bus depth, role priority, source identity, local layer ordinal의 총순서로 합산한다. Parallel execution은 이 순서를 보존한 partial block만 반환하며 completion order로 더하지 않는다.
+각 route는 decode/resample, trim/envelope, spatial/acoustic processing, gain/automation, bus processing, master processing의 선언된 순서를 가진다. 같은 sample에 기여하는 항목의 canonical total-order key는 bus depth, bus identity, role priority, presentation source instance identity, route identity, stable layer ordinal과 stable route-local contribution ordinal을 순서대로 포함한다. Route, layer와 contribution ordinal은 각각의 owning identity 안에서 선언되고 traversal이나 입력 열거 순서에서 다시 부여되지 않는다. Adopted asset identity, source digest, input enumeration position, map iteration과 worker completion order는 tie breaker가 아니다.
+
+서로 다른 contribution이 완전한 canonical key를 공유하면 mix graph는 ambiguous하며 accumulation 전에 충돌한 instance와 route identities를 지목해 거절한다. Parallel execution은 canonical key와 sample interval로 정렬된 partial block만 반환하고 merge도 같은 total order를 사용하므로 worker count, chunk boundary와 completion order가 합산 순서나 mix identity를 바꾸지 않는다.
 
 ### Automation sample clock {#sound-mix-automation-sample-clock}
 <!-- @evidence requirements/sound/mix-hierarchy-and-loudness.md#sound-mix-automation-clock 이 절은 automation을 fixed sample clock에서 직접 평가하게 한다. -->
