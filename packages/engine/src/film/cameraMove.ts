@@ -27,6 +27,9 @@ const UP: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
  * demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x = up
  * × z, y = z × x) converted to a quaternion; aiming straight up/down
  * degenerates the cross product, so +Z steps in as the reference.
+ *
+ * @evidence requirements/camera/scope-and-identity.md#camera-spatial-state-binding Constructs a world-up-stabilized quaternion that points camera −Z at the authored direction without rolling the horizon.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding lookRotation realizes explicit camera spatial binding: The rotation that points a camera's −Z down `direction` while keeping its horizon level (world-up stabilized), what a shortest-arc `aimRotation` cannot do: the shortest arc from −Z rolls the frame on off-axis aims, which the demo's orbit shot exposed as a tilted horizon. Standard look-at basis (x = up × z, y = z × x) converted to a quaternion; aiming straight up/down degenerates the cross product, so +Z steps in as the reference.
  */
 export const lookRotation = (
   direction: IAutoMovieVector3,
@@ -73,6 +76,9 @@ export const lookRotation = (
  * The framing grammar: how much vertical world-space the frame shows, as a
  * multiple of the subject's height. `close` fills the frame with head and
  * shoulders; `wide` shows the subject small in its surroundings.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing FRAMING_HEIGHT_FRACTION drives required-landmark framing: The framing grammar: how much vertical world-space the frame shows, as a multiple of the subject's height. `close` fills the frame with head and shoulders; `wide` shows the subject small in its surroundings.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations FRAMING_HEIGHT_FRACTION realizes landmark-based framing: The framing grammar: how much vertical world-space the frame shows, as a multiple of the subject's height. `close` fills the frame with head and shoulders; `wide` shows the subject small in its surroundings.
  */
 export const FRAMING_HEIGHT_FRACTION: Record<
   IAutoMovieCameraAction["framing"],
@@ -82,13 +88,21 @@ export const FRAMING_HEIGHT_FRACTION: Record<
 /**
  * Where on the subject the camera aims, as a fraction of its height: a close
  * shot looks at the head, a full shot at the middle of the body.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing FRAMING_AIM_FRACTION drives required-landmark framing: Where on the subject the camera aims, as a fraction of its height: a close shot looks at the head, a full shot at the middle of the body.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations FRAMING_AIM_FRACTION realizes landmark-based framing: Where on the subject the camera aims, as a fraction of its height: a close shot looks at the head, a full shot at the middle of the body.
  */
 export const FRAMING_AIM_FRACTION: Record<
   IAutoMovieCameraAction["framing"],
   number
 > = { wide: 0.5, full: 0.5, medium: 0.72, close: 0.85 };
 
-/** Stand-in height when the subject has no skeleton to measure. */
+/**
+ * Stand-in height when the subject has no skeleton to measure.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing DEFAULT_SUBJECT_HEIGHT drives required-landmark framing: Stand-in height when the subject has no skeleton to measure.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations DEFAULT_SUBJECT_HEIGHT realizes landmark-based framing: Stand-in height when the subject has no skeleton to measure.
+ */
 export const DEFAULT_SUBJECT_HEIGHT = 1.7;
 
 /** A whip pan snaps to its new aim in this many seconds. */
@@ -119,13 +133,26 @@ const FOLLOW_HZ = 4;
  * null` means the subject holds still; a `follow` move on it degenerates to a
  * static framing.
  *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject drives required-landmark framing: What a `frame` action points the camera at, resolved by the caller: the subject's base (ground) point, its measured height, and, when the subject has an actor or effective object motion, its animated base over shot time. `at: null` means the subject holds still; a `follow` move on it degenerates to a static framing.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject realizes landmark-based framing: What a `frame` action points the camera at, resolved by the caller: the subject's base (ground) point, its measured height, and, when the subject has an actor or effective object motion, its animated base over shot time. `at: null` means the subject holds still; a `follow` move on it degenerates to a static framing.
+ *
  * @author Samchon
  */
 export interface IAutoMovieFramedSubject {
-  /** Base (ground) point at the move's start. */
+  /**
+   * Base (ground) point at the move's start.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject.base drives required-landmark framing: Base (ground) point at the move's start.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.base realizes landmark-based framing: Base (ground) point at the move's start.
+   */
   base: IAutoMovieVector3;
 
-  /** Subject height in meters (drives framing distance and aim height). */
+  /**
+   * Subject height in meters (drives framing distance and aim height).
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject.height drives required-landmark framing: Subject height in meters (drives framing distance and aim height).
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.height realizes landmark-based framing: Subject height in meters (drives framing distance and aim height).
+   */
   height: number;
 
   /**
@@ -133,23 +160,48 @@ export interface IAutoMovieFramedSubject {
    *
    * A single figure has no horizontal extent worth solving from: it is taller
    * than it is wide at every shot size, so its framing is the vertical fit and
-   * always has been. A mass is the opposite — two thousand figures on a field
-   * are a hundred meters across and one and a half tall — and framing that from
+   * always has been. A mass is the opposite — two thousand figures on a field are
+   * a hundred meters across and one and a half tall — and framing that from
    * height alone puts the camera where one person would fill the frame and the
    * unit runs off both edges.
    *
    * Absent or zero states that no horizontal extent was measured, which leaves
    * the vertical fit in sole charge exactly as before.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject.radius supplies the horizontal half-span the framing solve must contain when subject width demands more distance than height.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.radius realizes landmark-based framing: Half the subject's widest horizontal span about {@link base}, in meters. A single figure has no horizontal extent worth solving from: it is taller than it is wide at every shot size, so its framing is the vertical fit and always has been. A mass is the opposite — two thousand figures on a field are a hundred meters across and one and a half tall — and framing that from height alone puts the camera where one person would fill the frame and the unit runs off both edges. Absent or zero states that no horizontal extent was measured, which leaves the vertical fit in sole charge exactly as before.
    */
   radius?: number;
 
-  /** Animated base over shot-local seconds, or null when static. */
+  /**
+   * Animated base over shot-local seconds, or null when static.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject.at drives required-landmark framing: Animated base over shot-local seconds, or null when static.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.at realizes landmark-based framing: Animated base over shot-local seconds, or null when static.
+   */
   at: ((seconds: number) => IAutoMovieVector3) | null;
 }
 
-/** One `frame` action paired with its resolved subject. */
+/**
+ * One `frame` action paired with its resolved subject.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieCameraFrameEntry drives required-landmark framing: One `frame` action paired with its resolved subject.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieCameraFrameEntry realizes landmark-based framing: One `frame` action paired with its resolved subject.
+ */
 export interface IAutoMovieCameraFrameEntry {
+  /**
+   * Authored camera action whose framing and move are compiled.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieCameraFrameEntry.action drives required-landmark framing: Authored camera action whose framing and move are compiled.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieCameraFrameEntry.action realizes landmark-based framing: Authored camera action whose framing and move are compiled.
+   */
   action: IAutoMovieCameraAction;
+  /**
+   * Resolved subject extent and trajectory used by the framing solve.
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieCameraFrameEntry.subject drives required-landmark framing: Resolved subject extent and trajectory used by the framing solve.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieCameraFrameEntry.subject realizes landmark-based framing: Resolved subject extent and trajectory used by the framing solve.
+   */
   subject: IAutoMovieFramedSubject;
 }
 
@@ -182,6 +234,11 @@ export interface IAutoMovieCameraFrameEntry {
  *   fail to hold, so an unknown aspect pulls back far enough rather than
  *   cropping a mass it could not measure. A subject with no `radius` is
  *   unaffected either way.
+ * @evidence requirements/camera/position-and-movement.md#camera-path-time-sampling Fits authored subjects through the declared lens and emits camera keyframes at each framing span on the shot clock.
+ * @evidence requirements/camera/position-and-movement.md#camera-speed-easing Samples push-in, orbit, and truck moves at fixed bounded segment counts and applies the same `easeInOut` curve to their authored progress.
+ * @evidence requirements/camera/targets-focus-and-depth-boundary.md#camera-target-sampling Samples a moving framed subject through `subject.at(t)` at each emitted truck or follow key time instead of reusing its opening position.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-camera-path-direct-sampling compileCameraMove resolves the authored camera move at explicit shot-local times, making the camera path directly sampleable.
+ * @evidence specifications/camera-light-and-visibility/target-focus-exposure-and-sampling.md#clv-focus-intent-appearance-boundary Resolves the framed subject at the same shot-local instant used to emit each camera transform; it does not claim a target-loss transition policy.
  */
 export const compileCameraMove = (props: {
   clipId: string;
@@ -405,9 +462,17 @@ export const compileCameraMove = (props: {
  * record: the bundle a coverage take compiles from. Carrying the intent beside
  * the action keeps the take's `cameraIntent` in one-to-one correspondence with
  * the spans its `cameraMotion` plays, by construction.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieCameraCoverageEntry drives required-landmark framing: One `frame` action paired with its resolved subject and its resolved intent record: the bundle a coverage take compiles from. Carrying the intent beside the action keeps the take's `cameraIntent` in one-to-one correspondence with the spans its `cameraMotion` plays, by construction.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieCameraCoverageEntry realizes landmark-based framing: One `frame` action paired with its resolved subject and its resolved intent record: the bundle a coverage take compiles from. Carrying the intent beside the action keeps the take's `cameraIntent` in one-to-one correspondence with the spans its `cameraMotion` plays, by construction.
  */
 export interface IAutoMovieCameraCoverageEntry extends IAutoMovieCameraFrameEntry {
-  /** This span's resolved intent record (as the hero take's entries emit). */
+  /**
+   * This span's resolved intent record (as the hero take's entries emit).
+   *
+   * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieCameraCoverageEntry.intent drives required-landmark framing: This span's resolved intent record (as the hero take's entries emit).
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieCameraCoverageEntry.intent realizes landmark-based framing: This span's resolved intent record (as the hero take's entries emit).
+   */
   intent: IAutoMovieCameraIntent;
 }
 
@@ -424,6 +489,12 @@ export interface IAutoMovieCameraCoverageEntry extends IAutoMovieCameraFrameEntr
  * non-overlapping (the shot compiler gates that). An empty list is a locked-off
  * covering camera: `cameraMotion: null`, no intent spans, the same convention
  * as a shot with no `frame` action.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing Compiles an alternate staged camera and its per-span intent through the same subject-framing solver as the hero take.
+ * @evidence requirements/camera/scope-and-identity.md#camera-shot-distinction Keeps the alternate camera id and motion separate from the hero shot camera while compiling both from the same beat.
+ * @evidence requirements/camera/scope-and-identity.md#camera-take-lineage Carries each coverage take's camera id, motion, and ordered intent spans without merging them into the elected hero take.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations compileCameraCoverage realizes landmark-based framing: Compile one beat's coverage take (#1187): the alternate angle another staged camera plays over the beat, paired with its per-span intent as one {@link IAutoMovieShotCoverage} record. The move compiles through the same {@link compileCameraMove} framing grammar the hero take uses (the camera is a parameter, so a side camera's staged bearing frames its own angle), and the deterministic solve stays the only consumer of the geometry: the intent records ride as guide metadata, never back into the math. Entries carry the same precondition as the hero take's: sorted by `start`, non-overlapping (the shot compiler gates that). An empty list is a locked-off covering camera: `cameraMotion: null`, no intent spans, the same convention as a shot with no `frame` action.
+ * @evidence specifications/camera-light-and-visibility/camera-state-projection-and-gate.md#clv-camera-authority-spatial-binding Preserves one independent camera identity and timed intent record for the coverage branch while retaining the common shot source.
  */
 export const compileCameraCoverage = (props: {
   camera: IAutoMovieCamera;
@@ -457,6 +528,9 @@ export const compileCameraCoverage = (props: {
  * that number crops an actor's head off. {@link computeModelRestExtentY}
  * measures what a renderer actually draws; use it for anything the camera
  * frames, and keep this for questions genuinely about the rig.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing computeRestHeight derives the skeleton's rest-pose vertical landmark span used when framing a rigged subject.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations computeRestHeight realizes landmark-based framing: A skeleton's rest-pose joint span: compose each bone's rest transform down the parent chain (rotation and translation; rigs keep unit scale) and take the world-Y extent of the joints. This is the span between the extreme **joints**, which is not the subject's height and must not be used as one. A rig ends at the joints it needs for animation, and geometry continues past them at both ends: the generated `stickman` puts its highest joint at 0.92 of the declared height and its lowest at 0.24, so this returns 0.680 of the real figure. Framing solved from that number crops an actor's head off. {@link computeModelRestExtentY} measures what a renderer actually draws; use it for anything the camera frames, and keep this for questions genuinely about the rig.
  */
 export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
   if (skeleton.bones.length === 0) return 0;
@@ -552,6 +626,9 @@ const restWorldFrames = (
  * produces the vertices, so the extent cannot drift from the picture. Returns
  * null when a model has nothing to measure, leaving the caller's own fallback
  * in charge rather than inventing a height.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing computeModelRestExtentY measures drawn geometry in model space so landmark framing uses the subject's visible vertical extent.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations computeModelRestExtentY realizes landmark-based framing: A model's rest-pose vertical extent in model space: the world-Y range of the geometry a renderer would actually draw. This is the subject height the framing grammar needs, and the reason it is not {@link computeRestHeight}. A rig stops at the joints animation requires; the figure does not. The generated `stickman` has no foot bone and no head-top bone, so its joint span is 0.680 of the declared height, and a `full` shot solved from that number shows an actor from the shins up. Every part is placed the way the renderer places it — its own transform, then its attached bone's rest frame, or model space when it rides no bone — and primitives are measured through {@link tessellate}, the same code that produces the vertices, so the extent cannot drift from the picture. Returns null when a model has nothing to measure, leaving the caller's own fallback in charge rather than inventing a height.
  */
 export const computeModelRestExtentY = (
   model: IAutoMovieModel,

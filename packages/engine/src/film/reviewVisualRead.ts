@@ -57,6 +57,11 @@ const DEFAULT_SILHOUETTE_RADIUS = 0.35;
  * approximation across all three. Deterministic: pure FK (`foldRoot` +
  * `sampleMotion`), fixed-clock sampling, and stateless vector math.
  *
+ * @evidence requirements/camera/validation.md#camera-boundary-negative reviewVisualRead measures framing, silhouette, and contact boundary failures as located visual-tier notes without turning an advisory into a hard gate.
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-framing-range Samples the full shot interval and reports the first time a performing subject leaves the resolved moving camera frame.
+ * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-observation-validation-cases reviewVisualRead samples framing, contact, silhouette, and grammar boundaries and files deterministic negative observations without replacing human judgment.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-interval-crop Evaluates subject visibility at deterministic interval samples, preserving the failing time instead of judging only one representative frame.
+ *
  * @author Samchon
  */
 export const reviewVisualRead = (props: {

@@ -19,9 +19,26 @@ import { bakedTransformAt, followClipOf } from "./followClip";
 import { handoffEvents } from "./handoffEvents";
 import { IAutoMovieStagedSet } from "./stageScene";
 
-/** One validated `attachTo` job: the coupling and its source action index. */
+/**
+ * One validated `attachTo` job: the coupling and its source action index.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAttachJob preserves declared attachment handoff: One validated `attachTo` job: the coupling and its source action index.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAttachJob realizes declared attachment and object handoff: One validated `attachTo` job: the coupling and its source action index.
+ */
 export interface IAttachJob {
+  /**
+   * Validated attachment action to compile.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAttachJob.action preserves declared attachment handoff: Validated attachment action to compile.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAttachJob.action realizes declared attachment and object handoff: Validated attachment action to compile.
+   */
   action: IAutoMovieActionCall & { verb: "attachTo" };
+  /**
+   * Stable source index used for paths and ordering.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects IAttachJob.index preserves declared attachment handoff: Stable source index used for paths and ordering.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAttachJob.index realizes declared attachment and object handoff: Stable source index used for paths and ordering.
+   */
   index: number;
 }
 
@@ -64,6 +81,9 @@ const childrenOf = (action: IAutoMovieActionCall): string[] =>
  * first track time rather than by an id suffix. A coupling CYCLE has no world
  * composition (nobody stands on the ground), so it violates instead of baking
  * frozen couplings silently.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects coupleObjects resolves both beat-local handoffs and persistent mounts against compiled parent poses before baking their child follow clips.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff coupleObjects realizes declared attachment and object handoff: Bake the object couplings a shot carries, the per-beat `attachTo` handoffs and the persistent staged `mounts` (#674), into follow clips once the parents' poses have compiled. Lives in its own module because it is the hot region {@link performShot} kept growing. `attachTo` (already validated in the action scan) rides the child on the parent's bone in scene space and emits the grab/attach/detach/release {@link handoffEvents}. Each staged `mount` descends through the SAME baker, spanning the whole shot, so a rider rides every beat without re-issuing `attachTo`; an explicit `attachTo` for the same child this beat overrides its mount, and a mount emits no handoff events (standing scene state, not a per-shot pickup). A mount's parent rig and bone are validated here (staging placed the parent but had no skeletons) and returned as violations. Couplings CHAIN (#1140): a parent that is itself a coupled child this shot (a rider mounted on an animal, carrying a pole) is baked FIRST, and its riders compose onto its baked follow frame per sample instead of its staged placement, through any depth. The latest parent coupling is selected by its first track time rather than by an id suffix. A coupling CYCLE has no world composition (nobody stands on the ground), so it violates instead of baking frozen couplings silently.
  */
 export const coupleObjects = (props: {
   attachments: readonly IAttachJob[];

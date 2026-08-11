@@ -23,31 +23,69 @@ import {
 import { ViolationCollector } from "../validation/violation";
 import { forgeProp } from "./forgeProp";
 
-/** What one shot's authored object clips are checked against. */
+/**
+ * What one shot's authored object clips are checked against.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate constrains authored object motion: What one shot's authored object clips are checked against.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate realizes declared attachment and object handoff: What one shot's authored object clips are checked against.
+ */
 export interface IAutoMovieObjectMotionGate {
-  /** The staged scene, for the placements a clip may address. */
+  /**
+   * The staged scene, for the placements a clip may address.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.scene constrains authored object motion: The staged scene, for the placements a clip may address.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.scene realizes declared attachment and object handoff: The staged scene, for the placements a clip may address.
+   */
   scene: IAutoMovieScene;
 
-  /** The shot's prop registry, whose articulation lowers the joint ids. */
+  /**
+   * The shot's prop registry, whose articulation lowers the joint ids.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.props constrains authored object motion: The shot's prop registry, whose articulation lowers the joint ids.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.props realizes declared attachment and object handoff: The shot's prop registry, whose articulation lowers the joint ids.
+   */
   props?: readonly IAutoMoviePropSpec[];
 
-  /** The clips the source authored. */
+  /**
+   * The clips the source authored.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.clips constrains authored object motion: The clips the source authored.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.clips realizes declared attachment and object handoff: The clips the source authored.
+   */
   clips: readonly IAutoMovieClip[];
 
   /**
-   * The object clips the engine baked for this shot (launched flights,
-   * `attachTo` follows, staged mounts). Their ids and the channels they drive
-   * are already spoken for.
+   * The object clips the engine baked for this shot (launched flights, `attachTo`
+   * follows, staged mounts). Their ids and the channels they drive are already
+   * spoken for.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.baked constrains authored object motion: The object clips the engine baked for this shot (launched flights, `attachTo` follows, staged mounts). Their ids and the channels they drive are already spoken for.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.baked realizes declared attachment and object handoff: The object clips the engine baked for this shot (launched flights, `attachTo` follows, staged mounts). Their ids and the channels they drive are already spoken for.
    */
   baked: readonly IAutoMovieClip[];
 
-  /** Scene nodes a compiled performance drives through the rig. */
+  /**
+   * Scene nodes a compiled performance drives through the rig.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.performed constrains authored object motion: Scene nodes a compiled performance drives through the rig.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.performed realizes declared attachment and object handoff: Scene nodes a compiled performance drives through the rig.
+   */
   performed: ReadonlySet<string>;
 
-  /** Shot length in seconds; a key outside it is never played. */
+  /**
+   * Shot length in seconds; a key outside it is never played.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-object-authored-vocabulary IAutoMovieObjectMotionGate.duration constrains authored object motion: Shot length in seconds; a key outside it is never played.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.duration realizes declared attachment and object handoff: Shot length in seconds; a key outside it is never played.
+   */
   duration: number;
 
-  /** Authoring path the violations are reported against. */
+  /**
+   * Authoring path the violations are reported against.
+   *
+   * @evidence requirements/motion/object-motion-and-interaction.md#motion-interaction-refusal Carries the exact source path used to report why an authored object clip was refused.
+   * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff IAutoMovieObjectMotionGate.path realizes declared attachment and object handoff: Authoring path the violations are reported against.
+   */
   path: string;
 }
 
@@ -101,6 +139,11 @@ export interface IAutoMovieObjectMotionGate {
  * engine's own door round-trip is proved with. A clamp that fires is reported
  * with the profile that owns it, so a correction round reads "this travel, this
  * channel" instead of an anonymous number.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-interaction-refusal Refuses unstaged targets, undeclared articulation, conflicting ownership, and travel outside the prop's authored limit.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff gateAuthoredObjectMotions realizes declared attachment and object handoff: Gate the object clips a shot's source authored, so a moving thing that is not a performer can reach a compiled shot at all. Everything on `objectMotions` used to be baked by the engine from a verb: a launch's flight, a coupling's follow. Nothing else could get there, and two separate contracts already promised that something would. {@link builtOpeningPanelPlacements} says in as many words that a door which swings on screen is an `objectMotions` clip over the panel node ids it answers with, and {@link IAutoMoviePropArticulation} says a prop's hinge is a lowered joint a clip drives. Both were true of the data and false of the pipeline: no field carried such a clip, so every door in every production was a configuration that could be authored open or shut and never seen to move. One channel serves both, because they are one thing: a node in the staged graph, turned over the shot's own clock. A building's panel is a staged set piece (`<environment>/<element>`) and a prop's leaf is a lowered articulation joint (`<placement>/<joint>`), and admitting only one of them would leave the other needing a second mechanism for the same sentence. What is refused, and why each refusal is not a preference: - **A node no shot staged**, or a joint no staged prop declares. A clip   addressing nothing is written, validated, stored, and rendered as silence;   this is the same drop the honorable-channel gate closed for pointer   tracks. - **A node a performance already drives.** A performer's motion comes off its   rig, and a transform clip written over it would fight the pose every frame   with the winner decided by producer order. - **A channel a baked clip already drives**, and an id a baked clip already   carries. One authority per channel, which is the grain the sampler resolves   at, and `validateUniqueIds` refuses the shot outright on a duplicate id. - **A key outside the shot's own clock.** A time past the end is data no frame   reads, exactly as a launch landing past the end is refused rather than   trimmed. - **`cubicspline` interpolation.** The travel a prop declares is a bound this   gate proves, and it proves it at the authored keys: between two bounded   keys a `step` track never leaves the pair, and a `linear` one stays on the   segment (a translation) or the arc (a rotation) between them, so neither   can escape a componentwise bound its endpoints satisfy. A spline's tangents   can overshoot both, and nothing downstream clamps an object clip: the   viewer writes it onto the object verbatim. Refusing what cannot be bounded   is the alternative to shipping a shot whose declared limit is decoration. The bound itself is measured rather than asserted: the clips resolve through {@link resolveFrame} over the lowered graph with every staged prop's profile bound at its own placement prefix, which is the same CONSTRAIN stage the engine's own door round-trip is proved with. A clamp that fires is reported with the profile that owns it, so a correction round reads "this travel, this channel" instead of an anonymous number.
+ * @evidence requirements/motion/channels-controls-and-drivers.md#motion-channel-control-ownership Rejects an authored object track whose exact channel is already owned by a baked shot clip.
+ * @evidence specifications/performance-motion-and-staging/motion-sampling-and-composition.md#performance-motion-clip-keytime-interpolation Enforces one writer per object channel across authored and baked clip sources.
  */
 export const gateAuthoredObjectMotions = (
   gate: IAutoMovieObjectMotionGate,

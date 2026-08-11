@@ -10,7 +10,14 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
 import { FRAMING_HEIGHT_FRACTION } from "./cameraMove";
 import { IAutoMovieResolvedCamera, projectToNdc } from "./cameraProjection";
 
-/** Machine-readable film-grammar diagnostic families. */
+/**
+ * Machine-readable film-grammar diagnostic families.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding AutoMovieGrammarDiagnosticCode supports deterministic continuity findings: Machine-readable film-grammar diagnostic families.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Names line crosses, eyeline breaks, screen-direction flips, and related edit observations with stable machine-readable diagnostic codes.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar AutoMovieGrammarDiagnosticCode realizes deterministic continuity-grammar analysis: Machine-readable film-grammar diagnostic families.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Provides stable finding identities for measured camera-grammar failures instead of reducing them to untyped prose.
+ */
 export type AutoMovieGrammarDiagnosticCode =
   | "grammar-axis-crossed"
   | "grammar-jump-cut"
@@ -20,17 +27,47 @@ export type AutoMovieGrammarDiagnosticCode =
   | "grammar-reestablish"
   | "grammar-pacing";
 
-/** One subject's deterministic measurements over a shot. */
+/**
+ * One subject's deterministic measurements over a shot.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation supplies deterministic spatial-grammar analysis: One subject's deterministic measurements over a shot.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation realizes deterministic continuity-grammar analysis: One subject's deterministic measurements over a shot.
+ */
 export interface IAutoMovieGrammarSubjectObservation {
-  /** Stable scene-node or formation id. */
+  /**
+   * Stable scene-node or formation id.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.id supplies deterministic spatial-grammar analysis: Stable scene-node or formation id.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.id realizes deterministic continuity-grammar analysis: Stable scene-node or formation id.
+   */
   id: string;
-  /** World root at the opening frame. */
+  /**
+   * World root at the opening frame.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.start supplies deterministic spatial-grammar analysis: World root at the opening frame.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.start realizes deterministic continuity-grammar analysis: World root at the opening frame.
+   */
   start: IAutoMovieVector3;
-  /** World root at the closing frame. */
+  /**
+   * World root at the closing frame.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.end supplies deterministic spatial-grammar analysis: World root at the closing frame.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.end realizes deterministic continuity-grammar analysis: World root at the closing frame.
+   */
   end: IAutoMovieVector3;
-  /** Positive world-space subject height in metres. */
+  /**
+   * Positive world-space subject height in metres.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.height supplies deterministic spatial-grammar analysis: Positive world-space subject height in metres.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.height realizes deterministic continuity-grammar analysis: Positive world-space subject height in metres.
+   */
   height: number;
-  /** Resolved gaze target over the shot, or null when it is not observed. */
+  /**
+   * Resolved gaze target over the shot, or null when it is not observed.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.eyeline supplies deterministic spatial-grammar analysis: Resolved gaze target over the shot, or null when it is not observed.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.eyeline realizes deterministic continuity-grammar analysis: Resolved gaze target over the shot, or null when it is not observed.
+   */
   eyeline: {
     /** Stable semantic target id, even when that target is outside the frame. */
     target: string;
@@ -41,58 +78,179 @@ export interface IAutoMovieGrammarSubjectObservation {
   } | null;
 }
 
-/** One perspective camera sample at a shot boundary. */
+/**
+ * One perspective camera sample at a shot boundary.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarCameraObservation supplies deterministic spatial-grammar analysis: One perspective camera sample at a shot boundary.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarCameraObservation realizes deterministic continuity-grammar analysis: One perspective camera sample at a shot boundary.
+ */
 export interface IAutoMovieGrammarCameraObservation extends IAutoMovieResolvedCamera {
-  /** Vertical field of view in degrees. */
+  /**
+   * Vertical field of view in degrees.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarCameraObservation.fovY supplies deterministic spatial-grammar analysis: Vertical field of view in degrees.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarCameraObservation.fovY realizes deterministic continuity-grammar analysis: Vertical field of view in degrees.
+   */
   fovY: number;
-  /** Render width divided by height. */
+  /**
+   * Render width divided by height.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarCameraObservation.aspect supplies deterministic spatial-grammar analysis: Render width divided by height.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarCameraObservation.aspect realizes deterministic continuity-grammar analysis: Render width divided by height.
+   */
   aspect: number;
 }
 
-/** The geometric and editorial facts required to inspect one ordered shot. */
+/**
+ * The geometric and editorial facts required to inspect one ordered shot.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation supplies deterministic spatial-grammar analysis: The geometric and editorial facts required to inspect one ordered shot.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-time-sampling Carries opening and closing camera, subject, gaze-target, and travel positions so a cut can compare the outgoing close with the incoming open.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation realizes deterministic continuity-grammar analysis: The geometric and editorial facts required to inspect one ordered shot.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Supplies the two observable shot-boundary samples consumed by grammar analysis rather than a start transform or average heading.
+ */
 export interface IAutoMovieGrammarShotObservation {
-  /** Stable shot id. */
+  /**
+   * Stable shot id.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.id supplies deterministic spatial-grammar analysis: Stable shot id.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.id realizes deterministic continuity-grammar analysis: Stable shot id.
+   */
   id: string;
-  /** Positive edited duration in seconds. */
+  /**
+   * Positive edited duration in seconds.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.duration supplies deterministic spatial-grammar analysis: Positive edited duration in seconds.
+   * @evidence requirements/editorial/pacing-and-rhythm.md#editorial-duration-pattern Supplies the positive edited shot duration used to form the ordered duration series; it does not claim event density or audiovisual rhythm.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.duration realizes deterministic continuity-grammar analysis: Positive edited duration in seconds.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-pacing-rhythm Provides the per-shot input for the analyzer's duration-only pacing observation without classifying the creative result.
+   */
   duration: number;
-  /** Resolved camera at both edited shot boundaries. */
+  /**
+   * Resolved camera at both edited shot boundaries.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.camera supplies deterministic spatial-grammar analysis: Resolved camera at both edited shot boundaries.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.camera realizes deterministic continuity-grammar analysis: Resolved camera at both edited shot boundaries.
+   */
   camera: {
     /** Opening-frame camera. */
     start: IAutoMovieGrammarCameraObservation;
     /** Closing-frame camera. */
     end: IAutoMovieGrammarCameraObservation;
   };
-  /** Subjects observed in this shot; input order has no meaning. */
+  /**
+   * Subjects observed in this shot; input order has no meaning.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.subjects supplies deterministic spatial-grammar analysis: Subjects observed in this shot; input order has no meaning.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.subjects realizes deterministic continuity-grammar analysis: Subjects observed in this shot; input order has no meaning.
+   */
   subjects: IAutoMovieGrammarSubjectObservation[];
-  /** Principal subject used for cut and framing checks. */
+  /**
+   * Principal subject used for cut and framing checks.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.primarySubject supplies deterministic spatial-grammar analysis: Principal subject used for cut and framing checks.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.primarySubject realizes deterministic continuity-grammar analysis: Principal subject used for cut and framing checks.
+   */
   primarySubject: string | null;
-  /** Authored framing claim, or null when none was declared. */
+  /**
+   * Authored framing claim, or null when none was declared.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.declaredShotSize supplies deterministic spatial-grammar analysis: Authored framing claim, or null when none was declared.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.declaredShotSize realizes deterministic continuity-grammar analysis: Authored framing claim, or null when none was declared.
+   */
   declaredShotSize: IAutoMovieCameraIntent["framing"] | null;
-  /** Two subjects defining the line of action, or null when unavailable. */
+  /**
+   * Two subjects defining the line of action, or null when unavailable.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.actionAxis supplies deterministic spatial-grammar analysis: Two subjects defining the line of action, or null when unavailable.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.actionAxis realizes deterministic continuity-grammar analysis: Two subjects defining the line of action, or null when unavailable.
+   */
   actionAxis: readonly [string, string] | null;
-  /** Deliberate exceptions copied from the shot contract. */
+  /**
+   * Deliberate exceptions copied from the shot contract.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarShotObservation.styleIntent supplies deterministic spatial-grammar analysis: Deliberate exceptions copied from the shot contract.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarShotObservation.styleIntent realizes deterministic continuity-grammar analysis: Deliberate exceptions copied from the shot contract.
+   */
   styleIntent?: AutoMovieGrammarStyleIntent[];
 }
 
-/** A film-grammar fact, its editorial consequence, and a concrete recovery. */
+/**
+ * A film-grammar fact, its editorial consequence, and a concrete recovery.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic supports deterministic continuity findings: A film-grammar fact, its editorial consequence, and a concrete recovery.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Carries a named finding with its affected cut, measured fact, visual consequence, and corrective option.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic realizes deterministic continuity-grammar analysis: A film-grammar fact, its editorial consequence, and a concrete recovery.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Preserves the operands and editorial ownership of a measured grammar failure as a reviewable record.
+ */
 export interface IAutoMovieGrammarDiagnostic {
-  /** Stable diagnostic family. */
+  /**
+   * Stable diagnostic family.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.code supports deterministic continuity findings: Stable diagnostic family.
+   * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Identifies the measured grammar failure with a stable named family.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.code realizes deterministic continuity-grammar analysis: Stable diagnostic family.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Keeps finding classification machine-readable across repeated analysis and review adaptation.
+   */
   code: AutoMovieGrammarDiagnosticCode;
-  /** Objective failures are errors; heuristics warn; statistics advise. */
+  /**
+   * Objective failures are errors; heuristics warn; statistics advise.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.severity supports deterministic continuity findings: Objective failures are errors; heuristics warn; statistics advise.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.severity realizes deterministic continuity-grammar analysis: Objective failures are errors; heuristics warn; statistics advise.
+   */
   severity: "error" | "warning" | "advisory";
-  /** Incoming or sole shot where the diagnostic is filed. */
+  /**
+   * Incoming or sole shot where the diagnostic is filed.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.shot supports deterministic continuity findings: Incoming or sole shot where the diagnostic is filed.
+   * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Names the incoming or sole shot affected by the measured grammar failure.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.shot realizes deterministic continuity-grammar analysis: Incoming or sole shot where the diagnostic is filed.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Locates the finding on the edited shot where its consequence becomes observable.
+   */
   shot: string;
-  /** Preceding edited shot for a cut diagnostic. */
+  /**
+   * Preceding edited shot for a cut diagnostic.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.previousShot supports deterministic continuity findings: Preceding edited shot for a cut diagnostic.
+   * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Retains the outgoing shot identity when the finding belongs to a measured cut.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.previousShot realizes deterministic continuity-grammar analysis: Preceding edited shot for a cut diagnostic.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Pairs the outgoing and incoming edit operands without inventing a cut for single-shot findings.
+   */
   previousShot: string | null;
-  /** Measured fact. */
+  /**
+   * Measured fact.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.fact supports deterministic continuity findings: Measured fact.
+   * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Reports the observed sides, projected relations, directions, angles, sizes, or distances that triggered the named finding.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.fact realizes deterministic continuity-grammar analysis: Measured fact.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Carries the compared operands and observed value in the finding instead of only a verdict.
+   */
   fact: string;
-  /** Why that fact can damage the visual read. */
+  /**
+   * Why that fact can damage the visual read.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.impact supports deterministic continuity findings: Why that fact can damage the visual read.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.impact realizes deterministic continuity-grammar analysis: Why that fact can damage the visual read.
+   */
   impact: string;
-  /** Concrete corrective option. */
+  /**
+   * Concrete corrective option.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding IAutoMovieGrammarDiagnostic.recovery supports deterministic continuity findings: Concrete corrective option.
+   * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Gives an explicit camera, cutaway, establishing-shot, or declared-deviation response for the measured failure.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarDiagnostic.recovery realizes deterministic continuity-grammar analysis: Concrete corrective option.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Makes each finding actionable without silently suppressing the observed relation.
+   */
   recovery: string;
 }
 
-/** Exact one-to-one suppression table for deliberate grammar exceptions. */
+/**
+ * Exact one-to-one suppression table for deliberate grammar exceptions.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation GRAMMAR_STYLE_SUPPRESSION makes grammar violations actionable: Exact one-to-one suppression table for deliberate grammar exceptions.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar GRAMMAR_STYLE_SUPPRESSION realizes deterministic continuity-grammar analysis: Exact one-to-one suppression table for deliberate grammar exceptions.
+ */
 export const GRAMMAR_STYLE_SUPPRESSION: Readonly<
   Record<AutoMovieGrammarStyleIntent, AutoMovieGrammarDiagnosticCode>
 > = {
@@ -103,11 +261,26 @@ export const GRAMMAR_STYLE_SUPPRESSION: Readonly<
   "rhythmic-pacing": "grammar-pacing",
 };
 
-/** One deliberate exception, and the shot whose contract declared it. */
+/**
+ * One deliberate exception, and the shot whose contract declared it.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation IAutoMovieGrammarStyleClaim makes grammar violations actionable: One deliberate exception, and the shot whose contract declared it.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarStyleClaim realizes deterministic continuity-grammar analysis: One deliberate exception, and the shot whose contract declared it.
+ */
 export interface IAutoMovieGrammarStyleClaim {
-  /** Shot that declared the exception. */
+  /**
+   * Shot that declared the exception.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation IAutoMovieGrammarStyleClaim.shot makes grammar violations actionable: Shot that declared the exception.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarStyleClaim.shot realizes deterministic continuity-grammar analysis: Shot that declared the exception.
+   */
   shot: string;
-  /** Declared deliberate break. */
+  /**
+   * Declared deliberate break.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation IAutoMovieGrammarStyleClaim.intent makes grammar violations actionable: Declared deliberate break.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarStyleClaim.intent realizes deterministic continuity-grammar analysis: Declared deliberate break.
+   */
   intent: AutoMovieGrammarStyleIntent;
 }
 
@@ -122,21 +295,54 @@ export interface IAutoMovieGrammarStyleClaim {
  * unexercised is therefore part of the same read, computed by the one pass that
  * already decides it, rather than by a second implementation of the suppression
  * table downstream.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarReading retains the ordered findings and exception matches established by one deterministic grammar pass.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarReading realizes deterministic continuity-grammar analysis: Everything one mechanical pass over an edited sequence establishes. The findings alone cannot answer the author's second question. A declaration that suppresses a finding and a declaration that suppresses nothing look identical from outside — both leave the diagnostic list silent — so a shot declaring an exception nobody ever broke reads as a registered intent when it is in fact a claim about a film that is not there. Which declarations went unexercised is therefore part of the same read, computed by the one pass that already decides it, rather than by a second implementation of the suppression table downstream.
  */
 export interface IAutoMovieGrammarReading {
-  /** Findings no declared exception excepted, in analyzer order. */
+  /**
+   * Findings no declared exception excepted, in analyzer order.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarReading.reported supplies deterministic spatial-grammar analysis: Findings no declared exception excepted, in analyzer order.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarReading.reported realizes deterministic continuity-grammar analysis: Findings no declared exception excepted, in analyzer order.
+   */
   reported: IAutoMovieGrammarDiagnostic[];
-  /** Declarations that found nothing to except, in shot order. */
+  /**
+   * Declarations that found nothing to except, in shot order.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarReading.unmatched supplies deterministic spatial-grammar analysis: Declarations that found nothing to except, in shot order.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarReading.unmatched realizes deterministic continuity-grammar analysis: Declarations that found nothing to except, in shot order.
+   */
   unmatched: IAutoMovieGrammarStyleClaim[];
 }
 
-/** One edited sequence and the thresholds its mechanical read uses. */
+/**
+ * One edited sequence and the thresholds its mechanical read uses.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarInput supplies deterministic spatial-grammar analysis: One edited sequence and the thresholds its mechanical read uses.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarInput realizes deterministic continuity-grammar analysis: One edited sequence and the thresholds its mechanical read uses.
+ */
 export interface IAutoMovieGrammarInput {
-  /** Shots in edited playback order. */
+  /**
+   * Shots in edited playback order.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarInput.shots supplies deterministic spatial-grammar analysis: Shots in edited playback order.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarInput.shots realizes deterministic continuity-grammar analysis: Shots in edited playback order.
+   */
   shots: readonly IAutoMovieGrammarShotObservation[];
-  /** Smallest camera-bearing change that avoids a same-size jump cut. */
+  /**
+   * Smallest camera-bearing change that avoids a same-size jump cut.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarInput.minimumCutAngleDegrees supplies deterministic spatial-grammar analysis: Smallest camera-bearing change that avoids a same-size jump cut.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarInput.minimumCutAngleDegrees realizes deterministic continuity-grammar analysis: Smallest camera-bearing change that avoids a same-size jump cut.
+   */
   minimumCutAngleDegrees?: number;
-  /** Subject displacement that requires a wide re-establishing view. */
+  /**
+   * Subject displacement that requires a wide re-establishing view.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarInput.reestablishDistance supplies deterministic spatial-grammar analysis: Subject displacement that requires a wide re-establishing view.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarInput.reestablishDistance realizes deterministic continuity-grammar analysis: Subject displacement that requires a wide re-establishing view.
+   */
   reestablishDistance?: number;
 }
 
@@ -149,6 +355,21 @@ const EPSILON = 1e-6;
  *
  * The findings half of {@link readFilmGrammar}, kept as the plain call for a
  * consumer that only files what survived.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar analyzeFilmGrammar compares measured framing, axis, displacement, and cut facts across the ordered edit to emit reproducible diagnoses.
+ * @evidence requirements/staging/coverage-and-alternative-takes.md#staging-coverage-gap Reports screen-direction and edit-compatibility conflicts as explicit findings instead of treating the available shots as usable coverage.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-180-line Compares matching action-axis identities at the outgoing close and incoming open, reporting a camera half-plane reversal only when neither shot shows the crossing.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-eyeline-match Projects the outgoing gaze relation and the incoming reciprocal or continuing gaze relation at the cut, then reports a horizontal or vertical screen-relation mismatch.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-entry-exit-direction Reports a travel reversal only when the same primary subject has nonzero projected horizontal motion of opposite signs in adjacent shots.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-time-sampling Evaluates the previous shot's closing sample against the incoming shot's opening sample instead of substituting shot starts or average headings.
+ * @evidence requirements/camera/axis-eyeline-and-screen-direction.md#camera-grammar-findings Returns stable named findings with the affected cut, measured fact, visual consequence, and concrete recovery.
+ * @evidence requirements/editorial/pacing-and-rhythm.md#editorial-duration-pattern Reports the ordered edited shot durations and their arithmetic mean as the measurable duration-pattern subset of pacing analysis.
+ * @evidence requirements/editorial/pacing-and-rhythm.md#editorial-pacing-claim-boundary Keeps that duration series advisory and directs creative cadence judgment back to authored intent instead of declaring the sequence objectively fast, slow, effective, or entertaining.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar analyzeFilmGrammar realizes deterministic continuity-grammar analysis: Diagnose an ordered edit from deterministic shot observations. The findings half of {@link readFilmGrammar}, kept as the plain call for a consumer that only files what survived.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-pacing-rhythm Emits only the measured duration series, average, and an advisory recovery for this duration-only subset; it makes no structural, audiovisual, delivery, or creative-quality verdict.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-take-continuity-edit-compatibility Checks the ordered edit's measured axis, screen direction, framing, and displacement facts for deterministic cut-compatibility failures.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-line-eyeline-travel-evaluation Computes action-axis half-planes, projected gaze relations, and subject travel signs from the declared scene-local operands at each cut boundary.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-grammar-sampling-findings Converts exact outgoing-close and incoming-open observations into named findings rather than inferring dynamic relations from edit order.
  */
 export const analyzeFilmGrammar = (
   props: IAutoMovieGrammarInput,
@@ -161,6 +382,9 @@ export const analyzeFilmGrammar = (
  * and action-axis endpoints are normalized by id, so collection order and
  * random generation order cannot alter the result. The analyzer has no seed,
  * clock, scene mutation, or renderer dependency.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar readFilmGrammar matches declared style exceptions to their exact diagnoses while leaving unmatched findings visible.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar readFilmGrammar realizes deterministic continuity-grammar analysis: Read an ordered edit, and report which declared exceptions it exercised. Shot order is editorial meaning and remains untouched. Subject collections and action-axis endpoints are normalized by id, so collection order and random generation order cannot alter the result. The analyzer has no seed, clock, scene mutation, or renderer dependency.
  */
 export const readFilmGrammar = (
   props: IAutoMovieGrammarInput,
@@ -251,7 +475,12 @@ export const readFilmGrammar = (
 const claimKey = (shot: string, intent: AutoMovieGrammarStyleIntent): string =>
   `${shot}|${intent}`;
 
-/** Adapt grammar diagnostics into the existing visual-review backlog socket. */
+/**
+ * Adapt grammar diagnostics into the existing visual-review backlog socket.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding grammarDiagnosticsToReviewNotes supports deterministic continuity findings: Adapt grammar diagnostics into the existing visual-review backlog socket.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar grammarDiagnosticsToReviewNotes realizes deterministic continuity-grammar analysis: Adapt grammar diagnostics into the existing visual-review backlog socket.
+ */
 export const grammarDiagnosticsToReviewNotes = (props: {
   /** Narrative beat that owns the review backlog. */
   beat: string;
@@ -265,7 +494,12 @@ export const grammarDiagnosticsToReviewNotes = (props: {
     suggestion: diagnostic.recovery,
   }));
 
-/** Classify a subject's measured fraction of total frame height. */
+/**
+ * Classify a subject's measured fraction of total frame height.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar classifyGrammarShotSize supplies deterministic spatial-grammar analysis: Classify a subject's measured fraction of total frame height.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar classifyGrammarShotSize realizes deterministic continuity-grammar analysis: Classify a subject's measured fraction of total frame height.
+ */
 export const classifyGrammarShotSize = (
   verticalFrameOccupancy: number,
 ): IAutoMovieCameraIntent["framing"] => {

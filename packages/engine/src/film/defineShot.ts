@@ -38,6 +38,11 @@ import { stageScene } from "./stageScene";
  * This helper deliberately does not execute or validate the builder. Module
  * evaluation remains side-effect free; {@link compileDefinedShot} owns all
  * validation and converts author-visible failures into structured diagnostics.
+ *
+ * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Registers an ordinary TypeScript shot definition without executing it or creating hidden editor state.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-shot-source-binding Keeps the shot id, scene id, contract beat, and source builder together as the one registered value later compilation must realize.
+ * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input defineShot keeps the shot identity and builder as explicit source input for the later compiler boundary.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status Establishes the registered shot, scene, beat, and builder identity that realization checks against the compiled program.
  */
 export const defineShot = <Context>(
   id: string,
@@ -59,7 +64,12 @@ interface IAutoMovieShotPhysicsAdviceBase {
   proposal: IAutoMovieCollisionResponse;
 }
 
-/** One explicit author disposition over an engine D010 proposal. */
+/**
+ * One explicit author disposition over an engine D010 proposal.
+ *
+ * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Records whether the author left a D010 proposal pending, accepted it, replaced it, or rejected it, together with the selected response and required rationale.
+ * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Keeps the engine-computed proposal distinct from the author's explicit selected collision response so simulation advice never becomes implicit authority.
+ */
 export type IAutoMovieShotPhysicsAdvice =
   | (IAutoMovieShotPhysicsAdviceBase & {
       /** The proposal has not been adjudicated yet. */
@@ -94,25 +104,58 @@ export type IAutoMovieShotPhysicsAdvice =
       rationale: string;
     });
 
-/** Host-owned capabilities needed to turn thin verbs into dense motion. */
+/**
+ * Host-owned capabilities needed to turn thin verbs into dense motion.
+ *
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime supports reproducible staging and performance: Host-owned capabilities needed to turn thin verbs into dense motion.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime realizes deterministic staging replay and validation: Host-owned capabilities needed to turn thin verbs into dense motion.
+ */
 export interface IAutoMovieShotRuntime {
-  /** Rig-specific action synthesizer; engine composition and ROM gates follow. */
+  /**
+   * Rig-specific action synthesizer; engine composition and ROM gates follow.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.synthesize supports reproducible staging and performance: Rig-specific action synthesizer; engine composition and ROM gates follow.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.synthesize realizes deterministic staging replay and validation: Rig-specific action synthesizer; engine composition and ROM gates follow.
+   */
   synthesize: IAutoMovieActionSynthesizer;
-  /** Rig lookup for every staged actor. */
+  /**
+   * Rig lookup for every staged actor.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.skeleton supports reproducible staging and performance: Rig lookup for every staged actor.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.skeleton realizes deterministic staging replay and validation: Rig lookup for every staged actor.
+   */
   skeleton(node: string): IAutoMovieSkeleton | null;
   /**
    * Raster dimensions used to project required camera subjects at opening,
    * review-frame and closing times.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.frameFormat supports reproducible staging and performance: Raster dimensions used to project required camera subjects at opening, review-frame and closing times.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.frameFormat realizes deterministic staging replay and validation: Raster dimensions used to project required camera subjects at opening, review-frame and closing times.
    */
   frameFormat: Pick<
     IAutoMovieProductionDesign["frameFormat"],
     "width" | "height"
   >;
-  /** Optional world landmarks cited by contract predicates. */
+  /**
+   * Optional world landmarks cited by contract predicates.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.world supports reproducible staging and performance: Optional world landmarks cited by contract predicates.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.world realizes deterministic staging replay and validation: Optional world landmarks cited by contract predicates.
+   */
   world?: IAutoMovieWorldDesign | null;
-  /** Formation designs cited by the registered participant contract. */
+  /**
+   * Formation designs cited by the registered participant contract.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.formationDesigns supports reproducible staging and performance: Formation designs cited by the registered participant contract.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.formationDesigns realizes deterministic staging replay and validation: Formation designs cited by the registered participant contract.
+   */
   formationDesigns?: ReadonlyMap<string, IAutoMovieFormationDesign>;
-  /** Compiler-owned compact formation runtimes present in this shot. */
+  /**
+   * Compiler-owned compact formation runtimes present in this shot.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.formations supports reproducible staging and performance: Compiler-owned compact formation runtimes present in this shot.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.formations realizes deterministic staging replay and validation: Compiler-owned compact formation runtimes present in this shot.
+   */
   formations?: readonly IAutoMovieCompiledFormation[];
   /**
    * The shot's compact formation cues.
@@ -121,6 +164,9 @@ export interface IAutoMovieShotRuntime {
    * the unit where the cue playing at that instant has put it, so the cues have
    * to reach the performance boundary rather than being attached to the source
    * artifact after it is built.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.formationMotions fixes the compact formation cues supplied to every replay of this shot.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.formationMotions realizes deterministic staging replay and validation: The shot's compact formation cues. A camera framing a unit and the realization grading that frame both measure the unit where the cue playing at that instant has put it, so the cues have to reach the performance boundary rather than being attached to the source artifact after it is built.
    */
   formationMotions?: readonly IAutoMovieFormationMotion[];
   /**
@@ -129,58 +175,129 @@ export interface IAutoMovieShotRuntime {
    * The source states them beside its verbs and the host hands them here; the
    * performance boundary gates them against the staged lights, exactly as it
    * gates every other reference the source makes.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.lightMotions carries the authored light animation inputs into the reproducible compiled-shot result.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.lightMotions realizes deterministic staging replay and validation: The shot's own light clips, carried onto the compiled shot. The source states them beside its verbs and the host hands them here; the performance boundary gates them against the staged lights, exactly as it gates every other reference the source makes.
    */
   lightMotions?: readonly IAutoMovieClip[];
   /**
-   * The shot's own object clips and the prop registry they are measured
-   * against, carried onto the compiled shot's `objectMotions`.
+   * The shot's own object clips and the prop registry they are measured against,
+   * carried onto the compiled shot's `objectMotions`.
    *
-   * A building's panel and a prop's leaf are the two things a shot can move
-   * that no verb reaches, and both are one node in the staged graph turned over
-   * the shot's clock. The performance boundary admits the nodes this shot may
-   * drive and bounds a driven joint by the travel its prop declares; see
+   * A building's panel and a prop's leaf are the two things a shot can move that
+   * no verb reaches, and both are one node in the staged graph turned over the
+   * shot's clock. The performance boundary admits the nodes this shot may drive
+   * and bounds a driven joint by the travel its prop declares; see
    * {@link gateAuthoredObjectMotions}.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.objectMotions binds authored object clips to the prop registry used to validate and reproduce them.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.objectMotions realizes deterministic staging replay and validation: The shot's own object clips and the prop registry they are measured against, carried onto the compiled shot's `objectMotions`. A building's panel and a prop's leaf are the two things a shot can move that no verb reaches, and both are one node in the staged graph turned over the shot's clock. The performance boundary admits the nodes this shot may drive and bounds a driven joint by the travel its prop declares; see {@link gateAuthoredObjectMotions}.
    */
   objectMotions?: readonly IAutoMovieClip[];
-  /** Forged props this shot stages, whose joints those clips may address. */
+  /**
+   * Forged props this shot stages, whose joints those clips may address.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.props supports reproducible staging and performance: Forged props this shot stages, whose joints those clips may address.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.props realizes deterministic staging replay and validation: Forged props this shot stages, whose joints those clips may address.
+   */
   props?: readonly IAutoMoviePropSpec[];
-  /** Optional full models when predicates need model-owned rig evidence. */
+  /**
+   * Optional full models when predicates need model-owned rig evidence.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.models supports reproducible staging and performance: Optional full models when predicates need model-owned rig evidence.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.models realizes deterministic staging replay and validation: Optional full models when predicates need model-owned rig evidence.
+   */
   models?: readonly IAutoMovieModel[];
-  /** Formation-slot collisions found while materializing this shot. */
+  /**
+   * Formation-slot collisions found while materializing this shot.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.collisions supports reproducible staging and performance: Formation-slot collisions found while materializing this shot.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.collisions realizes deterministic staging replay and validation: Formation-slot collisions found while materializing this shot.
+   */
   collisions?: readonly string[];
-  /** Optional distinction between missing actor context and a rig-less actor. */
+  /**
+   * Optional distinction between missing actor context and a rig-less actor.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.hasActorContext supports reproducible staging and performance: Optional distinction between missing actor context and a rig-less actor.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.hasActorContext realizes deterministic staging replay and validation: Optional distinction between missing actor context and a rig-less actor.
+   */
   hasActorContext?(node: string): boolean;
-  /** Optional clinical joint axes used by ground IK and attachment baking. */
+  /**
+   * Optional clinical joint axes used by ground IK and attachment baking.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.jointAxes supports reproducible staging and performance: Optional clinical joint axes used by ground IK and attachment baking.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.jointAxes realizes deterministic staging replay and validation: Optional clinical joint axes used by ground IK and attachment baking.
+   */
   jointAxes?(
     node: string,
   ): Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
-  /** Optional clinical rest frames used by ground IK and attachment baking. */
+  /**
+   * Optional clinical rest frames used by ground IK and attachment baking.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.restFrames supports reproducible staging and performance: Optional clinical rest frames used by ground IK and attachment baking.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.restFrames realizes deterministic staging replay and validation: Optional clinical rest frames used by ground IK and attachment baking.
+   */
   restFrames?(
     node: string,
   ): Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
-  /** Optional live point resolver for moving targets. */
+  /**
+   * Optional live point resolver for moving targets.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.targetAt supports reproducible staging and performance: Optional live point resolver for moving targets.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.targetAt realizes deterministic staging replay and validation: Optional live point resolver for moving targets.
+   */
   targetAt?(
     target: import("@automovie/interface").IAutoMovieActionTarget,
     seconds: number,
   ): IAutoMovieVector3 | null;
-  /** Gait vocabulary available to each actor. */
+  /**
+   * Gait vocabulary available to each actor.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.gaits supports reproducible staging and performance: Gait vocabulary available to each actor.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.gaits realizes deterministic staging replay and validation: Gait vocabulary available to each actor.
+   */
   gaits?(node: string): readonly string[] | undefined;
-  /** Prior verified beat state used as this shot's opening condition. */
+  /**
+   * Prior verified beat state used as this shot's opening condition.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.previous supports reproducible staging and performance: Prior verified beat state used as this shot's opening condition.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.previous realizes deterministic staging replay and validation: Prior verified beat state used as this shot's opening condition.
+   */
   previous?: IAutoMovieBeatEndState;
-  /** Ground-IK stance runs carried into the closing continuity snapshot. */
+  /**
+   * Ground-IK stance runs carried into the closing continuity snapshot.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-deterministic-replay IAutoMovieShotRuntime.plants supports reproducible staging and performance: Ground-IK stance runs carried into the closing continuity snapshot.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result IAutoMovieShotRuntime.plants realizes deterministic staging replay and validation: Ground-IK stance runs carried into the closing continuity snapshot.
+   */
   plants?: ReadonlyArray<{
     /** Scene node whose feet were measured. */
     node: string;
     /** Measured stance runs for that node. */
     plants: readonly IAutoMovieBeatEndFootPlant[];
   }>;
-  /** Optional D010 suggestions generated by shot code or a host analysis pass. */
+  /**
+   * Optional D010 suggestions generated by shot code or a host analysis pass.
+   *
+   * @evidence requirements/effects-and-simulation/rigid-motion-ballistics-and-collision.md#effects-authored-simulated-trajectory Carries D010 suggestions and their author dispositions into compilation as optional source data rather than applying any proposal automatically.
+   * @evidence specifications/simulation-effects-and-sound/rigid-collision-and-damage.md#rigid-trajectory-tier-contract Supplies the proposal, selected response, decision, and rationale that the compiler validates at the explicit trajectory-authority boundary.
+   */
   advice?: readonly IAutoMovieShotPhysicsAdvice[];
 }
 
-/** One actionable failure at the public authoring boundary. */
+/**
+ * One actionable failure at the public authoring boundary.
+ *
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Exposes the failure category, owning phase, precise path, observed fact, impact, recovery, and optional lower-gate violation as one actionable authoring diagnostic.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Preserves field-addressed rejection evidence so the same invalid shot can be diagnosed and corrected without depending on an opaque thrown message.
+ */
 export interface IAutoMovieAuthoringDiagnostic {
-  /** Stable machine-readable category. */
+  /**
+   * Stable machine-readable category.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Classifies the rejected shot by a stable registration, builder, contract, stage, blocking, performance, or pipeline failure code.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Makes the rejection class machine-readable instead of deriving it from error prose.
+   */
   code:
     | "registration-invalid"
     | "builder-failed"
@@ -190,7 +307,12 @@ export interface IAutoMovieAuthoringDiagnostic {
     | "blocking-invalid"
     | "performance-invalid"
     | "pipeline-failed";
-  /** Pipeline phase that owns the correction. */
+  /**
+   * Pipeline phase that owns the correction.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Names the registration, build, stage, blocking, performance, contract, or continuity phase that owns the correction.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Locates the deterministic pipeline boundary that rejected the shot.
+   */
   phase:
     | "registration"
     | "build"
@@ -199,19 +321,49 @@ export interface IAutoMovieAuthoringDiagnostic {
     | "performance"
     | "contract"
     | "continuity";
-  /** Exact source or generated field that failed. */
+  /**
+   * Exact source or generated field that failed.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Identifies the exact source or generated field that must be inspected rather than only naming the enclosing shot.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Anchors the failure result to the same field path on every replay.
+   */
   path: string;
-  /** What was observed, including the offending identity or value. */
+  /**
+   * What was observed, including the offending identity or value.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Records the offending identity or value observed at the addressed field.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Retains the concrete observed fact that caused the deterministic gate to fail.
+   */
   fact: string;
-  /** Why the failure prevents a trustworthy shot artifact. */
+  /**
+   * Why the failure prevents a trustworthy shot artifact.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status States the concrete trust or compilation consequence of the observed failure.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Explains why the deterministic gate cannot admit the current shot artifact.
+   */
   impact: string;
-  /** Concrete source edit or input correction that permits the next attempt. */
+  /**
+   * Concrete source edit or input correction that permits the next attempt.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Gives the source edit or input correction required before compilation can be attempted again.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Couples the deterministic rejection with a concrete recovery action.
+   */
   recovery: string;
-  /** Original domain violation when a lower engine gate produced one. */
+  /**
+   * Original domain violation when a lower engine gate produced one.
+   *
+   * @evidence requirements/staging/budgets-safety-and-validation.md#staging-failure-status Retains the typed constraint violation emitted by the lower engine gate when one exists.
+   * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Preserves the original domain-gate evidence inside the public failure result instead of flattening it into prose.
+   */
   violation?: IAutoMovieConstraintViolation;
 }
 
-/** Result of the direct, non-MCP shot authoring entry point. */
+/**
+ * Result of the direct, non-MCP shot authoring entry point.
+ *
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance IAutoMovieCompiledDefinedShot makes delivery acceptance measurable: Result of the direct, non-MCP shot authoring entry point.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status IAutoMovieCompiledDefinedShot realizes inspectable delivery acceptance: Result of the direct, non-MCP shot authoring entry point.
+ */
 export type IAutoMovieCompiledDefinedShot =
   | {
       /** The registered builder passed every engine gate. */
@@ -245,6 +397,15 @@ export type IAutoMovieCompiledDefinedShot =
  * validation and continuity sampling. Author mistakes return diagnostics.
  * Unexpected builder exceptions are also translated at this public boundary,
  * keeping raw throws internal to programmer invariants.
+ *
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-delivery-acceptance compileDefinedShot realizes a registered source builder and returns its measured delivery status at the direct authoring boundary.
+ * @evidence requirements/staging/budgets-safety-and-validation.md#staging-temporal-validation Requires blocking and performance duration to match the registered range and each finite event sample to lie inside its declared window.
+ * @evidence requirements/staging/events-and-timing.md#staging-event-refusal Returns structured build diagnostics for missing, duplicate, undeclared, non-finite, or out-of-window event samples.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-shot-source-binding Checks the built scene, beat, and duration against the registered shot and records the same shot id as the realized source export.
+ * @evidence requirements/staging/shot-contracts-and-deliveries.md#staging-shot-contract-refusal Stops at registration, build, stage, blocking, performance, or realization failure with addressed diagnostics and never publishes a partial shot source.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-deterministic-replay-failure-result Applies the registered duration and event windows before performance and reports the owning phase for any failed temporal gate.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-event-boundary-sampling-output Admits exactly one declared finite sample inside each event window and refuses missing, duplicate, undeclared, or out-of-window occurrences.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-contract-realization-acceptance-status Binds the built artifact to its registered scene, beat, duration, and source identity and returns structured contract failure instead of partial delivery.
  */
 export const compileDefinedShot = <Context>(props: {
   /** Registered source export. */

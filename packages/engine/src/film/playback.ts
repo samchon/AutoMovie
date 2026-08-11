@@ -11,49 +11,116 @@ import { compareCodeUnits } from "../text/compareCodeUnits";
  * long it plays (its trim, else the whole shot), and the shot-local second its
  * playback begins at.
  *
+ * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMoviePlaybackEntry supports ordered output-track composition: One entry's placement on the output timeline: where it starts globally, how long it plays (its trim, else the whole shot), and the shot-local second its playback begins at.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEntry realizes ordered output-track composition: One entry's placement on the output timeline: where it starts globally, how long it plays (its trim, else the whole shot), and the shot-local second its playback begins at.
+ *
  * @author Samchon
  */
 export interface IAutoMoviePlaybackEntry {
-  /** Index into `sequence.shots`. */
+  /**
+   * Index into `sequence.shots`.
+   *
+   * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks Identifies which ordered sequence entry owns this playback placement on the composed output track.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEntry.entry binds a timeline placement to its ordered sequence entry.
+   */
   entry: number;
 
-  /** Shot id played here. */
+  /**
+   * Shot id played here.
+   *
+   * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMoviePlaybackEntry.shot supports ordered output-track composition: Shot id played here.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEntry.shot realizes ordered output-track composition: Shot id played here.
+   */
   shot: string;
 
-  /** Global output second this entry starts at. */
+  /**
+   * Global output second this entry starts at.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEntry.start anchors canonical film-clock computation: Global output second this entry starts at.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEntry.start realizes rational global-timeline evaluation: Global output second this entry starts at.
+   */
   start: number;
 
-  /** Seconds of the shot this entry plays. */
+  /**
+   * Seconds of the shot this entry plays.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEntry.played anchors canonical film-clock computation: Seconds of the shot this entry plays.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEntry.played realizes rational global-timeline evaluation: Seconds of the shot this entry plays.
+   */
   played: number;
 
-  /** Shot-local second playback begins at (the trim's start, else 0). */
+  /**
+   * Shot-local second playback begins at (the trim's start, else 0).
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEntry.offset anchors canonical film-clock computation: Shot-local second playback begins at (the trim's start, else 0).
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEntry.offset realizes rational global-timeline evaluation: Shot-local second playback begins at (the trim's start, else 0).
+   */
   offset: number;
 }
 
-/** The resolved output timeline: entry placements and the total runtime. */
+/**
+ * The resolved output timeline: entry placements and the total runtime.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackTimeline anchors canonical film-clock computation: The resolved output timeline: entry placements and the total runtime.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackTimeline realizes rational global-timeline evaluation: The resolved output timeline: entry placements and the total runtime.
+ */
 export interface IAutoMoviePlaybackTimeline {
+  /**
+   * Sequence entries placed on the global output clock.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackTimeline.entries anchors canonical film-clock computation: Sequence entries placed on the global output clock.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackTimeline.entries realizes rational global-timeline evaluation: Sequence entries placed on the global output clock.
+   */
   entries: IAutoMoviePlaybackEntry[];
 
-  /** Total output seconds (transition overlaps subtracted). */
+  /**
+   * Total output seconds (transition overlaps subtracted).
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackTimeline.runtime anchors canonical film-clock computation: Total output seconds (transition overlaps subtracted).
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackTimeline.runtime realizes rational global-timeline evaluation: Total output seconds (transition overlaps subtracted).
+   */
   runtime: number;
 }
 
 /**
  * A shot-local interaction event placed on the sequence output clock.
  *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEvent anchors canonical film-clock computation: A shot-local interaction event placed on the sequence output clock.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEvent realizes rational global-timeline evaluation: A shot-local interaction event placed on the sequence output clock.
+ *
  * @author Samchon
  */
 export interface IAutoMoviePlaybackEvent extends IAutoMovieInteractionEvent {
-  /** Index into `sequence.shots`. */
+  /**
+   * Index into `sequence.shots`.
+   *
+   * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks Retains the owning sequence-entry index when a shot-local event is projected onto the output track.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEvent.entry retains the sequence occurrence that projected the event onto output time.
+   */
   entry: number;
 
-  /** Shot id that owns the source event. */
+  /**
+   * Shot id that owns the source event.
+   *
+   * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMoviePlaybackEvent.shot supports ordered output-track composition: Shot id that owns the source event.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackEvent.shot realizes ordered output-track composition: Shot id that owns the source event.
+   */
   shot: string;
 
-  /** Original shot-local event time. */
+  /**
+   * Original shot-local event time.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEvent.shotTime anchors canonical film-clock computation: Original shot-local event time.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEvent.shotTime realizes rational global-timeline evaluation: Original shot-local event time.
+   */
   shotTime: number;
 
-  /** Global output second after trims and transitions. */
+  /**
+   * Global output second after trims and transitions.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackEvent.globalTime anchors canonical film-clock computation: Global output second after trims and transitions.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackEvent.globalTime realizes rational global-timeline evaluation: Global output second after trims and transitions.
+   */
   globalTime: number;
 }
 
@@ -76,15 +143,33 @@ const indexShots = (
  * What plays at one output instant: the live entry's shot at its local time,
  * plus, inside an incoming transition, the outgoing entry's tail and the
  * incoming shot's weight ramping 0 → 1 across the transition.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackSample anchors canonical film-clock computation: What plays at one output instant: the live entry's shot at its local time, plus, inside an incoming transition, the outgoing entry's tail and the incoming shot's weight ramping 0 → 1 across the transition.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackSample realizes rational global-timeline evaluation: What plays at one output instant: the live entry's shot at its local time, plus, inside an incoming transition, the outgoing entry's tail and the incoming shot's weight ramping 0 → 1 across the transition.
  */
 export interface IAutoMoviePlaybackSample {
-  /** Live (incoming) shot id. */
+  /**
+   * Live (incoming) shot id.
+   *
+   * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-sequential-tracks IAutoMoviePlaybackSample.shot supports ordered output-track composition: Live (incoming) shot id.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition IAutoMoviePlaybackSample.shot realizes ordered output-track composition: Live (incoming) shot id.
+   */
   shot: string;
 
-  /** Shot-local seconds into the live shot. */
+  /**
+   * Shot-local seconds into the live shot.
+   *
+   * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time IAutoMoviePlaybackSample.time anchors canonical film-clock computation: Shot-local seconds into the live shot.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline IAutoMoviePlaybackSample.time realizes rational global-timeline evaluation: Shot-local seconds into the live shot.
+   */
   time: number;
 
-  /** The outgoing tail being dissolved from, or null on a hard cut. */
+  /**
+   * The outgoing tail being dissolved from, or null on a hard cut.
+   *
+   * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-overlap-composition IAutoMoviePlaybackSample.blend preserves declared transition overlap: The outgoing tail being dissolved from, or null on a hard cut.
+   * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-transition-overlap IAutoMoviePlaybackSample.blend realizes transition-overlap composition: The outgoing tail being dissolved from, or null on a hard cut.
+   */
   blend: { shot: string; time: number; alpha: number } | null;
 }
 
@@ -94,6 +179,17 @@ export interface IAutoMoviePlaybackSample {
  * its entry forward to overlap the previous tail by the transition's duration.
  * Precondition: the sequence already passed `cutSequence` (every entry
  * references a shot, every trim fits), so this resolver is total.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Places every trimmed sequence entry on the output clock and subtracts declared transition overlaps from the accumulated runtime.
+ * @evidence requirements/editorial/scope-and-identity.md#editorial-authored-cut Preserves the declared sequence order, trim choice, and incoming transition on each picture entry without reordering or pacing optimization.
+ * @evidence requirements/editorial/scope-and-identity.md#editorial-duration-closure Computes picture-only closure by summing each played trim or full-shot duration and subtracting declared picture-transition overlap.
+ * @evidence requirements/editorial/scope-and-identity.md#editorial-missing-refusal Refuses an empty sequence or an entry whose referenced shot is absent from the supplied source set.
+ * @evidence requirements/editorial/tracks-stacks-and-composition.md#editorial-composition-refusal Refuses only the sequential picture defects it can prove: an empty sequence, duplicate supplied shot ids, a missing shot reference, or an incoming transition with no predecessor.
+ * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-refusal Rejects a transition on the first picture entry because no outgoing source exists for that overlap.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Resolves declared trims and transition offsets into ordered output-clock picture placements.
+ * @evidence specifications/editorial-render-and-delivery/editorial-version-conform-and-validation.md#spec-editorial-film-identity Resolves the authored picture order and transition graph into a finite picture runtime while refusing absent required picture sources.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-track-composition Validates the small sequential-picture subset at this boundary before emitting ordered playback entries.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-transition-overlap Requires an outgoing picture before positioning an incoming overlap on the output clock.
  */
 export const sequenceTimeline = (
   sequence: IAutoMovieSequence,
@@ -166,6 +262,11 @@ const sampleAt = (
  * `[0, runtime)`, the caller already framed a real output instant (the render
  * plan drives it from `frameTimes`; {@link resolveSequencePlayback} range-checks
  * first). O(entries); for a whole film use {@link playbackCursor}.
+ *
+ * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-overlap-composition Resolves one output instant to the incoming entry and its optional outgoing overlap contribution.
+ * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-timing Evaluates the incoming start, outgoing source time, and linear picture weight directly from the requested film instant and declared overlap duration.
+ * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-transition-boundary-samples Includes the outgoing picture with zero incoming weight at overlap start and removes the blend at the end-exclusive transition boundary.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-transition-overlap Selects the incoming picture at an overlap instant and derives the outgoing sample and normalized picture weight from the same film time.
  */
 export const resolveFromTimeline = (
   sequence: IAutoMovieSequence,
@@ -194,6 +295,9 @@ export const resolveFromTimeline = (
  * increasing" note was the one false premise in this argument.) Feeding it a
  * time earlier than the previous call breaks the non-decreasing-clock
  * invariant; use {@link resolveFromTimeline} for random access.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Advances a forward-only cursor across non-decreasing output times while preserving the same entry selection as direct resolution.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline playbackCursor realizes rational global-timeline evaluation: A forward-only playback resolver for a **monotonically non-decreasing** query clock, the whole-film seam that turns the per-frame O(entries) scan into one O(frames + entries) sweep (the render/caption plans call it once per frame in output order). Entry starts are **non-decreasing**, a full-overlap dissolve (`transition.duration === previousPlayed`) makes two adjacent starts equal, which `cutSequence` allows, and the timeline tiles `[0, runtime)` with no gaps. The advance test is `start <= seconds`, so among equal-start entries the cursor lands on the **highest** index, which is exactly the last entry whose span contains the instant, the same live entry {@link resolveFromTimeline}'s scan returns, so the samples are byte-identical. (Strict increase is NOT required and is not enforced; the earlier "strictly increasing" note was the one false premise in this argument.) Feeding it a time earlier than the previous call breaks the non-decreasing-clock invariant; use {@link resolveFromTimeline} for random access.
  */
 export const playbackCursor = (
   sequence: IAutoMovieSequence,
@@ -219,6 +323,11 @@ export const playbackCursor = (
  * outside `[0, runtime)`, there is no frame there to draw. Builds the timeline
  * per call, for random single-instant access (interactive scrubbing); a whole
  * film drives {@link playbackCursor} off one timeline instead.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-time-ranges Treats the output interval as start-inclusive and end-exclusive by returning no frame before zero or at and beyond the computed runtime.
+ * @evidence requirements/editorial/transitions-and-overlaps.md#editorial-overlap-composition Returns the live incoming picture and its outgoing contribution only while the requested instant lies inside the declared overlap.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Applies the playback timeline's half-open film range before resolving the active entry.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-transition-overlap Resolves a valid film instant to the incoming picture plus any active outgoing overlap instead of composing outside the timeline.
  */
 export const resolveSequencePlayback = (
   sequence: IAutoMovieSequence,
@@ -248,6 +357,19 @@ export const resolveSequencePlayback = (
  * binds a single contiguous seam, where two entries share one on-screen
  * instant. Included events keep their shot-local `time` and also expose
  * `shotTime` plus `globalTime`.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Maps in-range shot events to output time with half-open trim boundaries so a seam event is emitted exactly once.
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-time-transforms Applies the supported unity-rate affine mapping `globalTime = entry.start + event.time - entry.offset`, without claiming scale, reverse, or hold support.
+ * @evidence requirements/editorial/scope-and-identity.md#editorial-story-film-order Keeps each source event's shot-local instant while assigning a distinct entry and global instant to every presentation replay.
+ * @evidence requirements/editorial/scope-and-identity.md#editorial-source-preservation Copies the source event payload unchanged and adds entry, shot-local, and global placement facts instead of rewriting the source shot.
+ * @evidence requirements/story/beats-and-causality.md#story-semantic-event-identity Preserves the event's stable source id across trims and repeated presentation placements instead of replacing it with a frame or sequence index.
+ * @evidence requirements/story/story-clock-and-state.md#story-presentation-chronology Keeps source `shotTime` separate from the authored sequence's affine `globalTime`; it does not infer chronology, reverse, or causal order.
+ * @evidence requirements/staging/events-and-timing.md#staging-fixed-film-clock Converts each included shot-local event through the entry's trim offset and output start into one explicit global film-clock instant.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Projects trimmed events from shot-local seconds to deterministic output seconds while preserving per-play ownership.
+ * @evidence specifications/editorial-render-and-delivery/editorial-version-conform-and-validation.md#spec-editorial-film-identity Preserves the source occurrence and represents each authored presentation placement as separate film-order data.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-semantic-event-occurrence Keeps one semantic event identity while separating every replayed sequence occurrence by its placement data.
+ * @evidence specifications/narrative-and-intent/events-causality-and-time.md#narrative-intent-chronology-presentation Exposes the supported unity-rate source-to-presentation placement without rewriting source event time as story chronology.
+ * @evidence specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md#performance-staging-event-boundary-sampling-output Maps every admitted occurrence onto the production clock and assigns a contiguous trim-boundary occurrence to exactly one play.
  */
 export const sequenceEventTimeline = (
   sequence: IAutoMovieSequence,
@@ -316,6 +438,11 @@ export const sequenceEventTimeline = (
  * on-screen sample. This is the deterministic seam a render host drives its
  * per-frame capture from, pose the live shot's scene at `time`, blend the
  * outgoing tail when a dissolve is in flight, write the frame.
+ *
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-canonical-time Derives every picture sample from its integer index, the declared frame rate, and the one resolved output timeline.
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-frame-grid Numbers picture samples from zero and places sample `i` at `i / fps`; it does not decide whether an arbitrary authored time belongs to that grid.
+ * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-time-refusal Refuses a non-finite, zero, or negative picture frame rate before deriving a frame count or sample instant.
+ * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-rational-timeline Enumerates the finite picture grid in index order and resolves each `i / fps` instant against the same timeline.
  */
 export const playbackFrameSamples = (
   sequence: IAutoMovieSequence,

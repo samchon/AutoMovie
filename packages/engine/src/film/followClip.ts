@@ -9,6 +9,9 @@ import { sampleClip, sampleClipSequence } from "../resolve/sampleClip";
  * coupling's parent read (#1140) all share the SAME composition (#674). Scale
  * is not baked (rigid couplings never scale), so it stays identity.
  *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects Samples the baked follow transform shared by rendering, chained couplings, and beat-end continuity for the attached node.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff bakedTransformAt realizes declared attachment and object handoff: The world transform a baked follow clip writes onto `node` at `t`. A coupled child's world root comes from here (the exact clip {@link performShot} baked through `compileAttach`), so beat-end, per-frame render, and a chained coupling's parent read (#1140) all share the SAME composition (#674). Scale is not baked (rigid couplings never scale), so it stays identity.
+ *
  * @author Samchon
  */
 export const bakedTransformAt = (
@@ -39,6 +42,9 @@ export const bakedTransformAt = (
  * Resolve a node's baked world transform from every object-motion authority at
  * one shot-local instant. Translation and rotation are selected independently,
  * so disjoint producer clips compose while later duplicate channels hand off.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects bakedTransformFromClipsAt preserves declared attachment handoff: Resolve a node's baked world transform from every object-motion authority at one shot-local instant. Translation and rotation are selected independently, so disjoint producer clips compose while later duplicate channels hand off.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff bakedTransformFromClipsAt realizes declared attachment and object handoff: Resolve a node's baked world transform from every object-motion authority at one shot-local instant. Translation and rotation are selected independently, so disjoint producer clips compose while later duplicate channels hand off.
  */
 export const bakedTransformFromClipsAt = (
   clips: readonly IAutoMovieClip[],
@@ -89,6 +95,9 @@ const drivingStart = (clip: IAutoMovieClip, node: string): number =>
  * latest clip to start wins, so a chained coupling composes through the last
  * parent handoff without interpreting its artifact id. Ties go to the later
  * producer entry.
+ *
+ * @evidence requirements/motion/object-motion-and-interaction.md#motion-coupled-objects followClipOf selects the baked parent transform source needed to continue a chained object coupling for the addressed node.
+ * @evidence specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-attachment-object-handoff followClipOf realizes declared attachment and object handoff: The baked clip that supplies a chained coupling's parent transform for `node`, or `null` when none does. `coupleObjects` already groups these clips by the child they drive. The latest clip to start wins, so a chained coupling composes through the last parent handoff without interpreting its artifact id. Ties go to the later producer entry.
  *
  * @author Samchon
  */
