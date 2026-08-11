@@ -75,6 +75,7 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "requirements/lighting/color-exposure-and-display-boundary.md",
+            "requirements/lighting/shadows-reflections-and-transmission.md",
             "requirements/lighting/sources-and-photometry.md",
             "requirements/lighting/sun-sky-and-environment.md",
           ],
@@ -189,8 +190,12 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "requirements/formations/heroes-variation-and-state.md",
+            "requirements/formations/layouts-and-slots.md",
             "requirements/formations/reform-and-group-motion.md",
             "requirements/formations/resolution-culling-and-evidence.md",
+            "requirements/formations/scope-and-identity.md",
+            "requirements/formations/terrain-and-routes.md",
           ],
           symbol: ["h3"],
         },
@@ -216,6 +221,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: [
+            "specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md",
             "specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md",
           ],
           symbol: ["h3"],
@@ -302,6 +308,7 @@ const graph: ITtscEvidenceGraphConfig = {
           files: [
             "requirements/rendering/geometry-visibility-and-culling.md",
             "requirements/rendering/materials-lighting-and-color.md",
+            "requirements/rendering/scene-lowering-and-runtime-state.md",
           ],
           symbol: ["h3"],
         },
@@ -329,6 +336,7 @@ const graph: ITtscEvidenceGraphConfig = {
           root: "../../docs",
           files: [
             "specifications/editorial-render-and-delivery/render-products-visibility-and-color.md",
+            "specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md",
           ],
           symbol: ["h2"],
         },
