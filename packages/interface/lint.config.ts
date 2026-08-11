@@ -343,8 +343,8 @@ const graph: ITtscEvidenceGraphConfig = {
       ],
     ),
     contractClaim(
-      "face and expression schemas",
-      ["src/expression/*.ts", "src/face/*.ts"],
+      "expression schemas",
+      ["src/expression/*.ts"],
       [
         "requirements/actors/README.md",
         "requirements/actors/appearance-costume-and-attachments.md",
@@ -357,6 +357,18 @@ const graph: ITtscEvidenceGraphConfig = {
         "specifications/performance-motion-and-staging/README.md",
         "specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md",
         "specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md",
+      ],
+    ),
+    contractClaim(
+      "dormant face-schema compatibility boundary",
+      ["src/face/*.ts"],
+      [
+        "requirements/product/README.md",
+        "requirements/product/scope-and-exclusions.md",
+      ],
+      [
+        "specifications/authoring-and-authority/README.md",
+        "specifications/authoring-and-authority/prototype-determinism-and-fidelity.md",
       ],
     ),
     contractClaim(
@@ -543,6 +555,7 @@ const graph: ITtscEvidenceGraphConfig = {
         "specifications/interchange-and-adoption/README.md",
         "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
         "specifications/interchange-and-adoption/conversion-receipts-and-determinism.md",
+        "specifications/interchange-and-adoption/media-inspection-boundaries.md",
         "specifications/interchange-and-adoption/provenance-rights-and-secrets.md",
         "specifications/interchange-and-adoption/resource-closure-and-acquisition.md",
         "specifications/performance-motion-and-staging/README.md",
@@ -682,6 +695,8 @@ const graph: ITtscEvidenceGraphConfig = {
         "specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md",
         "specifications/editorial-render-and-delivery/delivery-profiles-time-and-picture.md",
         "specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md",
+        "specifications/interchange-and-adoption/README.md",
+        "specifications/interchange-and-adoption/adoption-decisions-and-composition.md",
         "specifications/narrative-and-intent/README.md",
         "specifications/narrative-and-intent/design-authority-and-visual-language.md",
         "specifications/narrative-and-intent/events-causality-and-time.md",
