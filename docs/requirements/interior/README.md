@@ -1,0 +1,37 @@
+# 실내 공간 요구사항
+
+실내는 사람이 들어가 사용하거나 camera가 내부에서 관찰하는 building interior의 공간, 경계, 마감, 설비, 가구와 state를 소유한다. MCP knowledge and evidence boundary가 안내하고 검토하는 범위는 건물 interior이며, 연결된 exterior가 정한 building mass, 건축면적과 연면적, storey elevation과 floor-to-floor height, envelope, core, shaft와 opening을 interior가 편의를 위해 바꿀 수 없다.
+
+각 storey, room, surface와 overlapping zone은 공유 type을 재사용하거나 독립된 ceiling, floor, tile field, wall assembly, service, lighting, acoustics와 furniture state를 가질 수 있다. Pattern의 group seed와 상관 오차, 사용자가 선택한 texture·wear·soiling, external glTF의 direct placement·native conversion·group composition은 같은 resolved building identity와 결정적 authoring evidence로 검토한다.
+
+- [범위와 Host 경계](./scope-and-host-boundary.md)
+- [공간 위계와 Zone](./spatial-hierarchy-and-zones.md)
+- [공간 용도와 점유](./spaces-and-occupancy.md)
+- [연결과 Circulation](./connections-and-circulation.md)
+- [바닥과 이중 바닥](./floors-and-raised-floors.md)
+- [천장과 상부 Zone](./ceilings-and-overhead-zones.md)
+- [벽, 칸막이와 Lining](./walls-partitions-and-linings.md)
+- [기둥, 보와 건축 요소](./columns-beams-and-architectural-elements.md)
+- [문, 창과 Opening](./doors-windows-and-openings.md)
+- [Surface Assembly](./surface-assemblies.md)
+- [재료와 물리 속성](./materials-and-physical-properties.md)
+- [Texture, Pattern과 변주](./textures-patterns-and-variation.md)
+- [허용오차와 의도된 불완전성](./tolerances-and-imperfections.md)
+- [마모, 오염과 노후화](./wear-soiling-and-aging.md)
+- [결, 이음과 연속성](./grain-seams-and-continuity.md)
+- [Joint, Edge와 Transition](./joints-edges-and-transitions.md)
+- [색, Style, Form과 Art](./color-style-form-and-art.md)
+- [가구, Fixture와 Equipment](./furniture-fixtures-and-equipment.md)
+- [외부 자산과 배치 선택](./external-assets-and-placement.md)
+- [Group, Instance와 반복](./groups-instances-and-repetition.md)
+- [Clearance, 인체 치수와 접근성](./clearance-anthropometrics-and-accessibility.md)
+- [조명, 자연광과 광학](./lighting-daylight-and-optics.md)
+- [설비와 실내 환경](./services-and-environment.md)
+- [습식 공간과 방수](./wet-areas-and-waterproofing.md)
+- [물과 유체 요소](./water-and-fluid-features.md)
+- [음향과 소리 경계](./acoustics-and-sound-boundaries.md)
+- [연성 재료, 식물과 변형](./soft-materials-plants-and-deformation.md)
+- [기존 상태, 단계와 대안](./existing-conditions-phases-and-alternatives.md)
+- [시공, 유지관리와 안전](./construction-maintenance-and-safety.md)
+- [산출물과 수량](./deliverables-and-quantities.md)
+- [검증과 반복](./validation-and-iteration.md)
