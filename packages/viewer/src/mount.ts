@@ -50,7 +50,6 @@ export interface IAutoMovieViewerHandle {
  * multi-pass cross-dissolve composite), so the loop skips its own default
  * `render`; returning `void`/`false` keeps the plain single-pass render.
  *
- * @author Samchon
  * @evidence requirements/rendering/scene-lowering-and-runtime-state.md#rendering-runtime-lifecycle Owns the browser renderer and animation loop until the returned handle releases them.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Keeps that interactive runtime state inside one explicit viewer lifecycle.
  * @evidenceExclude requirements/acceptance/approval-exceptions-and-publication.md The viewer presents resolved frames; approval authority, exceptions, and publication decisions remain in review and production orchestration.
@@ -590,8 +589,12 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/editorial-render-and-delivery/README.md The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
  * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-chunk-recovery The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
  * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-frame-identity The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-raster-admission-bound The viewer applies an admitted canvas size but does not compute or enforce the production raster pixel limit.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-dependency-fingerprint The viewer draws supplied runtime state and does not construct the target dependency closure used for render identity.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-fingerprint-protocol The viewer draws supplied runtime state and does not define or encode the versioned target fingerprint protocol.
  * @evidenceExclude specifications/editorial-render-and-delivery/render-encoding-and-validation.md The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
  * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
+ * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-capture-runtime-identity The viewer owns a renderer lifecycle but does not canonicalize or record the browser, executable, platform, graphics, and capture-mode identity.
  * @evidenceExclude specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-headless-platform The viewer projects resolved frames; editorial planning, render scheduling, encoding, packaging, and delivery authority remain outside it.
  * @evidenceExclude specifications/evidence-and-provenance/canonical-digests-and-content-identity.md The viewer renders compiled state; evidence policy, provenance lineage, audit retention, and adjudication remain outside this projection layer.
  * @evidenceExclude specifications/evidence-and-provenance/chain-of-custody-and-tamper-detection.md The viewer renders compiled state; evidence policy, provenance lineage, audit retention, and adjudication remain outside this projection layer.
@@ -660,10 +663,13 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/performance-motion-and-staging/actor-identity-state-and-fidelity.md The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-sounding-membership-handoff The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-spacing-overlap-avoidance The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-static-clearance The viewer instances already-resolved slots and does not derive body bounds or validate static member clearance.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-bounds-framing-culling-failures The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost The viewer applies already-admitted formations; worst-case formation budget calculation and admission remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-geometry-layout-motion-validation The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-layout-ground-validation The viewer instances compiled placements and does not validate resolved slot uniqueness, body clearance, or support-surface contact.
  * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-member-exception-command-event The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
+ * @evidenceExclude specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-motion-validation The viewer samples compiled formation cues and exceptions but does not validate their identities, bounds, or shot-local intervals.
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-contact-phase-weight-support The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-interaction-determinism-compatibility The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/kinematics-contact-and-interaction.md#performance-kinematics-procedural-gait-rule The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
@@ -737,6 +743,7 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/world-and-site/terrain-ground-and-geology.md The viewer draws compiled world state; site authority, geospatial policy, traversal analysis, and validation remain upstream.
  * @evidenceExclude specifications/world-and-site/transport-crossings-and-utilities.md The viewer draws compiled world state; site authority, geospatial policy, traversal analysis, and validation remain upstream.
  * @evidenceExclude specifications/world-and-site/traversal-and-visibility.md The viewer draws compiled world state; site authority, geospatial policy, traversal analysis, and validation remain upstream.
+ * @author Samchon
  */
 export const mountViewer = (
   canvas: HTMLCanvasElement,
