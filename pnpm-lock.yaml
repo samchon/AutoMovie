@@ -145,6 +145,33 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  config:
+    devDependencies:
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.26.1
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.26.1
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
+  docs:
+    devDependencies:
+      '@ttsc/evidence':
+        specifier: catalog:typescript
+        version: 0.26.1(@ttsc/lint@0.26.1)
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.26.1
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.26.1
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/archetypes:
     dependencies:
       '@automovie/engine':

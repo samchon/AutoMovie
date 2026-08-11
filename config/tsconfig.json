@@ -13,5 +13,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["lint.config.ts"]
 }

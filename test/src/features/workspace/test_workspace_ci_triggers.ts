@@ -194,6 +194,14 @@ const SUITE_INPUTS = [
   // test_workspace_pnpm_policy
   "package.json",
   "pnpm-workspace.yaml",
+  "config/package.json",
+  "config/tsconfig.json",
+  "config/lint.config.ts",
+  "config/assertBuild.js",
+  "docs/package.json",
+  "docs/tsconfig.json",
+  "docs/lint.config.ts",
+  "docs/requirements/README.md",
   ".github/license-policy.json",
   "internals/license-policy.mjs",
   // packaged capture and production verification

@@ -14,7 +14,7 @@
     "prepare": "pnpm run build:versions",
     "build:versions": "node build/sync-versions.mjs",
     "build": "pnpm run build:versions && rimraf lib && ttsc && tsc --emitDeclarationOnly",
-    "postbuild": "node ../../internals/config/assertBuild.js",
+    "postbuild": "node ../../config/assertBuild.js",
     "start": "ttsx src/bin.ts",
     "prepack": "pnpm run build"
   },
