@@ -33,7 +33,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/asset-authoring/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -59,7 +59,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/asset-and-representation/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -85,7 +85,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/asset-authoring/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -105,7 +105,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/asset-and-representation/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -127,7 +127,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/actors/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -153,7 +153,7 @@ const graph: ITtscEvidenceGraphConfig = {
             "specifications/asset-and-representation/README.md",
             "specifications/performance-motion-and-staging/README.md",
           ],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -176,7 +176,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["requirements/motion/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
@@ -196,7 +196,7 @@ const graph: ITtscEvidenceGraphConfig = {
           type: "markdown",
           root: "../../docs",
           files: ["specifications/performance-motion-and-staging/README.md"],
-          symbol: ["h2", "h3"],
+          symbol: ["h1", "h2", "h3"],
         },
         {
           type: "markdown",
