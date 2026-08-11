@@ -81,9 +81,17 @@ request는 변하지 않는 의도와 입력의 identity이고, attempt는 한 �
 ### 구조 비교와 연속성 {#asset-spec-repaint-structure-continuity}
 
 <!-- @evidence requirements/repaint/structural-comparison-and-review.md#repaint-structural-comparison-review 재도색 전후 subject, pose, silhouette, camera, contact와 event를 비교해야 한다. -->
+<!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication 여러 재도색 shot에서 같은 film의 시각 identity를 추적해야 한다. -->
+<!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-reference-continuity 공유 reference, model version, control policy와 핵심 palette를 고정하거나 의도된 변경으로 기록해야 한다. -->
 <!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes 여러 shot의 visual identity 기준과 의도된 변화를 고정해야 한다. -->
+<!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-drift-propagation 앞선 rendition을 다음 reference로 쓸 때 계보와 승인 범위를 기록하고 검토되지 않은 drift 전파를 막아야 한다. -->
+<!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts sequence playback에서 flicker, identity drift, geometry warp, texture crawl과 transition mismatch를 검토해야 한다. -->
 
-review는 source와 rendition의 subject identity·count, pose, silhouette, framing, camera relation, contact, 공간 배치와 사건 가독성을 직접 비교하고 pixel 차이와 구조 차이를 구분한다. 여러 shot은 고정된 identity·style reference와 continuity baseline을 공유하며, 의도된 상태 변화만 shot별 delta로 기록하고 한 결과의 drift를 다음 source로 자동 전파하지 않는다.
+review는 source와 rendition의 subject identity·count, pose, silhouette, framing, camera relation, contact, 공간 배치와 사건 가독성을 직접 비교하고 pixel 차이와 구조 차이를 구분한다.
+
+sequence 기록은 character, costume, prop, location, material, palette, light, weather, damage와 texture identity를 deterministic·repainted shot 전체에서 추적한다. 공유 identity·style reference, model version, control policy와 핵심 palette는 versioned continuity baseline과 적용 shot 범위로 고정하고, 의도된 상태 변화만 시작·종료 경계를 가진 shot별 delta로 기록한다.
+
+앞선 rendition을 다음 shot의 reference로 채택할 때는 derivation edge와 승인 범위를 남기며, 승인되지 않은 변화가 연쇄 reference를 통해 누적되지 않게 한다. sequence playback 검토는 frame·shot 경계의 flicker, identity drift, geometry warp, texture crawl과 transition mismatch를 지목하고 해결되지 않은 구간을 publication 실패로 전달한다.
 
 ### rendition 출력과 provenance {#asset-spec-repaint-output-provenance}
 
@@ -95,6 +103,7 @@ rendition 출력은 새 identity와 digest, source와 review revision, 제공자
 ### 실패와 publication 호환성 {#asset-spec-repaint-failure-publication}
 
 <!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-publication-gate current source, provenance, 구조 review와 continuity review를 모두 통과해야 publication할 수 있다. -->
+<!-- @evidence requirements/repaint/sequence-continuity-and-publication.md#repaint-mixed-delivery 결정론적 shot과 재도색 shot의 혼합 정책, 전환과 review requirement를 명시해야 한다. -->
 <!-- @evidence requirements/repaint/providers-models-and-credentials.md#repaint-provider-refusal capability, 조건, credential 또는 실행 경계가 충족되지 않으면 외부 실행을 거부해야 한다. -->
 
-누락 source·reference, digest 불일치, 미지원 capability, 승인되지 않은 외부 전송, credential 부재, budget 초과, 구조 drift, temporal artifact, continuity 실패 또는 stale provenance는 구체적 attempt 상태로 남는다. publication은 current source와 accepted rendition, 완전한 provenance, 구조·continuity review와 delivery 선언이 모두 일치할 때만 가능하며, 결정론적 frame과 재도색 frame의 혼합 delivery는 구간과 전환 규칙을 명시적으로 승인받는다.
+누락 source·reference, digest 불일치, 미지원 capability, 승인되지 않은 외부 전송, credential 부재, budget 초과, 구조 drift, temporal artifact, continuity 실패 또는 stale provenance는 구체적 attempt 상태로 남는다. publication은 current source와 accepted rendition, 완전한 provenance, 구조·continuity review와 delivery 선언이 모두 일치할 때만 가능하다. 결정론적 shot과 재도색 shot을 섞는 delivery는 포함 구간, 전환 정책과 추가 review requirement를 명시적으로 승인받으며, 선언과 다른 lane의 비의도 혼합은 거부한다.
