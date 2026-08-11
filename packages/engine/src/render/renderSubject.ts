@@ -1,5 +1,7 @@
 import {
   IAutoMovieBuiltEnvironment,
+  IAutoMovieCompiledEffect,
+  IAutoMovieCompiledFormation,
   IAutoMovieCompiledInstanceSet,
   IAutoMovieCompiledShotSource,
   IAutoMovieFluidDomain,
@@ -58,6 +60,25 @@ export interface IAutoMovieRenderSubject {
    * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Makes worst-case instance expansion an explicit preflight input.
    */
   instanceSets?: readonly IAutoMovieCompiledInstanceSet[];
+
+  /**
+   * Compact character formations drawn as camera-selected instanced batches.
+   *
+   * Heroes already occur as ordinary scene nodes; this list carries the
+   * anonymous population that no node expansion is allowed to materialize.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Includes bounded formation instances in render preflight without expanding them into nodes.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries the compiled formation population and LOD closure into worst-case inventory.
+   */
+  formations?: readonly IAutoMovieCompiledFormation[];
+
+  /**
+   * Bounded compiler-owned particle effects drawn as instanced billboards.
+   *
+   * @evidence requirements/rendering/budgets.md#rendering-expansion-bounds Includes the declared particle cap rather than the one frame's sampled population.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Carries effect prototype and instance bounds into worst-case inventory.
+   */
+  effects?: readonly IAutoMovieCompiledEffect[];
 
   /**
    * Water bodies the production declares.
@@ -394,6 +415,8 @@ export const autoMovieRenderSubjectOfShot = (props: {
   models: props.compiled.models,
   environments: props.compiled.builtEnvironments ?? [],
   instanceSets: props.compiled.instanceSets,
+  formations: props.compiled.formations,
+  effects: props.compiled.effects,
   waterBodies: props.waterBodies ?? [],
   softBodies: props.softBodies ?? [],
   plantings: props.plantings ?? [],

@@ -38,7 +38,8 @@ import {
  * Scenarios:
  *
  * 1. A shot declaring no simulated domain converts to empty drawable lists and
- *    passes its scene, models, buildings and instance sets straight through.
+ *    passes its scene, models, buildings, compact formations, effects, and
+ *    instance sets straight through.
  * 2. Every declared domain becomes exactly one drawable, and a bound one takes the
  *    owning space and the binding's material while an unbound one takes `null`
  *    for both.
@@ -57,11 +58,11 @@ export const test_render_subject_compiled_shot = (): void => {
     models: modelsFixture(),
     motions: [],
     eventSamples: [],
-    formations: [],
+    formations: [{ id: "chorus" }],
     instanceSets: [instanceSetFixture({ id: "windows", count: 2, chunks: 1 })],
     formationMotions: [],
     formationSlotMotions: [],
-    effects: [],
+    effects: [{ id: "haze" }],
     shot: {},
   } as unknown as IAutoMovieCompiledShotSource;
 
@@ -73,6 +74,8 @@ export const test_render_subject_compiled_shot = (): void => {
       models: empty.models.length,
       environments: empty.environments,
       sets: empty.instanceSets?.map((set) => set.id),
+      formations: empty.formations?.map((formation) => formation.id),
+      effects: empty.effects?.map((effect) => effect.id),
       water: empty.waterBodies,
       panels: empty.softBodies,
       plantings: empty.plantings,
@@ -83,6 +86,8 @@ export const test_render_subject_compiled_shot = (): void => {
       models: 5,
       environments: [],
       sets: ["windows"],
+      formations: ["chorus"],
+      effects: ["haze"],
       water: [],
       panels: [],
       plantings: [],

@@ -347,6 +347,87 @@ export const measureAutoMovieRenderInventory = (props: {
     add(owner, source, "instanceSets", 1);
   }
 
+  let simulatedNodes = 0;
+  let simulatedBytes = 0;
+
+  // --- compact formations --------------------------------------------------
+  // Promoted heroes are ordinary scene nodes above. Every other member is one
+  // instance in exactly one camera-selected LOD batch, so the most expensive
+  // tier times the anonymous population is the safe frame bound. A chunk can
+  // select only one tier, which makes its draw bound the largest part count,
+  // not the sum of every mutually-exclusive representation.
+  for (const formation of subject.formations ?? []) {
+    let worstTriangles = 0;
+    let worstVertices = 0;
+    let worstParts = 0;
+    if (formation.lod.length === 0)
+      throw new Error(
+        `render inventory cannot measure formation "${formation.id}": it declares no level of detail`,
+      );
+    for (const lod of formation.lod) {
+      const cost = measure(
+        model(lod.model, `formation "${formation.id}" LOD "${lod.tier}"`),
+        costs,
+        lod.tier,
+      );
+      drawnModels.add(cost.model);
+      worstTriangles = Math.max(worstTriangles, cost.triangles);
+      worstVertices = Math.max(worstVertices, cost.vertices);
+      worstParts = Math.max(worstParts, cost.parts);
+    }
+    const owner = `formation:${formation.id}`;
+    const source = `formations["${formation.id}"]`;
+    const formationTriangles = formation.anonymousCount * worstTriangles;
+    const formationVertices = formation.anonymousCount * worstVertices;
+    const formationDraws = formation.chunks.length * worstParts;
+    triangles += formationTriangles;
+    vertices += formationVertices;
+    drawCalls += formationDraws;
+    instanceSlots += formation.anonymousCount;
+    instanceChunks += formation.chunks.length;
+    add(owner, source, "triangles", formationTriangles);
+    add(owner, source, "vertices", formationVertices);
+    add(owner, source, "drawCalls", formationDraws);
+    add(owner, source, "instanceSlots", formation.anonymousCount);
+    add(owner, source, "instanceChunks", formation.chunks.length);
+    add(owner, source, "nodes", 1);
+    ++simulatedNodes;
+  }
+
+  // --- bounded billboard effects ------------------------------------------
+  // The viewer uploads one four-vertex plane and instances it up to the
+  // compiler-owned cap. Time sampling may draw fewer (including zero), but a
+  // preflight bound must hold at the cue's peak rather than at frame zero.
+  for (const effect of subject.effects ?? []) {
+    const cap = effect.recipe.budget.maxParticles;
+    if (!Number.isSafeInteger(cap) || cap <= 0)
+      throw new Error(
+        `render inventory cannot measure effect "${effect.id}": maxParticles must be a positive safe integer, but was ${cap}`,
+      );
+    const owner = `effect:${effect.id}`;
+    const source = `effects["${effect.id}"]`;
+    const effectTriangles = cap * 2;
+    const effectVertices = cap * 4;
+    const effectDraws = 1;
+    triangles += effectTriangles;
+    vertices += effectVertices;
+    drawCalls += effectDraws;
+    instanceSlots += cap;
+    simulatedBytes +=
+      4 *
+        (AUTOMOVIE_POSITION_BYTES +
+          AUTOMOVIE_NORMAL_BYTES +
+          AUTOMOVIE_UV_BYTES) +
+      6 * AUTOMOVIE_INDEX_BYTES;
+    ++simulatedNodes;
+    add(owner, source, "triangles", effectTriangles);
+    add(owner, source, "vertices", effectVertices);
+    add(owner, source, "drawCalls", effectDraws);
+    add(owner, source, "instanceSlots", cap);
+    add(owner, source, "nodes", 1);
+    cite(null, owner, source, `effect "${effect.id}"`);
+  }
+
   // --- simulated drawables --------------------------------------------------
   // Cloth, planting and water are drawn by the same renderer as everything
   // above and are held by no scene node, so a subject that measured only nodes,
@@ -354,8 +435,6 @@ export const measureAutoMovieRenderInventory = (props: {
   // curtain, the fern bed and the pond are missing from. Every count here is
   // derived from the domain record alone: no solve has to run, which is the
   // whole point of refusing a production before the first step is integrated.
-  let simulatedNodes = 0;
-  let simulatedBytes = 0;
   let fluidCells = 0;
   let fluidParticles = 0;
   const unmeasured: string[] = [];
@@ -625,19 +704,43 @@ export const measureAutoMovieRenderInventory = (props: {
   // counted, and the environment background costs one full-screen draw.
   const shadowMaps = casters.length;
   const opaqueDraws = drawCalls;
+  const opaqueTriangles = triangles;
   for (const caster of casters) {
     drawCalls += opaqueDraws;
+    triangles += opaqueTriangles;
     add(
       `light:${caster}`,
       `scene.lights["${caster}"]`,
       "drawCalls",
       opaqueDraws,
     );
+    add(
+      `light:${caster}`,
+      `scene.lights["${caster}"]`,
+      "triangles",
+      opaqueTriangles,
+    );
+  }
+  // Outline is another complete geometry pass. With no shadow caster it is
+  // the frame-wide peak; with one it ties the beauty shadow pass, and with
+  // several the shadow pass is already the larger conservative bound.
+  if (casters.length === 0) {
+    drawCalls += opaqueDraws;
+    triangles += opaqueTriangles;
+    add("render-pass:outline", "render.pass.outline", "drawCalls", opaqueDraws);
+    add(
+      "render-pass:outline",
+      "render.pass.outline",
+      "triangles",
+      opaqueTriangles,
+    );
   }
   const image = subject.scene.environment?.image ?? null;
   if (image !== null) {
     drawCalls += 1;
+    triangles += 2;
     add(`texture:${image}`, "scene.environment.image", "drawCalls", 1);
+    add(`texture:${image}`, "scene.environment.image", "triangles", 2);
   }
 
   const nodes =
