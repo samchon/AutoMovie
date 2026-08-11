@@ -84,11 +84,9 @@ export const deriveProductionRuntimeSoundPlan = (props: {
         `Sound occurrence "${event.id}" has a selected acoustic profile but no explicit room binding.`,
       );
     bindings.delete(event.id);
-    const compiled = props.compiled.get(event.shot);
-    if (compiled === undefined)
-      throw new Error(
-        `Sound occurrence "${event.id}" has no current compiled shot.`,
-      );
+    // `deriveProductionSoundPlan` creates an event only after resolving this
+    // exact shot from the same immutable map in this synchronous call.
+    const compiled = props.compiled.get(event.shot)!;
     validateDeclaredSpace(
       compiled,
       binding.sourceSpace,
@@ -155,6 +153,14 @@ export const compileProductionDialogueRuntime = (props: {
   receipts: readonly IAutoMovieProductionTtsReceipt[];
   bindings: readonly IAutoMovieDialogueSpeakerBinding[];
 }): IAutoMovieProductionDialogueRuntime => {
+  if (
+    props.plan.inputFingerprint !== props.timeline.inputFingerprint ||
+    props.plan.fps !== props.timeline.fps ||
+    props.plan.totalFrames !== props.timeline.totalFrames
+  )
+    throw new Error(
+      "Dialogue sound plan and film timeline must share one input fingerprint, frame rate, and total frame count.",
+    );
   const lines = uniqueBy(
     props.plan.dialogue,
     (line) => line.id,
@@ -220,7 +226,7 @@ const assertDialogueTimelineSeparation = (
     const ordered = [...actorTimelines].sort(
       (left, right) =>
         left.ranges[0]!.startFrame - right.ranges[0]!.startFrame ||
-        (left.line < right.line ? -1 : left.line > right.line ? 1 : 0),
+        (left.line < right.line ? -1 : 1),
     );
     for (let index = 1; index < ordered.length; ++index) {
       const previous = ordered[index - 1]!;

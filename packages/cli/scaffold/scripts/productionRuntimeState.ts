@@ -71,7 +71,7 @@ export const productionDialogueFrameForShotTime = (props: {
     props.time < 0
   )
     return null;
-  const sourceFrame = Math.round(props.time * runtime.fps);
+  const sourceFrame = Math.floor(props.time * runtime.fps);
   const candidates = runtime.segments.filter(
     (segment) =>
       segment.shot === props.shot &&

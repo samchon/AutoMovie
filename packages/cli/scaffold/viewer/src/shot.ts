@@ -132,7 +132,7 @@ function uniqueFilmFrameForShotTime(
 ): number | null {
   if (dialogue === null || Number.isFinite(time) === false || time < 0)
     return null;
-  const sourceFrame = Math.round(time * dialogue.fps);
+  const sourceFrame = Math.floor(time * dialogue.fps);
   const candidates = dialogue.segments.filter(
     (segment) =>
       segment.shot === shot &&
