@@ -14,7 +14,7 @@ interface IProjectTransactionFixtureFailure {
 class ProjectTransactionFixtureCleanupError extends AggregateError {}
 
 /** Remove one transaction root without replacing its primary failure. */
-export const preserveProjectTransactionFixtureCleanup = (
+const preserveProjectTransactionFixtureCleanup = (
   failure: IProjectTransactionFixtureFailure | undefined,
   cleanup: () => unknown,
   resource: string,
@@ -38,7 +38,7 @@ interface IProjectTransactionSwapCleanup {
 class ProjectTransactionSwapCleanupError extends AggregateError {}
 
 /** Attempt every transaction root-swap cleanup without hiding failure. */
-export const preserveProjectTransactionSwapCleanup = (
+const preserveProjectTransactionSwapCleanup = (
   failure: IProjectTransactionFixtureFailure | undefined,
   resources: readonly IProjectTransactionSwapCleanup[],
 ): void => {

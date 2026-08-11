@@ -13,7 +13,7 @@ interface IProjectSliceEdgeFixtureFailure {
 class ProjectSliceEdgeFixtureCleanupError extends AggregateError {}
 
 /** Remove one slice-edge root without replacing its primary failure. */
-export const preserveProjectSliceEdgeFixtureCleanup = (
+const preserveProjectSliceEdgeFixtureCleanup = (
   failure: IProjectSliceEdgeFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

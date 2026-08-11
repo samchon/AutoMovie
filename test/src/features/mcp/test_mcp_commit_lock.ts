@@ -17,7 +17,7 @@ interface ICommitLockFixtureFailure {
 class CommitLockFixtureCleanupError extends AggregateError {}
 
 /** Remove the commit-lock fixture root without replacing its primary failure. */
-export const preserveCommitLockFixtureCleanup = (
+const preserveCommitLockFixtureCleanup = (
   failure: ICommitLockFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
@@ -40,7 +40,7 @@ interface ICommitLockHookCleanup {
 class CommitLockHookCleanupError extends AggregateError {}
 
 /** Attempt every commit-lock harness hook restoration without hiding failure. */
-export const preserveCommitLockHookCleanup = (
+const preserveCommitLockHookCleanup = (
   failure: ICommitLockFixtureFailure | undefined,
   resources: readonly ICommitLockHookCleanup[],
 ): void => {

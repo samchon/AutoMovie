@@ -13,7 +13,7 @@ interface IProjectAssetsFixtureFailure {
 class ProjectAssetsFixtureCleanupError extends AggregateError {}
 
 /** Remove the project-assets root without replacing its primary failure. */
-export const preserveProjectAssetsFixtureCleanup = (
+const preserveProjectAssetsFixtureCleanup = (
   failure: IProjectAssetsFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

@@ -19,7 +19,7 @@ interface IProjectStorePlumbingFixtureFailure {
 class ProjectStorePlumbingFixtureCleanupError extends AggregateError {}
 
 /** Remove one plumbing root without replacing its primary failure. */
-export const preserveProjectStorePlumbingFixtureCleanup = (
+const preserveProjectStorePlumbingFixtureCleanup = (
   failure: IProjectStorePlumbingFixtureFailure | undefined,
   cleanup: () => unknown,
   resource: string,

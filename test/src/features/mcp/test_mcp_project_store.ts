@@ -21,7 +21,7 @@ interface IProjectStoreFixtureFailure {
 class ProjectStoreFixtureCleanupError extends AggregateError {}
 
 /** Remove one project-store root without replacing its primary failure. */
-export const preserveProjectStoreFixtureCleanup = (
+const preserveProjectStoreFixtureCleanup = (
   failure: IProjectStoreFixtureFailure | undefined,
   cleanup: () => unknown,
   resource: string,

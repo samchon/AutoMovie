@@ -44,7 +44,7 @@ interface IProductionOracleFixtureFailure {
 
 class ProductionOracleFixtureCleanupError extends AggregateError {}
 
-export const preserveProductionOracleFixtureCleanup = (
+const preserveProductionOracleFixtureCleanup = (
   failure: IProductionOracleFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {
@@ -67,7 +67,7 @@ interface IProductionOracleHookCleanup {
 class ProductionOracleHookCleanupError extends AggregateError {}
 
 /** Attempt every oracle harness hook restoration without hiding failure. */
-export const preserveProductionOracleHookCleanup = (
+const preserveProductionOracleHookCleanup = (
   failure: IProductionOracleFixtureFailure | undefined,
   resources: readonly IProductionOracleHookCleanup[],
 ): void => {

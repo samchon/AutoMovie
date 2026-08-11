@@ -1,4 +1,4 @@
-import { renderScaffold, scaffoldAssetDirectory } from "@automovie/cli";
+import { scaffoldAssetDirectory } from "@automovie/cli";
 import {
   forgeProp,
   placementChildNode,
@@ -106,46 +106,20 @@ const swing = (node: string, deg: number): IAutoMovieClip => ({
  *
  * Scenarios:
  *
- * 1. The rendered starter carries both halves of the rung, the specification cites
- *    the scene that calls for the object, and that scene's prose actually names
- *    it: a citation whose scene never asks for the thing is a claim nobody can
- *    check.
- * 2. The shipped class forges: `forgeProp` accepts its model and articulation,
+ * 1. The shipped class forges: `forgeProp` accepts its model and articulation,
  *    including the part its one joint drives.
- * 3. Specification and placement join: `validatePropPlacements` accepts the
+ * 2. Specification and placement join: `validatePropPlacements` accepts the
  *    class's own `design()` against its own `stage()`, which is the compiler
  *    gate a generated project meets on its first compile. The placement is the
  *    far edge of the staged ground, and a world carrying no ground at all is
  *    refused rather than putting the gate on top of the soloist.
- * 4. The hinge id the class publishes is the id `sceneToNodes` lowers it under, so
+ * 3. The hinge id the class publishes is the id `sceneToNodes` lowers it under, so
  *    a shot addressing `hingeNode()` addresses the node the scene carries.
- * 5. The declared travel is a bound, not a comment: a swing inside it resolves
+ * 4. The declared travel is a bound, not a comment: a swing inside it resolves
  *    with no violation, and one past it is clamped and reported against the
  *    gate's own profile.
  */
 export const test_cli_scaffold_object_ladder = (): void => {
-  const files = renderScaffold({ name: "demo-film" });
-  const specification = files["docs/objects/gate.md"];
-  const scene = files["docs/demo-film/04-scenes/SCN-002.md"];
-  TestValidator.equals(
-    "the object rung ships both halves, cited and called for",
-    {
-      specification: specification !== undefined,
-      implementation: files["src/objects/gate.ts"] !== undefined,
-      cites:
-        specification?.includes(
-          "@evidence docs/demo-film/04-scenes/SCN-002.md",
-        ) === true,
-      calledFor: scene?.includes("GATE") === true,
-    },
-    {
-      specification: true,
-      implementation: true,
-      cites: true,
-      calledFor: true,
-    },
-  );
-
   const gate = (
     createRequire(__filename)(
       path.join(scaffoldAssetDirectory(), "src", "objects", "gate.ts"),

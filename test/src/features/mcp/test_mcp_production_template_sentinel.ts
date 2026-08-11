@@ -15,7 +15,7 @@ interface ITemplateSentinelFixtureFailure {
 
 class TemplateSentinelFixtureCleanupError extends AggregateError {}
 
-export const preserveTemplateSentinelFixtureCleanup = (
+const preserveTemplateSentinelFixtureCleanup = (
   failure: ITemplateSentinelFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

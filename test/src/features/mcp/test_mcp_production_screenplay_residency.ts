@@ -16,7 +16,7 @@ interface IScreenplayResidencyFixtureFailure {
 
 class ScreenplayResidencyFixtureCleanupError extends AggregateError {}
 
-export const preserveScreenplayResidencyFixtureCleanup = (
+const preserveScreenplayResidencyFixtureCleanup = (
   failure: IScreenplayResidencyFixtureFailure | undefined,
   cleanup: () => void,
 ): void => {

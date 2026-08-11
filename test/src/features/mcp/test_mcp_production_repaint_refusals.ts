@@ -12,7 +12,7 @@ interface IRepaintFixtureFailure {
 class RepaintFixtureCleanupError extends AggregateError {}
 
 /** Dispose one repaint fixture without replacing its primary failure. */
-export const preserveRepaintFixtureCleanup = (
+const preserveRepaintFixtureCleanup = (
   failure: IRepaintFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

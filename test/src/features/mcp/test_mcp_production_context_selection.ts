@@ -13,7 +13,7 @@ interface IContextFixtureFailure {
 class ContextFixtureCleanupError extends AggregateError {}
 
 /** Remove one context fixture root without replacing its primary failure. */
-export const preserveContextFixtureCleanup = (
+const preserveContextFixtureCleanup = (
   failure: IContextFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

@@ -102,7 +102,7 @@ interface ILegacyImportFixtureCleanup {
 class LegacyImportFixtureCleanupError extends AggregateError {}
 
 /** Attempt every acquired legacy-import cleanup without hiding failure. */
-export const preserveLegacyImportFixtureCleanup = (
+const preserveLegacyImportFixtureCleanup = (
   failure: ILegacyImportFixtureFailure | undefined,
   resources: readonly ILegacyImportFixtureCleanup[],
 ): void => {
@@ -130,7 +130,7 @@ export const preserveLegacyImportFixtureCleanup = (
 class LegacyFixtureConstructionCleanupError extends AggregateError {}
 
 /** Remove a partial legacy fixture without replacing its setup failure. */
-export const throwLegacyFixtureConstructionFailure = (
+const throwLegacyFixtureConstructionFailure = (
   failure: unknown,
   cleanup: () => unknown,
 ): never => {

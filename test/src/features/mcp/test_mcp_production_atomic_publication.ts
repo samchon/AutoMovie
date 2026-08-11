@@ -31,7 +31,7 @@ interface IAtomicPublicationFixtureFailure {
 class AtomicPublicationFixtureCleanupError extends AggregateError {}
 
 /** Dispose the atomic-publication fixture without replacing its failure. */
-export const preserveAtomicPublicationFixtureCleanup = (
+const preserveAtomicPublicationFixtureCleanup = (
   failure: IAtomicPublicationFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {

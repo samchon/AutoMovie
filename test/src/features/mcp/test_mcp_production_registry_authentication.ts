@@ -18,7 +18,7 @@ interface IRegistryFixtureFailure {
 class RegistryFixtureCleanupError extends AggregateError {}
 
 /** Dispose one registry fixture without replacing its primary failure. */
-export const preserveRegistryFixtureCleanup = (
+const preserveRegistryFixtureCleanup = (
   failure: IRegistryFixtureFailure | undefined,
   cleanup: () => unknown,
 ): void => {
