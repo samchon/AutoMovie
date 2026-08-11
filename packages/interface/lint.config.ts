@@ -757,20 +757,15 @@ const graph: ITtscEvidenceGraphConfig = {
       ],
       [
         "requirements/acceptance/README.md",
-        "requirements/acceptance/approval-exceptions-and-publication.md",
         "requirements/acceptance/evidence-and-freshness.md",
         "requirements/review/README.md",
         "requirements/review/annotations-findings-and-verdicts.md",
-        "requirements/review/approval-rejection-and-waivers.md",
         "requirements/review/records-and-completeness.md",
-        "requirements/review/scope-and-authority.md",
       ],
       [
         "specifications/review-and-acceptance/README.md",
-        "specifications/review-and-acceptance/approval-waiver-and-publication.md",
         "specifications/review-and-acceptance/evidence-freshness-and-completeness.md",
         "specifications/review-and-acceptance/observations-findings-and-defects.md",
-        "specifications/review-and-acceptance/verdict-authority-and-dissent.md",
       ],
     ),
     contractClaim(
