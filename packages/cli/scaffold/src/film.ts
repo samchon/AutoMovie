@@ -58,7 +58,7 @@ export const film = {
             id: "cue-caption",
             text: "The soloist raises the cue.",
             language: "en",
-            speaker: "soloist",
+            speaker: null,
             start: { seconds: 1.5 },
             end: { seconds: 3 },
           },
