@@ -21,6 +21,22 @@ interface IEvidenceGroup {
  */
 const groups: IEvidenceGroup[] = [
   {
+    name: "building drawing schedule and quantity derivation",
+    sources: ["src/drawing/**/*.ts"],
+    requirements: [
+      "requirements/building-exterior/README.md",
+      "requirements/building-exterior/deliverables.md",
+      "requirements/interior/README.md",
+      "requirements/interior/deliverables-and-quantities.md",
+    ],
+    specifications: [
+      "specifications/building-envelope/README.md",
+      "specifications/building-envelope/phases-deliverables-and-validation.md",
+      "specifications/interior-space/README.md",
+      "specifications/interior-space/deliverables-and-validation.md",
+    ],
+  },
+  {
     name: "building and interior physical invariants",
     sources: [
       "src/analysis/hygrothermalAnalysis.ts",
@@ -93,24 +109,29 @@ const groups: IEvidenceGroup[] = [
     ],
     requirements: [
       "requirements/asset-authoring/README.md",
-      "requirements/asset-authoring/external-assets.md",
       "requirements/asset-authoring/identity-and-instances.md",
       "requirements/building-exterior/README.md",
       "requirements/building-exterior/existing-phases-and-alternatives.md",
-      "requirements/building-exterior/external-assets-and-placement.md",
+      "requirements/evidence-and-provenance/README.md",
+      "requirements/evidence-and-provenance/entities-activities-agents-and-lineage.md",
+      "requirements/evidence-and-provenance/generation-transformation-and-derivation.md",
       "requirements/interior/README.md",
       "requirements/interior/existing-conditions-phases-and-alternatives.md",
-      "requirements/interior/external-assets-and-placement.md",
+      "requirements/production-design/README.md",
+      "requirements/production-design/references-and-provenance.md",
     ],
     specifications: [
       "specifications/asset-and-representation/README.md",
       "specifications/asset-and-representation/identity-resources-and-lifecycle.md",
       "specifications/building-envelope/README.md",
-      "specifications/building-envelope/external-assets-patterns-and-instances.md",
       "specifications/building-envelope/phases-deliverables-and-validation.md",
+      "specifications/evidence-and-provenance/README.md",
+      "specifications/evidence-and-provenance/entities-activities-agents-and-lineage.md",
+      "specifications/evidence-and-provenance/generation-transformation-and-derivation.md",
       "specifications/interior-space/README.md",
       "specifications/interior-space/construction-phases-and-alternatives.md",
-      "specifications/interior-space/external-assets-and-groups.md",
+      "specifications/narrative-and-intent/README.md",
+      "specifications/narrative-and-intent/fidelity-references-and-provenance.md",
     ],
   },
   {
@@ -372,6 +393,73 @@ const groups: IEvidenceGroup[] = [
       "specifications/performance-motion-and-staging/README.md",
       "specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md",
       "specifications/performance-motion-and-staging/staging-space-state-and-choreography.md",
+    ],
+  },
+  {
+    name: "story hierarchy beat and correction computation",
+    sources: [
+      "src/film/scriptGraph.ts",
+      "src/validation/validateScriptTree.ts",
+    ],
+    requirements: [
+      "requirements/story/README.md",
+      "requirements/story/beats-and-causality.md",
+      "requirements/story/revision-and-change-impact.md",
+      "requirements/story/scenes-and-observable-action.md",
+      "requirements/story/scope-and-source-of-truth.md",
+      "requirements/story/treatment-and-sequences.md",
+    ],
+    specifications: [
+      "specifications/narrative-and-intent/README.md",
+      "specifications/narrative-and-intent/alternatives-revisions-and-compatibility.md",
+      "specifications/narrative-and-intent/events-causality-and-time.md",
+      "specifications/narrative-and-intent/scene-coverage-and-acceptance.md",
+      "specifications/narrative-and-intent/story-authority-and-hierarchy.md",
+    ],
+  },
+  {
+    name: "story clock state and simultaneity computation",
+    sources: ["src/film/storyClock.ts"],
+    requirements: [
+      "requirements/story/README.md",
+      "requirements/story/beats-and-causality.md",
+      "requirements/story/story-clock-and-state.md",
+    ],
+    specifications: [
+      "specifications/narrative-and-intent/README.md",
+      "specifications/narrative-and-intent/characters-relations-and-state.md",
+      "specifications/narrative-and-intent/events-causality-and-time.md",
+    ],
+  },
+  {
+    name: "editorial trim transition and rational runtime computation",
+    sources: ["src/film/cutSequence.ts"],
+    requirements: [
+      "requirements/editorial/README.md",
+      "requirements/editorial/clips-source-ranges-and-handles.md",
+      "requirements/editorial/picture-and-sound-edits.md",
+      "requirements/editorial/rational-time-and-ranges.md",
+      "requirements/editorial/transitions-and-overlaps.md",
+    ],
+    specifications: [
+      "specifications/editorial-render-and-delivery/README.md",
+      "specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md",
+      "specifications/editorial-render-and-delivery/rational-timeline-and-composition.md",
+    ],
+  },
+  {
+    name: "shot review criterion and observation computation",
+    sources: ["src/film/reviewShot.ts", "src/film/reviewVisualRead.ts"],
+    requirements: [
+      "requirements/acceptance/README.md",
+      "requirements/acceptance/criteria-and-observables.md",
+      "requirements/acceptance/review-surfaces-and-sampling.md",
+    ],
+    specifications: [
+      "specifications/review-and-acceptance/README.md",
+      "specifications/review-and-acceptance/criteria-tolerance-and-comparison.md",
+      "specifications/review-and-acceptance/observations-findings-and-defects.md",
+      "specifications/review-and-acceptance/surfaces-and-sampling.md",
     ],
   },
   {
