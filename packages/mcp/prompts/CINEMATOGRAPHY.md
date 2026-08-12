@@ -30,7 +30,9 @@ Match on action by overlapping authored motion and choosing a cut where directio
 
 Pan or tilt to reveal, follow, compare, or withhold. Dolly changes spatial relation and perspective; zoom changes framing without moving through space. Truck, pedestal, orbit, crane, and handheld each imply different observation and energy. Every move needs a subject, start state, end state, and dramatic reason. A motion that only proves the camera can move is noise.
 
-Ease camera starts and stops unless impact calls for discontinuity. Coordinate subject motion and camera motion so one does not accidentally cancel or amplify the other. Check minimum distance, target visibility, occlusion, raster bounds, and motion speed through the engine and acceptance gates.
+Ease camera starts and stops unless impact calls for discontinuity. Coordinate subject motion and camera motion so one does not accidentally cancel or amplify the other.
+
+Know which of those the surface will check for you, because it is fewer than it looks. The engine's `distance` and `camera` queries measure separation and project animated subject roots through the current camera, its field of view, its clip planes and the production aspect ratio, so a subject outside the raster or too close to the lens is a fact you can read. **Occlusion and motion speed are not gates.** The camera query reports the shot contract's `maxAllowedOcclusionRatio` beside `occlusionMeasured: false`, because projecting a root point does not measure how much of a body is hidden; and acceptance carries exactly one numeric metric, `runtime-seconds`, with physics and occlusion deliberately left out until their operands and measurement protocols are explicit. Judge both from current frame evidence through the review tools, and do not write an acceptance criterion that claims to have checked them.
 
 ## Light and color
 
