@@ -22,6 +22,9 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
     const application = new AutoMovieApplication({ projectRoot: root });
     const catalog = listAutoMovieDiagnosticCatalog();
     const references = new Set(catalog.map((entry) => entry.reference.id));
+    const revisions = new Set(
+      catalog.map((entry) => entry.reference.catalogRevision),
+    );
 
     TestValidator.equals(
       "the immutable catalog closes the public diagnostic union exactly once",
@@ -33,6 +36,23 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
             AUTOMOVIE_DIAGNOSTIC_CODES.join("\n"),
         ],
         ["uniqueReferences", () => references.size === catalog.length],
+        [
+          "onePositiveRevision",
+          () =>
+            revisions.size === 1 &&
+            [...revisions].every((revision) => revision > 0),
+        ],
+        [
+          "completeReferences",
+          () =>
+            catalog.every(
+              (entry) =>
+                entry.reference.path.includes(".md#") &&
+                entry.invariant.length > 0 &&
+                entry.correction.length > 0 &&
+                entry.recheck.length > 0,
+            ),
+        ],
         ["catalogFrozen", () => Object.isFrozen(catalog)],
         [
           "entriesFrozen",
@@ -63,6 +83,8 @@ export const test_mcp_production_diagnostic_catalog = (): void => {
       {
         codes: true,
         uniqueReferences: true,
+        onePositiveRevision: true,
+        completeReferences: true,
         catalogFrozen: true,
         entriesFrozen: true,
         lookups: true,
