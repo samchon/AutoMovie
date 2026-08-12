@@ -1142,43 +1142,17 @@ export const validateAutoMovieProductionGraph = (
       `${sharedRoot}/formations`,
       `Formation LOD matrices and phase attributes require ${formationInstanceBytes} bytes, above the ${AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES}-byte viewer budget. Reduce count or LOD tiers.`,
     );
-  const formationRuntimeBytes = [...graph.formations.values()].reduce(
-    (bytes, formation) => {
-      const occurrences = [...graph.shots.values()].filter((shot) =>
-        shot.participants.some(
-          (participant) =>
-            participant.kind === "formation" && participant.id === formation.id,
-        ),
-      ).length;
-      const variableBytes = Buffer.byteLength(
-        JSON.stringify({
-          id: formation.id,
-          modelRecipe: formation.modelRecipe,
-          layout: formation.layout,
-          heroes: formation.heroOverrides,
-          lod: graph.models.get(formation.modelRecipe)?.lod ?? [],
-        }),
-        "utf8",
-      );
-      const runtimeBytes =
-        4_096 +
-        variableBytes +
-        Math.ceil(formation.count / 1_024) * 1_024 +
-        formation.heroOverrides.length * 1_024;
-      return bytes + runtimeBytes * Math.max(1, occurrences);
-    },
-    0,
-  );
+  const runtimeCost = formationRuntimeCost(graph);
   if (
-    Number.isSafeInteger(formationRuntimeBytes) === false ||
-    formationRuntimeBytes > AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES
+    Number.isSafeInteger(runtimeCost.total) === false ||
+    runtimeCost.total > AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES
   )
     invalid(
       diagnostics,
       "design-range-invalid",
       "formations",
       `${sharedRoot}/formations`,
-      `Estimated compact formation runtime is ${formationRuntimeBytes} bytes, above the ${AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES}-byte generated payload budget. Reduce count or hero overrides.`,
+      `Estimated compact formation runtime is ${runtimeCost.total} bytes, above the ${AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES}-byte generated payload budget. ${formationRuntimeAdvice(runtimeCost)}`,
     );
 
   for (const [id, formation] of graph.formations) {
@@ -2805,6 +2779,97 @@ const dressedInterval = (
       file,
       `Dressing tolerance ${tolerance} m reaches half the ${spacing} m ${axis} interval it perturbs, so two neighbouring members can stand in one place. Keep twice layout.dressing.${axis} below layout.spacing.${axis} in the tracked formation design record.`,
     );
+};
+
+/**
+ * What the compact formation runtime costs, and which term is paying for it.
+ *
+ * The budget is charged per **participation**, not per formation: a unit named
+ * by six shots is stored six times, fixed floor and all. That is the term a
+ * production of many shots runs out on, and it is the one nothing was saying.
+ * A refusal that reads "reduce count or hero overrides" sends an author to
+ * shrink a crowd that is not the problem, when the fix is to stage fewer units
+ * per shot or to stop reusing one unit across every shot in the sequence. The
+ * #1825 campaign integrated none of eight new shots on this rule, six of which
+ * added no members at all, and read the diagnostic as being about its crowds.
+ *
+ * The breakdown is kept rather than summed away so the refusal can name the
+ * dominant term instead of the first one that came to mind.
+ */
+interface IFormationRuntimeCost {
+  /** Total estimated bytes across every participation. */
+  total: number;
+  /** Formation-to-shot participations counted, at least one per formation. */
+  participations: number;
+  /** Bytes owed to the per-participation fixed floor alone. */
+  floor: number;
+  /** Bytes owed to member chunks. */
+  members: number;
+  /** Bytes owed to promoted hero slots. */
+  heroes: number;
+}
+
+/** The per-participation fixed cost of holding one unit in a shot. */
+const FORMATION_RUNTIME_FLOOR_BYTES = 4_096;
+
+const formationRuntimeCost = (
+  graph: IAutoMovieProductionDesignGraph,
+): IFormationRuntimeCost => {
+  const cost: IFormationRuntimeCost = {
+    total: 0,
+    participations: 0,
+    floor: 0,
+    members: 0,
+    heroes: 0,
+  };
+  for (const formation of graph.formations.values()) {
+    const occurrences = Math.max(
+      1,
+      [...graph.shots.values()].filter((shot) =>
+        shot.participants.some(
+          (participant) =>
+            participant.kind === "formation" && participant.id === formation.id,
+        ),
+      ).length,
+    );
+    const variableBytes = Buffer.byteLength(
+      JSON.stringify({
+        id: formation.id,
+        modelRecipe: formation.modelRecipe,
+        layout: formation.layout,
+        heroes: formation.heroOverrides,
+        lod: graph.models.get(formation.modelRecipe)?.lod ?? [],
+      }),
+      "utf8",
+    );
+    const members = Math.ceil(formation.count / 1_024) * 1_024;
+    const heroes = formation.heroOverrides.length * 1_024;
+    cost.participations += occurrences;
+    cost.floor += FORMATION_RUNTIME_FLOOR_BYTES * occurrences;
+    cost.members += members * occurrences;
+    cost.heroes += heroes * occurrences;
+    cost.total +=
+      (FORMATION_RUNTIME_FLOOR_BYTES + variableBytes + members + heroes) *
+      occurrences;
+  }
+  return cost;
+};
+
+/**
+ * Name the term that is actually spending the budget.
+ *
+ * Whichever of the three is largest is the one an author can act on, and the
+ * participation count is stated in every case because it multiplies all of
+ * them and is the fact the guide's "at most 100,000 total members" reading
+ * hides.
+ */
+const formationRuntimeAdvice = (cost: IFormationRuntimeCost): string => {
+  const shared = `The estimate charges each formation once per shot that names it, so ${cost.participations} participation(s) are stored, ${FORMATION_RUNTIME_FLOOR_BYTES} bytes of fixed cost each.`;
+  if (cost.floor >= cost.members && cost.floor >= cost.heroes)
+    return `${shared} That fixed cost alone is ${cost.floor} bytes and is the dominant term: reduce how many formations each shot stages, or how many shots reuse one formation. Shrinking counts will not help.`;
+  if (cost.heroes >= cost.members)
+    return `${shared} Promoted hero slots are the dominant term at ${cost.heroes} bytes: reduce hero overrides, or the number of shots the promoted units appear in.`;
+  return `${shared} Member chunks are the dominant term at ${cost.members} bytes: reduce count, or the number of shots those units appear in.`;
 };
 
 /**
