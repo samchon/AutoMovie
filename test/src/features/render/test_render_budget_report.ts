@@ -896,10 +896,7 @@ export const test_render_budget_report = (): void => {
       materials: 2,
       textures: 0,
       textureBytes: 0,
-      geometryBytes:
-        BOX_GEOMETRY_BYTES +
-        4 * (12 + 12 + 8) +
-        6 * 4,
+      geometryBytes: BOX_GEOMETRY_BYTES + 4 * (12 + 12 + 8) + 6 * 4,
       lights: 0,
       shadowMaps: 0,
       nodes: 2,

@@ -1,5 +1,7 @@
 import {
   autoMovieAssemblyOpeningReveal,
+  autoMoviePatternInstanceTransforms,
+  autoMoviePatternTextureTransforms,
   buildAutoMoviePolyhedron,
   buildAutoMovieWall,
   builtEnvironmentAdjacentSpaces,
@@ -11,6 +13,7 @@ import {
   builtEnvironmentSpaceSurfaces,
   extrudeAutoMovieProfile,
   extrudeAutoMovieRegion,
+  generateAutoMovieSurfacePattern,
   inspectAutoMovieMeshTopology,
   loftAutoMovieSections,
   lowerBuiltEnvironment,
@@ -67,6 +70,8 @@ export type IAutoMovieSandboxEngineAnswer =
 export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandboxEngineExport[] =
   [
     "autoMovieAssemblyOpeningReveal",
+    "autoMoviePatternInstanceTransforms",
+    "autoMoviePatternTextureTransforms",
     "buildAutoMoviePolyhedron",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
@@ -78,6 +83,7 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "builtEnvironmentSpaceSurfaces",
     "extrudeAutoMovieProfile",
     "extrudeAutoMovieRegion",
+    "generateAutoMovieSurfacePattern",
     "inspectAutoMovieMeshTopology",
     "loftAutoMovieSections",
     "lowerBuiltEnvironment",
@@ -112,6 +118,12 @@ const bridged =
 const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
   {
     autoMovieAssemblyOpeningReveal: bridged(autoMovieAssemblyOpeningReveal),
+    autoMoviePatternInstanceTransforms: bridged(
+      autoMoviePatternInstanceTransforms,
+    ),
+    autoMoviePatternTextureTransforms: bridged(
+      autoMoviePatternTextureTransforms,
+    ),
     buildAutoMoviePolyhedron: bridged(buildAutoMoviePolyhedron),
     buildAutoMovieWall: bridged(buildAutoMovieWall),
     builtEnvironmentAdjacentSpaces: bridged(builtEnvironmentAdjacentSpaces),
@@ -123,6 +135,7 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     builtEnvironmentSpaceSurfaces: bridged(builtEnvironmentSpaceSurfaces),
     extrudeAutoMovieProfile: bridged(extrudeAutoMovieProfile),
     extrudeAutoMovieRegion: bridged(extrudeAutoMovieRegion),
+    generateAutoMovieSurfacePattern: bridged(generateAutoMovieSurfacePattern),
     inspectAutoMovieMeshTopology: bridged(inspectAutoMovieMeshTopology),
     loftAutoMovieSections: bridged(loftAutoMovieSections),
     lowerBuiltEnvironment: bridged(lowerBuiltEnvironment),

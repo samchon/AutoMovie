@@ -21,6 +21,7 @@
 // `sandboxManifest` then pins every workspace package to its tarball, and
 // `claudeSettings` approves the project's own MCP server so a non-interactive
 // session can reach it.
+import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +30,7 @@ import {
   WORKSPACE_TEMPLATE_VERSION_KEYS,
   resolveTemplateVersions,
 } from "../packages/cli/build/templateVersions.mjs";
-import { packWorkspace } from "./tgz.mjs";
+import { PACKAGES, packWorkspace } from "./tgz.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
@@ -46,15 +47,6 @@ Options:
   --no-install  Render only, skipping the pack and install.
 `;
 
-/**
- * The workspace packages a sandbox installs, dependencies before consumers.
- *
- * This is the scaffold's own set (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed
- * under `@automovie/*` dependencies, which adds `ingest` and `render` through
- * `mcp`. The closure matters because `pnpm pack` rewrites a `workspace:^` range
- * to a plain semver one: any member left unpacked would be resolved from the
- * public registry at a version this monorepo has never published.
- */
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
  * `.gitignore` and `.npmrc` from a published package. Mirrors the rename map in
@@ -106,33 +98,6 @@ const assertPortableName = (name) => {
     throw new Error(`name "${name}" must be one portable directory segment`);
 };
 
-/**
- * Pack every workspace package into `experimental/<name>/.tarballs`, returning
- * each package's `file:` specifier.
- *
- * Packing rather than linking is the whole design. `pnpm pack` runs each
- * package's `prepack` build and applies `publishConfig`, so the tarball's
- * `exports` name built `lib/*.js` instead of `src/*.ts`. Three consequences
- * follow, and all three were measured before this replaced `link:`.
- *
- * The MCP host starts in seconds instead of 133, which is the difference
- * between a usable sandbox and an unusable one: an MCP client's `initialize`
- * request times out at 60 seconds, and no environment variable moves it, so a
- * linked sandbox handed a live agent zero tools no matter how long it waited.
- *
- * Typia's compile-time transform is already applied, so no consumer needs
- * `ttsx` to avoid `typia.llm.controller(): no transform has been configured`,
- * and the scaffold's own `tsx` scripts run unmodified.
- *
- * `lib/index.js` is CommonJS emitted by `tsc`, whose `__exportStar` form
- * `cjs-module-lexer` does follow, so an ESM importer sees every name the index
- * re-exports. Under a link the same import lost every `export * from` line.
- *
- * The digest in each filename is not decoration. `file:` specifiers are keyed
- * by path, so a rebuilt package under an unchanged name and version would leave
- * an existing sandbox installed against stale bytes; changing the specifier is
- * what forces pnpm to resolve the new tarball.
- */
 /**
  * The scaffold rendered for a sandbox: the published version tokens, with every
  * package this monorepo publishes replaced by its working-tree tarball.
@@ -192,23 +157,6 @@ const claudeSettings = (rendered) => {
   )}\n`;
 };
 
-/**
- * The sandbox's manifest: the scaffold's, plus the two settings the root
- * workspace used to supply.
- *
- * The scaffold is an npm project, so its Sharp stub is an npm-style top-level
- * `overrides` block. pnpm reads `pnpm.overrides` instead and ignores that one,
- * and a standalone install therefore pulls real Sharp in past the capability
- * wall the stub exists to hold. Mirroring it under `pnpm` restores the stub
- * without disturbing the npm form a published project still needs.
- *
- * `onlyBuiltDependencies` is not cosmetic. pnpm 10 refuses to run any
- * dependency lifecycle script that a project has not allowed, and reports the
- * refusal as `ERR_PNPM_IGNORED_BUILDS` with a **non-zero exit**, which the
- * generator would otherwise read as a failed install. The listed three are the
- * builds this dependency graph genuinely needs; Sharp is absent because the
- * override above replaces it with the stub, which has nothing to build.
- */
 /**
  * The sandbox's manifest: the scaffold's, with every workspace package pinned
  * to its sibling tarball.

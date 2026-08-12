@@ -13,6 +13,8 @@ export type AutoMovieSandboxEngineExport =
   | "AutoMovieSubject"
   | "AutoMovieSubjectGroup"
   | "autoMovieAssemblyOpeningReveal"
+  | "autoMoviePatternInstanceTransforms"
+  | "autoMoviePatternTextureTransforms"
   | "buildAutoMoviePolyhedron"
   | "buildAutoMovieWall"
   | "builtEnvironmentAdjacentSpaces"
@@ -25,6 +27,7 @@ export type AutoMovieSandboxEngineExport =
   | "defineShot"
   | "extrudeAutoMovieProfile"
   | "extrudeAutoMovieRegion"
+  | "generateAutoMovieSurfacePattern"
   | "inspectAutoMovieMeshTopology"
   | "loftAutoMovieSections"
   | "lowerBuiltEnvironment"
@@ -72,6 +75,8 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "AutoMovieSubject",
     "AutoMovieSubjectGroup",
     "autoMovieAssemblyOpeningReveal",
+    "autoMoviePatternInstanceTransforms",
+    "autoMoviePatternTextureTransforms",
     "buildAutoMoviePolyhedron",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
@@ -84,6 +89,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "defineShot",
     "extrudeAutoMovieProfile",
     "extrudeAutoMovieRegion",
+    "generateAutoMovieSurfacePattern",
     "inspectAutoMovieMeshTopology",
     "loftAutoMovieSections",
     "lowerBuiltEnvironment",
