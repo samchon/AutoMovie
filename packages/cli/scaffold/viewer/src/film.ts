@@ -25,6 +25,7 @@ import {
   createCompiledShotRuntime,
 } from "./shotRuntime";
 import {
+  type IAutoMovieCaptureHook,
   type IAutoMovieShotObservation,
   viewerDocument,
 } from "./viewerDocument";
@@ -66,7 +67,9 @@ if (productionRuntimeResponse.ok === false)
 const productionRuntime =
   (await productionRuntimeResponse.json()) as IAutoMovieProductionViewerRuntime;
 const runtimes = new Map<string, IFilmShot>();
-for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
+
+/** Build one cut's runtime and register it under its shot id. */
+const loadShot = async (shot: string): Promise<IFilmShot> => {
   const response = await fetch(
     `/__automovie/shots/${encodeURIComponent(shot)}.json`,
   );
@@ -86,7 +89,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
     autoMovieRenderSubjectOfCompiledShot({ compiled }),
   );
   attachAutoMovieSemanticMask(runtime.scene, { design: compiled.scene, mask });
-  runtimes.set(shot, {
+  const value: IFilmShot = {
     runtime,
     mask,
     coverage: auditAutoMovieSemanticMaskScene({
@@ -94,10 +97,24 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
       design: compiled.scene,
       mask,
     }),
-  });
-}
-const first = runtimes.values().next().value;
-if (first === undefined) throw new Error("Compiled film has no playable shot.");
+  };
+  runtimes.set(shot, value);
+  return value;
+};
+
+// Cuts load in playback order, and only the first is awaited before the film
+// starts. Building all of them up front costs a minute or more on a feature's
+// worth of cuts, during which the page shows nothing and reads as hung; the
+// opening cut alone appears in seconds. The rest stream in behind playback
+// with an entire shot's duration of headroom each, so the loader stays far
+// ahead of the playhead. `__automovieCapture.ready` still waits for all of
+// them, because a capture that seeks into a cut this loop has not reached yet
+// would photograph a held frame and file it as that cut's evidence.
+const shotIds = [...new Set(timeline.segments.map((segment) => segment.shot))];
+const firstShotId = shotIds[0];
+if (firstShotId === undefined)
+  throw new Error("Compiled film has no playable shot.");
+const first = await loadShot(firstShotId);
 // The shot whose scene the last layer of the last frame was drawn from.
 // `observe` and `sidecar` answer about that one: a film holds one scene per
 // cut, and evidence read off a scene this frame never drew would be evidence
@@ -105,6 +122,11 @@ if (first === undefined) throw new Error("Compiled film has no playable shot.");
 let drawnShot = first;
 let lastObservation: IAutoMovieShotObservation;
 let frozen = false;
+// The cut the playhead wants that has not streamed in yet, or null when the
+// loader is ahead of playback. Reported in the status line so a held frame
+// reads as buffering rather than as a film that stopped.
+let buffering: string | null = null;
+let loaded = false;
 const viewerRendererRef = {
   current: undefined as WebGLRenderer | undefined,
 };
@@ -132,8 +154,17 @@ const renderLayer = (
   globalFrame: number,
 ): string => {
   const shot = runtimes.get(layer.shot);
-  if (shot === undefined)
-    throw new Error(`Film layer references unavailable shot "${layer.shot}".`);
+  // A cut the streaming loader has not reached yet leaves the last drawn frame
+  // standing rather than throwing: the alternative kills the animation loop and
+  // stops the film outright over a cut that is seconds away. Drawing nothing is
+  // the honest hold — re-running the previous cut at this layer's source time
+  // would advance a clock that belongs to a different shot. Capture never takes
+  // this path, because `seek` refuses until every cut is loaded.
+  if (shot === undefined) {
+    buffering = layer.shot;
+    return drawnShot.runtime.id;
+  }
+  buffering = null;
   const renderer = viewerRendererRef.current;
   if (renderer === undefined) throw new Error("Film renderer is not mounted.");
   drawnShot = shot;
@@ -180,6 +211,8 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
   };
   status.textContent =
     `${timeline.id}  frame=${frame}/${timeline.totalFrames - 1}  ${pass}` +
+    (buffering === null ? "" : `  BUFFERING ${buffering}`) +
+    (loaded ? "" : `  loading ${runtimes.size}/${shotIds.length} cuts`) +
     (drawnShot.coverage.unresolved.length === 0
       ? ""
       : `  UNDRAWN ${drawnShot.coverage.unresolved.join(",")}`) +
@@ -188,16 +221,30 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
       : `  UNNAMED ${drawnShot.coverage.unaddressed}`);
 }
 
-window.__automovieCapture = {
-  ready: true,
+const capture: IAutoMovieCaptureHook = {
+  ready: false,
   seek: (time, pass) => {
+    // Refused rather than served from whatever has streamed in: a seek into an
+    // unloaded cut would hold the previous frame, and a capture harness would
+    // file that image as this cut's evidence. Harnesses already wait on
+    // `ready`; this makes ignoring it loud instead of silently wrong.
+    if (loaded === false)
+      throw new Error(
+        `Film seek requested before every cut loaded (${runtimes.size}/${shotIds.length}).`,
+      );
     frozen = true;
     renderFilm(time, pass);
   },
   observe: () => lastObservation,
   sidecar: () => renderAutoMovieSemanticMaskSidecar(drawnShot.mask),
 };
+window.__automovieCapture = capture;
 renderFilm(0, "beauty");
+
+// Playback is already running on the opening cut; the rest arrive behind it.
+for (const shot of shotIds.slice(1)) await loadShot(shot);
+loaded = true;
+capture.ready = true;
 
 /**
  * Which compiled segments cover one film frame, and how much each weighs.
