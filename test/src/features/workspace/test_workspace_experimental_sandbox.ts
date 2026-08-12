@@ -8,7 +8,7 @@ import { preserveExperimentalSandboxCleanup } from "./ExperimentalSandboxCleanup
 
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 const GENERATOR = path.join(ROOT, "internals", "experimental.mjs");
-const NAME = "fixture_sandbox";
+const NAME = `fixture_sandbox_${process.pid}`;
 const TARGET = path.join(ROOT, "experimental", NAME);
 
 /** Invoke the repository-local sandbox generator without packing or installing. */
