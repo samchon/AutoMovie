@@ -380,6 +380,39 @@ export const heightAt = (
 };
 
 /**
+ * The walking height at every one of many plan points, in the order given.
+ *
+ * {@link heightAt} answers about one place, and the questions an author
+ * actually has are about many at once: the ground along a route, under a
+ * footprint, beneath each member of a crowd. Asked one call at a time from a
+ * deterministic shot module, that is not merely N times the work. Every engine
+ * call from the compile sandbox carries its arguments across a JSON boundary,
+ * so a per-point call serializes the whole space per point and the host parses
+ * a new record each time — which also defeats {@link prepareSpace}'s memo,
+ * because the record it is handed is never the record it saw before. The
+ * #1825 campaign timed out four shots that way while sampling terrain for a
+ * climb.
+ *
+ * One crossing, one preparation, N answers. That is the same shape the rest of
+ * this product already prefers: a crowd is a count and a layout rather than N
+ * records, and the ground it stands on should be one question rather than N.
+ *
+ * Each answer is `null` on exactly the terms {@link heightAt} states — over
+ * nothing, and over a top an actor may not stand on — so a caller reads the
+ * result positionally and never has to guess which point a missing entry was.
+ *
+ * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `heightsAt` produces the walking height at each of many plan points against one prepared space. This ensures marks and supports resolve against their declared host geometry.
+ * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `heightsAt` evaluates a batch of plan points through one space preparation and keeps each point's walkable-height answer in its own position.
+ */
+export const heightsAt = (
+  space: IAutoMovieSpace,
+  points: readonly { x: number; z: number }[],
+): (number | null)[] => {
+  const prepared = prepareSpace(space);
+  return points.map((point) => heightAt(space, point.x, point.z, prepared));
+};
+
+/**
  * May an actor stand at `(x, z)`? Exactly `heightAt(...) !== null`.
  *
  * @evidence requirements/staging/marks-zones-and-blocking.md#staging-mark-surface `isWalkable` answers "May an actor stand at `(x, z)`?" This ensures marks and supports resolve against their declared host geometry.

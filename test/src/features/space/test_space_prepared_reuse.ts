@@ -1,4 +1,9 @@
-import { heightAt, prepareSpace, surfaceAt } from "@automovie/engine";
+import {
+  heightAt,
+  heightsAt,
+  prepareSpace,
+  surfaceAt,
+} from "@automovie/engine";
 import { IAutoMovieSpace, IAutoMovieSurface } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -56,6 +61,14 @@ const scenery = (): IAutoMovieSpace => ({
  * 4. The prepared value describes the record it was made from and carries one
  *    entry per surface, so what is being shared is the whole preparation rather
  *    than a partially filled one.
+ * 5. `heightsAt` answers a batch positionally and agrees with the single-point
+ *    form on every entry, including the ones that are `null`. The batch exists
+ *    because a shot module's engine calls cross a JSON boundary, where the memo
+ *    above cannot help — the host parses a new record per call — so the fix for
+ *    a loop over points is one call rather than a cheaper repeat.
+ * 6. An empty batch answers with an empty list rather than refusing, because
+ *    "no points to ask about" is a real state of a route that has not been
+ *    sampled yet.
  */
 export const test_space_prepared_reuse = (): void => {
   const space = scenery();
@@ -102,6 +115,30 @@ export const test_space_prepared_reuse = (): void => {
         "andSurfaceLookupIsUnchangedToo",
         () => surfaceAt(space, inside.x, inside.z)?.id === "plate-2",
       ],
+      // The batch is the answer for a shot module, whose calls cross a JSON
+      // boundary the memo above cannot reach.
+      [
+        "aBatchAnswersEveryPointInOrder",
+        () => {
+          const points = [inside, outside, { x: 22, z: 1 }];
+          const batch = heightsAt(space, points);
+          return (
+            batch.length === points.length &&
+            points.every((point, index) => {
+              const single = heightAt(space, point.x, point.z);
+              const many = batch[index]!;
+              return single === null
+                ? many === null
+                : many !== null && nclose(many, single);
+            })
+          );
+        },
+      ],
+      [
+        "andItKeepsTheHolesWhereTheyWere",
+        () => heightsAt(space, [outside])[0] === null,
+      ],
+      ["anEmptyBatchIsAnEmptyAnswer", () => heightsAt(space, []).length === 0],
     ]),
     {
       oneRecordIsPreparedOnce: true,
@@ -112,6 +149,9 @@ export const test_space_prepared_reuse = (): void => {
       andRepeatingItAgreesWithItself: true,
       aPointOverNothingIsStillNothing: true,
       andSurfaceLookupIsUnchangedToo: true,
+      aBatchAnswersEveryPointInOrder: true,
+      andItKeepsTheHolesWhereTheyWere: true,
+      anEmptyBatchIsAnEmptyAnswer: true,
     },
   );
 };
