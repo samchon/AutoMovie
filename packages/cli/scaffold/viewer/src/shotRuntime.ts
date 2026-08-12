@@ -1,4 +1,6 @@
 import {
+  HUMANOID_JOINT_AXES,
+  HUMANOID_REST_FRAME,
   type IAutoMovieDialogueExpressionLayers,
   type IAutoMovieDialogueVisemeTimeline,
   type IAutoMovieResolvedBone,
@@ -440,7 +442,20 @@ export const createCompiledShotRuntime = async (
         motion,
         skeleton,
         startOffset: performance?.startOffset ?? 0,
-        player: new AutoMoviePlayer(target.object, skeleton, motion),
+        // The humanoid joint axes and rest frame are passed explicitly at
+        // every pose site below for the same reason: without them a humanoid
+        // skeleton is driven in its raw bind orientation and the whole crowd
+        // renders in T-pose, arms straight out, which is what this production
+        // shipped until it was caught in a frame.
+        player: new AutoMoviePlayer(
+          target.object,
+          skeleton,
+          motion,
+          HUMANOID_JOINT_AXES,
+          false,
+          undefined,
+          HUMANOID_REST_FRAME,
+        ),
       },
     ];
   });
@@ -458,7 +473,13 @@ export const createCompiledShotRuntime = async (
     }
     for (const item of built)
       if (item.node.pose !== null && item.model.skeleton !== null)
-        applyPose(item.object, item.node.pose, item.model.skeleton);
+        applyPose(
+          item.object,
+          item.node.pose,
+          item.model.skeleton,
+          HUMANOID_JOINT_AXES,
+          HUMANOID_REST_FRAME,
+        );
     for (const item of animations) {
       const seconds = Math.max(0, time - item.startOffset);
       if (flushImportedRuntime) item.player.update(seconds);
@@ -467,6 +488,8 @@ export const createCompiledShotRuntime = async (
           item.target.object,
           sampleMotion(item.motion, seconds).pose,
           item.skeleton,
+          HUMANOID_JOINT_AXES,
+          HUMANOID_REST_FRAME,
         );
     }
     articulation.restore();
