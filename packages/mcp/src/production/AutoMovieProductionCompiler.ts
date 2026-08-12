@@ -5017,7 +5017,10 @@ export const validateAutoMovieFormationGround = (
                     const target = formationSlotPosition(
                       formation,
                       member.slot,
-                      { layout: cue.layout!, progress: 1 },
+                      // Measured against where these members are standing
+                      // now, which is what `member.point` already holds, so
+                      // the departure arrangement is that same current one.
+                      { layout: cue.layout!, from: null, progress: 1 },
                     );
                     return Math.hypot(
                       target.x - member.point.x,

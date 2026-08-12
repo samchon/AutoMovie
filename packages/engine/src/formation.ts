@@ -39,6 +39,27 @@ export interface IAutoMovieFormationReform {
    */
   layout: IAutoMovieFormationDesign["layout"];
   /**
+   * The arrangement the unit is travelling *from*, or null for its design's.
+   *
+   * A unit that has already re-formed is standing in the last cue's target, not
+   * in the arrangement it was designed in, so a second cue has to blend out of
+   * where the unit actually is. Without this the blend always started at the
+   * design, and a two-step change — the manoeuvre `FORMATION_DESIGN` recommends
+   * for a re-form whose members would otherwise cross — sent every member back
+   * toward its designed place before setting off again. The #1825 campaign
+   * followed that advice and reported that the intermediate cue did not retain
+   * the previous arrangement.
+   *
+   * Null rather than a copy of the design's layout, because "no earlier
+   * re-form" and "an earlier re-form that happened to end where the design
+   * began" are different histories, and only the first one is a unit that has
+   * never moved.
+   *
+   * @evidence requirements/formations/reform-and-group-motion.md#formation-reform-local-blend Carries the arrangement a chained re-form departs from so successive cues blend from the unit's real state.
+   * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-determinism-status-compatibility Makes the departure arrangement part of the deterministic sample rather than implied by the design record.
+   */
+  from: IAutoMovieFormationDesign["layout"] | null;
+  /**
    * Eased fraction of the way there, 0 at the cue's start and 1 at its end.
    *
    * @evidence requirements/formations/budgets-and-validation.md#formation-motion-validation Identifies the exact interior state at which reform geometry is evaluated.
@@ -260,15 +281,23 @@ export const formationSlotPosition = (
   // the two world points were blended instead, a unit that is also turning
   // would fold its heading into the arrangement and members would swing along
   // arcs their layout never describes.
-  const designed = localFormationPoint(formation, slot);
   const point =
     reform === null
-      ? designed
+      ? localFormationPoint(formation, slot)
       : (() => {
+          // Out of where the unit is standing, which is the last cue's target
+          // once one has finished, and only the design's arrangement when none
+          // has. A blend that always started at the design would walk a
+          // re-formed unit back to its designed places before setting off.
+          const departure = localFormationPoint(
+            formation,
+            slot,
+            reform.from ?? formation.layout,
+          );
           const target = localFormationPoint(formation, slot, reform.layout);
           return {
-            x: lerp(designed.x, target.x, reform.progress),
-            z: lerp(designed.z, target.z, reform.progress),
+            x: lerp(departure.x, target.x, reform.progress),
+            z: lerp(departure.z, target.z, reform.progress),
           };
         })();
   const radians = (formation.facingDeg * Math.PI) / 180;
@@ -455,7 +484,11 @@ export const sampleFormationMotion = (
         reform:
           cue.layout === undefined
             ? retained.reform
-            : { layout: cue.layout, progress },
+            : {
+                layout: cue.layout,
+                from: retained.reform?.layout ?? null,
+                progress,
+              },
       };
     }
     retained = {
@@ -463,7 +496,11 @@ export const sampleFormationMotion = (
       reform:
         cue.layout === undefined
           ? retained.reform
-          : { layout: cue.layout, progress: 1 },
+          : {
+              layout: cue.layout,
+              from: retained.reform?.layout ?? null,
+              progress: 1,
+            },
     };
   }
   return retained;
