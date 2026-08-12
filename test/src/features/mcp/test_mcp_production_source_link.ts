@@ -306,6 +306,7 @@ export const test_mcp_production_source_link = (): void => {
       "extrudeAutoMovieProfile",
       "extrudeAutoMovieRegion",
       "generateAutoMovieSurfacePattern",
+      "heightAt",
       "inspectAutoMovieMeshTopology",
       "loftAutoMovieSections",
       "lowerBuiltEnvironment",

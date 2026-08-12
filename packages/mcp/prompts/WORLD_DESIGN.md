@@ -22,3 +22,5 @@ candidate support surface, so an overlapping lower ground plane cannot hide the
 platform that actually supports a block.
 
 Validate terrain and choreography with the programmatic engine geometry API instead of estimating from prose. A shot source should use the injected ground oracle rather than duplicating its own unrelated height formula.
+
+Two ground questions are not the same question, and the difference decides which one a shot may build on. `context.engine.groundHeight` and `worldSurfaceHeight` answer how high the world's terrain is under a point, and the injected one answers zero where there is no terrain at all — convenient for relief, and a lie if you were asking whether anything is there. `heightAt(space, x, z)` answers the standing question against the shot's own staged space: the height of the topmost surface under the point **when that surface is walkable**, and `null` when the point is over nothing or over a top an actor may not stand on. Reach for it whenever the answer decides where a body goes, because a zero that means "no ground" and a zero that means "ground at sea level" are indistinguishable once they are a number.

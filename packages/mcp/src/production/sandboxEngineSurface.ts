@@ -28,6 +28,7 @@ export type AutoMovieSandboxEngineExport =
   | "extrudeAutoMovieProfile"
   | "extrudeAutoMovieRegion"
   | "generateAutoMovieSurfacePattern"
+  | "heightAt"
   | "inspectAutoMovieMeshTopology"
   | "loftAutoMovieSections"
   | "lowerBuiltEnvironment"
@@ -90,6 +91,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "extrudeAutoMovieProfile",
     "extrudeAutoMovieRegion",
     "generateAutoMovieSurfacePattern",
+    "heightAt",
     "inspectAutoMovieMeshTopology",
     "loftAutoMovieSections",
     "lowerBuiltEnvironment",
