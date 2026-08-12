@@ -90,11 +90,43 @@ export const prepareSurface = (
  * @evidence specifications/performance-motion-and-staging/staging-space-state-and-choreography.md#performance-staging-mark-surface-zone-membership `prepareSpace` performs space preparation when the engine resolves host-relative support geometry and whole-footprint zone membership.
  * @author Samchon
  */
-export const prepareSpace = (space: IAutoMovieSpace): IAutoMoviePreparedSpace =>
-  ({
+export const prepareSpace = (
+  space: IAutoMovieSpace,
+): IAutoMoviePreparedSpace => {
+  const remembered = preparedSpaceCache.get(space);
+  if (remembered !== undefined) return remembered;
+  const prepared = {
     space,
     surfaces: space.surfaces.map(prepareSurface),
-  }) satisfies IAutoMoviePreparedSpace;
+  } satisfies IAutoMoviePreparedSpace;
+  preparedSpaceCache.set(space, prepared);
+  return prepared;
+};
+
+/**
+ * One preparation per space record, keyed by the record itself.
+ *
+ * {@link heightAt}, {@link surfaceAt} and {@link surfaceContains} each default
+ * their `prepared` argument to `prepareSpace(space)`, which is the call an
+ * author writes: `heightAt(space, x, z)` for each place a body might go.
+ * Without a memo that spelling hulls every footprint in the space again on
+ * every point, so the natural loop over a crowd is quadratic in the scenery,
+ * and the deterministic shot sandbox — which allows one second per module —
+ * times out on a battlefield rather than on anything the author did wrong.
+ *
+ * Keyed by identity rather than by content, exactly as the formation ground
+ * datum is: a caller holding one record asks about one geometry, and a caller
+ * that built a new record has, as far as anything here can know, new geometry.
+ * Weak, so a space stops being remembered when the shot that made it does.
+ *
+ * The consequence is that callers share one prepared value, which is read-only
+ * by contract. Nothing in the engine writes to it, and a consumer that did
+ * would already have been corrupting the value `spaceGround` closes over.
+ */
+const preparedSpaceCache = new WeakMap<
+  IAutoMovieSpace,
+  IAutoMoviePreparedSpace
+>();
 
 /**
  * Whatever states how high the ground is: either surface record answers here.
