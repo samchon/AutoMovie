@@ -178,7 +178,7 @@ const claudeSettings = (rendered) => {
  */
 const sandboxManifest = (rendered, specifiers) => {
   const manifest = JSON.parse(rendered);
-  for (const name of PACKAGES) {
+  for (const name of Object.keys(specifiers)) {
     if (specifiers[name] === undefined) continue;
     const dependency = `@automovie/${name}`;
     const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)

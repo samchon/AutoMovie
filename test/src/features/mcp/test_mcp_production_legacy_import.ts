@@ -82,6 +82,32 @@ const captureFailure = (task: () => unknown): unknown => {
   }
 };
 
+/** Whether this host permits an unprivileged file-symlink fixture. */
+const supportsFileSymlinks = (): boolean => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-symlink-probe-"),
+  );
+  try {
+    const target = path.join(root, "target");
+    const link = path.join(root, "link");
+    fs.writeFileSync(target, "probe");
+    try {
+      fs.symlinkSync(target, link);
+      return fs.lstatSync(link).isSymbolicLink();
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        (error.code === "EPERM" || error.code === "EACCES")
+      )
+        return false;
+      throw error;
+    }
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+};
+
 const aggregateContainsExactly = (
   error: unknown,
   expected: unknown[],
@@ -253,6 +279,7 @@ const rejectsTamperedRollbackBaseline = (
  *    duplicate file entries.
  */
 export const test_mcp_production_legacy_import = (): void => {
+  const fileSymlinks = supportsFileSymlinks();
   const fixture = createLegacy();
   let fixtureFailure: ILegacyImportFixtureFailure | undefined;
   try {
@@ -3167,18 +3194,20 @@ export const test_mcp_production_legacy_import = (): void => {
       path.join(linkedRevisionTarget, "revision.json"),
       '{"revision":2}',
     );
-    fs.rmSync(revisionPath);
-    fs.symlinkSync(
-      path.join(linkedRevisionTarget, "revision.json"),
-      revisionPath,
-    );
-    TestValidator.predicate(
-      "legacy project files cannot be read through symlinks",
-      throws(
-        () => new AutoMovieLegacyImporter(linkedRevision.root).plan(),
-        "symlink or junction",
-      ),
-    );
+    if (fileSymlinks) {
+      fs.rmSync(revisionPath);
+      fs.symlinkSync(
+        path.join(linkedRevisionTarget, "revision.json"),
+        revisionPath,
+      );
+      TestValidator.predicate(
+        "legacy project files cannot be read through symlinks",
+        throws(
+          () => new AutoMovieLegacyImporter(linkedRevision.root).plan(),
+          "symlink or junction",
+        ),
+      );
+    }
   } catch (error) {
     linkedRevisionFailure = { error };
     throw error;
@@ -3210,6 +3239,7 @@ export const test_mcp_production_legacy_import = (): void => {
     "directory",
     "foreign-token",
   ] as const) {
+    if (lockMutation === "symlink" && fileSymlinks === false) continue;
     const changingLock = createLegacy();
     let outsideLock: string | undefined;
     let changingLockFailure: ILegacyImportFixtureFailure | undefined;
@@ -3373,11 +3403,13 @@ export const test_mcp_production_legacy_import = (): void => {
     const linkedPath = path.join(linkedAppliedState.root, ".automovie/linked");
     const target = path.join(linkedAppliedStateTarget, "outside.txt");
     fs.writeFileSync(target, "outside");
-    fs.symlinkSync(target, linkedPath);
-    TestValidator.predicate(
-      "symbolic links cannot enter an applied import state tree",
-      throws(() => importer.rollback(), "changed after import"),
-    );
+    if (fileSymlinks) {
+      fs.symlinkSync(target, linkedPath);
+      TestValidator.predicate(
+        "symbolic links cannot enter an applied import state tree",
+        throws(() => importer.rollback(), "changed after import"),
+      );
+    }
   } catch (error) {
     linkedAppliedStateFailure = { error };
     throw error;
@@ -3566,17 +3598,19 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-outside-"));
     fs.writeFileSync(path.join(outside, "shot.json"), "{}");
-    fs.symlinkSync(
-      path.join(outside, "shot.json"),
-      path.join(unsafe.root, "shots/unsafe.json"),
-    );
-    TestValidator.predicate(
-      "symlinked legacy inventory is refused",
-      throws(
-        () => new AutoMovieLegacyImporter(unsafe.root).plan(),
-        "symlink or junction",
-      ),
-    );
+    if (fileSymlinks) {
+      fs.symlinkSync(
+        path.join(outside, "shot.json"),
+        path.join(unsafe.root, "shots/unsafe.json"),
+      );
+      TestValidator.predicate(
+        "symlinked legacy inventory is refused",
+        throws(
+          () => new AutoMovieLegacyImporter(unsafe.root).plan(),
+          "symlink or junction",
+        ),
+      );
+    }
   } catch (error) {
     unsafeFailure = { error };
     throw error;

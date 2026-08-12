@@ -5,187 +5,105 @@ import os from "node:os";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
-interface ICreateAutoMovieFixtureFailure {
-  error: unknown;
+interface ICreatorResult {
+  status: number;
+  stderr: string;
+  stdout: string;
 }
 
-interface ICreateAutoMovieFixtureCleanup {
-  cleanup: () => unknown;
-  resource: string;
-}
-
-class CreateAutoMovieFixtureCleanupError extends AggregateError {}
-
-/** Attempt every acquired fixture cleanup without replacing earlier failure. */
-const preserveCreateAutoMovieFixtureCleanup = (
-  failure: ICreateAutoMovieFixtureFailure | undefined,
-  resources: readonly ICreateAutoMovieFixtureCleanup[],
-): void => {
-  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
-  for (const resource of resources)
-    try {
-      resource.cleanup();
-    } catch (error) {
-      cleanupFailures.push({ error, resource: resource.resource });
-    }
-  if (cleanupFailures.length === 1 && failure === undefined)
-    throw cleanupFailures[0]!.error;
-  if (cleanupFailures.length !== 0)
-    throw new CreateAutoMovieFixtureCleanupError(
-      [
-        ...(failure === undefined ? [] : [failure.error]),
-        ...cleanupFailures.map((entry) => entry.error),
-      ],
-      `Create-automovie fixture cleanup failed${
-        failure === undefined ? "" : " after the test failed"
-      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
-    );
-};
-
-/**
- * The package-manager-native creator delegates to the canonical scaffold.
- *
- * One call against an empty parent must create a usable project with the build,
- * lint, verifier, proxy/final render, viewer, and explicit Chromium doctor
- * surfaces; it must not install dependencies or fetch a browser implicitly.
- */
-export const test_cli_create_automovie = (): void => {
+/** Invoke the creator while restoring both process streams before returning. */
+const create = (target: string): ICreatorResult => {
   const nativeStdout = process.stdout.write;
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
-  let stdoutCaptureInstalled = false;
-  let createFailure: ICreateAutoMovieFixtureFailure | undefined;
+  const nativeStderr = process.stderr.write;
+  let stdout = "";
+  let stderr = "";
   try {
-    const target = path.join(base, "my-film");
-    let stdout = "";
     process.stdout.write = ((chunk: string | Uint8Array): boolean => {
       stdout +=
         typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
       return true;
     }) as typeof process.stdout.write;
-    stdoutCaptureInstalled = true;
+    process.stderr.write = ((chunk: string | Uint8Array): boolean => {
+      stderr +=
+        typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+      return true;
+    }) as typeof process.stderr.write;
     const status = runCreateAutoMovie([
       process.execPath,
       "create-automovie",
       target,
     ]);
-    const pkg = JSON.parse(
+    return { status, stderr, stdout };
+  } finally {
+    process.stdout.write = nativeStdout;
+    process.stderr.write = nativeStderr;
+  }
+};
+
+/** The package-manager creator publishes editable source and refuses overwrite. */
+export const test_cli_create_automovie = (): void => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
+  let failure: { error: unknown } | undefined;
+  try {
+    const target = path.join(base, "my-film");
+    const created = create(target);
+    const manifest = JSON.parse(
       fs.readFileSync(path.join(target, "package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
-    const readme = fs.readFileSync(path.join(target, "README.md"), "utf8");
+    const sentinel = path.join(target, "author-owned.txt");
+    fs.writeFileSync(sentinel, "keep\n", "utf8");
+    const repeated = create(target);
+
     TestValidator.equals(
-      "one creator call writes every project workflow without hidden installs",
+      "creation publishes ordinary source without hidden work and refuses overwrite",
       namedFacts([
-        ["status", () => status === 0],
-        ["pkgScriptsBuild", () => pkg.scripts?.build === "npm run compile"],
+        ["created", () => created.status === 0 && created.stderr === ""],
         [
-          "pkgScriptsLint",
+          "source",
           () =>
-            pkg.scripts?.lint ===
-            "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts",
+            fs.existsSync(path.join(target, "src", "film.ts")) &&
+            fs.existsSync(path.join(target, "docs")),
         ],
         [
-          "pkgScriptsLint2",
+          "workflows",
           () =>
-            pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json",
+            typeof manifest.scripts?.build === "string" &&
+            typeof manifest.scripts?.lint === "string" &&
+            typeof manifest.scripts?.render === "string" &&
+            typeof manifest.scripts?.verify === "string",
         ],
         [
-          "pkgScriptsVerify",
-          () => pkg.scripts?.verify === "tsx scripts/verify.ts",
-        ],
-        ["pkgScriptsRender", () => typeof pkg.scripts?.render === "string"],
-        ["pkgScriptsViewer", () => typeof pkg.scripts?.viewer === "string"],
-        [
-          "pkgScriptsCapture",
-          () => typeof pkg.scripts?.["capture:doctor"] === "string",
-        ],
-        [
-          "existsSyncTargetMcp",
-          () => fs.existsSync(path.join(target, ".mcp.json")),
-        ],
-        [
-          "readFileSyncTargetNpmrc",
-          () =>
-            fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
-            "onnxruntime-node-install-cuda=skip\n",
-        ],
-        [
-          "existsSyncTargetAutomovie",
-          () =>
-            fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false,
-        ],
-        [
-          "readmeIncludesNnpm",
-          () => readme.includes("\nnpm run lint:source\n"),
-        ],
-        ["readmeIncludesNnpm2", () => readme.includes("\nnpm run lint\n")],
-        [
-          "stdoutIncludesN",
-          () => stdout.includes("\n  npm run lint:source\n  npm run lint\n"),
-        ],
-        ["readmeIncludesNpm", () => readme.includes("npm run verify")],
-        [
-          "readmeIncludesRender",
-          () => readme.includes("render all --tier proxy"),
-        ],
-        ["readmeIncludesHttp", () => readme.includes("http://127.0.0.1:5173")],
-        [
-          "readmeIncludesPLAYWRIGHTDOWNLOADHOST",
-          () => readme.includes("PLAYWRIGHT_DOWNLOAD_HOST"),
-        ],
-        [
-          "existsSyncTargetNodemodules",
+          "noHiddenInstall",
           () => fs.existsSync(path.join(target, "node_modules")) === false,
         ],
         [
-          "existsSyncTargetAutomovie2",
-          () =>
-            fs.existsSync(path.join(target, ".automovie", "capture")) === false,
+          "refusedOverwrite",
+          () => repeated.status === 1 && repeated.stderr.includes(target),
+        ],
+        [
+          "preservedAuthorFile",
+          () => fs.readFileSync(sentinel, "utf8") === "keep\n",
         ],
       ]),
       {
-        status: true,
-        pkgScriptsBuild: true,
-        pkgScriptsLint: true,
-        pkgScriptsLint2: true,
-        pkgScriptsVerify: true,
-        pkgScriptsRender: true,
-        pkgScriptsViewer: true,
-        pkgScriptsCapture: true,
-        existsSyncTargetMcp: true,
-        readFileSyncTargetNpmrc: true,
-        existsSyncTargetAutomovie: true,
-        readmeIncludesNnpm: true,
-        readmeIncludesNnpm2: true,
-        stdoutIncludesN: true,
-        readmeIncludesNpm: true,
-        readmeIncludesRender: true,
-        readmeIncludesHttp: true,
-        readmeIncludesPLAYWRIGHTDOWNLOADHOST: true,
-        existsSyncTargetNodemodules: true,
-        existsSyncTargetAutomovie2: true,
+        created: true,
+        source: true,
+        workflows: true,
+        noHiddenInstall: true,
+        refusedOverwrite: true,
+        preservedAuthorFile: true,
       },
     );
   } catch (error) {
-    createFailure = { error };
+    failure = { error };
     throw error;
   } finally {
-    const completedStdoutCapture = stdoutCaptureInstalled;
-    preserveCreateAutoMovieFixtureCleanup(createFailure, [
-      ...(completedStdoutCapture
-        ? [
-            {
-              resource: "standard output",
-              cleanup: (): void => {
-                process.stdout.write = nativeStdout;
-              },
-            },
-          ]
-        : []),
-      {
-        resource: "temporary project root",
-        cleanup: () => fs.rmSync(base, { force: true, recursive: true }),
-      },
-    ]);
+    preserveCliRootFixtureCleanup(
+      failure,
+      () => fs.rmSync(base, { force: true, recursive: true }),
+      "create-automovie fixture root",
+    );
   }
 };
