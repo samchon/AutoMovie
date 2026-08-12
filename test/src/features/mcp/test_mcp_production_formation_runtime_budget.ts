@@ -121,6 +121,11 @@ const across = (id: string, count: number): IAutoMovieShotContract[] =>
  * 4. A heavily promoted unit is refused with hero slots named as dominant.
  * 5. Every refusal states the participation count, because it multiplies all
  *    three terms and is the fact the member ceiling hides.
+ * 6. A record no shot stages is charged one participation anyway, by the
+ *    estimate's own `Math.max(1, occurrences)` floor, and the refusal says so
+ *    and says to delete the record. That term is invisible from the shots, and
+ *    the first wording of this rule implied it was free -- the campaign found
+ *    it by retiring five records that were costing without staging.
  */
 export const test_mcp_production_formation_runtime_budget = (): void => {
   const small = formation({ id: "company", count: 100 });
@@ -133,6 +138,14 @@ export const test_mcp_production_formation_runtime_budget = (): void => {
   const promoted = budgetRefusal(
     [formation({ id: "staff", count: 256, heroes: 256 })],
     across("staff", 1),
+  );
+  // Forty records nobody stages: no shot names them, and the floor charges
+  // every one of them regardless.
+  const idle = budgetRefusal(
+    Array.from({ length: 40 }, (_, index) =>
+      formation({ id: `retired-${index}`, count: 100 }),
+    ),
+    [],
   );
 
   TestValidator.equals(
@@ -174,6 +187,19 @@ export const test_mcp_production_formation_runtime_budget = (): void => {
               found?.message.includes("once per shot that names it") === true,
           ),
       ],
+      // Staged by nothing and charged anyway: the term an author cannot see by
+      // reading their shots.
+      ["recordsNoShotStagesAreStillCharged", () => idle !== undefined],
+      [
+        "andTheRefusalSaysToDeleteThem",
+        () =>
+          idle?.message.includes("staged by no shot") === true &&
+          idle?.message.includes("delete those records") === true,
+      ],
+      [
+        "andAStagedProductionIsNotToldAboutIdleRecords",
+        () => reused?.message.includes("staged by no shot") === false,
+      ],
     ]),
     {
       oneUnitInOneShotIsInsideTheBudget: true,
@@ -184,6 +210,9 @@ export const test_mcp_production_formation_runtime_budget = (): void => {
       aLargeCrowdIsToldItsMembersAreTheCost: true,
       aPromotedUnitIsToldItsHeroesAre: true,
       andEveryRefusalStatesTheParticipationRule: true,
+      recordsNoShotStagesAreStillCharged: true,
+      andTheRefusalSaysToDeleteThem: true,
+      andAStagedProductionIsNotToldAboutIdleRecords: true,
     },
   );
 };

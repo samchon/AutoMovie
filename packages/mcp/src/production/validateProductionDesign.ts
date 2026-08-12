@@ -2807,6 +2807,16 @@ interface IFormationRuntimeCost {
   members: number;
   /** Bytes owed to promoted hero slots. */
   heroes: number;
+  /**
+   * Registered formations no shot stages, each still charged one participation.
+   *
+   * `Math.max(1, occurrences)` is the estimate's own floor, so a record nobody
+   * stages is not free: it costs a whole participation, and the only way to
+   * stop paying for it is to delete the record rather than to drop it from a
+   * shot. Counted separately because it is the one term an author cannot see
+   * by reading their shots.
+   */
+  unstaged: number;
 }
 
 /** The per-participation fixed cost of holding one unit in a shot. */
@@ -2821,17 +2831,17 @@ const formationRuntimeCost = (
     floor: 0,
     members: 0,
     heroes: 0,
+    unstaged: 0,
   };
   for (const formation of graph.formations.values()) {
-    const occurrences = Math.max(
-      1,
-      [...graph.shots.values()].filter((shot) =>
-        shot.participants.some(
-          (participant) =>
-            participant.kind === "formation" && participant.id === formation.id,
-        ),
-      ).length,
-    );
+    const staged = [...graph.shots.values()].filter((shot) =>
+      shot.participants.some(
+        (participant) =>
+          participant.kind === "formation" && participant.id === formation.id,
+      ),
+    ).length;
+    if (staged === 0) cost.unstaged += 1;
+    const occurrences = Math.max(1, staged);
     const variableBytes = Buffer.byteLength(
       JSON.stringify({
         id: formation.id,
@@ -2864,7 +2874,13 @@ const formationRuntimeCost = (
  * hides.
  */
 const formationRuntimeAdvice = (cost: IFormationRuntimeCost): string => {
-  const shared = `The estimate charges each formation once per shot that names it, so ${cost.participations} participation(s) are stored, ${FORMATION_RUNTIME_FLOOR_BYTES} bytes of fixed cost each.`;
+  // Stated before the dominant term, because it is the one an author cannot
+  // find by reading their shots: the record is paying while staging nothing.
+  const idle =
+    cost.unstaged === 0
+      ? ""
+      : ` ${cost.unstaged} formation record(s) are staged by no shot and are still charged one participation each; delete those records rather than dropping them from a shot.`;
+  const shared = `The estimate charges each formation once per shot that names it, and never less than once, so ${cost.participations} participation(s) are stored, ${FORMATION_RUNTIME_FLOOR_BYTES} bytes of fixed cost each.${idle}`;
   if (cost.floor >= cost.members && cost.floor >= cost.heroes)
     return `${shared} That fixed cost alone is ${cost.floor} bytes and is the dominant term: reduce how many formations each shot stages, or how many shots reuse one formation. Shrinking counts will not help.`;
   if (cost.heroes >= cost.members)
