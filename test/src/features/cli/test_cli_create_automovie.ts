@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { namedFacts } from "../internal/predicates";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 interface ICreatorResult {
   status: number;
@@ -44,6 +45,7 @@ const create = (target: string): ICreatorResult => {
 /** The package-manager creator publishes editable source and refuses overwrite. */
 export const test_cli_create_automovie = (): void => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
+  let failure: { error: unknown } | undefined;
   try {
     const target = path.join(base, "my-film");
     const created = create(target);
@@ -94,7 +96,14 @@ export const test_cli_create_automovie = (): void => {
         preservedAuthorFile: true,
       },
     );
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(base, { force: true, recursive: true });
+    preserveCliRootFixtureCleanup(
+      failure,
+      () => fs.rmSync(base, { force: true, recursive: true }),
+      "create-automovie fixture root",
+    );
   }
 };
