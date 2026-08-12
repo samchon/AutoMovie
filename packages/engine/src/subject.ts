@@ -236,6 +236,25 @@ export interface IAutoMovieSubjectContribution {
   /**
    * Compact populations this subject materializes.
    *
+   * **No shot consumes this.** `IAutoMovieShotProgram` carries no
+   * `instanceSets`, so the only route a compact population takes into a
+   * compiled artifact is the production's shared `world.instanceSets`. A
+   * subject may state one, a shot may stage that subject, and the population
+   * will not appear.
+   *
+   * Said here rather than left to be discovered, because the shape invites the
+   * mistake: the field exists on this contribution, so scene-local scenery —
+   * the debris of one engagement, onlookers present for one beat, a baggage
+   * park that stands in a single shot — reads as authorable per subject and is
+   * not. It is also one reason parallel scene authorship converges on the
+   * singleton world: scenery has nowhere else to go, so every author writes
+   * into one registry and the integrator serializes them by hand.
+   *
+   * What would consume it is a shot program able to carry compact populations
+   * of its own. That is an addition to the authoring surface rather than a
+   * correction here, so until it exists, declare the population in the world
+   * design and accept that it stands for the whole production.
+   *
    * @evidence requirements/product/capability-and-content.md#product-project-owned-content Preserves compact project-authored populations without replacing them with engine-supplied catalogue entries.
    * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Supplies prototype, layout, variation, count, and seed as explicit instance-set output.
    */
