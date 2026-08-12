@@ -199,10 +199,21 @@ window.__automovieCapture = {
 };
 renderFilm(0, "beauty");
 
-const sampleFilmFrame = (
+/**
+ * Which compiled segments cover one film frame, and how much each weighs.
+ *
+ * A hoisted declaration rather than a `const` arrow, because `renderFilm(0,
+ * "beauty")` above draws the opening frame during module evaluation and reaches
+ * this from inside itself. `renderFilm` is hoisted and so it runs; a `const`
+ * declared further down is still in its temporal dead zone when it does, and
+ * the viewer died on "Cannot access 'sampleFilmFrame' before initialization"
+ * with its status stuck on "loading current compiler output…". Nothing in the
+ * page said which line, so the film simply never played.
+ */
+function sampleFilmFrame(
   source: IAutoMovieFilmTimeline,
   frame: number,
-): IFilmLayer[] => {
+): IFilmLayer[] {
   const active = source.segments
     .map((segment, index) => ({ segment, index }))
     .filter(
@@ -240,4 +251,4 @@ const sampleFilmFrame = (
     ];
   }
   return [incoming];
-};
+}
