@@ -48,6 +48,8 @@ Read the results rather than the render. Findings come back as `sliver`, `unsupp
 
 Whole occurrences are emitted as exact instance transforms and cut ones are listed separately, because a cut piece needs its own geometry and cannot share a prototype. Feed the whole ones into an `explicit` instance set and give the cut ones real meshes.
 
+Three names do this, and all three are callable from shot source. `generateAutoMovieSurfacePattern` takes the pattern and answers with `placements`, `quantities` and `findings`. `autoMoviePatternInstanceTransforms` turns that answer's whole occurrences into instance transforms and hands back the cut ids you still owe geometry for. `autoMoviePatternTextureTransforms` says how each laid piece samples its material, and reports by id any piece whose lay would need a shear the texture matrix has no term for, rather than skewing the image quietly.
+
 ## Service networks and wet zones
 
 Water, drainage, power, data, air, fire suppression, and control are one computational object, not seven. A service network holds systems, nodes carrying typed ports, segments joining exactly two ports, penetrations where a run crosses a boundary, and wet zones. Giving each discipline its own record would make "is this connected" seven questions with seven answers.
