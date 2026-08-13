@@ -33,7 +33,7 @@ Coverage edge는 source promise, target unit, setup, development, complication, 
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance scene의 participant, state, event와 cue를 판정한다. -->
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-sequence-acceptance sequence progression과 handoff를 독립 판정한다. -->
 <!-- @evidence requirements/story/coverage-and-acceptance.md#story-film-level-review film의 causal chain, arc, pacing, setup과 ending을 별도 검토한다. -->
-<!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces asset, shot, sequence, film과 delivery verdict를 격리한다. -->
+<!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces 주체, shot, sequence, film과 delivery verdict를 격리한다. -->
 
 Scene surface는 participant, entry와 exit state, event와 cue를, sequence surface는 beat coverage, progression, causal link, movement와 handoff를, film surface는 전체 promise, causal chain, character arc, pacing, setup과 payoff와 ending을 판정한다. 하위 surface의 pass는 상위 surface 입력일 뿐 자동 집계 pass가 아니다.
 
