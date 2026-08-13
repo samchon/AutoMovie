@@ -5,6 +5,9 @@ generated/
 .automovie/*
 !.automovie/manifest.json
 !.automovie/assets.json
+!.automovie/derived-artifacts.json
+!.automovie/derived/
+!.automovie/derived/**
 !.automovie/design/
 !.automovie/design/**
 !.automovie/reviews/

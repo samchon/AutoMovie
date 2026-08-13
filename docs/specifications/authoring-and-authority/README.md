@@ -15,3 +15,4 @@
 - [부분 target과 원자적 결과](./partial-targets-and-atomic-results.md)
 - [지식·증거 도구 경계](./knowledge-evidence-and-tool-boundary.md)
 - [Prototype 결정성과 fidelity 경계](./prototype-determinism-and-fidelity.md)
+- [결정적 사전계산 산출물](./deterministic-precomputed-artifacts.md)

@@ -8,3 +8,4 @@
 - [능력 발견과 예시](./capability-discovery.md)
 - [부분 작업과 원자적 결과](./partial-work.md)
 - [프로젝트 소유권](./project-ownership.md)
+- [결정적 사전계산](./deterministic-precomputation.md)
