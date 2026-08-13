@@ -21,6 +21,17 @@ import { AutoMovieRenderMetric } from "./AutoMovieRenderMetric";
  * budget. An omitted metric is unbudgeted, which the report states explicitly
  * so an author can tell "allowed to be large" from "nobody thought about it".
  *
+ * A budget declares limits, not passes. The renderer decides which passes a
+ * frame runs: one depth pass per shadow caster, or the outline guide pass when
+ * there is none. The conservative one-frame peak has to include them whether
+ * or not a production has an opinion about them. There is deliberately no field
+ * here to switch one off, because switching a pass off is not budgeting, it is
+ * choosing a different frame. What the production is owed instead is the
+ * arithmetic: the report states what the passes added apart from what the
+ * drawable owners cost, and it never offers a pass as somewhere to edit. A
+ * declared pass set would reopen this only alongside a renderer that can
+ * actually be asked for a different one.
+ *
  * @evidence requirements/rendering/budgets.md#rendering-budget-decision Exposes `IAutoMovieRenderBudget` as the portable data boundary for the rendering budget decision requirement.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Types `IAutoMovieRenderBudget` for the spec render budget preflight system contract.
  * @author Samchon

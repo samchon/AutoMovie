@@ -16,6 +16,8 @@ Budget preflight는 requested product와 tier, exact schedule, lowered owner inv
 
 Instancing, procedural population, particles-like effects, sequences와 archives는 materialization 전 maximum expansion을 가져야 한다. Tier는 dimensions, sampling, passes, representation과 allowed resources를 소유하고 proxy 성공을 final clearance로 바꾸지 않는다. Decision은 target limit, exact 또는 conservative estimate, confidence, dominant owners, worst frame과 requested product를 사용자에게 제공한다.
 
+Dominant owner는 production이 선언하고 편집할 수 있는, 자기 자신의 비용을 지는 owner여야 한다. Frame pass는 앞선 owner들이 이미 지불한 geometry를 다시 제출하므로 그 비용이 곧 그들의 합이며, conservative bound와 measured total에는 반드시 남되 ranking에는 참여하지 않는다. Ranking에서 제외한 pass와 보고 bound를 넘어선 owner는 omitted count와 omitted cost에 남겨 listed contributor와 omitted cost의 합이 measured total과 같아야 한다. 초과 거절은 pass가 더한 cost와 dominant pass attribution을 ranking과 구분되는 별도 accounting 사실로 진술하며, 그 attribution을 편집 지시로 표현하지 않는다.
+
 Unknown 또는 unbounded required cost, overflow, declared limit 초과와 profile 밖 degradation은 실행 전 거절한다. Actual usage가 bound를 넘으면 safe checkpoint에서 중단하고 completed atomic chunks와 measurements를 보존하며 frame drop, nondeterministic culling, downscale 또는 pass skip을 적용하지 않는다. 사용자가 명시적으로 다른 profile을 선택한 rerun은 새 request이지 원 budget의 성공이 아니다.
 
 ### Exact raster admission bound {#spec-render-raster-admission-bound}
