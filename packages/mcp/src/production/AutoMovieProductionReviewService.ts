@@ -397,6 +397,21 @@ export class AutoMovieProductionReviewService {
         message:
           "This visual target has no verified current PNG frame. Capture every required current view and pass before submitReview. Correction feedback does not authorize deleting the artifact.",
       });
+    // The plan source this warning used to say did not exist now does, and
+    // saying otherwise puts two surfaces in flat contradiction for a caller
+    // holding an inspectSubject coverage record that reads "reviewed". What is
+    // still absent is a published one: the observation artifacts state no
+    // compiled revision, so an image drawn before a recompile cannot be told
+    // from one drawn after, and counting either would be exactly the fabricated
+    // pass this refusal exists to prevent.
+    //
+    // The plan folded below therefore stays empty rather than being recomputed
+    // here. Two instruments already lay a turntable out under different rules,
+    // the viewer page against a fixed 16:9 reference aspect and the MCP tool
+    // against the raster its caller asked for, and both ground their low ring
+    // on the subject's own box, so a viewpoint id is a property of the look
+    // that was taken rather than of the subject. A third recomputation would
+    // measure observations against a denominator nothing was obliged to meet.
     if (input.target.kind === "subject")
       diagnostics.push({
         code: "review-subject-viewpoint-unsupported",
@@ -405,7 +420,7 @@ export class AutoMovieProductionReviewService {
         target: reviewTargetKey(input.target),
         path: targetPath(this.project, input.target),
         message:
-          "No inspection-owned subject viewpoint plan exists yet, so subject-view coverage is indeterminate and this review cannot be completed. Record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
+          "inspectSubject is the inspection-owned viewpoint plan source: it derives a turntable from a subject's own measured extent, draws every viewpoint in it, and reports its own coverage, refusing outright any subject it cannot frame. What it does not do is publish a record prepareReview can read, because the images it leaves behind state no compiled revision and no plan. So no subject-view observation is recoverable here, the plan folded by this surface stays empty, coverage is indeterminate, and this review cannot be completed. Record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
       });
     const quotable =
       input.target.kind === "subject"
