@@ -18,13 +18,13 @@ import { AutoMovieProductionContext } from "./production/AutoMovieProductionCont
 import { AutoMovieProductionGuideService } from "./production/AutoMovieProductionGuideService";
 import { AutoMovieProductionRepaintService } from "./production/AutoMovieProductionRepaintService";
 import { canonicalizeAutoMovieJson } from "./production/contentIdentity";
-import {
-  AutoMovieProductionSubjectInspectionService,
-  type AutoMovieProductionSubjectInspection,
-  type IAutoMovieInspectSubject,
-} from "./production/subjectInspection";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 import { readAutoMovieProductionRegistry } from "./production/productionRegistry";
+import {
+  type AutoMovieProductionSubjectInspection,
+  AutoMovieProductionSubjectInspectionService,
+  type IAutoMovieInspectSubject,
+} from "./production/subjectInspection";
 
 export {
   findAutoMovieDiagnosticCatalogEntry,
