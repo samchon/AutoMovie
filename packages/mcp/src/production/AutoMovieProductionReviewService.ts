@@ -27,7 +27,7 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
-import typia from "typia";
+import typia, { IValidation } from "typia";
 
 import {
   AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
@@ -193,6 +193,9 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Keys asset subject freshness to the target fingerprint, so a changed recipe invalidates the worksheet rather than silently carrying it forward.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Aggregates asset coverage over the enumerated consumed-recipe population instead of over whatever happened to be captured.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-propagation Reports an asset review as no longer current when the recipe it addressed changed, which is the propagation this service can measure; propagation from a prototype to the placements sharing it is not measured here.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps missing, malformed, and contract-incompatible compiler artifacts distinct from absent acceptance outcomes.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Preserves the compiler-owned artifact path and exact validator failure paths without blaming an unchanged author input for an internal contract mismatch.
+ * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Refuses each compiler artifact at its actual read boundary while retaining independently readable scenario evidence.
  * @evidenceExclude requirements/review/subject-inspection.md#review-subject-identity The service resolves review targets against the contract's identity model; what makes something a subject, and how a subject decomposes, are contract-layer statements it reads rather than defines.
  * @evidenceExclude requirements/review/subject-inspection.md#review-observable-judgeable-parity The parity between what may be judged and what may be observed is a statement about the requirement layer's own units, not a behaviour any single service performs.
  * @evidenceExclude requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface The service carries the asset surface it already implements; declaring the full subject surface an acceptance request may name belongs with the contract that defines those target kinds.
@@ -530,6 +533,9 @@ export class AutoMovieProductionReviewService {
    * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes missing, stale, incomplete, revise, and complete review state.
    * @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Compares required queue entries with the actual current review records.
    * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Reports the queue state without implying a verdict.
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps compiler-artifact refusal states visible while calculating aggregate queue readiness.
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Retains every artifact read diagnostic from the prepared target instead of collapsing unreadable evidence into a missing review.
+   * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Reuses one snapshot-bound reader result per target while deriving queue state.
    */
   public queue(
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
@@ -1638,6 +1644,183 @@ const sequenceShotIds = (
     .sort(compareCodeUnits);
 };
 
+type AutoMovieReviewArtifactRead<T> =
+  | {
+      status: "ready";
+      data: T;
+    }
+  | {
+      status: "refused";
+    };
+
+interface IReviewArtifactContractMismatch {
+  path: string;
+  expected: string;
+}
+
+/**
+ * Reopen one manifest-owned compiler artifact without losing why it failed.
+ *
+ * Review reaches this reader only after the compiler fingerprint is current.
+ * A missing publication and damaged bytes remain user-recoverable compiler
+ * state, while an exact-schema disagreement is a writer-reader product defect.
+ */
+const readReviewArtifact = <T>(props: {
+  project: AutoMovieProductionProject;
+  generated: IAutoMovieGeneratedManifest;
+  relativePath: string;
+  label: string;
+  target: IAutoMovieReviewTarget;
+  diagnostics: IAutoMovieDiagnostic[];
+  context?: IReviewReadContext;
+  validate: (input: unknown) => IValidation<T>;
+  semanticMismatches: (data: T) => IReviewArtifactContractMismatch[];
+}): AutoMovieReviewArtifactRead<T> => {
+  const entry = props.generated.files.find(
+    (candidate) => candidate.path === props.relativePath,
+  );
+  if (entry === undefined) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-missing",
+        `Compiler-owned ${props.label} is absent from the current generated manifest. Compile the same current inputs to restore the missing publication before review.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = currentGeneratedFile(
+      props.project,
+      props.relativePath,
+      props.context,
+    );
+  } catch (error) {
+    const missing = currentGeneratedArtifactMissing(
+      props.project,
+      props.relativePath,
+      props.context,
+    );
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        missing
+          ? "review-outcome-artifact-missing"
+          : "review-outcome-artifact-malformed",
+        missing
+          ? `Compiler-owned ${props.label} is absent even though the current manifest owns it. Compile the same current inputs to restore the missing publication before review.`
+          : `Compiler-owned ${props.label} cannot be read: ${reviewReadErrorMessage(error)}. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  if (digestAutoMovieBytes(bytes) !== entry.digest) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-malformed",
+        `Compiler-owned ${props.label} bytes disagree with the current manifest digest. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    ) as unknown;
+  } catch (error) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-malformed",
+        `Compiler-owned ${props.label} is not intact UTF-8 JSON: ${reviewReadErrorMessage(error)}. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  const validation = props.validate(parsed);
+  if (validation.success === false) {
+    appendReviewArtifactContractMismatch(
+      props,
+      validation.errors.map((error) => ({
+        path: error.path,
+        expected: error.expected,
+      })),
+    );
+    return { status: "refused" };
+  }
+  const mismatches = props.semanticMismatches(validation.data);
+  if (mismatches.length !== 0) {
+    appendReviewArtifactContractMismatch(props, mismatches);
+    return { status: "refused" };
+  }
+  return { status: "ready", data: validation.data };
+};
+
+const appendReviewArtifactContractMismatch = (
+  props: {
+    relativePath: string;
+    label: string;
+    target: IAutoMovieReviewTarget;
+    diagnostics: IAutoMovieDiagnostic[];
+  },
+  mismatches: readonly IReviewArtifactContractMismatch[],
+): void => {
+  const paths = [...mismatches]
+    .sort((left, right) =>
+      compareCodeUnits(
+        `${left.path}\u0000${left.expected}`,
+        `${right.path}\u0000${right.expected}`,
+      ),
+    )
+    .map((mismatch) => `${mismatch.path}: expected ${mismatch.expected}`)
+    .join("; ");
+  props.diagnostics.push(
+    reviewArtifactReadDiagnostic(
+      props.target,
+      props.relativePath,
+      "review-outcome-contract-mismatch",
+      `Compiler-owned ${props.label} is valid JSON but disagrees with the current reader contract at ${paths}. This is an internal compiler-reader contract defect; unchanged recompilation is not a user recovery. Report the artifact path and failed contract paths.`,
+    ),
+  );
+};
+
+const currentGeneratedArtifactMissing = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+  context?: IReviewReadContext,
+): boolean =>
+  context?.generatedFiles !== undefined
+    ? context.generatedFiles.has(relativePath) === false
+    : fs.existsSync(
+        path.join(project.generatedRoot(), ...relativePath.split("/")),
+      ) === false;
+
+const reviewReadErrorMessage = (error: unknown): string => String(error);
+
+const reviewArtifactReadDiagnostic = (
+  target: IAutoMovieReviewTarget,
+  artifactPath: string,
+  code:
+    | "review-outcome-artifact-missing"
+    | "review-outcome-artifact-malformed"
+    | "review-outcome-contract-mismatch",
+  message: string,
+): IAutoMovieDiagnostic => ({
+  code,
+  category: "error",
+  phase: "review",
+  target: reviewTargetKey(target),
+  path: artifactPath,
+  message,
+});
+
 const currentAcceptanceOutcomes = (
   project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
@@ -1689,99 +1872,122 @@ const currentAcceptanceOutcomes = (
       );
     return [];
   }
-  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
-  const realizations = new Map<string, IAutoMovieCompiledContractRealization>();
-  let retainedTimeline: IAutoMovieFilmTimeline | null | undefined;
-  const readTimeline = (): IAutoMovieFilmTimeline | null => {
-    if (retainedTimeline !== undefined) return retainedTimeline;
-    try {
-      retainedTimeline = currentFilmTimeline(
+  const compiled = new Map<
+    string,
+    AutoMovieReviewArtifactRead<IAutoMovieCompiledShotSource>
+  >();
+  const realizations = new Map<
+    string,
+    AutoMovieReviewArtifactRead<IAutoMovieCompiledContractRealization>
+  >();
+  let retainedTimeline:
+    | AutoMovieReviewArtifactRead<IAutoMovieFilmTimeline>
+    | undefined;
+  const readTimeline =
+    (): AutoMovieReviewArtifactRead<IAutoMovieFilmTimeline> => {
+      if (retainedTimeline !== undefined) return retainedTimeline;
+      retainedTimeline = readReviewArtifact({
         project,
-        generated.inputFingerprint,
+        generated,
+        relativePath: "film-timeline.json",
+        label: "film timeline",
+        target,
+        diagnostics,
         context,
-      );
-    } catch {
-      retainedTimeline = null;
-    }
-    return retainedTimeline;
-  };
-  const readCompiled = (shot: string): IAutoMovieCompiledShotSource | null => {
+        validate: (input) =>
+          typia.validateEquals<IAutoMovieFilmTimeline>(input),
+        semanticMismatches: (timeline) =>
+          timeline.inputFingerprint === generated.inputFingerprint
+            ? []
+            : [
+                {
+                  path: "$input.inputFingerprint",
+                  expected: JSON.stringify(generated.inputFingerprint),
+                },
+              ],
+      });
+      return retainedTimeline;
+    };
+  const readCompiled = (
+    shot: string,
+  ): AutoMovieReviewArtifactRead<IAutoMovieCompiledShotSource> => {
     const retained = compiled.get(shot);
     if (retained !== undefined) return retained;
-    try {
-      const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
-        JSON.parse(
-          Buffer.from(
-            currentGeneratedFile(
-              project,
-              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-              context,
-            ),
-          ).toString("utf8"),
-        ) as unknown,
-      );
-      if (validation.success === false) return null;
-      compiled.set(shot, validation.data);
-      return validation.data;
-    } catch {
-      return null;
-    }
+    const result = readReviewArtifact({
+      project,
+      generated,
+      relativePath: `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+      label: `compiled shot "${shot}"`,
+      target,
+      diagnostics,
+      context,
+      validate: (input) =>
+        typia.validateEquals<IAutoMovieCompiledShotSource>(input),
+      semanticMismatches: (artifact) =>
+        artifact.shot.id === shot
+          ? []
+          : [{ path: "$input.shot.id", expected: JSON.stringify(shot) }],
+    });
+    compiled.set(shot, result);
+    return result;
   };
   const readRealization = (
     shot: string,
-  ): IAutoMovieCompiledContractRealization | null => {
+  ): AutoMovieReviewArtifactRead<IAutoMovieCompiledContractRealization> => {
     const retained = realizations.get(shot);
     if (retained !== undefined) return retained;
-    try {
-      const validation =
-        typia.validateEquals<IAutoMovieCompiledContractRealization>(
-          JSON.parse(
-            Buffer.from(
-              currentGeneratedFile(
-                project,
-                `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
-                context,
-              ),
-            ).toString("utf8"),
-          ) as unknown,
-        );
-      if (validation.success === false) return null;
-      realizations.set(shot, validation.data);
-      return validation.data;
-    } catch {
-      return null;
-    }
+    const result = readReviewArtifact({
+      project,
+      generated,
+      relativePath: `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
+      label: `contract realization "${shot}"`,
+      target,
+      diagnostics,
+      context,
+      validate: (input) =>
+        typia.validateEquals<IAutoMovieCompiledContractRealization>(input),
+      semanticMismatches: (artifact) =>
+        artifact.shot === shot
+          ? []
+          : [{ path: "$input.shot", expected: JSON.stringify(shot) }],
+    });
+    realizations.set(shot, result);
+    return result;
   };
   const outcomes: IAutoMovieAcceptanceOutcomeReference[] = [];
   for (const scenario of scenarios) {
     const criterion = scenario.criterion;
-    if (
-      target.kind === "film" &&
-      criterion.kind !== "event" &&
-      acceptanceBelongsToFilm(graph, scenario, readTimeline()) === false
-    )
-      continue;
+    if (target.kind === "film" && criterion.kind !== "event") {
+      const timeline = readTimeline();
+      if (
+        timeline.status === "refused" ||
+        acceptanceBelongsToFilm(graph, scenario, timeline.data) === false
+      )
+        continue;
+    }
     if (criterion.kind === "frame") continue;
     if (criterion.kind === "event") {
       const shot =
         criterion.shot ??
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
-      const event =
-        shot === undefined
-          ? undefined
-          : readRealization(shot)?.events.find(
-              (candidate) => candidate.id === criterion.event,
-            );
-      if (
-        target.kind === "film" &&
-        acceptanceBelongsToFilm(
-          graph,
-          scenario,
-          readTimeline(),
-          event?.time,
-        ) === false
-      )
-        continue;
+      const realization = shot === undefined ? null : readRealization(shot);
+      if (realization?.status === "refused") continue;
+      const event = realization?.data.events.find(
+        (candidate) => candidate.id === criterion.event,
+      );
+      if (target.kind === "film") {
+        const timeline = readTimeline();
+        if (
+          timeline.status === "refused" ||
+          acceptanceBelongsToFilm(
+            graph,
+            scenario,
+            timeline.data,
+            event?.time,
+          ) === false
+        )
+          continue;
+      }
       if (shot === undefined || event === undefined) {
         diagnostics.push(
           outcomeMissingDiagnostic(
@@ -1807,24 +2013,34 @@ const currentAcceptanceOutcomes = (
       // per-shot event outcomes already read. A missing realization leaves the
       // outcome unresolved rather than absent, which keeps the reviewer looking
       // at the failure instead of at nothing.
+      const required = acceptanceCriterionShots(scenario).map(readRealization);
+      if (required.some((artifact) => artifact.status === "refused")) continue;
       outcomes.push({
         kind: "story-sync",
         scenario: scenario.id,
         ...autoMovieStorySyncOutcome({
           criterion,
           contracts: graph.shots,
-          realization: readRealization,
+          realization: (shot) => {
+            const artifact = readRealization(shot);
+            return artifact.status === "ready" ? artifact.data : null;
+          },
         }),
       });
       continue;
     }
     const fps = graph.production!.frameFormat.fps;
-    const filmFrames =
-      scenario.target.kind === "film" ? readTimeline()?.totalFrames : null;
+    const filmTimeline =
+      scenario.target.kind === "film" ? readTimeline() : null;
+    if (filmTimeline?.status === "refused") continue;
+    const compiledShot =
+      scenario.target.kind === "shot" ? readCompiled(scenario.target.id) : null;
+    if (compiledShot?.status === "refused") continue;
+    const filmFrames = filmTimeline?.data.totalFrames ?? null;
     const actual =
-      scenario.target.kind === "shot"
-        ? readCompiled(scenario.target.id)?.shot.duration
-        : filmFrames === null || filmFrames === undefined
+      compiledShot?.status === "ready"
+        ? compiledShot.data.shot.duration
+        : filmFrames === null
           ? null
           : filmFrames / fps;
     if (actual === undefined || actual === null) {
@@ -3026,7 +3242,12 @@ const currentGeneratedFile = (
 ): Uint8Array => {
   if (context?.generatedFiles === undefined)
     return project.readGeneratedFile(relativePath);
-  return context.generatedFiles.get(relativePath)!;
+  const retained = context.generatedFiles.get(relativePath);
+  if (retained === undefined)
+    throw new Error(
+      `Generated file "${relativePath}" is absent from the current compiler snapshot.`,
+    );
+  return retained;
 };
 
 const currentFilmTimeline = (

@@ -54,6 +54,13 @@ Presentation context는 raster, crop, display transform과 color identity, playb
 
 필수 대상이나 context를 확인할 수 없으면 검토 상태는 unavailable, unsupported, not-run 또는 indeterminate 가운데 실제 원인을 나타내고 누락 범위와 하류 판정 영향을 제공한다. Context 부재를 대상의 fail이나 pass로 변환하지 않는다.
 
+### Compiler-owned 산출물 판독 거부 {#review-system-compiler-artifact-read-refusal}
+
+<!-- @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Separates a missing artifact, unreadable or malformed bytes, and a schema-contract contradiction instead of turning all three into one absent outcome. -->
+<!-- @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Reports the exact artifact identity, failed validation path and recovery owner while preserving the last trustworthy review scope. -->
+
+Current compile identity가 확인된 뒤 compiler-owned review artifact를 판독하지 못하면 review system은 파일 부재, byte 판독 또는 UTF-8·JSON·digest 손상, exact schema나 current identity 불일치를 별도 상태로 보고한다. 파일 부재와 손상은 compiler-owned publication의 재생성이 복구 행동이지만 schema 또는 identity 불일치는 writer와 reader의 같은 revision 계약이 모순된 제품 결함이므로 unchanged compile을 사용자 복구로 제시하지 않는다. Schema 거부는 validator가 제공한 실패 path를 보존하고, 어느 판독 실패도 acceptance outcome의 부재나 target fail로 바꾸지 않으며 독립적으로 읽을 수 있는 다른 scenario evidence를 폐기하지 않는다.
+
 ### Context 변경과 무효화 {#review-system-context-invalidation}
 
 <!-- @evidence requirements/acceptance/change-regression-and-revalidation.md#acceptance-target-change Invalidates evidence and verdicts affected by target changes. -->
