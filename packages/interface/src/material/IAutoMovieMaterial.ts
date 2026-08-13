@@ -69,12 +69,15 @@ export interface IAutoMovieTextureReference {
    * What one unit of the addressed UV set means. Omission preserves legacy raw
    * UV sampling without making a new claim about the set's unit or extent.
    *
+   * Declare `"surface-metres"` for an atlas-bearing procedural surface, which
+   * is what the geometry kernel emits and what most generated members carry;
+   * omitting the field there leaves the unit unstated rather than defaulted.
    * Declare `"normalized"` for a lattice surface, a module prototype, or an
    * imported set whose selected UV layout is known to span `[0, 1]`. Declare
    * `"source-uv"` when an imported set keeps its arbitrary authored layout;
    * importing a mesh does not normalize that layout by itself.
-   * `transform.scale` is read against whichever source this names, so the two
-   * cannot be told apart from the material record without it.
+   * `transform.scale` is read against whichever source this names, and the
+   * three cannot be told apart from the material record without it.
    *
    * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Declares the coordinate system this binding's real scale is expressed in, so the same input places the same way.
    * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Supplies the coordinate set the binding record must state beside its transform and real scale.
