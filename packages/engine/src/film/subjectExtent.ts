@@ -163,13 +163,25 @@ export const formationSubjectBox = (props: {
 
 /**
  * The box one staged point occupies, given the vertical extent of what stands
- * there. Horizontally degenerate on purpose: a placement is a point, and the
- * only honest horizontal span a group of placements has is the spread between
- * them. Inventing a body width per member would put a number the renderer never
- * drew into the camera solve.
+ * there. `extent` is stated relative to the point and carries its own floor, so
+ * a model whose geometry begins above its node origin is boxed where it draws
+ * rather than at the placement it hangs from.
  *
- * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion pointSubjectBox exposes state-dependent asset extent: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
- * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants pointSubjectBox realizes dynamic-bounds invariants: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
+ * Horizontally degenerate, and the reason is the caller's rather than the
+ * geometry's. A placement is a point, and the only horizontal span a group of
+ * placements states is the spread between them; the framing solve reads a node
+ * subject as one placement and one height and hands the camera no horizontal
+ * half-span, so a width invented here would grade a subject nobody framed. For
+ * a figure the two are the same answer, since it is taller than it is wide at
+ * every shot size. For a building element lowered as one set piece they are
+ * not: a 60 m facade authored outward from its element origin is graded as a
+ * pole 30 m from the mass's own centre, and its true box is already computable
+ * (`builtEnvironmentElementBounds`). Closing that belongs to the framing solve,
+ * the one side that can also aim at the mass; widening the grade alone would
+ * refuse shots no authored camera could then satisfy.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion pointSubjectBox exposes state-dependent asset extent: The box one staged point occupies, given the vertical extent of what stands there, carrying the extent's own floor so geometry authored above its node origin is boxed where it draws. Horizontally degenerate, and the reason is the caller's rather than the geometry's: the framing solve hands a node subject no horizontal half-span, so a width invented here would grade a subject nobody framed.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants pointSubjectBox realizes dynamic-bounds invariants: The box one staged point occupies, given the vertical extent of what stands there, carrying the extent's own floor so geometry authored above its node origin is boxed where it draws. Horizontally degenerate, and the reason is the caller's rather than the geometry's: the framing solve hands a node subject no horizontal half-span, so a width invented here would grade a subject nobody framed.
  */
 export const pointSubjectBox = (
   point: IAutoMovieVector3,
