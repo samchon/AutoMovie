@@ -196,8 +196,10 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Preserves submitted criterion outcomes without manufacturing a human verdict.
  * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Keeps deterministic worksheet validation separate from reviewer judgment.
  * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary Refuses invalid worksheets without making the aesthetic judgment itself.
+ * @evidence requirements/review/subject-inspection.md#review-subject-identity Addresses one stable compiled subject instead of reconstructing it from names.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Reads the shared compiled-subject record rather than defining a second one.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Owns the viewpoint plan for the asset subject kind rather than inheriting an authored camera: the six required turntable views fix angle, elevation, and pose, and a shot frame that happens to contain the asset discharges none of them. Space, element, and part subjects have no review target kind here yet, so this answers the unit for assets alone.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds asset subject evidence to target identity, compile and target fingerprints, and the exact angle, elevation, pose, and pass of every required view, and refuses completion while one is missing or stale. The same binding does not yet exist for space, element, or part.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds asset subject evidence to target identity, compile and target fingerprints, and the exact angle, elevation, pose, and pass of every required view, and binds a compiled subject to the exact compile its description was read from.
  * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the asset population from the model recipes the production actually consumes, so a completeness claim is measured against an enumerated set rather than asserted over an unstated one.
  * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Keeps asset subject freshness on the asset's own fingerprint, so rerendering a shot does not make an asset review current and completing an asset review does not discharge a frame obligation.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Realizes the viewpoint plan as the fixed six-view asset turntable set, with each view addressed by angle, elevation, and pose.
@@ -208,10 +210,8 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps missing, malformed, and contract-incompatible compiler artifacts distinct from absent acceptance outcomes.
  * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Preserves the compiler-owned artifact path and exact validator failure paths without blaming an unchanged author input for an internal contract mismatch.
  * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Refuses each compiler artifact at its actual read boundary while retaining independently readable scenario evidence.
- * @evidenceExclude requirements/review/subject-inspection.md#review-subject-identity The service resolves review targets against the contract's identity model; what makes something a subject, and how a subject decomposes, are contract-layer statements it reads rather than defines.
  * @evidenceExclude requirements/review/subject-inspection.md#review-observable-judgeable-parity The parity between what may be judged and what may be observed is a statement about the requirement layer's own units, not a behaviour any single service performs.
  * @evidenceExclude requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface The service carries the asset surface it already implements; declaring the full subject surface an acceptance request may name belongs with the contract that defines those target kinds.
- * @evidenceExclude specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record The subject record and its composition are typed by the contract package; this service consumes the record rather than defining its shape.
  * @evidenceExclude specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Resolving an arbitrary judgeable target to its observation unit requires target kinds this surface does not yet carry.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories Worksheets carry criterion observations, not a defect category taxonomy.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary The service has no defect-versus-accepted-variation classification record.
@@ -1266,9 +1266,6 @@ const targetValueOf = (
  * subject resolves to null and is reported as a missing review target instead
  * of being silently reviewed against another compile.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-identity Addresses one stable compiled subject instead of reconstructing it from names.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds the resolved subject to the exact compile the description was read from.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Reads the shared compiled-subject record rather than defining a second one.
  */
 const currentSubjectReviewUnit = (
   project: AutoMovieProductionProject,
