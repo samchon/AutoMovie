@@ -68,6 +68,8 @@ Continuity rules are tools, not moral law. Break eyeline, axis, framing, exposur
 
 The compile reads the edit and says what it found. An undeclared crossing, jump cut, eyeline break, screen-direction reversal, shot-size jump, or re-establish is reported as a warning naming both shots either side of the cut, so a break you meant to make and a break you did not are told apart by whether you declared it. A declaration that excepted nothing is reported too (`grammar-style-intent-unmatched`), because an intent covering a cut the reader never objected to is a note about a film that no longer exists. Declare the crossing itself as `axis-cross`; the other intents are named for the rule they excuse. None of this refuses a compile: the edit is yours, and the compiler's job is to make sure you know what it looks like.
 
+That read measures the subject the camera was solved for, from the same box, and it takes a shot size from whichever axis the subject fills more of: its share of the frame's height, or its share of the frame's width. Because the solve stands at the further of the two fits, a mass the frame holds by its width fills less of the frame's height than its declared framing implies, so a height-only read would report a size no camera delivered and then ask you to move in until the ends of the mass left the frame. A subject with nothing horizontal to measure, the one `SHOT_CONTRACT` describes as keeping a vertical segment at its root, is read vertically exactly as it always was.
+
 For edit decisions, preserve Walter Murch’s priority: emotion, story, rhythm, eye trace, two-dimensional screen plane, then three-dimensional continuity. A lower priority may yield to a higher one, but the trade must be observed and intentional.
 
 ## Coverage recipe
