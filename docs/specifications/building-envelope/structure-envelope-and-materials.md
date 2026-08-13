@@ -10,7 +10,9 @@
 
 <!-- @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support element의 지지 대상, bearing relation과 미검증 구조 성능을 구분한다. -->
 
-입력은 member identity, geometry 또는 bounds, structural role, support·supported relation, attachment, phase와 known load fact를 제공한다. 출력은 연결된 support graph, unsupported member와 unresolved relation이며 실제 capacity, code compliance와 안전성은 별도 검증이 없으면 `unknown`으로 남는다.
+입력은 member identity, geometry 또는 bounds, structural role, support·supported relation, attachment, phase와 known load fact를 제공한다. 저작 가능한 배치 검사는 subject를 element 또는 compact population identity로, support를 element·population 또는 named surface identity로 지정하고 `bearing`과 `suspended`를 구분한다. `bearing` 검사는 subject의 world bounds와 support face가 평면에서 만나는 표본을 양쪽 footprint에서 취해 underside gap을 계산하며, 선언한 tolerance 안은 `resting`, 양수는 `floating`, 음수는 `sunk`, 표본이 하나도 겹치지 않으면 `not-over-support`로 답한다. `suspended`는 subject와 support가 모두 해석될 때만 의도된 비접촉으로 답하고, 해석할 수 없는 identity나 bounds는 `unresolved`로 남긴다. Named-neighbour 검사는 같은 world bounds에서 양의 부피가 겹치는지 답하되 면 접촉은 overlap으로 세지 않고, compact population은 member를 전개하지 않은 conservative population bounds라는 basis를 결과에 보존한다. 모든 배치 결과는 그 수치를 얻은 basis를 함께 제공한다. Element geometry, conservative population bounds, authored surface height rule을 구분하며, 기록이 vertex를 담지 않는 element는 기록이 진술하는 world origin 한 점으로 해석하고 extent를 재지 않았다는 basis를 명시한다. Basis 없는 수치는 측정 근거를 감춘 결과로 취급한다.
+
+출력은 프로젝트 소스가 선언한 relation별 배치 결과와 unresolved relation을 제공한다. 질의는 geometry 또는 axis-aligned bounds에 대한 시각적 broad-phase이며 자동으로 구조 graph, load path 또는 defect를 발명하지 않는다. 실제 capacity, code compliance와 안전성은 별도 검증이 없으면 `unknown`으로 남는다.
 
 ### 외피 연속성과 Side 불변식 {#building-envelope-envelope-continuity-invariant}
 
