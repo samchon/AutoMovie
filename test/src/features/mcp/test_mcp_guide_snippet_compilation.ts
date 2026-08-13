@@ -146,6 +146,12 @@ const writeSnippets = (
  * minutes for nothing. Asking the program for its diagnostics as a whole would
  * then report an unrelated workspace error against this case, so each example
  * is asked only about itself.
+ *
+ * A failure carries the line inside the fenced block, because that is the line
+ * the author edits. The appended `export {}` sits after the last of them, so
+ * every reported position is the author's own. An example the program never
+ * received is a failure of the arrangement rather than a clean run, so it
+ * throws instead of contributing nothing.
  */
 const snippetDiagnostics = (
   program: ts.Program,
@@ -158,7 +164,11 @@ const snippetDiagnostics = (
       throw new Error(`The guide example ${file} never entered the program.`);
     for (const diagnostic of ts.getPreEmitDiagnostics(program, source))
       failures.push(
-        `${snippet.guide} example ${snippet.index + 1}: TS${diagnostic.code} ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`,
+        `${snippet.guide} example ${snippet.index + 1} line ${
+          diagnostic.start === undefined
+            ? 0
+            : source.getLineAndCharacterOfPosition(diagnostic.start).line + 1
+        }: TS${diagnostic.code} ${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")}`,
       );
   }
   return [...new Set(failures)].sort(compareCodeUnits);
