@@ -21,6 +21,11 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  *
  * The seed is declared here rather than chosen in source, so the same design
  * always materializes the same chorus.
+ *
+ * @evidence docs/characters/chorus.md Answers the Silhouette and Cohesion
+ *   sections, which are claims about the group and not about a member: the
+ *   interval that must survive, the edge the rows read by, and the order that
+ *   holds through the cue are all arrangement, and arrangement lives here.
  */
 export class Chorus extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,

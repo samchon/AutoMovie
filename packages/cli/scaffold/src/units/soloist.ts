@@ -16,6 +16,10 @@ import type {
  * field can cite the line of the specification that fixes it; the capability is
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
+ *
+ * @evidence docs/characters/soloist.md Is SOLOIST entire: the one upright
+ *   figure that document describes, carrying its stated scale and the single
+ *   raised-hand capability it permits and nothing beyond it.
  */
 export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "soloist";

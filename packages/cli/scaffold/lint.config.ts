@@ -34,30 +34,39 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * different reason: they declare the compile itself rather than a subject, so
  * the document they would answer for does not exist at any rung of the ladder.
  *
- * What this graph does not do is force the first citation. `evidence/graph`
- * runs its obligation from the reference toward the claim, so a document nobody
- * implements is an error while a source file nobody's document describes is
- * silent. Measured on this configuration: adding `src/world/xxx.ts` with an
- * exported class, field, and method and no `@evidence` at all compiles clean,
- * while adding `docs/world/yyy.md` that nothing implements fails with one
- * `evidence/graph` error. So the populations under `src` are the set whose
- * citations are checked, not the set that is made to cite, and an author who
- * models a room before writing down what the room is is not caught here.
+ * `evidence/graph` runs its obligation from the reference toward the claim, so
+ * on its own it makes a document nobody implements an error while leaving a
+ * source file nobody's document describes silent. That is why the claim below
+ * is written twice over the same files. The second copy sets
+ * `singleEvidencePerSymbol` on its reference, which counts from the claim's
+ * complete selected host population and therefore fails a host citing nothing
+ * exactly as it fails a host citing two. Measured on this configuration: adding
+ * `src/world/zzz.ts` with an exported, uncited class now fails with
+ * `cites 0 distinct selected evidence unit(s); singleEvidencePerSymbol requires
+ * exactly 1`, and the same file compiles clean once the class cites one
+ * specification. So a wall modelled before anything specifies the wall is
+ * refused at the moment it is written.
  *
- * `singleEvidencePerSymbol` on a reference does close that gap, and it is
- * unpaid rather than unavailable. Setting it on the specification-library
- * reference turned the same uncited `src/world/xxx.ts` into three errors, one
- * per selected host. Adopting it means every exported class, field, and method
- * under `src/units`, `src/objects`, `src/world`, and `src/formations` must cite
- * exactly one specification, which the shipped production does not yet do.
+ * The bound is the class, and the rest of it is measured debt rather than a
+ * decided boundary. Turning `singleEvidencePerSymbol` on for `type`,
+ * `property`, and `function` at once reports 64 hosts in the shipped
+ * production citing nothing; 10 of those are the classes, which this
+ * configuration pays, and the remaining 54 are fields and methods. Widening the
+ * second claim's `symbol` list is how they get paid.
+ *
  * `evidence/documented`, which all eleven library packages under `packages/`
- * enable and this one does not, is unpaid the same way and is measured:
- * enabling it here reports 63 exported declarations with no JSDoc block at
- * all, 46 of them in `src/examples` and 17 inside the graphed populations. A
- * declaration with no block can never cite anything, so those 17 are real
- * debt rather than a decided boundary; the rule is left off because turning it
- * on without paying them would hand every generated project a red build it did
- * not author.
+ * enable and this one does not, stays off and is measured: enabling it here
+ * reports 63 exported declarations with no JSDoc block at all, 46 of them in
+ * `src/examples` and 17 inside the graphed populations. It cannot be aimed at
+ * only those populations. Its own options carry no `files` selector; a
+ * per-entry `files` selector would take `evidence/graph` with it, and
+ * `@ttsc/lint` documents that a project-scoped contributor rule must come from
+ * an entry without one; an array of config entries is rejected with the
+ * measured message `config file must export an ITtscLintConfig object`; and a
+ * top-level `ignores` would strip every correctness rule from `src/examples`
+ * rather than just this one. Inside the graphed populations the rule is in any
+ * case subsumed: a declaration with no block cites nothing, and citing nothing
+ * is what the claim below already refuses.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
@@ -128,6 +137,39 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
         symbol: "file",
+      },
+    },
+    // The same population again, narrowed to the class, and this time the
+    // obligation runs the other way. `singleEvidencePerSymbol` counts from the
+    // claim's complete selected host population, so a class carrying no
+    // `@evidence` fails exactly as a class citing two would: a subject modelled
+    // before anything specified it is a compile error at the moment it is
+    // written, which is the one thing the reference-side claims above cannot
+    // say.
+    //
+    // Narrowed to `type` on purpose. Exactly-one is right for a class, because
+    // a class is a subject and a subject has one specification. It is measured
+    // and not yet right for every field and method: 64 selected hosts in the
+    // shipped production cite nothing, and 54 of those are fields and methods
+    // whose citations are real work rather than a configuration flip. Widening
+    // the `symbol` list here is how that debt is paid down.
+    //
+    // `src/examples` is outside this claim for the same reason it is outside
+    // the one above, so the narrowing costs the example files nothing.
+    {
+      type: "typescript",
+      files: [
+        "src/units/*.ts",
+        "src/objects/*.ts",
+        "src/world/*.ts",
+        "src/formations/*.ts",
+      ],
+      symbol: ["type"],
+      reference: {
+        type: "markdown",
+        files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
+        symbol: "file",
+        singleEvidencePerSymbol: true,
       },
     },
     // There is no population for actions. An action belongs to the
