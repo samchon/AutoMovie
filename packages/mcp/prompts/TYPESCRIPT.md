@@ -4,7 +4,7 @@ AutoMovie source is ordinary tracked TypeScript compiled in a deterministic no-I
 
 ## Module shape
 
-Use `defineShot(id, { scene, contract, build })` as the stable named export selected by the design record’s source binding. The shot VM permits that one runtime import from `@automovie/engine`; import package types with `import type`, and use deterministic geometry through `context.engine`. Keep build functions pure: output depends only on the frozen context and source-local deterministic code. No filesystem, network, process environment, clock, randomness, global mutation, or host-specific path lookup belongs inside shot or film source.
+Use `defineShot(id, { scene, contract, build })` as the stable named export selected by the design record’s source binding. It is one of the engine names the shot VM publishes, and the next section lists the rest; import package types with `import type`, and reach the compiler's own runtime data through `context.engine`. Keep build functions pure: output depends only on the frozen context and source-local deterministic code. No filesystem, network, process environment, clock, randomness, global mutation, or host-specific path lookup belongs inside shot or film source.
 
 This minimal helper is a real compile-checked example:
 
@@ -22,6 +22,27 @@ A scaffold section still marked with the `AUTOMOVIE_IMPLEMENT_ME` placeholder is
 Prefer small deterministic functions named for domain decisions: frame conversion, camera placement, event construction, motion selection, formation state, or EDL interval. Validate meaning through engine contracts rather than duplicating math and accepting divergent behavior.
 
 These rules govern any module you write. How a production's source is arranged once its shots repeat is a separate decision with its own guide: read `SOURCE_COMPOSITION`.
+
+## What the sandbox lets you import
+
+Shot and film source may use named static imports from project-relative modules, the gait tables from `@automovie/archetypes`, and a published set of names from `@automovie/engine`. Default, namespace, side-effect, and dynamic imports are refused. Reach is granted per name because the sandbox has to carry every call across a JSON boundary, so a name nobody bridged has nothing on the far side to answer with. That is a decision, not an oversight, and the compiler now says which one you hit: a named engine import the gate refuses tells you whether the engine has no such export at all, or publishes one the sandbox withholds. A withheld engine export is still reachable from a project script under `scripts/`, which runs in ordinary Node against the whole of `@automovie/engine` and is where every document-producing call belongs.
+
+The reachable engine set is small enough to read whole, so read it by the question you are asking rather than by a name you already know. These are all of its names.
+
+- **How do I write a subject and a shot at all?** `AutoMovieSubject` and `AutoMovieSubjectGroup` to extend, `defineShot(` to register, `mergeAutoMovieSubjectContributions(` to fold what several subjects each returned into one contribution.
+- **How do I turn a profile or a region into geometry?** `extrudeAutoMovieProfile(` and `revolveAutoMovieProfile(` and `sweepAutoMovieProfile(` for a hulled profile, `extrudeAutoMovieRegion(` and `triangulateAutoMovieRegion(` for a free-form region with holes, `loftAutoMovieSections(` to interpolate between sections along a path, `buildAutoMoviePolyhedron(` for a stated solid, `buildAutoMovieWall(` for a wall partitioned around its openings, `tessellateSurface(` for the support surface height queries read.
+- **How do I assemble the parts I built into one thing?** `transformAutoMovieMesh(` to place a part, `mergeAutoMovieMeshes(` to join parts, `mergeAutoMovieMeshParts(` to join them and keep the index range each one owns, `matchAutoMovieAssemblyJunction(` for which construction roles survive a corner, `autoMovieAssemblyOpeningReveal(` for the finished size a build-up leaves an opening at.
+- **Is the mesh I built well formed?** `inspectAutoMovieMeshTopology(` measures the triangle topology instead of assuming it.
+- **How do I cover a surface with an element instead of a repeating texture?** `generateAutoMovieSurfacePattern(` lays the pattern and reports exactly what it laid, `autoMoviePatternInstanceTransforms(` turns that into placements, `autoMoviePatternTextureTransforms(` into texture frames.
+- **What is this built out of, and does that build-up hold?** `validateAutoMovieMaterialSubstance(` for one substance, `validateAutoMovieMaterialAssembly(` for the layered build-up, `resolveAutoMovieMaterialAssembly(` to place a validated build-up on its host's measuring line.
+- **What does the building I declared actually contain?** `builtEnvironmentContainsPoint(`, `builtEnvironmentAdjacentSpaces(`, `builtEnvironmentSpaceConnectors(`, `builtEnvironmentSpaceSurfaces(`, `builtEnvironmentSpaceNodes(`, `builtEnvironmentSpacePopulations(`, `builtEnvironmentSpaceContentBounds(`, `builtEnvironmentSpaceFidelity(`, `builtEnvironmentBuildingOfSpace(`. That is the whole family, and `WORLD_BUILDING` says what each one answers; no count is written here, because a count is the thing that drifts.
+- **Does this building placement rest, float, sink, or overlap?** `builtEnvironmentPlacementBounds(` resolves one element or compact population without expanding it, `builtEnvironmentSupportStatus(` measures an authored bearing or suspended relation, and `builtEnvironmentPlacementOverlap(` measures two named placements.
+- **How do I turn a declared building into the geometry a frame shows?** `lowerBuiltEnvironment(`, then `mergeAutoMovieSpaces(` when a shot needs one stage space.
+- **How do I name a part of something I placed?** `placementChildNode(` gives the scene-graph id of a bone or joint under a placement, which is what an attachment or a motion addresses.
+- **How do I derive a placed object's world frame from its relation?** `propAnchorFrame(` resolves the exact world position and rotation for one declared prop-to-building relation.
+- **How high is the ground under this point?** `worldSurfaceHeight(` evaluates one production-world height rule at an XZ point.
+
+If the capability you need is not on that list, do not invent a way around it. Say what you were trying to do; a workaround that compiles is the expensive failure here, not the refusal.
 
 ## Ownership
 
