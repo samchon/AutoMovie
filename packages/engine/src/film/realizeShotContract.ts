@@ -509,6 +509,24 @@ const cameraOutcome = (
     } catch {}
   return {
     time,
+    // State the camera this sample actually measured whenever a compiled move
+    // means the staged transform is no longer it. `compileCameraMove` keeps the
+    // staged bearing and solves the distance from the framing, so a camera
+    // staged for a wide exterior can be pulled to a few metres from its subject
+    // while every static fact in the artifact still reads as authored. A shot
+    // with no `frame` action compiles no move, so its record keeps exactly the
+    // bytes it always had.
+    ...(props.compiled.shot.cameraMotion === null
+      ? {}
+      : {
+          placement: {
+            // Copy rather than alias. `resolveCameraAt` hands back the staged
+            // transform's own vectors component-wise when a track is absent,
+            // and this record exists to be a fact separate from that transform.
+            position: { ...resolvedCamera.position },
+            rotation: { ...resolvedCamera.rotation },
+          },
+        }),
     requiredSubjects: props.contract.camera.requiredSubjects.length,
     resolvedSubjects,
     readableSubjects,

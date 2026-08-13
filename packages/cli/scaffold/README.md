@@ -224,6 +224,16 @@ turntable. The reusable capture session opens each target/raster page once and
 seeks subsequent frames in place; render output reports page, navigation,
 seek, and capture counts so throughput improvements remain measurable.
 
+`viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in
+your hands: W A S D or the arrow keys to fly, Space and C to rise and descend,
+Q and E for speed, click for pointer-lock mouse look, and the wheel for field
+of view, with the eye's position and lens printed on screen so anything odd can
+be reported by coordinate. It exists to look at staging from angles nobody
+authored, and it is an inspection tool rather than a delivery path: it installs
+no capture hook, writes nothing, holds the shot's opening second, and shows the
+level of detail your own distance selects. Review evidence still comes from
+`npm run preview` and `npm run render`.
+
 ## Ownership
 
 - `.automovie/design/shared`: project-shared model, world and formation design

@@ -17,6 +17,7 @@ import type {
   IAutoMovieShotContract,
   IAutoMovieVector3,
 } from "@automovie/interface";
+import type { IAutoMovieProductionRenderJobPlan } from "@automovie/mcp";
 
 import type { IAutoMovieProductionDialogueRuntime } from "./productionRuntimeState";
 import type {
@@ -210,6 +211,43 @@ export const compileProductionDialogueRuntime = (props: {
     receipts: joined,
     timelines,
   };
+};
+
+/**
+ * Refuse a sound plan that does not cover the exact runtime a render tier plays.
+ *
+ * The film is scored once, on the compiler's own frame clock, and the very same
+ * bytes are muxed into every tier: a proxy exists to preview the final cheaply,
+ * so giving it a different mix would defeat what it is for. A proxy also
+ * shortens no film. Its `frameStep` decimates the clock, turning `frameStep`
+ * timeline frames into one output frame at `fps / frameStep`, so it carries
+ * fewer frames of the same seconds.
+ *
+ * Comparing the two frame counts therefore refuses every tier that declares the
+ * temporal decimation `frameStep` exists to declare, while the two gates that
+ * actually receive these bytes, the feature mux and the published media probe,
+ * both measure runtime. Runtime is what has to agree, and this compares it
+ * through the decimation rather than by multiplying out the decimated fps,
+ * because `fps / frameStep` is not exact for every admitted step: a 25 fps edit
+ * decimated by three makes `225 * (25 / 3)` evaluate to 1875.0000000000002
+ * against an exact 1875, which would refuse a proxy that is correct. An integer
+ * multiplication cannot drift.
+ */
+export const assertProductionSoundRenderClock = (props: {
+  plan: Pick<IAutoMovieProductionSoundPlan, "fps" | "totalFrames">;
+  render: Pick<
+    IAutoMovieProductionRenderJobPlan,
+    "sourceFrameFormat" | "tier" | "totalFrames"
+  >;
+}): void => {
+  if (
+    props.plan.fps !== props.render.sourceFrameFormat.fps ||
+    props.plan.totalFrames !==
+      props.render.totalFrames * props.render.tier.frameStep
+  )
+    throw new Error(
+      `Sound plan and render plan do not share the exact film frame clock. The sound plan covers ${props.plan.totalFrames} frames at ${props.plan.fps} fps, while render tier "${props.render.tier.kind}" plays ${props.render.totalFrames} frames decimated by ${props.render.tier.frameStep} from a ${props.render.sourceFrameFormat.fps} fps edit.`,
+    );
 };
 
 /** Refuse two authored lines that would compete for one actor mouth. */

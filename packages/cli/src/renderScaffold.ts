@@ -61,7 +61,27 @@ const renderKey = (
   );
 };
 
-/** Every file under `root`, root-relative, in deterministic sorted order. */
+/**
+ * Directory names the scaffold never ships, whatever a host leaves there.
+ *
+ * A generated project installs its own dependencies and builds its own
+ * caches, so anything under these names is a working artifact of whoever ran a
+ * tool inside the scaffold directory rather than something the scaffold means
+ * to hand over. Naming them here is what makes the shipped set a fact the code
+ * decides instead of a fact the disk decides.
+ */
+const UNSHIPPED = new Set([".git", "node_modules"]);
+
+/**
+ * Every shipped file under `root`, root-relative, in deterministic sorted
+ * order.
+ *
+ * Walking without exclusions made the scaffold's contents whatever happened to
+ * be sitting in its directory: a `ttsc` lint cache under
+ * `scaffold/node_modules/.cache` rode into every generated project, and did it
+ * silently, because a clean CI checkout has no such directory and the gate
+ * never saw it.
+ */
 const listFiles = (root: string): string[] => {
   const out: string[] = [];
   const walk = (dir: string): void => {
@@ -72,8 +92,10 @@ const listFiles = (root: string): string[] => {
       .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile()) out.push(path.relative(root, full));
+      if (entry.isDirectory()) {
+        if (UNSHIPPED.has(entry.name)) continue;
+        walk(full);
+      } else if (entry.isFile()) out.push(path.relative(root, full));
     }
   };
   walk(root);

@@ -3717,6 +3717,22 @@ export interface IAutoMovieCompiledContractRealization {
   camera: Array<{
     /** Shot-local sample time. */
     time: number;
+    /**
+     * World placement this sample measured, present only when the shot
+     * compiled a camera move.
+     *
+     * A `frame` action solves the live camera's placement from the framing and
+     * its subject, keeping the staged camera's bearing but replacing its
+     * distance, so the staged `scene.cameras[i].transform` beside this record is
+     * the solve's input rather than the placement that renders. Absent means the
+     * two are the same camera and the staged transform is exact.
+     */
+    placement?: {
+      /** Sampled camera origin in world space. */
+      position: IAutoMovieVector3;
+      /** Sampled camera orientation in world space. */
+      rotation: IAutoMovieQuaternion;
+    };
     /** Number of required subjects. */
     requiredSubjects: number;
     /** Number resolved in current compiled output. */

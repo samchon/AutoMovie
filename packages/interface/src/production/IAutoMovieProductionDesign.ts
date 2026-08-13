@@ -680,6 +680,10 @@ export interface IAutoMovieExplicitInstanceTransform {
   /**
    * Optional exact `#RRGGBB` palette override.
    *
+   * Decoded from sRGB like every other palette entry; see
+   * `IAutoMovieInstanceVariation.palette` for how that differs from
+   * `IAutoMovieColor`.
+   *
    * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `palette` as the portable data boundary for the map coordinate transform precision requirement.
    * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-transform-lineage-precision Types `palette` for the world site transform lineage precision system contract.
    */
@@ -764,6 +768,14 @@ export interface IAutoMovieInstanceVariation {
   visibleProbability?: number;
   /**
    * Non-empty exact `#RRGGBB` palette choices applied per instance.
+   *
+   * An entry is the color itself rather than a label for one, so the viewer
+   * decodes it from sRGB to linear before it reaches the instance.
+   * `IAutoMovieColor` holds the opposite convention: its components are
+   * authored linear and its `hex` is a derived label the renderer never
+   * decodes. Digits transcribed into such a triple and then pasted here render
+   * darker, which is how instanced slots and the cut geometry that carries its
+   * own material end up covering one surface in two different colors.
    *
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `palette` as the portable data boundary for the production design consistency variation requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `palette` for the narrative intent visual language variation system contract.

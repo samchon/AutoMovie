@@ -21,6 +21,7 @@ export type AutoMovieSandboxEngineExport =
   | "builtEnvironmentBuildingOfSpace"
   | "builtEnvironmentContainsPoint"
   | "builtEnvironmentSpaceConnectors"
+  | "builtEnvironmentSpaceContentBounds"
   | "builtEnvironmentSpaceFidelity"
   | "builtEnvironmentSpaceNodes"
   | "builtEnvironmentSpaceSurfaces"
@@ -83,6 +84,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "builtEnvironmentBuildingOfSpace",
     "builtEnvironmentContainsPoint",
     "builtEnvironmentSpaceConnectors",
+    "builtEnvironmentSpaceContentBounds",
     "builtEnvironmentSpaceFidelity",
     "builtEnvironmentSpaceNodes",
     "builtEnvironmentSpaceSurfaces",

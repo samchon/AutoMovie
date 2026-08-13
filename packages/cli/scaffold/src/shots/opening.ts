@@ -255,6 +255,13 @@ const buildCue = (
           duration: context.contract.durationSeconds,
           clip: performer.clips![0]!.id,
         },
+        // The action, not the staged position, is what the frame renders from.
+        // Staging above chose the side the lens watches from; this keeps that
+        // bearing and solves the distance from `framing` and the subject, so
+        // the stand-off written there is an input rather than the result. The
+        // realization records the placement it measured whenever a shot
+        // compiles a move; read that, not the staged transform, when a frame is
+        // not what was expected.
         {
           verb: "frame",
           actor: "camera",

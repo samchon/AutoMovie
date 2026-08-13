@@ -220,6 +220,11 @@ export const buildInstancedInstanceSet = (input: {
               index,
               instanceMatrix(slot, input.instanceSet.anchor),
             );
+            // A `#RRGGBB` string is read as sRGB and decoded into the linear
+            // working space. That is the palette convention, not
+            // `IAutoMovieColor`'s, whose components are already linear and go
+            // straight into the material in `buildMaterial`; constructing this
+            // color component-wise instead would brighten every instanced set.
             mesh.setColorAt(index, new THREE.Color(slot.palette));
           });
           mesh.instanceMatrix.needsUpdate = true;

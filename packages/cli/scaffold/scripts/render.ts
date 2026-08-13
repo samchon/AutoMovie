@@ -91,6 +91,7 @@ import {
   publishDialogueCache,
 } from "./dialogueCacheSnapshot";
 import {
+  assertProductionSoundRenderClock,
   compileProductionDialogueRuntime,
   deriveProductionRuntimeSoundPlan,
   installProductionDialogueRuntime,
@@ -2200,13 +2201,7 @@ const produceProductionSound = async (
   renderProgress("sound.plan.complete", {
     dialogueLines: soundPlan.dialogue.length,
   });
-  if (
-    soundPlan.totalFrames !== renderPlan.totalFrames ||
-    soundPlan.fps !== renderPlan.frameFormat.fps
-  )
-    throw new Error(
-      "Sound plan and render plan do not share the exact film frame clock.",
-    );
+  assertProductionSoundRenderClock({ plan: soundPlan, render: renderPlan });
   renderProgress("sound.assets.decode.start");
   // A cue plays the asset it names only if something decoded it: the mix takes
   // samples and never a path. A guide stem contributes no entry and falls back
