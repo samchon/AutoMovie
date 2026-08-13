@@ -159,8 +159,8 @@ const graph: ITtscEvidenceGraphConfig = {
     // whose citations are real work rather than a configuration flip. Widening
     // the `symbol` list here is how that debt is paid down.
     //
-    // `src/examples` is outside this claim for the same reason it is outside
-    // the one above, so the narrowing costs the example files nothing.
+    // `src/examples` is outside the `files` list for the same reason it is
+    // outside the claim above, so this obligation never reaches an example.
     {
       type: "typescript",
       files: [
