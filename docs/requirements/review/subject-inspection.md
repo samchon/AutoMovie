@@ -26,6 +26,14 @@ Frame과 구간 검토는 반대로 저작된 camera를 그대로 물려받아�
 
 주체 검토가 만든 관찰을 delivery evidence로 제시하지 않아야 하며, 저작된 shot의 frame이 주체를 담고 있다는 사실만으로 그 주체를 검토했다고 주장하지 않아야 한다.
 
+### 검사 기구의 도달 {#review-subject-inspection-reach}
+
+주체 검사는 화면을 볼 수 없는 당사자가 요청할 수 있어야 한다. 주체를 안정된 identity로 이름 대고 검사가 소유한 시점을 지정하면 그 시점의 관찰 artifact를 돌려받는 요청 표면이 있어야 하며, 그 표면 없이 사람의 화면에서만 열리는 검사 기구는 저작 주체에게 없는 기구로 취급해야 한다.
+
+같은 주체 identity와 같은 시점을 지정한 두 요청은 같은 대상을 같은 조건에서 열어야 한다. 검사 결과를 지목하는 근거는 관찰 artifact 자체가 아니라 주체 identity와 시점 identity여야 하며, 이미지를 주고받아야만 성립하는 지목은 지목으로 인정하지 않아야 한다.
+
+관찰 artifact를 생산하는 기구가 없으면 표면은 관찰을 지어내지 않고 거부해야 하며, 거부는 무엇이 없는지와 그것을 어떻게 갖추는지를 이름으로 말해야 한다.
+
 ### 주체 검토의 Evidence와 Freshness {#review-subject-evidence}
 
 주체 검토 evidence는 관찰한 주체 identity와 revision, 고른 시점 집합과 각 관찰 조건, 사용한 표현과 state, 그리고 그 관찰이 어느 compile 또는 source 상태에서 나왔는지를 함께 가져야 한다. 필수 시점을 관찰하지 못했으면 그 범위는 pass가 될 수 없으며 not-run, unsupported, indeterminate 또는 partial 가운데 실제 원인을 표시해야 한다.

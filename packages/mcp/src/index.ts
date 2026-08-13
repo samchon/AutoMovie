@@ -39,4 +39,5 @@ export * from "./production/storySyncDiagnostics";
 export * from "./production/openAutoMovieProduction";
 export * from "./production/validateProductionDesign";
 export * from "./production/visualChangeReport";
+export * from "./production/subjectInspection";
 export { AUTOMOVIE_PRODUCTION_GUIDE_NAMES } from "./production/AutoMovieProductionGuideService";

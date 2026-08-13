@@ -30,6 +30,16 @@ Resolver는 acceptance 대상 kind를 시간 축 위의 frame·구간·전체 �
 
 Frame과 구간 표면은 반대로 저작된 camera state를 그대로 사용하고 자체 시점을 선택하지 않는다. 주체 검사가 만든 관찰은 delivery evidence population에 들어가지 않으며, 주체를 담은 shot frame은 그 주체의 viewpoint plan을 충족한 표본으로 계상되지 않는다.
 
+### 주체 검사의 요청 표면 {#review-system-subject-inspection-reach}
+
+<!-- @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach 화면을 볼 수 없는 당사자가 검사를 요청할 수 있어야 한다는 요구를 요청 표면 계약으로 고정한다. -->
+
+주체 검사 요청 표면은 주체 target, viewpoint plan 선택 규칙과 raster 크기를 입력으로 받고, 해석된 주체 record, plan, 각 시점의 해석된 camera state, 그 시점에서 생산된 관찰 artifact와 coverage를 반환한다. 표면은 저작된 camera, shot 경계와 film time을 입력으로 받지 않으며, 같은 주체와 같은 plan 선택 규칙은 어느 요청자에게나 같은 시점 identity와 같은 camera state를 만든다.
+
+표면이 반환하는 관찰은 delivery evidence로 표시될 수 없어야 하며 그 사실은 반환 형태 자체가 고정해야 한다. 관찰 artifact는 delivery render bundle 밖에 놓여 frame evidence 수집 경로에 들어가지 않아야 하고, 관찰 receipt는 host가 생산한 exact bytes의 digest와 그 관찰이 파생된 compile identity를 함께 가져야 한다.
+
+관찰 artifact를 생산하는 host 기구가 없거나 그 산출물이 검증을 통과하지 못하면 표면은 관찰을 만들지 않고 거부하며, 거부는 없는 기구와 그 조달 방법을 이름으로 말한다.
+
 ### 주체 Observation Record {#review-system-subject-observation}
 
 <!-- @evidence requirements/review/subject-inspection.md#review-subject-evidence 주체 관찰의 evidence 구성과 필수 표본 누락 상태를 정의한다. -->
