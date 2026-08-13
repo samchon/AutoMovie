@@ -2,7 +2,7 @@
 
 ## 판정할 범위와 권한의 명시 {#review-scope-authority}
 
-검토는 frame, 시간 구간, scene, sequence, cut, 전달물 또는 전체 작품 가운데 판정할 범위와 그 범위가 참조하는 정확한 source, take와 version을 명시할 수 있어야 한다.
+검토는 frame, 시간 구간, scene, sequence, cut, 주체, 전달물 또는 전체 작품 가운데 판정할 범위와 그 범위가 참조하는 정확한 source, take와 version을 명시할 수 있어야 한다.
 
 ### 제품 검증과 제작 판정 {#review-validation-decision-boundary}
 

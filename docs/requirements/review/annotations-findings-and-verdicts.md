@@ -8,6 +8,8 @@
 
 주석은 frame, time range, subject, sound event, caption cue 또는 작품 전체와 같은 대상 위치를 가리키고 필요한 경우 화면 영역이나 비교 대상을 함께 식별할 수 있어야 한다.
 
+주체를 가리키는 주석은 주체 identity와 관찰한 시점을 함께 식별해야 하며 화면 영역만으로 대상을 대신 지정하지 않아야 한다.
+
 ### 관찰과 해석의 구분 {#review-observation-interpretation}
 
 관찰된 결과, 기대한 결과, 차이와 제작상 영향을 분리하여 기록하고 확인되지 않은 원인을 사실처럼 단정하지 않아야 한다.

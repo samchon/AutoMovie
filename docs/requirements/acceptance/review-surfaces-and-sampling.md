@@ -2,7 +2,11 @@
 
 ## 독립된 검토 표면 {#acceptance-review-surfaces}
 
-자산, shot, sequence, film과 published delivery는 서로 다른 acceptance 표면이어야 한다. 한 표면의 pass는 필요한 하위 근거가 될 수 있지만 다른 표면의 독립 판단을 대신하지 않아야 한다.
+주체, shot, sequence, film과 published delivery는 서로 다른 acceptance 표면이어야 한다. 한 표면의 pass는 필요한 하위 근거가 될 수 있지만 다른 표면의 독립 판단을 대신하지 않아야 한다.
+
+### 주체 표면 {#acceptance-subject-surface}
+
+자산, actor, formation, 공간, element와 part의 acceptance는 그 주체 자체를 표면으로 삼아 판정할 수 있어야 하며, 판정에 필요한 시점은 그 주체를 담은 shot이나 frame이 아니라 판정 범위가 선택해야 한다. 주체를 담은 frame의 pass를 그 주체의 pass로 간주하지 않아야 한다.
 
 ### 자산 표면 {#acceptance-asset-surface}
 

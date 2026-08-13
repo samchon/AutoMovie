@@ -13,6 +13,7 @@
 
 - [대상, 범위와 재현 Context](./target-scope-and-context.md)
 - [검토 표면과 Sampling](./surfaces-and-sampling.md)
+- [주체 표면과 검사](./subject-surface-and-inspection.md)
 - [Criterion, Tolerance와 비교](./criteria-tolerance-and-comparison.md)
 - [Acceptance Case Matrix](./case-matrix.md)
 - [Observation, Finding과 Defect](./observations-findings-and-defects.md)
