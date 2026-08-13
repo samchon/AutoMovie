@@ -2843,6 +2843,13 @@ export class AutoMovieProductionProject {
           "film",
           `${encodeId(target.id)}.json`,
         );
+      case "subject":
+        return path.join(
+          this.reviewRoot,
+          "subjects",
+          encodeId(target.shot),
+          `${encodeId(target.subject)}.json`,
+        );
     }
   }
 
@@ -3585,13 +3592,15 @@ const validateManifest = (
         ))) ||
     (record.assetManifest !== undefined &&
       record.assetManifest !== ".automovie/assets.json") ||
+    (record.derivedArtifactManifest !== undefined &&
+      record.derivedArtifactManifest !== ".automovie/derived-artifacts.json") ||
     typeof record.generatedRoot !== "string" ||
     record.generatedRoot.trim().length === 0 ||
     typeof record.renderRoot !== "string" ||
     record.renderRoot.trim().length === 0
   )
     throw new Error(
-      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json".`,
+      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json" and derivedArtifactManifest must be ".automovie/derived-artifacts.json".`,
     );
   const manifest = record as IAutoMovieProductionManifest &
     Record<string, unknown>;
@@ -4165,6 +4174,8 @@ const modelRecipeDependsOn = (
 const reviewConsequenceKey = (target: IAutoMovieReviewTarget): string => {
   if (target.kind === "design") return `design:${targetKey(target.design)}`;
   if (target.kind === "source") return `source:${target.path}`;
+  if (target.kind === "subject")
+    return `subject:${target.shot}:${target.subject}`;
   return `${target.kind}:${target.id}`;
 };
 

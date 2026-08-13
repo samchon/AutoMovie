@@ -1,4 +1,8 @@
 import {
+  foldAutoMovieSubjectReviewCoverage,
+  resolveAutoMovieSubjectReviewUnit,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceOutcomeReference,
@@ -21,6 +25,8 @@ import {
   IAutoMovieReviewQueue,
   IAutoMovieReviewTarget,
   IAutoMovieStoredReview,
+  IAutoMovieSubjectReviewTarget,
+  IAutoMovieSubjectReviewUnit,
   IAutoMovieSubmitReviewInput,
   IAutoMovieSubmitReviewOutput,
 } from "@automovie/interface";
@@ -129,6 +135,12 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "rig-convention-and-rom",
     "material-and-outline-legibility",
     "turntable-coverage",
+  ],
+  subject: [
+    "identity-and-composition",
+    "placement-and-bounds",
+    "viewpoint-coverage",
+    "subject-frame-separation",
   ],
   design: [
     "identity-and-references",
@@ -258,7 +270,14 @@ export class AutoMovieProductionReviewService {
   ): IAutoMoviePrepareReviewOutput {
     const graph = this.project.graph();
     const diagnostics: IAutoMovieDiagnostic[] = [];
-    const targetValue = targetValueOf(this.project, input.target);
+    const subjectUnit =
+      input.target.kind === "subject"
+        ? currentSubjectReviewUnit(this.project, input.target, context)
+        : null;
+    const targetValue =
+      input.target.kind === "subject"
+        ? (subjectUnit?.description ?? null)
+        : targetValueOf(this.project, input.target);
     if (targetValue === null)
       diagnostics.push({
         code: "review-target-missing",
@@ -378,27 +397,42 @@ export class AutoMovieProductionReviewService {
         message:
           "This visual target has no verified current PNG frame. Capture every required current view and pass before submitReview. Correction feedback does not authorize deleting the artifact.",
       });
+    if (input.target.kind === "subject")
+      diagnostics.push({
+        code: "review-subject-viewpoint-unsupported",
+        category: "warning",
+        phase: "review",
+        target: reviewTargetKey(input.target),
+        path: targetPath(this.project, input.target),
+        message:
+          "No inspection-owned subject viewpoint plan exists yet, so subject-view coverage is indeterminate and this review cannot be completed. Record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
+      });
     const quotable =
-      input.target.kind === "design" && targetValue !== null
-        ? jsonPointers(targetValue, input.target.design)
-        : input.target.kind === "asset"
-          ? targetValue === null
-            ? []
-            : jsonPointers(targetValue, {
-                kind: "model",
-                id: input.target.id,
-              })
-          : input.target.kind === "source"
-            ? sourceSelectors(this.project, input.target.path, diagnostics)
-            : input.target.kind === "shot"
-              ? shotSourceSelectors(
-                  this.project,
-                  graph.shots.get(input.target.id)?.source.module,
-                  diagnostics,
-                )
-              : input.target.kind === "sequence" || input.target.kind === "film"
-                ? sourceSelectors(this.project, "src/film.ts", diagnostics)
-                : [];
+      input.target.kind === "subject"
+        ? subjectUnit === null
+          ? []
+          : subjectPointers(subjectUnit.description, subjectUnit.target)
+        : input.target.kind === "design" && targetValue !== null
+          ? jsonPointers(targetValue, input.target.design)
+          : input.target.kind === "asset"
+            ? targetValue === null
+              ? []
+              : jsonPointers(targetValue, {
+                  kind: "model",
+                  id: input.target.id,
+                })
+            : input.target.kind === "source"
+              ? sourceSelectors(this.project, input.target.path, diagnostics)
+              : input.target.kind === "shot"
+                ? shotSourceSelectors(
+                    this.project,
+                    graph.shots.get(input.target.id)?.source.module,
+                    diagnostics,
+                  )
+                : input.target.kind === "sequence" ||
+                    input.target.kind === "film"
+                  ? sourceSelectors(this.project, "src/film.ts", diagnostics)
+                  : [];
     const safeDiagnostics = diagnostics
       .map(appendReviewCorrectionSafety)
       .sort(compareDiagnostics);
@@ -415,6 +449,13 @@ export class AutoMovieProductionReviewService {
       frames,
       renditions,
       outcomes,
+      subjectReview:
+        subjectUnit === null
+          ? null
+          : {
+              unit: subjectUnit,
+              coverage: foldAutoMovieSubjectReviewCoverage(subjectUnit, [], []),
+            },
       diagnostics: safeDiagnostics,
     };
   }
@@ -735,6 +776,11 @@ const validateWorksheet = (
           `A completed asset review must cite every required current view digest. Missing: ${missing.join(", ")}.`,
         );
     }
+    if (input.target.kind === "subject")
+      add(
+        "review-subject-coverage-incomplete",
+        `A subject review is complete only when every required inspection viewpoint has been observed at the current revision. No inspection-owned viewpoint plan exists yet, so subject-view coverage stays "${prepared.subjectReview?.coverage.state ?? "indeterminate"}" and no structural inspection can discharge it. Submit the worksheet with complete false and record the unobserved range.`,
+      );
     if (prepared.renditions.length !== 0) {
       const requiredShots = [
         ...new Set(prepared.renditions.map((rendition) => rendition.shot)),
@@ -1096,6 +1142,36 @@ const validateEvidence = (
         "review-evidence-stale",
         "diagnostic actual must exactly equal the current diagnostic message.",
       );
+  } else if (evidence.kind === "subject") {
+    const subject = prepared.subjectReview;
+    if (
+      subject === null ||
+      canonicalizeAutoMovieJson(subject.unit.target) !==
+        canonicalizeAutoMovieJson(evidence.target)
+    )
+      fail(
+        "review-evidence-target-mismatch",
+        "subject evidence addresses a compiled subject this worksheet did not prepare. Quote the prepared subject target.",
+      );
+    else {
+      const resolved = resolveJsonPointer(
+        subject.unit.description,
+        evidence.pointer,
+      );
+      if (resolved.found === false)
+        fail(
+          "review-evidence-selector-invalid",
+          `JSON pointer "${evidence.pointer}" does not exist in the current compiled subject description. Use a selector returned by prepareReview.`,
+        );
+      else if (
+        canonicalizeAutoMovieJson(resolved.value) !==
+        canonicalizeAutoMovieJson(evidence.exactValue)
+      )
+        fail(
+          "review-evidence-stale",
+          `JSON pointer "${evidence.pointer}" no longer equals exactValue. Prepare the review again.`,
+        );
+    }
   } else if (evidence.kind === "outcome") {
     const current = prepared.outcomes.find(
       (outcome) => outcome.scenario === evidence.scenario,
@@ -1165,6 +1241,8 @@ const targetValueOf = (
       return null;
     }
   }
+  if (target.kind === "subject")
+    return currentSubjectReviewUnit(project, target)?.description ?? null;
   const graph = project.graph();
   if (target.kind === "shot") return graph.shots.get(target.id) ?? null;
   if (target.kind === "rendition")
@@ -1177,6 +1255,43 @@ const targetValueOf = (
       null
     );
   return graph.production?.id === target.id ? graph.production : null;
+};
+
+/**
+ * Resolve one compiled subject from the artifact the target names.
+ *
+ * The revision is digested from the exact bytes the description was read from
+ * rather than copied out of the manifest, so a description can never claim a
+ * revision it did not come from. Every unreadable, non-conforming, or absent
+ * subject resolves to null and is reported as a missing review target instead
+ * of being silently reviewed against another compile.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-identity Addresses one stable compiled subject instead of reconstructing it from names.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds the resolved subject to the exact compile the description was read from.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Reads the shared compiled-subject record rather than defining a second one.
+ */
+const currentSubjectReviewUnit = (
+  project: AutoMovieProductionProject,
+  target: Extract<IAutoMovieReviewTarget, { kind: "subject" }>,
+  context?: IReviewReadContext,
+): IAutoMovieSubjectReviewUnit | null => {
+  try {
+    const bytes = currentGeneratedFile(
+      project,
+      `shots/${encodeAutoMoviePathSegment(target.shot)}.json`,
+      context,
+    );
+    const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
+      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+    );
+    if (validation.success === false) return null;
+    return resolveAutoMovieSubjectReviewUnit(
+      { revision: digestAutoMovieBytes(bytes), compiled: validation.data },
+      { shot: target.shot, subject: target.subject },
+    );
+  } catch {
+    return null;
+  }
 };
 
 const reviewFingerprint = (
@@ -1244,6 +1359,12 @@ const reviewFingerprint = (
         `frame:${canonicalizeAutoMovieJson(frame.target)}:${frame.pass}`,
         frame,
       );
+    fields.push(compilerField());
+  } else if (target.kind === "subject") {
+    // The description carries its own compile revision, so this one field
+    // keys freshness to the compiled subject rather than to a shot render or
+    // a delivery regeneration, neither of which changes these bytes.
+    addJson("subject-description", targetValueOf(project, target));
     fields.push(compilerField());
   } else if (target.kind === "design") {
     addJson("design", project.design(target.design));
@@ -2865,10 +2986,7 @@ const frameClockClose = (left: number, right: number): boolean =>
   Math.abs(left - right) <=
   Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
-const jsonPointers = (
-  value: unknown,
-  target: IAutoMovieDesignTarget,
-): IAutoMoviePrepareReviewOutput["quotable"] => {
+const jsonPointerPaths = (value: unknown): string[] => {
   const pointers: string[] = [];
   const visit = (current: unknown, pointer: string): void => {
     if (pointers.length >= 256) return;
@@ -2885,8 +3003,28 @@ const jsonPointers = (
         );
   };
   visit(value, "");
-  return pointers.map((pointer) => ({ kind: "design", target, pointer }));
+  return pointers;
 };
+
+const jsonPointers = (
+  value: unknown,
+  target: IAutoMovieDesignTarget,
+): IAutoMoviePrepareReviewOutput["quotable"] =>
+  jsonPointerPaths(value).map((pointer) => ({
+    kind: "design",
+    target,
+    pointer,
+  }));
+
+const subjectPointers = (
+  value: unknown,
+  target: IAutoMovieSubjectReviewTarget,
+): IAutoMoviePrepareReviewOutput["quotable"] =>
+  jsonPointerPaths(value).map((pointer) => ({
+    kind: "subject",
+    target,
+    pointer,
+  }));
 
 const sourceSelectors = (
   project: AutoMovieProductionProject,
@@ -2968,6 +3106,8 @@ const highRiskCriteria = (target: IAutoMovieReviewTarget): string[] => {
   switch (target.kind) {
     case "asset":
       return ["silhouette-and-proportion", "rig-convention-and-rom"];
+    case "subject":
+      return ["identity-and-composition", "viewpoint-coverage"];
     case "design":
       return ["identity-and-references"];
     case "source":
@@ -3048,6 +3188,8 @@ const sameStringSet = (
 
 const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
   if (target.kind === "source") return `source:${target.path}`;
+  if (target.kind === "subject")
+    return `subject:${target.shot}:${target.subject}`;
   if (
     target.kind === "asset" ||
     target.kind === "shot" ||
@@ -3067,6 +3209,17 @@ const targetPath = (
 ): string | null => {
   const production = encodeAutoMoviePathSegment(project.productionId);
   if (target.kind === "source") return target.path;
+  if (target.kind === "subject")
+    return normalizeSlash(
+      path.relative(
+        project.root,
+        path.join(
+          project.generatedRoot(),
+          "shots",
+          `${encodeAutoMoviePathSegment(target.shot)}.json`,
+        ),
+      ),
+    );
   if (target.kind === "asset")
     return `.automovie/design/shared/models/${encodeAutoMoviePathSegment(target.id)}.json`;
   if (target.kind === "shot")

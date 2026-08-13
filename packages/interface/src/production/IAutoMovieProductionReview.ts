@@ -11,6 +11,11 @@ import {
   IAutoMovieDesignTarget,
 } from "./IAutoMovieProductionDesign";
 import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracle";
+import type {
+  IAutoMovieSubjectReviewCoverage,
+  IAutoMovieSubjectReviewTarget,
+  IAutoMovieSubjectReviewUnit,
+} from "./IAutoMovieSubjectReview";
 import type { IAutoMovieRepaintParameters } from "./application/IAutoMovieRepaintShot";
 
 /**
@@ -43,6 +48,14 @@ export type IAutoMovieReviewEvidenceSelector =
       code: string;
       /** Diagnostic project path or empty string when none. */
       path: string;
+    }
+  | {
+      /** Compiled subject description addressed as its own review unit. */
+      kind: "subject";
+      /** Exact compiled subject prepared for this review. */
+      target: IAutoMovieSubjectReviewTarget;
+      /** RFC 6901 JSON pointer into the compiled subject description. */
+      pointer: string;
     };
 
 /**
@@ -336,6 +349,23 @@ export type IAutoMovieReviewEvidence =
       actual: unknown;
     }
   | {
+      /**
+       * Structural evidence read from one compiled subject description.
+       *
+       * The discriminator is deliberately not `frame`: a delivered picture that
+       * contains the subject is evidence about the picture, so it can never
+       * discharge a subject criterion, and this receipt can never discharge a
+       * frame one.
+       */
+      kind: "subject";
+      /** Exact compiled subject prepared for this review. */
+      target: IAutoMovieSubjectReviewTarget;
+      /** RFC 6901 JSON pointer into the compiled subject description. */
+      pointer: string;
+      /** Exact current value at the pointer. */
+      exactValue: unknown;
+    }
+  | {
       /** Current required acceptance-scenario contract. */
       kind: "acceptance";
       /** Exact acceptance scenario id. */
@@ -458,6 +488,34 @@ export interface IAutoMoviePrepareReviewInput {
 }
 
 /**
+ * Resolved subject unit and its inspection-owned viewpoint coverage.
+ *
+ * Subject coverage is reported on its own axis. It is never folded into the
+ * frame, range, or whole-work coverage a time-axis review reports, and a
+ * completeness claim on either axis leaves the other's unobserved range open.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-coverage Exposes planned and actually observed subject coverage as its own reported axis.
+ * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Keeps subject coverage separate from the frame and range coverage reported beside it.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the coverage record returned with one prepared subject worksheet.
+ */
+export interface IAutoMovieSubjectReviewPreparation {
+  /**
+   * Compiled subject resolved from the target, with its revision.
+   *
+   * @evidence requirements/review/subject-inspection.md#review-subject-identity Carries the stable compiled identity the worksheet was prepared against.
+   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Types the observation unit a judgeable subject target resolves to.
+   */
+  unit: IAutoMovieSubjectReviewUnit;
+  /**
+   * Required viewpoints compared with current subject observations.
+   *
+   * @evidence requirements/review/subject-inspection.md#review-subject-evidence Reports not-run, partial, stale, and indeterminate subject observation instead of an implied pass.
+   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the planned, observed, and unobserved subject sets of one worksheet.
+   */
+  coverage: IAutoMovieSubjectReviewCoverage;
+}
+
+/**
  * Current review worksheet and quotable evidence inventory.
  *
  * @evidence requirements/review/records-and-completeness.md#review-execution-status Exposes `IAutoMoviePrepareReviewOutput` as the portable data boundary for the review execution status requirement.
@@ -514,6 +572,13 @@ export interface IAutoMoviePrepareReviewOutput {
    * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Types `outcomes` for the review system execution status system contract.
    */
   outcomes: IAutoMovieAcceptanceOutcomeReference[];
+  /**
+   * Resolved subject unit and viewpoint coverage, null for every other target.
+   *
+   * @evidence requirements/review/subject-inspection.md#review-subject-inspection Makes the compiled subject, rather than a film moment, the prepared review unit.
+   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Types the observation unit a resolved subject target is prepared as.
+   */
+  subjectReview: IAutoMovieSubjectReviewPreparation | null;
   /**
    * Blocking and warning diagnostics. Resolve errors and prepare again before
    * attempting a completion submission.
