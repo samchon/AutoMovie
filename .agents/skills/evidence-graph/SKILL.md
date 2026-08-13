@@ -53,6 +53,32 @@ Derive a domain-partitioned population by subtraction. A specialized claim may n
 
 A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Until the contributor grows a per-host lower bound, that bound belongs to a structural guard, and `#1900` deliberately removed the repository-shape test class that would host one. Record the unpaid edge instead of reporting the population as self-enforcing.
 
+## Declare one owner per contract unit
+
+The positive edge families prove that a unit has a claimant or a disclaimer. They cannot separate a promise project source owns by design from a promise nobody took, because both are spelled as one exclusion per package. `docs/contract-ownership/requirements.json` and `specifications.json` carry that missing statement, and `internals/contract-ownership.mjs` checks it.
+
+Declare exactly one owner per requirement unit and per specification obligation. A `package` owner names the workspace package that answers, and the gate requires that package to already carry a positive `@evidence` for the same target, so the ledger never invents an owner the native graph does not know. A `project-source` owner names the specification obligations the product supplies so an author can discharge it, and the gate walks those supplies until each one terminates at a package-owned obligation, rejecting a missing target, a cycle, and a path that ends in an exclusion. An obligation handed to an author with no product supply is an omission with a sentence in front of it, not an assignment. An `excluded` owner records the decided boundary once with a non-empty reason instead of repeating a disclaimer in every package.
+
+Split a specification unit into obligations rather than letting several partial claimants add up to a false whole. A package that owns one obligation writes `@evidencePart <unit>::<obligation-id>` in the same JSDoc block as its `@evidence <unit>`, so the part claim refines the native triangle instead of replacing it.
+
+Migrate rather than re-baseline. Initialization snapshots every existing unit into `legacy` with the SHA-256 of its heading and own prose, and the command refuses to overwrite a ledger that exists, so accrued debt cannot be laundered by taking a new snapshot. A new unit fails until it declares an owner, and editing a legacy unit fails with a demand to declare that unit rather than re-pin its hash. The remaining `legacy` count is the queryable migration debt; `node internals/contract-ownership.mjs query --layer requirements --owner <package|project-source|excluded|legacy>` answers who owns what without reading prose.
+
+## Partition a unit that several claimants share
+
+`evidence/graph` proves that a unit has a claimant. It does not prove that its claimants together cover the unit, so a unit one third implemented and a unit fully implemented pass identically. Prose that narrows a claim (`it does not claim camera-body clearance`) is honest and unparsed: no tool reads it, and one resolved citation counts the whole unit as realized.
+
+No `@ttsc/evidence` option closes this. `evidence/graph` runs its obligation from the reference toward the claim, `singleEvidencePerSymbol` demands exactly one unit per host where this repository's hosts answer for several, and `uniqueEvidence` would manufacture a false sole owner for shared implementation. Treat fragment coverage as a repository mechanism rather than a lint setting you have not found yet.
+
+Declare the partition in two places that answer two different questions. The specification unit enumerates its own fragments with `<!-- @evidenceObligation <id> <what the fragment is> -->` markers, because deciding where one obligation ends is human judgment that belongs beside the prose it divides. The ledger under `docs/contract-ownership/` then answers who owns each id, because ownership must be queryable without parsing prose. A package owner proves the fragment by carrying `@evidence <unit>` and `@evidencePart <unit>::<id>` in one JSDoc block; two separate blocks do not aggregate into a claim.
+
+Split a fragment whenever the product implements part of a noun and not the rest. `{#clv-clipping-clearance-evaluation}` lists `delivery crop` as one input, and the engine applies the delivery raster's width and height while nothing applies a crop region narrower than that raster, so the unit enumerates `delivery-raster-extent` and `delivery-crop-region` separately and only the first has an owner. Merging them would hide the missing half behind a true sentence about the present one, which is the failure this partition exists to end.
+
+Leave a fragment nobody implements undeclared rather than excluding it. An exclusion states that the claim intentionally owes nothing, so spending one on unfinished work restores the exact confusion between a decided boundary and an unexamined gap. An enumerated fragment with no ledger entry is visible debt; an exclusion over it is a false statement that reads green forever.
+
+Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit breaks the digest until someone declares its owners, so the cost lands on the next author of each unit instead of arriving as one repository-wide red gate.
+
+**Unpaid edge.** Nothing yet compares a unit's marker set against its declared obligation set, so a declaration can still cover five of nine fragments and pass. Until that comparison exists, read the markers when you review a declaration, and do not report a passing gate as proof that a unit is fully owned.
+
 ## Stable document identities
 
 Give every controlled H2 and H3 an explicit, unique lowercase ASCII anchor. Keep the anchor stable when prose is revised or translated so citations survive wording changes.
