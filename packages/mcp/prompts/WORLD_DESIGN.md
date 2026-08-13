@@ -14,11 +14,10 @@ Reach for `lattice` when the repetition is volumetric: a curtain-wall grid over 
 
 A set may declare a weighted `prototypes` table beside its `modelRecipe`, which stays the default. Each prototype names its own recipe and a positive selection weight, and the choice is deterministic from seed and slot, so a hedgerow of three shrub recipes or a facade of four panel types is one set rather than three sets that have to be kept in step. Variation widens the same way: `scale3` gives independent per-axis ranges, `rotationDeg` gives seeded XYZ Euler offsets applied after facing, and `visibleProbability` thins a procedural set without changing its declared count. All of it regenerates from the seed; none of it is stored per member.
 
-The engine world kit constructs constant terrain, ramps, sampled heightfields,
-visible wall/building box blocks, and the three seeded instance layouts (`grid`, `scatter`, `along-route`); `lattice` and `explicit` are compiler-materialized and have no world-kit builder. `assertWorldPlacements` rejects
-overlapping blocks, a block whose entire footprint lacks one matching support
-surface, blocked routes, and unreachable landmarks. It evaluates every
-candidate support surface, so an overlapping lower ground plane cannot hide the
-platform that actually supports a block.
+A set that repeats a building's own parts belongs to that building rather than to the world. Declare it in the built environment's `populations`, pairing the logical space it stands in with this same set record, and the lowering hands the set to the world for you. The set the world stages and the set a room measures are then one record, so asking a room what stands in it names the field instead of missing it. `WORLD_BUILDING` owns that pairing and the model-local `prototypeBounds` a compact population declares beside it.
+
+`builtInstanceSetPlacementBounds(` answers where a set actually stands: give it the set and one model-local prototype box and it folds the declared law, taking a grid's or a lattice's occupied hull corners, a scatter's declared disk, and explicit transforms exactly, so a set of thousands costs what a set of four costs. Seeded rotation ranges answer conservatively rather than pretending to know which slot sampled which angle, and `visibleProbability` never shrinks the result, because this is the declared placement envelope and not the members visible in one render sample. `along-route` is refused: its slots follow a world route the fold is not handed.
+
+The engine world kit constructs constant terrain, ramps, sampled heightfields, visible wall/building box blocks, and the seeded instance layouts `grid`, `scatter` and `along-route`; `lattice` and `explicit` are compiler-materialized and have no world-kit builder. `assertWorldPlacements` rejects overlapping blocks, a block whose entire footprint lacks one matching support surface, blocked routes, and unreachable landmarks. It evaluates every candidate support surface, so an overlapping lower ground plane cannot hide the platform that actually supports a block.
 
 Validate terrain and choreography with the programmatic engine geometry API instead of estimating from prose. A shot source should use the injected ground oracle rather than duplicating its own unrelated height formula.
