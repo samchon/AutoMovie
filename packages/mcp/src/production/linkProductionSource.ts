@@ -1,6 +1,9 @@
 import ts from "typescript-compiler";
 
-import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "./sandboxEngineSurface";
+import {
+  AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER,
+  AUTOMOVIE_SANDBOX_ENGINE_SURFACE,
+} from "./sandboxEngineSurface";
 
 /**
  * One project source module the compiler linked into a deterministic build.
@@ -117,7 +120,7 @@ export const AUTOMOVIE_SANDBOX_MODULE_EXPORTS: ReadonlyMap<
   string,
   ReadonlySet<string>
 > = new Map([
-  ["@automovie/engine", AUTOMOVIE_SANDBOX_ENGINE_EXPORTS],
+  [AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER, AUTOMOVIE_SANDBOX_ENGINE_EXPORTS],
   ["@automovie/archetypes", AUTOMOVIE_SANDBOX_ARCHETYPE_EXPORTS],
 ]);
 

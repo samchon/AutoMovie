@@ -152,6 +152,16 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck:
       "Validate design scope first, then repeat every invalidated downstream scope.",
   },
+  derived: {
+    guide: "DERIVED_ARTIFACTS",
+    path: "prompts/DERIVED_ARTIFACTS.md#deterministic-derived-artifacts",
+    invariant:
+      "Every derived artifact must have one current, portable, project-owned generator, dependency closure, ledger record, and exact output before source execution.",
+    correction:
+      "Correct the generator or declared input named by the occurrence and rerun the explicit generation command; do not edit the ledger or output bytes by hand.",
+    recheck:
+      "Inspect the derived-artifact ledger again, then compile the same scope without changing its input closure.",
+  },
   engine: {
     guide: "DEBUGGING",
     path: "prompts/DEBUGGING.md#debugging-handbook",
