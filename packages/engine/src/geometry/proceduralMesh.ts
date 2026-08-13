@@ -399,18 +399,31 @@ export const extrudeAutoMovieProfile = (props: {
  * meridian's own polyline length, which is slant distance on a cone and
  * developed height on a cylinder rather than the shortcut through the axis.
  *
+ * Around runs against the direction the lattice is built in, and that is the
+ * whole reason it is written `2 * pi - theta` rather than `theta`. The outward
+ * normal this winding produces, the meridian running up, and `theta` running
+ * round form a left-handed triple, so an atlas keyed on `theta` directly comes
+ * out mirrored against every other builder here: a letter reads backwards, and
+ * a normal map's tangent basis is handed the wrong way, which tilts the
+ * lighting rather than merely the image. Reversing the axis that closes on
+ * itself costs nothing an author can name, because which way round a surface of
+ * revolution is traversed carries no authored meaning, while reversing the
+ * meridian instead would put `v = 0` at whichever end of the profile was typed
+ * last.
+ *
  * The lattice already carries a duplicate ring at `theta = 2 * pi`, which is
- * what makes the seam an honest cut: the first ring reads zero and the last
- * reads the full circumference at that radius, so the closing quad never
+ * what makes the seam an honest cut: one edge of the seam reads zero and the
+ * other reads the full circumference at that radius, so the closing quad never
  * interpolates backwards through the atlas. Those two phases coincide only
  * when the declared texture repeat divides that circumference; the kernel does
  * not stretch a finish to hide a mismatched seam. A changing radius also makes
- * the surface non-developable in general. `theta * radius` preserves local
+ * the surface non-developable in general. Scaling by radius preserves local
  * circumference scale on every parallel and therefore shears the flat atlas
  * between unequal parallels instead of pretending one global isometry exists.
  * A meridian point on the axis is a pole, and its whole ring reads zero around,
  * because a circle of no radius has no arc to travel. Its collapsed triangles
- * remain the topology this operator already declares; their UVs stay finite.
+ * remain the topology this operator already declares; their UVs stay finite,
+ * and they are the one place the atlas has no handedness to report.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
@@ -446,7 +459,7 @@ export const revolveAutoMovieProfile = (props: {
     const sine = Math.sin(angle);
     props.profile.forEach((point, index) => {
       positions.push(point.x * cosine, point.y, point.x * sine);
-      uvs.push(angle * point.x, meridian[index]!);
+      uvs.push((Math.PI * 2 - angle) * point.x, meridian[index]!);
     });
   }
   const count = props.profile.length;

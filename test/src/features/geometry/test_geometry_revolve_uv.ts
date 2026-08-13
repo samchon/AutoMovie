@@ -45,12 +45,15 @@ const cylinderProfile = [
  * Scenarios:
  *
  * 1. A revolved surface carries one uv pair per vertex, where it carried none.
- * 2. The seam is an explicit cut over the true circumference: the first ring
- *    reads zero around and the duplicate closing ring reads `2 * pi * r`, so
- *    the last quad does not interpolate backwards. The phases are deliberately
- *    unequal when the repeat does not divide that circumference.
- * 3. Along is the meridian's own length, so a 2 m tube spans 0 to 2 and a
- *    quarter turn is `pi / 2` m around, both in metres and neither in `[0, 1]`.
+ * 2. The seam is an explicit cut over the true circumference: around runs
+ *    against the build direction as `2 * pi - theta` so the atlas stays
+ *    right-handed, which puts `2 * pi * r` on the first ring and zero on the
+ *    duplicate closing ring, and the last quad still does not interpolate
+ *    backwards. The phases are deliberately unequal when the repeat does not
+ *    divide that circumference.
+ * 3. Along is the meridian's own length, so a 2 m tube spans 0 to 2, and one
+ *    quarter of the way round the lattice reads `3 * pi / 2` m of arc because
+ *    around counts down; both are metres and neither is in `[0, 1]`.
  * 4. A cone's slant is measured as slant: `sqrt(2)` for a meridian rising 1 m
  *    over 1 m, and its pole ring reads zero around at every segment, because a
  *    circle of no radius has no arc to travel. The six collapsed pole triangles
@@ -83,13 +86,17 @@ export const test_geometry_revolve_uv = (): void => {
   TestValidator.equals(
     "the seam cut spans the true circumference, in metres of arc",
     namedFacts([
-      ["firstRing", () => nclose(uvAt(tube.uvs!, 0).u, 0)],
-      ["closingRing", () => nclose(uvAt(tube.uvs!, closing).u, circumference)],
+      ["firstRing", () => nclose(uvAt(tube.uvs!, 0).u, circumference)],
+      ["closingRing", () => nclose(uvAt(tube.uvs!, closing).u, 0)],
       [
         "quarterTurn",
-        () => nclose(uvAt(tube.uvs!, cylinderProfile.length).u, Math.PI / 2),
+        () =>
+          nclose(
+            uvAt(tube.uvs!, cylinderProfile.length).u,
+            circumference - Math.PI / 2,
+          ),
       ],
-      ["notNormalized", () => uvAt(tube.uvs!, closing).u > 1],
+      ["notNormalized", () => uvAt(tube.uvs!, 0).u > 1],
       [
         "phaseIsACut",
         () =>
@@ -144,10 +151,17 @@ export const test_geometry_revolve_uv = (): void => {
             nclose(uvAt(cone.uvs!, segment * 2).u, 0),
           ).every((flat) => flat),
       ],
+      ["rimStart", () => nclose(uvAt(cone.uvs!, 1).u, 2 * Math.PI)],
       ["rimHalfTurn", () => nclose(uvAt(cone.uvs!, 3 * 2 + 1).u, Math.PI)],
-      ["rimFullTurn", () => nclose(uvAt(cone.uvs!, 6 * 2 + 1).u, 2 * Math.PI)],
+      ["rimFullTurn", () => nclose(uvAt(cone.uvs!, 6 * 2 + 1).u, 0)],
     ]),
-    { slant: true, poleRing: true, rimHalfTurn: true, rimFullTurn: true },
+    {
+      slant: true,
+      poleRing: true,
+      rimStart: true,
+      rimHalfTurn: true,
+      rimFullTurn: true,
+    },
   );
 
   TestValidator.equals(
