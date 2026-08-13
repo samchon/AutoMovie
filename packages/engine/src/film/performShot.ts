@@ -1901,21 +1901,22 @@ export const performShot = (props: {
   objectMotions.push(...authoredMotions);
 
   // Compile the live camera's move from its frame actions. Subjects resolve
-  // against the staged placements; a node subject's height is measured from
-  // the geometry its model actually draws (staging doctrine: measure, don't
-  // hope), and its animated base rides either a compiled actor clip or an
-  // effective object motion, so `follow` tracks a walking actor, launched
-  // prop, or handoff.
+  // against the staged placements; a node subject's extent is measured from the
+  // geometry its model actually draws, on every axis it fills (staging
+  // doctrine: measure, don't hope), and its animated base rides either a
+  // compiled actor clip or an effective object motion, so `follow` tracks a
+  // walking actor, launched prop, or handoff.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
+  /** Every staged node by id, for the placement and model reads below. */
+  const stagedNodes = new Map(
+    staged.scene.nodes.map((entry) => [entry.id, entry] as const),
+  );
   /**
-   * A staged node's drawn vertical extent, memoized because a shot frames the
+   * A staged node's drawn model-space box, memoized because a shot frames the
    * same subject from the hero camera and again from every coverage angle. Null
    * whenever the model is absent or has nothing to measure, which hands the rig
    * measurement back its documented fallback role.
    */
-  const stagedNodes = new Map(
-    staged.scene.nodes.map((entry) => [entry.id, entry] as const),
-  );
   const measuredExtents = new Map<string, IAutoMovieSubjectBox | null>();
   const modelExtentOf = (node: string): IAutoMovieSubjectBox | null => {
     const cached = measuredExtents.get(node);
@@ -1968,9 +1969,9 @@ export const performShot = (props: {
    * What each member of a group target occupies at a shot-local instant, one
    * box per member that resolves.
    *
-   * Every member contributes what it actually occupies: a staged node its
-   * placement raised by its own measured extent, a formation its whole
-   * transformed footprint under the cue playing at that instant. Their union is
+   * Every member contributes what it actually occupies: a staged node the box
+   * its model draws, carried out through its own placement, a formation its
+   * whole transformed footprint under the cue playing at that instant. Their union is
    * the thing the camera has to hold, which is the datum a centroid destroyed —
    * two thousand figures and one figure have the same centroid, and only one of
    * them fits in a frame solved for a person.
