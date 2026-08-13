@@ -1,12 +1,18 @@
-import { describeAutoMovieSubjects } from "@automovie/engine";
+import {
+  describeAutoMovieSubjects,
+  foldAutoMovieSubjectReviewCoverage,
+  resolveAutoMovieSubjectReviewUnit,
+} from "@automovie/engine";
 import type { IAutoMovieCompiledShotSource } from "@automovie/interface";
 import {
+  AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE,
   AUTOMOVIE_SUBJECT_INSPECTION_ROOT,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   type AutoMovieProductionSubjectInspection,
   AutoMovieProductionSubjectInspectionService,
   openAutoMovieProduction,
+  readAutoMovieSubjectInspection,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -313,6 +319,98 @@ export const test_mcp_inspect_subject = async (): Promise<void> => {
         resolved: placedPart,
         observed: [placedPart],
         echoedTarget: viewerKey,
+      },
+    );
+
+    // The review surface counts coverage from what was published, not from a
+    // plan it recomputes: one subject is legitimately planned differently by
+    // the page and by this tool, so the denominator has to come from whoever
+    // actually took the look.
+    const compiledShot = JSON.parse(
+      Buffer.from(
+        services.project.readGeneratedFile("shots/opening.json"),
+      ).toString("utf8"),
+    ) as IAutoMovieCompiledShotSource;
+    const revision = swept.revision;
+    if (revision === null)
+      throw new Error("The sweep reported no compiled revision.");
+    const unit = resolveAutoMovieSubjectReviewUnit(
+      { revision, compiled: compiledShot },
+      { shot: "opening", subject: SUBJECT },
+    );
+    const readBack = () =>
+      readAutoMovieSubjectInspection({
+        projectRoot: fixture.root,
+        productionId: "fixture-film",
+        shot: "opening",
+        subject: SUBJECT,
+      });
+    const published = readBack();
+    TestValidator.equals(
+      "the published plan and its observations reopen as the sweep that took them",
+      {
+        planned: published.planned.map((viewpoint) => viewpoint.id),
+        observed: published.observations.map(
+          (observation) => observation.viewpoint,
+        ),
+        revisions: [
+          ...new Set(
+            published.observations.map((observation) => observation.revision),
+          ),
+        ],
+        state: foldAutoMovieSubjectReviewCoverage(
+          unit,
+          published.planned,
+          published.observations,
+        ).state,
+      },
+      {
+        planned: dug.plan.map((viewpoint) => viewpoint.id),
+        observed: dug.plan.map((viewpoint) => viewpoint.id),
+        revisions: [revision],
+        state: "reviewed",
+      },
+    );
+
+    const firstArtifact = path.join(
+      fixture.root,
+      ...dug.views[0]!.path.split("/"),
+    );
+    // A different raster is different bytes, and different bytes are a
+    // different digest, which is the only thing that decides whether the
+    // picture still answers for the observation naming it.
+    fs.writeFileSync(firstArtifact, Buffer.from(inspectionPng(8, 8)));
+    const tampered = readBack();
+    fs.rmSync(
+      path.join(
+        fixture.root,
+        ...`${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/fixture-film/opening/${encodeURIComponent(SUBJECT)}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`.split(
+          "/",
+        ),
+      ),
+    );
+    const unplanned = readBack();
+    TestValidator.equals(
+      "a replaced picture stops being an observation and a missing plan is no denominator",
+      {
+        tampered: foldAutoMovieSubjectReviewCoverage(
+          unit,
+          tampered.planned,
+          tampered.observations,
+        ).state,
+        stillPlanned: tampered.planned.length,
+        unplanned: foldAutoMovieSubjectReviewCoverage(
+          unit,
+          unplanned.planned,
+          unplanned.observations,
+        ).state,
+        nothingRead: unplanned.observations.length,
+      },
+      {
+        tampered: "partial",
+        stillPlanned: dug.plan.length,
+        unplanned: "indeterminate",
+        nothingRead: 0,
       },
     );
   } finally {

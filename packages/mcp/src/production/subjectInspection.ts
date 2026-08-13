@@ -38,9 +38,76 @@ import {
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Keeps an inspection-owned observation out of the population a delivery review reads.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Places the observation artifact outside the delivery render bundle the specification separates it from.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::artifact-separation The observation artifact is published under an inspection root outside the render bundle tree a delivery review collects frames from.
  * @author Samchon
  */
 export const AUTOMOVIE_SUBJECT_INSPECTION_ROOT = ".automovie/inspections";
+
+/**
+ * File one subject's published viewpoint plan is written to.
+ *
+ * The plan is the denominator of that subject's coverage, and it is written by
+ * the instrument that actually took the look. A reader that recomputed it
+ * instead would be inventing a third plan: the viewer page lays its turntable
+ * out at its own aspect and the tool lays one out at the caller's raster, and
+ * both clamp a low ring against the subject's own box, so one subject is
+ * legitimately planned differently in two places. Counting observations against
+ * a denominator nobody was answering is worse than counting nothing.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-coverage Publishes the planned viewpoint population an observation set is measured against.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Fixes where the declared denominator of one subject's coverage is read from.
+ * @author Samchon
+ */
+export const AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE = "plan.json";
+
+/**
+ * One subject's published viewpoint plan.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the viewpoint population one inspection answered for.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the persisted denominator of subject coverage.
+ * @author Samchon
+ */
+export interface IAutoMovieSubjectInspectionPlanRecord {
+  /** Record format. */
+  version: 1;
+  /** Production namespace the inspection ran in. */
+  productionId: string;
+  /** Compiled artifact and compiled subject id the plan was laid out for. */
+  target: IAutoMovieSubjectReviewTarget;
+  /** Revision of the compiled artifact the plan was derived from. */
+  revision: string;
+  /** Compile the plan and its observations were derived from. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Viewpoints the inspection undertook to observe, in plan order. */
+  planned: IAutoMovieSubjectReviewViewpoint[];
+  /** Never delivery evidence, and typed so it cannot become it. */
+  deliveryEvidence: false;
+}
+
+/**
+ * One published observation, beside the image it was taken of.
+ *
+ * The revision is what makes it reopenable rather than merely repeatable: the
+ * same viewpoint at a later compile is a different look, and a receipt without
+ * a revision could not tell a picture drawn before a recompile from one drawn
+ * after it.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Persists which subject, revision, and viewpoint the artifact answers, beside the artifact.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the persisted subject observation record.
+ * @author Samchon
+ */
+export interface IAutoMovieSubjectInspectionObservationRecord {
+  /** Record format. */
+  version: 1;
+  /** Receipt in the shape subject coverage counts. */
+  observation: IAutoMovieSubjectReviewObservation;
+  /** Camera state the artifact was drawn through. */
+  pose: IAutoMovieSubjectInspectionPose;
+  /** Compile the observation was derived from. */
+  compileFingerprint: AutoMovieContentDigest;
+  /** Never delivery evidence, and typed so it cannot become it. */
+  deliveryEvidence: false;
+}
 
 /** Lock guarding concurrent observation publication inside one project. */
 const INSPECTION_LOCK_PATH = ".automovie/inspections.lock";
@@ -146,6 +213,7 @@ export interface IAutoMovieSubjectInspectionPose {
  * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Provides the host instrument the request surface needs to answer a named subject and viewpoint with an image.
  * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Leaves actual pixel production with the host that executes the real project.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the host instrument whose absence the surface must refuse by name.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::host-absence-refusal A separate host instrument is what the surface names when it is absent, so a missing instrument is refused rather than answered with an invented observation.
  * @author Samchon
  */
 export type AutoMovieProductionSubjectInspection = (input: {
@@ -245,6 +313,7 @@ export interface IAutoMovieSubjectInspectionView {
  * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Returns the resolved subject, the inspection-owned plan, and the artifacts a named request produced.
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Marks the whole answer as something no delivery review may consume.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request surface's complete answer.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::request-inputs-and-answer The answer carries the resolved subject record, the viewpoint plan, each viewpoint's resolved camera state and artifact, and the coverage they discharge.
  * @author Samchon
  */
 export interface IAutoMovieInspectSubject {
@@ -309,6 +378,7 @@ export interface IAutoMovieInspectSubject {
    *
    * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Marks a subject observation as something that cannot be offered as delivery evidence.
    * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Fixes the delivery-evidence refusal in the returned shape itself.
+   * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::delivery-evidence-refusal The literal false in the returned shape is what refuses a delivery-evidence consumer, rather than a rule a caller has to remember.
    */
   deliveryEvidence: false;
   /**
@@ -404,6 +474,8 @@ export namespace IAutoMovieInspectSubject {
  *
  * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Derives angle, distance and projection from the subject's own extent instead of from an authored camera.
  * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Makes two requests naming the same subject and rule open the same thing under the same condition.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach States the deterministic viewpoint identities and camera state one subject and one plan rule produce for any requester.
+ * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::plan-determinism The same subject extent and the same plan rule yield the same viewpoint identities in the same order, so two requesters receive one plan rather than two.
  * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Implements the deterministic viewpoint selection rule, producing the same identities and order for the same inputs.
  * @author Samchon
  */
@@ -728,6 +800,35 @@ export class AutoMovieProductionSubjectInspectionService {
         { revision: resolved.revision, subject: resolved.description },
       );
     }
+    // The plan is published before the first picture is drawn, so a sweep that
+    // refuses partway leaves a denominator standing beside the observations it
+    // did manage. Without that, a half-finished inspection would read as a
+    // completed one over a smaller plan, which is the shape of a rubber stamp.
+    const directory = inspectionDirectory(
+      services.project.productionId,
+      target.shot,
+      resolved.description.id,
+    );
+    publishInspectionFile(
+      services.project.root,
+      `${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`,
+      Buffer.from(
+        `${JSON.stringify(
+          {
+            version: 1,
+            productionId: services.project.productionId,
+            target: { shot: target.shot, subject: resolved.description.id },
+            revision: resolved.revision,
+            compileFingerprint: generated.inputFingerprint,
+            planned: plan,
+            deliveryEvidence: false,
+          } satisfies IAutoMovieSubjectInspectionPlanRecord,
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      ),
+    );
     const views: IAutoMovieSubjectInspectionView[] = [];
     for (const viewpoint of plan) {
       const pose = autoMovieSubjectInspectionPose({
@@ -787,13 +888,35 @@ export class AutoMovieProductionSubjectInspectionService {
           { revision: resolved.revision, subject: resolved.description, plan },
         );
       const bytes = Buffer.from(drawn.bytes);
-      const relative = inspectionArtifactPath(
-        services.project.productionId,
-        target,
-        viewpoint.id,
-      );
-      publishInspectionArtifact(services.project.root, relative, bytes);
+      const relative = `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.png`;
+      publishInspectionFile(services.project.root, relative, bytes);
       const digest = digestAutoMovieBytes(bytes);
+      const observation: IAutoMovieSubjectReviewObservation = {
+        kind: "subject-view",
+        subject: resolved.description.id,
+        revision: resolved.revision,
+        viewpoint: viewpoint.id,
+        artifact: relative,
+        digest,
+      };
+      publishInspectionFile(
+        services.project.root,
+        `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.json`,
+        Buffer.from(
+          `${JSON.stringify(
+            {
+              version: 1,
+              observation,
+              pose,
+              compileFingerprint: generated.inputFingerprint,
+              deliveryEvidence: false,
+            } satisfies IAutoMovieSubjectInspectionObservationRecord,
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        ),
+      );
       views.push({
         viewpoint: viewpoint.id,
         pose,
@@ -801,14 +924,7 @@ export class AutoMovieProductionSubjectInspectionService {
         digest,
         width,
         height,
-        observation: {
-          kind: "subject-view",
-          subject: resolved.description.id,
-          revision: resolved.revision,
-          viewpoint: viewpoint.id,
-          artifact: relative,
-          digest,
-        },
+        observation,
       });
     }
     // A compile that moved while the sweep ran leaves a set of pictures taken
@@ -940,22 +1056,116 @@ const inspectionFrame = (
     : { bounds, coordinateSpace: description.bounds.coordinateSpace };
 };
 
-/** Project-relative artifact location for one subject viewpoint. */
-const inspectionArtifactPath = (
+/**
+ * Project-relative directory holding one compiled subject's inspection.
+ *
+ * It is keyed by the compiled subject id rather than by the spelling the caller
+ * used, so a name pasted from the viewer page and the same subject named the
+ * compiler's way publish into one place instead of two.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-identity Keeps one subject's observations under one identity however the requester spelled it.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Fixes where one subject's published plan and observations are found.
+ * @author Samchon
+ */
+export const inspectionDirectory = (
   productionId: string,
-  target: IAutoMovieSubjectReviewTarget,
-  viewpoint: string,
+  shot: string,
+  subject: string,
 ): string =>
   [
     AUTOMOVIE_SUBJECT_INSPECTION_ROOT,
     encodeAutoMoviePathSegment(productionId),
-    encodeAutoMoviePathSegment(target.shot),
-    encodeAutoMoviePathSegment(target.subject),
-    `${encodeAutoMoviePathSegment(viewpoint)}.png`,
+    encodeAutoMoviePathSegment(shot),
+    encodeAutoMoviePathSegment(subject),
   ].join("/");
 
-/** Write one observation artifact under the project's inspection lock. */
-const publishInspectionArtifact = (
+/**
+ * Read one compiled subject's published plan and verified observations.
+ *
+ * This is the read side of the receipt, so a consumer counting coverage never
+ * has to know where the files live or how a viewpoint id becomes a filename.
+ * Every observation is admitted only when the artifact it names is present and
+ * still hashes to the digest it claims; a picture that was deleted or replaced
+ * is not an observation, and letting it count is the fabricated pass the whole
+ * refusal exists to prevent.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-coverage Supplies the declared plan and the observations actually on disk so coverage is counted rather than asserted.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Admits an observation only while the exact artifact it names still answers for it.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Reads the persisted numerator and denominator of one subject's coverage.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Returns observations with the revision each was taken at, so a stale one is visible as stale.
+ * @author Samchon
+ */
+export const readAutoMovieSubjectInspection = (props: {
+  /** Project root the inspection published into. */
+  projectRoot: string;
+  /** Production namespace the inspection ran in. */
+  productionId: string;
+  /** Compiled artifact owning the subject. */
+  shot: string;
+  /** Compiled subject id. */
+  subject: string;
+}): {
+  /** Declared viewpoint population, empty when nothing was ever planned. */
+  planned: IAutoMovieSubjectReviewViewpoint[];
+  /** Observations whose artifacts still answer for them, in plan order. */
+  observations: IAutoMovieSubjectReviewObservation[];
+} => {
+  const directory = inspectionDirectory(
+    props.productionId,
+    props.shot,
+    props.subject,
+  );
+  const absolute = (relative: string): string =>
+    path.join(props.projectRoot, ...relative.split("/"));
+  const plan = readInspectionJson<IAutoMovieSubjectInspectionPlanRecord>(
+    absolute(`${directory}/${AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE}`),
+    (value) =>
+      value.version === 1 &&
+      Array.isArray(value.planned) &&
+      value.deliveryEvidence === false,
+  );
+  if (plan === null) return { planned: [], observations: [] };
+  const observations: IAutoMovieSubjectReviewObservation[] = [];
+  for (const viewpoint of plan.planned) {
+    const record =
+      readInspectionJson<IAutoMovieSubjectInspectionObservationRecord>(
+        absolute(
+          `${directory}/${encodeAutoMoviePathSegment(viewpoint.id)}.json`,
+        ),
+        (value) =>
+          value.version === 1 &&
+          value.deliveryEvidence === false &&
+          typeof value.observation?.artifact === "string" &&
+          typeof value.observation?.digest === "string",
+      );
+    if (record === null) continue;
+    let bytes: Buffer;
+    try {
+      bytes = fs.readFileSync(absolute(record.observation.artifact));
+    } catch {
+      continue;
+    }
+    if (digestAutoMovieBytes(bytes) !== record.observation.digest) continue;
+    observations.push(record.observation);
+  }
+  return { planned: plan.planned, observations };
+};
+
+/** Read one inspection record, refusing anything it cannot recognize. */
+const readInspectionJson = <T>(
+  file: string,
+  accepts: (value: T) => boolean,
+): T | null => {
+  try {
+    const value = JSON.parse(fs.readFileSync(file, "utf8")) as T;
+    return accepts(value) ? value : null;
+  } catch {
+    return null;
+  }
+};
+
+/** Write one inspection file under the project's inspection lock. */
+const publishInspectionFile = (
   root: string,
   relative: string,
   bytes: Buffer,

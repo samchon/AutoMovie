@@ -45,6 +45,40 @@
           }
         }
       }
+    },
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach": {
+      "obligations": {
+        "artifact-separation": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/mcp"
+          }
+        },
+        "delivery-evidence-refusal": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/mcp"
+          }
+        },
+        "host-absence-refusal": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/mcp"
+          }
+        },
+        "plan-determinism": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/mcp"
+          }
+        },
+        "request-inputs-and-answer": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/mcp"
+          }
+        }
+      }
     }
   },
   "legacy": {

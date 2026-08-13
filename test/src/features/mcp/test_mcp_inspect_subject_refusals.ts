@@ -297,28 +297,32 @@ export const test_mcp_inspect_subject_refusals = async (): Promise<void> => {
       },
     );
 
-    const erased = project.eraseDesignArtifact({ kind: "production" });
+    // The compiler refuses to erase a production its shots depend on, so the
+    // absent frame format is arranged by withholding it from the graph rather
+    // than by breaking the project into a state no compile could produce.
     const formatless = await inspection.inspect(
-      withStatus(
-        openAutoMovieProduction({
-          projectRoot: fixture.root,
-          productionId: "fixture-film",
+      {
+        ...services,
+        project: new Proxy(services.project, {
+          get: (target, key) =>
+            key === "graph"
+              ? () => ({ ...target.graph(), production: null })
+              : Reflect.get(target, key, target),
         }),
-        {},
-      ),
+      },
       target,
     );
     TestValidator.equals(
       "a production without a frame format cannot state an inspection raster",
       {
-        erased: erased.accepted,
         code: formatless.diagnostics[0]?.code,
         inspected: formatless.inspected,
+        drawn: instrument.calls.length,
       },
       {
-        erased: true,
         code: "compile-missing",
         inspected: false,
+        drawn: 0,
       },
     );
   } finally {

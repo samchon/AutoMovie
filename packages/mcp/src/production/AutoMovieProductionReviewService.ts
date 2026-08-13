@@ -397,13 +397,13 @@ export class AutoMovieProductionReviewService {
         message:
           "This visual target has no verified current PNG frame. Capture every required current view and pass before submitReview. Correction feedback does not authorize deleting the artifact.",
       });
-    // The plan source this warning used to say did not exist now does, and
-    // saying otherwise puts two surfaces in flat contradiction for a caller
-    // holding an inspectSubject coverage record that reads "reviewed". What is
-    // still absent is a published one: the observation artifacts state no
-    // compiled revision, so an image drawn before a recompile cannot be told
-    // from one drawn after, and counting either would be exactly the fabricated
-    // pass this refusal exists to prevent.
+    // The plan source this warning used to say did not exist now does, and so
+    // does the published record: inspectSubject writes a plan and one
+    // revision-bearing receipt per observation, and readAutoMovieSubjectInspection
+    // returns only observations whose artifact still hashes to the digest it
+    // claims. What is absent is the join, and saying anything stronger puts two
+    // surfaces in flat contradiction for a caller holding an inspectSubject
+    // coverage record that reads "reviewed".
     //
     // The plan folded below therefore stays empty rather than being recomputed
     // here. Two instruments already lay a turntable out under different rules,
@@ -420,7 +420,7 @@ export class AutoMovieProductionReviewService {
         target: reviewTargetKey(input.target),
         path: targetPath(this.project, input.target),
         message:
-          "inspectSubject is the inspection-owned viewpoint plan source: it derives a turntable from a subject's own measured extent, draws every viewpoint in it, and reports its own coverage, refusing outright any subject it cannot frame. What it does not do is publish a record prepareReview can read, because the images it leaves behind state no compiled revision and no plan. So no subject-view observation is recoverable here, the plan folded by this surface stays empty, coverage is indeterminate, and this review cannot be completed. Record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
+          "inspectSubject is the inspection-owned viewpoint plan source: it derives a turntable from a subject's own measured extent, draws every viewpoint in it, and publishes that plan beside one revision-bearing receipt per observation under .automovie/inspections/, refusing outright any subject it cannot frame. What is still missing is the join: this surface does not yet read those receipts, so the plan folded here stays empty, coverage is indeterminate, and this review cannot be completed. Inspect the subject anyway, record what you actually saw, and leave the viewpoint range explicitly unobserved.",
       });
     const quotable =
       input.target.kind === "subject"
@@ -794,7 +794,7 @@ const validateWorksheet = (
     if (input.target.kind === "subject")
       add(
         "review-subject-coverage-incomplete",
-        `A subject review is complete only when every required inspection viewpoint has been observed at the current revision. No inspection-owned viewpoint plan exists yet, so subject-view coverage stays "${prepared.subjectReview?.coverage.state ?? "indeterminate"}" and no structural inspection can discharge it. Submit the worksheet with complete false and record the unobserved range.`,
+        `A subject review is complete only when every required inspection viewpoint has been observed at the current revision. inspectSubject publishes those observations, but this surface does not read them yet, so subject-view coverage stays "${prepared.subjectReview?.coverage.state ?? "indeterminate"}" and no structural inspection can discharge it. Submit the worksheet with complete false and record the unobserved range.`,
       );
     if (prepared.renditions.length !== 0) {
       const requiredShots = [
