@@ -2,7 +2,7 @@
 
 Read this guide before `prepareReview` or `submitReview` with target kind `subject`. A subject review asks whether one authored thing is correct. It is independent from a shot, frame, sequence, or delivery review, even though its compiled artifact is addressed through one shot.
 
-Read `SUBJECT_INSPECTION` first when you do not yet know which subjects exist. It owns the queries that enumerate ids and measure bounds and members, and this guide assumes you arrive holding an id it produced.
+Read `SUBJECT_INSPECTION` first. It owns the queries that enumerate ids and measure bounds and members, and it owns `inspectSubject`, which is how you actually look at the thing you are about to judge. This guide assumes you arrive holding an id those produced and, where the host can draw, having seen it.
 
 ## Name compiled truth
 
@@ -24,7 +24,7 @@ A normal frame receipt is delivery-facing evidence. It cannot satisfy subject co
 
 `foldAutoMovieSubjectReviewCoverage` separates planned, observed, missing, stale, unplanned, foreign, and duplicate records, and reports one state: an empty plan is `indeterminate`, no current observation is `not-run`, only old-revision observations are `stale`, a partly observed plan is `partial`, and a wholly current plan is `reviewed`.
 
-The plan this surface folds is empty today, so the state it reports is `indeterminate` every time. Report that state as it stands. An unobserved plan is never a pass, and a structural reading of the compiled description is not a substitute for having looked.
+The plan this surface folds is empty today, so the state it reports is `indeterminate` every time; the last section says why, and the reason is not that nothing can look. Report that state as it stands. An unobserved plan is never a pass, and a structural reading of the compiled description is not a substitute for having looked.
 
 The review target identifies one unit. Production-wide prototype population and final completeness policy are separate obligations; never infer that one reviewed subject completes all subject review.
 
@@ -43,16 +43,16 @@ Structural evidence is a `subject` item, `{ kind: "subject", target, pointer, ex
 
 `identity-and-composition` and `viewpoint-coverage` are high-risk. Were a subject review ever completable, each would have to pass and each would have to be named verbatim in the completion basis, and neither could be discharged as `not-applicable`. That rule binds only a completion, and a subject completion is currently refused outright.
 
-## Completion is refused until inspection can look
+## Coverage is not wired to the instrument yet
 
-This surface has no viewpoint plan source. `prepareReview` folds an empty plan against no observations, so `subjectReview.coverage.state` is structurally `indeterminate`, and `submitReview` refuses `complete: true` with `review-subject-coverage-incomplete` every time. The refusal is the point: a subject that nothing has ever looked at must not be recorded as reviewed.
+Look at the subject anyway. `inspectSubject` is the inspection-owned viewpoint plan source and it works: it derives a turntable from the subject's own measured extent, draws every viewpoint in it, and reports its own coverage, which can read `reviewed` over its own plan. `SUBJECT_INSPECTION` owns that tool. Seeing the thing you are judging is the point of a subject review, and it is worth doing before you write a single observation.
 
-Alongside it, `prepareReview` always returns the warning `review-subject-viewpoint-unsupported` for a subject target. It is a warning, it blocks nothing, and it is not a defect in your production; it names the same missing plan source. Do not spend a round trying to make it disappear.
+What that sweep does not do is publish a record this surface can read. The images it leaves behind carry PNG bytes and state neither a compiled revision nor a plan, so an image drawn before a recompile cannot be told from one drawn after and there is no denominator on disk. No `subject-view` observation is recoverable here, `prepareReview` folds an empty plan, `subjectReview.coverage.state` stays `indeterminate`, and `submitReview` refuses `complete: true` with `review-subject-coverage-incomplete`. Counting the pictures anyway would be precisely the fabricated pass that refusal exists to prevent.
 
-The viewpoint computation lives in `@automovie/viewer`, and the starter's `viewer/subject.html` page drives it: it opens one subject by name, frames it from the subject's own content box, and turns a deterministic turntable around it. `SUBJECT_INSPECTION` routes you there, and looking through it before you write an observation is worth the minute it costs.
+So the two records disagree on purpose, and you may hold both at once: an `inspectSubject` coverage reading `reviewed` and a worksheet coverage reading `indeterminate` are answers to different questions, one about a sweep that happened and one about evidence this surface can verify. **Neither the refusal nor the warning beside it is a defect in your production or in the pictures you took. Do not spend a round trying to make either go away.** `prepareReview` returns `review-subject-viewpoint-unsupported` for every subject target; it is a warning, it blocks nothing, and it says which half exists and which half does not.
 
-What that page does not do is write. It produces no receipt and no digest, so nothing turns its output into the `subject-view` observation record this surface accepts, and that is why the plan here is empty rather than merely unobserved. A look you took is a reason to write an honest observation, never a viewpoint you may report as covered.
+A look you took is a reason to write an honest observation, never a viewpoint you may report as covered.
 
-So submit the honest incomplete worksheet. Quote the structural evidence you did read, set `complete: false`, and carry either a `revise` verdict or a correction naming the viewpoints that remain unobserved; an incomplete worksheet that explains no next round is refused as `review-self-contradiction`.
+So submit the honest incomplete worksheet. Quote the structural evidence you did read, describe what the sweep showed you in the observations, set `complete: false`, and carry either a `revise` verdict or a correction naming the viewpoints that remain unobserved; an incomplete worksheet that explains no next round is refused as `review-self-contradiction`.
 
 Progress between two revisions is a separate question with a separate answer. `VISUAL_CHANGE_REPORT` tells you which rendered views actually moved, and `SUBJECT_INSPECTION` tells you which compiled subjects did. Neither is a verdict, and neither belongs in this worksheet as evidence.
