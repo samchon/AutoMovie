@@ -20,6 +20,43 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * graphs Markdown, Prisma, TypeScript, and Swagger; JSON cannot host a
  * citation. That is why the typed sources under `src` own the subjects and `npm
  * run design` emits the records from them.
+ *
+ * `src/examples` is absent on purpose too, and the reason is mechanical rather
+ * than stylistic. An example teaches one authoring technique against
+ * placeholder geometry, and the shipped `AGENTS.md` tells the reader to copy
+ * the technique out and delete the file. Admitting it to the implementation
+ * claim would make it owe a `docs/objects` or `docs/world` specification, that
+ * specification would owe a scene, and the scene would owe a beat: a file whose
+ * whole purpose is to be deleted would drag a chain of invented story documents
+ * into every generated project, and deleting it would then leave those
+ * documents uncited and break the build of a project that did exactly what the
+ * instructions said. `src/film.ts` and `src/production.ts` are outside for a
+ * different reason: they declare the compile itself rather than a subject, so
+ * the document they would answer for does not exist at any rung of the ladder.
+ *
+ * What this graph does not do is force the first citation. `evidence/graph`
+ * runs its obligation from the reference toward the claim, so a document nobody
+ * implements is an error while a source file nobody's document describes is
+ * silent. Measured on this configuration: adding `src/world/xxx.ts` with an
+ * exported class, field, and method and no `@evidence` at all compiles clean,
+ * while adding `docs/world/yyy.md` that nothing implements fails with one
+ * `evidence/graph` error. So the populations under `src` are the set whose
+ * citations are checked, not the set that is made to cite, and an author who
+ * models a room before writing down what the room is is not caught here.
+ *
+ * `singleEvidencePerSymbol` on a reference does close that gap, and it is
+ * unpaid rather than unavailable. Setting it on the specification-library
+ * reference turned the same uncited `src/world/xxx.ts` into three errors, one
+ * per selected host. Adopting it means every exported class, field, and method
+ * under `src/units`, `src/objects`, `src/world`, and `src/formations` must cite
+ * exactly one specification, which the shipped production does not yet do.
+ * `evidence/documented`, which every package in the automovie workspace enables
+ * and this one does not, is unpaid in the same way and is measured: enabling it
+ * here reports 63 exported declarations with no JSDoc block at all, 46 of them
+ * in `src/examples` and 17 inside the graphed populations. A declaration with no
+ * block can never cite anything, so those 17 are real debt rather than a
+ * decided boundary; the rule is left off because turning it on without paying
+ * them would hand every generated project a red build it did not author.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
