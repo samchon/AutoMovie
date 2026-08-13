@@ -6,6 +6,7 @@
 - [재현 가능한 검토 Context](./reproducible-context.md)
 - [Frame, 구간과 전체 작품 검토](./frame-range-and-whole-work.md)
 - [주체 검토](./subject-inspection.md)
+- [주체 기술과 구조 변경](./subject-description-and-structural-change.md)
 - [시각 변경 보고](./visual-change-reporting.md)
 - [기준과 비교](./criteria-and-comparison.md)
 - [주석, Finding과 판정](./annotations-findings-and-verdicts.md)
