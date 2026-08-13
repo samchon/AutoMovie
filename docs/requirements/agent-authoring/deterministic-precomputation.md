@@ -23,4 +23,3 @@ Compile은 필요한 파생 산출물의 manifest, generator, input 또는 outpu
 ### 외부 provenance와의 분리 {#agent-precomputed-provenance-separation}
 
 Project source가 결정적으로 만든 파생 bytes는 외부에서 취득하거나 비결정적으로 생성한 자산의 provenance, license와 consumer 원장에 섞이지 않아야 한다. 두 경로가 같은 물리 path를 동시에 소유하거나 서로의 freshness 증거를 대신해서는 안 된다.
-
