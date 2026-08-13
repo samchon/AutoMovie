@@ -179,9 +179,10 @@ export const test_validation_texture_scale = (): void => {
     validationHasWarningCount("bed post total", bedPost, 2),
   );
 
-  TestValidator.equals(
-    "a tile exactly the size of the surface is the boundary and passes",
-    violationCount(
+  TestValidator.predicate(
+    "a tile exactly the size of the surface is the boundary and warns about nothing",
+    validationHasWarningCount(
+      "exact-fit boundary",
       run(
         [meshPart("panel", "oak", rect(4, 4))],
         [
@@ -194,20 +195,24 @@ export const test_validation_texture_scale = (): void => {
           ),
         ],
       ),
+      0,
     ),
-    0,
   );
   TestValidator.predicate(
     "a tile that fits many times over reports nothing at all",
-    run(
-      [meshPart("floor", "oak", rect(9, 4))],
-      [
-        material(
-          "oak",
-          texture({ coordinateSource: "surface-metres", transform: uv(2) }),
-        ),
-      ],
-    ).success === true,
+    validationHasWarningCount(
+      "many turns",
+      run(
+        [meshPart("floor", "oak", rect(9, 4))],
+        [
+          material(
+            "oak",
+            texture({ coordinateSource: "surface-metres", transform: uv(2) }),
+          ),
+        ],
+      ),
+      0,
+    ),
   );
   TestValidator.predicate(
     "a mirrored axis is measured by the tile it implies, not its sign",
@@ -285,15 +290,15 @@ export const test_validation_texture_scale = (): void => {
   //----
   const post = (base: IAutoMovieMaterial["baseColorTexture"]) =>
     run([meshPart("post", "oak", rect(0.1, 0.1))], [material("oak", base)]);
-  const silent: ReadonlyArray<readonly [string, number]> = [
-    ["a legacy bare-id binding claims no coordinate unit", 0],
-    ["an omitted coordinateSource makes no claim to check", 0],
-    ["a source-uv set has no general physical-scale formula", 0],
-    ["a clamped axis has already declared a deliberate fit", 0],
-    ["a binding with no transform states no scale", 0],
-    ["a non-finite scale is not a tile size", 0],
-    ["a zero scale implies no finite tile", 0],
-    ["a material with no image slots binds nothing", 0],
+  const silent: readonly string[] = [
+    "a legacy bare-id binding claims no coordinate unit",
+    "an omitted coordinateSource makes no claim to check",
+    "a source-uv set has no general physical-scale formula",
+    "a clamped axis has already declared a deliberate fit",
+    "a binding with no transform states no scale",
+    "a non-finite scale is not a tile size",
+    "a zero scale implies no finite tile",
+    "a material with no image slots binds nothing",
   ];
   TestValidator.equals(
     "nothing measurable was claimed, so nothing is reported",
@@ -323,10 +328,10 @@ export const test_validation_texture_scale = (): void => {
       post(texture({ coordinateSource: "surface-metres", transform: uv(0) })),
       post(null),
     ].map((validation, index) => [
-      silent[index]![0],
-      violationCount(validation),
+      silent[index]!,
+      validationHasWarningCount(silent[index]!, validation, 0),
     ]),
-    silent.map((entry) => [entry[0], entry[1]]),
+    silent.map((title) => [title, true]),
   );
 
   //----
@@ -343,19 +348,33 @@ export const test_validation_texture_scale = (): void => {
       shape: { type: "box", width: 9, height: 9, depth: 9 },
     },
   } as IAutoMovieModelPart;
+  const unmeasurable: readonly string[] = [
+    "a primitive's coordinates are produced downstream, not carried",
+    "an imported mesh may carry no texture coordinates at all",
+    "an empty coordinate array is nothing to measure",
+    "a non-finite coordinate makes the whole span unusable",
+    "a zero u span is mesh topology's finding, not this one",
+    "a zero v span is refused the same way",
+    "a part bound to no material has no pair to measure",
+    "a part naming an undefined material is model validation's finding",
+    "no models is a clean pass rather than an empty claim",
+  ];
   TestValidator.equals(
     "an unmeasurable surface is silence, not a guess",
     [
-      violationCount(run([primitive], [bound])),
-      violationCount(run([meshPart("imported", "oak", null)], [bound])),
-      violationCount(run([meshPart("empty", "oak", [])], [bound])),
-      violationCount(run([meshPart("nan", "oak", [0, 0, NaN, 9])], [bound])),
-      violationCount(run([meshPart("seam", "oak", rect(0, 9))], [bound])),
-      violationCount(run([meshPart("edge", "oak", rect(9, 0))], [bound])),
-      violationCount(run([meshPart("unbound", null, rect(9, 9))], [bound])),
-      violationCount(run([meshPart("missing", "walnut", rect(9, 9))], [bound])),
-      violationCount(validateTextureScale({ models: [] })),
-    ],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      run([primitive], [bound]),
+      run([meshPart("imported", "oak", null)], [bound]),
+      run([meshPart("empty", "oak", [])], [bound]),
+      run([meshPart("nan", "oak", [0, 0, NaN, 9])], [bound]),
+      run([meshPart("seam", "oak", rect(0, 9))], [bound]),
+      run([meshPart("edge", "oak", rect(9, 0))], [bound]),
+      run([meshPart("unbound", null, rect(9, 9))], [bound]),
+      run([meshPart("missing", "walnut", rect(9, 9))], [bound]),
+      validateTextureScale({ models: [] }),
+    ].map((validation, index) => [
+      unmeasurable[index]!,
+      validationHasWarningCount(unmeasurable[index]!, validation, 0),
+    ]),
+    unmeasurable.map((title) => [title, true]),
   );
 };
