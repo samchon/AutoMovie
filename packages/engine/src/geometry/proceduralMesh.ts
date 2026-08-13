@@ -1149,6 +1149,14 @@ export const mergeAutoMovieMeshes = (
  * flips triangle winding so the outward face stays outward. UVs ride along
  * untouched, because a placement moves a surface without re-cutting its atlas.
  *
+ * That is what makes a placed member's coordinates local rather than global,
+ * and it is the one thing to know before rotating an atlas-bearing member.
+ * {@link buildAutoMoviePolyhedron} decides each face's frame from world up in
+ * the frame the mesh was built in, so a panel built upright and then laid down
+ * by a rotation keeps the upright face's frame while presenting a level face.
+ * Build the member in the orientation it will be seen in, or accept that its
+ * grain travels with it, which is what a real board does when it is turned.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
  */
