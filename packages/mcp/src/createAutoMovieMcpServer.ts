@@ -9,6 +9,7 @@ import typia from "typia";
 
 import { AutoMovieApplication } from "./AutoMovieApplication";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
+import type { AutoMovieProductionSubjectInspection } from "./production/subjectInspection";
 
 /** Installed MCP package version. */
 const MCP_PACKAGE_VERSION = (
@@ -37,6 +38,14 @@ export const createAutoMovieMcpServer = (props?: {
   capture?: AutoMovieProductionFrameCapture;
   /** Host-owned optional diffusion rendition. */
   repaint?: AutoMovieProductionShotRepaint;
+  /**
+   * Host-owned subject inspection instrument.
+   *
+   * Separate from `capture` on purpose: an inspection view is not delivery
+   * evidence, and one adapter for both is how an inspection frame would
+   * eventually acquire the receipt shape a shot review consumes.
+   */
+  inspect?: AutoMovieProductionSubjectInspection;
   /** Host seed at or below the project root. */
   projectRoot?: string;
   /** Host-selected default production. */

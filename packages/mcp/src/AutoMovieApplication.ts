@@ -18,6 +18,11 @@ import { AutoMovieProductionContext } from "./production/AutoMovieProductionCont
 import { AutoMovieProductionGuideService } from "./production/AutoMovieProductionGuideService";
 import { AutoMovieProductionRepaintService } from "./production/AutoMovieProductionRepaintService";
 import { canonicalizeAutoMovieJson } from "./production/contentIdentity";
+import {
+  AutoMovieProductionSubjectInspectionService,
+  type AutoMovieProductionSubjectInspection,
+  type IAutoMovieInspectSubject,
+} from "./production/subjectInspection";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 import { readAutoMovieProductionRegistry } from "./production/productionRegistry";
 
@@ -2826,6 +2831,7 @@ export class AutoMovieApplication {
   private readonly context: AutoMovieProductionContext;
   private readonly guides = new AutoMovieProductionGuideService();
   private readonly repaintService: AutoMovieProductionRepaintService;
+  private readonly inspectionService: AutoMovieProductionSubjectInspectionService;
 
   /** Bind the application to host-selected scope and adapters. */
   public constructor(props?: {
@@ -2833,6 +2839,14 @@ export class AutoMovieApplication {
     capture?: AutoMovieProductionFrameCapture;
     /** Host-owned optional diffusion rendition. */
     repaint?: AutoMovieProductionShotRepaint;
+    /**
+     * Host-owned subject inspection instrument.
+     *
+     * Deliberately separate from `capture`. An inspection view is not delivery
+     * evidence, and giving the two one adapter is how an inspection frame would
+     * eventually acquire the receipt shape a shot review consumes.
+     */
+    inspect?: AutoMovieProductionSubjectInspection;
     /** Host seed at or below the immutable project root. */
     projectRoot?: string;
     /** Host-selected default production for review and asset tools. */
@@ -2852,6 +2866,9 @@ export class AutoMovieApplication {
       props?.archetypes,
     );
     this.repaintService = new AutoMovieProductionRepaintService(props?.repaint);
+    this.inspectionService = new AutoMovieProductionSubjectInspectionService(
+      props?.inspect,
+    );
   }
 
   /**
@@ -3176,6 +3193,28 @@ export class AutoMovieApplication {
   }
 
   /**
+   * Open one compiled subject from every planned viewpoint and return the
+   * observation set, so an agent that cannot see a screen can still judge one
+   * object or one room on its own. A named space is sectioned automatically,
+   * because the outside of a room is what hides its inside. The observations
+   * are written outside the render root and carry `deliveryEvidence: false`:
+   * they are how you decide what to fix, never what a shot review accepts.
+   * Without a host instrument this refuses and names how to provide one.
+   *
+   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Gives an agent without a screen the observation set one named subject request asked for.
+   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Exposes the subject inspection request surface on the tool boundary.
+   */
+  public async inspectSubject(
+    props: IAutoMovieInspectSubject.IProps,
+  ): Promise<IAutoMovieInspectSubject> {
+    this.requireGuides("inspectSubject");
+    return this.inspectionService.inspect(
+      this.context.forProduction(props.productionId),
+      props,
+    );
+  }
+
+  /**
    * Prepare the current review worksheet for one target. It returns that
    * target's exact fingerprint, its mandatory axes, and whatever current
    * evidence its own kind carries; a kind that carries no frame or outcome
@@ -3246,6 +3285,7 @@ export const AUTOMOVIE_TOOL_GUIDES = {
   getGuideDocument: [],
   captureFrame: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
   repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT"],
+  inspectSubject: ["AUTOMOVIE_OVERALL", "SUBJECT_INSPECTION"],
   prepareReview: ["AUTOMOVIE_OVERALL"],
   submitReview: ["AUTOMOVIE_OVERALL"],
 } as const satisfies Record<
