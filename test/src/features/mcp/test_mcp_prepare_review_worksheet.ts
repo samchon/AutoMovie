@@ -49,6 +49,10 @@ const MODEL_TARGET = {
  *    changes.
  * 6. A design target that does not exist is refused by name with the correction
  *    safety sentence appended, and offers nothing quotable.
+ * 7. The two arrangements this case relies on fail loudly rather than quietly:
+ *    a pointer written without its leading slash resolves to nothing instead of
+ *    to the whole document, and a recolour asked for a palette entry the recipe
+ *    does not carry throws instead of returning the recipe unchanged.
  */
 export const test_mcp_prepare_review_worksheet = (): void => {
   const fixture = productionFixture();
