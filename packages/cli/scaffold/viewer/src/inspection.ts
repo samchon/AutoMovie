@@ -185,6 +185,11 @@ if (description.bounds.coordinateSpace !== "world")
       "Inspect a placement of it instead.",
   );
 
+// Resolved before anything is decoded. A subject whose compiled id the viewer
+// key grammar cannot spell is refused for the price of a message rather than
+// after a whole scene's worth of textures has been built to draw it.
+const subject = parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id));
+
 const productionRuntimeResponse = await fetch(
   "/__automovie/production-runtime.json",
 );
@@ -273,8 +278,6 @@ const sectionAt = (
     normal: { x: away.x, y: away.y, z: away.z },
   };
 };
-
-const subject = parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id));
 
 window.__automovieInspect = {
   ready: true,

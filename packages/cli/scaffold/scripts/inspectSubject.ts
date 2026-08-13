@@ -222,6 +222,18 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
     const resident = await inspectionPage(session, input);
     let drawn: IAutoMovieInspectionImage;
     try {
+      // Waited for on every viewpoint, not only when the page is opened. A
+      // sweep is many draws through one resident page, and anything that
+      // reloads it in between - an author saving a viewer source while the dev
+      // server watches it - destroys the execution context and fails the next
+      // draw with a navigation message that says nothing about subjects.
+      // Measured: editing this page's module mid-sweep killed the third of
+      // three viewpoints. Reopening the same URL rebuilds the same subject, and
+      // a state that actually moved is still refused, because the surface
+      // rechecks the compile fingerprint once the sweep ends.
+      await resident.page.waitForFunction(
+        () => window.__automovieInspect?.ready === true,
+      );
       drawn = await resident.page.evaluate(
         ({ pose, viewpoint }) =>
           window.__automovieInspect!.view(pose, viewpoint),
