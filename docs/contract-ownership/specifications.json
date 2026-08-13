@@ -2,6 +2,16 @@
   "version": 1,
   "layer": "specifications",
   "declarations": {
+    "specifications/authoring-and-authority/README.md#spec-authoring-authority-index": {
+      "obligations": {
+        "document-index": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "A specification README index lists the topic documents and states no system obligation of its own."
+          }
+        }
+      }
+    },
     "specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation": {
       "obligations": {
         "boundary-inclusion-tolerance": {
@@ -111,7 +121,6 @@
     "specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-rig-output-failures": "sha256:ec43d444290cbf7d41b618388aecd0394032524a915b5b6258983fe7450ca528",
     "specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-skin-morph-facts": "sha256:8ed4e3aeb760492007fe02db11a1abba72c5850e29d91f32da302b2d9e4c2ef7",
     "specifications/asset-and-representation/rig-deformation-and-state.md#asset-spec-state-motion-separation": "sha256:088792ceaa7e7d7864013015e60eec91c2cdf8fb7d6c78487cd787ec82e53dec",
-    "specifications/authoring-and-authority/README.md#spec-authoring-authority-index": "sha256:8c251467f0b1aa335cd1861fe5e733c0fc0b75bda381fad46844eaa6f78088ae",
     "specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility": "sha256:1e95e33b33c74193516ec442fd12bdc7d46294d61c1f59219e86dfb313953c61",
     "specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-failure-gap": "sha256:c56ca276bacaf9171fe6ce04c7bdf27de446c3110ad7d7d102094f965d84df0d",
     "specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output": "sha256:17275f7cb478277fcb21cd605336008d0a94797f9be0e43fbae266c328586d3b",
