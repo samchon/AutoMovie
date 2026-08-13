@@ -19,11 +19,21 @@ If a generated digest, registry path, id, or fingerprint disagrees, stop consumi
 
 If a target is missing from the evidence registry, verify source binding, named export, design id, compile success, and production namespace. A plausible id in prose does not register an artifact.
 
+## Derived-artifact failures
+
+A `derived-artifact-*` refusal is not cleared by compiling. The ledger records a generator, its declared inputs, and the exact output bytes; compilation verifies that record and never runs a generator or repairs a stale result. Correct what the occurrence names, the generator, a declared input, an unsafe path, or a colliding asset registration, then rerun the explicit generation command before compiling again. Compiling first is the loop that has no exit.
+
+Never edit the ledger or the output bytes to make a digest agree. That replaces a refusal with a false statement about what produced those bytes, and the next reader has no way to detect it. Read `DERIVED_ARTIFACTS` for what each code means and whether it names the basis or the output.
+
 ## Geometry and motion failures
 
 Reduce the question to engine facts: coordinate basis, transform chain, pose sample, reach, distance, formation slot, camera projection, contact, event time, or bounds. Inspect units and local/world conversion. Test the exact failing time and neighboring frames. Correct the earliest bad transform or contract, not the downstream pixel.
 
 For continuity, compare outgoing and incoming state: position, facing, pose, gaze, held objects, gait phase, event completion, sound tail, and edit source offset.
+
+Ask the compiled artifact what it is before you ask a camera to show you. `SUBJECT_INSPECTION` describes one compiled subject exactly, its kind, prototype, placement, transform, declared and measured bounds, and members, and diffs one compiled artifact against another, with no render involved. A part that compiled to a single box, a placement off by a storey, and a brace spanning three bays while rising a fraction of a metre are all arithmetic there and guesswork in a frame. Start there whenever the question is what a thing is or what changed, because a description is cheap, exact, and stays true when the lighting does not.
+
+When the fault is inside a building, the thing hiding it is the building. A camera moved into a room shows that room, and no exterior angle shows any of them. Cut the resolved scene instead: a section plane removes a half-space so a storey reads as a plan or a wall opens into elevation. `SUBJECT_INSPECTION` owns both halves of that cut, the calculation that says how a subject's bound stands against the planes and the call that makes the cut visible, plus the reading rules each one needs. A section is an inspection viewpoint and never delivery evidence.
 
 When the authored camera is the reason you cannot see the fault, stop reasoning about the frame and go and look. The starter's `viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in your hands — fly with the arrow keys or W A S D, rise and descend with Space and C, click for pointer-lock mouse look — and prints the eye's position and lens on screen, so anything odd is reported by coordinate rather than by adjective. That is what makes it a debugging instrument: a staging fault hidden behind the shot camera, geometry that only reads wrong from an angle nobody authored, and a placement you believed rather than measured all become one observation. It installs no capture hook, writes nothing, holds the shot's opening second, and shows the level of detail your own distance selects, so it proves nothing on its own. Review evidence still comes from `npm run preview` and `npm run render`, and a coordinate you read there is a hypothesis to confirm against the engine query that owns it.
 
@@ -43,6 +53,14 @@ First confirm that deterministic source and full beauty/control grid are correct
 
 Prepare again and use only returned current selectors, frames, outcomes, fingerprint, and criteria order. Resolve error diagnostics before composing prose. Distinguish a correction from an observation, and never set the final boolean true while a correction remains.
 
+`review-outcome-artifact-missing` and `review-outcome-artifact-malformed` are compiler-publication failures. Compile the same current inputs, having first removed only the damaged publication the occurrence names, and prepare again. `review-outcome-contract-mismatch` reads like their sibling and is not one; it belongs under Escalation record below.
+
+A subject review is not a shot review, and their evidence does not convert. A capture that happens to contain the subject cannot discharge subject coverage, and a subject verdict cannot discharge a frame, range, sequence, film, or delivery obligation. `REVIEW_SUBJECT` owns what subject coverage currently reports and whether `review-subject-coverage-incomplete` can be cleared at all; read it before treating that refusal as something you failed to do, and submit the honest incomplete worksheet it describes rather than retrying.
+
+`review-subject-viewpoint-unsupported` names a viewpoint the inspection cannot derive, because the subject carries no measured extent to frame or because the plan it would need does not exist. It is a statement about how far the product reaches, not about your input, so record the unobserved range as unobserved and spend no correction attempts on it.
+
 ## Escalation record
 
 When the root cause is a product boundary rather than authored content, record minimal input, exact current commit, production and target ids, expected and observed values, diagnostic, ownership trace, and why existing correction paths cannot resolve it. That evidence is suitable for a new issue; a screenshot and intuition are not.
+
+A refusal can declare that boundary itself. `review-outcome-contract-mismatch` says the compiler that wrote an acceptance artifact and the reader that consumed it disagree inside one shipped revision, which no author-owned edit reaches. Record the artifact path and the validator paths it names, and stop. Retrying an unchanged compile is not a fix, and rewriting source that was already correct to make a product defect go quiet is worse than the defect.
