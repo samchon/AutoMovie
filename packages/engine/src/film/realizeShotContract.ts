@@ -20,11 +20,7 @@ import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
 import { productionRuntimeModelId } from "../productionIdentity";
 import { sampleClipSequence } from "../resolve/sampleClip";
-import {
-  DEFAULT_SUBJECT_HEIGHT,
-  computeModelRestExtentY,
-  computeRestHeight,
-} from "./cameraMove";
+import { computeModelRestExtent, computeRestHeight } from "./cameraMove";
 import {
   intersectsPerspectiveFrustumBox,
   resolveCameraAt,
@@ -33,7 +29,8 @@ import {
   IAutoMovieSubjectBox,
   formationMemberExtent,
   formationSubjectBox,
-  pointSubjectBox,
+  nodeSubjectBox,
+  nodeSubjectExtent,
 } from "./subjectExtent";
 
 /**
@@ -387,16 +384,16 @@ const resolveSpatial = (
 };
 
 /**
- * The vertical extent the camera solve assumed for a required NODE subject, so
+ * The model-space box the camera solve assumed for a required NODE subject, so
  * the readability test and the framing that produced the shot share one
  * subject.
  *
- * `performShot`'s `nodeVerticalExtent` builds each `IAutoMovieFramedSubject`
- * this way: a node is measured from the geometry its model draws, its rig's
- * joint span stands in when no model was supplied, and a rig too small to
- * measure takes `DEFAULT_SUBJECT_HEIGHT`. Reading it back the same way is what
- * makes the check honest. Measuring here while the solve assumed a default
- * would frame one subject and grade another.
+ * `performShot`'s `nodeExtent` builds each `IAutoMovieFramedSubject` from the
+ * same read through the same {@link nodeSubjectExtent}: a node is measured from
+ * the geometry its model draws, its rig's joint span stands in when no model
+ * was supplied, and a rig too small to measure takes `DEFAULT_SUBJECT_HEIGHT`.
+ * Reading it back the same way is what makes the check honest. Measuring here
+ * while the solve assumed a default would frame one subject and grade another.
  *
  * **The floor is part of that reading, not a detail of it.** A model's rest
  * extent is measured in MODEL space, so `min` states where the geometry starts
@@ -411,14 +408,20 @@ const resolveSpatial = (
  * would have passed, because moving down to catch the segment moves the deck
  * out.
  *
+ * **So is the width.** The same measurement states what the subject fills
+ * horizontally, and the solve aims at the middle of that and stands back for
+ * it, so the grade reads the same box: a 60 m facade authored outward from its
+ * element origin is tested on `x 0…60, z −1…1` about its own centre rather than
+ * as a pole 30 m away from it.
+ *
  * A formation does not come through here. Its extent is its own transformed
- * bounds ({@link formationSubjectBox}), which is a box rather than a height, and
- * reducing it to one would put the crowd back at its centroid.
+ * bounds ({@link formationSubjectBox}), measured from where its members stand
+ * rather than from one model's rest geometry.
  */
 const framedSubjectExtent = (
   props: Parameters<typeof realizeShotContract>[0],
   subject: string,
-): { min: number; max: number } => {
+): IAutoMovieSubjectBox => {
   const node = props.compiled.scene.nodes.find(
     (candidate) => candidate.id === subject,
   );
@@ -428,54 +431,44 @@ const framedSubjectExtent = (
       : (props.compiled.models ?? []).find(
           (candidate) => candidate.id === node.model,
         );
-  const extent = model === undefined ? null : computeModelRestExtentY(model);
+  const extent = model === undefined ? null : computeModelRestExtent(model);
   const rig = node === undefined ? null : skeletonOf(props, node);
-  const measured =
-    extent === null
-      ? rig === null
-        ? 0
-        : computeRestHeight(rig)
-      : extent.max - extent.min;
   // A rig span and the stand-in are both measured from the placement itself:
-  // neither states a floor, so neither may invent one.
-  const floor = extent === null ? 0 : extent.min;
-  return {
-    min: floor,
-    max: floor + (measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT),
-  };
+  // neither states a floor or a width, so neither may invent one.
+  return nodeSubjectExtent(
+    extent,
+    rig === null ? null : computeRestHeight(rig),
+  );
 };
 
 /**
- * The world box a required subject occupies at `time`, given the point it
+ * The world box a required subject occupies at `time`, given the placement it
  * already resolved to.
  *
  * The two kinds of subject are measured the way the camera solve measured them.
- * A node keeps the segment it has always been graded on: its resolved root,
- * raised by the drawn floor and spanning the drawn height
- * ({@link framedSubjectExtent}), a box with no horizontal span, which the box
- * test below decides exactly as the segment test did. A formation is its whole
- * transformed footprint, widened by a member's radius and raised by a member's
- * height, so a unit reads when the frame holds any part of it — its flank, its
- * front rank, or one wing of a line the frame cannot possibly contain whole.
+ * A node is its drawn model-space box ({@link framedSubjectExtent}) carried out
+ * through its resolved placement by {@link nodeSubjectBox} — the same function,
+ * on the same extent, that `performShot` framed it from. A formation is its
+ * whole transformed footprint, widened by a member's radius and raised by a
+ * member's height, so a unit reads when the frame holds any part of it — its
+ * flank, its front rank, or one wing of a line the frame cannot possibly
+ * contain whole.
  *
- * **A node's zero horizontal span is what the solve assumed, not what the
- * subject is**, and the two are only the same thing for a figure. `performShot`
- * frames a node subject from its height alone and states no `radius`, so a
- * 60 m facade lowered as one set piece is framed, and therefore graded, as a
- * pole standing at its element origin — 30 m from the mass's own centre when
- * the facade is authored to run outward from that origin. Grading it on its
- * true box while the solve still aims at the origin would refuse shots no
- * authored camera could then satisfy, so the two stay deliberately in step and
- * the gap is the solve's to close. Until it does, an author framing a building
- * queries the real extent (`builtEnvironmentElementBounds`,
- * `builtInstanceSetPlacementBounds`), stages the camera from it, and keeps the
- * required element's origin inside the frame it authored, because the origin is
- * the point this check tests.
+ * **A node's horizontal span is what the solve assumed, not an independent
+ * opinion about the subject.** The two sides move together on purpose: grading
+ * a 60 m facade on its true box while the solve still aimed at its element
+ * origin would refuse shots no authored camera could satisfy, and framing it on
+ * that box while the grade still tested a pole would report a passing shot the
+ * frame does not hold. Both now read the drawn box, so a `frame` action on a
+ * building element aims at the middle of the mass and stands back for its
+ * width, and this check tests the mass it aimed at. A node with nothing to
+ * measure keeps the horizontally degenerate segment it always had, because a
+ * rig span and the stand-in height state no width.
  */
 const framedSubjectBox = (
   props: Parameters<typeof realizeShotContract>[0],
   subject: string,
-  point: IAutoMovieVector3,
+  placement: IAutoMovieTransform,
   time: number,
 ): IAutoMovieSubjectBox => {
   const formation = props.formations.has(subject)
@@ -484,7 +477,7 @@ const framedSubjectBox = (
       )
     : undefined;
   return formation === undefined
-    ? pointSubjectBox(point, framedSubjectExtent(props, subject))
+    ? nodeSubjectBox(placement, framedSubjectExtent(props, subject))
     : formationSubjectBox({
         formation,
         motions: props.compiled.formationMotions ?? [],
@@ -521,11 +514,24 @@ const cameraOutcome = (
   let readableSubjects = 0;
   for (const subject of props.contract.camera.requiredSubjects)
     try {
-      const point = props.formations.has(subject)
-        ? resolveSpatial(props, { kind: "formation", id: subject }, time)
-        : resolveSpatial(props, { kind: "node", id: subject }, time);
+      // A node subject carries its orientation as well as its root: a yawed
+      // element fills a different world box than the same geometry facing down
+      // an axis, and the solve framed it from the same placement. A formation
+      // resolves to a point and states its own transformed bounds, so it needs
+      // no placement of its own; the identity here is never read.
+      const placement: IAutoMovieTransform = props.formations.has(subject)
+        ? {
+            translation: resolveSpatial(
+              props,
+              { kind: "formation", id: subject },
+              time,
+            ),
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 1, y: 1, z: 1 },
+          }
+        : actorTransformAt(props, subject, time);
       ++resolvedSubjects;
-      const box = framedSubjectBox(props, subject, point, time);
+      const box = framedSubjectBox(props, subject, placement, time);
       if (
         intersectsPerspectiveFrustumBox({
           camera: resolvedCamera,
