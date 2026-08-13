@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SUBJECT_HEIGHT,
   FRAMING_AIM_FRACTION,
   FRAMING_HEIGHT_FRACTION,
   classifyGrammarShotSize,
@@ -17,6 +18,7 @@ import type {
   IAutoMovieModel,
   IAutoMovieQuaternion,
   IAutoMovieShotContract,
+  IAutoMovieSkeleton,
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -70,6 +72,31 @@ const FACADE = element(
   { width: 60, height: 24, depth: 2 },
   point(30, 12, 0),
 );
+
+/** A rig span far enough from the stand-in height to classify differently. */
+const RIG_SPAN = 6;
+
+/**
+ * A two-joint mast: nothing to draw, so the rig span is what stands in for the
+ * subject's height, and it states no width any more than it states a floor.
+ */
+const MAST: IAutoMovieSkeleton = {
+  id: "mast",
+  bones: [
+    {
+      bone: "hips",
+      parent: null,
+      rest: placed(point(0, 0, 0)),
+      constraint: null,
+    },
+    {
+      bone: "head",
+      parent: "hips",
+      rest: placed(point(0, RIG_SPAN, 0)),
+      constraint: null,
+    },
+  ],
+};
 
 /** A canopy whose 4 m deck hangs 8 m above its element origin. */
 const CANOPY = element(
@@ -128,6 +155,8 @@ const readEdit = (props: {
   framing: IAutoMovieCameraIntent["framing"];
   /** What the camera was solved for, when that is not what the shot declares. */
   solveFor?: IAutoMovieCameraIntent["framing"];
+  /** The box the camera was solved for, when the model does not state it. */
+  solveBox?: ReturnType<typeof framedBoxOf>;
 }): IAutoMovieDiagnostic[] => {
   const contract: IAutoMovieShotContract = {
     id: "elevation",
@@ -163,7 +192,7 @@ const readEdit = (props: {
         {
           id: "lens",
           transform: solvedCamera(
-            framedBoxAt(props.model, props.placement),
+            props.solveBox ?? framedBoxAt(props.model, props.placement),
             props.solveFor ?? props.framing,
           ),
           fovY: FOV_Y,
@@ -280,6 +309,10 @@ const rootAndHeightSize = (props: {
  * 5. A framing the solved camera genuinely does not deliver is still reported:
  *    the facade camera solved for `medium` under a declared `close` intent
  *    keeps the finding, so the convergence did not silence the check.
+ * 6. A node whose model draws nothing keeps the point it always was: its rig
+ *    span stands in for the height, its horizontal extent stays 0, and a
+ *    `full` camera solved for that 6.000 m span is read as `full`, while the
+ *    camera a 1.700 m stand-in would have produced is reported.
  */
 export const test_mcp_film_grammar_subject_box = (): void => {
   const facade = {
@@ -312,6 +345,32 @@ export const test_mcp_film_grammar_subject_box = (): void => {
     "the root-and-height read of the deck misclassifies it",
     rootAndHeightSize(canopy),
     "full",
+  );
+
+  const rigged = {
+    model: { ...makeProp([], null), id: "rigged", skeleton: MAST },
+    placement: placed(point(0, 0, 0)),
+    framing: "full",
+  } as const;
+  TestValidator.equals(
+    "a subject with nothing to draw is framed and read on its rig span",
+    readEdit({
+      ...rigged,
+      solveBox: { base: point(0, 0, 0), height: RIG_SPAN, radius: 0 },
+    }),
+    [],
+  );
+  TestValidator.equals(
+    "the same subject read at the stand-in height would not be full",
+    readEdit({
+      ...rigged,
+      solveBox: {
+        base: point(0, 0, 0),
+        height: DEFAULT_SUBJECT_HEIGHT,
+        radius: 0,
+      },
+    }).map((diagnostic) => diagnostic.code),
+    ["grammar-shot-size"],
   );
 
   const mismatched = readEdit({
