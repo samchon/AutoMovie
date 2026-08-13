@@ -485,6 +485,7 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude requirements/review/records-and-completeness.md The viewer exposes observable frames; oracle policy, acceptance judgment, evidence adjudication, and review state remain outside this projection layer.
  * @evidenceExclude requirements/review/reproducible-context.md The viewer exposes observable frames; oracle policy, acceptance judgment, evidence adjudication, and review state remain outside this projection layer.
  * @evidenceExclude requirements/review/scope-and-authority.md The viewer exposes observable frames; oracle policy, acceptance judgment, evidence adjudication, and review state remain outside this projection layer.
+ * @evidenceExclude requirements/review/subject-inspection.md The viewer exposes observable frames; oracle policy, acceptance judgment, evidence adjudication, and review state remain outside this projection layer.
  * @evidenceExclude requirements/sound/ambience-and-sustained-sources.md The viewer is the visual projection boundary; sound authoring, acoustics, mixing, synchronization policy, and audio delivery remain outside it.
  * @evidenceExclude requirements/sound/dialogue-voice-and-visemes.md The viewer is the visual projection boundary; sound authoring, acoustics, mixing, synchronization policy, and audio delivery remain outside it.
  * @evidenceExclude requirements/sound/editing-synchronization-and-continuity.md The viewer is the visual projection boundary; sound authoring, acoustics, mixing, synchronization policy, and audio delivery remain outside it.
@@ -693,6 +694,7 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/profiles-aggregation-and-partial-results.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/README.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
+ * @evidenceExclude specifications/review-and-acceptance/subject-surface-and-inspection.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/surfaces-and-sampling.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/target-scope-and-context.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/verdict-authority-and-dissent.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
