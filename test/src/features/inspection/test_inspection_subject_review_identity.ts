@@ -119,7 +119,7 @@ export const test_inspection_subject_review_identity = (): void => {
         revision: "sha256:inspection-a",
         kind: "space",
         prototype: null,
-        placement: null,
+        placement: "space:castle/hall",
         owner: null,
         viewpointOwner: "inspection",
         deliveryEvidenceEligible: false,
