@@ -425,6 +425,38 @@ export const extrudeAutoMovieProfile = (props: {
  * remain the topology this operator already declares; their UVs stay finite,
  * and they are the one place the atlas has no handedness to report.
  *
+ * How far that shear goes is worth stating, because it decides what finish the
+ * surface can carry. The map is exactly equiareal, its Jacobian determinant one
+ * everywhere, so the whole distortion is pure shear of `2 * pi - theta` times
+ * `dr / ds`. Worst anisotropy over a full turn is therefore
+ * `(sqrt(k * k + 4) + k) / (sqrt(k * k + 4) - k)` at `k = 2 * pi * |dr / ds|`:
+ * 1.0 on a cylinder, 2.0 at 6.5 degrees off the axis, 4.0 at 13.8 degrees, 21.5
+ * on a 45-degree cone, and 41 where the meridian runs level, which is what a
+ * dome's pole and a cone's tip approach. A tile that reads square beside the
+ * seam is drawn into a ribbon a quarter turn away, and the curve of constant
+ * `u` spirals instead of following a meridian.
+ *
+ * That is the price of the metric statement rather than a defect awaiting
+ * repair. Measuring true arc around forces `u` to be `theta * r` plus some
+ * `c(s)`, whose derivative would have to be `-theta * dr / ds` to cancel the
+ * shear, and no function of `s` alone does that at every `theta`. Choosing
+ * `c(s)` only moves where the shear vanishes, which is why it sits at the seam
+ * here; centring it would halve the worst case to 11.8 at a pole, still far
+ * past readable, and would rewrite the coordinates of every surface already
+ * authored against this one. The pole is not a second fault: cut the tip off a
+ * cone and the frustum that remains shears exactly as hard, so the collapsed
+ * pole triangles above are a topology note rather than the cause.
+ *
+ * A directional finish therefore wants a meridian within a few degrees of the
+ * axis, which is a drum, a shaft, a turret barrel. A sloped or domed form that
+ * must carry one is authored as flat faces through
+ * {@link buildAutoMoviePolyhedron}, whose per-face frame is isometric, or as a
+ * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
+ * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
+ * escape here that it is for the coordinate-less builders, because it measures
+ * this same pair and a tapered loft shears the same way. Where the form has to
+ * stay a true surface of revolution, the finish on it stays non-directional.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
  * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Gives the revolved surface texture coordinates in a stated metric coordinate system so a declared scale places the same way every run.
