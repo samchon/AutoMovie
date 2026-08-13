@@ -1,4 +1,9 @@
-import type { IAutoMovieModelRecipe } from "@automovie/interface";
+import type {
+  IAutoMovieModelRecipe,
+  IAutoMoviePrepareReviewOutput,
+  IAutoMovieReviewCheck,
+  IAutoMovieSubmitReviewInput,
+} from "@automovie/interface";
 import {
   AUTOMOVIE_SUBJECT_INSPECTION_ROOT,
   AutoMovieApplication,
@@ -14,6 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { recolouredModelRecipe } from "../internal/designMutation";
+import { resolveJsonPointer } from "../internal/jsonPointer";
 import {
   productionCompileSucceeded,
   productionFixture,
@@ -31,6 +37,76 @@ const TARGET = {
 /** An instrument that refuses the first viewpoint it is handed. */
 const failingInstrument: AutoMovieProductionSubjectInspection = () =>
   Promise.reject(new Error("the inspection instrument is unavailable."));
+
+const CRITERIA = [
+  "identity-and-composition",
+  "placement-and-bounds",
+  "viewpoint-coverage",
+  "subject-frame-separation",
+] as const;
+
+/**
+ * One distinct current description pointer per required criterion.
+ *
+ * Coverage itself is not quotable: `quotable` is built from the compiled
+ * description alone, and the coverage record is not part of it. A criterion
+ * about what was looked at therefore cites a description pointer and says its
+ * piece in prose, which is the route this case has to take too.
+ */
+const POINTERS = ["/id", "/bounds", "/materials", "/members"] as const;
+
+/**
+ * Build a completion worksheet that is valid apart from what coverage says.
+ *
+ * Everything a completion needs beyond viewpoint coverage is satisfied here, so
+ * whether the submission is accepted turns on the coverage gate alone rather
+ * than on a worksheet defect standing in for it.
+ */
+const subjectWorksheet = (
+  prepared: IAutoMoviePrepareReviewOutput,
+): IAutoMovieSubmitReviewInput => {
+  const description = prepared.subjectReview?.unit.description;
+  if (description === undefined)
+    throw new Error("The prepared worksheet carries no subject description.");
+  const selectors = prepared.quotable.filter(
+    (selector) => selector.kind === "subject",
+  );
+  const checks: IAutoMovieReviewCheck[] = CRITERIA.map((criterion, index) => {
+    const pointer = POINTERS[index]!;
+    const selector = selectors.find(
+      (candidate) => candidate.pointer === pointer,
+    );
+    const resolved = resolveJsonPointer(description, pointer);
+    if (selector === undefined || resolved.found === false)
+      throw new Error(
+        `Prepared subject selector "${pointer}" does not resolve in the current description.`,
+      );
+    return {
+      criterion,
+      verdict: "pass",
+      observation: `The current compiled subject answers ${criterion} at ${pointer}.`,
+      evidence: [
+        {
+          kind: "subject",
+          target: selector.target,
+          pointer,
+          exactValue: resolved.value,
+        },
+      ],
+    };
+  });
+  return {
+    target: TARGET,
+    preparedFingerprint: prepared.fingerprint,
+    observations:
+      "The compiled subject was read structurally and opened from every planned inspection viewpoint.",
+    checks,
+    corrections: [],
+    completionBasis:
+      "identity-and-composition and viewpoint-coverage are both current at this compiled revision.",
+    complete: true,
+  };
+};
 
 /**
  * A subject review reads the coverage the inspection actually published, so
@@ -56,7 +132,12 @@ const failingInstrument: AutoMovieProductionSubjectInspection = () =>
  *    review reports `partial` and names the one id that went missing.
  * 5. Recompiling the reviewed model moves the compiled revision, so every
  *    standing receipt is `stale` and none of them counts as observed.
- * 6. Through all of it the axes stay apart: every artifact is published under
+ * 6. Sweeping the current revision again reaches reviewed, which is the state
+ *    under which a completion is accepted; withdrawing nine of the twelve
+ *    pictures reopens the gate, which then names every unobserved id, and a
+ *    target resolving no subject at all is answered by the missing target
+ *    alone rather than by coverage numbers about nothing.
+ * 7. Through all of it the axes stay apart: every artifact is published under
  *    the inspection root, the resolved unit keeps refusing delivery-evidence
  *    eligibility, and `prepareReview` offers a subject target no frame evidence
  *    at all even while its pictures exist on disk.
@@ -240,8 +321,98 @@ export const test_mcp_subject_review_viewpoint_plan_gap =
         },
       );
 
-      const unit = application.prepareReview({ target: TARGET }).subjectReview
-        ?.unit;
+      const resweep = await new AutoMovieProductionSubjectInspectionService(
+        recordingInstrument().adapter,
+      ).inspect(services, {
+        shot: "opening",
+        subject: SUBJECT,
+        azimuthCount: 12,
+      });
+      if (resweep.inspected === false)
+        throw new Error(
+          `The second sweep refused: ${JSON.stringify(resweep.diagnostics)}`,
+        );
+      const completable = application.prepareReview({ target: TARGET });
+      const completed = application.submitReview(subjectWorksheet(completable));
+      TestValidator.equals(
+        "reviewed is the state under which a subject review may complete",
+        {
+          state: completable.subjectReview?.coverage.state,
+          planned: completable.subjectReview?.coverage.planned.length,
+          accepted: completed.accepted,
+          stored: completed.state,
+          diagnostics: completed.diagnostics,
+        },
+        {
+          state: "reviewed",
+          planned: resweep.plan.length,
+          accepted: true,
+          stored: "complete",
+          diagnostics: [],
+        },
+      );
+
+      const withheld = resweep.views.slice(0, 9);
+      for (const view of withheld)
+        fs.writeFileSync(
+          path.join(fixture.root, ...view.path.split("/")),
+          inspectionPng(view.width + 1, view.height),
+        );
+      const reopened = application.prepareReview({ target: TARGET });
+      const refusedCompletion = application.submitReview(
+        subjectWorksheet(reopened),
+      );
+      const gate = refusedCompletion.diagnostics.find(
+        (diagnostic) =>
+          diagnostic.code === "review-subject-coverage-incomplete",
+      );
+      TestValidator.equals(
+        "withdrawing pictures reopens the gate and names every look it wants",
+        {
+          accepted: refusedCompletion.accepted,
+          state: reopened.subjectReview?.coverage.state,
+          missing: reopened.subjectReview?.coverage.missing.length,
+          named: withheld.filter(
+            (view) => gate?.message.includes(view.viewpoint) !== true,
+          ).length,
+          staleNone: gate?.message.includes("stale []") ?? false,
+        },
+        {
+          accepted: false,
+          state: "partial",
+          missing: withheld.length,
+          named: 0,
+          staleNone: true,
+        },
+      );
+
+      const absent = {
+        kind: "subject",
+        shot: "opening",
+        subject: "space:no/such",
+      } as const;
+      const onAbsent = application.submitReview({
+        ...subjectWorksheet(reopened),
+        target: absent,
+        preparedFingerprint: application.prepareReview({ target: absent })
+          .fingerprint,
+      });
+      TestValidator.equals(
+        "a target that resolves nothing is named missing, not lectured on coverage",
+        {
+          accepted: onAbsent.accepted,
+          missing: onAbsent.diagnostics.some(
+            (diagnostic) => diagnostic.code === "review-target-missing",
+          ),
+          coverage: onAbsent.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "review-subject-coverage-incomplete",
+          ),
+        },
+        { accepted: false, missing: true, coverage: false },
+      );
+
+      const unit = reopened.subjectReview?.unit;
       TestValidator.equals(
         "inspection artifacts never enter the delivery axis",
         {

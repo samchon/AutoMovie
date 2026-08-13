@@ -790,18 +790,22 @@ const validateWorksheet = (
     }
     // The gate is now a measurement rather than a standing refusal. Only a plan
     // wholly observed at this unit's own revision discharges it, and the
-    // viewpoints that do not are named, because "incomplete" that does not say
-    // which look is missing costs the caller a round to find out.
+    // viewpoints that do not are named, because an "incomplete" that does not
+    // say which look is missing costs the caller a round to find out. A target
+    // that resolved no subject at all is answered by review-target-missing
+    // alone; reporting coverage over a thing that does not exist would be a
+    // second complaint about one fault, and the numbers in it would be about
+    // nothing.
+    const subjectCoverage = prepared.subjectReview?.coverage;
     if (
       input.target.kind === "subject" &&
-      prepared.subjectReview?.coverage.state !== "reviewed"
-    ) {
-      const coverage = prepared.subjectReview?.coverage;
+      subjectCoverage !== undefined &&
+      subjectCoverage.state !== "reviewed"
+    )
       add(
         "review-subject-coverage-incomplete",
-        `A subject review is complete only when every viewpoint the inspection planned has been observed at the current compiled revision, and no structural reading discharges that. Subject-view coverage is "${coverage?.state ?? "indeterminate"}", with ${coverage?.observed.length ?? 0} of ${coverage?.planned.length ?? 0} planned viewpoint(s) observed, unobserved [${(coverage?.missing ?? []).join(", ")}], stale [${(coverage?.stale ?? []).join(", ")}]. Run inspectSubject on this compiled subject id, prepare the review again, and submit with complete false meanwhile, recording the unobserved range.`,
+        `A subject review is complete only when every viewpoint the inspection planned has been observed at the current compiled revision, and no structural reading discharges that. Subject-view coverage is "${subjectCoverage.state}", with ${subjectCoverage.observed.length} of ${subjectCoverage.planned.length} planned viewpoint(s) observed, unobserved [${subjectCoverage.missing.join(", ")}], stale [${subjectCoverage.stale.join(", ")}]. Run inspectSubject on this compiled subject id, prepare the review again, and submit with complete false meanwhile, recording the unobserved range.`,
       );
-    }
     if (prepared.renditions.length !== 0) {
       const requiredShots = [
         ...new Set(prepared.renditions.map((rendition) => rendition.shot)),
