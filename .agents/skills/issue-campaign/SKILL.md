@@ -81,16 +81,46 @@ Publish only the adjudicated form, and only with user authorization or under a s
 
 ### Self-Contained Issue Body
 
-Write enough context for a fresh AI agent to begin implementation from the issue alone. Do not require access to the local `.wiki`, the discovery conversation, or unstated repository knowledge. Cover these sections when they apply:
+Write enough context for a fresh AI agent to begin implementation from the issue alone. Do not require access to the local `.wiki`, the discovery conversation, or unstated repository knowledge. Cover these sections when they apply, except **Scope**, which every issue carries:
 
 - **Problem:** current and expected behavior, impact, and affected users.
 - **Evidence:** exact reproduction, outputs or renders, stable symbols, verified root cause, ownership, and provenance. For a violation of the development skill's **Forbidden** section, prove the classification from behavior, control flow, and history instead of merely naming the prohibition. Line numbers are navigation, not proof.
 - **Consequence surface:** affected consumers, states, platforms, compatibility and failure paths, plus the complete case matrix for the cause.
 - **Approach:** the invariant and architectural owner, without prescribing an unverified implementation.
+- **Scope:** every layer this one topic crosses, each answered, including the layers whose answer is that they do not apply. [An Issue Stands Vertically](#an-issue-stands-vertically) owns this section.
 - **Acceptance and verification:** positive, negative, boundary, and regression outcomes with narrow and broader proving commands, including the coverage gate.
 - **Coordination:** dependencies, exclusions, migration concerns, external blockers, and related open, closed, accepted, or rejected work.
 
 Use tables for repeated case mappings. Read the rendered issue back and keep its body as the current operative handoff; use comments only for chronology.
+
+### An Issue Stands Vertically
+
+An issue is one topic, not one package. Walk the topic down the contract before publishing and answer every layer in the body, because an issue that claims one layer and calls the rest separate hands its implementer a package-shaped fragment.
+
+| Layer | What the body answers |
+| --- | --- |
+| `docs/requirements` | Which requirement already promises this capability, or which promise the topic adds |
+| `docs/specifications` | Which specification makes that promise precise |
+| `packages/*` | Which package owns the logic, and which anchors its public exports cite |
+| Sandbox engine surface | Whether authoring source has to call it, and through which surface entry and bridge |
+| `packages/mcp/prompts` | How an authoring agent comes to know the capability is there |
+| Tests | Reachability and the negative twin, not the logic alone |
+
+The table is the floor, not the boundary. A topic that also crosses the scaffold, the viewer, CI, the evidence configuration, or a skill lists that layer beside the six.
+
+**"Not applicable" is an answer and silence is not.** Write the layer down with the reason it does not apply. A layer the body never mentions is a layer nobody decided about, and the decision then falls to whoever notices it later.
+
+Name each layer's obligation by pointing at the skill that owns it. The [evidence graph skill](../evidence-graph/SKILL.md) owns what the two document layers hold and how a public export cites them, the [MCP skill](../mcp/SKILL.md) owns the guide corpus, and the development skill's rule that [a solver lands with the consumer that calls it](../development/SKILL.md#work-rules) owns the same obligation inside a single change. A second copy of any of those drifts from the original, and this repository has already shipped a guide README promising a gate nothing performed.
+
+The failure this contract exists to prevent is a capability that exists and cannot be reached. One campaign recorded it six times (`#1904`, `#1915`, `#1917`, `#1920`, `#1930`, and `builtEnvironmentSpaceNodes`): logic that worked, with nothing exposing it, listing it, or naming it where an author would look. In `#1904` the authoring agent was told the right technique, given no way to perform it, and invented a workaround the guides explicitly forbid.
+
+The last of those cases is why a surface entry alone does not discharge that layer. The function was listed, its JSDoc described it accurately, the reviewer who needed it had already read the surface list, and it still went uncalled. Published, documented, and reachable are three different states, so the guide layer answers how an author arrives at the capability rather than whether its name appears anywhere.
+
+### Read The Upper Layer First
+
+Answer the layers downward, from `docs/requirements` toward the tests. A topic that starts at the code and back-fills the documents afterwards turns a requirement into a description of what was already built, which points the evidence graph the wrong way.
+
+Reading `docs/requirements` first also changes what the issue turns out to be. A later campaign reversed six of its ten issues at self-review for this reason alone (`#1929`, `#1930`, `#1934`, `#1935`, `#1936`, `#1937`): the requirement was already written, so what read as a new capability was an unmet promise, and the two carry different acceptance and a different fix. The review skill's ["It is missing" rule](../review/SKILL.md#it-is-missing-is-a-claim-that-needs-its-own-evidence) states the four checks that settle which one it is.
 
 ## Develop And Repeat The Campaign
 
