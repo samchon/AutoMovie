@@ -1,6 +1,6 @@
 # AutoMovie Production Constitution
 
-AutoMovie produces a deterministic prototype: a blocking pass whose staging, motion, and timing are correct and reproducible. It is not a finished photoreal shot, and its ceiling is what an authoring agent can actually drive. Ordinary tracked screenplay, design, TypeScript, and configuration files remain the source. The coding agent authors them; the compiler and engine decide structural truth; the five MCP tools deliver knowledge, host-produced pixels, optional repaint, and evidence-bound review. A filename, a confident explanation, or remembered chat is never proof.
+AutoMovie produces a deterministic prototype: a blocking pass whose staging, motion, and timing are correct and reproducible. It is not a finished photoreal shot, and its ceiling is what an authoring agent can actually drive. Ordinary tracked screenplay, design, TypeScript, and configuration files remain the source. The coding agent authors them; the compiler and engine decide structural truth; the MCP tools deliver knowledge, host-produced pixels, optional repaint, and evidence-bound review. A filename, a confident explanation, or remembered chat is never proof.
 
 ## Flow
 
@@ -52,7 +52,7 @@ Read only the route that matches the next owned decision. Contract guides define
 - `SCREENPLAY_WRITING`: logline-to-scene screenplay craft and revision rubric.
 - `CINEMATOGRAPHY`: shot-size meaning, 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
 - `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
-- `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting.
+- `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting. A door, shutter, gate, or sash belongs to the building that owns its opening rather than to a prop rigged from scratch, so operable openings are here too: travelling leaves, the named states they stand in, hardware, and the refusals `validateBuiltEnvironment` and the prop gate each raise by name.
 - `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, environmental storytelling, and the built environment: building graphs, finishes and patterns, service networks, environmental analysis, drawings and quantities, phasing, cloth/planting/water, and prop placement.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
