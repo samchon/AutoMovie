@@ -53,8 +53,11 @@ export interface IAutoMovieBuiltSupportQuery {
   /** Whether the subject bears on the support or intentionally hangs from it. */
   kind: "bearing" | "suspended";
   /**
-   * Non-negative contact tolerance in metres. Omission uses the engine's
-   * deterministic placement epsilon.
+   * Finite, non-negative contact tolerance in metres: how far off the support
+   * a member may sit and still count as resting. Omission uses the engine's
+   * deterministic placement epsilon; a negative or non-finite value is refused
+   * rather than defaulted, because it withdraws the meaning of contact instead
+   * of adjusting it.
    */
   tolerance?: number;
 }

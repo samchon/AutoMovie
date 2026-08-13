@@ -100,6 +100,11 @@ export const builtEnvironmentPlacementBounds = (props: {
  * only after both named sides resolve. The query is a deterministic visual
  * placement check, not a structural load or safety analysis.
  *
+ * A negative or non-finite tolerance throws rather than resolving to a default,
+ * because it does not narrow or widen what "touching" means, it withdraws the
+ * meaning: every distance would be outside a negative band, so the answer would
+ * be a confident `floating` or `sunk` for a member that rests exactly.
+ *
  * Both bases travel with the verdict. A subject the record carries no vertices
  * for is probed as its stated origin, so its gap is measured from that point
  * rather than from an underside nobody declared, and `element-origin-point` is
