@@ -92,6 +92,19 @@ jobs:
       - name: Build Packages
         run: pnpm run build
 
+      # `pnpm run build` cannot reach `packages/cli/scaffold`: it is not a
+      # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
+      # `package.json` carries template tokens rather than versions, so nothing
+      # above compiles the obligation graph every generated project inherits.
+      # The gate renders a probe from the scaffold's own `docs`, `src` and
+      # `lint.config.ts` and fails on the evidence diagnostics alone, so the
+      # module-resolution noise an uninstalled probe always carries stays out of
+      # the verdict. It plants its own uncited class every run, because a lint
+      # that never loaded reports zero diagnostics and reads exactly like a
+      # clean graph.
+      - name: Check Scaffold Obligation Graph
+        run: node internals/scaffold-evidence-gate.mjs
+
       - name: Save Toolchain Plugin Cache
         if: always()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
