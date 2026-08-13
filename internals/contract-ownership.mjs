@@ -151,8 +151,29 @@ export const inspectContractOwnership = (root) => {
         Object.keys(ledgers.get(layer).legacy).length,
       ]),
     ),
+    stale: Object.fromEntries(
+      LAYERS.map((layer) => [
+        layer,
+        countStaleLegacy(unitsByLayer.get(layer), ledgers.get(layer)),
+      ]),
+    ),
   };
 };
+
+/**
+ * Count the recorded debts whose prose moved since the ledger snapshot.
+ *
+ * Drift is reported rather than refused. A legacy unit is exactly the unit
+ * nobody has been able to assign yet, so failing an unrelated prose edit until
+ * someone names an owner buys a declaration written to clear a diagnostic, and
+ * a manufactured owner is worse than a counted debt. What the gate does refuse
+ * is a unit that is new or gone, because those are decisions somebody made.
+ */
+const countStaleLegacy = (units, ledger) =>
+  Object.entries(ledger.legacy).filter(
+    ([target, digest]) =>
+      units.has(target) && units.get(target).digest !== digest,
+  ).length;
 
 /** Return the declared or migration status of every unit in one layer. */
 export const queryContractOwnership = (root, layer, owner) => {
@@ -232,16 +253,9 @@ const validateLayer = (
       diagnostics.push(`${layer} ledger has invalid target '${target}'`);
     }
   }
-  for (const [target, digest] of Object.entries(ledger.legacy)) {
+  for (const digest of Object.values(ledger.legacy)) {
     if (typeof digest !== "string" || !/^sha256:[a-f0-9]{64}$/.test(digest)) {
-      diagnostics.push(`${target} has invalid legacy digest`);
-      continue;
-    }
-    const actual = units.get(target)?.digest;
-    if (actual !== undefined && actual !== digest) {
-      diagnostics.push(
-        `${target} changed since its legacy snapshot; declare its owner instead of rebasing '${digest}' to '${actual}'`,
-      );
+      diagnostics.push(`${layer} legacy has an invalid snapshot digest`);
     }
   }
   for (const [target, declaration] of Object.entries(ledger.declarations)) {

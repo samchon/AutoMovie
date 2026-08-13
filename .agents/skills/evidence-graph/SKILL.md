@@ -61,7 +61,9 @@ Declare exactly one owner per requirement unit and per specification obligation.
 
 Split a specification unit into obligations rather than letting several partial claimants add up to a false whole. A package that owns one obligation writes `@evidencePart <unit>::<obligation-id>` in the same JSDoc block as its `@evidence <unit>`, so the part claim refines the native triangle instead of replacing it.
 
-Migrate rather than re-baseline. Initialization snapshots every existing unit into `legacy` with the SHA-256 of its heading and own prose, and the command refuses to overwrite a ledger that exists, so accrued debt cannot be laundered by taking a new snapshot. A new unit fails until it declares an owner, and editing a legacy unit fails with a demand to declare that unit rather than re-pin its hash. The remaining `legacy` count is the queryable migration debt; `node internals/contract-ownership.mjs query --layer requirements --owner <package|project-source|excluded|legacy>` answers who owns what without reading prose.
+Migrate rather than re-baseline. Initialization snapshots the existing corpus into `legacy` and refuses to overwrite a ledger that exists, so accrued debt cannot be laundered by taking a fresh snapshot. What the gate refuses afterwards is a decision somebody made: a unit that appears with no owner, and a ledger entry whose unit is gone. The debt can therefore shrink or hold, never quietly grow.
+
+Count drift, do not refuse it. A legacy unit is exactly the unit nobody has been able to assign, so failing an unrelated prose edit until someone names an owner buys a declaration written to clear a diagnostic, and a manufactured owner is worse than a counted debt. The check reports `stale` beside `legacy` for the units whose prose moved since the snapshot. `node internals/contract-ownership.mjs query --layer requirements --owner <package|project-source|excluded|legacy>` answers who owns what without reading prose.
 
 ## Partition a unit that several claimants share
 

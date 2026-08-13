@@ -3613,7 +3613,6 @@
     "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-intended-obstruction": "sha256:ab21bf5d4caab01d67eb3f0edb1f8fd1c386c4da382b39ef4b8118f0f889554d",
     "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-obstruction-contract": "sha256:963419a5a1c8f8fdbbddccc012e31d8735396acde1113cd1d455097a0d1db68f",
     "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-occlusion-metric": "sha256:e1b1145003523f6917bba5a2f6c37063cef6df28fad06f6455ac61e950bf0519",
-    "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership": "sha256:513389dbf1fc6edd2ed1e46b1b16f6ad3b81c7959e04231c7c82540b49c370b1",
     "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-alternatives": "sha256:74b6ada9a2bdd635ee64e9466cbea62a886167a4cbe35c78ab3efa208ce53a5d",
     "requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-spatial-geometry-revision": "sha256:7a81dcb6e679ca79312ec4942625527d1229c008d0e5f8ff1111e49dcbb08331",
     "requirements/camera/continuity-and-intentional-violations.md#camera-alternative-comparison": "sha256:5742bba0d8e9857ecc3f98fc2ee55405d8284a959e820261f5a95fd2798a519f",
