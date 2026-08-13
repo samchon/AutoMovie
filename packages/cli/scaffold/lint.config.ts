@@ -50,13 +50,14 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * per selected host. Adopting it means every exported class, field, and method
  * under `src/units`, `src/objects`, `src/world`, and `src/formations` must cite
  * exactly one specification, which the shipped production does not yet do.
- * `evidence/documented`, which every package in the automovie workspace enables
- * and this one does not, is unpaid in the same way and is measured: enabling it
- * here reports 63 exported declarations with no JSDoc block at all, 46 of them
- * in `src/examples` and 17 inside the graphed populations. A declaration with no
- * block can never cite anything, so those 17 are real debt rather than a
- * decided boundary; the rule is left off because turning it on without paying
- * them would hand every generated project a red build it did not author.
+ * `evidence/documented`, which all eleven library packages under `packages/`
+ * enable and this one does not, is unpaid the same way and is measured:
+ * enabling it here reports 63 exported declarations with no JSDoc block at
+ * all, 46 of them in `src/examples` and 17 inside the graphed populations. A
+ * declaration with no block can never cite anything, so those 17 are real
+ * debt rather than a decided boundary; the rule is left off because turning it
+ * on without paying them would hand every generated project a red build it did
+ * not author.
  */
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
