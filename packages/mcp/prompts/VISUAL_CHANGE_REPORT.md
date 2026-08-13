@@ -1,0 +1,13 @@
+# Visual Change Report
+
+Use `compareAutoMovieVisualRevisions(before, after)` when the question is which rendered observations changed between two revisions. Supply the image digests an existing render or inspection path already produced. The comparison never opens pixels, renders a frame, or computes a new digest.
+
+Each snapshot names one revision and one catalog. Give every entry a stable `subject` and `view`; their ordered pair is the identity compared across revisions. Keep the viewpoint, time, pass, and presentation basis behind one view identity fixed, and mint a different view identity when that basis changes. A delivery review-frame catalog and an inspection-harness catalog are different populations and need different catalog names. The function refuses a cross-catalog comparison instead of making camera-set changes look like production progress.
+
+The result contains every subject-view pair in code-unit order. `changed` means both revisions contain the pair and their exact image-byte digests differ. `unchanged` means both contain it and the digests are equal. `new` means only the later revision contains it. `gone` means only the earlier revision contains it. Read `unchanged` explicitly: it tells you where no visual bytes moved, which is often the most useful progress fact.
+
+Run this before you write or accept a progress claim. Editing source and moving output bytes are different facts, and only the second one is visible here: a checkpoint that reports new geometry while the views covering it stay `unchanged` describes an intention, not a result. The count of unchanged views is the list of surfaces still untouched, and reading it costs no frames at all.
+
+Do not promote a status into a judgment. `changed` does not mean improved or regressed, and `unchanged` does not mean correct, current, complete, or reviewed. The report carries no review receipt or verdict and cannot satisfy `submitReview`. Use `diffAutoMovieSubjects` from `@automovie/engine` when the question is which compiled subjects were added, removed, moved, or reshaped; a structural change and a visual change are independent facts.
+
+The catalog is an input, not a camera generator. Never hash a PNG yourself; the digests already exist. Take a delivery entry's digest from the `digest` of a review evidence frame, whose `time` and `pass` belong in the view identity you mint for it, and take a directly captured entry's digest from the `outputDigest` of a `captureFrame` receipt. Build inspection entries from the separate subject harness when one exists. This API neither creates that harness nor merges its output with delivery evidence.
