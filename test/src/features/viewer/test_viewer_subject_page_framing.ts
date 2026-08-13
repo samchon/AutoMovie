@@ -155,24 +155,26 @@ export const test_viewer_subject_page_framing = (): void => {
   );
   const tower = overflow.bounds.content!;
   const cell = overflow.bounds.declared!;
-  const cropped = plan.filter(
-    (planned) => framesInside(cell, tower, planned, 16 / 9) === false,
-  );
   TestValidator.equals(
-    "contents that overflow their cell are framed whole, and cropped by the cell",
+    "the overflowing contents are the larger box and frame themselves whole",
     namedFacts([
       ["the contents are the larger box", () => radius(tower) > radius(cell)],
       [
         "the contents frame themselves whole",
         () => plan.every((planned) => frames(tower, planned, 16 / 9)),
       ],
-      ["and the cell crops them", () => cropped.length === plan.length],
     ]),
     {
       "the contents are the larger box": true,
       "the contents frame themselves whole": true,
-      "and the cell crops them": true,
     },
+  );
+  TestValidator.equals(
+    "no planned viewpoint derived from the cell holds the contents",
+    plan
+      .filter((planned) => framesInside(cell, tower, planned, 16 / 9))
+      .map((planned) => planned.id),
+    [],
   );
 
   //----

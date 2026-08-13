@@ -235,8 +235,9 @@ level of detail your own distance selects. Review evidence still comes from
 `npm run preview` and `npm run render`.
 
 `viewer/subject.html?shot=<id>&subject=<kind>:<id>` opens one authored thing
-alone and turns it around: arrow keys walk the deterministic turntable, the
-wheel pulls the eye in and out, `X` sections away whatever stands between you
+alone and turns it around: the left and right arrows walk the deterministic
+turntable, up and down change its elevation ring, the wheel or `-` and `=` pull
+the eye in and out, `F` refits, `X` sections away whatever stands between you
 and a room's inside, and `Backspace` opens the owner. Spaces, elements, parts,
 instance sets and instance members are openable; opening the page with no
 `subject` lists every space and population of the shot to start from, and every
@@ -244,11 +245,12 @@ panel entry is a link, so a room descends into the things standing in it. The
 eye is derived from the subject's own CONTENT box rather than from the cell a
 room was declared over — those are different extents, and reading the first as
 the second aims a review camera at a wall — and both boxes are printed so the
-gap between them is visible. The heading prints the subject key, the compiled
-revision, and the current viewpoint id, which is what lets a finding name the
-thing rather than the pixel: a reviewer writes `element:<node>@<revision>` and
-the authoring agent opens exactly that. Same status as `inspect.html`: an
-inspection tool, no capture hook, nothing written, not a delivery path.
+gap between them is visible. On screen beside the picture are the subject key,
+the compiled revision, and the current viewpoint id, which is what lets a
+finding name the thing rather than the pixel: a reviewer writes
+`element:<node>@<revision>` and the authoring agent opens exactly that. Same
+status as `inspect.html`: an inspection tool, no capture hook, nothing written,
+not a delivery path.
 
 ## Ownership
 
