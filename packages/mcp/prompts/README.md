@@ -19,7 +19,6 @@ The exact allowlist in `build/prompt.mjs` names every Markdown guide served by `
 - Do not preserve retired server vocabulary as history, migration advice, or comparison. Git history owns history.
 - When an MCP tool changes, update its declaration table, exact gate guide, constitution route, and prose contract in the same topic.
 - Time-sensitive recommendations, especially diffusion models and asset services, instruct the agent to research the current state instead of freezing a brand name as eternal truth.
-
 - Never write the size of a published family as a word or a digit. `WORLD_BUILDING` called the built-environment queries "the six" while eight were reachable, and the sentence was already wrong on the day it was written; a later addition updated the names beside it and left the number alone. Say "that is the whole family" and let the reader count, or name the derived index that owns the number. A count typed into prose is a claim nothing recomputes.
 
 The corpus contract test pins served-name closure, tool-to-guide linkage, all five tool-name mentions, required doctrine, retired-call absence, old-file removal, routing closure, TypeScript snippet compilation, and sandbox reachability of every name a guide presents as callable.

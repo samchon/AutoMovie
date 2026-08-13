@@ -122,9 +122,7 @@ const inspectSurfaceTeaching = (application: AutoMovieApplication): void => {
     "every reachable engine function is written in call form by some guide",
     AUTOMOVIE_SANDBOX_ENGINE_SURFACE.filter(
       (name) => isCallable(name) && called.has(name) === false,
-    )
-      .slice()
-      .sort(compareCodeUnits),
+    ).sort(compareCodeUnits),
     [],
   );
 
@@ -132,9 +130,7 @@ const inspectSurfaceTeaching = (application: AutoMovieApplication): void => {
     "no reachable base class is written in call form",
     AUTOMOVIE_SANDBOX_ENGINE_SURFACE.filter(
       (name) => isCallable(name) === false && called.has(name),
-    )
-      .slice()
-      .sort(compareCodeUnits),
+    ).sort(compareCodeUnits),
     [],
   );
 
@@ -142,9 +138,7 @@ const inspectSurfaceTeaching = (application: AutoMovieApplication): void => {
     "only the subject base classes are excused from being taught as callable",
     AUTOMOVIE_SANDBOX_ENGINE_SURFACE.filter(
       (name) => isCallable(name) === false,
-    )
-      .slice()
-      .sort(compareCodeUnits),
+    ).sort(compareCodeUnits),
     ["AutoMovieSubject", "AutoMovieSubjectGroup"],
   );
 };
