@@ -2080,10 +2080,11 @@ export const performShot = (props: {
       y: framed.base.y - point.y,
       z: framed.base.z - point.z,
     };
-    const onFloor = (value: IAutoMovieVector3): IAutoMovieVector3 =>
-      shift.x === 0 && shift.y === 0 && shift.z === 0
-        ? value
-        : { x: value.x + shift.x, y: value.y + shift.y, z: value.z + shift.z };
+    const onFramed = (value: IAutoMovieVector3): IAutoMovieVector3 => ({
+      x: value.x + shift.x,
+      y: value.y + shift.y,
+      z: value.z + shift.z,
+    });
     const motion = node === null ? undefined : motions[node];
     const facing = node === null ? undefined : nodeRotations.get(node);
     const objectAt =
@@ -2118,7 +2119,7 @@ export const performShot = (props: {
       // actor clip/facing, so read its effective object authority instead: the
       // same trajectory/attachment handoff the player applies. This runs after
       // coupling, deliberately, so a camera follows a launch into a hand.
-      at: animated === null ? null : (seconds) => onFloor(animated(seconds)),
+      at: animated === null ? null : (seconds) => onFramed(animated(seconds)),
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({

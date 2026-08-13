@@ -207,16 +207,32 @@ export const pointSubjectBox = (
  * its true box while the solve still aimed at its element origin would refuse
  * shots no authored camera could then satisfy.
  *
- * A degenerate `extent` reproduces {@link pointSubjectBox} exactly, so a node
- * with nothing to measure is framed and graded as the segment it always was.
+ * An extent lying on the node's own vertical axis is a point with a height
+ * rather than geometry — the shape {@link nodeSubjectExtent} returns when
+ * nothing could be measured — and it goes to {@link pointSubjectBox} instead.
+ * There is nothing to place, so the only part of the placement that could
+ * matter is where it stands: a rotation cannot turn a segment about the axis it
+ * lies on, and a scale must not stretch the height, because a rig span and the
+ * stand-in are inventions about the subject rather than measurements of it, and
+ * scaling an invention states something the model never did.
  *
  * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion nodeSubjectBox exposes state-dependent asset extent: The world box one staged node fills, the eight corners of its drawn model-space box carried through its own placement, so a yawed or scaled element is bounded where it stands.
- * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectBox realizes dynamic-bounds invariants: The world box one staged node fills, given the model-space box of what it draws. The eight corners of extent go through the node's own placement, the arithmetic that placed the parts the extent was measured from, and the result is their axis-aligned range, so a yawed or scaled element is boxed where it stands rather than where its model file happens to lie. This is the one answer both sides of a shot read: performShot frames a node subject from it and realizeShotContract grades the same subject from it, which is what makes the check honest. A degenerate extent reproduces pointSubjectBox exactly, so a node with nothing to measure is framed and graded as the segment it always was.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectBox realizes dynamic-bounds invariants: The world box one staged node fills, given the model-space box of what it draws. The eight corners of extent go through the node's own placement, the arithmetic that placed the parts the extent was measured from, and the result is their axis-aligned range, so a yawed or scaled element is boxed where it stands rather than where its model file happens to lie. This is the one answer both sides of a shot read: performShot frames a node subject from it and realizeShotContract grades the same subject from it, which is what makes the check honest. An extent with no horizontal span states that nothing was measured and goes to pointSubjectBox instead, because a rig span and the stand-in are inventions about the subject rather than measurements of it, and scaling an invention states something the model never did.
  */
 export const nodeSubjectBox = (
   placement: IAutoMovieTransform,
   extent: IAutoMovieSubjectBox,
 ): IAutoMovieSubjectBox => {
+  if (
+    extent.min.x === 0 &&
+    extent.max.x === 0 &&
+    extent.min.z === 0 &&
+    extent.max.z === 0
+  )
+    return pointSubjectBox(placement.translation, {
+      min: extent.min.y,
+      max: extent.max.y,
+    });
   const min: IAutoMovieVector3 = { x: Infinity, y: Infinity, z: Infinity };
   const max: IAutoMovieVector3 = { x: -Infinity, y: -Infinity, z: -Infinity };
   for (const x of [extent.min.x, extent.max.x])
