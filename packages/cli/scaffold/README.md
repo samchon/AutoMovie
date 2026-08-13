@@ -238,10 +238,13 @@ level of detail your own distance selects. Review evidence still comes from
 alone and turns it around: the left and right arrows walk the deterministic
 turntable, up and down change its elevation ring, the wheel or `-` and `=` pull
 the eye in and out, `F` refits, `X` sections away whatever stands between you
-and a room's inside, and `Backspace` opens the owner. Spaces, elements, parts,
-instance sets and instance members are openable; opening the page with no
-`subject` lists every space and population of the shot to start from, and every
-panel entry is a link, so a room descends into the things standing in it. The
+and a room's inside, and `Backspace` opens the owner. How far the downward ring
+may look up from under a subject is that subject's own answer, so a slate on a
+roof is read from beneath and a room is not read from underground. Spaces,
+elements, parts, instance sets and instance members are openable; opening the
+page with no `subject` lists every space and population of the shot to start
+from, and every panel entry is a link, so a room descends into the things
+standing in it, with a box to narrow a long list by name. The
 eye is derived from the subject's own CONTENT box rather than from the cell a
 room was declared over — those are different extents, and reading the first as
 the second aims a review camera at a wall — and both boxes are printed so the
