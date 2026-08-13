@@ -10,7 +10,7 @@ A view identity stands for one repeatable observation basis: the viewpoint, the 
 
 A delivery review-frame catalog and an inspection-harness catalog are different populations and need different catalog names. Two snapshots whose `catalog` strings differ are refused rather than folded together.
 
-## Read the four states and the counts
+## Read the states and the counts
 
 The report carries its own provenance in `catalog`, `fromRevision`, and `toRevision`, so it stays readable away from the call that produced it. `counts` carries the exact totals for `changed`, `unchanged`, `new`, and `gone`. `views` carries every subject-view pair from either snapshot, in code-unit order by subject then view, each with its own `status` and its `before` and `after` digests; `before` is `null` on a `new` pair and `after` is `null` on a `gone` one.
 

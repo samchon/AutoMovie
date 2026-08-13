@@ -28,7 +28,7 @@ The plan this surface folds is empty today, so the state it reports is `indeterm
 
 The review target identifies one unit. Production-wide prototype population and final completeness policy are separate obligations; never infer that one reviewed subject completes all subject review.
 
-## The four criteria
+## The required criteria
 
 `prepareReview` returns these ids in this order, and `submitReview` demands every one of them exactly once in that order. Each needs its own observation and at least one current evidence item, and two criteria carrying the same observation text with the same evidence set are refused as a copy, so decide what each criterion independently establishes before writing it.
 
@@ -39,9 +39,9 @@ The review target identifies one unit. Production-wide prototype population and 
 
 Structural evidence is a `subject` item, `{ kind: "subject", target, pointer, exactValue }`. The `target` must equal the prepared target exactly, the `pointer` must resolve in the compiled description that was prepared, and `exactValue` must equal the value currently at that pointer. Read the value out of the returned description rather than retyping it from memory; a mismatch is refused as `review-evidence-stale`, and a pointer that does not resolve is refused as `review-evidence-selector-invalid`. The `quotable` list is a bounded listing of pointers, so a deep record may not have every one of its own pointers listed there.
 
-The first two criteria are answered by those pointers. `viewpoint-coverage` is read from the coverage record and cited through the prepared diagnostic that explains it, as `{ kind: "diagnostic", code, path, actual }`. Copy `actual` from the message `prepareReview` returned rather than from this guide: the service appends its own correction-safety sentence to every diagnostic message, and `actual` must equal the current message exactly or the item is refused as stale.
+`identity-and-composition` and `placement-and-bounds` are answered by those pointers. `viewpoint-coverage` is read from the coverage record and cited through the prepared diagnostic that explains it, as `{ kind: "diagnostic", code, path, actual }`. Copy `actual` from the message `prepareReview` returned rather than from this guide: the service appends its own correction-safety sentence to every diagnostic message, and `actual` must equal the current message exactly or the item is refused as stale.
 
-`identity-and-composition` and `viewpoint-coverage` are the high-risk pair. Were a subject review ever completable, both would have to pass and both would have to be named in the completion basis, and neither could be discharged as `not-applicable`. That rule binds only a completion, and a subject completion is currently refused outright.
+`identity-and-composition` and `viewpoint-coverage` are high-risk. Were a subject review ever completable, each would have to pass and each would have to be named verbatim in the completion basis, and neither could be discharged as `not-applicable`. That rule binds only a completion, and a subject completion is currently refused outright.
 
 ## Completion is refused until inspection can look
 
