@@ -113,24 +113,39 @@ const MAX_DISTANCE_SCALE = 8;
 const DISTANCE_STEP = 1.15;
 
 /**
- * Kinds this page cannot open, and what to open instead.
+ * How each authored kind is spelled in a compiled shot, or why it is not
+ * spelled there at all.
  *
- * Every one of these names something real that a compiled shot does not carry
- * as a placed subject. A prototype is the clearest case and the reason this
- * table refuses rather than guesses: a model may be placed a thousand times or
- * not at all, so "show me the model" has no answer in world space, and
- * answering it with the origin would be exactly the prototype-placement
- * collapse a subject identity exists to prevent.
+ * One entry per member of the union, and that totality is the whole reason the
+ * table has this shape. A kind added to the viewer's vocabulary cannot reach
+ * this page without somebody deciding which of the two things it is, because
+ * TypeScript refuses an incomplete `Record` and the compiler names the missing
+ * kind. A dispatch that ended in a catch-all would take a new kind and do
+ * something plausible with it instead, which is the silent skip this project's
+ * doctrine forbids and which the starter's own lint rule exists to catch.
+ *
+ * A function answers with the compiled subject ids that key could name. More
+ * than one only for a part, where a placed part and a prototype's part share a
+ * spelling; they are tried in that order because only a placement stands
+ * somewhere in this scene, and {@link resolve} refuses whatever is left in
+ * model space.
+ *
+ * A string is a refusal, and it names what to open instead. Every one of those
+ * kinds is something real that a compiled shot does not carry as a placed
+ * subject. A prototype is the clearest case and the reason these refuse rather
+ * than guess: a model may be placed a thousand times or not at all, so "show me
+ * the model" has no answer in world space, and answering it with the origin
+ * would be exactly the prototype-placement collapse a subject identity exists
+ * to prevent.
  */
-const UNPLACED_ADVICE: Readonly<
-  Record<
-    Exclude<
-      AutoMovieViewerSubjectKind,
-      "space" | "element" | "instance-set" | "instance" | "part"
-    >,
-    string
-  >
+const SUBJECT_TARGETS: Readonly<
+  Record<AutoMovieViewerSubjectKind, ((id: string) => string[]) | string>
 > = {
+  space: (id) => [`space:${id}`],
+  element: (id) => [`element:${id}`],
+  "instance-set": (id) => [`instance-set:${id}`],
+  instance: (id) => [`instance:${id}`],
+  part: (id) => [`element-part:${id}`, `prototype-part:${id}`],
   "built-environment":
     'a built environment is opened through its spaces, as "space:<environment>/<space>"',
   building:
@@ -205,29 +220,15 @@ const renderIndex = (): void => {
   );
 };
 
-/**
- * The compiled subject ids one viewer subject key could name.
- *
- * More than one only for a part, where a placed part and a prototype's part
- * share a spelling. They are tried in that order because only a placement
- * stands somewhere in this scene, and {@link resolve} refuses whatever is left
- * in model space.
- */
+/** The compiled subject ids one viewer subject key could name. */
 const compiledSubjectIds = (subject: IAutoMovieViewerSubject): string[] => {
-  switch (subject.kind) {
-    case "space":
-    case "element":
-    case "instance-set":
-    case "instance":
-      return [`${subject.kind}:${subject.id}`];
-    case "part":
-      return [`element-part:${subject.id}`, `prototype-part:${subject.id}`];
-    default:
-      throw new Error(
-        `${autoMovieViewerSubjectKey(subject)} is not a placed subject of shot "${shotId}": ` +
-          `${UNPLACED_ADVICE[subject.kind]}.`,
-      );
-  }
+  const target = SUBJECT_TARGETS[subject.kind];
+  if (typeof target === "string")
+    throw new Error(
+      `${autoMovieViewerSubjectKey(subject)} is not a placed subject of shot "${shotId}": ` +
+        `${target}.`,
+    );
+  return target(subject.id);
 };
 
 /**
