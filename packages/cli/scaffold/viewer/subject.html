@@ -21,6 +21,12 @@
         height: 100%;
       }
 
+      /* A plate under every overlay, not a text shadow alone. Half of what this
+         page is for is exterior and roof work, where the sky behind the text is
+         near white and pale glyphs with a dark shadow are unreadable — and the
+         thing that goes unread there is the subject key, which is the whole
+         point of the page. The plate makes the reading independent of whatever
+         the eye happens to be pointed at. */
       #notice,
       #keys,
       #status,
@@ -28,7 +34,9 @@
         position: fixed;
         color: #e8edf2;
         font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
-        text-shadow: 0 1px 3px #000;
+        background: rgba(9, 13, 18, 0.78);
+        padding: 7px 10px;
+        border-radius: 4px;
         pointer-events: none;
       }
 
@@ -92,6 +100,19 @@
 
       #subject .gap {
         height: 0.7em;
+      }
+
+      #subject .filter {
+        width: 100%;
+        margin: 2px 0 4px;
+        padding: 3px 6px;
+        border: 1px solid #3a4653;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.35);
+        color: #e8edf2;
+        font: inherit;
+        text-align: right;
+        box-sizing: border-box;
       }
     </style>
   </head>

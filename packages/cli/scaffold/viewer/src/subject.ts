@@ -40,6 +40,7 @@ import {
   type IAutoMovieViewerSubject,
   type IAutoMovieViewerSubjectBounds,
   type IAutoMovieViewerSubjectPose,
+  type IAutoMovieViewerViewpoint,
   applyAutoMovieSectionPlanes,
   applyAutoMovieViewerSubjectPose,
   applyRendererEnvironment,
@@ -65,14 +66,41 @@ import { viewerDocument } from "./viewerDocument";
  * angle, and every one of them is visible from a horizontal sweep.
  */
 const AZIMUTHS = 8;
-const ELEVATIONS_DEG: readonly number[] = [-20, 10, 45];
 
-/** The plan, laid out ring by ring, so index = ring * {@link AZIMUTHS} + step. */
-const TURNTABLE = autoMovieViewerTurntableViewpoints({
-  azimuthCount: AZIMUTHS,
-  elevationsDeg: ELEVATIONS_DEG,
-  distanceFactor: 1.25,
-});
+/** How far below level the soffit ring asks to look, before it is grounded. */
+const LOW_ELEVATION_DEG = -20;
+
+/** The rings above level, which no subject can push underground. */
+const RAISED_ELEVATIONS_DEG: readonly number[] = [10, 45];
+
+/** Rings altogether, low first, so index = ring * {@link AZIMUTHS} + step. */
+const RINGS = RAISED_ELEVATIONS_DEG.length + 1;
+
+/**
+ * Ring the page opens on: eye height, never the grazing one.
+ *
+ * A soffit view is a thing you go and ask for, not the first thing a subject
+ * should say about itself, and the low ring is the one that most nearly runs
+ * out of room beneath a subject standing on the ground.
+ */
+const ENTRY_RING = 1;
+
+/** Framing margin every planned viewpoint carries. */
+const DISTANCE_FACTOR = 1.25;
+
+/**
+ * Viewport shape the PLAN is laid out for, which is not the one it is drawn at.
+ *
+ * The distance a subject is fitted at follows the narrower field, so it follows
+ * the viewport, and a plan measured against a live viewport would rename its
+ * own viewpoints when somebody dragged the window. A viewpoint id is a string
+ * two agents pass back and forth, so it is fixed against one reference shape
+ * here and the live shape is left to move the distance alone.
+ */
+const PLAN_ASPECT = 16 / 9;
+
+/** Members listed before the panel offers a way to narrow them. */
+const FILTERABLE_FROM = 12;
 
 /** Lens the inspection looks through, narrow enough not to bow a straight run. */
 const FOV_DEGREES = 35;
@@ -156,18 +184,24 @@ const requestedKey = parameters.get("subject");
  * choosing what to look at is not yet looking at anything.
  */
 const renderIndex = (): void => {
-  panel.replaceChildren(line(`${shotId}: subjects to open`, "what"));
-  for (const environment of compiled.builtEnvironments ?? [])
-    for (const space of environment.spaces)
-      panel.append(subjectLink(`space:${environment.id}/${space.id}`, ""));
-  for (const set of compiled.instanceSets)
-    panel.append(subjectLink(`instance-set:${set.id}`, ""));
-  panel.append(
-    line("", "gap"),
+  const rows = [
+    ...(compiled.builtEnvironments ?? []).flatMap((environment) =>
+      environment.spaces.map((space) =>
+        subjectLink(`space:${environment.id}/${space.id}`, ""),
+      ),
+    ),
+    ...compiled.instanceSets.map((set) =>
+      subjectLink(`instance-set:${set.id}`, ""),
+    ),
+  ];
+  panel.replaceChildren(
+    line(`${shotId}: subjects to open`, "what"),
     line(
       "elements and parts are reached by opening the space they stand in",
       "omitted",
     ),
+    line("", "gap"),
+    ...narrowable(rows),
   );
 };
 
@@ -257,6 +291,63 @@ const extentOf = (description: IAutoMovieSubjectDescription): IExtent => {
 };
 
 /**
+ * How far below level this subject's soffit ring may actually go, in degrees.
+ *
+ * The low ring is where the underside of a thing is read, and for a slate on a
+ * roof or a chandelier over a hall that is exactly right: the eye drops half a
+ * metre and is still eight metres in the air. For a room it is not. A hall
+ * fitted at thirty-six metres and asked for -20 degrees puts the eye seven and
+ * a half metres UNDERGROUND, looking up at the building through the floor, and
+ * eight of the twenty-four planned viewpoints were that. The angle is therefore
+ * the subject's own to answer, exactly as its distance already is.
+ *
+ * The floor is grade, or the subject's own underside where that is already
+ * below grade, so a cellar is still looked at from inside its own extent. The
+ * fitted distance is read back from {@link frameAutoMovieViewerSubject} rather
+ * than recomputed: a level eye sits one fitted distance from the centre, so
+ * asking the framing rule what it did keeps this page from carrying a second
+ * copy of arithmetic that a subject inspection elsewhere is pinned bit-for-bit
+ * against.
+ */
+const groundedElevationDeg = (
+  bounds: IAutoMovieViewerSubjectBounds,
+): number => {
+  const level = frameAutoMovieViewerSubject(
+    bounds,
+    {
+      id: "level",
+      azimuthDeg: 0,
+      elevationDeg: 0,
+      distanceFactor: DISTANCE_FACTOR,
+    },
+    { fovDeg: FOV_DEGREES, aspect: PLAN_ASPECT },
+  );
+  const distance = Math.hypot(
+    level.position.x - level.target.x,
+    level.position.y - level.target.y,
+    level.position.z - level.target.z,
+  );
+  const drop = Math.max(level.target.y - Math.min(0, bounds.min.y), 0);
+  // Never steeper than asked for, never past the floor. The result stays inside
+  // [-20, 0], which is what keeps its rounded label clear of the rings above it
+  // and the plan nameable.
+  return Math.max(
+    LOW_ELEVATION_DEG,
+    -THREE.MathUtils.radToDeg(Math.asin(Math.min(drop / distance, 1))),
+  );
+};
+
+/** The viewpoints this subject is turned through, low ring grounded to it. */
+const turntableFor = (
+  bounds: IAutoMovieViewerSubjectBounds,
+): IAutoMovieViewerViewpoint[] =>
+  autoMovieViewerTurntableViewpoints({
+    azimuthCount: AZIMUTHS,
+    elevationsDeg: [groundedElevationDeg(bounds), ...RAISED_ELEVATIONS_DEG],
+    distanceFactor: DISTANCE_FACTOR,
+  });
+
+/**
  * A cut at the subject's near face that removes the half-space the eye is in.
  *
  * A room framed from outside is a room behind its own wall, so without this the
@@ -327,6 +418,33 @@ const line = (text: string, className: string): HTMLDivElement => {
   row.className = className;
   row.textContent = text;
   return row;
+};
+
+/**
+ * A list of subject links, with a box to narrow it once it stops being a list
+ * you can read.
+ *
+ * A hall's sample is sixty-four rows of `great-hall-chandelier-0-ring-13` and
+ * its neighbours, and a shot's index is every space and population it has, so
+ * scrolling is otherwise the only way to find one of them by eye. The box hides
+ * rows rather than rebuilding them, so what is filtered is the same DOM a click
+ * still navigates from, and it filters on the key, which is the string a
+ * reviewer already has in hand.
+ */
+const narrowable = (rows: readonly HTMLDivElement[]): HTMLElement[] => {
+  if (rows.length < FILTERABLE_FROM) return [...rows];
+  const box = document.createElement("input");
+  box.type = "text";
+  box.className = "filter";
+  box.placeholder = `narrow ${rows.length} listed`;
+  box.addEventListener("input", () => {
+    const needle = box.value.trim().toLowerCase();
+    for (const row of rows)
+      row.hidden =
+        needle !== "" &&
+        (row.textContent ?? "").toLowerCase().includes(needle) === false;
+  });
+  return [box, ...rows];
 };
 
 const size = (bounds: IAutoMovieViewerSubjectBounds): string =>
@@ -415,7 +533,8 @@ const openSubjectPage = async (key: string): Promise<void> => {
     "beauty",
   );
 
-  let viewpoint = 0;
+  let plan = turntableFor(extent.bounds);
+  let viewpoint = ENTRY_RING * AZIMUTHS;
   let distanceScale = 1;
   let sectioned = false;
   /** Whether the scene currently carries a cut, so an uncut one costs nothing. */
@@ -427,7 +546,7 @@ const openSubjectPage = async (key: string): Promise<void> => {
 
   /** Resolve the pose for the current subject, angle and distance, and aim. */
   function stage(): IAutoMovieViewerSubjectPose {
-    const planned = TURNTABLE[viewpoint]!;
+    const planned = plan[viewpoint]!;
     const staged = frameAutoMovieViewerSubject(
       extent.bounds,
       { ...planned, distanceFactor: planned.distanceFactor * distanceScale },
@@ -480,11 +599,11 @@ const openSubjectPage = async (key: string): Promise<void> => {
 
   /** The three facts a finding is written from, then the picture's conditions. */
   function statusLines(staged: IAutoMovieViewerSubjectPose): string {
-    const planned = TURNTABLE[viewpoint]!;
+    const planned = plan[viewpoint]!;
     return (
       `${autoMovieViewerSubjectKey({ ...asked, revision })}\n` +
-      `viewpoint ${planned.id}  (${viewpoint + 1}/${TURNTABLE.length})` +
-      `  az=${planned.azimuthDeg.toFixed(0)}° el=${planned.elevationDeg.toFixed(0)}°` +
+      `viewpoint ${planned.id}  (${viewpoint + 1}/${plan.length})` +
+      `  az=${planned.azimuthDeg.toFixed(0)}° el=${planned.elevationDeg.toFixed(1)}°` +
       `  distance ${(planned.distanceFactor * distanceScale).toFixed(2)}× fitted` +
       `${distanceScale === 1 ? "" : " (off plan)"}\n` +
       `${extent.source} extent ${size(extent.bounds)} at ${middleOf(extent.bounds)}` +
@@ -527,6 +646,18 @@ const openSubjectPage = async (key: string): Promise<void> => {
           "stale",
         ),
       );
+    // Said out loud, because a slate turned at -20 degrees beside a hall turned
+    // at -8 looks like an inconsistent tool until you know the hall would have
+    // been underground.
+    const low = plan[0]!.elevationDeg;
+    if (low > LOW_ELEVATION_DEG)
+      panel.append(
+        line(
+          `soffit ring grounded to ${low.toFixed(1)}°, ` +
+            `since ${LOW_ELEVATION_DEG}° puts this eye below grade`,
+          "omitted",
+        ),
+      );
     if (description.owner !== null)
       panel.append(line("", "gap"), subjectLink(description.owner, "↑ "));
     // `members.items` is already a bounded sample the description chose, and
@@ -540,7 +671,7 @@ const openSubjectPage = async (key: string): Promise<void> => {
         "omitted",
       ),
     );
-    for (const member of members.items) panel.append(subjectLink(member, ""));
+    panel.append(...narrowable(members.items.map((id) => subjectLink(id, ""))));
   }
 
   /**
@@ -573,6 +704,10 @@ const openSubjectPage = async (key: string): Promise<void> => {
     asked = subject;
     description = next;
     extent = box;
+    // The angle is kept across a descent so a room and the moulding inside it
+    // are read from the same side, but the plan itself is the new subject's:
+    // how far its soffit ring may drop is its own extent's answer.
+    plan = turntableFor(box.bounds);
     distanceScale = 1;
     pose = stage();
     renderPanel();
@@ -598,6 +733,10 @@ const openSubjectPage = async (key: string): Promise<void> => {
   }
 
   window.addEventListener("keydown", (event) => {
+    // The panel's filter is the one place on this page that wants letters, and
+    // every key below is a letter or an arrow. Without this, narrowing a list
+    // would turn the table and `Backspace` would leave the subject entirely.
+    if (event.target instanceof HTMLInputElement) return;
     if (event.code === "ArrowRight") viewpoint = turn(1);
     else if (event.code === "ArrowLeft") viewpoint = turn(-1);
     else if (event.code === "ArrowUp") viewpoint = ring(1);
@@ -657,10 +796,9 @@ const openSubjectPage = async (key: string): Promise<void> => {
 
   /** The same azimuth on the next elevation ring. */
   function ring(delta: number): number {
-    const rings = ELEVATIONS_DEG.length;
     const at = Math.floor(viewpoint / AZIMUTHS);
     return (
-      ((((at + delta) % rings) + rings) % rings) * AZIMUTHS +
+      ((((at + delta) % RINGS) + RINGS) % RINGS) * AZIMUTHS +
       (viewpoint - at * AZIMUTHS)
     );
   }

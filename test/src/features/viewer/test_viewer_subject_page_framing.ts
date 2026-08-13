@@ -48,7 +48,10 @@ import {
  *    merely shrink them: it crops them out of the picture.
  * 5. A room with nothing in it reports no content box, and the declared cell
  *    is what is left to frame.
- * 6. The compiled ids the page spells from a subject key resolve, and a
+ * 6. A fixed downward ring puts the eye under the ground for a room and not
+ *    for a slate on a roof, and the eye's height rises with the angle, which
+ *    is what makes one grounded angle per subject well defined.
+ * 7. The compiled ids the page spells from a subject key resolve, and a
  *    prototype's answer is model-space, which is why the page refuses to aim
  *    a world camera at one.
  */
@@ -202,7 +205,77 @@ export const test_viewer_subject_page_framing = (): void => {
   );
 
   //----
-  // 6. WHAT A SUBJECT KEY SPELLS, AND WHAT IT MUST NOT AIM AT
+  // 6. A DOWNWARD RING IS THE SUBJECT'S TO ANSWER, NOT THE PLAN'S TO FIX
+  //----
+  // A soffit ring is right for a slate on a roof, which drops half a metre and
+  // is still ten metres up, and wrong for a room, which is fitted at tens of
+  // metres and therefore drops through the floor: on the medieval residence a
+  // -20 degree ring put the hall's eye 7.5 m underground, looking up at the
+  // building through the ground, on eight of twenty-four viewpoints and on the
+  // first frame anybody saw. The page answers by deriving the ring from the
+  // subject the way it already derives the distance. What is measured here is
+  // what makes that derivation well posed rather than the arithmetic of it:
+  // the hazard is real, level is always safe, the two are separated by a
+  // monotone height, and a subject standing clear of the ground keeps the
+  // whole ring it asked for.
+  const grounded = describeAutoMovieSubject(artifact, "space:castle/hall")
+    .bounds.content!;
+  const lifted = describeAutoMovieSubject(
+    subjectInspectionArtifact({
+      models: [
+        subjectInspectionModel({
+          id: "roof-slate-model",
+          min: { x: -0.29, y: 11.9, z: -0.29 },
+          max: { x: 0.29, y: 11.95, z: 0.29 },
+        }),
+      ],
+    }),
+    "element:castle/roof-slate",
+  ).bounds.content!;
+  const eyeHeight = (
+    bounds: IAutoMovieViewerSubjectBounds,
+    elevationDeg: number,
+  ): number =>
+    frameAutoMovieViewerSubject(
+      bounds,
+      { id: "probe", azimuthDeg: 0, elevationDeg, distanceFactor: 1.25 },
+      LENS,
+    ).position.y;
+  TestValidator.equals(
+    "how far down a subject may be looked at from is the subject's own answer",
+    namedFacts([
+      [
+        "a room standing on the ground is put under it",
+        () => eyeHeight(grounded, -20) < Math.min(0, grounded.min.y),
+      ],
+      [
+        "a level eye never is",
+        () => eyeHeight(grounded, 0) >= Math.min(0, grounded.min.y),
+      ],
+      [
+        "and height rises with the angle between them",
+        () =>
+          [-20, -15, -10, -5, 0].every(
+            (deg, index, all) =>
+              index === 0 ||
+              eyeHeight(grounded, deg) > eyeHeight(grounded, all[index - 1]!),
+          ),
+      ],
+      [
+        "while a slate on a roof keeps the whole ring it asked for",
+        () => eyeHeight(lifted, -20) > 0,
+      ],
+    ]),
+    {
+      "a room standing on the ground is put under it": true,
+      "a level eye never is": true,
+      "and height rises with the angle between them": true,
+      "while a slate on a roof keeps the whole ring it asked for": true,
+    },
+  );
+
+  //----
+  // 7. WHAT A SUBJECT KEY SPELLS, AND WHAT IT MUST NOT AIM AT
   //----
   TestValidator.equals(
     "a placed subject answers in world space and a prototype does not",
