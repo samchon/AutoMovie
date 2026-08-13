@@ -47,6 +47,11 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * specification. So a wall modelled before anything specifies the wall is
  * refused at the moment it is written.
  *
+ * Writing the claim twice is also why a specification nothing implements now
+ * reports the same missing acknowledgement once per claim rather than once.
+ * Two claims select that document, so two obligations go unpaid; both are
+ * discharged by the same citation.
+ *
  * The bound is the class, and the rest of it is measured debt rather than a
  * decided boundary. Turning `singleEvidencePerSymbol` on for `type`,
  * `property`, and `function` at once reports 64 hosts in the shipped
