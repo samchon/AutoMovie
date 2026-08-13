@@ -1,74 +1,153 @@
+import type { IAutoMovieModelRecipe } from "@automovie/interface";
 import {
-  AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE,
   AUTOMOVIE_SUBJECT_INSPECTION_ROOT,
   AutoMovieApplication,
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  type AutoMovieProductionSubjectInspection,
   AutoMovieProductionSubjectInspectionService,
   compareCodeUnits,
   openAutoMovieProduction,
-  readAutoMovieSubjectInspection,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { recolouredModelRecipe } from "../internal/designMutation";
 import {
   productionCompileSucceeded,
   productionFixture,
 } from "./productionFixtures";
-import { recordingInstrument } from "./test_mcp_inspect_subject";
+import { inspectionPng, recordingInstrument } from "./test_mcp_inspect_subject";
 
 const SUBJECT = "prototype:automovie:model:soloist";
 
-const UNSUPPORTED =
-  "inspectSubject is the inspection-owned viewpoint plan source: it derives a turntable from a subject's own measured extent, draws every viewpoint in it, and publishes that plan beside one revision-bearing receipt per observation under .automovie/inspections/, refusing outright any subject it cannot frame. What is still missing is the join: this surface does not yet read those receipts, so the plan folded here stays empty, coverage is indeterminate, and this review cannot be completed. Inspect the subject anyway, record what you actually saw, and leave the viewpoint range explicitly unobserved. Correction feedback does not authorize deleting the artifact.";
+const TARGET = {
+  kind: "subject",
+  shot: "opening",
+  subject: SUBJECT,
+} as const;
+
+/** An instrument that refuses the first viewpoint it is handed. */
+const failingInstrument: AutoMovieProductionSubjectInspection = () =>
+  Promise.reject(new Error("the inspection instrument is unavailable."));
 
 /**
- * The inspection surface can look at a compiled subject while the review
- * surface still folds an empty plan, and the review warning says exactly that
- * instead of denying that any plan source exists.
+ * A subject review reads the coverage the inspection actually published, so
+ * every state of that fold is produced by a real sweep rather than asserted.
  *
- * This pins the boundary between two surfaces rather than one function's
- * output, because the boundary is the thing that goes quietly wrong. An agent
- * holding an `inspectSubject` coverage record reading `reviewed` and a
- * `prepareReview` coverage record reading `indeterminate` for the same subject
- * at the same compiled revision has to be told which of the two is a statement
- * about evidence, and the diagnostic message is where it is told. `submitReview`
- * requires that message quoted back verbatim, so it is a contract string and is
- * asserted here as one.
+ * The fold has always been able to say `not-run`, `partial`, `stale` and
+ * `reviewed`; until the receipts were published and read, none of them could
+ * happen to a production. This pins each one to the sequence of events that
+ * causes it, because a state nothing can reach is a state nobody maintains, and
+ * because the difference between "not looked at" and "looked at, and wrong" is
+ * the entire value of the surface.
  *
  * Scenarios:
  *
- * 1. A recording instrument answers every planned viewpoint, so `inspectSubject`
- *    reports a non-empty plan wholly observed at the current revision.
- * 2. `prepareReview` on the same subject, at the same compiled revision, still
- *    folds an empty plan and reports `indeterminate` with an empty planned,
- *    observed, missing and stale set.
- * 3. The reason is measurable rather than editorial: the inspection publishes a
- *    plan and one revision-bearing receipt per image under the inspection root,
- *    every observation is recoverable from disk at the compiled revision it was
- *    drawn at, and this surface still folds an empty plan over none of them. The
- *    gap is a join nobody has written, not a record nobody has kept.
- * 4. The warning carries the exact contract message, including the appended
- *    correction-safety sentence, so a worksheet may cite it unchanged.
+ * 1. Before anything inspects it, the subject is `indeterminate`, and that is
+ *    the one case still carrying `review-subject-viewpoint-unsupported`.
+ * 2. A sweep whose instrument refuses the first viewpoint still publishes its
+ *    plan, so the review then reads a standing denominator with no observation
+ *    and reports `not-run`, which is a different fact from `indeterminate`.
+ * 3. A complete sweep makes the same review report `reviewed` over the same
+ *    plan the inspection itself folded.
+ * 4. Replacing one observation's bytes withdraws exactly that viewpoint, so the
+ *    review reports `partial` and names the one id that went missing.
+ * 5. Recompiling the reviewed model moves the compiled revision, so every
+ *    standing receipt is `stale` and none of them counts as observed.
+ * 6. Through all of it the axes stay apart: every artifact is published under
+ *    the inspection root, the resolved unit keeps refusing delivery-evidence
+ *    eligibility, and `prepareReview` offers a subject target no frame evidence
+ *    at all even while its pictures exist on disk.
  */
 export const test_mcp_subject_review_viewpoint_plan_gap =
   async (): Promise<void> => {
     const fixture = productionFixture();
     try {
       const project = AutoMovieProductionProject.open(fixture.root);
+      const compiler = new AutoMovieProductionCompiler(project);
       if (
         productionCompileSucceeded(
-          "subject review plan gap fixture",
-          new AutoMovieProductionCompiler(project).compile({ scope: "source" }),
+          "subject review coverage fixture",
+          compiler.compile({ scope: "source" }),
         ) === false
       )
-        throw new Error("The subject-review plan-gap fixture did not compile.");
+        throw new Error("The subject-review coverage fixture did not compile.");
       const services = openAutoMovieProduction({
         projectRoot: fixture.root,
         productionId: "fixture-film",
       });
+      const application = new AutoMovieApplication({
+        projectRoot: fixture.root,
+      });
+      application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+      application.getGuideDocument({ name: "REVIEW_SUBJECT" });
+      const coverageOf = (): {
+        state: string;
+        planned: number;
+        observed: string[];
+        missing: string[];
+        stale: string[];
+        unsupported: number;
+        frames: number;
+      } => {
+        const prepared = application.prepareReview({
+          target: TARGET,
+        });
+        const coverage = prepared.subjectReview?.coverage;
+        if (coverage === undefined)
+          throw new Error("The reviewed subject resolved no review unit.");
+        return {
+          state: coverage.state,
+          planned: coverage.planned.length,
+          observed: [...coverage.observed],
+          missing: [...coverage.missing],
+          stale: [...coverage.stale],
+          unsupported: prepared.diagnostics.filter(
+            (diagnostic) =>
+              diagnostic.code === "review-subject-viewpoint-unsupported",
+          ).length,
+          frames: prepared.frames.length,
+        };
+      };
+
+      const untouched = coverageOf();
+      TestValidator.equals(
+        "a subject nothing inspected is indeterminate and says so once",
+        {
+          state: untouched.state,
+          planned: untouched.planned,
+          unsupported: untouched.unsupported,
+        },
+        { state: "indeterminate", planned: 0, unsupported: 1 },
+      );
+
+      const refused = await new AutoMovieProductionSubjectInspectionService(
+        failingInstrument,
+      ).inspect(services, { shot: "opening", subject: SUBJECT });
+      TestValidator.predicate(
+        "an instrument that refuses still leaves the plan it published",
+        refused.inspected === false,
+      );
+      const notRun = coverageOf();
+      TestValidator.equals(
+        "a published plan with no observation is not-run, not indeterminate",
+        {
+          state: notRun.state,
+          observed: notRun.observed,
+          unsupported: notRun.unsupported,
+          denominator: notRun.planned !== 0,
+          missingAll: notRun.missing.length === notRun.planned,
+        },
+        {
+          state: "not-run",
+          observed: [],
+          unsupported: 0,
+          denominator: true,
+          missingAll: true,
+        },
+      );
 
       const swept = await new AutoMovieProductionSubjectInspectionService(
         recordingInstrument().adapter,
@@ -79,97 +158,113 @@ export const test_mcp_subject_review_viewpoint_plan_gap =
             swept.diagnostics,
           )}`,
         );
-      TestValidator.predicate(
-        "the inspection folds a non-empty plan it wholly observed",
-        swept.inspected === true &&
-          swept.coverage.state === "reviewed" &&
-          swept.coverage.planned.length !== 0 &&
-          swept.coverage.observed.length === swept.coverage.planned.length,
-      );
-
-      const application = new AutoMovieApplication({
-        projectRoot: fixture.root,
-      });
-      application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-      application.getGuideDocument({ name: "REVIEW_SUBJECT" });
-      const prepared = application.prepareReview({
-        target: { kind: "subject", shot: "opening", subject: SUBJECT },
-      });
+      const reviewed = coverageOf();
       TestValidator.equals(
-        "the review surface folds no plan for the subject the inspection just swept",
+        "a wholly observed plan is reviewed on both surfaces at one revision",
         {
-          revision: prepared.subjectReview?.unit.description.revision,
-          coverage: prepared.subjectReview?.coverage,
-          warnings: prepared.diagnostics
-            .filter(
-              (diagnostic) =>
-                diagnostic.code === "review-subject-viewpoint-unsupported",
-            )
-            .map((diagnostic) => ({
-              category: diagnostic.category,
-              message: diagnostic.message,
-            })),
+          state: reviewed.state,
+          missing: reviewed.missing,
+          stale: reviewed.stale,
+          unsupported: reviewed.unsupported,
+          agrees:
+            reviewed.observed.length === swept.coverage.observed.length &&
+            reviewed.planned === swept.coverage.planned.length,
         },
         {
-          revision: swept.revision,
-          coverage: {
-            state: "indeterminate",
-            planned: [],
-            observed: [],
-            missing: [],
-            stale: [],
-            unplanned: [],
-            foreign: 0,
-            duplicates: 0,
-          },
-          warnings: [{ category: "warning", message: UNSUPPORTED }],
-        },
-      );
-
-      const published = swept.views.map((view) => view.path);
-      const directory = path.posix.dirname(published[0]!);
-      const entries = fs
-        .readdirSync(path.join(fixture.root, ...directory.split("/")))
-        .sort(compareCodeUnits);
-      const record = readAutoMovieSubjectInspection({
-        projectRoot: fixture.root,
-        productionId: "fixture-film",
-        shot: "opening",
-        subject: SUBJECT,
-      });
-      TestValidator.equals(
-        "the record the fold would need is on disk and this surface still does not read it",
-        {
-          root: directory.startsWith(`${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/`),
-          missing: published.filter(
-            (relative) =>
-              fs.existsSync(path.join(fixture.root, ...relative.split("/"))) ===
-              false,
-          ),
-          images: entries.filter((entry) => entry.endsWith(".png")).length,
-          plan: entries.includes(AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE),
-          recoverable: {
-            planned: record.planned.length,
-            observed: record.observations.length,
-            revisions: [
-              ...new Set(
-                record.observations.map((observation) => observation.revision),
-              ),
-            ],
-          },
-          foldedHere: prepared.subjectReview?.coverage.state,
-        },
-        {
-          root: true,
+          state: "reviewed",
           missing: [],
-          images: swept.views.length,
-          plan: true,
-          recoverable: {
-            planned: swept.plan.length,
-            observed: swept.views.length,
-            revisions: [swept.revision!],
-          },
-          foldedHere: "indeterminate",
+          stale: [],
+          unsupported: 0,
+          agrees: true,
+        },
+      );
+
+      const withdrawn = swept.views[1]!;
+      fs.writeFileSync(
+        path.join(fixture.root, ...withdrawn.path.split("/")),
+        inspectionPng(withdrawn.width, withdrawn.height + 1),
+      );
+      const partial = coverageOf();
+      TestValidator.equals(
+        "replacing one picture withdraws exactly that viewpoint",
+        {
+          state: partial.state,
+          missing: partial.missing,
+          observed: partial.observed.length,
+          unsupported: partial.unsupported,
+        },
+        {
+          state: "partial",
+          missing: [withdrawn.viewpoint],
+          observed: reviewed.observed.length - 1,
+          unsupported: 0,
+        },
+      );
+
+      const recipe = project.design({
+        kind: "model",
+        id: "soloist",
+      }) as IAutoMovieModelRecipe;
+      const mutation = project.setModelRecipe(recolouredModelRecipe(recipe));
+      if (mutation.accepted === false)
+        throw new Error(
+          `The subject-coverage model mutation was refused: ${JSON.stringify(
+            mutation.diagnostics,
+          )}`,
+        );
+      if (
+        productionCompileSucceeded(
+          "changed subject coverage fixture",
+          compiler.compile({ scope: "source" }),
+        ) === false
+      )
+        throw new Error(
+          "The changed subject-coverage fixture did not compile.",
+        );
+      const stale = coverageOf();
+      TestValidator.equals(
+        "a moved compiled revision makes every standing receipt stale",
+        {
+          state: stale.state,
+          observed: stale.observed,
+          missingAll: stale.missing.length === stale.planned,
+          stale: stale.stale,
+          unsupported: stale.unsupported,
+        },
+        {
+          state: "stale",
+          observed: [],
+          missingAll: true,
+          stale: partial.observed,
+          unsupported: 0,
+        },
+      );
+
+      const unit = application.prepareReview({ target: TARGET }).subjectReview
+        ?.unit;
+      TestValidator.equals(
+        "inspection artifacts never enter the delivery axis",
+        {
+          published: swept.views
+            .filter(
+              (view) =>
+                view.path.startsWith(
+                  `${AUTOMOVIE_SUBJECT_INSPECTION_ROOT}/`,
+                ) === false,
+            )
+            .map((view) => view.path)
+            .sort(compareCodeUnits),
+          owner: unit?.viewpointOwner,
+          eligible: unit?.deliveryEvidenceEligible,
+          framesWhileReviewed: reviewed.frames,
+          framesWhileStale: stale.frames,
+        },
+        {
+          published: [],
+          owner: "inspection",
+          eligible: false,
+          framesWhileReviewed: 0,
+          framesWhileStale: 0,
         },
       );
     } finally {

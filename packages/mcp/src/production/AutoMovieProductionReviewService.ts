@@ -25,6 +25,7 @@ import {
   IAutoMovieReviewQueue,
   IAutoMovieReviewTarget,
   IAutoMovieStoredReview,
+  IAutoMovieSubjectReviewCoverage,
   IAutoMovieSubjectReviewTarget,
   IAutoMovieSubjectReviewUnit,
   IAutoMovieSubmitReviewInput,
@@ -69,6 +70,7 @@ import {
 import { assertProductionRenditionTimelineDelivery } from "./muxProductionFeatureMp4";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { autoMovieStorySyncOutcome } from "./storySyncDiagnostics";
+import { readAutoMovieSubjectInspection } from "./subjectInspection";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
 type AutoMovieReviewWorksheet = Omit<
@@ -274,6 +276,10 @@ export class AutoMovieProductionReviewService {
       input.target.kind === "subject"
         ? currentSubjectReviewUnit(this.project, input.target, context)
         : null;
+    const subjectCoverage =
+      subjectUnit === null
+        ? null
+        : publishedSubjectCoverage(this.project, subjectUnit);
     const targetValue =
       input.target.kind === "subject"
         ? (subjectUnit?.description ?? null)
@@ -397,22 +403,16 @@ export class AutoMovieProductionReviewService {
         message:
           "This visual target has no verified current PNG frame. Capture every required current view and pass before submitReview. Correction feedback does not authorize deleting the artifact.",
       });
-    // The plan source this warning used to say did not exist now does, and so
-    // does the published record: inspectSubject writes a plan and one
-    // revision-bearing receipt per observation, and readAutoMovieSubjectInspection
-    // returns only observations whose artifact still hashes to the digest it
-    // claims. What is absent is the join, and saying anything stronger puts two
-    // surfaces in flat contradiction for a caller holding an inspectSubject
-    // coverage record that reads "reviewed".
-    //
-    // The plan folded below therefore stays empty rather than being recomputed
-    // here. Two instruments already lay a turntable out under different rules,
-    // the viewer page against a fixed 16:9 reference aspect and the MCP tool
-    // against the raster its caller asked for, and both ground their low ring
-    // on the subject's own box, so a viewpoint id is a property of the look
-    // that was taken rather than of the subject. A third recomputation would
-    // measure observations against a denominator nothing was obliged to meet.
-    if (input.target.kind === "subject")
+    // This warning is no longer the standing state of the surface. It says one
+    // thing now: nothing has ever inspected this subject, so there is no
+    // denominator to measure against and coverage is indeterminate rather than
+    // merely unobserved. Once a plan is published the code stops applying, and
+    // an honest not-run, partial or stale is reported through coverage instead
+    // of through a warning that would say the same thing less precisely.
+    if (
+      input.target.kind === "subject" &&
+      (subjectCoverage === null || subjectCoverage.state === "indeterminate")
+    )
       diagnostics.push({
         code: "review-subject-viewpoint-unsupported",
         category: "warning",
@@ -420,7 +420,7 @@ export class AutoMovieProductionReviewService {
         target: reviewTargetKey(input.target),
         path: targetPath(this.project, input.target),
         message:
-          "inspectSubject is the inspection-owned viewpoint plan source: it derives a turntable from a subject's own measured extent, draws every viewpoint in it, and publishes that plan beside one revision-bearing receipt per observation under .automovie/inspections/, refusing outright any subject it cannot frame. What is still missing is the join: this surface does not yet read those receipts, so the plan folded here stays empty, coverage is indeterminate, and this review cannot be completed. Inspect the subject anyway, record what you actually saw, and leave the viewpoint range explicitly unobserved.",
+          "Nothing has inspected this subject yet, so no viewpoint plan is published for it under .automovie/inspections/ and subject-view coverage is indeterminate rather than unobserved. Run inspectSubject on this exact compiled id: it derives a turntable from the subject's own measured extent, draws every viewpoint in it, and publishes that plan beside one revision-bearing receipt per observation, which this surface then reads. A subject it cannot frame is refused under this same code, and for that one the range stays permanently unobservable. Until a plan exists, record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
       });
     const quotable =
       input.target.kind === "subject"
@@ -465,12 +465,9 @@ export class AutoMovieProductionReviewService {
       renditions,
       outcomes,
       subjectReview:
-        subjectUnit === null
+        subjectUnit === null || subjectCoverage === null
           ? null
-          : {
-              unit: subjectUnit,
-              coverage: foldAutoMovieSubjectReviewCoverage(subjectUnit, [], []),
-            },
+          : { unit: subjectUnit, coverage: subjectCoverage },
       diagnostics: safeDiagnostics,
     };
   }
@@ -791,11 +788,20 @@ const validateWorksheet = (
           `A completed asset review must cite every required current view digest. Missing: ${missing.join(", ")}.`,
         );
     }
-    if (input.target.kind === "subject")
+    // The gate is now a measurement rather than a standing refusal. Only a plan
+    // wholly observed at this unit's own revision discharges it, and the
+    // viewpoints that do not are named, because "incomplete" that does not say
+    // which look is missing costs the caller a round to find out.
+    if (
+      input.target.kind === "subject" &&
+      prepared.subjectReview?.coverage.state !== "reviewed"
+    ) {
+      const coverage = prepared.subjectReview?.coverage;
       add(
         "review-subject-coverage-incomplete",
-        `A subject review is complete only when every required inspection viewpoint has been observed at the current revision. inspectSubject publishes those observations, but this surface does not read them yet, so subject-view coverage stays "${prepared.subjectReview?.coverage.state ?? "indeterminate"}" and no structural inspection can discharge it. Submit the worksheet with complete false and record the unobserved range.`,
+        `A subject review is complete only when every viewpoint the inspection planned has been observed at the current compiled revision, and no structural reading discharges that. Subject-view coverage is "${coverage?.state ?? "indeterminate"}", with ${coverage?.observed.length ?? 0} of ${coverage?.planned.length ?? 0} planned viewpoint(s) observed, unobserved [${(coverage?.missing ?? []).join(", ")}], stale [${(coverage?.stale ?? []).join(", ")}]. Run inspectSubject on this compiled subject id, prepare the review again, and submit with complete false meanwhile, recording the unobserved range.`,
       );
+    }
     if (prepared.renditions.length !== 0) {
       const requiredShots = [
         ...new Set(prepared.renditions.map((rendition) => rendition.shot)),
@@ -1304,6 +1310,42 @@ const currentSubjectReviewUnit = (
   } catch {
     return null;
   }
+};
+
+/**
+ * Fold what the inspection published for one subject against its own plan.
+ *
+ * The denominator is read rather than recomputed, and that is the design. A
+ * viewpoint id is a property of the look that was taken, not of the subject:
+ * the viewer page lays its turntable out against a fixed 16:9 reference aspect
+ * while the tool lays one out against the raster its caller asked for, and both
+ * ground the low ring on the subject's own box, so one subject plans different
+ * id sets under the two. A third computation here would measure observations
+ * against a denominator nothing was obliged to meet, which is the axis mixing
+ * subject coverage forbids.
+ *
+ * The published directory is keyed by the compiled subject id, which is exactly
+ * what a resolved unit carries, so a caller who reached the tool through the
+ * viewer's spelling and a reviewer who named the compiled id land on one
+ * record. Freshness needs no code here either: every receipt states the
+ * revision it was drawn at and the fold compares it against this unit's, so a
+ * sweep taken before a recompile reports as stale rather than as observed.
+ */
+const publishedSubjectCoverage = (
+  project: AutoMovieProductionProject,
+  unit: IAutoMovieSubjectReviewUnit,
+): IAutoMovieSubjectReviewCoverage => {
+  const published = readAutoMovieSubjectInspection({
+    projectRoot: project.root,
+    productionId: project.productionId,
+    shot: unit.target.shot,
+    subject: unit.description.id,
+  });
+  return foldAutoMovieSubjectReviewCoverage(
+    unit,
+    published.planned,
+    published.observations,
+  );
 };
 
 const reviewFingerprint = (
