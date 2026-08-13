@@ -2,11 +2,13 @@
 
 Use subject inspection after compilation when the question is "what is this?" or "what changed?" and a render is unnecessary. This is an ordinary `@automovie/engine` query over `IAutoMovieCompiledShotSource`; it is not a shot-sandbox global and does not require a new MCP tool.
 
+Everything named here runs in a project script under `scripts/`, where the whole of `@automovie/engine` is available, and none of it is on the shot-source sandbox surface. That is the point rather than an omission: these read a compiled artifact, and a shot build function is the thing producing one, so a source module asking what it just compiled would be asking about a file that does not exist yet. The names below are therefore written bare, which is this corpus's way of saying a source module may not call them.
+
 ## Choose the artifact and revision
 
 Load the current project state through the ordinary CLI API, select the compiled shot from `generated.shots`, and pair it with `freshness.compileFingerprint`. Never label an answer with an authoring-session revision or infer freshness from a file timestamp.
 
-`describeAutoMovieSubjects({ revision, compiled })` lists directly stored subjects in stable order. `describeAutoMovieSubject({ revision, compiled }, id)` also resolves a placed part or one compact instance on demand. The stable id namespaces are:
+`describeAutoMovieSubjects`, called with `{ revision, compiled }`, lists directly stored subjects in stable order. `describeAutoMovieSubject`, called with the same pair and an id, also resolves a placed part or one compact instance on demand. The stable id namespaces are:
 
 - `prototype:<model>` and `prototype-part:<model>/<part>` for reusable geometry;
 - `element:<node>` and `element-part:<node>/<part>` for scene placements;
@@ -23,13 +25,13 @@ The description does not guess provenance. Join its revision and stable subject 
 
 ## Compare revisions
 
-`diffAutoMovieSubjects(before, after, tolerance?)` returns `added`, `removed`, `moved`, `reshaped`, and a bounded `unchanged` summary. The default absolute tolerance is `1e-6`; a difference exactly at the tolerance is unchanged. Equivalent quaternion signs compare as the same rotation.
+`diffAutoMovieSubjects`, called with a before revision, an after revision and an optional tolerance, returns `added`, `removed`, `moved`, `reshaped`, and a bounded `unchanged` summary. The default absolute tolerance is `1e-6`; a difference exactly at the tolerance is unchanged. Equivalent quaternion signs compare as the same rotation.
 
 Movement covers transform, owner, space, and referenced-prototype placement state. Reshaping covers reusable geometry and compact instance-set population laws. One subject may be in both categories. Prototype changes remain one change record with aggregate element, instance, and instance-set fan-out. Instance-set prototype reassignment reports a changed-slot count instead of thousands of member records.
 
 ## Look inside a building: section planes
 
-A building cannot be judged from outside, because the outside is what hides the inside, and a camera moved into a room shows that room only. Cut the resolved scene instead. `IAutoMovieSectionPlane` declares one half-space to REMOVE as a coplanar `point` and a `normal` pointing at the removed side; `applyAutoMovieSectionPlanes({ renderer, root, planes })` puts it on an already-built scene, and `classifyAutoMovieSectionPlaneBox({ planes, min, max })` answers `kept`, `cut`, or `crossed` for a subject's bound so a written finding names what the cut actually left in view.
+A building cannot be judged from outside, because the outside is what hides the inside, and a camera moved into a room shows that room only. Cut the resolved scene instead. `IAutoMovieSectionPlane` declares one half-space to REMOVE as a coplanar `point` and a `normal` pointing at the removed side; `applyAutoMovieSectionPlanes`, called with the renderer, the scene root and the planes, puts it on an already-built scene, and `classifyAutoMovieSectionPlaneBox`, called with the planes and a bound, answers `kept`, `cut`, or `crossed` for a subject's bound so a written finding names what the cut actually left in view.
 
 Derive the plane from geometry you already measured rather than from a guessed offset: a floor level plus `{ x: 0, y: 1, z: 0 }` reads that storey as a plan; a wall face plus its outward normal opens the elevation behind it. Several planes intersect, so each one removes more.
 
