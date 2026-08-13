@@ -391,21 +391,34 @@ const resolveSpatial = (
  * the readability test and the framing that produced the shot share one
  * subject.
  *
- * `performShot` builds each `IAutoMovieFramedSubject` this way: a node is
- * measured from the geometry its model draws, its rig's joint span stands in
- * when no model was supplied, and a rig too small to measure takes
- * `DEFAULT_SUBJECT_HEIGHT`. Reading it back the same way is what makes the
- * check honest. Measuring here while the solve assumed a default would frame
- * one subject and grade another.
+ * `performShot`'s `nodeVerticalExtent` builds each `IAutoMovieFramedSubject`
+ * this way: a node is measured from the geometry its model draws, its rig's
+ * joint span stands in when no model was supplied, and a rig too small to
+ * measure takes `DEFAULT_SUBJECT_HEIGHT`. Reading it back the same way is what
+ * makes the check honest. Measuring here while the solve assumed a default
+ * would frame one subject and grade another.
+ *
+ * **The floor is part of that reading, not a detail of it.** A model's rest
+ * extent is measured in MODEL space, so `min` states where the geometry starts
+ * relative to the node's own origin, and it is only zero for a figure that
+ * stands on its origin. The solve raises the framed base by it — a canopy whose
+ * deck is authored 8 m above its element origin is framed at 8 m — so a grade
+ * that placed the same span at the origin would test a segment 8 m below
+ * everything the camera was aimed at. That is not a stricter check but an
+ * unsatisfiable one: on the fixture `test_film_camera_node_subject_floor` pins,
+ * `full`, `medium` and `close` all put the deck squarely in frame while the
+ * origin-based segment fell outside it, and no camera the author could write
+ * would have passed, because moving down to catch the segment moves the deck
+ * out.
  *
  * A formation does not come through here. Its extent is its own transformed
  * bounds ({@link formationSubjectBox}), which is a box rather than a height, and
  * reducing it to one would put the crowd back at its centroid.
  */
-const framedSubjectHeight = (
+const framedSubjectExtent = (
   props: Parameters<typeof realizeShotContract>[0],
   subject: string,
-): number => {
+): { min: number; max: number } => {
   const node = props.compiled.scene.nodes.find(
     (candidate) => candidate.id === subject,
   );
@@ -423,7 +436,13 @@ const framedSubjectHeight = (
         ? 0
         : computeRestHeight(rig)
       : extent.max - extent.min;
-  return measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT;
+  // A rig span and the stand-in are both measured from the placement itself:
+  // neither states a floor, so neither may invent one.
+  const floor = extent === null ? 0 : extent.min;
+  return {
+    min: floor,
+    max: floor + (measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT),
+  };
 };
 
 /**
@@ -431,12 +450,27 @@ const framedSubjectHeight = (
  * already resolved to.
  *
  * The two kinds of subject are measured the way the camera solve measured them.
- * A node keeps the segment it has always been graded on: its resolved root and
- * its measured height, a box with no horizontal span, which the box test below
- * decides exactly as the segment test did. A formation is its whole transformed
- * footprint, widened by a member's radius and raised by a member's height, so a
- * unit reads when the frame holds any part of it — its flank, its front rank,
- * or one wing of a line the frame cannot possibly contain whole.
+ * A node keeps the segment it has always been graded on: its resolved root,
+ * raised by the drawn floor and spanning the drawn height
+ * ({@link framedSubjectExtent}), a box with no horizontal span, which the box
+ * test below decides exactly as the segment test did. A formation is its whole
+ * transformed footprint, widened by a member's radius and raised by a member's
+ * height, so a unit reads when the frame holds any part of it — its flank, its
+ * front rank, or one wing of a line the frame cannot possibly contain whole.
+ *
+ * **A node's zero horizontal span is what the solve assumed, not what the
+ * subject is**, and the two are only the same thing for a figure. `performShot`
+ * frames a node subject from its height alone and states no `radius`, so a
+ * 60 m facade lowered as one set piece is framed, and therefore graded, as a
+ * pole standing at its element origin — 30 m from the mass's own centre when
+ * the facade is authored to run outward from that origin. Grading it on its
+ * true box while the solve still aims at the origin would refuse shots no
+ * authored camera could then satisfy, so the two stay deliberately in step and
+ * the gap is the solve's to close. Until it does, an author framing a building
+ * queries the real extent (`builtEnvironmentElementBounds`,
+ * `builtInstanceSetPlacementBounds`), stages the camera from it, and keeps the
+ * required element's origin inside the frame it authored, because the origin is
+ * the point this check tests.
  */
 const framedSubjectBox = (
   props: Parameters<typeof realizeShotContract>[0],
@@ -450,10 +484,7 @@ const framedSubjectBox = (
       )
     : undefined;
   return formation === undefined
-    ? pointSubjectBox(point, {
-        min: 0,
-        max: framedSubjectHeight(props, subject),
-      })
+    ? pointSubjectBox(point, framedSubjectExtent(props, subject))
     : formationSubjectBox({
         formation,
         motions: props.compiled.formationMotions ?? [],
