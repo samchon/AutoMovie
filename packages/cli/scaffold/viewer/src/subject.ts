@@ -418,6 +418,8 @@ const openSubjectPage = async (key: string): Promise<void> => {
   let viewpoint = 0;
   let distanceScale = 1;
   let sectioned = false;
+  /** Whether the scene currently carries a cut, so an uncut one costs nothing. */
+  let cutting = false;
   let viewWidth = 0;
   let viewHeight = 0;
   let pose = stage();
@@ -435,11 +437,19 @@ const openSubjectPage = async (key: string): Promise<void> => {
       },
     );
     applyAutoMovieViewerSubjectPose(eye, staged);
-    applyAutoMovieSectionPlanes({
-      renderer: mounted.renderer,
-      root: runtime.scene,
-      planes: sectioned ? [sectionAt(staged, extent.bounds)] : [],
-    });
+    // A cut rides the eye, so it is rewritten whenever one is in force, and
+    // released exactly once when it stops being. Skipping the uncut case
+    // matters: the call walks every material in the scene, and a shot of a few
+    // thousand nodes would pay that walk on every wheel notch for a section
+    // nobody asked for.
+    if (sectioned || cutting) {
+      applyAutoMovieSectionPlanes({
+        renderer: mounted.renderer,
+        root: runtime.scene,
+        planes: sectioned ? [sectionAt(staged, extent.bounds)] : [],
+      });
+      cutting = sectioned;
+    }
     return staged;
   }
 
@@ -501,6 +511,14 @@ const openSubjectPage = async (key: string): Promise<void> => {
         "what",
       ),
     );
+    // One spelling is the viewer's and one is the compiled artifact's, and they
+    // differ only where a part could have been either table's. Printing the
+    // compiled id when it differs is what keeps this page and the subject tools
+    // that take compiled ids naming the same thing.
+    if (
+      description.id !== autoMovieViewerSubjectKey({ ...asked, revision: null })
+    )
+      panel.append(line(`compiled id ${description.id}`, "omitted"));
     if (asked.revision !== null && asked.revision !== revision)
       panel.append(
         line(
