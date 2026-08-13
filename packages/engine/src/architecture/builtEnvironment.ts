@@ -3,10 +3,12 @@ import {
   IAutoMovieBuiltConnector,
   IAutoMovieBuiltEnvironment,
   IAutoMovieBuiltOpening,
+  IAutoMovieBuiltPopulation,
   IAutoMovieBuiltSpace,
   IAutoMovieConnectorCarriage,
   IAutoMovieConnectorSection,
   IAutoMovieConnectorState,
+  IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
   IAutoMovieMovablePanel,
   IAutoMovieOpeningProfile,
@@ -112,6 +114,10 @@ const FULL_TURN_EPSILON = 1e-6;
  * @evidence specifications/building-envelope/phases-deliverables-and-validation.md#building-envelope-validation-finding-output The validator supplies stable paths, severity, observed values, and expected conditions for its geometry subset without claiming the specification's full finding schema.
  * @evidence requirements/building-exterior/validation-and-interior-consistency.md#building-exterior-interior-shared-validation `validateBuiltEnvironment` jointly validates the shared boundary, opening, coordinate hierarchy, containment, and ownership facts held in one built environment.
  * @evidence specifications/building-envelope/linked-interior-coordination.md#building-envelope-linked-interior-matrix-rules The validator implements the boundary, opening, coordinate, and containment rows of the coordination matrix without claiming area, storey, or stale-propagation coverage.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `validateBuiltEnvironment` requires each compact population to name one declared logical space, keeping spatial membership explicit and separate from logical grouping.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `validateBuiltEnvironment` refuses unresolved or duplicated compact population ownership and placement laws that a space query could not inspect.
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds `validateBuiltEnvironment` requires a finite, ordered prototype-local bound before any population world bound can be derived.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-bounds-inputs `validateBuiltEnvironment` checks the declared model-local extent and every placement scalar consumed by the deterministic population bounds fold.
  */
 export const validateBuiltEnvironment = (props: {
   environment: IAutoMovieBuiltEnvironment;
@@ -318,6 +324,33 @@ export const validateBuiltEnvironment = (props: {
     "building element",
     collector,
   );
+
+  const populationIds = new Set<string>();
+  (environment.populations ?? []).forEach((population, index) => {
+    const path = `${root}.populations[${index}]`;
+    nonEmpty(population.set.id, `${path}.set.id`, "population id", collector);
+    if (populationIds.has(population.set.id))
+      collector.push(
+        "type",
+        `${path}.set.id`,
+        `population id "${population.set.id}" is duplicated`,
+        population.set.id,
+      );
+    populationIds.add(population.set.id);
+    if (!spaceIds.has(population.space))
+      collector.push(
+        "type",
+        `${path}.space`,
+        `population space "${population.space}" does not resolve`,
+        population.space,
+      );
+    validatePopulationPrototypeBounds(
+      population.prototypeBounds,
+      `${path}.prototypeBounds`,
+      collector,
+    );
+    validatePopulationSet(population.set, `${path}.set`, collector);
+  });
 
   const buildingIds = collectIds(
     environment.buildings,
@@ -629,12 +662,20 @@ export const validateBuiltEnvironment = (props: {
  * A record that declares no operation lowers byte-for-byte as it always did,
  * because the joint displacement it would contribute is the identity.
  *
+ * A declared population leaves as the compact instance set it already is, never
+ * expanded into set pieces. That is what makes the building the one owner of its
+ * own repeated parts: the set the production world stages and the set a space
+ * query measures are the same record, so no second copy of a placement law can
+ * drift away from the first.
+ *
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `lowerBuiltEnvironment` lowers one building record to ordinary subject contributions. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `lowerBuiltEnvironment` performs built environment lowering when the engine resolves ownership, topology, and geometry inside one building-interior boundary.
  * @evidence requirements/building-exterior/coordinates-and-shared-boundaries.md#building-coordinate-transform-chain `lowerBuiltEnvironment` composes every building root and child element's declared local translation, rotation, and scale in parent-to-child order into deterministic world transforms.
  * @evidence specifications/building-envelope/identity-scope-and-coordinates.md#building-envelope-coordinate-input-output The lowering implements the building-root and child-transform composition subset without claiming CRS, control-point residual, or source-frame receipts.
  * @evidence requirements/building-exterior/facades-and-walls.md#building-facade-placement-basis `lowerBuiltEnvironment` preserves each facade element's authored parent-local transform and resolves it through the building coordinate root rather than applying a view-dependent offset.
  * @evidence specifications/building-envelope/facade-roof-and-openings.md#building-envelope-facade-placement-input The lowering contributes deterministic local-to-world facade placement while face-region selection, corners, and panel rules remain authored facts.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `lowerBuiltEnvironment` contributes each space-owned compact population as the same instance-set record instead of expanding it or duplicating its placement law.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `lowerBuiltEnvironment` preserves a compressed population's stable set identity, count, seed, and selectable-member regeneration contract in the production world.
  */
 export const lowerBuiltEnvironment = (
   environment: IAutoMovieBuiltEnvironment,
@@ -648,6 +689,7 @@ export const lowerBuiltEnvironment = (
   }
 
   const matrices = worldMatricesOf(environment, operationDeltas(environment));
+  const populations = environment.populations ?? [];
   const spaces: IAutoMovieSpace[] = environment.spaces.map((space) => {
     const surfaces = environment.surfaces
       .filter((entry) => entry.space === space.id)
@@ -676,6 +718,14 @@ export const lowerBuiltEnvironment = (
       }),
     spaces,
     builtEnvironments: [environment],
+    // A population is contributed as the compact set it already is, never
+    // expanded into set pieces: the whole point of declaring 2,392 slates as
+    // one record is that nothing downstream has to hold 2,392 of anything. The
+    // key is omitted rather than emitted empty so a record without populations
+    // merges byte-for-byte as it did before the field existed.
+    ...(populations.length === 0
+      ? {}
+      : { instanceSets: populations.map((population) => population.set) }),
   };
 };
 
@@ -788,6 +838,12 @@ export const builtSpaceIsConvex = (space: IAutoMovieBuiltSpace): boolean =>
  * This engine has no curved boundary primitive, so a curved region cannot be
  * stated exactly by any spelling here. That limit is reported rather than
  * smoothed over: a caller that wants an exact dome learns it is holding flats.
+ *
+ * What fills the region never enters this answer. The question is what a space
+ * says its own volume is, so an element, a population, or an empty room all
+ * leave it alone; the blindness to populations that
+ * {@link builtEnvironmentSpaceContentBounds} carried was a blindness about
+ * contents, and this fold never looked at contents to begin with.
  *
  * It folds because {@link builtEnvironmentContainsPoint} folds: the caller who
  * asked whether a prop stands in a storey, or whether a fluid lattice stays in
@@ -1018,15 +1074,31 @@ export const builtEnvironmentSpaceSurfaces = (
 };
 
 /**
- * Name the staged set nodes standing in a logical space and its descendants.
+ * Name what is staged in a logical space and its descendants.
  *
  * This is the join that keeps the visible model and the semantic partition from
- * drifting apart: the ids returned here are exactly the `node` ids
- * {@link lowerBuiltEnvironment} emits, so a room can be asked what is visibly
- * inside it without a second traversal that could answer differently.
+ * drifting apart: a room can be asked what is visibly inside it without a
+ * second traversal that could answer differently.
  *
- * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceNodes` names the staged set nodes standing in a logical space and its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * Two spellings come back, in this order, because two things are staged. An
+ * element contributes exactly the `node` id {@link lowerBuiltEnvironment} emits
+ * for it, `<environment>/<element>`. A population contributes
+ * `instance-set:<set>`, the one owner id the render inventory and the semantic
+ * mask already address a whole population by, because lowering emits it as one
+ * compact set and not as `count` nodes. Naming the population rather than its
+ * members is the difference between an answer and an unbounded expansion: one
+ * authored field of roof slate is 2,392 members, and a query a reviewer calls
+ * in a loop may not hand back 2,392 strings to say "there is slate here".
+ * {@link builtEnvironmentSpacePopulations} hands back the sets themselves for a
+ * caller that wants the placement law. Regeneration names a procedural member
+ * `instance:<set>:slot:<six-digit-index>` and an explicit member
+ * `instance:<set>:<transform-id>`, exactly as the production materializer does.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceNodes` names the staged set nodes and populations standing in a logical space and its descendants. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceNodes` collects staged node ids from a logical space and every child space within its building boundary.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `builtEnvironmentSpaceNodes` answers for a compact population under the space that owns it, so compression does not remove the population from the question "what stands here".
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-compression-individuality `builtEnvironmentSpaceNodes` keeps a compressed population addressable by one stable owner id without expanding or omitting its members.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `builtEnvironmentSpaceNodes` addresses a compressed population by its stable owner id rather than dropping it from the staged listing.
  */
 export const builtEnvironmentSpaceNodes = (
   environment: IAutoMovieBuiltEnvironment,
@@ -1034,14 +1106,50 @@ export const builtEnvironmentSpaceNodes = (
 ): string[] => {
   requireSpace(environment, spaceId);
   const included = descendantSpaces(environment.spaces, spaceId);
-  return environment.elements
-    .filter(
-      (element) =>
-        element.model !== null &&
-        element.space !== null &&
-        included.has(element.space),
-    )
-    .map((element) => `${environment.id}/${element.id}`);
+  return [
+    ...environment.elements
+      .filter(
+        (element) =>
+          element.model !== null &&
+          element.space !== null &&
+          included.has(element.space),
+      )
+      .map((element) => `${environment.id}/${element.id}`),
+    ...(environment.populations ?? [])
+      .filter((population) => included.has(population.space))
+      .map((population) => `instance-set:${population.set.id}`),
+  ];
+};
+
+/**
+ * Report the compact populations standing in a logical space and its
+ * descendants.
+ *
+ * {@link builtEnvironmentSpaceNodes} names them; this hands back the records, so
+ * a caller that needs a member's own transform regenerates it from the same set
+ * the renderer draws instead of re-deriving a placement law from the geometry.
+ * Selection is by declared membership, exactly as an element's is: a population
+ * states the one space it occupies and every ancestor of that space folds it in,
+ * so nothing here tests a member's position against a cell. That is deliberate.
+ * A floor flag rests on the floor plane and an ashlar block sits inside the
+ * wall, both of them on or across the boundary a derived test would have to
+ * judge them against, so deriving membership would answer "the room is empty" in
+ * exactly the cases the room is most full.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `builtEnvironmentSpacePopulations` answers which compact populations a space owns, which is the space membership this requirement holds apart from a member's logical groups.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-compression-individuality `builtEnvironmentSpacePopulations` exposes the compact source record needed to regenerate and inspect individual members without storing a member-sized answer.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `builtEnvironmentSpacePopulations` keeps a compressed population selectable and inspectable through the space that owns it.
+ * @author Samchon
+ */
+export const builtEnvironmentSpacePopulations = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): IAutoMovieBuiltPopulation[] => {
+  requireSpace(environment, spaceId);
+  const included = descendantSpaces(environment.spaces, spaceId);
+  return (environment.populations ?? []).filter((population) =>
+    included.has(population.space),
+  );
 };
 
 /**
@@ -1056,13 +1164,28 @@ export const builtEnvironmentSpaceNodes = (
  * answers how far the room reaches; this answers where its content is, which is
  * the question a reviewer placing an eye actually asks.
  *
- * The elements measured are exactly {@link builtEnvironmentSpaceNodes}'s: the
- * staged set pieces of this space and every space below it. Each stands where
- * the environment's current operating state puts it, which is where
- * {@link lowerBuiltEnvironment} stages it, so a leaf authored open widens the
- * box by the leaf where it actually rests. Geometry is read through
- * {@link tessellate} for a primitive and from the stated mesh otherwise, the
- * same vertices the renderer draws, so the box cannot drift from the picture.
+ * What is measured is exactly what {@link builtEnvironmentSpaceNodes} names: the
+ * staged set pieces and the compact populations of this space and every space
+ * below it. Each element stands where the environment's current operating state
+ * puts it, which is where {@link lowerBuiltEnvironment} stages it, so a leaf
+ * authored open widens the box by the leaf where it actually rests. Geometry is
+ * read through {@link tessellate} for a primitive and from the stated mesh
+ * otherwise, the same vertices the renderer draws, so the box cannot drift from
+ * the picture.
+ *
+ * **A population widens this box, and that is the intended change rather than a
+ * regression.** Before populations existed the answer counted elements alone,
+ * and in the medieval-residence experiment that meant a room whose slate, ashlar
+ * and flagging were four instance sets reported the box of whatever few elements
+ * were left over: not `null`, which would have been noticed, but a plausibly
+ * small box a review camera then aimed into a corner. A caller that stored the
+ * old answer is holding a narrower box than the room's contents, so an eye
+ * derived from it frames less than it did. A population contributes through
+ * {@link builtInstanceSetPlacementBounds}, which measures the region its
+ * declared placement law spans after folding the population's authored
+ * prototype-local box through every scale and rotation that law permits. The
+ * building cannot inspect the recipe's mesh, so the local box is the explicit
+ * geometry fact that keeps a one-member table from collapsing to its origin.
  *
  * An element citing a runtime model reference, whose bytes this record never
  * holds, contributes its own world origin rather than nothing, exactly as one
@@ -1081,6 +1204,11 @@ export const builtEnvironmentSpaceNodes = (
  *
  * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceContentBounds` reports the world box the placed contents of a logical space and its descendants fill. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceContentBounds` resolves the element hierarchy, ownership, and geometry of one logical-space subtree into its world extent inside one building-interior boundary.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `builtEnvironmentSpaceContentBounds` includes every compact population owned by the queried space subtree instead of losing it behind instance compression.
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-compression-individuality `builtEnvironmentSpaceContentBounds` measures a compressed population from its stable placement law rather than treating omitted expansion as empty content.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `builtEnvironmentSpaceContentBounds` folds the compact population record itself, so a spatial query remains proportional to populations rather than procedural members.
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds `builtEnvironmentSpaceContentBounds` keeps the authored prototype-local extent separate from the world-space content box it derives.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-bounds-inputs `builtEnvironmentSpaceContentBounds` derives the current world extent from the population's declared local bound and placement law without persisting a second placement box.
  * @author Samchon
  */
 export const builtEnvironmentSpaceContentBounds = (
@@ -1106,7 +1234,259 @@ export const builtEnvironmentSpaceContentBounds = (
         matrices.get(element.id)!,
       ),
     );
+  for (const population of environment.populations ?? [])
+    if (included.has(population.space)) {
+      const bounds = builtInstanceSetPlacementBounds(
+        population.set,
+        population.prototypeBounds,
+      );
+      points.push(bounds.min, bounds.max);
+    }
   return points.length === 0 ? null : boundsOf(points);
+};
+
+/**
+ * The world box one compact population and its prototype geometry occupy.
+ *
+ * The placement law and the authored local box are the two inputs. A grid and a
+ * lattice contribute only their occupied hull corners, including a short final
+ * row, so thousands of repeated members cost the same bounded fold as four. A
+ * scatter contributes its declared disk rather than copying the seeded
+ * materializer. The local box is then scaled and rotated about every slot.
+ * Fixed rotations stay exact. A non-constant seeded rotation range contributes
+ * the smallest origin-centred sphere enclosing every scaled local corner; that
+ * conservative result cannot crop a member, and records that it is an authored
+ * range rather than pretending to know which unexpanded slots sampled which
+ * angles. Explicit transforms are already stored per member, so their exact
+ * rotations and scales are folded directly and cost only the data the author
+ * chose to store. Visibility variation never shrinks the result: this is the
+ * declared population's occupied placement envelope, not a seed-expanded list
+ * of the members visible in one render sample.
+ *
+ * `along-route` is refused: its slots follow a production-world route, and a
+ * building record carries no field that can reach one. `validateBuiltEnvironment`
+ * refuses such a population outright, so this throws only for a caller handing
+ * over a world set directly.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group `builtInstanceSetPlacementBounds` measures where a compact population stands so the space owning it can answer for it.
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds `builtInstanceSetPlacementBounds` keeps the authored prototype-local box distinct from the world-space result derived after slot placement, rotation, and scale.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality `builtInstanceSetPlacementBounds` derives the population's extent from the stored count, seed, and layout the specification allows compression to keep.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-bounds-inputs `builtInstanceSetPlacementBounds` consumes an explicit model-local bound and returns the corresponding deterministic world-space placement bound.
+ * @author Samchon
+ */
+export const builtInstanceSetPlacementBounds = (
+  set: IAutoMovieInstanceSetDesign,
+  prototypeBounds: IAutoMovieBuiltPopulation["prototypeBounds"],
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
+  const layout = set.layout;
+  if (layout.kind === "along-route")
+    throw new Error(
+      `instance set "${set.id}" is placed along world route "${layout.route}", which a built environment carries no field to resolve`,
+    );
+  const collector = new ViolationCollector();
+  validatePopulationPrototypeBounds(
+    prototypeBounds,
+    "$input.prototypeBounds",
+    collector,
+  );
+  validatePopulationSet(set, "$input.set", collector);
+  if (collector.items.length !== 0) {
+    const first = collector.items[0]!;
+    throw new RangeError(
+      `instance set "${set.id}" cannot be bounded: ${first.path} ${first.expected}`,
+    );
+  }
+  if (layout.kind === "explicit") {
+    return boundsOf(
+      layout.transforms.slice(0, set.count).flatMap((transform) => {
+        const position = placeInstancePoint(set, transform.translation);
+        const rotation = Quaternion.normalize(
+          Quaternion.multiply(
+            Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, set.facingDeg),
+            transform.rotation,
+          ),
+        );
+        return prototypeBoxCorners(prototypeBounds).map((corner) => {
+          const offset = Quaternion.rotateVector(rotation, {
+            x: corner.x * transform.scale.x,
+            y: corner.y * transform.scale.y,
+            z: corner.z * transform.scale.z,
+          });
+          return Vector3.add(position, offset);
+        });
+      }),
+    );
+  }
+  const placement =
+    layout.kind === "scatter"
+      ? {
+          min: {
+            x: set.anchor.x - layout.radius,
+            y: set.anchor.y,
+            z: set.anchor.z - layout.radius,
+          },
+          max: {
+            x: set.anchor.x + layout.radius,
+            y: set.anchor.y,
+            z: set.anchor.z + layout.radius,
+          },
+        }
+      : boundsOf(
+          instanceSetExtremeSlots(set, layout).map((point) =>
+            placeInstancePoint(set, point),
+          ),
+        );
+  const offset = populationPrototypeOffsetBounds(set, prototypeBounds);
+  return {
+    min: Vector3.add(placement.min, offset.min),
+    max: Vector3.add(placement.max, offset.max),
+  };
+};
+
+/** Place one layout-local point under the set's anchor and base heading. */
+const placeInstancePoint = (
+  set: IAutoMovieInstanceSetDesign,
+  point: IAutoMovieVector3,
+): IAutoMovieVector3 => {
+  const radians = (set.facingDeg * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  return {
+    x: set.anchor.x + point.x * cosine + point.z * sine,
+    y: set.anchor.y + point.y,
+    z: set.anchor.z - point.x * sine + point.z * cosine,
+  };
+};
+
+/** The eight corners of one model-local box, duplicates included when flat. */
+const prototypeBoxCorners = (
+  bounds: IAutoMovieBuiltPopulation["prototypeBounds"],
+): IAutoMovieVector3[] =>
+  [bounds.min.x, bounds.max.x].flatMap((x) =>
+    [bounds.min.y, bounds.max.y].flatMap((y) =>
+      [bounds.min.z, bounds.max.z].map((z) => ({ x, y, z })),
+    ),
+  );
+
+/** The prototype offset shared by every compact, non-explicit layout slot. */
+const populationPrototypeOffsetBounds = (
+  set: IAutoMovieInstanceSetDesign,
+  bounds: IAutoMovieBuiltPopulation["prototypeBounds"],
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
+  const scaleRange = set.variation.scale3;
+  const scales =
+    scaleRange === undefined
+      ? [set.variation.scale.min, set.variation.scale.max].map((scale) => ({
+          x: scale,
+          y: scale,
+          z: scale,
+        }))
+      : [scaleRange.min.x, scaleRange.max.x].flatMap((x) =>
+          [scaleRange.min.y, scaleRange.max.y].flatMap((y) =>
+            [scaleRange.min.z, scaleRange.max.z].map((z) => ({ x, y, z })),
+          ),
+        );
+  const rotationRange = set.variation.rotationDeg;
+  const rotationVaries =
+    rotationRange !== undefined &&
+    (rotationRange.x.min !== rotationRange.x.max ||
+      rotationRange.y.min !== rotationRange.y.max ||
+      rotationRange.z.min !== rotationRange.z.max);
+  if (rotationVaries) {
+    let radius = 0;
+    for (const corner of prototypeBoxCorners(bounds))
+      for (const scale of scales)
+        radius = Math.max(
+          radius,
+          Math.hypot(
+            corner.x * scale.x,
+            corner.y * scale.y,
+            corner.z * scale.z,
+          ),
+        );
+    return {
+      min: { x: -radius, y: -radius, z: -radius },
+      max: { x: radius, y: radius, z: radius },
+    };
+  }
+  const variationRotation =
+    rotationRange === undefined
+      ? Quaternion.identity()
+      : Quaternion.fromEuler({
+          x: rotationRange.x.min,
+          y: rotationRange.y.min,
+          z: rotationRange.z.min,
+          order: "XYZ",
+        });
+  const rotation = Quaternion.normalize(
+    Quaternion.multiply(
+      Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, set.facingDeg),
+      variationRotation,
+    ),
+  );
+  return boundsOf(
+    prototypeBoxCorners(bounds).flatMap((corner) =>
+      scales.map((scale) =>
+        Quaternion.rotateVector(rotation, {
+          x: corner.x * scale.x,
+          y: corner.y * scale.y,
+          z: corner.z * scale.z,
+        }),
+      ),
+    ),
+  );
+};
+
+/**
+ * The set-local points that can carry a deterministic layout's extremes.
+ *
+ * A rotated point set's world box is the box of its convex hull's corners, so a
+ * lattice needs its corners rather than its slots. The last row of a grid may be
+ * short, which is why the corner list is not simply four: the hull then has the
+ * full rows' far corner and the short row's own end, and taking the full
+ * rectangle instead would report a column of slate nobody laid.
+ */
+const instanceSetExtremeSlots = (
+  set: IAutoMovieInstanceSetDesign,
+  layout: Exclude<
+    IAutoMovieInstanceSetDesign["layout"],
+    { kind: "along-route" } | { kind: "explicit" } | { kind: "scatter" }
+  >,
+): IAutoMovieVector3[] => {
+  const perLayer = layout.rows * layout.columns;
+  const layers =
+    layout.kind === "lattice" ? Math.ceil(set.count / perLayer) : 1;
+  const withinLayer =
+    layers > 1 ? perLayer : Math.min(set.count, layout.rows * layout.columns);
+  const top = layout.kind === "lattice" ? (layers - 1) * layout.spacing.y : 0;
+  return gridExtremeCells(withinLayer, layout.columns).flatMap((cell) =>
+    (top === 0 ? [0] : [0, top]).map((y) => ({
+      x: (cell.column - (layout.columns - 1) / 2) * layout.spacing.x,
+      y,
+      z: cell.row * layout.spacing.z,
+    })),
+  );
+};
+
+/** The hull corners of `count` slots laid row-major into `columns` columns. */
+const gridExtremeCells = (
+  count: number,
+  columns: number,
+): Array<{ column: number; row: number }> => {
+  const rows = Math.ceil(count / columns);
+  const last = count - (rows - 1) * columns;
+  if (rows === 1)
+    return [
+      { column: 0, row: 0 },
+      { column: last - 1, row: 0 },
+    ];
+  return [
+    { column: 0, row: 0 },
+    { column: columns - 1, row: 0 },
+    { column: 0, row: rows - 1 },
+    { column: last - 1, row: rows - 1 },
+    ...(last === columns ? [] : [{ column: columns - 1, row: rows - 2 }]),
+  ];
 };
 
 /**
@@ -1151,6 +1531,64 @@ const placedElementPoints = (
   return points.length === 0
     ? [applyMatrix(world, { x: 0, y: 0, z: 0 })]
     : points;
+};
+
+/**
+ * The world box one named element's placed geometry fills.
+ *
+ * **This is the engine's one computation of an element's world extent, and
+ * every layer above asks it rather than repeating it.** Placement validation
+ * resolves an element locator through here, subject description answers "where
+ * is this element" through here, and the space fold above measures its elements
+ * through the same private placement and tessellation this calls. A fourth
+ * spelling of the same box is the defect this sentence exists to prevent: the
+ * medieval-residence campaign built its own element-bounds probe by hand and
+ * used it more than the viewer, which is exactly how a second answer to one
+ * question gets written.
+ *
+ * The element stands where the environment's current operating state puts it,
+ * so a leaf authored open is measured where it rests. Geometry is read through
+ * {@link tessellate} for a primitive and from the stated mesh otherwise, the
+ * same vertices the renderer draws.
+ *
+ * `null` has two ordinary readings, and neither is a fault. An id this record
+ * never declared resolves to nothing, because the caller is usually resolving a
+ * locator that project source authored and an unresolved locator is a finding
+ * for that caller to report rather than an engine refusal — which is why this
+ * answers `null` where the space queries in this file throw. A transform-only
+ * element draws nothing, so it has no geometry box either, and it is left out
+ * here for exactly the reason {@link builtEnvironmentSpaceContentBounds} leaves
+ * it out of a room's contents: a grouping node standing eight metres up is not
+ * something a camera can be aimed at.
+ *
+ * An element citing a runtime model reference, whose bytes this record never
+ * holds, contributes its own world origin rather than nothing, so the answer is
+ * a degenerate box at the place the record does state.
+ *
+ * One call stages the whole work's transform hierarchy, because an element's
+ * world matrix is its ancestors' product. A caller resolving many locators over
+ * one environment pays that once per locator, which is worth knowing before
+ * putting this inside a loop over thousands of placements.
+ *
+ * @evidence requirements/asset-authoring/identity-and-instances.md#asset-prototype-instance `builtEnvironmentElementBounds` answers for one placed occurrence by its own stable identity, keeping a single placement's extent distinct from the prototype it reuses.
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentElementBounds` reports the world box one declared building element's placed geometry fills. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-prototype-instance `builtEnvironmentElementBounds` reports the placement fact recorded against one instance identity rather than a fact about its shared prototype.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentElementBounds` resolves one element's hierarchy, operating state, and geometry into its world extent inside one building-interior boundary.
+ * @author Samchon
+ */
+export const builtEnvironmentElementBounds = (
+  environment: IAutoMovieBuiltEnvironment,
+  elementId: string,
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } | null => {
+  const element = environment.elements.find(
+    (candidate) => candidate.id === elementId,
+  );
+  if (element === undefined || element.model === null) return null;
+  const matrices = worldMatricesOf(environment, operationDeltas(environment));
+  const model = environment.models.find(
+    (candidate) => candidate.id === element.model,
+  );
+  return boundsOf(placedElementPoints(model, matrices.get(element.id)!));
 };
 
 /**
@@ -2254,6 +2692,264 @@ const descendantSpaces = (
       }
   }
   return included;
+};
+
+/**
+ * Check exactly what a building owns about a population it stages.
+ *
+ * The whole instance-set design is the production compiler's to validate, and
+ * it validates it again when the lowered set reaches the world. What is checked
+ * here is the subset this record answers for on its own: the slot count and the
+ * placement law {@link builtInstanceSetPlacementBounds} has to be total over,
+ * because a space query that cannot bound a population it was handed would have
+ * to return either a lie or nothing at all.
+ */
+const validatePopulationPrototypeBounds = (
+  bounds: IAutoMovieBuiltPopulation["prototypeBounds"],
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  finiteVector(
+    bounds.min,
+    `${path}.min`,
+    "population prototype minimum",
+    collector,
+  );
+  finiteVector(
+    bounds.max,
+    `${path}.max`,
+    "population prototype maximum",
+    collector,
+  );
+  for (const axis of ["x", "y", "z"] as const)
+    if (
+      Number.isFinite(bounds.min[axis]) &&
+      Number.isFinite(bounds.max[axis]) &&
+      bounds.min[axis] > bounds.max[axis]
+    )
+      collector.push(
+        "range",
+        `${path}.${axis}`,
+        `population prototype ${axis} bounds must be ordered, but ${bounds.min[axis]} is above ${bounds.max[axis]}`,
+        { min: bounds.min[axis], max: bounds.max[axis] },
+      );
+};
+
+const validatePopulationSet = (
+  set: IAutoMovieInstanceSetDesign,
+  path: string,
+  collector: ViolationCollector,
+): void => {
+  positiveInteger(
+    set.count,
+    `${path}.count`,
+    "population slot count",
+    collector,
+  );
+  finiteVector(set.anchor, `${path}.anchor`, "population anchor", collector);
+  if (!Number.isFinite(set.facingDeg))
+    collector.push(
+      "range",
+      `${path}.facingDeg`,
+      `population heading must be finite, but was ${set.facingDeg}`,
+      set.facingDeg,
+    );
+  positive(
+    set.variation.scale.min,
+    `${path}.variation.scale.min`,
+    "population minimum scale",
+    collector,
+  );
+  positive(
+    set.variation.scale.max,
+    `${path}.variation.scale.max`,
+    "population maximum scale",
+    collector,
+  );
+  if (
+    Number.isFinite(set.variation.scale.min) &&
+    Number.isFinite(set.variation.scale.max) &&
+    set.variation.scale.min > set.variation.scale.max
+  )
+    collector.push(
+      "range",
+      `${path}.variation.scale`,
+      `population scale range must be ordered, but ${set.variation.scale.min} is above ${set.variation.scale.max}`,
+      set.variation.scale,
+    );
+  if (set.variation.scale3 !== undefined)
+    for (const axis of ["x", "y", "z"] as const) {
+      const range = {
+        min: set.variation.scale3.min[axis],
+        max: set.variation.scale3.max[axis],
+      };
+      positive(
+        range.min,
+        `${path}.variation.scale3.min.${axis}`,
+        `population minimum ${axis} scale`,
+        collector,
+      );
+      positive(
+        range.max,
+        `${path}.variation.scale3.max.${axis}`,
+        `population maximum ${axis} scale`,
+        collector,
+      );
+      if (
+        Number.isFinite(range.min) &&
+        Number.isFinite(range.max) &&
+        range.min > range.max
+      )
+        collector.push(
+          "range",
+          `${path}.variation.scale3.${axis}`,
+          `population ${axis} scale range must be ordered, but ${range.min} is above ${range.max}`,
+          range,
+        );
+    }
+  if (set.variation.rotationDeg !== undefined)
+    for (const axis of ["x", "y", "z"] as const) {
+      const range = set.variation.rotationDeg[axis];
+      if (!Number.isFinite(range.min))
+        collector.push(
+          "range",
+          `${path}.variation.rotationDeg.${axis}.min`,
+          `population minimum ${axis} rotation must be finite, but was ${range.min}`,
+          range.min,
+        );
+      if (!Number.isFinite(range.max))
+        collector.push(
+          "range",
+          `${path}.variation.rotationDeg.${axis}.max`,
+          `population maximum ${axis} rotation must be finite, but was ${range.max}`,
+          range.max,
+        );
+      if (
+        Number.isFinite(range.min) &&
+        Number.isFinite(range.max) &&
+        range.min > range.max
+      )
+        collector.push(
+          "range",
+          `${path}.variation.rotationDeg.${axis}`,
+          `population ${axis} rotation range must be ordered, but ${range.min} is above ${range.max}`,
+          range,
+        );
+    }
+  const layout = set.layout;
+  if (layout.kind === "along-route") {
+    collector.push(
+      "type",
+      `${path}.layout.kind`,
+      'a building population may not use the "along-route" layout: a route is a production-world fact this record carries no field for, so such a population belongs to the world rather than to a building space',
+      layout.kind,
+    );
+    return;
+  }
+  if (layout.kind === "scatter") {
+    positive(
+      layout.radius,
+      `${path}.layout.radius`,
+      "population scatter radius",
+      collector,
+    );
+    return;
+  }
+  if (layout.kind === "explicit") {
+    if (layout.transforms.length < set.count)
+      collector.push(
+        "range",
+        `${path}.layout.transforms`,
+        `an explicit population needs one transform per slot, but ${layout.transforms.length} were stated for ${set.count} slots`,
+        layout.transforms.length,
+      );
+    layout.transforms.forEach((transform, index) => {
+      finiteVector(
+        transform.translation,
+        `${path}.layout.transforms[${index}].translation`,
+        "population slot translation",
+        collector,
+      );
+      unitQuaternion(
+        transform.rotation,
+        `${path}.layout.transforms[${index}].rotation`,
+        "population slot rotation",
+        collector,
+      );
+      for (const axis of ["x", "y", "z"] as const)
+        positive(
+          transform.scale[axis],
+          `${path}.layout.transforms[${index}].scale.${axis}`,
+          `population slot ${axis} scale`,
+          collector,
+        );
+    });
+    return;
+  }
+  positiveInteger(
+    layout.rows,
+    `${path}.layout.rows`,
+    "population layout rows",
+    collector,
+  );
+  positiveInteger(
+    layout.columns,
+    `${path}.layout.columns`,
+    "population layout columns",
+    collector,
+  );
+  positive(
+    layout.spacing.x,
+    `${path}.layout.spacing.x`,
+    "population layout x spacing",
+    collector,
+  );
+  positive(
+    layout.spacing.z,
+    `${path}.layout.spacing.z`,
+    "population layout z spacing",
+    collector,
+  );
+  if (layout.kind === "lattice") {
+    positiveInteger(
+      layout.layers,
+      `${path}.layout.layers`,
+      "population layout layers",
+      collector,
+    );
+    positive(
+      layout.spacing.y,
+      `${path}.layout.spacing.y`,
+      "population layout y spacing",
+      collector,
+    );
+  }
+  const capacity =
+    layout.kind === "lattice"
+      ? layout.rows * layout.columns * layout.layers
+      : layout.rows * layout.columns;
+  if (Number.isSafeInteger(capacity) && capacity < set.count)
+    collector.push(
+      "range",
+      `${path}.layout`,
+      `a ${layout.kind} population's own lattice holds ${capacity} slots, which cannot carry its ${set.count}`,
+      capacity,
+    );
+};
+
+const positiveInteger = (
+  value: number,
+  path: string,
+  label: string,
+  collector: ViolationCollector,
+): void => {
+  if (!Number.isSafeInteger(value) || value <= 0)
+    collector.push(
+      "range",
+      path,
+      `${label} must be an integer > 0, but was ${value}`,
+      value,
+    );
 };
 
 const nonEmpty = (
