@@ -10,7 +10,7 @@ AutoMovie produces a deterministic prototype: a blocking pass whose staging, mot
 4. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
 5. Read `CAPTURE_FRAME`, then call `captureFrame` for current asset turntables or current shot pixels. `captured:false` is a refusal, not evidence.
 6. Review deterministic assets and shots first. When production design declares visual delivery `repainted`, complete the current `shot` review, read `REPAINT_SHOT` and `DIFFUSION_ENHANCE`, call `repaintShot`, then complete the separate `rendition` review. Deterministic delivery does not route through diffusion.
-7. Read the exact target guide before both `prepareReview` and `submitReview`: `REVIEW_ASSET`, `REVIEW_SHOT` (for `shot` and `rendition`), `REVIEW_SEQUENCE`, or `REVIEW_FILM`. Inspect every returned current evidence item yourself. Put the final boolean last.
+7. Read the exact target guide before both `prepareReview` and `submitReview`: `REVIEW_ASSET`, `REVIEW_SUBJECT`, `REVIEW_SHOT` (for `shot` and `rendition`), `REVIEW_SEQUENCE`, or `REVIEW_FILM`. Inspect every returned current evidence item yourself. Put the final boolean last.
 8. Render through the scaffold CLI only after current review gates pass. Verify receipts and media facts; never infer completion from an output path.
 
 The host fixes project root and default production at startup. No tool payload may activate another filesystem root. Registry identity is `production / artifact id / time-or-angle-and-pass / fingerprint`; all evidence must reopen through that identity.
@@ -23,6 +23,7 @@ Read only the route that matches the next owned decision. Contract guides define
 
 - `PRODUCTION_DESIGN`: production clock, deliverables, art direction, visual-delivery declaration, render budgets, and site context.
 - `MODEL_RECIPE`: bounded primitive and external model recipes, and physically-based surface materials.
+- `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, freshness refusals, and the source-context boundary.
 - `WORLD_DESIGN`: terrain, routes, landmarks, bounded effects, and instance sets.
 - `FORMATION_DESIGN`: repeated-unit layouts, heroes, and formation motion.
 - `SHOT_CONTRACT`: source binding, events, camera intent, review times, and rendition policy.
@@ -30,12 +31,15 @@ Read only the route that matches the next owned decision. Contract guides define
 - `SOURCE_OWNERSHIP`: coding-agent, compiler, renderer, and review ownership.
 - `COMPILATION`: design/source/review/final scopes and atomic publication.
 - `GEOMETRY`: direct engine geometry and project-state queries outside the compile sandbox, and the mesh constructors source-owned models are built from.
+- `SUBJECT_INSPECTION`: render-free descriptions of compiled elements, parts, prototypes, instances, sets, and spaces, plus bounded structural diffs between revisions.
+- `VISUAL_CHANGE_REPORT`: changed, unchanged, new, and gone views across two existing PNG-digest catalogs; this is neither structural diff nor review evidence.
 
 ### MCP gate contracts
 
 - `CAPTURE_FRAME`: exact `captureFrame` targets, passes, receipts, and refusal recovery.
 - `REPAINT_SHOT`: exact `repaintShot` inputs, source-grid requirements, provenance, and refusal recovery.
 - `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
+- `REVIEW_SUBJECT`: one compiled subject's worksheet, its inspection-owned viewpoints, and its coverage states.
 - `REVIEW_SHOT`: shot worksheet and composition, performance, continuity, and acceptance axes.
 - `REVIEW_SEQUENCE`: sequence coverage, editorial rhythm, transition, and continuity worksheet.
 - `REVIEW_FILM`: whole-film story, pacing, audiovisual delivery, and terminal consistency worksheet.
