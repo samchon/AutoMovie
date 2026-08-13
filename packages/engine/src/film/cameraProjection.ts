@@ -391,14 +391,14 @@ export const intersectsPerspectiveFrustumSphere = (props: {
  * plus the direction to throw away is what it can name. An offset would make it
  * solve for a scalar it never measured.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Declares the inspection-owned cut as a coplanar point and a normal naming the removed side, outside any authored camera field.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Declares the inspection-owned cut as a coplanar point and a normal naming the removed side, outside any authored camera field.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Types the optional clipping plane that clipping evaluation accepts as an input beside the near, far, and side planes.
  */
 export interface IAutoMovieSectionPlane {
   /**
    * A point the plane passes through, world space, metres.
    *
-   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Carries the coplanar point the declared cut is measured from.
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Carries the coplanar point the declared cut is measured from.
    * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Supplies `p0` of the specified signed distance `n·(p − p0)`.
    */
   point: IAutoMovieVector3;
@@ -408,7 +408,7 @@ export interface IAutoMovieSectionPlane {
    * normalized on use, and a zero or non-finite vector names no half-space at
    * all, so it is refused rather than read as "keep everything".
    *
-   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Carries which side of the declared plane the section removes.
+   * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Carries which side of the declared plane the section removes.
    * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Supplies `n` of the specified signed distance `n·(p − p0)`.
    */
   normal: IAutoMovieVector3;
@@ -423,7 +423,7 @@ export interface IAutoMovieSectionPlane {
  * that neither removes alone. Reading `crossed` as "partly visible" is the
  * mistake this union is named to prevent.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Names the three outcomes a declared cut has for a body without overstating a partial result.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Names the three outcomes a declared cut has for a body without overstating a partial result.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Types the specified `kept`, `cut`, and `crossed` outcome of evaluating a bound against the optional clipping planes.
  */
 export type AutoMovieSectionPlaneState = "kept" | "cut" | "crossed";
@@ -440,7 +440,7 @@ export type AutoMovieSectionPlaneState = "kept" | "cut" | "crossed";
  * so this number and the pixel the renderer draws agree at the boundary instead
  * of disagreeing by one plane.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Measures a world point against the declared cut and keeps geometry lying exactly on the plane.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Measures a world point against the declared cut and keeps geometry lying exactly on the plane.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Implements the specified signed distance `n·(p − p0)` with zero declared on the kept side.
  */
 export const autoMovieSectionPlaneDistance = (
@@ -472,7 +472,7 @@ export const autoMovieSectionPlaneDistance = (
  * An empty plane list keeps everything, which is what makes "no section" the
  * absence of a declaration rather than a separate mode.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Answers whether the declared cut leaves a world point in the observed half-space.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Answers whether the declared cut leaves a world point in the observed half-space.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Applies the optional clipping planes as an intersection of kept half-spaces with the boundary included.
  */
 export const autoMovieSectionPlanesKeepPoint = (
@@ -500,7 +500,7 @@ export const autoMovieSectionPlanesKeepPoint = (
  * would add a term that is always empty there while making the acceptance of a
  * sliced subject a silent decision.
  *
- * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Reports whether a declared cut leaves a subject's bound whole, removes it, or crosses it, with plane-level contact kept.
+ * @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Reports whether a declared cut leaves a subject's bound whole, removes it, or crosses it, with plane-level contact kept.
  * @evidence specifications/camera-light-and-visibility/visibility-and-image-space-observation.md#clv-clipping-clearance-evaluation Produces the specified `kept`, `cut`, and `crossed` outcome for a current geometry bound under the optional clipping planes.
  */
 export const classifyAutoMovieSectionPlaneBox = (props: {

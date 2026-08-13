@@ -12,6 +12,10 @@ Camera clearance, clipping와 occlusion 결과는 map·exterior·interior·asset
 
 Near와 far는 positive ordered distance를 가지고 required subject, environment와 depth precision 범위에 맞아야 한다.
 
+Resolved scene을 잘라 내부를 드러내는 optional clipping plane은 검사가 소유하며 저작된 camera의 field가 아니어야 한다. 저작된 camera가 납품하는 clipping은 near와 far뿐이고, 단면으로 만든 관찰은 그 camera가 납품할 그림에 대한 evidence가 아니다. 이 배제가 풀리는 조건은 어떤 production이 단면 자체를 shot으로 납품해야 하는 경우이며, 그때 plane은 저작된 field가 되고 잘려나간 required subject는 readable로 셀 수 없다.
+
+Section plane은 평면 위의 한 점과 제거되는 쪽을 가리키는 normal로 선언하고, 평면 위에 정확히 놓인 geometry는 남는 쪽으로 판정해야 한다. 잘린 단면을 메우는 surface는 만들지 않으며, 껍질이 열려 보이는 것이 단면 관찰의 정상 결과임을 밝혀야 한다.
+
 ### Camera Clearance {#camera-clearance}
 
 Interior wall, ceiling, floor, furniture, terrain, vehicle와 moving subject에 대한 camera position과 path clearance를 선언할 수 있어야 한다.

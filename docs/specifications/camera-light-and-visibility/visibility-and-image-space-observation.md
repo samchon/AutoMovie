@@ -16,8 +16,6 @@ Visibility는 source가 존재하거나 frustum과 교차한다는 사실, image
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Near·far의 ordered distance와 required depth 범위를 검증한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Camera body와 path가 wall, terrain, vehicle와 subject를 침범하는지 판정한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Moving camera와 geometry의 swept interval을 보수적으로 검사한다. -->
-<!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-section-view-ownership Optional clipping plane의 소유, 표현과 경계 포함 규칙을 evaluation 입력으로 정밀화한다. -->
-
 Clipping evaluation은 camera projection convention, positive ordered near·far distance, optional clipping planes, delivery crop와 current geometry bounds를 사용한다. Boundary inclusion과 tolerance를 선언하고 required subject·environment 범위와 depth precision constraint를 함께 보고한다.
 
 <!-- @evidenceObligation projection-convention Optical axis, transform order, vertical FOV와 aspect가 만드는 camera-local half-space convention. -->
