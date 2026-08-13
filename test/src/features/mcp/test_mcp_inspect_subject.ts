@@ -208,7 +208,7 @@ export const test_mcp_inspect_subject = async (): Promise<void> => {
       shot: "opening",
       subject: SUBJECT,
       azimuthCount: 2,
-      elevationsDeg: [0, -30],
+      elevationsDeg: [0, 30],
       distanceFactor: 2,
       width: 8,
       height: 4,
@@ -233,11 +233,48 @@ export const test_mcp_inspect_subject = async (): Promise<void> => {
       },
       {
         inspected: true,
-        plan: ["az000-el000", "az180-el000", "az000-eln030", "az180-eln030"],
+        plan: ["az000-el000", "az180-el000", "az000-el030", "az180-el030"],
         state: "reviewed",
         raster: ["8x4"],
         wider: true,
       },
+    );
+
+    const box =
+      swept.subject !== null && swept.subject.kind !== "formation"
+        ? (swept.subject.bounds.content ?? swept.subject.bounds.declared)
+        : null;
+    if (box === null)
+      throw new Error("The inspected subject reported no measurable extent.");
+    const floor = Math.min(0, box.min.y);
+    const dug = await inspection.inspect(services, {
+      shot: "opening",
+      subject: SUBJECT,
+      azimuthCount: 2,
+      elevationsDeg: [-45],
+    });
+    TestValidator.equals(
+      "a downward angle that would bury the eye is raised to the subject's floor",
+      {
+        inspected: dug.inspected,
+        askedFor: dug.plan.map((viewpoint) => viewpoint.id),
+        underground: dug.views.filter((view) => view.pose.position.y < floor)
+          .length,
+        aimedAtTheSubject: dug.views.every(
+          (view) => view.pose.target.y === (box.min.y + box.max.y) / 2,
+        ),
+      },
+      {
+        inspected: true,
+        askedFor: dug.plan.map((viewpoint) => viewpoint.id),
+        underground: 0,
+        aimedAtTheSubject: true,
+      },
+    );
+    TestValidator.equals(
+      "the buried angle is not the angle that was asked for",
+      dug.plan.some((viewpoint) => viewpoint.id === "az000-eln045"),
+      false,
     );
 
     const described = describeAutoMovieSubjects({

@@ -478,6 +478,50 @@ export const autoMovieSubjectInspectionPlan = (props: {
 };
 
 /**
+ * Raise any requested elevation that would put the eye under the subject.
+ *
+ * A turntable angle is stated relative to the subject's centre, and a subject
+ * standing on the ground has its centre above that ground, so a low ring digs.
+ * Measured on one production, a room whose centre sits 4.95 m up put the eye
+ * 7.49 m *below* grade at twenty degrees down, and eight of that sweep's
+ * twenty-four viewpoints were underground pictures of nothing. A client that
+ * cannot look at a screen has no way to notice that, which is exactly why the
+ * rule belongs here rather than in the caller's judgement.
+ *
+ * The floor comes from the subject's own box rather than from a world constant,
+ * so a slate lying three metres up keeps its full downward angle and only a
+ * subject that actually rests on the ground is lifted. Two elevations that
+ * collapse onto one angle collapse into one viewpoint, because two identical
+ * angles are one viewpoint however they were asked for.
+ *
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Keeps the chosen angle one that reveals the subject instead of one that buries the eye beneath it.
+ * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Protects a requester that cannot see the returned picture from recording an underground frame as an observation.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Derives the plan's admissible vertical range from the subject's own extent.
+ * @author Samchon
+ */
+export const autoMovieSubjectInspectionElevations = (props: {
+  /** Box the plan frames, in the subject's own coordinate space. */
+  bounds: IAutoMovieSubjectBox;
+  /** Elevation rings the caller asked for, in degrees. */
+  elevationsDeg: readonly number[];
+  /** Distance the plan places the eye at, in metres. */
+  distance: number;
+}): number[] => {
+  const floor = Math.min(0, props.bounds.min.y);
+  const drop = boxCenter(props.bounds).y - floor;
+  const lowest =
+    props.distance <= 0
+      ? 0
+      : -Math.asin(Math.min(1, drop / props.distance)) * (180 / Math.PI);
+  const grounded: number[] = [];
+  for (const elevationDeg of props.elevationsDeg) {
+    const raised = Math.max(elevationDeg, lowest);
+    if (grounded.includes(raised) === false) grounded.push(raised);
+  }
+  return grounded;
+};
+
+/**
  * Resolve one planned viewpoint into the camera state it is drawn through.
  *
  * The clip planes come from the same half-diagonal the distance did, which
@@ -650,14 +694,33 @@ export class AutoMovieProductionSubjectInspectionService {
       );
     let plan: IAutoMovieSubjectReviewViewpoint[];
     try {
-      plan = autoMovieSubjectInspectionPlan({
+      const rule = {
         bounds: frame.bounds,
         azimuthCount: input.azimuthCount ?? DEFAULT_AZIMUTH_COUNT,
         elevationsDeg: input.elevationsDeg ?? DEFAULT_ELEVATIONS_DEG,
         distanceFactor: input.distanceFactor ?? DEFAULT_DISTANCE_FACTOR,
         fovDeg: INSPECTION_FOV_DEG,
         aspect: width / height,
+      };
+      // The distance is asked of the plan rather than recomputed, so the one
+      // rule that decides where the eye stands stays in one place and the
+      // bit-for-bit agreement with the viewer harness survives this correction.
+      const asked = autoMovieSubjectInspectionPlan(rule);
+      const grounded = autoMovieSubjectInspectionElevations({
+        bounds: frame.bounds,
+        elevationsDeg: rule.elevationsDeg,
+        distance: asked[0]!.distance,
       });
+      plan =
+        grounded.length === rule.elevationsDeg.length &&
+        grounded.every(
+          (degrees, index) => degrees === rule.elevationsDeg[index],
+        )
+          ? asked
+          : autoMovieSubjectInspectionPlan({
+              ...rule,
+              elevationsDeg: grounded,
+            });
     } catch (error) {
       return refuse(
         "preview-input-invalid",

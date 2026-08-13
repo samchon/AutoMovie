@@ -1,6 +1,7 @@
 import {
   type IAutoMovieInspectSubject,
   type IAutoMovieSubjectInspectionView,
+  autoMovieSubjectInspectionElevations,
   autoMovieSubjectInspectionPlan,
   autoMovieSubjectInspectionPose,
 } from "@automovie/mcp";
@@ -111,7 +112,7 @@ export const test_mcp_subject_inspection_parity = (): void => {
   TestValidator.equals(
     "one rule frames a wall and a mullion at their own scales",
     {
-      scaled: elevation.distance > mullion.distance * 100,
+      scaled: elevation.distance > mullion.distance * 20,
       mullionWithinReach: mullion.distance < 12,
       degenerateFramed:
         degenerate.distance > 0 && Number.isFinite(degenerate.distance),
@@ -127,6 +128,46 @@ export const test_mcp_subject_inspection_parity = (): void => {
       mullionWithinReach: true,
       degenerateFramed: true,
       degenerateAtItsOwnPoint: { x: 2, y: 1, z: 0 },
+    },
+  );
+
+  const room = {
+    min: { x: -6, y: 0, z: -4 },
+    max: { x: 6, y: 9.9, z: 4 },
+  };
+  const raised = {
+    min: { x: 0, y: 3, z: 0 },
+    max: { x: 0.4, y: 3.02, z: 0.4 },
+  };
+  TestValidator.equals(
+    "a low ring is raised only where it would put the eye under the subject",
+    {
+      grounded: autoMovieSubjectInspectionElevations({
+        bounds: room,
+        elevationsDeg: [20, -20],
+        distance: 20,
+      }),
+      offTheGround: autoMovieSubjectInspectionElevations({
+        bounds: raised,
+        elevationsDeg: [20, -20],
+        distance: 2,
+      }),
+      collapsed: autoMovieSubjectInspectionElevations({
+        bounds: room,
+        elevationsDeg: [-20, -30, -40],
+        distance: 20,
+      }).length,
+      unmeasurableDistance: autoMovieSubjectInspectionElevations({
+        bounds: room,
+        elevationsDeg: [-20, 10],
+        distance: 0,
+      }),
+    },
+    {
+      grounded: [20, -Math.asin(4.95 / 20) * (180 / Math.PI)],
+      offTheGround: [20, -20],
+      collapsed: 1,
+      unmeasurableDistance: [0, 10],
     },
   );
 

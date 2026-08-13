@@ -1,5 +1,3 @@
-import { describeAutoMovieSubjects } from "@automovie/engine";
-import type { IAutoMovieCompiledShotSource } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
@@ -275,39 +273,26 @@ export const test_mcp_inspect_subject_refusals = async (): Promise<void> => {
       },
     );
 
-    const unframeable = describeAutoMovieSubjects({
-      revision: "probe",
-      compiled: JSON.parse(
-        Buffer.from(
-          services.project.readGeneratedFile("shots/opening.json"),
-        ).toString("utf8"),
-      ) as IAutoMovieCompiledShotSource,
-    }).find(
-      (subject) =>
-        subject.bounds.content === null && subject.bounds.declared === null,
-    );
-    if (unframeable === undefined)
-      throw new Error(
-        "The fixture compiles no extentless subject, so the unsupported-viewpoint refusal cannot be arranged.",
-      );
-    const extentless = await inspection.inspect(services, {
+    // A viewer key names a placed part `part:<node>/<part>` where the compiler
+    // says `element-part:` or `prototype-part:`. Both spellings are tried, and
+    // exhausting them is still an absent subject rather than a silent guess at
+    // a neighbouring one.
+    const misspelled = await inspection.inspect(services, {
       shot: "opening",
-      subject: unframeable.id,
+      subject: "part:no-such-node/no-such-part@somerevision",
     });
     TestValidator.equals(
-      "a subject with no measurable extent is unsupported, never framed anyway",
+      "a viewer-key spelling that resolves to nothing is absent, not guessed",
       {
-        code: extentless.diagnostics[0]?.code,
-        inspected: extentless.inspected,
-        described: extentless.subject?.id,
-        plan: extentless.plan,
+        code: misspelled.diagnostics[0]?.code,
+        subject: misspelled.subject,
+        echoed: misspelled.target.subject,
         drawn: instrument.calls.length,
       },
       {
-        code: "review-subject-viewpoint-unsupported",
-        inspected: false,
-        described: unframeable.id,
-        plan: [],
+        code: "capture-target-missing",
+        subject: null,
+        echoed: "part:no-such-node/no-such-part@somerevision",
         drawn: 0,
       },
     );
