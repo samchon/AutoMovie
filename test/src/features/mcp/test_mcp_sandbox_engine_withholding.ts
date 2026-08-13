@@ -33,9 +33,11 @@ import { namedFacts } from "../internal/predicates";
  * 4. The runtime inventory holds runtime names only. `defineShot` is present and
  *    `IAutoMovieShotSource` is absent, since a type is erased before the module
  *    object exists and must never be reported as a withheld capability.
- * 5. A reachable name produces no refusal, so a mixed import naming one reachable
- *    and one withheld capability can report the withheld half alone.
- * 6. A withheld name's refusal names the import, says the engine publishes it,
+ * 5. No reachable name produces a refusal. Checked over the whole surface rather
+ *    than one member, because this is what lets a mixed import naming one
+ *    reachable and one withheld capability report the withheld half alone, and a
+ *    single sample would leave forty-one names unasked.
+ * 6. Every withheld name's refusal names the import, says the engine publishes it,
  *    names the unproved bridge or stand-in, and gives the project-script route.
  * 7. A name the engine does not publish is told exactly that, so a misspelling is
  *    never read as a decided exclusion.
@@ -96,12 +98,15 @@ export const test_mcp_sandbox_engine_withholding = (): void => {
   );
 
   TestValidator.equals(
-    "a reachable name is not refused",
-    autoMovieSandboxEngineImportRefusal({
-      name: AUTOMOVIE_SANDBOX_ENGINE_SURFACE[0]!,
-      sourcePath: "src/shots/opening.ts",
-    }),
-    null,
+    "no reachable name is refused",
+    AUTOMOVIE_SANDBOX_ENGINE_SURFACE.filter(
+      (name) =>
+        autoMovieSandboxEngineImportRefusal({
+          name,
+          sourcePath: "src/shots/opening.ts",
+        }) !== null,
+    ),
+    [],
   );
 
   TestValidator.equals(
