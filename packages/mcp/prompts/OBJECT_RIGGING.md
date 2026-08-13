@@ -42,9 +42,25 @@ The state vocabulary is yours and the arithmetic is the engine's. `closed`, `ope
 - a current state naming no declared state;
 - an empty or duplicated panel, state, or hardware id, an empty hardware kind, or a hardware element that does not resolve.
 
-Rigging a leaf buys you no visibility change, and this is the connection authors get wrong. The room culler treats a boundary carrying an opening as a portal whether or not a leaf fills it and whatever state that leaf stands in, because a shut leaf is movable state and the cull stays conservative. `WORLD_BUILDING` owns that rule and the rest of the space graph; what follows for your rig is that the state a leaf stands in never moves a space between the drawn set and the hidden one, so a shot that needs the room beyond a door out of the picture is solved by framing, lighting, or the design, never by the hinge. What the travel does feed is measurement: `builtOpeningSweepEnvelope` returns the world volume each panel sweeps across its whole travel, which is the number a swing clearance is argued from.
+Rigging a leaf buys you no visibility change, and this is the connection authors get wrong. The room culler treats a boundary carrying an opening as a portal whether or not a leaf fills it and whatever state that leaf stands in, because a shut leaf is movable state and the cull stays conservative. `WORLD_BUILDING` owns that rule and the rest of the space graph; what follows for your rig is that the state a leaf stands in never moves a space between the drawn set and the hidden one, so a shot that needs the room beyond a door out of the picture is solved by framing, lighting, or the design, never by the hinge. What the travel does feed is clearance and, separately, the swing an audience sees: `builtOpeningSweepEnvelope` returns the world volume each panel sweeps across its whole travel, which is the number a swing clearance is argued from, and the next section owns what it takes to put that swing in a frame.
 
 A hinge pin, a knob, a boss, a ring pull, and a finial are surfaces of revolution. `MODEL_RECIPE` and `GEOMETRY` own the recipe vocabulary that turns a profile into one; go there rather than spelling it a second way here, and judge the result at the distance the shot actually uses, because a turned part that reads in the hand is a smear at room scale and the reverse is just as common.
+
+## Making a leaf move on screen
+
+A named state is a configuration, not a movement. It says where a leaf stands, and a design that only ever states one is a door an author can write open or shut and nobody ever sees swing. What carries the swing is an object-motion clip on the shot, and one channel serves the building's panel and the prop's leaf alike, because they are the same thing: a node in the staged graph turned over the shot's own clock.
+
+Address a building's panel by its staged set-piece node, the environment id and the panel's element id joined as `<environment>/<element>`, which is the node id `builtOpeningPanelPlacements` answers with. Address a prop's leaf by its lowered joint, `<placement>/<joint>`. The clips go on the shot's own `objectMotions`, and they are measured rather than trusted: they resolve through the engine's frame solver with every staged prop's profile bound at its own placement prefix, so a track driving a hinge past the travel its profile declares is refused with the channel and the owning profile both named.
+
+An object-motion track interpolates `step` or `linear`. `cubicspline` is refused by name, because a spline's tangents can leave a declared travel between two bounded keys while nothing downstream clamps an object clip; the viewer writes it onto the object verbatim. The rest of what the gate refuses:
+
+- a node no shot staged, and a joint no staged prop declares, because a clip addressing nothing is written, validated, stored, and rendered as silence;
+- a node this shot's performance already drives, because a performer moves off its rig rather than off a transform clip that would fight the pose every frame;
+- a channel a baked clip already drives, or a clip id a baked clip already carries, since one channel carries one authority;
+- a clip id duplicated among the authored clips;
+- a key outside the shot's own clock, because a time past the end is data no frame reads.
+
+Getting the numbers for those keys is where an author stalls. `builtOpeningPanelPlacements` returns each panel's world placement at one named state and refuses a state the opening does not declare, so a key at a half-open angle is bought by declaring that half-open state and reading its placement, never by passing an angle to the query. Declare on the opening every state the shot has to pass through, then read them. The query is not reachable from shot source, so a project script asks and the shot carries the keys that come back.
 
 ## Profiles, traits, and controls
 
@@ -62,7 +78,7 @@ The articulation contract is reported all at once rather than one failure at a t
 
 The mesh reference is the one authors forget, and forgetting it is silent. A joint that names no part still builds its frame and still turns, so a hinge declared without its leaf turns nothing while the shot validates clean and shows a door standing still. Name the part on the joint that carries it. A joint that only positions other joints legitimately names none, and a prop drawing an imported appearance has no addressable parts in the model the viewer builds, so a joint of one may name none and its frame still turns whatever it holds.
 
-A lowered joint is addressed by `placementChildNode(`, the placement id and the joint id joined under the engine's own lowering law, and that string is what a shot's object-motion track names. Only the channels a clip carries actually move on screen. A profile's limits and drivers are resolved by the engine's frame solver, so a handle declared to mirror its hinge is honored where the shot is gated and stands still where the shot is drawn; author the channel you want to see move rather than expecting a driver to animate it for you.
+A lowered joint is addressed by `placementChildNode(`, the placement id and the joint id joined under the engine's own lowering law, which is the string an object-motion clip names. Only the channels a clip carries actually move on screen. A profile's limits and drivers are resolved by the engine's frame solver, so a handle declared to mirror its hinge is honored where the shot is gated and stands still where the shot is drawn; author the channel you want to see move rather than expecting a driver to animate it for you.
 
 ## Retargeting
 
