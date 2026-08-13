@@ -8,14 +8,26 @@
  * display; when both are present the engine treats the linear triple as
  * authoritative and `hex` as a derived label.
  *
- * Instance palettes are the exception. An entry of
- * `IAutoMovieInstanceVariation.palette` is a bare `#RRGGBB` string with no
- * triple beside it, so the viewer decodes it from sRGB instead of reading it as
- * a label. The two paths land on the same color only when this type's triple
- * was actually derived from its swatch: `hex` is never checked against `r`,
- * `g`, `b`, so an author who transcribes `7d` as `125 / 255` gets a material at
- * linear `0.49` beside the same palette entry `#7d828c` at linear `0.20`, and
- * nothing refuses the pair.
+ * Derive the label, do not type it. `linearColorToSrgbHex` writes `hex` from
+ * the triple, `srgbHexToLinearColor` writes the triple from a swatch, and the
+ * two round-trip exactly for every eight-bit channel value. Bare `#RRGGBB`
+ * fields carry the color rather than label one, so they are sRGB inputs: the
+ * compiler and instance viewer share `srgbHexToLinearColor` for recipe and
+ * instance palettes, while the effect viewer applies three.js's equivalent
+ * decode to particle colors.
+ *
+ * A swatch pasted into `r`, `g`, `b` unconverted lands about 2.3x too bright at
+ * midtones: `#808080` becomes linear `0.502` where the swatch means `0.216`.
+ * The compiler used to make exactly that substitution when it turned a model
+ * recipe palette into `baseColor`, which is how one production covered a single
+ * roof in two colors, its instanced slates decoding their palette correctly
+ * while the cut slates beside them carried a material that had not been
+ * decoded at all.
+ *
+ * Nothing compares `hex` against `r`, `g`, `b`. A label typed by hand can still
+ * contradict the numbers it sits beside, and the engine will render the numbers
+ * without saying so. That refusal is deferred rather than declined: it belongs
+ * with the model validators, and the conversion it needs now exists.
  *
  * Keeping color as a numeric triple (rather than a free string) lets an
  * authoring agent adjust it numerically and lets the engine range-check it.
@@ -64,8 +76,9 @@ export interface IAutoMovieColor {
 
   /**
    * Optional sRGB `#RRGGBB` convenience form for human / LLM readability and
-   * viewer swatches. Derived from the linear triple; the linear components are
-   * authoritative when both are present.
+   * viewer swatches. Write it with `linearColorToSrgbHex` rather than by hand;
+   * the linear components are authoritative when both are present, and nothing
+   * refuses a label that disagrees with them.
    *
    * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-scene-display-color Exposes `hex` as the portable data boundary for the rendering scene display color requirement.
    * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Types `hex` for the spec render material color system contract.

@@ -1,4 +1,9 @@
-import { Quaternion, seededValue, selectFormationLod } from "@automovie/engine";
+import {
+  Quaternion,
+  seededValue,
+  selectFormationLod,
+  srgbHexToLinearColor,
+} from "@automovie/engine";
 import {
   IAutoMovieCompiledFormationLod,
   IAutoMovieCompiledInstanceSet,
@@ -108,7 +113,9 @@ interface IInstanceChunkObject {
  * source mesh is refused by name rather than instanced as something else.
  *
  * @evidence requirements/formations/resolution-culling-and-evidence.md#formation-resolution-policy-selection Displays this surface from the formation's selected resolution policy.
+ * @evidence requirements/lighting/color-exposure-and-display-boundary.md#lighting-working-color-space Decodes palette swatches before their values enter the renderer's scene-linear instance attribute.
  * @evidence specifications/performance-motion-and-staging/formation-identity-layout-and-terrain.md#performance-formation-compact-representation-compatibility Implements the logical-to-display resolution boundary for instances.
+ * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-color-effective-ownership Keeps the palette input encoding and its scene-linear output under one explicit conversion owner.
  */
 export const buildInstancedInstanceSet = (input: {
   instanceSet: IAutoMovieCompiledInstanceSet;
@@ -122,6 +129,10 @@ export const buildInstancedInstanceSet = (input: {
   prototypeObjects?: ReadonlyMap<string, IAutoMovieModelObject>;
 }): IAutoMovieInstanceSetViewerObject => {
   const root = new THREE.Group();
+  // One decoded carrier per authored swatch. `setColorAt` copies its
+  // components, and a block may hold a hundred thousand slots, so neither the
+  // transfer function nor its temporary label belongs in the per-slot cost.
+  const paletteColors = new Map<string, THREE.Color>();
   root.name = `instance-set:${input.instanceSet.id}`;
   root.position.copy(vector(input.instanceSet.anchor));
   const prototypes = input.instanceSet.prototypes ?? [
@@ -220,12 +231,23 @@ export const buildInstancedInstanceSet = (input: {
               index,
               instanceMatrix(slot, input.instanceSet.anchor),
             );
-            // A `#RRGGBB` string is read as sRGB and decoded into the linear
-            // working space. That is the palette convention, not
-            // `IAutoMovieColor`'s, whose components are already linear and go
-            // straight into the material in `buildMaterial`; constructing this
-            // color component-wise instead would brighten every instanced set.
-            mesh.setColorAt(index, new THREE.Color(slot.palette));
+            // A palette entry is an sRGB swatch, so it is decoded here by the
+            // engine's own transfer function rather than by handing the string
+            // to `THREE.Color`. Both decodes agree to every bit this attribute
+            // can hold, but three's runs only while the global
+            // `ColorManagement.enabled` is true, and a host that switches it
+            // off would silently brighten every instanced set while materials
+            // built from an `IAutoMovieColor` triple stayed where they were.
+            // Decoding explicitly is also what makes the two authoring paths
+            // one conversion: the compiler decodes a recipe palette with this
+            // same function on its way into `baseColor`.
+            let paint = paletteColors.get(slot.palette);
+            if (paint === undefined) {
+              const linear = srgbHexToLinearColor(slot.palette);
+              paint = new THREE.Color(linear.r, linear.g, linear.b);
+              paletteColors.set(slot.palette, paint);
+            }
+            mesh.setColorAt(index, paint);
           });
           mesh.instanceMatrix.needsUpdate = true;
           // A batch is only built for a prototype that owns at least one slot,
