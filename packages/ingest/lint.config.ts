@@ -1,7 +1,14 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/*.ts", "!src/index.ts"];
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population crosses every directory depth, so a source added under a new
+ * subdirectory joins the graph by existing. The barrel is the only exclusion,
+ * because it re-exports declarations that already answer at their definition.
+ */
+const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
 
 /**
  * The public ingest surface answers for stable contract populations.

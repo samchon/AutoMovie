@@ -1,48 +1,21 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population is derived from the source tree instead of enumerated, so a
+ * file joins the graph by existing rather than by someone remembering to list
+ * it here. The negative patterns name source classes that owe no product contract:
+ * the barrel re-exports declarations that already answer at their definition,
+ * `bin.ts` is the process entry point rather than a contract carrier, and the
+ * guide constant is generated from `prompts/` and gitignored.
+ */
 const publicSurface = [
-  "src/AutoMovieApplication.ts",
-  "src/convert.ts",
-  "src/createAutoMovieMcpServer.ts",
-  "src/dto.ts",
-  "src/project/AutoMovieProject.ts",
-  "src/project/commitLock.ts",
-  "src/production/acceptanceScope.ts",
-  "src/production/assetAcquisition.ts",
-  "src/production/AutoMovieLegacyImporter.ts",
-  "src/production/AutoMovieProductionCompiler.ts",
-  "src/production/AutoMovieProductionContext.ts",
-  "src/production/AutoMovieProductionGuideService.ts",
-  "src/production/AutoMovieProductionOracleService.ts",
-  "src/production/AutoMovieProductionProject.ts",
-  "src/production/AutoMovieProductionReviewService.ts",
-  "src/production/captureRuntimeIdentity.ts",
-  "src/production/contentIdentity.ts",
-  "src/production/decodeProductionAudioAsset.ts",
-  "src/production/designReferenceDiagnostics.ts",
-  "src/production/diagnosticCatalog.ts",
-  "src/production/filmGrammarDiagnostics.ts",
-  "src/production/filmTimeline.ts",
-  "src/production/inspectDesignReferenceAsset.ts",
-  "src/production/linkProductionSource.ts",
-  "src/production/materializeProduction.ts",
-  "src/production/muxProductionFeatureMp4.ts",
-  "src/production/openAutoMovieProduction.ts",
-  "src/production/probeProductionMedia.ts",
-  "src/production/productionArchetypes.ts",
-  "src/production/productionPublicationSnapshot.ts",
-  "src/production/productionRegistry.ts",
-  "src/production/productionRenderGc.ts",
-  "src/production/productionRenderJob.ts",
-  "src/production/renditionIdentity.ts",
-  "src/production/renderIdentity.ts",
-  "src/production/rootNamespaceLock.ts",
-  "src/production/sandboxEngineBridge.ts",
-  "src/production/sandboxEngineSurface.ts",
-  "src/production/storySyncDiagnostics.ts",
-  "src/production/trimProductionAudioPresentation.ts",
-  "src/production/validateProductionDesign.ts",
+  "src/**/*.ts",
+  "!src/**/index.ts",
+  "!src/bin.ts",
+  "!src/guides/AutoMovieGuideConstant.ts",
 ];
 
 const requirementReadmes = ["requirements/**/README.md"];

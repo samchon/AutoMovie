@@ -1,6 +1,15 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population is derived from the source tree instead of enumerated. The
+ * barrel is the only file outside it, because it re-exports declarations that
+ * already answer for their contracts at their definition.
+ */
+const allSources = ["src/**/*.ts", "!src/**/index.ts"];
+
 const authoringSurface = [
   "src/bin.ts",
   "src/renderScaffold.ts",
@@ -8,8 +17,23 @@ const authoringSurface = [
   "src/templateVersions.ts",
 ];
 
-const operationsSurface = ["src/bin.ts", "src/writeFiles.ts"];
 const inspectionSurface = ["src/loadAutoMovieProjectState.ts"];
+
+/**
+ * The operational domain is the residual of the derived population.
+ *
+ * Writing it as a subtraction rather than a list is what keeps the default
+ * inside the graph: a new CLI source answers for the operational contracts
+ * until someone deliberately assigns it to the authoring or inspection domain,
+ * instead of silently answering for nothing.
+ */
+const operationsSurface = [
+  ...allSources,
+  "!src/renderScaffold.ts",
+  "!src/renderTemplate.ts",
+  "!src/templateVersions.ts",
+  "!src/loadAutoMovieProjectState.ts",
+];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [

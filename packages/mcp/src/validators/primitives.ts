@@ -37,8 +37,10 @@ const UNIT_QUATERNION_EPSILON = 1e-6;
  * diagnostic is assembled from, plus the few MCP-layer rules that more than one
  * gate must apply identically. A rule with two gates lives here once rather
  * than in each of them, which is the drift #1320 traced to its root.
+ *
+ * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-aggregate-boundary Aggregates nested violations without changing their deterministic production order.
+ * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-aggregate-execution Appends one completed validation result at the caller's explicit collection boundary.
  */
-
 export const appendValidation = (
   violations: IAutoMovieConstraintViolation[],
   validation: IAutoMovieValidation,
@@ -194,6 +196,9 @@ export const validateColorArtifact = (
  * escape to distinct filenames), which is the safe direction: relaxing a
  * refusal that has stood since #1096 needs a product reason, not a symmetry
  * argument.
+ *
+ * @evidence requirements/story/scope-and-source-of-truth.md#story-stable-unit-identity Refuses case-folding collisions that would make two authored beats share one portable identity.
+ * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-story-unit-identity Enforces a unique portable beat key before it becomes a shot or resident filename.
  */
 export const validateBeatIdCaseCollisions = (
   beats: unknown,
