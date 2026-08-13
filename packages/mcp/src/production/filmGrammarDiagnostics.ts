@@ -1,10 +1,13 @@
 import {
-  DEFAULT_SUBJECT_HEIGHT,
   GRAMMAR_STYLE_SUPPRESSION,
   IAutoMovieGrammarShotObservation,
   IAutoMovieGrammarSubjectObservation,
-  computeModelRestExtentY,
+  computeModelRestExtent,
+  computeRestHeight,
   foldRoot,
+  framedBoxOf,
+  nodeSubjectBox,
+  nodeSubjectExtent,
   readFilmGrammar,
   resolveCameraAt,
   sampleMotion,
@@ -16,7 +19,7 @@ import type {
   IAutoMovieFilmTimeline,
   IAutoMovieSceneNode,
   IAutoMovieShotContract,
-  IAutoMovieVector3,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 
 /** One frame-normalized placement in the canonical film timeline. */
@@ -130,9 +133,21 @@ export const filmGrammarDiagnostics = (props: {
  * observed at all.
  *
  * Everything here is measured from compiler-owned output: the staged camera and
- * its compiled move, the performed root of each subject the contract requires
+ * its compiled move, the performed box of each subject the contract requires
  * readable, and the framing the compiled camera intent claims. Nothing is
  * inferred from prose, and a subject the shot never staged simply is not one.
+ *
+ * **A subject is measured once for the whole production.** The box is
+ * {@link nodeSubjectExtent} carried through the node's placement by
+ * {@link nodeSubjectBox} and restated by {@link framedBoxOf} — the same three
+ * calls `performShot` solves a camera from and `realizeShotContract` grades it
+ * against. This read was the third and last independent one: it took the node's
+ * root translation and the model's vertical span, so it stood a subject at the
+ * placement it hangs from rather than where it draws (8 m below a canopy deck
+ * authored above its element origin) and gave it no width at all (30 m from the
+ * middle of a 60 m facade, and a half-diagonal of 0 where the solve used 30 m).
+ * An edit read on a different subject than the one the camera was aimed at
+ * advises the author about a film nobody shot.
  */
 const observeSegment = (props: {
   segment: IAutoMovieFilmSegment;
@@ -160,42 +175,66 @@ const observeSegment = (props: {
   );
   const modelById = new Map(compiled.models.map((model) => [model.id, model]));
   const nodeById = new Map(compiled.scene.nodes.map((node) => [node.id, node]));
-  // The engine's own answer to "where in the world is this subject", played at
-  // the shot-local second the cut actually shows, startOffset-aware exactly as
-  // the visual-read pass is.
-  const rootAt = (
+  // Where a staged node stands at one shot-local second: the engine's own
+  // answer to "where in the world is this subject", startOffset-aware exactly
+  // as the visual-read pass is, carrying the node's own rotation and scale
+  // because the box measured below is carried out through this placement — the
+  // same pair `performShot` frames a node subject from.
+  const placementAt = (
     node: IAutoMovieSceneNode,
     seconds: number,
-  ): IAutoMovieVector3 => {
+  ): IAutoMovieTransform => {
     const performance = performanceByNode.get(node.id);
     const clip = motionById.get(performance?.motion ?? "");
-    return clip === undefined
-      ? node.transform.translation
-      : foldRoot(
-          node.transform,
-          sampleMotion(clip, Math.max(0, seconds - performance!.startOffset))
-            .pose.root,
-        ).translation;
+    return {
+      ...node.transform,
+      translation:
+        clip === undefined
+          ? node.transform.translation
+          : foldRoot(
+              node.transform,
+              sampleMotion(
+                clip,
+                Math.max(0, seconds - performance!.startOffset),
+              ).pose.root,
+            ).translation,
+    };
   };
   const subjects = props.contract.camera.requiredSubjects.flatMap(
     (id): IAutoMovieGrammarSubjectObservation[] => {
       const node = nodeById.get(id);
       // A required subject naming a formation or an unstaged id is not a scene
-      // node with a root and a height, so it contributes no geometry here.
+      // node with a placement and a box, so it contributes no geometry here.
       if (node === undefined) return [];
       const model = modelById.get(node.model);
-      const extent =
-        model === undefined ? null : computeModelRestExtentY(model);
-      // A rig-derived span below a tenth of a metre is not a figure; the
-      // documented stand-in height is what the framing solve itself falls back
-      // to, so both read the same subject.
-      const measured = extent === null ? 0 : extent.max - extent.min;
+      const drawn = model === undefined ? null : computeModelRestExtent(model);
+      // The one definition the framing solve and the contract grade already
+      // share: the drawn box when the model draws something, the rig span as
+      // its documented fallback, and the stand-in height when neither measures
+      // anything. Reading it here is what keeps the edit's account of a subject
+      // the same as the account the camera was solved against — a canopy deck
+      // authored 8 m above its element origin is observed 8 m up rather than on
+      // the ground, and a 60 m facade authored outward from that origin is
+      // observed about its own middle rather than at one end.
+      const rig = drawn === null ? (model?.skeleton ?? null) : null;
+      const extent = nodeSubjectExtent(
+        drawn,
+        rig === null ? null : computeRestHeight(rig),
+      );
+      // A node's placement changes over the shot, its box does not: the model
+      // is measured at rest and the rotation and scale it is carried through
+      // are the staged ones, so the span and the radius are read once and only
+      // the standing point moves.
+      const at = (seconds: number) =>
+        framedBoxOf(nodeSubjectBox(placementAt(node, seconds), extent));
+      const opening = at(start);
       return [
         {
           id,
-          start: rootAt(node, start),
-          end: rootAt(node, end),
-          height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
+          start: opening.base,
+          end: at(end).base,
+          height: opening.height,
+          radius: opening.radius,
           eyeline: null,
         },
       ];
