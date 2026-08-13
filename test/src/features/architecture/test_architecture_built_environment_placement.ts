@@ -307,6 +307,16 @@ export const test_architecture_built_environment_placement = (): void => {
     }),
     null,
   );
+  const unpopulated = environment();
+  delete unpopulated.populations;
+  TestValidator.equals(
+    "a record declaring no populations at all resolves none",
+    builtEnvironmentPlacementBounds({
+      environment: unpopulated,
+      target: body("population", "flags"),
+    }),
+    null,
+  );
 
   const bearing = (
     subjectId: string,
