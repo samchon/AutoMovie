@@ -69,6 +69,8 @@ The shots row is its own population and selects functions, so a shot's citation 
 
 These five folders are the whole source population. A module under any other path is outside the graph: it owes nothing, nothing owes it, and no diagnostic reports the omission. A building written under `src/buildings/` does not fail the graph, it leaves it, so put a work under `src/world/` and let its spec live in `docs/world/`.
 
+Two shipped modules are outside on purpose. `src/film.ts` and `src/production.ts` declare the compile rather than a subject, so no rung of the ladder holds a document they could answer for. `src/examples/` is outside for its own reason, which the file that configures the graph states beside it.
+
 ## Why the design records are not in the graph
 
 The graph covers Markdown, TypeScript, Prisma, and Swagger. JSON cannot host a citation, so `.automovie/design/**` sits outside it.
