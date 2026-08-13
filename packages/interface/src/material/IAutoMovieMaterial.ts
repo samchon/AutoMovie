@@ -14,12 +14,13 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  * about one such unit implies a physical distance or a normalized extent; its
  * source layout or adoption receipt owns the transform.
  *
- * Nothing in an image says which of the two it will be sampled through, and
- * neither does a `transform.scale` read on its own: the two arithmetics differ
- * by exactly the surface extent, which is why a binding authored for one and
- * applied to the other reads as flat paint or as one tile smeared across a
- * floor rather than as a wrong number anything can see. Declaring the source is
- * what makes that difference a stated fact instead of a guess.
+ * Nothing in an image says which of the three it will be sampled through, and
+ * neither does a `transform.scale` read on its own: the metric and normalized
+ * arithmetics differ by exactly the surface extent, and the imported one has no
+ * general formula at all, which is why a binding authored for one and applied
+ * to another reads as flat paint or as one tile smeared across a floor rather
+ * than as a wrong number anything can see. Declaring the source is what makes
+ * that difference a stated fact instead of a guess.
  *
  * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Lets a texture declare the coordinate system its scale is expressed in rather than leaving it inferred from the image.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Names the coordinate set a binding record must state alongside its coordinate transform and real scale.
