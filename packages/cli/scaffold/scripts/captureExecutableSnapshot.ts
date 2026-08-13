@@ -167,20 +167,103 @@ export const openCaptureExecutable = (
   }
 };
 
+/**
+ * What a refusal tells its reader to run, and why the two differ.
+ *
+ * A refusal that names the wrong command is a wall. `capture:install` downloads
+ * and republishes a browser generation and costs minutes; it is the answer when
+ * the installed bytes are wrong and the answer to nothing else. When the bytes
+ * are provably intact and only the filesystem's stamps moved, the reader has
+ * already done everything an install can do, so the only thing left to say is
+ * to run the doctor again once the machine stops touching the file.
+ */
+const REINSTALL_INSTRUCTION =
+  "Run npm run capture:install, then npm run capture:doctor.";
+
+const RETRY_INSTRUCTION =
+  "The installation itself is intact, so reinstalling changes nothing: wait a few seconds for that activity to finish and run npm run capture:doctor again, without npm run capture:install.";
+
+/**
+ * Why an unchanged file reports a changed stamp, measured rather than assumed.
+ *
+ * `physicalVersion` folds `mtimeNs` and `ctimeNs` in, and neither is a statement
+ * about content. Measured on this repository's Windows NTFS target: reading the
+ * file through a second handle moves `atimeNs` alone, changing an attribute
+ * moves `ctimeNs` alone, and writing an alternate data stream moves `mtimeNs`
+ * and `ctimeNs` together while the main stream stays byte-for-byte identical. An
+ * in-place rewrite of the same length moves exactly the same two fields, so no
+ * comparison of stamps can separate "somebody replaced this executable" from
+ * "a virus scanner or a search indexer touched a browser that finished
+ * extracting a minute ago", which is the observed cause of a first
+ * `capture:doctor` failing and the second succeeding untouched.
+ *
+ * The digest can separate them, and it is the same claim the refusal makes, so
+ * a moved version is settled by rehashing the descriptor that is still open on
+ * the captured inode. This never accepts drift: both outcomes still refuse. It
+ * decides which of the two refusals is true, so the reader is told to reinstall
+ * only when reinstalling is the fix.
+ */
+const captureExecutableBytesIntact = (
+  expected: ICaptureExecutableSnapshot,
+): boolean => {
+  try {
+    return (
+      digestDescriptor(expected.descriptor, expected.maximumBytes) ===
+      expected.digest
+    );
+  } catch {
+    // A read that cannot complete, or bytes that now overrun the captured
+    // maximum, is itself proof that these are no longer the captured bytes.
+    return false;
+  }
+};
+
+/**
+ * A refusal that already names the command that answers it.
+ *
+ * Every caller that wraps one of these adds context, and a wrapper that also
+ * appends its own generic remedy puts two contradicting instructions in front
+ * of one reader; the launch boundary did exactly that, which is how a browser
+ * the machine had merely touched told its author to spend a minute and a half
+ * reinstalling. A wrapper tests for this type instead of matching on wording.
+ */
+export class CaptureExecutableInstructedError extends Error {}
+
+const changedBytesFailure = (
+  expected: ICaptureExecutableSnapshot,
+): CaptureExecutableInstructedError =>
+  new CaptureExecutableInstructedError(
+    `Capture executable "${expected.path}" changed open descriptor bytes. ${REINSTALL_INSTRUCTION}`,
+  );
+
+const touchedWhileOpenFailure = (
+  expected: ICaptureExecutableSnapshot,
+  subject: string,
+): CaptureExecutableInstructedError =>
+  new CaptureExecutableInstructedError(
+    `Capture executable ${subject} "${expected.path}" is byte-for-byte the file this project captured, and its filesystem stamps moved while the descriptor stayed open, so something outside this project touched it mid-run; on Windows an antivirus or search indexer scanning a freshly installed browser is the usual cause. ${RETRY_INSTRUCTION}`,
+  );
+
 /** Revalidate the open executable descriptor and its resident pathname. */
 export const assertCaptureExecutable = (
   expected: ICaptureExecutableSnapshot,
 ): void => {
   assertCaptureExecutableDescriptor(expected);
   const resident = fs.lstatSync(expected.path, { bigint: true });
-  if (
-    resident.isSymbolicLink() ||
-    resident.isFile() === false ||
-    physicalVersion(resident) !== expected.identity
-  )
-    throw new Error(
-      `Capture executable "${expected.path}" changed physical identity.`,
+  if (resident.isSymbolicLink() || resident.isFile() === false)
+    throw new CaptureExecutableInstructedError(
+      `Capture executable "${expected.path}" changed physical identity. Something replaced that path with a link or a non-file. ${REINSTALL_INSTRUCTION}`,
     );
+  if (physicalVersion(resident) !== expected.identity) {
+    // The descriptor's bytes were just revalidated above, so a pathname whose
+    // stamps moved while it still names that exact inode is the same drift the
+    // descriptor check classifies, reported one stat later.
+    if (physicalFileIdentity(resident) === expected.physicalIdentity)
+      throw touchedWhileOpenFailure(expected, "pathname");
+    throw new CaptureExecutableInstructedError(
+      `Capture executable "${expected.path}" changed physical identity. Another file now occupies that path. ${REINSTALL_INSTRUCTION}`,
+    );
+  }
   assertPhysicalDirectory(expected.directory, "capture executable directory");
 };
 
@@ -191,12 +274,13 @@ export const assertCaptureExecutableDescriptor = (
   const opened = fs.fstatSync(expected.descriptor, { bigint: true });
   if (
     opened.isFile() === false ||
-    physicalVersion(opened) !== expected.descriptorVersion ||
     physicalFileIdentity(opened) !== expected.physicalIdentity
   )
-    throw new Error(
-      `Capture executable "${expected.path}" changed open descriptor bytes.`,
-    );
+    throw changedBytesFailure(expected);
+  if (physicalVersion(opened) === expected.descriptorVersion) return;
+  if (captureExecutableBytesIntact(expected) === false)
+    throw changedBytesFailure(expected);
+  throw touchedWhileOpenFailure(expected, "descriptor");
 };
 
 /** Rehash the exact open descriptor when byte-for-byte publication requires it. */
@@ -208,17 +292,13 @@ export const assertCaptureExecutableBytes = (
     digestDescriptor(expected.descriptor, expected.maximumBytes) !==
     expected.digest
   )
-    throw new Error(
-      `Capture executable "${expected.path}" changed open descriptor bytes.`,
-    );
+    throw changedBytesFailure(expected);
   const completed = fs.fstatSync(expected.descriptor, { bigint: true });
-  if (
-    completed.isFile() === false ||
-    physicalVersion(completed) !== expected.descriptorVersion
-  )
-    throw new Error(
-      `Capture executable "${expected.path}" changed while revalidated.`,
-    );
+  if (completed.isFile() === false) throw changedBytesFailure(expected);
+  // The rehash above just proved these bytes, so a version that moved during it
+  // is the machine touching the file, not the file changing.
+  if (physicalVersion(completed) !== expected.descriptorVersion)
+    throw touchedWhileOpenFailure(expected, "descriptor");
 };
 
 /** Verify that one atomic rename published the same open file at a new path. */
@@ -336,8 +416,20 @@ const assertPhysicalDirectory = (
   label: string,
 ): void => {
   const current = physicalDirectory(expected.path, label);
-  if (current.real !== expected.real || current.version !== expected.version)
-    throw new Error(`${label} "${expected.path}" changed physical identity.`);
+  if (current.real === expected.real && current.version === expected.version)
+    return;
+  // A directory's stamps move whenever anything is created or removed inside
+  // it, which a quarantine file or an extraction leftover does without the
+  // directory ever ceasing to be the one that was captured. That is the same
+  // ambient activity the descriptor refusals classify, so it earns the same
+  // instruction rather than a reinstall the reader has already performed.
+  if (current.real === expected.real && current.identity === expected.identity)
+    throw new CaptureExecutableInstructedError(
+      `${label} "${expected.path}" changed while this project held its executable open, so something outside this project wrote into it mid-run. ${RETRY_INSTRUCTION}`,
+    );
+  throw new CaptureExecutableInstructedError(
+    `${label} "${expected.path}" changed physical identity. Another directory now occupies that path. ${REINSTALL_INSTRUCTION}`,
+  );
 };
 
 const physicalVersion = (status: fs.BigIntStats): string =>
