@@ -18,6 +18,7 @@ import type {
   IAutoMovieCompiledShotSource,
   IAutoMovieExpression,
   IAutoMovieSoftBodyDomain,
+  IAutoMovieTransform,
 } from "@automovie/interface";
 import {
   AutoMoviePlayer,
@@ -171,8 +172,37 @@ export const selectProductionWearableSoftBodies = (
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
+  /**
+   * The shot's object graph, which is **not renderable until it has been
+   * resolved for a camera**.
+   *
+   * Every instance set and formation builds its level-of-detail meshes hidden
+   * and only reveals one when it is told how far away the eye is, so a scene
+   * drawn straight out of this field shows the ordinary meshes and silently
+   * drops every instanced population — the laid modules, the flags, the
+   * boards. Call {@link IAutoMovieCompiledShotRuntime.resolveForCamera} first
+   * when drawing this graph with a camera of your own; {@link render} already
+   * does it for the shot's own camera.
+   */
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
+  /**
+   * Reveal the level of detail each population owes the given eye.
+   *
+   * Separated from {@link render} because looking at a shot from somewhere the
+   * shot does not go is an ordinary thing to want — a review from a fresh
+   * angle, a survey of a surface nobody authored a camera for — and the only
+   * alternative was to draw through the shot's own camera and get the authored
+   * view back every time.
+   *
+   * @param camera Eye the populations resolve against.
+   * @param viewportHeight Pixel height the projection is judged at; a taller
+   *   viewport resolves more detail at the same distance.
+   */
+  resolveForCamera: (
+    camera: THREE.PerspectiveCamera,
+    viewportHeight: number,
+  ) => void;
   render: (
     renderer: THREE.WebGLRenderer,
     time: number,
@@ -560,6 +590,28 @@ export const createCompiledShotRuntime = async (
     quaternion: camera.quaternion.clone(),
     scale: camera.scale.clone(),
   };
+  /**
+   * Reveal the level of detail each population owes one eye.
+   *
+   * `render` passes the animation state it has already lowered for this frame;
+   * an outside caller drawing a still from its own camera passes nothing and
+   * gets the populations resolved at rest, which is what a survey wants.
+   */
+  const resolveForCamera = (
+    eye: THREE.PerspectiveCamera,
+    viewportHeight: number,
+    animation?: {
+      time: number;
+      heroSources: ReadonlyMap<string, IAutoMovieTransform>;
+    },
+  ): void => {
+    const height = Math.max(1, viewportHeight);
+    eye.updateMatrixWorld(true);
+    for (const formation of formationObjects)
+      formation.update(eye, height, animation?.time, animation?.heroSources);
+    for (const instanceSet of instanceSetObjects)
+      instanceSet.update(eye, height);
+  };
   const render = (
     renderer: THREE.WebGLRenderer,
     time: number,
@@ -660,15 +712,10 @@ export const createCompiledShotRuntime = async (
           ] as const,
       ),
     );
-    for (const formation of formationObjects)
-      formation.update(
-        camera,
-        Math.max(1, renderer.domElement.height),
-        time,
-        heroSources,
-      );
-    for (const instanceSet of instanceSetObjects)
-      instanceSet.update(camera, Math.max(1, renderer.domElement.height));
+    resolveForCamera(camera, Math.max(1, renderer.domElement.height), {
+      time,
+      heroSources,
+    });
     for (const effect of effectObjects) effect.update(camera, time);
     formationObjects.forEach(({ stats }, index) => {
       const runtime = compiled.formations[index]!;
@@ -766,6 +813,7 @@ export const createCompiledShotRuntime = async (
     id: compiled.shot.id,
     scene: scene.scene,
     camera,
+    resolveForCamera,
     render,
     dispose: async () => {
       for (const water of waterObjects) {

@@ -32,6 +32,10 @@ Pan or tilt to reveal, follow, compare, or withhold. Dolly changes spatial relat
 
 Ease camera starts and stops unless impact calls for discontinuity. Coordinate subject motion and camera motion so one does not accidentally cancel or amplify the other. Check minimum distance, target visibility, occlusion, raster bounds, and motion speed through the engine and acceptance gates.
 
+A beat authors that move with a `frame` action naming the live camera, and it is the one declaration that outranks the staged camera. Staging chooses the side the lens watches from; the action keeps that bearing and solves the distance from its declared framing and its subject, so a camera staged forty metres out for an establishing wide is pulled to whatever distance a medium of one figure demands. Both declarations are legitimate together, and the action is the one that renders. A beat with no `frame` action locks the camera off exactly where staging put it.
+
+That makes the staged transform an input rather than a result, so read the camera that will render from the compiled realization instead: each camera sample carries a `placement` at every review time whenever the shot compiled a move, and its absence means staging and the render agree. A shot whose frame looks wrong while every staged number reads correct is the shape of that difference.
+
 ## Light and color
 
 Design key direction, fill ratio, practical motivation, contrast, and color separation around story state. Maintain continuity where the scene is continuous; change it only when time, location, perception, or dramatic state changes. Confirm that skin, uniforms, props, smoke, and terrain remain separable under the actual material and render path.

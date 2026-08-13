@@ -61,13 +61,16 @@ Codex takes its MCP servers from its own configuration rather than `.mcp.json`. 
 
 Give the agent a brief and let it work. The agent drives the tools; you observe and record. Do not narrate the tool calls on its behalf or perform them yourself, since the point is to see what the surface affords a model that has only the guides and the schemas.
 
-Drive the agent turn by turn when you need to play the user across a longer session: `claude -p "<brief>" --session-id <uuid>`, then `claude -p "<next turn>" --resume <uuid>`. Codex resumes with `codex exec resume --last "<next turn>"`.
+Drive the agent turn by turn when you need to play the user across a longer session: `claude -p "<brief>" --session-id <uuid>`, then `claude -p "<next turn>" --resume <uuid>`. Codex resumes with `codex exec resume <session-uuid> "<next turn>"`, naming the session rather than `--last`.
+
+Read [steering.md](steering.md) before driving a session that will run for hours instead of for one prompt. A long session accepts no input while a turn is running, shares the machine with whatever else is running on it, and reports on itself faster than it produces, so the operational rules for keeping one on course are their own document.
 
 ## Read The Result
 
 Judge against what the experiment set out to answer, and say plainly when the run did not settle it.
 
 - Separate what the engine accepted from what the render shows. A render that disagrees with the engine result is a viewer bug; one that agrees and still looks wrong is an engine or data bug. Verify anything visual through the viewer-verification skill rather than trusting a tool's success return.
+- Verify the instrument before the subject. A sweep script, capture loop, or comparison harness written to observe with is covered by nothing the engine or the viewer guarantees, so a defect in it is indistinguishable from a defect in the work. Say how each claim was obtained: a count read from a compiled artifact is reliable, a frame is worth exactly what the path that produced it is worth, and the two disagreeing makes the instrument the first suspect.
 - Reproduce before believing. The engine is deterministic and the driving model is not, so a single odd result is not yet a finding.
 - Record a suspicion the run cannot settle as a hypothesis with the observation that would confirm it, rather than acting on it.
 

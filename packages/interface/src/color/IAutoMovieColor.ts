@@ -8,6 +8,15 @@
  * display; when both are present the engine treats the linear triple as
  * authoritative and `hex` as a derived label.
  *
+ * Instance palettes are the exception. An entry of
+ * `IAutoMovieInstanceVariation.palette` is a bare `#RRGGBB` string with no
+ * triple beside it, so the viewer decodes it from sRGB instead of reading it as
+ * a label. The two paths land on the same color only when this type's triple
+ * was actually derived from its swatch: `hex` is never checked against `r`,
+ * `g`, `b`, so an author who transcribes `7d` as `125 / 255` gets a material at
+ * linear `0.49` beside the same palette entry `#7d828c` at linear `0.20`, and
+ * nothing refuses the pair.
+ *
  * Keeping color as a numeric triple (rather than a free string) lets an
  * authoring agent adjust it numerically and lets the engine range-check it.
  *

@@ -7,6 +7,7 @@ import {
   IAutoMovieConnectorCarriage,
   IAutoMovieConnectorSection,
   IAutoMovieConnectorState,
+  IAutoMovieModel,
   IAutoMovieMovablePanel,
   IAutoMovieOpeningProfile,
   IAutoMovieOperationState,
@@ -20,6 +21,7 @@ import {
 } from "@automovie/interface";
 
 import { IAutoMovieWallOpening } from "../geometry/proceduralMesh";
+import { tessellate } from "../geometry/tessellate";
 import { Matrix4 } from "../math/Matrix4";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
@@ -1040,6 +1042,115 @@ export const builtEnvironmentSpaceNodes = (
         included.has(element.space),
     )
     .map((element) => `${environment.id}/${element.id}`);
+};
+
+/**
+ * The world box the contents of a logical space and its descendants fill.
+ *
+ * A declared space and the thing standing in it are two different extents, and
+ * reading the first as the second is what puts a review camera in an empty
+ * corner. In the medieval-residence experiment the space `stair-ground` is
+ * declared over x 3.5..14.5, z 5.5..11.5 while the stair tower filling it
+ * occupies x 8.93..14.13, z 5.90..11.10, so three of four cameras placed at the
+ * declared cell's corners stood outside the tower and framed a wall. The cell
+ * answers how far the room reaches; this answers where its content is, which is
+ * the question a reviewer placing an eye actually asks.
+ *
+ * The elements measured are exactly {@link builtEnvironmentSpaceNodes}'s: the
+ * staged set pieces of this space and every space below it. Each stands where
+ * the environment's current operating state puts it, which is where
+ * {@link lowerBuiltEnvironment} stages it, so a leaf authored open widens the
+ * box by the leaf where it actually rests. Geometry is read through
+ * {@link tessellate} for a primitive and from the stated mesh otherwise, the
+ * same vertices the renderer draws, so the box cannot drift from the picture.
+ *
+ * An element citing a runtime model reference, whose bytes this record never
+ * holds, contributes its own world origin rather than nothing, exactly as one
+ * whose parts draw no vertices does. A space furnished entirely by referenced
+ * models therefore still reports where its content stands, and the horizontal
+ * degeneracy is deliberate: a width the record never stated is a number that
+ * would frame geometry nobody wrote down.
+ *
+ * `null` is a space with nothing placed in it at any depth. That is an ordinary
+ * answer, not a fault: an undressed room and a purely semantic container ("the
+ * west wing") are both legitimately empty, so refusing would make every caller
+ * guard a normal case, and this file keeps refusal for an undeclared space id,
+ * which is the caller's own mistake. A degenerate box would be worse than null,
+ * because nothing distinguishes it from one real element standing at the
+ * origin.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentSpaceContentBounds` reports the world box the placed contents of a logical space and its descendants fill. This ensures authored building-interior state remains explicit and reviewable within its supported host boundary.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentSpaceContentBounds` resolves the element hierarchy, ownership, and geometry of one logical-space subtree into its world extent inside one building-interior boundary.
+ * @author Samchon
+ */
+export const builtEnvironmentSpaceContentBounds = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaceId: string,
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } | null => {
+  requireSpace(environment, spaceId);
+  const included = descendantSpaces(environment.spaces, spaceId);
+  const matrices = worldMatricesOf(environment, operationDeltas(environment));
+  const models = new Map(
+    environment.models.map((model) => [model.id, model] as const),
+  );
+  const points = environment.elements
+    .filter(
+      (element) =>
+        element.model !== null &&
+        element.space !== null &&
+        included.has(element.space),
+    )
+    .flatMap((element) =>
+      placedElementPoints(
+        models.get(element.model!),
+        matrices.get(element.id)!,
+      ),
+    );
+  return points.length === 0 ? null : boundsOf(points);
+};
+
+/**
+ * The world points one placed element draws, or its origin when it draws none.
+ *
+ * Parts are placed the way the renderer places them, each under its own
+ * transform and then under the element's world matrix. A model the environment
+ * does not own is `undefined` here rather than an error, because a runtime
+ * model reference is a legal way to furnish a building and the record simply
+ * does not carry its vertices.
+ */
+const placedElementPoints = (
+  model: IAutoMovieModel | undefined,
+  world: number[],
+): IAutoMovieVector3[] => {
+  const points: IAutoMovieVector3[] = [];
+  for (const part of model === undefined ? [] : model.parts) {
+    const positions =
+      part.geometry.type === "primitive"
+        ? tessellate(part.geometry.shape).positions
+        : part.geometry.mesh.positions;
+    const matrix =
+      part.transform === null
+        ? world
+        : Matrix4.multiply(
+            world,
+            Matrix4.compose(
+              part.transform.translation,
+              part.transform.rotation,
+              part.transform.scale,
+            ),
+          );
+    for (let index = 0; index + 2 < positions.length; index += 3)
+      points.push(
+        applyMatrix(matrix, {
+          x: positions[index]!,
+          y: positions[index + 1]!,
+          z: positions[index + 2]!,
+        }),
+      );
+  }
+  return points.length === 0
+    ? [applyMatrix(world, { x: 0, y: 0, z: 0 })]
+    : points;
 };
 
 /**
@@ -3480,17 +3591,26 @@ const sweptCornerBounds = (
   };
 };
 
+/**
+ * The axis-aligned box containing every given point.
+ *
+ * Folded rather than spread through `Math.min`, because the callers are no
+ * longer only the four corners of a leaf: measuring a space's contents hands
+ * this every vertex the space draws, and a spread of that many arguments is a
+ * stack overflow rather than a slow answer.
+ */
 const boundsOf = (
   points: readonly IAutoMovieVector3[],
-): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => ({
-  min: {
-    x: Math.min(...points.map((point) => point.x)),
-    y: Math.min(...points.map((point) => point.y)),
-    z: Math.min(...points.map((point) => point.z)),
-  },
-  max: {
-    x: Math.max(...points.map((point) => point.x)),
-    y: Math.max(...points.map((point) => point.y)),
-    z: Math.max(...points.map((point) => point.z)),
-  },
-});
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
+  const min: IAutoMovieVector3 = { x: Infinity, y: Infinity, z: Infinity };
+  const max: IAutoMovieVector3 = { x: -Infinity, y: -Infinity, z: -Infinity };
+  for (const point of points) {
+    min.x = Math.min(min.x, point.x);
+    min.y = Math.min(min.y, point.y);
+    min.z = Math.min(min.z, point.z);
+    max.x = Math.max(max.x, point.x);
+    max.y = Math.max(max.y, point.y);
+    max.z = Math.max(max.z, point.z);
+  }
+  return { min, max };
+};

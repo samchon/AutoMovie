@@ -93,10 +93,10 @@ Buildings use the same rule without pretending they are formations. A building c
 ```ts
 import {
   AutoMovieSubject,
-  IAutoMovieSubjectContribution,
+  type IAutoMovieSubjectContribution,
   mergeAutoMovieSpaces,
 } from "@automovie/engine";
-import { IAutoMovieShotBuildContext } from "@automovie/interface";
+import type { IAutoMovieShotBuildContext } from "@automovie/interface";
 
 export const stageTower = (
   tower: AutoMovieSubject<unknown>,
