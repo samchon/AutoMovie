@@ -77,7 +77,7 @@ Split a fragment whenever the product implements part of a noun and not the rest
 
 Leave a fragment nobody implements undeclared rather than excluding it. An exclusion states that the claim intentionally owes nothing, so spending one on unfinished work restores the exact confusion between a decided boundary and an unexamined gap. An enumerated fragment with no ledger entry is visible debt; an exclusion over it is a false statement that reads green forever.
 
-Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit breaks the digest until someone declares its owners, so the cost lands on the next author of each unit instead of arriving as one repository-wide red gate.
+Migrate by touching. Every unit starts in the ledger's `legacy` snapshot with its digest, and editing that unit moves its prose away from the digest, which is what surfaces it to the next author of that unit rather than arriving as one repository-wide red gate. What surfaces is a number, not a refusal: the check reports it under `stale` and still exits zero, exactly as the counting rule above requires. Read that count when you touch a legacy unit and decide whether this is the change that should declare its owners; nothing will stop you either way, and a declaration written to clear a diagnostic is the outcome the counting rule exists to avoid.
 
 **Unpaid edge.** Nothing yet compares a unit's marker set against its declared obligation set, so a declaration can still cover five of nine fragments and pass. Until that comparison exists, read the markers when you review a declaration, and do not report a passing gate as proof that a unit is fully owned.
 
