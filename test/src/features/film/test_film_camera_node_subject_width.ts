@@ -90,6 +90,37 @@ const facade = (id: string, offset: number): IAutoMovieModel => ({
   asset: null,
 });
 
+/**
+ * The same wall delivered as an ingested mesh rather than as a primitive. Its
+ * eight corners are the box's, which is enough for an extent: the measurement
+ * reads vertices either way, and this is the arm a generated primitive never
+ * exercises.
+ */
+const meshFacade = (id: string, offset: number): IAutoMovieModel => {
+  const corners: number[] = [];
+  for (const x of [-WIDTH / 2, WIDTH / 2])
+    for (const y of [-HEIGHT / 2, HEIGHT / 2])
+      for (const z of [-DEPTH / 2, DEPTH / 2]) corners.push(x, y, z);
+  return {
+    ...facade(id, offset),
+    parts: [
+      {
+        ...facade(id, offset).parts[0]!,
+        geometry: {
+          type: "mesh",
+          mesh: {
+            positions: corners,
+            normals: null,
+            uvs: null,
+            indices: null,
+            skin: null,
+          },
+        },
+      },
+    ],
+  };
+};
+
 const camera = (): IAutoMovieCamera => ({
   id: "cam",
   transform: transform(0, 2, 200),
@@ -339,7 +370,11 @@ const performFacade = (model: IAutoMovieModel): IAutoMovieClip | null => {
  *    refused under the camera the height-only solve produced — that camera
  *    delivers a frame with none of the subject in it — and reads under the
  *    measured one.
- * 8. Boundaries. A node with nothing to measure keeps the horizontally
+ * 8. A wall delivered as an ingested mesh rather than as a generated primitive
+ *    draws the same box, because the measurement reads vertices either way.
+ * 9. `performShot` itself resolves the subject on those terms, so what is
+ *    pinned is the compiler's own reading rather than one rebuilt beside it.
+ * 10. Boundaries. A node with nothing to measure keeps the horizontally
  *    degenerate stand-in segment it always had, and a slab too thin to measure
  *    vertically keeps its real width while taking the stand-in height.
  */
@@ -497,7 +532,17 @@ export const test_film_camera_node_subject_width = (): void => {
     },
   );
 
-  // 8. the shot compiler itself resolves the subject that way.
+  // 8. an ingested mesh is measured on the same terms as a generated primitive.
+  TestValidator.equals(
+    "a mesh wall draws the same box its primitive twin does",
+    computeModelRestExtent(meshFacade("mesh-facade-model", WIDTH / 2)),
+    {
+      min: { x: 0, y: 0, z: -DEPTH / 2 },
+      max: { x: WIDTH, y: HEIGHT, z: DEPTH / 2 },
+    },
+  );
+
+  // 9. the shot compiler itself resolves the subject that way.
   const performed = performFacade(model);
   TestValidator.equals(
     "performShot frames a set piece from the box it draws",
@@ -517,7 +562,7 @@ export const test_film_camera_node_subject_width = (): void => {
     { performs: true, standsAtTheHorizontalFit: true, holdsTheFarEnd: true },
   );
 
-  // 9. boundaries: nothing to measure, and nothing vertical to measure.
+  // 10. boundaries: nothing to measure, and nothing vertical to measure.
   TestValidator.equals(
     "a node with nothing to measure keeps the degenerate stand-in segment",
     nodeSubjectExtent(null, null),
