@@ -36,6 +36,10 @@ A beat authors that move with a `frame` action naming the live camera, and it is
 
 That makes the staged transform an input rather than a result, so read the camera that will render from the compiled realization instead: each camera sample carries a `placement` at every review time whenever the shot compiled a move, and its absence means staging and the render agree. A shot whose frame looks wrong while every staged number reads correct is the shape of that difference.
 
+That solve reads a measured box rather than a point. A `frame` action naming a node takes the extent that node's geometry actually draws, carried out through its own placement, aims at the middle of that box at the height its framing asks for, and stands at the further of the vertical and the horizontal fit. A sixty-metre facade is therefore centred and stood back far enough to hold its width, rather than aimed at whichever corner its element origin happens to sit on, and `orbit` sweeps its arc about that same aim point, so it circles the mass. Several staged bearings still show more of a building than one sweep can, so choose between them on what the coverage has to prove.
+
+A `group` target is the multi-subject form of the same solve: it unions the nodes and formations it names into one box and frames that, which is how an elevation and the figure standing against it, a wing of two set pieces, or a crowd beside its landmark become one subject. Reach for it to state a composition, not to recover an extent one named node already measures.
+
 ## Light and color
 
 Design key direction, fill ratio, practical motivation, contrast, and color separation around story state. Maintain continuity where the scene is continuous; change it only when time, location, perception, or dramatic state changes. Confirm that skin, uniforms, props, smoke, and terrain remain separable under the actual material and render path.
