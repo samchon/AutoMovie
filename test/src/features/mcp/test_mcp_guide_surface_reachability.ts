@@ -13,8 +13,6 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
-import { namedFacts } from "../internal/predicates";
-
 /**
  * Every capability a guide presents as callable is reachable from the sandbox.
  *
