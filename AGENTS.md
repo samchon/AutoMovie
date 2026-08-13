@@ -67,7 +67,7 @@ What automovie models and what it refuses to model, plus the verification discip
 
 ### Viewer Verification
 
-Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation, `.agents/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works.
+Driving the viewer/playground through the Playwright library to inspect renders, poses, and motion against expectation, `.agents/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works, and to reach a real GPU context rather than a software fallback that reads like one.
 
 ### MCP Server Design
 

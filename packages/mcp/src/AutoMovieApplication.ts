@@ -3176,9 +3176,11 @@ export class AutoMovieApplication {
   }
 
   /**
-   * Prepare the current four-surface review worksheet. It returns the exact
-   * target fingerprint, mandatory axes, and current design/source/frame/outcome
-   * evidence. It performs no aesthetic judgment and stores no verdict.
+   * Prepare the current review worksheet for one target. It returns that
+   * target's exact fingerprint, its mandatory axes, and whatever current
+   * evidence its own kind carries; a kind that carries no frame or outcome
+   * returns an empty one rather than a stand-in. It performs no aesthetic
+   * judgment and stores no verdict.
    *
    * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Prepares current host evidence without deciding the review outcome.
    * @evidence requirements/agent-authoring/roles-and-authorities.md#agent-evidence-producer-authority Returns only evidence produced and verified by the scoped host services.
