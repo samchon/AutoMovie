@@ -17,7 +17,13 @@ interface InspectionSession {
   server: Awaited<ReturnType<typeof createServer>>;
   browser: IAutoMovieCaptureBrowserSession["browser"];
   origin: string;
-  pages: Map<string, Promise<InspectionPage>>;
+  pages: Map<string, IInspectionPageEntry>;
+}
+
+/** One cached page, beside the subject identity that supersedes it. */
+interface IInspectionPageEntry {
+  subject: string;
+  opening: Promise<InspectionPage>;
 }
 
 interface InspectionPage {
@@ -122,6 +128,23 @@ const inspectionSession = async (
  * that sweep after the fact; keeping both in the key means the page never
  * serves the mixed frame in the first place.
  */
+/**
+ * The subject a page stands for, without the state it was opened at.
+ *
+ * Two pages under this one identity are the same thing at two compiles, and
+ * only the newer one can still be asked for a frame.
+ */
+const pageSubject = (
+  input: Parameters<AutoMovieProductionSubjectInspection>[0],
+): string =>
+  JSON.stringify({
+    productionId: input.productionId,
+    shot: input.target.shot,
+    subject: input.target.subject,
+    width: input.width,
+    height: input.height,
+  });
+
 const pageKey = (
   input: Parameters<AutoMovieProductionSubjectInspection>[0],
 ): string =>
@@ -141,8 +164,22 @@ const inspectionPage = (
 ): Promise<InspectionPage> => {
   const key = pageKey(input);
   const existing = session.pages.get(key);
-  if (existing !== undefined) return existing;
+  if (existing !== undefined) return existing.opening;
+  const subject = pageSubject(input);
   const pending = (async (): Promise<InspectionPage> => {
+    // A recompile gives one subject a second key, and the page opened under the
+    // first can never be asked for a frame again: the fingerprint moved, so
+    // every later request misses it. Left in the map it would hold a whole
+    // staged scene open for the lifetime of the host, once per compile. The
+    // delivery capture retires its superseded pages the same way, though it
+    // recovers the subject by re-parsing its own key; carrying it beside the
+    // entry keeps that identity from depending on how the key was spelled.
+    for (const [candidateKey, candidate] of session.pages)
+      if (candidateKey !== key && candidate.subject === subject) {
+        session.pages.delete(candidateKey);
+        const previous = await candidate.opening.catch(() => null);
+        if (previous !== null) await previous.page.close();
+      }
     const page = await session.browser.newPage({
       viewport: { width: input.width, height: input.height },
       deviceScaleFactor: 1,
@@ -156,7 +193,19 @@ const inspectionPage = (
     );
     const url = new URL(
       "inspection.html",
-      new URL(config.viewer.basePath, session.origin),
+      // The trailing slash is forced rather than assumed. `basePath` is a
+      // project-editable setting and the delivery capture navigates to it
+      // directly, so `/viewer` and `/viewer/` behave identically there; this
+      // page is a SIBLING of that base, and URL resolution drops the last
+      // segment of a base that does not end in one. Measured: `/viewer`
+      // resolves to `/inspection.html`, which 404s and surfaces as "the page
+      // never became ready" rather than as a configuration fault.
+      new URL(
+        config.viewer.basePath.endsWith("/")
+          ? config.viewer.basePath
+          : `${config.viewer.basePath}/`,
+        session.origin,
+      ),
     );
     url.searchParams.set("shot", input.target.shot);
     url.searchParams.set("subject", input.target.subject);
@@ -190,9 +239,10 @@ const inspectionPage = (
       throw failure;
     }
   })();
-  session.pages.set(key, pending);
+  const entry = { subject, opening: pending };
+  session.pages.set(key, entry);
   void pending.catch(() => {
-    if (session.pages.get(key) === pending) session.pages.delete(key);
+    if (session.pages.get(key) === entry) session.pages.delete(key);
   });
   return pending;
 };
