@@ -81,9 +81,19 @@ export const test_mcp_repaint_shot = async (): Promise<void> => {
     const production = project.design({
       kind: "production",
     }) as IAutoMovieProductionDesign;
+    // The shared fixture marks every deliverable optional to stay cheap, and
+    // `repainted` delivery refuses a production whose features are all
+    // optional: a nominal repaint that ships only previews and guides has
+    // nothing to repaint. Requiring the feature is what makes this fixture a
+    // repaint production rather than a preview one.
     const delivery = project.setProductionDesign({
       ...production,
       visualDelivery: "repainted",
+      deliverables: production.deliverables.map((deliverable) =>
+        deliverable.kind === "feature"
+          ? { ...deliverable, required: true }
+          : deliverable,
+      ),
     });
     if (delivery.accepted === false)
       throw new Error(
@@ -115,7 +125,12 @@ export const test_mcp_repaint_shot = async (): Promise<void> => {
       () => compiled,
     );
     for (let index = 0; index < FRAME_COUNT; ++index)
-      for (const pass of ["beauty", "pose"] as const) {
+      // `mask` joins the two the repaint grid needs because the starter
+      // production carries an effect-mask acceptance scenario, and a shot
+      // review refuses to complete while any required review frame has no
+      // current verified PNG. Repaint is gated on that completed review, so
+      // the pass that no repaint input reads still has to exist.
+      for (const pass of ["beauty", "pose", "mask"] as const) {
         const preview = await oracle.preview({
           target: { kind: "shot", id: SHOT },
           time: index / FRAME_RATE,
@@ -270,7 +285,12 @@ const declareRepaintReference = (root: string, bytes: Uint8Array): string => {
       inputs: [],
       outputDigest: digest,
       reproducible: true,
-      seed: null,
+      // A reproducible generation owes the seed that reproduces it, and the
+      // compiler refuses the pair `reproducible: true` with `seed: null` by
+      // name. `productionPng` takes no seed, so this records the constant its
+      // raster is generated at rather than inventing a replay handle nothing
+      // would honour.
+      seed: 0,
     },
     license: {
       identifier: "CC0-1.0",
