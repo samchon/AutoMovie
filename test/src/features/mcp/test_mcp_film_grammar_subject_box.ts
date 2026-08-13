@@ -306,13 +306,13 @@ const rootAndHeightSize = (props: {
  *    `medium`: the converged read files nothing.
  * 4. The same canopy measured at its origin classifies `full`, the second
  *    shape of the same divergence, with the floor as well as the width.
- * 5. A framing the solved camera genuinely does not deliver is still reported:
- *    the facade camera solved for `medium` under a declared `close` intent
- *    keeps the finding, so the convergence did not silence the check.
- * 6. A node whose model draws nothing keeps the point it always was: its rig
+ * 5. A node whose model draws nothing keeps the point it always was: its rig
  *    span stands in for the height, its horizontal extent stays 0, and a
  *    `full` camera solved for that 6.000 m span is read as `full`, while the
  *    camera a 1.700 m stand-in would have produced is reported.
+ * 6. A framing the solved camera genuinely does not deliver is still reported:
+ *    the facade camera solved for `medium` under a declared `close` intent
+ *    keeps the finding, so the convergence did not silence the check.
  */
 export const test_mcp_film_grammar_subject_box = (): void => {
   const facade = {
