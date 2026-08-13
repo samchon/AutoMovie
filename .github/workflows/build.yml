@@ -95,14 +95,18 @@ jobs:
       # `pnpm run build` cannot reach `packages/cli/scaffold`: it is not a
       # workspace project (`pnpm-workspace.yaml` lists `packages/*`) and its
       # `package.json` carries template tokens rather than versions, so nothing
-      # above compiles the obligation graph every generated project inherits.
-      # The gate renders a probe from the scaffold's own `docs`, `src` and
-      # `lint.config.ts` and fails on the evidence diagnostics alone, so the
-      # module-resolution noise an uninstalled probe always carries stays out of
-      # the verdict. It plants its own uncited class every run, because a lint
-      # that never loaded reports zero diagnostics and reads exactly like a
-      # clean graph.
-      - name: Check Scaffold Obligation Graph
+      # above runs the `npm run lint:source` every generated project inherits.
+      # The gate renders a probe from the scaffold's own `docs` and everything
+      # its `tsconfig.json` compiles, and fails on the evidence and correctness
+      # diagnostics, so what an uninstalled probe cannot resolve stays out of
+      # the verdict. It plants one defect per axis every run, because a lint
+      # that never loaded and a union that resolved to `any` both report zero
+      # diagnostics and read exactly like a clean project.
+      #
+      # It runs after Build Packages on purpose: the probe resolves
+      # `@automovie/*` to the built declarations a generated project installs,
+      # rather than to this repository's own TypeScript.
+      - name: Check Scaffold lint:source
         run: node internals/scaffold-evidence-gate.mjs
 
       - name: Save Toolchain Plugin Cache
