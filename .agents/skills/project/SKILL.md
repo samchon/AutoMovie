@@ -49,7 +49,7 @@ An example that proves a capability lives in a test fixture or in `packages/arch
 - `packages/cli` (`@automovie/cli`): the `automovie` binary that scaffolds and inspects a production repository. `packages/cli/scaffold/` is the template it stamps out and a working production in its own right (see the scaffold skill).
 - `packages/create-automovie`: the one-command project creator, a thin front door onto the same scaffolder.
 - `packages/playground`: Vite demo pages exercising the pipeline end to end; capture-verified via headless Chrome (see `.agents/skills/viewer-verification/SKILL.md`).
-- `packages/mcp` (`@automovie/mcp`): the five-tool coding-agent evidence boundary over the deterministic production engine.
+- `packages/mcp` (`@automovie/mcp`): the coding-agent evidence boundary over the deterministic production engine.
   `AutoMovieApplication` serves guides, frame capture, optional repaint, and evidence-first review through `typia.llm.controller` + `@typia/mcp`; design/source authoring, compilation, inspection, migration, and rendering remain non-MCP package or CLI work, and the repository hosts no internal LLM.
 - `test/` (`@automovie/test`): the `@nestia/e2e` `DynamicExecutor` program; one scenario per file under `test/src/features/<domain>/`, builders under `features/internal/`.
 - `config/` (`@automovie/config`): the workspace-wide base `tsconfig.json`, shared lint policy, and package-output assertion.

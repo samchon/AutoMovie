@@ -6,7 +6,7 @@ The exact allowlist in `build/prompt.mjs` names every Markdown guide served by `
 
 - `AUTOMOVIE_OVERALL` is the constitution and prose router. An external agent that has read only this document must be able to select the next guide.
 - MCP gate guides use contract and diagnostic-catalog language. They name the exact tool, inputs, success evidence, refusals, recovery order, and boundaries they cannot judge.
-- Handbooks use cookbook language. They teach decisions made in repository files or ordinary APIs that the five-tool server cannot intercept.
+- Handbooks use cookbook language. They teach decisions made in repository files or ordinary APIs that the server cannot intercept.
 - Record and compiler guides explain typed owners and deterministic boundaries. Interface types and JSDoc remain the primary payload contract; guides add patterns and domain judgment.
 
 ## Writing rules

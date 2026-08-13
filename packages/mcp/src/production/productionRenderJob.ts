@@ -1243,7 +1243,7 @@ export function readAutoMovieProductionOwnedFile(props: {
  * Execute the production-owned read with an explicit optionality policy.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Implements the code-owned read boundary whose result remains reproducible outside an MCP session.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs repository-owned artifact access without turning the five-tool evidence surface into an authoring API.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs repository-owned artifact access without turning the evidence surface into an authoring API.
  */
 export function readAutoMovieProductionOwnedFile(props: {
   root: string;

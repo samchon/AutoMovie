@@ -14,7 +14,7 @@ const MCP_VERSION = (
 ).version;
 
 /**
- * Exact guide names served by the five-tool application.
+ * Exact guide names served by the application.
  *
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Enumerates the stable topic names an author can request.
  * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Enumerates the exact topic document identities served as knowledge output.

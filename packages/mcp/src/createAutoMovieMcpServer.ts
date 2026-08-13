@@ -16,12 +16,12 @@ const MCP_PACKAGE_VERSION = (
 ).version;
 
 /**
- * Build AutoMovie's complete five-tool MCP server. The host fixes workspace
+ * Build AutoMovie's complete MCP server. The host fixes workspace
  * identity and injects optional pixel/repaint adapters; tool payloads cannot
  * switch roots. Strict equality rejects excess properties and text fallback
  * keeps structured results available to ordinary MCP clients.
  *
- * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal Exposes the fixed five-tool knowledge and evidence surface rather than a duplicate authoring API.
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal Exposes the fixed knowledge and evidence surface rather than a duplicate authoring API.
  * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Delegates actual pixel production to the configured host.
  * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects Requires explicit host configuration before an external repaint can execute.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Consumes repository capability without synthesizing project model choices.

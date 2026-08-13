@@ -124,7 +124,7 @@ export interface IAutoMovieProductionProjectSummary {
  * One declared coding-agent input whose bytes enter compile identity.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Represents each declared repository file whose exact presence and bytes determine a coding-agent build.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives compiler identity a typed content record independent of the five-tool transport.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives compiler identity a typed content record independent of the transport.
  */
 export interface IAutoMovieProductionContentInput {
   /**
