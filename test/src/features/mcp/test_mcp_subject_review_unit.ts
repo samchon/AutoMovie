@@ -22,7 +22,7 @@ import {
 const TARGET: { kind: "subject" } & IAutoMovieSubjectReviewTarget = {
   kind: "subject",
   shot: "opening",
-  subject: "prototype:soloist",
+  subject: "prototype:automovie:model:soloist",
 };
 
 const CRITERIA = [
@@ -46,7 +46,8 @@ const diagnosticCodes = (
  * Scenarios:
  *
  * 1. After a real source compile and subject-guide credit, `prepareReview`
- *    resolves `prototype:soloist` from the generated shot, returns subject
+ *    resolves the compiled `soloist` prototype from the generated shot,
+ *    returns subject
  *    selectors, and reports indeterminate viewpoint coverage as a warning.
  * 2. `submitReview` accepts an explicitly incomplete worksheet backed by four
  *    distinct current subject-description selectors and stores it incomplete.
@@ -98,7 +99,7 @@ export const test_mcp_subject_review_unit = (): void => {
         target: TARGET,
         criteria: [...CRITERIA],
         description: {
-          id: "prototype:soloist",
+          id: "prototype:automovie:model:soloist",
           kind: "prototype",
           viewpointOwner: "inspection",
           deliveryEvidenceEligible: false,
@@ -163,7 +164,7 @@ export const test_mcp_subject_review_unit = (): void => {
       corrections: [
         {
           owner: "render",
-          target: "prototype:soloist",
+          target: "prototype:automovie:model:soloist",
           problem:
             "No subject-view observation exists for this compiled revision.",
           expected:
