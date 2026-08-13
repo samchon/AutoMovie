@@ -4,6 +4,8 @@ Read this guide before `prepareReview` or `submitReview` with target kind `shot`
 
 ## Prepare
 
+A compiler outcome refusal has three distinct owners. `review-outcome-artifact-missing` means the current manifest-owned publication is absent; compile the same current input. `review-outcome-artifact-malformed` means its bytes, digest, UTF-8, or JSON are damaged; remove only the damaged compiler publication and compile again. `review-outcome-contract-mismatch` means valid JSON disagrees with the exact reader contract or current identity, which is an internal writer-reader defect: report the diagnostic artifact path and validator paths, and do not edit author source or retry an unchanged compile as a supposed fix. Each state blocks completion while independently readable outcomes remain in the worksheet.
+
 Call `prepareReview` with `kind:"shot"` first. Its fingerprint binds deterministic contract, source, dependencies, compiler identity, render manifests, and acceptance outcomes; repaint output does not stale this source judgment. Complete that review before calling `repaintShot`.
 
 The canonical criteria are:
@@ -17,7 +19,7 @@ The canonical criteria are:
 
 Watch the full interval, not only hero stills. Compare adjacent shots when the shot establishes or pays off eyeline, screen direction, pose, action, lighting, or sound continuity.
 
-For repainted delivery, call `prepareReview` again with `kind:"rendition"` after repaint. That worksheet binds the completed source-review fingerprint and one current immutable repaint receipt. Its criteria are visual fidelity to deterministic truth, temporal coherence, anatomy/artifact integrity, and fixed-reference consistency. Inspect and cite the exact `kind:"rendition"` evidence; rerolling stales this worksheet but not the source-shot review.
+For repainted delivery, call `prepareReview` again with `kind:"rendition"` after repaint. That worksheet binds the completed source-review fingerprint and one current immutable repaint receipt. Its criteria are visual fidelity to deterministic truth, temporal coherence, anatomy/artifact integrity, and fixed-reference consistency, and the gate matches their ids as exact strings: `visual-fidelity-to-source`, `temporal-coherence`, `anatomy-and-artifact-integrity`, and `reference-consistency`. Prose naming the same ideas is refused, so cover every id the prepared worksheet returned, spelled the way it returned it. Inspect and cite the exact `kind:"rendition"` evidence; rerolling stales this worksheet but not the source-shot review.
 
 ## Submit
 
