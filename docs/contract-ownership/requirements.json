@@ -2762,6 +2762,12 @@
         "package": "@automovie/mcp"
       }
     },
+    "requirements/review/subject-inspection.md#review-subject-inspection-reach": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/mcp"
+      }
+    },
     "requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-refusal": {
       "owner": {
         "kind": "package",
