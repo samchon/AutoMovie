@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>AutoMovie subject viewer</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #11151b;
+      }
+
+      #view {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      #notice,
+      #keys,
+      #status,
+      #subject {
+        position: fixed;
+        color: #e8edf2;
+        font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+        text-shadow: 0 1px 3px #000;
+        pointer-events: none;
+      }
+
+      #notice {
+        left: 16px;
+        top: 14px;
+        max-width: 42em;
+        color: #ffd479;
+      }
+
+      #keys {
+        right: 16px;
+        bottom: 14px;
+        text-align: right;
+      }
+
+      #status {
+        left: 16px;
+        bottom: 14px;
+        white-space: pre-line;
+      }
+
+      /* The one region that takes the pointer: a subject is descended into by
+         opening the thing it contains, so these have to be clickable. */
+      #subject {
+        right: 16px;
+        top: 14px;
+        max-width: 30em;
+        max-height: 62vh;
+        overflow-y: auto;
+        text-align: right;
+        pointer-events: auto;
+      }
+
+      #subject a {
+        color: #8ec7ff;
+        text-decoration: none;
+      }
+
+      #subject a:hover {
+        text-decoration: underline;
+      }
+
+      #subject .up a {
+        color: #b6f2c1;
+      }
+
+      #subject .target {
+        color: #ffffff;
+      }
+
+      #subject .stale {
+        color: #ffd479;
+        text-align: left;
+      }
+
+      #subject .omitted {
+        color: #9aa7b4;
+      }
+
+      #subject .gap {
+        height: 0.7em;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <div id="notice">
+      SUBJECT VIEW. The eye is one this page derived from the subject's own
+      extent, so this frame belongs to no authored shot and is not capture
+      evidence. Delivery frames come from npm run preview and npm run render
+      through /viewer/. This page writes nothing.
+    </div>
+    <div id="subject">resolving subject…</div>
+    <div id="keys">
+      &larr; / &rarr;: turn the table<br />
+      &uarr; / &darr;: elevation ring<br />
+      wheel or - / =: distance<br />
+      F: refit &nbsp; X: section the near side<br />
+      Backspace: open the owner
+    </div>
+    <div id="status">loading current compiler output…</div>
+    <script type="module" src="/viewer/src/subject.ts"></script>
+  </body>
+</html>

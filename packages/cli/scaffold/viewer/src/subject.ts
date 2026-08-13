@@ -1,0 +1,676 @@
+/**
+ * One authored thing, opened alone and turned around:
+ * `/viewer/subject.html?shot=<id>&subject=<kind>:<id>`.
+ *
+ * The sibling page `inspect.html` answers "let me fly through this shot"; this
+ * one answers "let me look at THAT thing". The difference is what a finding can
+ * be written as afterwards. A flight ends in a coordinate, which is a place two
+ * people can disagree about having visited; this ends in a subject key, which
+ * is a name the authoring agent pastes back into the same field to reach the
+ * same thing. That is the whole reason the page exists, and it is why the eye
+ * is derived rather than flown: nobody has to agree about where they stood.
+ *
+ * **This is an inspection tool and not a delivery path.** The eye is one this
+ * page chose from the subject's own extent, so a frame it draws belongs to no
+ * authored camera and is not capture evidence. The page writes nothing — no
+ * file, no receipt — and it deliberately installs no `window.__automovieCapture`
+ * hook, so the capture host cannot drive it even if it is pointed here: preview
+ * and render frames keep coming from `/viewer/`, composed by a shot's own
+ * camera. The two caveats `inspect.html` carries apply here too: the level of
+ * detail every population shows is the one this eye's distance selects, and the
+ * scene holds the shot's opening second for as long as the page is open.
+ *
+ * What is framed is the subject's CONTENT box, never its declared one. A room
+ * is declared as a convex cell and the thing standing in it is a different
+ * extent; reading the first as the second is what put three of four review
+ * cameras against a wall in one survey (samchon/automovie#1920). The declared
+ * box is printed beside the content box so the gap is visible, and it is used
+ * only for a subject that has no content box at all.
+ */
+import {
+  type IAutoMovieSectionPlane,
+  describeAutoMovieSubject,
+} from "@automovie/engine";
+import type {
+  IAutoMovieCompiledShotSource,
+  IAutoMovieSubjectDescription,
+} from "@automovie/interface";
+import {
+  type AutoMovieViewerSubjectKind,
+  type IAutoMovieViewerSubject,
+  type IAutoMovieViewerSubjectBounds,
+  type IAutoMovieViewerSubjectPose,
+  applyAutoMovieSectionPlanes,
+  applyAutoMovieViewerSubjectPose,
+  applyRendererEnvironment,
+  autoMovieViewerSubjectKey,
+  autoMovieViewerTurntableViewpoints,
+  frameAutoMovieViewerSubject,
+  mountViewer,
+  parseAutoMovieViewerSubjectKey,
+} from "@automovie/viewer";
+import * as THREE from "three";
+
+import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
+import { createCompiledShotRuntime } from "./shotRuntime";
+import { viewerDocument } from "./viewerDocument";
+
+/**
+ * Directions the table turns through, and heights it turns at.
+ *
+ * Eight azimuths on three rings: a low one that reads a soffit, an eye-height
+ * one that reads a proportion, and a raised one that reads a footprint. Cheap
+ * and reproducible beats complete — the defects that survived one whole
+ * campaign were a wrong proportion, a missing head and a brace at the wrong
+ * angle, and every one of them is visible from a horizontal sweep.
+ */
+const AZIMUTHS = 8;
+const ELEVATIONS_DEG: readonly number[] = [-20, 10, 45];
+
+/** The plan, laid out ring by ring, so index = ring * {@link AZIMUTHS} + step. */
+const TURNTABLE = autoMovieViewerTurntableViewpoints({
+  azimuthCount: AZIMUTHS,
+  elevationsDeg: ELEVATIONS_DEG,
+  distanceFactor: 1.25,
+});
+
+/** Lens the inspection looks through, narrow enough not to bow a straight run. */
+const FOV_DEGREES = 35;
+
+/** Range the distance may be pulled through, in multiples of the plan's. */
+const MIN_DISTANCE_SCALE = 0.25;
+const MAX_DISTANCE_SCALE = 8;
+
+/** Multiplier per wheel notch or `-` / `=` press. */
+const DISTANCE_STEP = 1.15;
+
+/**
+ * Kinds this page cannot open, and what to open instead.
+ *
+ * Every one of these names something real that a compiled shot does not carry
+ * as a placed subject. A prototype is the clearest case and the reason this
+ * table refuses rather than guesses: a model may be placed a thousand times or
+ * not at all, so "show me the model" has no answer in world space, and
+ * answering it with the origin would be exactly the prototype-placement
+ * collapse a subject identity exists to prevent.
+ */
+const UNPLACED_ADVICE: Readonly<
+  Record<
+    Exclude<
+      AutoMovieViewerSubjectKind,
+      "space" | "element" | "instance-set" | "instance" | "part"
+    >,
+    string
+  >
+> = {
+  "built-environment":
+    'a built environment is opened through its spaces, as "space:<environment>/<space>"',
+  building:
+    'a building is a space in the compiled artifact, so open "space:<environment>/<building-space>"',
+  storey:
+    'a storey is a space in the compiled artifact, so open "space:<environment>/<storey-space>"',
+  model:
+    'the compiled artifact calls a model a prototype, and a prototype stands nowhere in particular; open a placement of it ("element:<node>" or "instance:<set>:slot:<index>"), or the prototype turntable at /viewer/?asset=<model>&angle=0',
+  prototype:
+    'a prototype stands nowhere in particular; open a placement of it ("element:<node>" or "instance:<set>:slot:<index>"), or the prototype turntable at /viewer/?asset=<model>&angle=0',
+  mesh: 'a mesh is carried by a part, so open "part:<node>/<part>"',
+  primitive: 'a primitive is carried by a part, so open "part:<node>/<part>"',
+  formation:
+    "a formation is not a compiled subject; open a placement of one of its members, or the whole shot at /viewer/?shot=<id>",
+  slot: 'a formation slot is not a compiled subject; a compact population member is "instance:<set>:slot:<index>"',
+};
+
+const { canvas, status } = viewerDocument();
+/** The one region of the page that takes the pointer; see `subject.html`. */
+const panel = ((): HTMLDivElement => {
+  const found = document.querySelector<HTMLDivElement>("#subject");
+  if (found === null)
+    throw new Error("The subject document is missing #subject.");
+  return found;
+})();
+
+const parameters = new URLSearchParams(window.location.search);
+const shotId = parameters.get("shot") ?? "opening";
+const response = await fetch(
+  `/__automovie/shots/${encodeURIComponent(shotId)}.json`,
+);
+if (response.ok === false)
+  throw new Error(
+    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
+  );
+// Read as text first, because the served bytes are the only revision this page
+// can honestly state: the viewer route carries no digest and no version beside
+// the compiled shot, and a revision invented from anything else would make an
+// observation reopenable against a state that never existed.
+const compiledText = await response.text();
+const compiled = JSON.parse(compiledText) as IAutoMovieCompiledShotSource;
+const revision = await digestOf(compiledText);
+const artifact = { revision, compiled };
+const requestedKey = parameters.get("subject");
+
+/**
+ * Every space and population of the shot, as keys that can be opened.
+ *
+ * This is the way in when nothing has been named yet, and it costs one pass
+ * over ids: no model is decoded and no scene is built, because a reviewer
+ * choosing what to look at is not yet looking at anything.
+ */
+const renderIndex = (): void => {
+  panel.replaceChildren(line(`${shotId}: subjects to open`, "what"));
+  for (const environment of compiled.builtEnvironments ?? [])
+    for (const space of environment.spaces)
+      panel.append(subjectLink(`space:${environment.id}/${space.id}`, ""));
+  for (const set of compiled.instanceSets)
+    panel.append(subjectLink(`instance-set:${set.id}`, ""));
+  panel.append(
+    line("", "gap"),
+    line(
+      "elements and parts are reached by opening the space they stand in",
+      "omitted",
+    ),
+  );
+};
+
+/**
+ * The compiled subject ids one viewer subject key could name.
+ *
+ * More than one only for a part, where a placed part and a prototype's part
+ * share a spelling. They are tried in that order because only a placement
+ * stands somewhere in this scene, and {@link resolve} refuses whatever is left
+ * in model space.
+ */
+const compiledSubjectIds = (subject: IAutoMovieViewerSubject): string[] => {
+  switch (subject.kind) {
+    case "space":
+    case "element":
+    case "instance-set":
+    case "instance":
+      return [`${subject.kind}:${subject.id}`];
+    case "part":
+      return [`element-part:${subject.id}`, `prototype-part:${subject.id}`];
+    default:
+      throw new Error(
+        `${autoMovieViewerSubjectKey(subject)} is not a placed subject of shot "${shotId}": ` +
+          `${UNPLACED_ADVICE[subject.kind]}.`,
+      );
+  }
+};
+
+/**
+ * Resolve one subject key against the compiled shot, or say why it cannot be.
+ *
+ * A model-space answer is refused rather than framed. The box a prototype
+ * reports is measured in its own model's coordinates, so aiming a world camera
+ * at it stages the world origin and shows whatever happens to stand there —
+ * agreement in form, a different thing in fact.
+ */
+const resolve = (
+  subject: IAutoMovieViewerSubject,
+): IAutoMovieSubjectDescription => {
+  const found: IAutoMovieSubjectDescription[] = [];
+  const refusals: string[] = [];
+  for (const candidate of compiledSubjectIds(subject))
+    try {
+      found.push(describeAutoMovieSubject(artifact, candidate));
+    } catch (error) {
+      refusals.push(error instanceof Error ? error.message : `${error}`);
+    }
+  const placed = found.find(
+    (candidate) => candidate.bounds.coordinateSpace === "world",
+  );
+  if (placed !== undefined) return placed;
+  if (found[0] !== undefined)
+    throw new Error(
+      `${autoMovieViewerSubjectKey(subject)} resolves to ${found[0].id}, which is measured ` +
+        "in model space and stands nowhere in this shot; open a placement of it instead.",
+    );
+  throw new Error(
+    `${autoMovieViewerSubjectKey(subject)} names nothing in shot "${shotId}": ${refusals.join(" ")}`,
+  );
+};
+
+/** Which of a description's two boxes the eye was derived from, and the other. */
+interface IExtent {
+  bounds: IAutoMovieViewerSubjectBounds;
+  source: "content" | "declared";
+  /** The declared box when one exists beside the framed content box. */
+  declared: IAutoMovieViewerSubjectBounds | null;
+}
+
+/**
+ * The box the eye is derived from.
+ *
+ * Content first, always. A declared cell answers how far a room reaches and the
+ * content box answers where its contents are, and only the second is what a
+ * reviewer placing an eye is asking about. The declared box is carried along so
+ * the page can print both and make the gap between them something you see
+ * rather than something you discover by framing a wall.
+ */
+const extentOf = (description: IAutoMovieSubjectDescription): IExtent => {
+  const { content, declared } = description.bounds;
+  if (content !== null) return { bounds: content, source: "content", declared };
+  if (declared !== null)
+    return { bounds: declared, source: "declared", declared: null };
+  throw new Error(
+    `${description.id} has neither a content nor a declared extent, so there is nothing to aim at.`,
+  );
+};
+
+/**
+ * A cut at the subject's near face that removes the half-space the eye is in.
+ *
+ * A room framed from outside is a room behind its own wall, so without this the
+ * space subject would be reachable and still unreadable. The plane rides the
+ * viewpoint, so turning the table turns the cut with it and a room stays open
+ * from every angle it is looked at. The scene is not edited — the cut is a way
+ * of looking rather than a second version of the building.
+ */
+const sectionAt = (
+  pose: IAutoMovieViewerSubjectPose,
+  bounds: IAutoMovieViewerSubjectBounds,
+): IAutoMovieSectionPlane => {
+  const middle = {
+    x: (bounds.min.x + bounds.max.x) / 2,
+    y: (bounds.min.y + bounds.max.y) / 2,
+    z: (bounds.min.z + bounds.max.z) / 2,
+  };
+  const away = new THREE.Vector3(
+    pose.position.x - middle.x,
+    pose.position.y - middle.y,
+    pose.position.z - middle.z,
+  ).normalize();
+  const radius = Math.max(
+    Math.hypot(
+      bounds.max.x - bounds.min.x,
+      bounds.max.y - bounds.min.y,
+      bounds.max.z - bounds.min.z,
+    ) / 2,
+    0.5,
+  );
+  return {
+    point: {
+      x: middle.x + away.x * radius,
+      y: middle.y + away.y * radius,
+      z: middle.z + away.z * radius,
+    },
+    normal: { x: away.x, y: away.y, z: away.z },
+  };
+};
+
+/**
+ * The viewer key spelling of one compiled subject id.
+ *
+ * A placed part and a prototype's part are one kind to the viewer, which is
+ * what lets one key name a part without the reviewer having to know which table
+ * the compiler wrote it into.
+ */
+const viewerKeyOf = (compiledId: string): string =>
+  compiledId.replace(/^(?:element|prototype)-part:/, "part:");
+
+const subjectLink = (compiledId: string, prefix: string): HTMLDivElement => {
+  const key = viewerKeyOf(compiledId);
+  const target = new URLSearchParams();
+  target.set("shot", shotId);
+  target.set("subject", key);
+  const anchor = document.createElement("a");
+  anchor.href = `?${target.toString()}`;
+  anchor.dataset.subject = key;
+  anchor.textContent = `${prefix}${key}`;
+  const row = document.createElement("div");
+  row.className = prefix === "" ? "member" : "up";
+  row.append(anchor);
+  return row;
+};
+
+const line = (text: string, className: string): HTMLDivElement => {
+  const row = document.createElement("div");
+  row.className = className;
+  row.textContent = text;
+  return row;
+};
+
+const size = (bounds: IAutoMovieViewerSubjectBounds): string =>
+  `${(bounds.max.x - bounds.min.x).toFixed(2)}×` +
+  `${(bounds.max.y - bounds.min.y).toFixed(2)}×` +
+  `${(bounds.max.z - bounds.min.z).toFixed(2)}m`;
+
+const point = (value: { x: number; y: number; z: number }): string =>
+  `(${value.x.toFixed(2)}, ${value.y.toFixed(2)}, ${value.z.toFixed(2)})`;
+
+const middleOf = (bounds: IAutoMovieViewerSubjectBounds): string =>
+  point({
+    x: (bounds.min.x + bounds.max.x) / 2,
+    y: (bounds.min.y + bounds.max.y) / 2,
+    z: (bounds.min.z + bounds.max.z) / 2,
+  });
+
+/**
+ * The revision this page states, taken from the bytes it was served.
+ *
+ * `SubtleCrypto` is only there in a secure context, and the viewer is normally
+ * bound to `127.0.0.1`, which is one. When it is not, the page says it has no
+ * revision instead of composing something that would look like one: an
+ * observation stamped with a fabricated revision is worse than an observation
+ * that admits it cannot name the state it saw.
+ */
+async function digestOf(text: string): Promise<string> {
+  if (
+    window.isSecureContext === false ||
+    globalThis.crypto?.subtle === undefined
+  )
+    return "unrevisioned (SubtleCrypto needs a secure context)";
+  const bytes = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text),
+  );
+  return `sha256:${[...new Uint8Array(bytes)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+/** Stage the named subject and keep the page on it until another is opened. */
+const openSubjectPage = async (key: string): Promise<void> => {
+  // Resolved before anything is decoded, so a mistyped key costs a message
+  // rather than a whole scene's worth of textures.
+  let asked = parseAutoMovieViewerSubjectKey(key);
+  let description = resolve(asked);
+  let extent = extentOf(description);
+  const productionRuntimeResponse = await fetch(
+    "/__automovie/production-runtime.json",
+  );
+  if (productionRuntimeResponse.ok === false)
+    throw new Error(
+      `Production runtime is unavailable (${productionRuntimeResponse.status}).`,
+    );
+  const productionRuntime =
+    (await productionRuntimeResponse.json()) as IAutoMovieProductionViewerRuntime;
+  // The same compiled shot the shot page builds, admitting the same live soft
+  // bodies, so what is judged here is what the shot draws rather than a
+  // lookalike assembled with different runtime choices. No delivery tone is
+  // passed: this page stands in for no delivery, so the scene's own environment
+  // owns the curve.
+  const runtime = await createCompiledShotRuntime(compiled, undefined, {
+    dialogue: productionRuntime.dialogue,
+    liveWearableSoftBodies: productionRuntime.liveWearableSoftBodies,
+  });
+  const eye = new THREE.PerspectiveCamera(FOV_DEGREES, 1, 0.1, 1000);
+  // No capture options: the shot page pins antialiasing off and preserves the
+  // drawing buffer so a readback is byte-stable. Nothing reads bytes back here,
+  // so the eye gets the smoother picture instead. Mounting this early is what
+  // gives the statements below a renderer; the loop it starts does not run
+  // until the next animation frame, so everything is in place first.
+  const mounted = mountViewer(canvas, runtime.scene, eye, () => frame());
+  mounted.renderer.setClearColor(0x11151b, 1);
+  // One draw through the shot's own camera lowers the scene to its opening
+  // second. `render` is what applies poses, prop articulation, object motion
+  // and light motion, and nothing else does, so a subject framed before this
+  // would be judged in the rest pose its model was imported in.
+  runtime.render(mounted.renderer, 0, "beauty");
+  // Applied once and kept. `render` restores the renderer environment after
+  // each draw because a capture shares one renderer across guide passes; this
+  // page draws one beauty pass for as long as it is open.
+  applyRendererEnvironment(
+    mounted.renderer,
+    compiled.scene.environment,
+    "beauty",
+  );
+
+  let viewpoint = 0;
+  let distanceScale = 1;
+  let sectioned = false;
+  let viewWidth = 0;
+  let viewHeight = 0;
+  let pose = stage();
+  renderPanel();
+
+  /** Resolve the pose for the current subject, angle and distance, and aim. */
+  function stage(): IAutoMovieViewerSubjectPose {
+    const planned = TURNTABLE[viewpoint]!;
+    const staged = frameAutoMovieViewerSubject(
+      extent.bounds,
+      { ...planned, distanceFactor: planned.distanceFactor * distanceScale },
+      {
+        fovDeg: FOV_DEGREES,
+        aspect: (canvas.clientWidth || 1) / (canvas.clientHeight || 1),
+      },
+    );
+    applyAutoMovieViewerSubjectPose(eye, staged);
+    applyAutoMovieSectionPlanes({
+      renderer: mounted.renderer,
+      root: runtime.scene,
+      planes: sectioned ? [sectionAt(staged, extent.bounds)] : [],
+    });
+    return staged;
+  }
+
+  function frame(): boolean {
+    // The canvas is sized once when the viewer is mounted, which is enough for
+    // a capture at a fixed viewport and not for a page somebody keeps open
+    // while dragging the window. Following the element here keeps the picture
+    // unstretched, keeps the height the populations resolve against the height
+    // actually being drawn, and refits the subject to the new shape.
+    const width = canvas.clientWidth || 1;
+    const height = canvas.clientHeight || 1;
+    if (width !== viewWidth || height !== viewHeight) {
+      viewWidth = width;
+      viewHeight = height;
+      mounted.renderer.setSize(width, height, false);
+      pose = stage();
+    }
+    // The scene is not renderable until the populations have been told where
+    // the eye is: each instance set and formation builds its levels of detail
+    // hidden and reveals one only here. A frame drawn without this call keeps
+    // the ordinary meshes and silently drops every instanced population, which
+    // reads as a roof laid only at its edges rather than as a missing call.
+    runtime.resolveForCamera(eye, canvas.height);
+    mounted.renderer.render(runtime.scene, eye);
+    status.textContent = statusLines(pose);
+    return true;
+  }
+
+  /** The three facts a finding is written from, then the picture's conditions. */
+  function statusLines(staged: IAutoMovieViewerSubjectPose): string {
+    const planned = TURNTABLE[viewpoint]!;
+    return (
+      `${autoMovieViewerSubjectKey({ ...asked, revision })}\n` +
+      `viewpoint ${planned.id}  (${viewpoint + 1}/${TURNTABLE.length})` +
+      `  az=${planned.azimuthDeg.toFixed(0)}° el=${planned.elevationDeg.toFixed(0)}°` +
+      `  distance ${(planned.distanceFactor * distanceScale).toFixed(2)}× fitted` +
+      `${distanceScale === 1 ? "" : " (off plan)"}\n` +
+      `${extent.source} extent ${size(extent.bounds)} at ${middleOf(extent.bounds)}` +
+      `${
+        extent.declared === null
+          ? ""
+          : `   declared ${size(extent.declared)} at ${middleOf(extent.declared)}`
+      }\n` +
+      `eye ${point(staged.position)}  near=${staged.near.toFixed(3)}` +
+      ` far=${staged.far.toFixed(1)}  fov=${staged.lens.fovDeg.toFixed(0)}°` +
+      ` aspect=${staged.lens.aspect.toFixed(2)}` +
+      `  section ${sectioned ? "on" : "off"}`
+    );
+  }
+
+  /** Identity to copy into a finding, the way out, and the ways in. */
+  function renderPanel(): void {
+    const members = description.members;
+    panel.replaceChildren(
+      line(autoMovieViewerSubjectKey({ ...asked, revision }), "target"),
+      line(
+        `${description.kind} · ${description.semanticKind}` +
+          `${description.name === null ? "" : ` · ${description.name}`}`,
+        "what",
+      ),
+    );
+    if (asked.revision !== null && asked.revision !== revision)
+      panel.append(
+        line(
+          `asked for @${asked.revision}; this shot compiles to @${revision}. ` +
+            "This page draws only what is compiled now.",
+          "stale",
+        ),
+      );
+    if (description.owner !== null)
+      panel.append(line("", "gap"), subjectLink(description.owner, "↑ "));
+    // `members.items` is already a bounded sample the description chose, and
+    // `omitted` is how many it left out, so the whole sample is listed and the
+    // remainder is stated rather than truncated a second time here.
+    panel.append(
+      line("", "gap"),
+      line(
+        `${members.total} inside` +
+          `${members.omitted === 0 ? "" : `, ${members.omitted} named only by key`}`,
+        "omitted",
+      ),
+    );
+    for (const member of members.items) panel.append(subjectLink(member, ""));
+  }
+
+  /**
+   * Stage another subject, keeping the current angle so a descent from a room
+   * to a moulding is a step inward rather than a jump to a new orientation.
+   *
+   * A refusal is written where the subject was and the previous one keeps its
+   * frame, because losing the picture you were looking at is a worse answer to
+   * a mistyped id than a line of text.
+   */
+  function show(subject: IAutoMovieViewerSubject): boolean {
+    let next: IAutoMovieSubjectDescription;
+    let box: IExtent;
+    try {
+      next = resolve(subject);
+      // Inside the same guard as the lookup: a subject that resolves and then
+      // reports no extent at all is refused the same way one that does not
+      // resolve is, rather than by an exception out of a click handler.
+      box = extentOf(next);
+    } catch (error) {
+      // The panel is rebuilt first so the ways out and in survive a refusal;
+      // an error that also took the navigation away would strand whoever
+      // mistyped a key on a page with nothing to click.
+      renderPanel();
+      panel.prepend(
+        line(error instanceof Error ? error.message : `${error}`, "stale"),
+      );
+      return false;
+    }
+    asked = subject;
+    description = next;
+    extent = box;
+    distanceScale = 1;
+    pose = stage();
+    renderPanel();
+    return true;
+  }
+
+  /** Open a subject key, recording it in history when it opened. */
+  function navigate(target: string): void {
+    if (show(parseAutoMovieViewerSubjectKey(target)) === false) return;
+    const next = new URLSearchParams();
+    next.set("shot", shotId);
+    next.set("subject", target);
+    window.history.pushState(null, "", `?${next.toString()}`);
+  }
+
+  /** A key off the address bar, which nothing guarantees is even well formed. */
+  function opened(key: string): boolean {
+    try {
+      return show(parseAutoMovieViewerSubjectKey(key));
+    } catch {
+      return false;
+    }
+  }
+
+  window.addEventListener("keydown", (event) => {
+    if (event.code === "ArrowRight") viewpoint = turn(1);
+    else if (event.code === "ArrowLeft") viewpoint = turn(-1);
+    else if (event.code === "ArrowUp") viewpoint = ring(1);
+    else if (event.code === "ArrowDown") viewpoint = ring(-1);
+    else if (event.code === "Minus") distanceScale = pulled(DISTANCE_STEP);
+    else if (event.code === "Equal") distanceScale = pulled(1 / DISTANCE_STEP);
+    else if (event.code === "KeyF") distanceScale = 1;
+    else if (event.code === "KeyX") sectioned = sectioned === false;
+    else if (event.code === "Backspace") {
+      event.preventDefault();
+      if (description.owner !== null) navigate(viewerKeyOf(description.owner));
+      return;
+    } else return;
+    event.preventDefault();
+    pose = stage();
+  });
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      // The wheel pulls the eye along the viewpoint's own direction rather than
+      // changing the lens, because the angle is what the plan names: a viewpoint
+      // id would otherwise stop describing the picture it is printed beside.
+      distanceScale = pulled(Math.exp(event.deltaY * 0.001));
+      pose = stage();
+    },
+    // The page owns the wheel, so the listener must be able to refuse the
+    // scroll.
+    { passive: false },
+  );
+  panel.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest("a")?.dataset
+      .subject;
+    if (target === undefined) return;
+    event.preventDefault();
+    navigate(target);
+  });
+  window.addEventListener("popstate", () => {
+    const next = new URLSearchParams(window.location.search);
+    const back = next.get("subject");
+    // Only a subject of this same shot can be staged in place; anything else
+    // wants a different scene built, which is a fresh page.
+    if (
+      back === null ||
+      (next.get("shot") ?? "opening") !== shotId ||
+      opened(back) === false
+    )
+      window.location.reload();
+  });
+
+  /** The next planned viewpoint around the ring the eye is already on. */
+  function turn(delta: number): number {
+    const base = Math.floor(viewpoint / AZIMUTHS) * AZIMUTHS;
+    const within = viewpoint - base;
+    return base + ((((within + delta) % AZIMUTHS) + AZIMUTHS) % AZIMUTHS);
+  }
+
+  /** The same azimuth on the next elevation ring. */
+  function ring(delta: number): number {
+    const rings = ELEVATIONS_DEG.length;
+    const at = Math.floor(viewpoint / AZIMUTHS);
+    return (
+      ((((at + delta) % rings) + rings) % rings) * AZIMUTHS +
+      (viewpoint - at * AZIMUTHS)
+    );
+  }
+
+  function pulled(factor: number): number {
+    return THREE.MathUtils.clamp(
+      distanceScale * factor,
+      MIN_DISTANCE_SCALE,
+      MAX_DISTANCE_SCALE,
+    );
+  }
+};
+
+if (requestedKey === null) {
+  renderIndex();
+  status.textContent =
+    `${shotId}: no subject named.\n` +
+    "Add ?subject=<kind>:<id>, or pick one on the right.\n" +
+    `rev=${revision}`;
+} else
+  try {
+    await openSubjectPage(requestedKey);
+  } catch (error) {
+    // Written where the subject would have been as well as thrown, because a
+    // page that fails only in the console looks to a reviewer like a page that
+    // renders nothing for no reason.
+    const message = error instanceof Error ? error.message : `${error}`;
+    panel.replaceChildren(line(message, "stale"));
+    status.textContent = `${shotId}: ${message}`;
+    throw error;
+  }
