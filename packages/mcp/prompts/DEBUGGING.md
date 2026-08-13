@@ -25,6 +25,8 @@ Reduce the question to engine facts: coordinate basis, transform chain, pose sam
 
 For continuity, compare outgoing and incoming state: position, facing, pose, gaze, held objects, gait phase, event completion, sound tail, and edit source offset.
 
+When the authored camera is the reason you cannot see the fault, stop reasoning about the frame and go and look. The starter's `viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in your hands — fly with the arrow keys or W A S D, rise and descend with Space and C, click for pointer-lock mouse look — and prints the eye's position and lens on screen, so anything odd is reported by coordinate rather than by adjective. That is what makes it a debugging instrument: a staging fault hidden behind the shot camera, geometry that only reads wrong from an angle nobody authored, and a placement you believed rather than measured all become one observation. It installs no capture hook, writes nothing, holds the shot's opening second, and shows the level of detail your own distance selects, so it proves nothing on its own. Review evidence still comes from `npm run preview` and `npm run render`, and a coordinate you read there is a hypothesis to confirm against the engine query that owns it.
+
 ## Capture and render failures
 
 Run the scaffold’s configured doctor or verify path. Check current compile identity, registered target, host runtime identity, decoded PNG/media facts, raster, frame rate, frame count, duration, and atomic manifest. `captured:false` means no evidence exists.
