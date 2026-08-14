@@ -41,6 +41,11 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `buildAnalysisOverlayObject` / `autoMovieAnalysisRampColor` | 분석 결과를 씬 위에 얹는다. 램프 색은 정의된 구간에서만 의미가 있고 바깥은 고정되며, 빌린 머티리얼은 처분하지 않고 스스로 만든 것만 처분한다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |
+| `autoMovieViewerSubjectKey` / `parseAutoMovieViewerSubjectKey` | 저작된 한 물건을 `<kind>:<id>`로 이름 붙이고 되읽는다. kind를 id 옆에 두는 것이 요점이다. 배치된 element와 그것이 배치하는 model이 같은 이름으로 저작됐을 때 두 문자열을 갈라놓는 것이 곧 prototype·placement 구분이다. 이 union에는 shot도 frame도 take도 없다. 주체는 자기가 무엇인지로 불리고, 자기를 담고 있는 배송된 그림으로 불리지 않는다. |
+| `frameAutoMovieViewerSubject(bounds, viewpoint)` | 한 주체를 한 시점에서 잡는 눈을 놓는다. 거리는 그 주체 자신의 반대각선과 두 화각 중 좁은 쪽에서 나오므로 **0.05 m 문설주와 50 m 입면이 한 규칙으로 잡히고** 어느 쪽도 손으로 맞춘 카메라를 필요로 하지 않는다. 클립 평면도 같은 반지름에서 파생되어 far/near 비가 규모를 건너 일정하게 유지된다. 고정 near는 작은 부품을 잘라내거나 큰 것에 깊이 버퍼를 통째로 낭비하고, 후자는 먼 픽셀 하나를 두고 두 면이 다투는 것처럼 보여 모델링 결함으로 읽힌다. |
+| `autoMovieViewerTurntableViewpoints` | 한 주체가 지는 고정 시점 집합을 낸다. 리뷰어가 고르는 것이 아니라 서비스가 정한다. |
+| `autoMovieViewerPoseFromHeading` / `applyAutoMovieViewerSubjectPose` | 관찰용 포즈를 heading에서 만들고 적용한다. |
+| `captureAutoMovieViewerSubjectView` | 그 시점 하나를 프레임으로 읽는다. 관찰이지 납품 증거가 아니다. |
 
 ## 에셋 경로
 
