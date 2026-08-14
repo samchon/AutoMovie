@@ -65,8 +65,8 @@
       #subject {
         right: 16px;
         top: 14px;
-        max-width: 30em;
-        max-height: 62vh;
+        max-width: 34em;
+        max-height: 68vh;
         overflow-y: auto;
         text-align: right;
         pointer-events: auto;
@@ -102,6 +102,40 @@
         height: 0.7em;
       }
 
+      /* A member row reads right to left so its twist keeps one column at the
+         panel's edge while the key, which is long enough to wrap in a panel
+         this narrow, takes the rest of the width and stays right-aligned with
+         everything else on the page. */
+      #subject .member {
+        display: flex;
+        flex-direction: row-reverse;
+        align-items: baseline;
+        gap: 0.35em;
+      }
+
+      #subject .member a {
+        flex: 1;
+      }
+
+      /* Depth is nesting rather than arithmetic: each level of the tree indents
+         inside the one that holds it, so a group's contents step away from the
+         edge its own row sits on. */
+      #subject .kids {
+        padding-right: 1.1em;
+      }
+
+      #subject .twist {
+        width: 1.1em;
+        color: #7f8c9b;
+        cursor: pointer;
+        text-align: center;
+        user-select: none;
+      }
+
+      #subject .twist:hover {
+        color: #e8edf2;
+      }
+
       #subject .filter {
         width: 100%;
         margin: 2px 0 4px;
@@ -130,7 +164,8 @@
       &uarr; / &darr;: elevation ring<br />
       wheel or - / =: distance<br />
       F: refit &nbsp; X: section the near side<br />
-      Backspace: open the owner
+      Backspace: open the owner<br />
+      &#9656; / &#9662;: list what stands inside a group
     </div>
     <div id="status">loading current compiler output…</div>
     <script type="module" src="/viewer/src/subject.ts"></script>

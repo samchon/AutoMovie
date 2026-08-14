@@ -34,6 +34,7 @@ import {
 import type {
   IAutoMovieCompiledShotSource,
   IAutoMovieSubjectDescription,
+  IAutoMovieSubjectMemberSummary,
 } from "@automovie/interface";
 import {
   type AutoMovieViewerSubjectKind,
@@ -99,8 +100,31 @@ const DISTANCE_FACTOR = 1.25;
  */
 const PLAN_ASPECT = 16 / 9;
 
-/** Members listed before the panel offers a way to narrow them. */
+/** Rows standing in the tree before the panel offers a way to narrow them. */
 const FILTERABLE_FROM = 12;
+
+/** A group whose contents have not been asked for yet. */
+const CLOSED_MARK = "▸";
+
+/** A group whose contents are listed beneath it. */
+const OPEN_MARK = "▾";
+
+/**
+ * Address parameter naming the tree nodes that are open, by compiled id.
+ *
+ * The collapse state lives in the address rather than in storage, which is the
+ * same answer this page already gives for which subject is being looked at, and
+ * the same one `inspection.html` was given when a dev-server reload killed a
+ * sweep mid-flight (61fed2ad): reopening one URL rebuilds the same state at the
+ * same address. So a saved edit to this module, a `Back`, and a link pasted to
+ * somebody else all land on the tree as it was left, and the page still writes
+ * nothing — no file, no receipt, no browser storage.
+ *
+ * Compiled ids rather than viewer keys, because {@link viewerKeyOf} is lossy:
+ * a placed part and a prototype's part both spell `part:`, and a node's
+ * identity here has to survive being read back.
+ */
+const OPEN_PARAMETER = "open";
 
 /** Lens the inspection looks through, narrow enough not to bow a straight run. */
 const FOV_DEGREES = 35;
@@ -192,6 +216,47 @@ const artifact = { revision, compiled };
 const requestedKey = parameters.get("subject");
 
 /**
+ * The shot's outermost subjects, as the roots of a tree that opens downward.
+ *
+ * A space nobody is the parent of is a root, and so is a population no
+ * environment binds to a space; everything else is somebody's member and is
+ * reached by opening that somebody. Listing every space flat, which is what
+ * this did before, put a room beside the storey that contains it and said
+ * nothing about which was which — and on the medieval residence that is
+ * fourteen of fifteen spaces standing at the top level with no parent named.
+ *
+ * `parent` is read from the compiled environment rather than from a
+ * description, because rooting the index would otherwise cost one
+ * {@link describeAutoMovieSubject} per space before the reviewer has asked to
+ * look at anything: measured at 45 ms each on that production, for the same
+ * field the engine itself reads. A parent naming a space this environment does
+ * not carry is treated as no parent, so a dangling link leaves its space
+ * reachable instead of orphaning it.
+ */
+const indexRoots = (): string[] => {
+  const environments = compiled.builtEnvironments ?? [];
+  const populated = new Set(
+    environments.flatMap((environment) =>
+      (environment.populations ?? []).map((population) => population.set.id),
+    ),
+  );
+  return [
+    ...environments.flatMap((environment) => {
+      const carried = new Set(environment.spaces.map((space) => space.id));
+      return environment.spaces
+        .filter(
+          (space) =>
+            space.parent === null || carried.has(space.parent) === false,
+        )
+        .map((space) => `space:${environment.id}/${space.id}`);
+    }),
+    ...compiled.instanceSets
+      .filter((set) => populated.has(set.id) === false)
+      .map((set) => `instance-set:${set.id}`),
+  ];
+};
+
+/**
  * Every space and population of the shot, as keys that can be opened.
  *
  * This is the way in when nothing has been named yet, and it costs one pass
@@ -199,24 +264,15 @@ const requestedKey = parameters.get("subject");
  * choosing what to look at is not yet looking at anything.
  */
 const renderIndex = (): void => {
-  const rows = [
-    ...(compiled.builtEnvironments ?? []).flatMap((environment) =>
-      environment.spaces.map((space) =>
-        subjectLink(`space:${environment.id}/${space.id}`, ""),
-      ),
-    ),
-    ...compiled.instanceSets.map((set) =>
-      subjectLink(`instance-set:${set.id}`, ""),
-    ),
-  ];
   panel.replaceChildren(
     line(`${shotId}: subjects to open`, "what"),
     line(
-      "elements and parts are reached by opening the space they stand in",
+      "open a group to list what stands inside it; an element the environment " +
+        "assigns to no space is named only by its key",
       "omitted",
     ),
     line("", "gap"),
-    ...narrowable(rows),
+    ...subjectTree(indexRoots()),
   );
 };
 
@@ -421,31 +477,249 @@ const line = (text: string, className: string): HTMLDivElement => {
   return row;
 };
 
+/** The open set as the address states it, which is the only place it lives. */
+const openedFromAddress = (): Set<string> =>
+  new Set(
+    (new URLSearchParams(window.location.search).get(OPEN_PARAMETER) ?? "")
+      .split(",")
+      .filter((id) => id.length !== 0),
+  );
+
+/** Compiled ids the address currently says are open. */
+let openIds = openedFromAddress();
+
 /**
- * A list of subject links, with a box to narrow it once it stops being a list
- * you can read.
+ * Record the open set in the address without adding a history entry.
  *
- * A hall's sample is sixty-four rows of `great-hall-chandelier-0-ring-13` and
- * its neighbours, and a shot's index is every space and population it has, so
- * scrolling is otherwise the only way to find one of them by eye. The box hides
- * rows rather than rebuilding them, so what is filtered is the same DOM a click
- * still navigates from, and it filters on the key, which is the string a
- * reviewer already has in hand.
+ * Opening a node is a way of looking at one subject rather than a move to
+ * another, so `Back` still steps between subjects instead of unwinding every
+ * twist the reviewer turned. The subject and shot parameters are carried
+ * through untouched, so this never renames what the page is looking at.
  */
-const narrowable = (rows: readonly HTMLDivElement[]): HTMLElement[] => {
-  if (rows.length < FILTERABLE_FROM) return [...rows];
+const writeOpenState = (): void => {
+  const next = new URLSearchParams(window.location.search);
+  if (openIds.size === 0) next.delete(OPEN_PARAMETER);
+  else next.set(OPEN_PARAMETER, [...openIds].join(","));
+  const query = next.toString();
+  // A bare `?` is not the same address as no query at all, and closing the last
+  // twist on a page opened without parameters would otherwise leave one.
+  window.history.replaceState(
+    null,
+    "",
+    query.length === 0 ? window.location.pathname : `?${query}`,
+  );
+};
+
+/**
+ * One description per compiled id, for as long as the page holds one artifact.
+ *
+ * A refusal is remembered as well as an answer. The lookup walks every
+ * prototype, then every scene node's parts, before it reaches spaces, so a
+ * miss is the most expensive question this page asks: 45 ms on the medieval
+ * residence's 3,381 scene nodes and 197 prototypes. Reopening a node the
+ * reviewer just closed must not pay it again.
+ */
+const described = new Map<string, IAutoMovieSubjectDescription | Error>();
+
+const describedSubject = (
+  compiledId: string,
+): IAutoMovieSubjectDescription | Error => {
+  const remembered = described.get(compiledId);
+  if (remembered !== undefined) return remembered;
+  let answer: IAutoMovieSubjectDescription | Error;
+  try {
+    answer = describeAutoMovieSubject(artifact, compiledId);
+  } catch (error) {
+    answer = error instanceof Error ? error : new Error(`${error}`);
+  }
+  described.set(compiledId, answer);
+  return answer;
+};
+
+/**
+ * What one node says about its own contents, including what it is not showing.
+ *
+ * `items` is a bounded sample the description chose and `omitted` is what it
+ * left out, so a node that listed its sample and said nothing else would be
+ * claiming the sample is the population. On the medieval residence the largest
+ * room holds 629 members and names 64 of them, so that claim would be wrong by
+ * 565 subjects at one node.
+ */
+const membershipLine = (members: IAutoMovieSubjectMemberSummary): string =>
+  members.total === 0
+    ? "nothing inside"
+    : members.omitted === 0
+      ? `${members.total} inside`
+      : `${members.total} inside · ${members.items.length} listed · ` +
+        `${members.omitted} named only by key`;
+
+/** One row of the tree: what it names, what it holds, and whether it is open. */
+interface ISubjectTreeRow {
+  /** Compiled id the row is described and remembered by. */
+  compiledId: string;
+  /** Viewer key spelling, which is what the filter reads. */
+  key: string;
+  /** Row and its children together, hidden as one by the filter. */
+  node: HTMLDivElement;
+  /** Container holding the membership line and the child rows. */
+  children: HTMLDivElement;
+  /** The twist the reviewer clicks. */
+  toggle: HTMLSpanElement;
+  /** Whether the reviewer has this node open, independent of any filter. */
+  open: boolean;
+  /** Child rows once the node has been opened, `null` before that. */
+  loaded: ISubjectTreeRow[] | null;
+}
+
+/**
+ * Subject links as a tree that opens and closes one node at a time.
+ *
+ * A subject is a group and a group holds groups — a residence holds storeys,
+ * a storey holds rooms, a room holds elements, an element holds its parts —
+ * and a flat list of sixty-four rows of `great-hall-chandelier-0-ring-13`
+ * spells that structure in the ids and shows none of it.
+ *
+ * **Nothing is expanded until it is opened.** A node's children arrive from one
+ * {@link describeAutoMovieSubject} call, and that call is the only way to learn
+ * them: the description carries an exact `total` and a bounded id sample for
+ * ONE subject, and there is no bulk answer for a subtree. Measured against the
+ * medieval residence's `great-hall` shot (14.3 MB compiled, 3,381 scene nodes,
+ * 3,474 built elements, 15 spaces, 8 instance sets, 197 prototypes, 4,003
+ * enumerable subjects): one element answers in about 1.6 ms and one space in
+ * about 45 ms, opening the largest room costs 102 ms for its 64 listed
+ * members, and describing that room two levels deep is 128 calls in 212 ms.
+ * Building every descendant up front is therefore thousands of calls for a
+ * reviewer who is going to open four of them.
+ *
+ * **Every opened node states its own population**, through
+ * {@link membershipLine}, because `items` is a sample. A node that turns out to
+ * name nothing this shot carries — the compiled artifact lets a space list a
+ * grouping element that owns no scene node, and 24 of the residence's do —
+ * shows that refusal where its children would be, which is a cheaper way to
+ * learn it than clicking through and losing the picture you were looking at.
+ *
+ * **The filter reaches exactly what is open, and says so.** It hides rows
+ * rather than rebuilding them, so what is filtered is the same DOM a click
+ * still navigates from, and it matches the key, which is the string a reviewer
+ * already has in hand. What it deliberately does not do is search closed
+ * nodes: their members have not been described, and a tree whose every node is
+ * a bounded sample could not honestly report a whole-subtree search anyway. So
+ * the box counts the rows it can actually see. Within that reach a match is
+ * never buried: an ancestor holding one is shown open even when the reviewer
+ * had closed it, and clearing the box restores what they chose, because the
+ * reveal is a way of looking rather than a change to their state.
+ */
+const subjectTree = (rootIds: readonly string[]): HTMLElement[] => {
+  const built: ISubjectTreeRow[] = [];
   const box = document.createElement("input");
   box.type = "text";
   box.className = "filter";
-  box.placeholder = `narrow ${rows.length} listed`;
-  box.addEventListener("input", () => {
+  box.hidden = true;
+  const tree = document.createElement("div");
+  tree.className = "tree";
+
+  const refreshFilter = (): void => {
+    box.hidden = built.length < FILTERABLE_FROM;
+    box.placeholder = `narrow the ${built.length} rows now open`;
+  };
+
+  /** Ask one node what it holds, once, and lay its answer out beneath it. */
+  const expand = (row: ISubjectTreeRow): void => {
+    if (row.loaded !== null) return;
+    const answer = describedSubject(row.compiledId);
+    if (answer instanceof Error) {
+      row.loaded = [];
+      row.children.append(line(answer.message, "stale"));
+      return;
+    }
+    const kids: ISubjectTreeRow[] = [];
+    row.loaded = kids;
+    row.children.append(line(membershipLine(answer.members), "omitted"));
+    for (const id of answer.members.items) {
+      const kid = buildRow(id);
+      kids.push(kid);
+      row.children.append(kid.node);
+    }
+  };
+
+  function buildRow(compiledId: string): ISubjectTreeRow {
+    const element = subjectLink(compiledId, "");
+    const toggle = document.createElement("span");
+    toggle.className = "twist";
+    toggle.textContent = CLOSED_MARK;
+    // Ahead of the link in the DOM so the row's reversed flow puts it at the
+    // right edge, where one column of twists stands clear of keys that wrap.
+    element.prepend(toggle);
+    const children = document.createElement("div");
+    children.className = "kids";
+    children.hidden = true;
+    const node = document.createElement("div");
+    node.className = "node";
+    node.append(element, children);
+    const row: ISubjectTreeRow = {
+      compiledId,
+      key: viewerKeyOf(compiledId),
+      node,
+      children,
+      toggle,
+      open: false,
+      loaded: null,
+    };
+    built.push(row);
+    toggle.addEventListener("click", () => {
+      row.open = row.open === false;
+      if (row.open) {
+        expand(row);
+        openIds.add(compiledId);
+      } else openIds.delete(compiledId);
+      row.children.hidden = row.open === false;
+      toggle.textContent = row.open ? OPEN_MARK : CLOSED_MARK;
+      writeOpenState();
+      refreshFilter();
+      applyFilter();
+    });
+    // Restored top down, so a node the address names is opened only once the
+    // node holding it has been, and an id this tree does not carry simply never
+    // arrives here.
+    if (openIds.has(compiledId)) {
+      row.open = true;
+      toggle.textContent = OPEN_MARK;
+      children.hidden = false;
+      expand(row);
+    }
+    return row;
+  }
+
+  /** Hide what the needle excludes, and open what it would otherwise bury. */
+  const filterRow = (row: ISubjectTreeRow, needle: string): boolean => {
+    let inside = false;
+    for (const kid of row.loaded ?? [])
+      if (filterRow(kid, needle)) inside = true;
+    const matched =
+      needle === "" || inside || row.key.toLowerCase().includes(needle);
+    row.node.hidden = matched === false;
+    row.children.hidden =
+      row.loaded === null ||
+      (needle === "" ? row.open === false : inside === false);
+    return matched;
+  };
+
+  const applyFilter = (): void => {
     const needle = box.value.trim().toLowerCase();
-    for (const row of rows)
-      row.hidden =
-        needle !== "" &&
-        (row.textContent ?? "").toLowerCase().includes(needle) === false;
-  });
-  return [box, ...rows];
+    for (const root of roots) filterRow(root, needle);
+  };
+
+  box.addEventListener("input", applyFilter);
+  const roots = rootIds.map((id) => buildRow(id));
+  for (const root of roots) tree.append(root.node);
+  // Whatever the address named that this tree has no row for is dropped, so the
+  // next twist does not write an open set describing a subject nobody is
+  // looking at any more.
+  openIds = new Set(
+    built.filter((row) => row.open).map((row) => row.compiledId),
+  );
+  refreshFilter();
+  return [box, tree];
 };
 
 const size = (bounds: IAutoMovieViewerSubjectBounds): string =>
@@ -663,16 +937,13 @@ const openSubjectPage = async (key: string): Promise<void> => {
       panel.append(line("", "gap"), subjectLink(description.owner, "↑ "));
     // `members.items` is already a bounded sample the description chose, and
     // `omitted` is how many it left out, so the whole sample is listed and the
-    // remainder is stated rather than truncated a second time here.
+    // remainder is stated rather than truncated a second time here. Every node
+    // of the tree below repeats that accounting for itself.
     panel.append(
       line("", "gap"),
-      line(
-        `${members.total} inside` +
-          `${members.omitted === 0 ? "" : `, ${members.omitted} named only by key`}`,
-        "omitted",
-      ),
+      line(membershipLine(members), "omitted"),
+      ...subjectTree(members.items),
     );
-    panel.append(...narrowable(members.items.map((id) => subjectLink(id, ""))));
   }
 
   /**
@@ -681,9 +952,15 @@ const openSubjectPage = async (key: string): Promise<void> => {
    *
    * A refusal is written where the subject was and the previous one keeps its
    * frame, because losing the picture you were looking at is a worse answer to
-   * a mistyped id than a line of text.
+   * a mistyped id than a line of text. The tree's open set is replaced only on
+   * a subject that actually opened, and by whatever the caller's address says:
+   * a step inward starts closed, and a `Back` restores the twists that entry of
+   * the history carries.
    */
-  function show(subject: IAutoMovieViewerSubject): boolean {
+  function show(
+    subject: IAutoMovieViewerSubject,
+    nextOpen: Set<string>,
+  ): boolean {
     let next: IAutoMovieSubjectDescription;
     let box: IExtent;
     try {
@@ -705,6 +982,7 @@ const openSubjectPage = async (key: string): Promise<void> => {
     asked = subject;
     description = next;
     extent = box;
+    openIds = nextOpen;
     // The angle is kept across a descent so a room and the moulding inside it
     // are read from the same side, but the plan itself is the new subject's:
     // how far its soffit ring may drop is its own extent's answer.
@@ -717,7 +995,8 @@ const openSubjectPage = async (key: string): Promise<void> => {
 
   /** Open a subject key, recording it in history when it opened. */
   function navigate(target: string): void {
-    if (show(parseAutoMovieViewerSubjectKey(target)) === false) return;
+    if (show(parseAutoMovieViewerSubjectKey(target), new Set()) === false)
+      return;
     const next = new URLSearchParams();
     next.set("shot", shotId);
     next.set("subject", target);
@@ -727,7 +1006,7 @@ const openSubjectPage = async (key: string): Promise<void> => {
   /** A key off the address bar, which nothing guarantees is even well formed. */
   function opened(key: string): boolean {
     try {
-      return show(parseAutoMovieViewerSubjectKey(key));
+      return show(parseAutoMovieViewerSubjectKey(key), openedFromAddress());
     } catch {
       return false;
     }
