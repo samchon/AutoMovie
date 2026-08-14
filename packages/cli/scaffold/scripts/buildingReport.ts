@@ -1,4 +1,5 @@
 import {
+  type AutoMovieDrawingScheduleSubject,
   type IAutoMovieAcousticRequest,
   type IAutoMovieDaylightRequest,
   type IAutoMovieEnvelopeRequest,
@@ -195,7 +196,14 @@ export interface IAutoMovieBuildingReport {
   revision: string;
   /** Derived sheets, one per view of the standard set. */
   sheets: IAutoMovieBuildingSheet[];
-  /** The same design counted instead of drawn. */
+  /**
+   * The same design counted instead of drawn, one entry per scheduled subject.
+   *
+   * The room schedule is the one to read for what stands in a given zone. Its
+   * membership is the built environment's own declaration rather than a scan of
+   * ids, so an author asking what is in a room reads this rather than writing a
+   * second index that disagrees with the model.
+   */
   schedules: IAutoMovieDrawingSchedule[];
   /** Every quantity the design can answer for, and every one it cannot. */
   quantities: IAutoMovieQuantityReport;
@@ -221,6 +229,41 @@ export interface IAutoMovieBuildingReport {
    */
   gaps: IAutoMovieBuildingGap[];
 }
+
+/**
+ * A subject list that cannot fall behind the derivation it drives.
+ *
+ * The declared type is the list itself when the tuple covers every subject the
+ * engine counts, and an error tuple naming what is absent when it does not, so
+ * a subject added to `AutoMovieDrawingScheduleSubject` fails this assignment
+ * rather than being quietly left out of every report a production writes.
+ *
+ * This is not a hypothetical. The room schedule arrived in the engine while the
+ * list below read `["opening", "connector"]`, and nothing said so: the report
+ * kept writing, its two schedules kept reconciling, and the derivation an author
+ * is told to ask for what stands in each room simply never ran.
+ */
+type IAutoMovieCompleteScheduleSubjects<
+  T extends readonly AutoMovieDrawingScheduleSubject[],
+> =
+  Exclude<AutoMovieDrawingScheduleSubject, T[number]> extends never
+    ? T
+    : [
+        "schedule subject missing from this report",
+        Exclude<AutoMovieDrawingScheduleSubject, T[number]>,
+      ];
+
+/**
+ * Every subject this report counts, in the order it writes them.
+ *
+ * The room schedule leads because it is the one a reader opens first: an
+ * opening or a connector row answers "what types are there and how many", while
+ * a room row answers "what is this zone, how far does it reach, and what stands
+ * in it", which is the question somebody walking the building actually has.
+ */
+export const AUTOMOVIE_BUILDING_SCHEDULE_SUBJECTS: IAutoMovieCompleteScheduleSubjects<
+  ["space", "opening", "connector"]
+> = ["space", "opening", "connector"];
 
 /**
  * The standard sheet set one building unit is asked for.
@@ -596,7 +639,7 @@ export const deriveAutoMovieBuildingReport = (props: {
     for (const gap of sheet.drawing.gaps)
       gaps.push({ ...gap, subject: `sheet:${sheet.view.id}/${gap.subject}` });
 
-  const schedules = (["opening", "connector"] as const).map((subject) =>
+  const schedules = AUTOMOVIE_BUILDING_SCHEDULE_SUBJECTS.map((subject) =>
     deriveAutoMovieDrawingSchedule({
       environment: props.environment,
       subject,
