@@ -81,6 +81,7 @@ export interface IAutoMovieTextureReference {
    *
    * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Declares the coordinate system this binding's real scale is expressed in, so the same input places the same way.
    * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Supplies the coordinate set the binding record must state beside its transform and real scale.
+   * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Carries the declared vocabulary the convention's three coordinate sources are named in, which is what makes the unit a binding states readable from the record alone.
    */
   coordinateSource?: AutoMovieTextureCoordinateSource;
   /**

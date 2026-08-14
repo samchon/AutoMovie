@@ -2,6 +2,46 @@
   "version": 1,
   "layer": "specifications",
   "declarations": {
+    "specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention": {
+      "obligations": {
+        "atlas-handedness": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "coordinate-absence-and-composition": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "coordinate-source-declaration": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "developed-atlas-shear": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "developed-metric-frame": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        },
+        "projected-metric-frame": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/engine"
+          }
+        }
+      }
+    },
     "specifications/authoring-and-authority/README.md#spec-authoring-authority-index": {
       "obligations": {
         "document-index": {

@@ -39,6 +39,36 @@
 
 재료는 표면이 빛과 합성에 응답하는 의미 및 입력 channel의 조합이고, texture는 좌표에 따라 표본화되는 독립 자원이다. 결합 기록은 재료 영역, texture revision, 좌표 집합, 좌표 변환, 실제 축척, 반복·clamp 정책, filtering, seam 처리, color space와 channel 의미를 명시하며 어느 image도 재료 의미를 암묵적으로 결정하지 않는다.
 
+### 표면 좌표 규약 {#asset-spec-surface-coordinate-convention}
+
+<!-- @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale 좌표계, 실제 축척과 방향을 표면 쪽에서 관찰 가능한 사실로 고정해 같은 선언이 같은 배치를 만들게 한다. -->
+<!-- @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations 각 기하 연산이 내는 좌표 집합의 축, 방향, 원점과 축척을 그 연산의 출력 계약으로 정밀화한다. -->
+<!-- @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-corner-continuity 결의 연속과 단절이 face마다 독립 UV로 우연히 바뀌지 않도록 frame이 무엇에서 파생되는지 고정한다. -->
+
+결합 기록이 이름 붙이는 좌표 집합은 세 종류로 구분되고, 그 종류가 좌표 변환의 축척을 읽는 단위를 결정한다. Metric surface 집합은 1 단위가 표면 위 1 m이므로 이미지 한 바퀴가 `tile` m를 덮을 때 축척은 `1 / tile`이고 표면 extent 항이 들어가지 않는다. Normalized 집합은 자기 표면을 정확히 한 번 덮으므로 축척은 `extent / tile`이며, 측정된 span이 1을 넘으면 선언이 결합된 기하와 모순이므로 거부한다. Source 집합은 임의의 저작 layout을 유지하므로 일반 물리 축척 공식이 없고 원본 layout이나 채택 기록이 변환을 공급한다. 좌표 종류를 선언하지 않은 결합은 어떤 단위 주장도 하지 않으며, 세 종류는 결합 기록만으로 구분되지 않으므로 결합이 그 종류를 직접 말한다.
+
+<!-- @evidenceObligation coordinate-source-declaration 결합이 이름 붙이는 좌표 집합의 세 종류와 각 종류에서 실제 축척을 읽는 방법. -->
+
+좌표를 내는 모든 기하 연산은 하나의 handedness를 쓴다. 어느 삼각형에서든 u가 커지는 방향과 v가 커지는 방향의 외적은 그 면의 outward normal이고, 따라서 방향성 있는 무늬는 어느 연산이 만든 표면에서도 같은 쪽으로 읽히며 normal map의 tangent basis는 여러 member를 합친 buffer 전체에서 한 방향을 유지한다. 특정 연산을 보정하려고 이미지를 미리 뒤집지 않는다. 축의 홀수 개를 뒤집는 mirroring placement가 이 규약이 뒤집히는 유일한 지점이다. 그 placement는 outward face가 밖을 향하도록 winding을 뒤집으면서 좌표는 다시 자르지 않고 옮기므로 그 member의 atlas는 반대 handedness가 되고, 한 buffer 안에서 두 handedness가 섞이면 하나의 tangent basis가 양쪽을 답하지 못한다.
+
+<!-- @evidenceObligation atlas-handedness 좌표를 내는 모든 연산이 공유하는 단일 handedness와 그것이 뒤집히는 지점. -->
+
+평면 face를 그대로 내는 연산은 투영 frame을 쓴다. 각 face의 frame은 그 face의 normal만으로 정해진다. Level이 아닌 face는 world up을 face 평면에 투영한 축을 v로 삼고 평면에 남는 직교 축을 u로 삼으며, level face는 world +X를 u로 삼는다. 좌표는 그 두 축에 정사영한 위치이고 원점은 mesh 자신의 원점이므로 단위는 m이다. Corner를 적은 순서가 아니라 normal에서 frame을 얻는 것이 규약의 핵심이다. 같은 평면 위의 face들은 corner를 어떤 순서로 적었든 하나의 연속 표면이 되고, 수직 모서리에서 만나는 두 face는 v가 위치의 같은 함수이므로 course가 모서리를 돌아 이어진다. u는 그 접힘을 돌아 이어지지 않으며 이는 선언된 단절이다. Level과 level이 아닌 face를 가르는 경계 자체도 선언된 방향 seam이므로 normal이 가깝다는 이유로 두 쪽이 연속을 주장하지 않는다. 이 연속성은 한 번의 build 호출이 공유하는 원점의 성질이므로, 따로 만들어 배치한 두 member는 아무리 정확히 맞닿아도 같은 datum을 공유하지 않는다.
+
+<!-- @evidenceObligation projected-metric-frame 평면 face가 자기 normal에서 얻는 투영 frame의 축, 원점과 연속성 범위. -->
+
+단면을 잇는 연산은 developed frame을 쓴다. u는 단면 ring을 따라 이동한 거리로 그 ring의 정규 시작점에서 0이고 ring의 전체 perimeter까지 가며, v는 path나 meridian을 따라 이동한 거리로 그 첫 점에서 0이다. 둘 다 m이므로 하나의 선언된 축척이 투영 frame과 developed frame에서 같게 읽힌다. 양 끝 cap은 단면 자신의 좌표를 쓰고 두 cap의 v는 서로 반대 부호이므로 mirror 관계다. 회전면의 u는 lattice가 나아가는 방향의 반대로 흘러 seam 한쪽이 0을, 다른 쪽이 그 반지름의 전체 둘레를 읽고, 축 위에 놓인 meridian 점은 이동할 호가 없으므로 그 ring 전체가 0을 읽는다. Ring cut은 명시적 절단이며 반복 무늬의 위상은 선언된 반복이 그 perimeter를 나눌 때만 절단 양쪽에서 일치하고, 시스템은 어긋난 seam을 감추려고 finish를 늘이지 않는다. 압출 prism의 옆면 v는 mesh 중앙면을 0으로 하는 압출 좌표이므로 `-depth / 2`에서 `+depth / 2`까지 가며 밑면을 0으로 하지 않는다.
+
+<!-- @evidenceObligation developed-metric-frame 단면을 잇는 연산이 쓰는 around·along 거리 좌표의 원점, 방향, 절단과 cap 규약. -->
+
+Developed frame은 정확히 equiareal이다. Jacobian determinant가 어디서나 1이므로 texel 밀도는 표면 전체에서 일정하고 왜곡은 두 축 사이의 각도로만 나타난다. 단면이 일정하면 왜곡이 없고 단면이 변하면 shear가 생기며, 회전면의 최악 anisotropy는 반지름이 아니라 meridian이 축에서 기운 정도로만 정해져서 `k = 2 * pi * |dr / ds|`에 대해 `(sqrt(k * k + 4) + k) / (sqrt(k * k + 4) - k)`이다. 축에서 6.5도에서 2, 13.8도에서 4, 45도 원뿔에서 21.7이고 meridian이 수평에 접근하면 41.5이다. 이 값은 pole의 성질이 아니라 기울기의 성질이므로 끝을 잘라낸 frustum도 같은 만큼 shear한다. 방향성 있는 finish는 단면이 일정한 구간에서만 정확하고, 그 밖의 형태는 평면 face로 저작하거나 방향성 없는 finish를 쓴다.
+
+<!-- @evidenceObligation developed-atlas-shear Developed frame의 면적 보존과 단면 변화가 만드는 shear의 상한. -->
+
+좌표를 내지 않는 연산은 채움값을 넣지 않고 좌표 자체를 내지 않는다. 0으로 채우면 그 표면 전체가 한 texel에 고정되어 평평한 도장처럼 보이고 그 손실을 결합 시점에 귀속시킬 수 없기 때문이다. Placement는 표면을 옮길 뿐 atlas를 다시 자르지 않으므로 좌표를 그대로 옮기며, 그래서 member의 좌표는 배치된 위치가 아니라 만들어진 frame에서 잰 값으로 남는다. 여러 mesh를 합치는 연산은 모든 member가 좌표를 가질 때만 좌표를 유지하고 하나라도 없으면 결과 전체가 좌표를 잃는다.
+
+<!-- @evidenceObligation coordinate-absence-and-composition 좌표를 내지 않는 연산의 처리와 placement·merge가 좌표에 하는 일. -->
+
 ### 표면 상태와 교체 {#asset-spec-surface-states-substitution}
 
 <!-- @evidence requirements/asset-authoring/materials-and-textures.md#asset-material-state 젖음, 손상, 오염과 같은 상태별 표면 표현을 같은 자산에 보존해야 한다. -->

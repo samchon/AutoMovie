@@ -461,6 +461,9 @@ export const extrudeAutoMovieProfile = (props: {
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
  * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Gives the revolved surface texture coordinates in a stated metric coordinate system so a declared scale places the same way every run.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Emits the coordinate set a material binding samples the revolved surface through.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Lays the revolved atlas under the shared surface coordinate convention rather than under a rule of its own.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::atlas-handedness Runs `u` against the direction the lattice advances so the increasing-`u` and increasing-`v` directions cross to the outward normal, which is the same handedness the projected and other developed builders emit.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-atlas-shear Keeps the map equiareal and bounds its worst anisotropy by the meridian's slope alone, which is why a pole and a truncated frustum shear the same.
  */
 export const revolveAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -612,6 +615,8 @@ export const sweepAutoMovieProfile = (props: {
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Accepts explicit metric face geometry as a native asset input.
  * @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-corner-continuity States where the grain continues across adjacent faces and stops it changing with the order a face's corners were authored in.
  * @evidence specifications/interior-space/surface-assemblies.md#interior-space-joint-edge-grain-continuity Derives the shared frame and transform continuity across faces is allowed to rest on.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Emits the projected half of the shared surface coordinate convention.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::projected-metric-frame Decides each face's in-plane metre frame from the face normal alone and anchors it on the mesh origin, so coplanar faces are one surface and the level boundary is a declared seam.
  */
 export const buildAutoMoviePolyhedron = (
   faces: ReadonlyArray<readonly IAutoMovieVector3[]>,
@@ -888,6 +893,8 @@ export const triangulateAutoMovieRegion = (props: {
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Extrudes a canonical region while retaining every declared hole.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Produces a closed manifold from the region's boundary topology.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Emits the developed half of the shared surface coordinate convention.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-metric-frame Measures a side as ring travel from the ring's canonical cut against the extrusion coordinate centred on the mesh mid-plane, and gives each cap the section's own coordinates with opposite `v` sign.
  */
 export const extrudeAutoMovieRegion = (props: {
   outer: readonly IAutoMovieProfilePoint[];
@@ -974,6 +981,7 @@ export const extrudeAutoMovieRegion = (props: {
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Connects authored planar sections along a declared path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Refuses incompatible ring topology rather than inventing correspondence.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Measures section travel against path travel in the same developed metre frame the convention states, so one declared scale reads the same on a loft as on a flat face.
  */
 export const loftAutoMovieSections = (props: {
   path: readonly IAutoMovieVector3[];
@@ -1155,6 +1163,8 @@ export const loftAutoMovieSections = (props: {
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Combines authored mesh operands without an argument-list size ceiling.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reindexes each input topology into one deterministic mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Decides what a composition does to the coordinate sets its members carry.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::coordinate-absence-and-composition Keeps the merged coordinate set only when every member carries one, so a coordinate-less member costs the assembly its atlas instead of being filled with a zero nobody can attribute.
  */
 export const mergeAutoMovieMeshes = (
   meshes: readonly IAutoMovieMesh[],
@@ -1204,6 +1214,7 @@ export const mergeAutoMovieMeshes = (
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Carries a member's coordinate set through a placement unchanged, which is what keeps the set measured in the frame the member was built in and what reverses its handedness under a mirroring scale.
  */
 export const transformAutoMovieMesh = (
   mesh: IAutoMovieMesh,
