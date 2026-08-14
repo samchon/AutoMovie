@@ -4,11 +4,13 @@ Read this guide before `captureFrame`. The tool produces actual current PNG evid
 
 ## Request
 
-Choose exactly one compiler-registry target:
+Choose exactly one compiler-registry target, and the choice is between these two:
 
-- A shot names `kind: "shot"`, an explicit `productionId`, registry `id`, non-negative shot-local `time`, and optional pass.
-- An asset turntable names `kind: "asset"`, registry `id`, azimuth `angleDeg`, optional elevation, `rest` or `rom-extremes` pose, and optional pass. Production may be omitted only when the host has an unambiguous default.
+- A shot names `kind: "shot"`, an explicit `productionId`, registry `id`, non-negative shot-local `time` no greater than the shot's duration, and optional pass. The returned time is snapped to the nearest frame index on the production clock.
+- An asset turntable names `kind: "asset"`, registry `id`, azimuth `angleDeg` in `[0, 360)`, optional elevation in `[-85, 85]`, `rest` or `rom-extremes` pose, and optional pass. A turntable runs on a fixed twelve-second clock where time is `angleDeg / 30`, so an azimuth is one exact frame index. Production may be omitted only when the host has an unambiguous default. `rom-extremes` is available only for a model whose compiled form carries a skeleton, so a prop, a panel, or a building part is captured in `rest`.
 - Width and height are optional positive integers bounded by production resolution. Omission requests production dimensions, which is what review needs: a frame captured at any smaller raster is downgraded with `render-frame-invalid` and can never discharge a required view. Override them only for a cheap diagnostic look you do not intend to cite.
+
+Nothing else is a capture target here. This tool has no subject, space, element, part, or instance target and no way to ask it for an arbitrary pose of a placed thing: through `captureFrame`, a compiled subject is reached only inside the shot that stages it, framed by that shot's camera. When the question is what a compiled subject is, where it stands, what its bounds are, or what changed between revisions, read `SUBJECT_INSPECTION`. That route is an ordinary engine query in a project `scripts/` module over the compiled artifact and needs no pixels at all, which is usually the cheaper answer for a building or an interior.
 
 Use `beauty` to judge appearance. Use structural passes when the target, acceptance scenario, or repaint workflow needs them. The pass names are a closed set and `segmentation` is not one of them: ask for `depth`, `mask`, `normal`, `outline`, or `pose`, and expect a refusal for anything else. A structural pass is evidence about geometry, not a substitute for beauty. Structural passes also suspend the scene's atmosphere, image lighting, exposure, and tone mapping, so a declared fog or environment will not appear in one; judge those from beauty.
 
@@ -33,8 +35,11 @@ Refusals arrive in two shapes and only one of them carries diagnostics. A refusa
 
 - Production invalid or unregistered: choose a trimmed registered namespace; do not retry with filesystem paths.
 - Registry unavailable or target missing: correct source/design and run the ordinary compile command.
+- Compile not current: `generated-stale` and `compile-current-invalid` say the generated output is not a clean build of current source. Compile before asking for pixels; every capture is bound to the compile it came from.
+- Target absent from compiled output: `preview-target-missing` is not the same refusal as an unregistered target. The registry knows the name and the compiler published nothing for it.
+- Input out of range: `preview-input-invalid` covers a shot time past the shot's duration, an asset azimuth or elevation outside its interval, a raster larger than the production frame, and `rom-extremes` asked of a model with no skeleton. Correct the request rather than the project.
 - Host refusal: repair the configured capture runtime using the scaffold doctor command.
 - Receipt invalid: discard the pixels. The host, compiler state, or manifest changed during capture; retry after the repository is stable.
 - `captured:false`: read every returned diagnostic, correct its owner, and repeat the same target. It is never partial evidence.
 
-After sufficient views exist, read the target-specific review guide and call `prepareReview`.
+Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set `prepareReview` returns for that model. Read `REVIEW_SHOT` or `REVIEW_ASSET`, call `prepareReview`, and let its `review-evidence-missing` diagnostics name the exact production, target, time, and pass still owed.

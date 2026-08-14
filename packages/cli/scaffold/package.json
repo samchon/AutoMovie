@@ -25,7 +25,9 @@
     "verify": "tsx scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json",
     "design": "tsx scripts/emitDesign.ts",
-    "building:report": "tsx scripts/deriveBuilding.ts"
+    "derive:example": "tsx scripts/deriveExampleArtifact.ts",
+    "building:report": "tsx scripts/deriveBuilding.ts",
+    "texture:scale": "tsx scripts/measureTextureScale.ts"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",

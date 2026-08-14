@@ -152,6 +152,16 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck:
       "Validate design scope first, then repeat every invalidated downstream scope.",
   },
+  derived: {
+    guide: "DERIVED_ARTIFACTS",
+    path: "prompts/DERIVED_ARTIFACTS.md#deterministic-derived-artifacts",
+    invariant:
+      "Every derived artifact must have one current, portable, project-owned generator, dependency closure, ledger record, and exact output before source execution.",
+    correction:
+      "Correct the generator or declared input named by the occurrence and rerun the explicit generation command; do not edit the ledger or output bytes by hand.",
+    recheck:
+      "Inspect the derived-artifact ledger again, then compile the same scope without changing its input closure.",
+  },
   engine: {
     guide: "DEBUGGING",
     path: "prompts/DEBUGGING.md#debugging-handbook",
@@ -330,11 +340,46 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
 };
 
+const CODE_CONTRACTS: Readonly<
+  Partial<Record<AutoMovieDiagnosticCode, IDiagnosticFamilyContract>>
+> = {
+  "review-outcome-artifact-malformed": {
+    guide: "REVIEW_SHOT",
+    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    invariant:
+      "A current compiler-owned acceptance artifact must remain readable, digest-matched UTF-8 JSON before review can derive an outcome from it.",
+    correction:
+      "Remove only the damaged compiler-owned publication named by the occurrence, then compile the same current inputs again; do not edit an acceptance outcome by hand.",
+    recheck:
+      "Prepare the same review again and confirm the named artifact reads under its current manifest digest.",
+  },
+  "review-outcome-artifact-missing": {
+    guide: "REVIEW_SHOT",
+    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    invariant:
+      "Every manifest-owned acceptance artifact required by a current compile must be resident before review derives an outcome.",
+    correction:
+      "Compile the same current inputs to restore the missing compiler-owned publication named by the occurrence.",
+    recheck:
+      "Prepare the same review again and confirm the named artifact is resident under the current generated manifest.",
+  },
+  "review-outcome-contract-mismatch": {
+    guide: "REVIEW_SHOT",
+    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    invariant:
+      "The compiler writer and review reader shipped in one revision must agree on the exact schema and identity of every acceptance artifact.",
+    correction:
+      "Report the artifact path and validator paths as an internal compiler-reader contract defect; do not change author-owned source or repeat an unchanged compile as a purported fix.",
+    recheck:
+      "After the product contract is corrected, compile and prepare the same review again against one unchanged input revision.",
+  },
+};
+
 const createCatalogEntry = (
   code: AutoMovieDiagnosticCode,
 ): Readonly<IAutoMovieDiagnosticCatalogEntry> => {
   const family = code.slice(0, code.indexOf("-"));
-  const contract = FAMILY_CONTRACTS[family];
+  const contract = CODE_CONTRACTS[code] ?? FAMILY_CONTRACTS[family];
   if (contract === undefined)
     throw new Error(`Diagnostic code "${code}" has no behavioral family.`);
   return Object.freeze({

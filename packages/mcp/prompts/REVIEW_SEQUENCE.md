@@ -4,6 +4,8 @@ Read this guide before `prepareReview` or `submitReview` with target kind `seque
 
 ## Prepare and inspect
 
+A compiler outcome refusal has three distinct owners. `review-outcome-artifact-missing` means the current manifest-owned publication is absent; compile the same current input. `review-outcome-artifact-malformed` means its bytes, digest, UTF-8, or JSON are damaged; remove only the damaged compiler publication and compile again. `review-outcome-contract-mismatch` means valid JSON disagrees with the exact reader contract or current identity, which is an internal writer-reader defect: report the diagnostic artifact path and validator paths, and do not edit author source or retry an unchanged compile as a supposed fix. Each state blocks completion while independently readable outcomes remain in the worksheet.
+
 Call `prepareReview` for the exact treatment sequence id. Inspect current coverage and the temporal run, including incoming and outgoing transitions. Use the worksheet's exact source selectors, verified frames, and acceptance outcomes. For repainted delivery, also open every addressed MP4 in `renditions`, inspect both sides of each cut, and cite at least one current `kind:"rendition"` entry per shot; missing, stale, or uncited rendition receipts block completion.
 
 The canonical criteria are:

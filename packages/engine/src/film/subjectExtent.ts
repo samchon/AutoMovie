@@ -2,12 +2,17 @@ import {
   IAutoMovieCompiledFormation,
   IAutoMovieFormationMotion,
   IAutoMovieModel,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { sampleFormationMotion, transformFormationBounds } from "../formation";
 import { productionRuntimeModelId } from "../productionIdentity";
-import { DEFAULT_SUBJECT_HEIGHT, computeModelRestExtentY } from "./cameraMove";
+import {
+  DEFAULT_SUBJECT_HEIGHT,
+  computeModelRestExtentY,
+  placeTransformedPoint,
+} from "./cameraMove";
 
 /**
  * The world-space axis-aligned box a camera must contain to show a subject.
@@ -163,13 +168,18 @@ export const formationSubjectBox = (props: {
 
 /**
  * The box one staged point occupies, given the vertical extent of what stands
- * there. Horizontally degenerate on purpose: a placement is a point, and the
- * only honest horizontal span a group of placements has is the spread between
- * them. Inventing a body width per member would put a number the renderer never
- * drew into the camera solve.
+ * there. `extent` is stated relative to the point and carries its own floor, so
+ * a model whose geometry begins above its node origin is boxed where it draws
+ * rather than at the placement it hangs from.
  *
- * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion pointSubjectBox exposes state-dependent asset extent: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
- * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants pointSubjectBox realizes dynamic-bounds invariants: The box one staged point occupies, given the vertical extent of what stands there. Horizontally degenerate on purpose: a placement is a point, and the only honest horizontal span a group of placements has is the spread between them. Inventing a body width per member would put a number the renderer never drew into the camera solve.
+ * Horizontally degenerate, because a placement is a point and a height is not a
+ * width. This is the shape of a subject nothing could be measured for — a node
+ * with no compiled model, whose span is its rig's or the stand-in's, and neither
+ * of those states a horizontal extent any more than it states a floor. A subject
+ * that does draw geometry is boxed by {@link nodeSubjectBox} from what it draws.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion pointSubjectBox exposes state-dependent asset extent: The box one staged point occupies, given the vertical extent of what stands there, carrying the extent's own floor so geometry authored above its node origin is boxed where it draws. Horizontally degenerate, because this is the shape of a subject nothing could be measured for: a rig span and the stand-in height state no width any more than they state a floor.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants pointSubjectBox realizes dynamic-bounds invariants: The box one staged point occupies, given the vertical extent of what stands there, carrying the extent's own floor so geometry authored above its node origin is boxed where it draws. Horizontally degenerate, because this is the shape of a subject nothing could be measured for: a rig span and the stand-in height state no width any more than they state a floor.
  */
 export const pointSubjectBox = (
   point: IAutoMovieVector3,
@@ -178,6 +188,121 @@ export const pointSubjectBox = (
   min: { x: point.x, y: point.y + extent.min, z: point.z },
   max: { x: point.x, y: point.y + extent.max, z: point.z },
 });
+
+/**
+ * The world box one staged node fills, given the model-space box of what it
+ * draws.
+ *
+ * The eight corners of `extent` go through the node's own placement
+ * ({@link placeTransformedPoint}, the arithmetic that placed the parts the
+ * extent was measured from) and the result is their axis-aligned range, so a
+ * yawed or scaled element is boxed where it stands rather than where its model
+ * file happens to lie.
+ *
+ * **This is the one answer both sides of a shot read.** `performShot` frames a
+ * node subject from it and `realizeShotContract` grades the same subject from
+ * it, which is what makes the check honest: a camera solved to hold a mass is
+ * tested against the mass it was solved for. Measuring the width on one side
+ * only would be worse than measuring it on neither — grading a 60 m facade on
+ * its true box while the solve still aimed at its element origin would refuse
+ * shots no authored camera could then satisfy.
+ *
+ * An extent lying on the node's own vertical axis is a point with a height
+ * rather than geometry — the shape {@link nodeSubjectExtent} returns when
+ * nothing could be measured — and it goes to {@link pointSubjectBox} instead.
+ * There is nothing to place, so the only part of the placement that could
+ * matter is where it stands: a rotation cannot turn a segment about the axis it
+ * lies on, and a scale must not stretch the height, because a rig span and the
+ * stand-in are inventions about the subject rather than measurements of it, and
+ * scaling an invention states something the model never did.
+ *
+ * **This re-frames existing shots, and that is the decision rather than a side
+ * effect.** Determinism is the product, so the change is stated here instead of
+ * arriving quietly. Two things move for a node subject that draws geometry: the
+ * framed `base` becomes the bottom CENTRE of the drawn box rather than the node
+ * root, and the fit gains a width. Neither reaches a subject whose width was
+ * already obvious. The base moves only by the horizontal offset between a
+ * model's drawn centre and its own origin, which is zero for every figure and
+ * every prop authored around itself; the distance moves only where
+ * `width > height * aspect`, which no single body reaches at any shot size. So
+ * what re-frames is exactly the class of subject whose framing was already
+ * wrong — a set piece authored outward from an element origin, aimed at a
+ * corner and solved for a fraction of its width — and holding that framing
+ * stable would be preserving a defect, not a contract. The one shot that newly
+ * FAILS is the one that named an element whose geometry stands nowhere near the
+ * frame it delivered, which the previous grade passed by testing a segment at
+ * the origin instead of the mass.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion nodeSubjectBox exposes state-dependent asset extent: The world box one staged node fills, the eight corners of its drawn model-space box carried through its own placement, so a yawed or scaled element is bounded where it stands.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectBox realizes dynamic-bounds invariants: The world box one staged node fills, given the model-space box of what it draws. The eight corners of extent go through the node's own placement, the arithmetic that placed the parts the extent was measured from, and the result is their axis-aligned range, so a yawed or scaled element is boxed where it stands rather than where its model file happens to lie. This is the one answer both sides of a shot read: performShot frames a node subject from it and realizeShotContract grades the same subject from it, which is what makes the check honest. An extent with no horizontal span states that nothing was measured and goes to pointSubjectBox instead, because a rig span and the stand-in are inventions about the subject rather than measurements of it, and scaling an invention states something the model never did.
+ */
+export const nodeSubjectBox = (
+  placement: IAutoMovieTransform,
+  extent: IAutoMovieSubjectBox,
+): IAutoMovieSubjectBox => {
+  if (
+    extent.min.x === 0 &&
+    extent.max.x === 0 &&
+    extent.min.z === 0 &&
+    extent.max.z === 0
+  )
+    return pointSubjectBox(placement.translation, {
+      min: extent.min.y,
+      max: extent.max.y,
+    });
+  const min: IAutoMovieVector3 = { x: Infinity, y: Infinity, z: Infinity };
+  const max: IAutoMovieVector3 = { x: -Infinity, y: -Infinity, z: -Infinity };
+  for (const x of [extent.min.x, extent.max.x])
+    for (const y of [extent.min.y, extent.max.y])
+      for (const z of [extent.min.z, extent.max.z]) {
+        const corner = placeTransformedPoint(placement, { x, y, z });
+        if (corner.x < min.x) min.x = corner.x;
+        if (corner.y < min.y) min.y = corner.y;
+        if (corner.z < min.z) min.z = corner.z;
+        if (corner.x > max.x) max.x = corner.x;
+        if (corner.y > max.y) max.y = corner.y;
+        if (corner.z > max.z) max.z = corner.z;
+      }
+  return { min, max };
+};
+
+/**
+ * The model-space box a node subject is framed and graded from: what its model
+ * draws when the compiler supplied one, and the horizontally degenerate segment
+ * a rig span or the stand-in height describes when it did not.
+ *
+ * Stated once because a node is measured by the framing solve and again by the
+ * contract check, and two answers to "what does he fill" is how a shot comes to
+ * be graded against a subject nobody framed. `extent` is the drawn box
+ * `computeModelRestExtent` measured, or null when the model measured nothing;
+ * `rigHeight` is the joint span standing in for it, or null when there is no
+ * rig either.
+ *
+ * A model too short to measure keeps the stand-in height and its own floor, and
+ * keeps its measured width: a plaza slab 60 m across and 20 mm thick is a real
+ * horizontal extent even where its vertical one is unusable.
+ *
+ * @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-bounds-state-motion nodeSubjectExtent exposes state-dependent asset extent: The model-space box a node subject is framed and graded from, the drawn box when a model was compiled and the degenerate segment a rig span or the stand-in height describes when it was not.
+ * @evidence specifications/asset-and-representation/bounds-proxies-and-lod.md#asset-spec-dynamic-bounds-invariants nodeSubjectExtent realizes dynamic-bounds invariants: The model-space box a node subject is framed and graded from: what its model draws when the compiler supplied one, and the horizontally degenerate segment a rig span or the stand-in height describes when it did not. Stated once because a node is measured by the framing solve and again by the contract check, and two answers to what he fills is how a shot comes to be graded against a subject nobody framed. A model too short to measure keeps the stand-in height and its own floor, and keeps its measured width: a plaza slab 60 m across and 20 mm thick is a real horizontal extent even where its vertical one is unusable.
+ */
+export const nodeSubjectExtent = (
+  extent: IAutoMovieSubjectBox | null,
+  rigHeight: number | null,
+): IAutoMovieSubjectBox => {
+  const measured =
+    extent === null ? (rigHeight ?? 0) : extent.max.y - extent.min.y;
+  const height = measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT;
+  const floor = extent === null ? 0 : extent.min.y;
+  return extent === null
+    ? {
+        min: { x: 0, y: floor, z: 0 },
+        max: { x: 0, y: floor + height, z: 0 },
+      }
+    : {
+        min: extent.min,
+        max: { x: extent.max.x, y: floor + height, z: extent.max.z },
+      };
+};
 
 /**
  * The smallest box containing every given box, or null when none were given.

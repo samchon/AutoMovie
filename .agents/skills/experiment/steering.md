@@ -2,6 +2,8 @@
 
 Read this document when the experiment is driven by a Claude Code or Codex session that runs for hours rather than for one prompt. A session that long stops being something you observe and becomes something you steer, and steering has its own failure modes. Every one below was paid for in a single campaign, most of them more than once.
 
+[briefing.md](briefing.md) owns what goes into the brief and into every message after it. This document owns how the session itself is driven.
+
 ## A Turn Is The Unit Of Work
 
 `codex exec resume <session-uuid> "<message>"` runs exactly one turn and exits. Two readings of the process table are therefore both wrong: a live process is not proof the agent is working, and an exited process is not proof it has stopped.
@@ -42,6 +44,14 @@ The observer was wrong seven times in that campaign. The most expensive one plac
 > The actionable remaining defect is in the external 88-camera sweep renderer's handling of GPU instancing, not the residence geometry.
 
 Settle that kind of rebuttal by measurement rather than by another look at the frames. Counting 39 oriel elements and 57 hub pieces in the compiled artifact withdrew two more claims immediately, and both of those claims would have survived another round of looking at frames.
+
+## Ask For Its List When Yours Is Empty
+
+Running out of findings is not the same as there being none left, so ask the agent for its own before you treat the run as closed.
+
+Told that the observer's list was empty, the agent in that campaign returned three priorities, one of which was its own review camera standing inside a room it was supposed to show. The observer had never considered it. The agent also named the exact evidence that would separate its three hypotheses, and that exchange was the most productive of the campaign.
+
+The closing condition itself belongs to the brief, which names the reference set both lists are checked against. See [Say What Ends The Run](briefing.md#say-what-ends-the-run).
 
 ## Prove The Pixels Are New
 

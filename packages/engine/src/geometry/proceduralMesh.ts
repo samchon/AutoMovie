@@ -342,10 +342,15 @@ export interface IAutoMovieLoftSection {
 /**
  * Extrude a convex XY profile along local Z into a closed triangle mesh.
  *
- * The result carries generated vertex normals and no UV atlas: where a prism's
- * seam falls is a finish decision this kernel does not make for the caller, and
- * {@link buildAutoMoviePolyhedron} is the builder that does lay one out, by
- * measuring each face's own plane in metres.
+ * The result carries generated vertex normals and no texture coordinates. Its
+ * side ring is one strip of shared vertices closed with a modular index, so the
+ * vertex that starts the ring is the vertex that ends it and no single number
+ * can be both zero and the profile's perimeter. Emitting a coordinate here
+ * would mean either mirroring the image back across the closing quad or
+ * splitting every corner, and the split version of this operation already
+ * exists: {@link extrudeAutoMovieRegion} takes the same profile, keeps concave
+ * outlines and holes the hull here destroys, and lays a stated metric atlas
+ * over the result. Reach for that one whenever the prism carries a finish.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a reusable solid by extruding an authored profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Emits the closed topology of the extrusion operation.
@@ -384,10 +389,81 @@ export const extrudeAutoMovieProfile = (props: {
  * Closure follows the meridian and is the caller's to declare: a meridian that
  * starts and ends on the axis closes into a solid whose pole rings collapse to
  * zero-area triangles, and one that does not is an open tube with a rim at each
- * end. Neither is repaired, and no UV atlas is generated.
+ * end. Neither is repaired.
+ *
+ * The surface carries a metric atlas measured the way its siblings measure
+ * theirs: distance travelled around the section against distance travelled
+ * along the path. Around is the arc the vertex actually sits on, `theta` times
+ * its own radius, so a baluster turned to a 0.3 m radius shows 1.88 m of grain
+ * around it rather than one turn of an image stretched to fit it. Along is the
+ * meridian's own polyline length, which is slant distance on a cone and
+ * developed height on a cylinder rather than the shortcut through the axis.
+ *
+ * Around runs against the direction the lattice is built in, and that is the
+ * whole reason it is written `2 * pi - theta` rather than `theta`. The outward
+ * normal this winding produces, the meridian running up, and `theta` running
+ * round form a left-handed triple, so an atlas keyed on `theta` directly comes
+ * out mirrored against every other builder here: a letter reads backwards, and
+ * a normal map's tangent basis is handed the wrong way, which tilts the
+ * lighting rather than merely the image. Reversing the axis that closes on
+ * itself costs nothing an author can name, because which way round a surface of
+ * revolution is traversed carries no authored meaning, while reversing the
+ * meridian instead would put `v = 0` at whichever end of the profile was typed
+ * last.
+ *
+ * The lattice already carries a duplicate ring at `theta = 2 * pi`, which is
+ * what makes the seam an honest cut: one edge of the seam reads zero and the
+ * other reads the full circumference at that radius, so the closing quad never
+ * interpolates backwards through the atlas. Those two phases coincide only
+ * when the declared texture repeat divides that circumference; the kernel does
+ * not stretch a finish to hide a mismatched seam. A changing radius also makes
+ * the surface non-developable in general. Scaling by radius preserves local
+ * circumference scale on every parallel and therefore shears the flat atlas
+ * between unequal parallels instead of pretending one global isometry exists.
+ * A meridian point on the axis is a pole, and its whole ring reads zero around,
+ * because a circle of no radius has no arc to travel. Its collapsed triangles
+ * remain the topology this operator already declares; their UVs stay finite,
+ * and they are the one place the atlas has no handedness to report.
+ *
+ * How far that shear goes is worth stating, because it decides what finish the
+ * surface can carry. The map is exactly equiareal, its Jacobian determinant one
+ * everywhere, so the whole distortion is pure shear of `2 * pi - theta` times
+ * `dr / ds`. Worst anisotropy over a full turn is therefore
+ * `(sqrt(k * k + 4) + k) / (sqrt(k * k + 4) - k)` at `k = 2 * pi * |dr / ds|`:
+ * 1.0 on a cylinder, 2.0 at 6.5 degrees off the axis, 4.0 at 13.8 degrees, 21.5
+ * on a 45-degree cone, and 41 where the meridian runs level, which is what a
+ * dome's pole and a cone's tip approach. A tile that reads square beside the
+ * seam is drawn into a ribbon a quarter turn away, and the curve of constant
+ * `u` spirals instead of following a meridian.
+ *
+ * That is the price of the metric statement rather than a defect awaiting
+ * repair. Measuring true arc around forces `u` to be `theta * r` plus some
+ * `c(s)`, whose derivative would have to be `-theta * dr / ds` to cancel the
+ * shear, and no function of `s` alone does that at every `theta`. Choosing
+ * `c(s)` only moves where the shear vanishes, which is why it sits at the seam
+ * here; centring it would halve the worst case to 11.8 at a pole, still far
+ * past readable, and would rewrite the coordinates of every surface already
+ * authored against this one. The pole is not a second fault: cut the tip off a
+ * cone and the frustum that remains shears exactly as hard, so the collapsed
+ * pole triangles above are a topology note rather than the cause.
+ *
+ * A directional finish therefore wants a meridian within a few degrees of the
+ * axis, which is a drum, a shaft, a turret barrel. A sloped or domed form that
+ * must carry one is authored as flat faces through
+ * {@link buildAutoMoviePolyhedron}, whose per-face frame is isometric, or as a
+ * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
+ * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
+ * escape here that it is for the coordinate-less builders, because it measures
+ * this same pair and a tapered loft shears the same way. Where the form has to
+ * stay a true surface of revolution, the finish on it stays non-directional.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
+ * @evidence requirements/asset-authoring/materials-and-textures.md#asset-texture-coordinates-scale Gives the revolved surface texture coordinates in a stated metric coordinate system so a declared scale places the same way every run.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-material-texture-relations Emits the coordinate set a material binding samples the revolved surface through.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Lays the revolved atlas under the shared surface coordinate convention rather than under a rule of its own.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::atlas-handedness Runs `u` against the direction the lattice advances so the increasing-`u` and increasing-`v` directions cross to the outward normal, which is the same handedness the projected and other developed builders emit.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-atlas-shear Keeps the map equiareal and bounds its worst anisotropy by the meridian's slope alone, which is why a pole and a truncated frustum shear the same.
  */
 export const revolveAutoMovieProfile = (props: {
   profile: readonly IAutoMovieProfilePoint[];
@@ -401,13 +477,25 @@ export const revolveAutoMovieProfile = (props: {
     if (point.x < 0)
       throw new Error(`revolve profile[${index}] radius must be >= 0`);
   });
+  const meridian = [0];
+  for (let index = 1; index < props.profile.length; ++index)
+    meridian.push(
+      meridian[index - 1]! +
+        Math.hypot(
+          props.profile[index]!.x - props.profile[index - 1]!.x,
+          props.profile[index]!.y - props.profile[index - 1]!.y,
+        ),
+    );
   const positions: number[] = [];
+  const uvs: number[] = [];
   for (let segment = 0; segment <= props.segments; ++segment) {
     const angle = (segment / props.segments) * Math.PI * 2;
     const cosine = Math.cos(angle);
     const sine = Math.sin(angle);
-    for (const point of props.profile)
+    props.profile.forEach((point, index) => {
       positions.push(point.x * cosine, point.y, point.x * sine);
+      uvs.push((Math.PI * 2 - angle) * point.x, meridian[index]!);
+    });
   }
   const count = props.profile.length;
   const indices: number[] = [];
@@ -418,7 +506,7 @@ export const revolveAutoMovieProfile = (props: {
       indices.push(current, current + 1, next);
       indices.push(current + 1, next + 1, next);
     }
-  return meshOf(positions, indices);
+  return meshOf(positions, indices, uvs);
 };
 
 /**
@@ -426,8 +514,16 @@ export const revolveAutoMovieProfile = (props: {
  *
  * This is the code path for moulding, rails, pipes, arches, and other members
  * whose section repeats along a path. Adjacent path points must be distinct.
- * Both ends are capped, so a sweep along a simple path is a closed solid; no UV
- * atlas is generated.
+ * Both ends are capped, so a sweep along a simple path is a closed solid.
+ *
+ * No texture coordinates are emitted, for the same reason
+ * {@link extrudeAutoMovieProfile} emits none: each ring is one strip of shared
+ * vertices closed with a modular index, and the caps read those same vertices,
+ * so no one coordinate serves both the seam and the cap. The atlas-bearing form
+ * of this operation is {@link loftAutoMovieSections} with the same section
+ * declared at `at` 0 and `at` 1, which sweeps a section this one would have
+ * hulled and lays a stated metric atlas over it. Reach for that one whenever
+ * the member carries a finish.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a solid by sweeping one authored section along a path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Connects section copies into a closed sweep topology.
@@ -485,7 +581,27 @@ export const sweepAutoMovieProfile = (props: {
  * the general escape for a solid whose faces are simply stated, such as a
  * ridged roof, a wedge, or a chamfered pier, without dropping to authored
  * vertex arrays. Each face owns its corners, so its normal stays flat across
- * the seam and its UV frame is the face's own plane measured in metres.
+ * the seam.
+ *
+ * Texture coordinates are local metres measured in a frame the face's own
+ * normal decides, anchored on the mesh origin before any later mesh transform.
+ * A face that is not level takes world up
+ * projected into its plane as V, so courses run level and every upright face in
+ * one mesh reads the same height at the same height: a wall return, a column
+ * wrap, and a countertop edge continue their coursing around the corner because
+ * V is the same function of position on both sides of it. U is the remaining
+ * in-plane axis, and it does not continue around a corner, because continuing
+ * both axes across a fold is a developed layout and this kernel does not cut
+ * one. A level face takes world +X as U instead, so a floor and the ceiling
+ * above it mirror rather than diverge.
+ *
+ * Deriving the frame from the normal rather than from the corner list is the
+ * point. A frame taken from a face's first edge moves when the same polygon is
+ * authored starting at a different corner, and two coplanar faces of one solid
+ * then carry unrelated coordinates with a grain break along a seam that is not
+ * a seam. Under this rule coplanar faces are one continuous surface however
+ * their corners were typed, and where the grain does break the break is stated
+ * rather than incidental.
  *
  * Faces are refused, never quietly repaired: fewer than three corners, a
  * non-finite corner, a collinear face carrying no area, a corner off the face's
@@ -497,6 +613,10 @@ export const sweepAutoMovieProfile = (props: {
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-primitive-freeform-geometry Builds arbitrary convex-faced polyhedra from code-authored points.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-inputs Accepts explicit metric face geometry as a native asset input.
+ * @evidence requirements/interior/grain-seams-and-continuity.md#interior-grain-corner-continuity States where the grain continues across adjacent faces and stops it changing with the order a face's corners were authored in.
+ * @evidence specifications/interior-space/surface-assemblies.md#interior-space-joint-edge-grain-continuity Derives the shared frame and transform continuity across faces is allowed to rest on.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Emits the projected half of the shared surface coordinate convention.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::projected-metric-frame Decides each face's in-plane metre frame from the face normal alone and anchors it on the mesh origin, so coplanar faces are one surface and the level boundary is a declared seam.
  */
 export const buildAutoMoviePolyhedron = (
   faces: ReadonlyArray<readonly IAutoMovieVector3[]>,
@@ -543,14 +663,12 @@ export const buildAutoMoviePolyhedron = (
       )
         throw new Error(`polyhedron face[${face}] must be convex`);
     }
-    const axisU = Vector3.normalize(Vector3.subtract(corners[1]!, origin));
-    const axisV = Vector3.cross(normal, axisU);
+    const frame = surfaceUvFrame(normal);
     const base = positions.length / 3;
     for (const corner of corners) {
-      const delta = Vector3.subtract(corner, origin);
       positions.push(corner.x, corner.y, corner.z);
       normals.push(normal.x, normal.y, normal.z);
-      uvs.push(Vector3.dot(delta, axisU), Vector3.dot(delta, axisV));
+      uvs.push(Vector3.dot(corner, frame.u), Vector3.dot(corner, frame.v));
     }
     for (let index = 1; index + 1 < corners.length; ++index)
       indices.push(base, base + index, base + index + 1);
@@ -585,7 +703,14 @@ export const buildAutoMoviePolyhedron = (
  * not a surface; separating it needs the general boolean this kernel does not
  * have, so it raises its own diagnostic instead of emitting a pinched solid.
  *
- * The result carries flat per-face normals and no UV atlas.
+ * The result carries flat per-face normals and no texture coordinates. A cell
+ * lattice is cut where the openings fall, so which cell a point belongs to is a
+ * function of the opening list rather than of the wall, and an atlas laid on it
+ * would shift under every opening the author moves. The atlas-bearing form is
+ * {@link extrudeAutoMovieRegion}, whose outer ring is the panel and whose holes
+ * are the openings: it cuts arbitrary outlines this one cannot, and its
+ * coordinates come from the authored region rather than from the cut lattice.
+ * Reach for that one whenever the wall carries a finish.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Constructs a wall and subtracts declared rectangular openings.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Emits the wall's closed topology after bounded opening operations.
@@ -754,15 +879,22 @@ export const triangulateAutoMovieRegion = (props: {
  *
  * Every triangle owns its corners, so the crease where a cap meets a side stays
  * a crease instead of being averaged into a rounded seam the way the older
- * builders leave it. The UV atlas is measured in metres and stated rather than
+ * builders leave it. The atlas is measured in metres and stated rather than
  * guessed: a cap carries its own profile coordinates, and a side carries the
- * distance travelled along its ring against the height along Z.
+ * distance travelled along its ring against the height along Z. Each ring is
+ * cut at its canonical first point, from zero to its full perimeter; the phases
+ * meet only when the declared repeat divides that perimeter. That is the
+ * developed frame rather than the projected one {@link buildAutoMoviePolyhedron}
+ * uses, because a side that follows an arc is only metric when it is measured
+ * along the arc; both are metres, so one declared scale reads the same on both.
  *
  * The result is a closed 2-manifold whose volume is the region's area times the
  * depth, spanning `-depth / 2` to `+depth / 2` like the convex extrusion.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Extrudes a canonical region while retaining every declared hole.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Produces a closed manifold from the region's boundary topology.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Emits the developed half of the shared surface coordinate convention.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-metric-frame Measures a side as ring travel from the ring's canonical cut against the extrusion coordinate centred on the mesh mid-plane, and gives each cap the section's own coordinates with opposite `v` sign.
  */
 export const extrudeAutoMovieRegion = (props: {
   outer: readonly IAutoMovieProfilePoint[];
@@ -838,15 +970,18 @@ export const extrudeAutoMovieRegion = (props: {
  * which corner of the next, so a mismatch is refused with its own diagnostic.
  *
  * Both ends are capped from their own authored section, every triangle owns its
- * corners so the section's corners stay creases, and the UV atlas is metric:
- * the distance travelled around the section against the distance travelled
- * along the path. Whether the swept solid intersects itself is the author's to
+ * corners so the section's corners stay creases, and the atlas is metric in the
+ * developed frame: the distance travelled around the section against the
+ * distance travelled along the path, the same pair
+ * {@link revolveAutoMovieProfile} measures for a surface of revolution. Whether
+ * the swept solid intersects itself is the author's to
  * decide, exactly as it is for a sweep: a path that turns tighter than the
  * section is wide folds the surface through itself, and this kernel measures
  * neither the turn nor the width.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Connects authored planar sections along a declared path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Refuses incompatible ring topology rather than inventing correspondence.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Measures section travel against path travel in the same developed metre frame the convention states, so one declared scale reads the same on a loft as on a flat face.
  */
 export const loftAutoMovieSections = (props: {
   path: readonly IAutoMovieVector3[];
@@ -1010,6 +1145,15 @@ export const loftAutoMovieSections = (props: {
  * wall among them; that is refused by absence rather than approximated, and
  * {@link buildAutoMovieWall} raises it by name where it bites.
  *
+ * Normals and texture coordinates survive only when every member carries them,
+ * and that is a stated rule rather than a lapse. A merged buffer is read by
+ * vertex index, so a member with no coordinates has no honest filler: zeros
+ * would pin its whole surface to one texel of whatever the material samples,
+ * which reads as flat paint nothing attributes back to the merge. Dropping the
+ * attribute makes the loss visible at the binding instead. The three builders
+ * that carry no coordinates each name the atlas-bearing operation that replaces
+ * them, so a member that needs to survive a merge is built with one of those.
+ *
  * Every buffer is appended element by element rather than by spreading the
  * source into `push`. A spread is an argument list, and an argument list has a
  * length limit in the low hundreds of thousands: `push(...positions)` throws
@@ -1019,6 +1163,8 @@ export const loftAutoMovieSections = (props: {
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Combines authored mesh operands without an argument-list size ceiling.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Reindexes each input topology into one deterministic mesh.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Decides what a composition does to the coordinate sets its members carry.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::coordinate-absence-and-composition Keeps the merged coordinate set only when every member carries one, so a coordinate-less member costs the assembly its atlas instead of being filled with a zero nobody can attribute.
  */
 export const mergeAutoMovieMeshes = (
   meshes: readonly IAutoMovieMesh[],
@@ -1058,8 +1204,17 @@ export const mergeAutoMovieMeshes = (
  * flips triangle winding so the outward face stays outward. UVs ride along
  * untouched, because a placement moves a surface without re-cutting its atlas.
  *
+ * That is what makes a placed member's coordinates local rather than global,
+ * and it is the one thing to know before rotating an atlas-bearing member.
+ * {@link buildAutoMoviePolyhedron} decides each face's frame from world up in
+ * the frame the mesh was built in, so a panel built upright and then laid down
+ * by a rotation keeps the upright face's frame while presenting a level face.
+ * Build the member in the orientation it will be seen in, or accept that its
+ * grain travels with it, which is what a real board does when it is turned.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
+ * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Carries a member's coordinate set through a placement unchanged, which is what keeps the set measured in the frame the member was built in and what reverses its handedness under a mirroring scale.
  */
 export const transformAutoMovieMesh = (
   mesh: IAutoMovieMesh,
@@ -1319,6 +1474,55 @@ const pushCellFace = (
   }
   target.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
 };
+
+/**
+ * The in-plane metre frame one planar face measures its texture coordinates in,
+ * decided by the face's normal and nothing else.
+ *
+ * Both branches return an orthonormal pair with `u x v === normal`, so a metre
+ * on the face is a unit in the atlas whichever way the face points and the
+ * image is never mirrored by the frame alone.
+ *
+ * An upright face takes world up projected into its plane as V, which is what
+ * makes coursing continue around a corner: two faces meeting at a vertical edge
+ * share the same V function of position even though their planes differ. A
+ * level face has no up to project, so it falls back to world +X as U, and the
+ * cross product then carries a floor and a ceiling to mirrored V, which is what
+ * keeps each of them reading the right way round from its own side.
+ *
+ * The switch is drawn where the projection stops being conditioned rather than
+ * where a face stops looking level: at the limit the residual up-component is
+ * still 1.4 mm per metre, which normalizes without loss, so a steep roof and a
+ * barely-tilted soffit both stay on the upright rule and only a face level to
+ * within a twelfth of a degree leaves it. That switch is itself a declared
+ * orientation seam. Faces on opposite sides of it do not claim grain
+ * continuity merely because their normals are close.
+ */
+const surfaceUvFrame = (
+  normal: IAutoMovieVector3,
+): { u: IAutoMovieVector3; v: IAutoMovieVector3 } => {
+  if (Math.abs(normal.y) < LEVEL_FACE_LIMIT) {
+    const v = inPlaneAxis({ x: 0, y: 1, z: 0 }, normal);
+    return { u: Vector3.cross(v, normal), v };
+  }
+  const u = inPlaneAxis({ x: 1, y: 0, z: 0 }, normal);
+  return { u, v: Vector3.cross(normal, u) };
+};
+
+/** One world axis projected into a plane and renormalized. */
+const inPlaneAxis = (
+  axis: IAutoMovieVector3,
+  normal: IAutoMovieVector3,
+): IAutoMovieVector3 =>
+  Vector3.normalize(
+    Vector3.subtract(axis, Vector3.scale(normal, Vector3.dot(axis, normal))),
+  );
+
+/**
+ * How aligned with world up a face normal may be before world up stops being a
+ * usable in-plane reference: the cosine of about `0.081` degrees off level.
+ */
+const LEVEL_FACE_LIMIT = 1 - 1e-6;
 
 /** The buffers a flat-shaded builder fills before it becomes a mesh. */
 interface IMeshTarget {
@@ -1777,10 +1981,14 @@ const tangentAt = (
   return Vector3.normalize(delta);
 };
 
-const meshOf = (positions: number[], indices: number[]): IAutoMovieMesh => ({
+const meshOf = (
+  positions: number[],
+  indices: number[],
+  uvs: number[] | null = null,
+): IAutoMovieMesh => ({
   positions,
   normals: normalsOf(positions, indices),
-  uvs: null,
+  uvs,
   indices,
   skin: null,
 });

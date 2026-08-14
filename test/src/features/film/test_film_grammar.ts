@@ -48,6 +48,9 @@ const subject = (
   start,
   end,
   height: 1.8,
+  // Stated as a point with a height: these observations are hand-built rather
+  // than measured, so they carry no horizontal extent to read a width from.
+  radius: 0,
   eyeline:
     eyeline === undefined
       ? null
@@ -624,6 +627,12 @@ export const test_film_grammar = (): void => {
   });
   rejects("zero subject height", (input) => {
     input.subjects[0]!.height = 0;
+  });
+  rejects("negative subject radius", (input) => {
+    input.subjects[0]!.radius = -1;
+  });
+  rejects("non-finite subject radius", (input) => {
+    input.subjects[0]!.radius = Number.NaN;
   });
   rejects("blank eyeline target", (input) => {
     input.subjects[0]!.eyeline = {

@@ -528,6 +528,12 @@ export interface IAutoMovieModelRecipe {
    * compiler. Multiple semantic part materials remain unsupported and are
    * refused instead of silently discarded.
    *
+   * The value is an sRGB swatch, and the compiler decodes it with
+   * `srgbHexToLinearColor` on its way into the material's linear `baseColor`.
+   * The same swatch written here and in `IAutoMovieInstanceVariation.palette`
+   * therefore renders one color, which is the whole reason both go through one
+   * decode.
+   *
    * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary Exposes `palette` as the portable data boundary for the production design story boundary requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-story-design-ownership Types `palette` for the narrative intent story design ownership system contract.
    */
@@ -680,8 +686,8 @@ export interface IAutoMovieExplicitInstanceTransform {
   /**
    * Optional exact `#RRGGBB` palette override.
    *
-   * Decoded from sRGB like every other palette entry; see
-   * `IAutoMovieInstanceVariation.palette` for how that differs from
+   * Decoded from sRGB by `srgbHexToLinearColor` like every other palette entry;
+   * see `IAutoMovieInstanceVariation.palette` for how that differs from
    * `IAutoMovieColor`.
    *
    * @evidence requirements/map/scope-and-coordinates.md#map-coordinate-transform-precision Exposes `palette` as the portable data boundary for the map coordinate transform precision requirement.
@@ -770,12 +776,18 @@ export interface IAutoMovieInstanceVariation {
    * Non-empty exact `#RRGGBB` palette choices applied per instance.
    *
    * An entry is the color itself rather than a label for one, so the viewer
-   * decodes it from sRGB to linear before it reaches the instance.
+   * decodes it from sRGB to linear with `srgbHexToLinearColor` before it
+   * reaches the instance. A model recipe palette is decoded by that same
+   * function on its way into `baseColor`, so the identical swatch authored
+   * either way now renders the identical color.
+   *
    * `IAutoMovieColor` holds the opposite convention: its components are
    * authored linear and its `hex` is a derived label the renderer never
-   * decodes. Digits transcribed into such a triple and then pasted here render
-   * darker, which is how instanced slots and the cut geometry that carries its
-   * own material end up covering one surface in two different colors.
+   * decodes. Reach for `srgbHexToLinearColor` when carrying a swatch across
+   * that boundary. Pasting the digits straight into a triple renders about
+   * 2.3x too bright at midtones, and instanced slots covering the same surface
+   * as such a material is how one production ended up drawing one roof in two
+   * colors.
    *
    * @evidence requirements/production-design/art-direction-and-visual-language.md#production-design-consistency-variation Exposes `palette` as the portable data boundary for the production design consistency variation requirement.
    * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-visual-language-variation Types `palette` for the narrative intent visual language variation system contract.

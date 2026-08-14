@@ -16,10 +16,24 @@ Visibility는 source가 존재하거나 frustum과 교차한다는 사실, image
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clipping-range Near·far의 ordered distance와 required depth 범위를 검증한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-clearance Camera body와 path가 wall, terrain, vehicle와 subject를 침범하는지 판정한다. -->
 <!-- @evidence requirements/camera/clipping-occlusion-and-spatial-constraints.md#camera-dynamic-spatial-sampling Moving camera와 geometry의 swept interval을 보수적으로 검사한다. -->
-
 Clipping evaluation은 camera projection convention, positive ordered near·far distance, optional clipping planes, delivery crop와 current geometry bounds를 사용한다. Boundary inclusion과 tolerance를 선언하고 required subject·environment 범위와 depth precision constraint를 함께 보고한다.
 
+<!-- @evidenceObligation projection-convention Optical axis, transform order, vertical FOV와 aspect가 만드는 camera-local half-space convention. -->
+<!-- @evidenceObligation near-far-range Positive ordered near·far distance를 depth 판정에 적용한다. -->
+<!-- @evidenceObligation clipping-planes Optional clipping plane 집합을 bound에 대해 평가한다. -->
+<!-- @evidenceObligation delivery-raster-extent Delivery raster의 width·height가 고정하는 image-space side bound. -->
+<!-- @evidenceObligation delivery-crop-region Delivery raster보다 좁은 crop region을 clipping 판정에 적용한다. -->
+<!-- @evidenceObligation geometry-bounds Clip을 취하는 current resolved geometry bound. -->
+<!-- @evidenceObligation boundary-inclusion-tolerance Boundary inclusion과 tolerance를 선언한 대로 판정한다. -->
+<!-- @evidenceObligation depth-precision-constraint Required subject·environment 범위와 depth precision constraint를 보고한다. -->
+
+Optional clipping plane은 평면 위의 한 점과 제거되는 쪽 unit normal로 주어지고 signed distance `n·(p − p0)`로 평가한다. `0`은 남는 쪽에 포함한다. Bound에 대한 결과는 `kept`, `cut`, `crossed` 셋이며 `cut`은 어느 한 평면이 bound 전체를 제거했다는 뜻이고 `crossed`는 어느 평면도 단독으로 bound 전체를 제거하지 못했다는 뜻일 뿐 남는 점의 존재를 보장하지 않는다. 잘린 단면을 메우는 surface는 evaluation의 산출물이 아니다.
+
+저작된 delivery camera는 plane을 선언하지 않으므로 delivery clipping evaluation의 plane 집합은 항상 비어 있고, required subject의 acceptance는 near·far와 frame bound만으로 결정된다. Plane 집합이 비어 있지 않은 evaluation은 검사 표면의 결과이며 delivery evidence로 계상하지 않는다.
+
 Clearance evaluation은 camera point가 아니라 camera body와 parent rig의 swept volume을 wall, ceiling, floor, furniture, terrain, vehicle, moving subject, opening과 support geometry의 같은 sample state와 비교한다. Discrete sample 사이의 penetration 가능성은 continuous bound, segment crossing 또는 추가 sample로 해소한다.
+
+<!-- @evidenceObligation camera-clearance-swept-volume Camera body와 parent rig의 swept volume을 같은 sample state의 scene geometry와 비교한다. -->
 
 ### Occlusion와 Image-space Metric {#clv-occlusion-image-metrics}
 

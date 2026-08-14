@@ -28,8 +28,11 @@ override는 대상 element와 property, 이전 값, 새 값, 저자·source, 이
 
 <!-- @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group 부품·가구·군중과 같은 논리 group을 중첩해 구성해야 한다. -->
 <!-- @evidence requirements/asset-authoring/identity-and-instances.md#asset-compression-individuality 압축과 instancing 뒤에도 개별 identity와 선택 가능성을 보존해야 한다. -->
+<!-- @evidence requirements/asset-authoring/representations-bounds-and-lod.md#asset-declared-measured-bounds 압축된 population도 저작한 prototype-local bounds와 배치 뒤 파생한 world bounds의 기준을 구분해야 한다. -->
 
 group은 고유 identity, member identity, 중첩 관계, 순서 또는 배치 규칙, group-level 상태와 허용된 집단 동작을 가진다. 저장·렌더 압축은 count, index, seed와 prototype을 이용할 수 있지만 각 member의 안정된 identity, 선택·검사·영웅 교체·개별 상태 적용 가능성을 제거하지 않는다.
+
+압축된 population은 자기가 점유하는 공간을 선언하며, 이 공간 소속은 논리 group과 별개의 사실이다. 공간의 내용을 묻는 질의는 element와 population을 함께 답해야 하고, 압축을 이유로 population을 목록이나 extent에서 빠뜨리는 것은 개별성 보존 실패이다. Population은 모든 선택 가능한 prototype을 보수적으로 감싸는 model-local bounds를 선언하고, world extent는 그 bounds를 저장된 count, seed, 배치, 회전과 scale 규칙에 합성하여 파생한다. 파생한 world extent를 옆에 따로 기재한 수치를 정본으로 삼지 않으며, 고정 회전은 정확히 접고 seeded 회전 범위는 어떤 member도 자르지 않는 보수적 상자로 보고한다. 가시성 변주는 선언한 점유 범위를 줄이지 않는다. 이 extent는 한 render sample에서 보이는 member 목록이 아니라 population의 보수적 배치 envelope이다. 여러 공간에 걸치는 field는 공간마다 하나의 population으로 나누거나 그 전부를 담는 가장 작은 공간을 선언하고, 어느 쪽이든 한 공간의 내용에 다른 공간의 member가 섞여 들어가지 않아야 한다. Procedural grid·lattice·scatter 질의는 member 수가 아니라 population 수에 비례해야 하며, 개체군을 열거하기 위해 선언되지 않은 확장을 수행하지 않는다. Explicit layout은 이미 저장한 transform만큼 접을 수 있다.
 
 ### 결정론적 instance 생성 {#asset-spec-deterministic-instance-generation}
 

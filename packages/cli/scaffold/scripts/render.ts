@@ -3742,7 +3742,9 @@ const reviewTargetLabel = (target: IAutoMovieReviewTarget): string =>
     ? `design:${target.design.kind}`
     : target.kind === "source"
       ? `source:${target.path}`
-      : `${target.kind}:${target.id}`;
+      : target.kind === "subject"
+        ? `subject:${target.shot}:${target.subject}`
+        : `${target.kind}:${target.id}`;
 
 const output = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);

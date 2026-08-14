@@ -6,7 +6,7 @@ A film is a program that emits shots. This handbook is about the shape that prog
 
 ## Know when to compose
 
-Hand-author while a production has a handful of shots. The starter's two shots are cheaper written out than generated, and a factory built for one caller is a worse module than the caller.
+Hand-author while a production has a handful of shots. The starter's shots are cheaper written out than generated, and a factory built for one caller is a worse module than the caller.
 
 Compose at the moment you copy a shot module and change its names. That copy is the signal, not the fortieth one. The cost of hand-authoring is linear in runtime and invisible until the runtime is large, so the decision has to be made from the repetition you can see rather than from the pain you have felt.
 
@@ -15,6 +15,8 @@ Compose at the moment you copy a shot module and change its names. That copy is 
 The sandbox runs every transpiled module, the registration probe, and the `build` call under a one-second timeout, and a script that exceeds it is refused with `source-execution-timeout` having published nothing. The budget is per invocation rather than per production, so a hundred shot modules each get a second of their own — and the single film module that assembles every placement in the edit gets one second for the whole thing.
 
 That is an arrangement constraint, not a micro-optimization. Keep the work inside a build proportionate to what the shot itself stages: let the engine regenerate a formation from its runtime instead of walking its members, and let a table computed once at module scope stay at module scope rather than being rebuilt inside a factory that is called per shot. Expensive derivation belongs in the ordinary scripts that emit design records and generated modules, which run outside the sandbox and under no such clock.
+
+When the result of that derivation is what source actually needs, publish it as a derived artifact and read it back from `context.derivedArtifacts`. Freezing the same table into a TypeScript literal moves the bytes out of the clock without moving the obligation: nothing then proves the literal still follows from the inputs it was computed from. `DERIVED_ARTIFACTS` owns that path.
 
 ## Every subject is a class
 
@@ -192,4 +194,8 @@ Placement timing, transitions, and edge states still belong to the edit's own ru
 
 The starter's own vocabulary is the worked example of the subject layer. Under `src/units/` a leaf subject's measured facts are fields and its one capability is a method, and a second unit derives its scale from the first rather than restating it; under `src/formations/` a group states arrangement and answers questions about its own extent; under `src/world/` a group of places emits a record that is the merge of what its pieces put down.
 
-`src/examples/` is the same lesson for the built environment: a building assembled by loops over its storeys, a physically-based finish and the four ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published. Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how a starter's furniture ends up in somebody's film.
+`src/examples/` is the same lesson for the built environment: a building assembled by loops over its storeys, a physically-based finish and the ways binding its images goes wrong, props declaring placement relations instead of coordinates, a seeded instance set, an observed plan that is read rather than traced, and a renovation phased over identities the building already published.
+
+Two more are about the scale this handbook is written for, and a production authored across several passes wants both early. `src/examples/surfaceQuantities.ts` makes a surface publish what it laid, counted from the elements it emitted and split into the categories a frame cannot tell apart, so a wall nobody has clad yet stops reading as a finished one. `src/examples/surfaceOwnership.ts` divides the work by complete visual surface, one owner per surface and never a surface split across two, and gives a concern that genuinely crosses every surface, such as finish binding, its own single owner rather than a decision each surface's file makes for itself.
+
+Read the one nearest your problem and then write your own. They teach technique; they are not a content library, and copying an example's dimensions into a production is how a starter's furniture ends up in somebody's film.

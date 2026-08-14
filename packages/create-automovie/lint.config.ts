@@ -1,7 +1,15 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-const publicSurface = ["src/bin.ts"];
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population is derived from the source tree instead of enumerated, so a
+ * file joins the graph by existing rather than by someone remembering to list
+ * it here. The barrel is the only exclusion, because it re-exports declarations
+ * that already answer at their definition.
+ */
+const publicSurface = ["src/**/*.ts", "!src/**/index.ts"];
 
 /**
  * The public create-automovie surface answers for stable contract populations.

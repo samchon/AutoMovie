@@ -23,6 +23,7 @@ import {
   IAutoMovieShot,
   IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -61,7 +62,7 @@ import {
   IAutoMovieFramedSubject,
   compileCameraCoverage,
   compileCameraMove,
-  computeModelRestExtentY,
+  computeModelRestExtent,
   computeRestHeight,
 } from "./cameraMove";
 import { compileLaunch } from "./compileLaunch";
@@ -75,7 +76,8 @@ import {
   formationMemberExtent,
   formationSubjectBox,
   framedBoxOf,
-  pointSubjectBox,
+  nodeSubjectBox,
+  nodeSubjectExtent,
   unionSubjectBoxes,
 } from "./subjectExtent";
 
@@ -1899,64 +1901,77 @@ export const performShot = (props: {
   objectMotions.push(...authoredMotions);
 
   // Compile the live camera's move from its frame actions. Subjects resolve
-  // against the staged placements; a node subject's height is measured from
-  // the geometry its model actually draws (staging doctrine: measure, don't
-  // hope), and its animated base rides either a compiled actor clip or an
-  // effective object motion, so `follow` tracks a walking actor, launched
-  // prop, or handoff.
+  // against the staged placements; a node subject's extent is measured from the
+  // geometry its model actually draws, on every axis it fills (staging
+  // doctrine: measure, don't hope), and its animated base rides either a
+  // compiled actor clip or an effective object motion, so `follow` tracks a
+  // walking actor, launched prop, or handoff.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
+  /** Every staged node by id, for the placement and model reads below. */
+  const stagedNodes = new Map(
+    staged.scene.nodes.map((entry) => [entry.id, entry] as const),
+  );
   /**
-   * A staged node's drawn vertical extent, memoized because a shot frames the
+   * A staged node's drawn model-space box, memoized because a shot frames the
    * same subject from the hero camera and again from every coverage angle. Null
    * whenever the model is absent or has nothing to measure, which hands the rig
    * measurement back its documented fallback role.
    */
-  const measuredExtents = new Map<
-    string,
-    { min: number; max: number } | null
-  >();
-  const modelExtentOf = (node: string): { min: number; max: number } | null => {
+  const measuredExtents = new Map<string, IAutoMovieSubjectBox | null>();
+  const modelExtentOf = (node: string): IAutoMovieSubjectBox | null => {
     const cached = measuredExtents.get(node);
     if (cached !== undefined) return cached;
-    const staffed = staged.scene.nodes.find((entry) => entry.id === node);
+    const staffed = stagedNodes.get(node);
     const model =
       staffed === undefined
         ? undefined
         : (props.models ?? []).find((entry) => entry.id === staffed.model);
-    const extent = model === undefined ? null : computeModelRestExtentY(model);
+    const extent = model === undefined ? null : computeModelRestExtent(model);
     measuredExtents.set(node, extent);
     return extent;
   };
   /**
-   * A staged node's framed vertical extent, relative to its placement: the
-   * geometry the renderer draws when a model was supplied, the rig's joint span
-   * as the documented fallback, and the stand-in height when neither measures
-   * anything. Stated once because a node is framed both on its own and as one
-   * member of a group, and two answers to "how tall is he" is how a two-shot
-   * comes to disagree with the singles cut beside it.
+   * A staged node's framed extent in model space: the box the renderer draws
+   * when a model was supplied, the rig's joint span as the documented fallback,
+   * and the stand-in height when neither measures anything. Stated once because
+   * a node is framed both on its own and as one member of a group, and two
+   * answers to "what does he fill" is how a two-shot comes to disagree with the
+   * singles cut beside it.
    */
-  const nodeVerticalExtent = (node: string): { min: number; max: number } => {
+  const nodeExtent = (node: string): IAutoMovieSubjectBox => {
     const extent = modelExtentOf(node);
     const rig = extent === null ? skeleton(node) : null;
-    const measured =
-      extent === null
-        ? rig === null
-          ? 0
-          : computeRestHeight(rig)
-        : extent.max - extent.min;
-    const floor = extent === null ? 0 : extent.min;
+    return nodeSubjectExtent(
+      extent,
+      rig === null ? null : computeRestHeight(rig),
+    );
+  };
+  /**
+   * Where a staged node stands, as the placement its measured extent is carried
+   * out through. `translation` is supplied rather than read back, because a
+   * subject may be framed at a resolved live point rather than at the staged
+   * one; the rotation and scale are the staged node's own, and a target that
+   * names no staged node (a bare point, or a camera) keeps the identity
+   * placement its degenerate extent makes indistinguishable anyway.
+   */
+  const nodePlacement = (
+    node: string | null,
+    translation: IAutoMovieVector3,
+  ): IAutoMovieTransform => {
+    const staffed = node === null ? undefined : stagedNodes.get(node);
     return {
-      min: floor,
-      max: floor + (measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT),
+      translation,
+      rotation: staffed?.transform.rotation ?? { x: 0, y: 0, z: 0, w: 1 },
+      scale: staffed?.transform.scale ?? { x: 1, y: 1, z: 1 },
     };
   };
   /**
    * What each member of a group target occupies at a shot-local instant, one
    * box per member that resolves.
    *
-   * Every member contributes what it actually occupies: a staged node its
-   * placement raised by its own measured extent, a formation its whole
-   * transformed footprint under the cue playing at that instant. Their union is
+   * Every member contributes what it actually occupies: a staged node the box
+   * its model draws, carried out through its own placement, a formation its
+   * whole transformed footprint under the cue playing at that instant. Their union is
    * the thing the camera has to hold, which is the datum a centroid destroyed —
    * two thousand figures and one figure have the same centroid, and only one of
    * them fits in a frame solved for a person.
@@ -1980,7 +1995,7 @@ export const performShot = (props: {
       const placement = nodePositions.get(node);
       return placement === undefined
         ? []
-        : [pointSubjectBox(placement, nodeVerticalExtent(node))];
+        : [nodeSubjectBox(nodePlacement(node, placement), nodeExtent(node))];
     }),
     ...(on.formations ?? []).flatMap((id) => {
       const formation = formationById.get(id);
@@ -2044,18 +2059,33 @@ export const performShot = (props: {
         formationPoints,
       ) as IAutoMovieVector3);
     const node = on.kind === "node" ? on.node : null;
-    // Measure the figure, not the rig. The extent is model-space, so its floor
-    // is where the geometry actually starts: shifting the framed base by it
-    // keeps `base` meaning "the bottom of what the camera sees", which is what
-    // the framing grammar's aim fractions are written against.
-    const vertical =
-      node === null
-        ? { min: 0, max: DEFAULT_SUBJECT_HEIGHT }
-        : nodeVerticalExtent(node);
-    const floor = vertical.min;
-    const measured = vertical.max - vertical.min;
-    const onFloor = (value: IAutoMovieVector3): IAutoMovieVector3 =>
-      floor === 0 ? value : { x: value.x, y: value.y + floor, z: value.z };
+    // Measure the figure, not the rig, and measure it on every axis it fills.
+    // The extent is model-space, so carrying it out through the node's own
+    // placement is what makes `base` the bottom CENTRE of what the camera sees
+    // — the point the framing grammar's aim fractions are written against —
+    // and what gives the fit a width to stand back for. A 60 m facade authored
+    // outward from its element origin is framed at the middle of the mass
+    // rather than 30 m off its own centre, and from the distance its width
+    // demands rather than the one its height alone would ask for.
+    const framed = framedBoxOf(
+      nodeSubjectBox(
+        nodePlacement(node, point),
+        node === null ? nodeSubjectExtent(null, null) : nodeExtent(node),
+      ),
+    );
+    // The framed base and the resolved root differ by a constant world offset
+    // (the drawn floor, and the horizontal centre of what is drawn), so a
+    // subject that moves keeps being framed on the same part of itself.
+    const shift: IAutoMovieVector3 = {
+      x: framed.base.x - point.x,
+      y: framed.base.y - point.y,
+      z: framed.base.z - point.z,
+    };
+    const onFramed = (value: IAutoMovieVector3): IAutoMovieVector3 => ({
+      x: value.x + shift.x,
+      y: value.y + shift.y,
+      z: value.z + shift.z,
+    });
     const motion = node === null ? undefined : motions[node];
     const facing = node === null ? undefined : nodeRotations.get(node);
     const objectAt =
@@ -2083,13 +2113,14 @@ export const performShot = (props: {
             ? null
             : (seconds: number) => objectAt(seconds) ?? point;
     return {
-      base: onFloor(point),
-      height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
+      base: framed.base,
+      height: framed.height,
+      radius: framed.radius,
       // Actor root motion rides the staged facing. A skeleton-less prop has no
       // actor clip/facing, so read its effective object authority instead: the
       // same trajectory/attachment handoff the player applies. This runs after
       // coupling, deliberately, so a camera follows a launch into a hand.
-      at: animated === null ? null : (seconds) => onFloor(animated(seconds)),
+      at: animated === null ? null : (seconds) => onFramed(animated(seconds)),
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({

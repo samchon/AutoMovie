@@ -1197,7 +1197,11 @@ export const autoMoviePatternInstanceTransforms = (props: {
  * is a real mirrored image rather than two slabs a viewer cannot tell apart.
  *
  * The mesh UV this is applied to is a point's place inside the module rectangle
- * the occurrence was generated at, normalized. A whole piece therefore spans
+ * the occurrence was generated at, normalized: the binding this fills in is a
+ * `"normalized"` coordinate source and not the `"surface-metres"` one an
+ * atlas-bearing procedural surface emits, so a prototype has to be a unit square
+ * by construction rather than by luck, and the binding has to say which
+ * arithmetic it was written in. A whole piece therefore spans
  * `[0, 1]` on both axes, which is what a unit-square prototype gives, and a cut
  * piece spans the sub-rectangle the cut left it rather than being renormalized
  * over its own outline, because a renormalized cut piece would show the whole

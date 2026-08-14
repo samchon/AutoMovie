@@ -1,6 +1,6 @@
 ---
 name: experiment
-description: Defines how automovie runs an ad-hoc experiment: creating a disposable source-linked sandbox under experimental/, driving its MCP surface with a live Claude Code or Codex session against working-tree code, and deciding what an observation is worth. Use when the user asks to try something out, drive the tools by hand, or see how a change behaves through a real agent; do not use for a render inspection of something already running (viewer-verification) or a repository-wide audit (issue-campaign).
+description: Defines how automovie runs an ad-hoc experiment: creating a disposable source-linked sandbox under experimental/, briefing and steering a live Claude Code or Codex session that drives its MCP surface against working-tree code, and deciding what an observation is worth. Use when the user asks to try something out, drive the tools by hand, run a benchmark against an authoring agent, or see how a change behaves through a real agent; do not use for a render inspection of something already running (viewer-verification) or a repository-wide audit (issue-campaign).
 ---
 
 # Experiment
@@ -61,6 +61,8 @@ Codex takes its MCP servers from its own configuration rather than `.mcp.json`. 
 
 Give the agent a brief and let it work. The agent drives the tools; you observe and record. Do not narrate the tool calls on its behalf or perform them yourself, since the point is to see what the surface affords a model that has only the guides and the schemas.
 
+Read [briefing.md](briefing.md) before writing the brief for a benchmark, where the agent authors a whole production over many rounds. What the brief withholds, the order it asks the work in, and the instrument that will judge it decide most of what such a run costs, and none of the three can be repaired later without giving up the ability to run the brief again.
+
 Drive the agent turn by turn when you need to play the user across a longer session: `claude -p "<brief>" --session-id <uuid>`, then `claude -p "<next turn>" --resume <uuid>`. Codex resumes with `codex exec resume <session-uuid> "<next turn>"`, naming the session rather than `--last`.
 
 Read [steering.md](steering.md) before driving a session that will run for hours instead of for one prompt. A long session accepts no input while a turn is running, shares the machine with whatever else is running on it, and reports on itself faster than it produces, so the operational rules for keeping one on course are their own document.
@@ -70,7 +72,8 @@ Read [steering.md](steering.md) before driving a session that will run for hours
 Judge against what the experiment set out to answer, and say plainly when the run did not settle it.
 
 - Separate what the engine accepted from what the render shows. A render that disagrees with the engine result is a viewer bug; one that agrees and still looks wrong is an engine or data bug. Verify anything visual through the viewer-verification skill rather than trusting a tool's success return.
-- Verify the instrument before the subject. A sweep script, capture loop, or comparison harness written to observe with is covered by nothing the engine or the viewer guarantees, so a defect in it is indistinguishable from a defect in the work. Say how each claim was obtained: a count read from a compiled artifact is reliable, a frame is worth exactly what the path that produced it is worth, and the two disagreeing makes the instrument the first suspect.
+- Verify the instrument before the subject. A sweep script, capture loop, or comparison harness written to observe with is covered by nothing the engine or the viewer guarantees, so a defect in it is indistinguishable from a defect in the work. Say how each claim was obtained: a count read from a compiled artifact is reliable, a frame is worth exactly what the path that produced it is worth, and the two disagreeing makes the instrument the first suspect. An instrument that shows nothing is caught in a minute; one that shows a plausible fraction of the truth survives rounds, because a partial truth reads as a finding.
+- Ask the model rather than your own index. What you saw is safe to report; what you did not see is a question until you have asked the model the way the model is organized. Five absences reported in one campaign were all present, and all five came from grepping element id prefixes for something the engine already answers from declared membership: instanced populations invisible to a bare render, hall windows filed under a facade prefix, cloth in a soft-furnishing list rather than a node, seats folded away by the observer's own grouping rule, panelling under a different id stem. The [review skill's rule for a missing capability](../review/SKILL.md#it-is-missing-is-a-claim-that-needs-its-own-evidence) is the same claim about the repository.
 - Reproduce before believing. The engine is deterministic and the driving model is not, so a single odd result is not yet a finding.
 - Record a suspicion the run cannot settle as a hypothesis with the observation that would confirm it, rather than acting on it.
 
@@ -81,5 +84,7 @@ Never adjust the sandbox to make a result look better. A sandbox edited until it
 An experiment is allowed to end with nothing but an answer. Publish an issue only when the observation survives fact-checking against the real code path, and follow the [issue-campaign skill's Self-Contained Issue Body](../issue-campaign/SKILL.md#self-contained-issue-body) contract when you do.
 
 Attribute before publishing: an engine defect, a missing schema axis, MCP-surface friction, and a guide gap are automovie's; a model-side failure against an adequate surface is not.
+
+An experiment's issue recommends a fix from outside the code, so write its approach as the hypothesis it is and say what the hypothesis rests on. Three issues from one campaign were reversed by their own implementers: a colour recommendation that would have made both paths wrong together instead of one, a lint marker that failed against six real sentences, and a quantity record that was a claim rather than a measurement. An implementer that contradicts the issue has read the code path the observation could not, so treat the contradiction as evidence.
 
 If the question turns out to need systematic measurement rather than one run, stop and say so; running it informally produces anecdotes that look like data.

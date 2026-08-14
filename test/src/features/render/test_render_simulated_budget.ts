@@ -47,10 +47,10 @@ import {
  * 3. A bound domain measures fluid cells and particles exactly; a body with
  *    neither a domain nor a proved count is still `unsupported`, never zero; a
  *    hand-supplied count is still honoured.
- * 4. Over-limit twins name the dominant owner and its source. Instance slots
- *    and fluid cells are resident and still name the drawable to edit;
- *    triangles and draw calls are submitted once per pass, so the pass
- *    outweighs every drawable and leads those two instead.
+ * 4. Over-limit twins name the drawable to edit and its source, on every metric.
+ *    Triangles and draw calls are submitted once per pass, so the pass is in
+ *    the measurement and stated in the recovery, but it is not a record anyone
+ *    can open and it never leads the ranking.
  * 5. A one-particle-wide panel and a one-cell-wide pond draw nothing at all, and
  *    cost no draw call for the mesh they never submit.
  * 6. A cluster stating no prototype cost leaves geometry `not-run` while draw
@@ -179,12 +179,17 @@ export const test_render_simulated_budget = (): void => {
     },
   );
   TestValidator.equals(
-    "every simulated cost is attributed to an owner the mask also names",
+    "every simulated cost is attributed and only the repeated pass is classified as pass work",
     inventory.owners
       .filter((entry) => entry.metric === "triangles" && entry.cost !== 0)
-      .map((entry) => [entry.owner, entry.source, entry.cost]),
+      .map((entry) => [entry.owner, entry.source, entry.cost, entry.kind]),
     [
-      ["planting:atrium-bed", 'plantings["atrium-bed"]', BRANCH_INSTANCES * 24],
+      [
+        "planting:atrium-bed",
+        'plantings["atrium-bed"]',
+        BRANCH_INSTANCES * 24,
+        "own",
+      ],
       // The extra pass is charged to the pass rather than smeared back over
       // the drawables, so a reader can tell what the room costs from what
       // drawing it twice costs.
@@ -192,9 +197,15 @@ export const test_render_simulated_budget = (): void => {
         "render-pass:outline",
         "render.pass.outline",
         PANEL_TRIANGLES + BRANCH_INSTANCES * BRANCH.triangles + WATER_TRIANGLES,
+        "pass",
       ],
-      ["soft-body:panel", 'softBodies["panel"]', PANEL_TRIANGLES],
-      ["water-body:atrium-pool", 'waterBodies["atrium-pool"]', WATER_TRIANGLES],
+      ["soft-body:panel", 'softBodies["panel"]', PANEL_TRIANGLES, "own"],
+      [
+        "water-body:atrium-pool",
+        'waterBodies["atrium-pool"]',
+        WATER_TRIANGLES,
+        "own",
+      ],
     ],
   );
 
@@ -360,6 +371,16 @@ export const test_render_simulated_budget = (): void => {
       recovers: (finding.recovery ?? "").includes(
         finding.contributors[0]?.owner ?? "!",
       ),
+      // The listed owners plus what the report leaves unnamed are still the
+      // whole measurement, pass included.
+      accounted:
+        finding.contributors.reduce((sum, entry) => sum + entry.cost, 0) +
+          finding.omittedCost ===
+        finding.measured,
+      // Whatever else the recovery says, it never sends an author to a pass.
+      editable: finding.contributors.every(
+        (entry) => !entry.owner.startsWith("render-pass:"),
+      ),
     };
   };
   TestValidator.equals(
@@ -371,10 +392,14 @@ export const test_render_simulated_budget = (): void => {
       fluidCells: twin("fluidCells", inventory, 5),
     },
     {
-      // The extra pass draws every opaque triangle again, so it outweighs any
-      // one drawable and leads the ranking for the two metrics a pass
-      // multiplies. Instance slots and fluid cells are resident rather than
-      // submitted, so their ranking still names the drawable that owns them.
+      // The extra pass draws every opaque triangle again, so its cost is the
+      // sum of every drawable and it would lead the ranking of the two metrics
+      // a pass multiplies for as long as it was ranked at all. It is not a
+      // record this production declares. `IAutoMovieRenderBudget` has no pass
+      // to turn off, so the ranking is over the drawables and the pass is
+      // counted among the owners the report does not name. Instance slots and
+      // fluid cells are resident rather than submitted and never had a pass to
+      // outrank them.
       triangles: {
         status: "over",
         excess:
@@ -383,16 +408,22 @@ export const test_render_simulated_budget = (): void => {
               BRANCH_INSTANCES * BRANCH.triangles +
               WATER_TRIANGLES) -
           100,
-        owner: "render-pass:outline",
-        source: "render.pass.outline",
+        owner: "planting:atrium-bed",
+        source: 'plantings["atrium-bed"]',
         recovers: true,
+        accounted: true,
+        editable: true,
       },
+      // Three drawables, one draw each, so the ranking is decided on the owner
+      // id and the bed sorts first.
       drawCalls: {
         status: "over",
         excess: PASSES * 3 - 2,
-        owner: "render-pass:outline",
-        source: "render.pass.outline",
+        owner: "planting:atrium-bed",
+        source: 'plantings["atrium-bed"]',
         recovers: true,
+        accounted: true,
+        editable: true,
       },
       instanceSlots: {
         status: "over",
@@ -400,6 +431,8 @@ export const test_render_simulated_budget = (): void => {
         owner: "planting:atrium-bed",
         source: 'plantings["atrium-bed"]',
         recovers: true,
+        accounted: true,
+        editable: true,
       },
       fluidCells: {
         status: "over",
@@ -407,6 +440,8 @@ export const test_render_simulated_budget = (): void => {
         owner: "water-body:atrium-pool",
         source: 'waterBodies["atrium-pool"]',
         recovers: true,
+        accounted: true,
+        editable: true,
       },
     },
   );

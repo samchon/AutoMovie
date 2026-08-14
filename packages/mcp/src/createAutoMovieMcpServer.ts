@@ -9,6 +9,7 @@ import typia from "typia";
 
 import { AutoMovieApplication } from "./AutoMovieApplication";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
+import type { AutoMovieProductionSubjectInspection } from "./production/subjectInspection";
 
 /** Installed MCP package version. */
 const MCP_PACKAGE_VERSION = (
@@ -16,12 +17,12 @@ const MCP_PACKAGE_VERSION = (
 ).version;
 
 /**
- * Build AutoMovie's complete five-tool MCP server. The host fixes workspace
+ * Build AutoMovie's complete MCP server. The host fixes workspace
  * identity and injects optional pixel/repaint adapters; tool payloads cannot
  * switch roots. Strict equality rejects excess properties and text fallback
  * keeps structured results available to ordinary MCP clients.
  *
- * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal Exposes the fixed five-tool knowledge and evidence surface rather than a duplicate authoring API.
+ * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal Exposes the fixed knowledge and evidence surface rather than a duplicate authoring API.
  * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Delegates actual pixel production to the configured host.
  * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects Requires explicit host configuration before an external repaint can execute.
  * @evidence requirements/agent-authoring/project-ownership.md#agent-repository-project-boundary Consumes repository capability without synthesizing project model choices.
@@ -37,6 +38,14 @@ export const createAutoMovieMcpServer = (props?: {
   capture?: AutoMovieProductionFrameCapture;
   /** Host-owned optional diffusion rendition. */
   repaint?: AutoMovieProductionShotRepaint;
+  /**
+   * Host-owned subject inspection instrument.
+   *
+   * Separate from `capture` on purpose: an inspection view is not delivery
+   * evidence, and one adapter for both is how an inspection frame would
+   * eventually acquire the receipt shape a shot review consumes.
+   */
+  inspect?: AutoMovieProductionSubjectInspection;
   /** Host seed at or below the project root. */
   projectRoot?: string;
   /** Host-selected default production. */

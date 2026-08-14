@@ -6,7 +6,7 @@
 
 ### 계획과 실제 Coverage {#review-planned-actual-coverage}
 
-필수 frame, 구간, 작품 단계, criterion과 담당자를 계획한 coverage와 실제 검토한 coverage로 구분하고 빠진 범위를 명시해야 한다.
+필수 frame, 구간, 주체, 작품 단계, criterion과 담당자를 계획한 coverage와 실제 검토한 coverage로 구분하고 빠진 범위를 명시해야 한다.
 
 ### 상태의 구분 {#review-execution-status}
 

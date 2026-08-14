@@ -54,9 +54,12 @@ import {
  *    metric, and the report clears it against a budget it fits inside.
  * 2. Each of triangles, draw calls, texture bytes, shadow maps, instance slots and
  *    fluid cells has an over-limit twin that names the dominant owner, the
- *    source to edit, and the exact excess.
+ *    source to edit, and the exact excess. The shadow pass is inside the
+ *    measurement and outside the ranking, so the twins name what an author can
+ *    open rather than the pass that redraws it.
  * 3. The report is bounded: fifty owners of one metric produce eight contributors,
- *    a counted remainder, and the remainder's total cost.
+ *    a counted remainder that includes the unranked pass, and a total that still
+ *    adds back up to the measurement.
  * 4. Withholding texture dimensions makes texture bytes `not-run`, not zero.
  * 5. Declaring a water body no solver measured makes fluid `unsupported`, not
  *    zero, and the report `incomplete`.
@@ -67,10 +70,15 @@ import {
  * 8. Mesh geometry, multi-part models and shared level-of-detail models cost what
  *    the documented byte model says they cost.
  * 9. A malformed budget, a malformed contributor bound, an absent model and a
- *    prototype with no level of detail are each refused at their own message.
+ *    prototype with no level of detail or valid particle cap are each refused
+ *    at their own message.
  * 10. An inventory that reports no value and no reason is `not-run` rather than
  *     assumed to be zero, and an over metric nobody owns still says what to
  *     do.
+ * 11. A version-one owner row written before the additive `kind` field remains
+ *     an editable `own` contribution rather than disappearing as a pass.
+ * 12. A pass-only public inventory preserves its accounting without inventing
+ *     an editable destination.
  */
 export const test_render_budget_report = (): void => {
   const target = sealAutoMovieRenderTarget({
@@ -252,20 +260,24 @@ export const test_render_budget_report = (): void => {
       fluidCells: shape(twin("fluidCells", fluid, 4000)),
     },
     {
+      // The shadow pass is in the measurement and out of the ranking: it
+      // redraws the 204 opaque triangles the owners below already paid for, so
+      // its aggregate cost cannot be allowed to lead the editable-owner
+      // complexity ranking. The window band is the largest owner's own cost.
       triangles: {
         status: "over",
         excess: 308,
-        owner: "light:sun",
-        source: 'scene.lights["sun"]',
-        cost: 204,
+        owner: "instance-set:windows",
+        source: 'world.instanceSets["windows"]',
+        cost: 12 * BOX_TRIANGLES,
         recovers: true,
       },
       drawCalls: {
         status: "over",
         excess: 1,
-        owner: "light:sun",
-        source: 'scene.lights["sun"]',
-        cost: 8,
+        owner: "instance-set:windows",
+        source: 'world.instanceSets["windows"]',
+        cost: 3,
         recovers: true,
       },
       textureBytes: {
@@ -345,9 +357,14 @@ export const test_render_budget_report = (): void => {
     },
     {
       contributors: AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS,
-      omittedContributors: 51 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS,
+      // The fifty props past the bound, plus the shadow pass, which is never
+      // ranked however small the production is.
+      omittedContributors: 50 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS + 1,
       omittedCost:
-        (51 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS) * BOX_TRIANGLES,
+        (50 - AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS) * BOX_TRIANGLES +
+        50 * BOX_TRIANGLES,
+      // The listed owners plus the omitted cost are still the whole
+      // measurement, so leaving the pass out of the ranking dropped nothing.
       accounted: 2 * 50 * BOX_TRIANGLES,
       measured: 2 * 50 * BOX_TRIANGLES,
       ordered: true,
@@ -866,6 +883,7 @@ export const test_render_budget_report = (): void => {
         source: 'scene.nodes["tower/hall-wall"]',
         metric: "triangles",
         cost: BOX_TRIANGLES,
+        kind: "own",
       },
     ],
   );
@@ -922,7 +940,7 @@ export const test_render_budget_report = (): void => {
   );
 
   TestValidator.equals(
-    "an owner contributing twice to one metric is summed, not listed twice",
+    "a legacy owner and an explicit own row are summed, not listed twice",
     report(
       {
         ...inventory,
@@ -938,6 +956,7 @@ export const test_render_budget_report = (): void => {
             source: 'scene.nodes["lantern"]',
             metric: "triangles",
             cost: 5,
+            kind: "own",
           },
         ],
       },
@@ -1009,12 +1028,50 @@ export const test_render_budget_report = (): void => {
             });
           }, "declares no level of detail"),
       ],
+      [
+        "zero effect cap",
+        () =>
+          throwsError(
+            () =>
+              measure({
+                scene: { ...sceneFixture(), nodes: [], lights: [] },
+                models: modelsFixture(),
+                effects: [
+                  {
+                    ...effect,
+                    recipe: { budget: { maxParticles: 0 } },
+                  } as unknown as IAutoMovieCompiledEffect,
+                ],
+              }),
+            "maxParticles must be a positive safe integer",
+          ),
+      ],
+      [
+        "fractional effect cap",
+        () =>
+          throwsError(
+            () =>
+              measure({
+                scene: { ...sceneFixture(), nodes: [], lights: [] },
+                models: modelsFixture(),
+                effects: [
+                  {
+                    ...effect,
+                    recipe: { budget: { maxParticles: 1.5 } },
+                  } as unknown as IAutoMovieCompiledEffect,
+                ],
+              }),
+            "maxParticles must be a positive safe integer",
+          ),
+      ],
     ]),
     {
       "negative limit": true,
       "fractional limit": true,
       "absent model": true,
       "prototype without level of detail": true,
+      "zero effect cap": true,
+      "fractional effect cap": true,
     },
   );
 
@@ -1045,7 +1102,7 @@ export const test_render_budget_report = (): void => {
       unowned: (
         silentReport.findings.find((finding) => finding.metric === "materials")!
           .recovery ?? ""
-      ).includes("attributed none of it to an owner"),
+      ).includes("attributed none of it to an editable owner"),
       status: silentReport.status,
     },
     {
@@ -1054,6 +1111,50 @@ export const test_render_budget_report = (): void => {
       materials: 0,
       unowned: true,
       status: "over",
+    },
+  );
+
+  const passOnly = report(
+    {
+      ...inventory,
+      totals: { ...inventory.totals, triangles: BOX_TRIANGLES },
+      owners: [
+        {
+          owner: "render-pass:outline",
+          source: "render.pass.outline",
+          metric: "triangles",
+          cost: BOX_TRIANGLES,
+          kind: "pass",
+        },
+      ],
+      gaps: [],
+    },
+    { ...budget, limits: { ...budget.limits, triangles: 0 } },
+    target,
+  ).findings.find((finding) => finding.metric === "triangles")!;
+  TestValidator.equals(
+    "a pass-only boundary has accounting but no false edit destination",
+    {
+      status: passOnly.status,
+      contributors: passOnly.contributors,
+      omittedContributors: passOnly.omittedContributors,
+      omittedCost: passOnly.omittedCost,
+      explainsNoEditableOwner: (passOnly.recovery ?? "").includes(
+        "attributed none of it to an editable owner",
+      ),
+      explainsPass: (passOnly.recovery ?? "").includes(
+        `a further ${BOX_TRIANGLES} of that total is frame passes redrawing the opaque owners, the largest "render-pass:outline" at ${BOX_TRIANGLES}`,
+      ),
+      inventsEdit: (passOnly.recovery ?? "").includes("edited at"),
+    },
+    {
+      status: "over",
+      contributors: [],
+      omittedContributors: 1,
+      omittedCost: BOX_TRIANGLES,
+      explainsNoEditableOwner: true,
+      explainsPass: true,
+      inventsEdit: false,
     },
   );
 };

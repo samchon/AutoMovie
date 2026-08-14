@@ -100,6 +100,7 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["front-door"],
         omittedMembers: 0,
         basis: "profile",
+        place: null,
       },
       {
         mark: "vent-01",
@@ -111,6 +112,7 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["vent"],
         omittedMembers: 0,
         basis: "unmeasured",
+        place: null,
       },
       {
         mark: "window-01",
@@ -122,6 +124,7 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["oculus"],
         omittedMembers: 0,
         basis: "profile",
+        place: null,
       },
     ],
   );
@@ -143,6 +146,7 @@ export const test_drawing_opening_schedule = (): void => {
       members: ["front-door"],
       omittedMembers: 0,
       basis: "fill",
+      place: null,
     },
   );
   TestValidator.equals(
@@ -150,6 +154,7 @@ export const test_drawing_opening_schedule = (): void => {
     schedule.gaps.map((gap) => [gap.subject, gap.status]),
     [
       ["opening-geometry", "not-run"],
+      ["opening-location", "not-run"],
       ["opening-performance", "unsupported"],
     ],
   );
@@ -169,6 +174,7 @@ export const test_drawing_opening_schedule = (): void => {
       members: ["front-door"],
       omittedMembers: 0,
       basis: "unmeasured",
+      place: null,
     },
   );
   TestValidator.equals(
@@ -273,6 +279,7 @@ export const test_drawing_opening_schedule = (): void => {
           members: ["service-ramp"],
           omittedMembers: 0,
           basis: "profile",
+          place: null,
         },
         {
           mark: "stair-01",
@@ -284,6 +291,7 @@ export const test_drawing_opening_schedule = (): void => {
           members: ["roof-stair"],
           omittedMembers: 0,
           basis: "profile",
+          place: null,
         },
       ],
     ],
@@ -291,7 +299,10 @@ export const test_drawing_opening_schedule = (): void => {
   TestValidator.equals(
     "a connector schedule refuses to read a scheduled stair as a climbable one",
     connectors.gaps.map((gap) => [gap.subject, gap.status]),
-    [["traversal-performance", "unsupported"]],
+    [
+      ["connector-location", "not-run"],
+      ["traversal-performance", "unsupported"],
+    ],
   );
 
   // 6-7. Void and face geometry.

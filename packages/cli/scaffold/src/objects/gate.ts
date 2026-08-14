@@ -52,6 +52,11 @@ const at = (position: IAutoMovieVector3): IAutoMovieTransform => ({
  *   ...
  * };
  * ```
+ *
+ * @evidence docs/objects/gate.md Is GATE entire: the single hinge that document
+ *   fixes, the travel it bounds, and the edge placement it derives from staged
+ *   ground all resolve on this class, while the two boxes it renders answer to
+ *   nothing and are meant to be thrown away.
  */
 export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   public readonly id = "plaza-gate";

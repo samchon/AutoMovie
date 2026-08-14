@@ -22,5 +22,6 @@ export * from "./validateSelfIntersection";
 export * from "./validateShotArtifact";
 export * from "./validateSpace";
 export * from "./validateTextureAssets";
+export * from "./validateTextureScale";
 export * from "./validateSupport";
 export * from "./violation";

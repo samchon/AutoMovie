@@ -486,8 +486,8 @@ const jointRotationDistance = (
 
 /**
  * The frame's joints with every pinned leg re-solved onto its target: planted
- * legs get their {@link solveLegPlant} articulation, everything else is carried
- * through unchanged.
+ * legs get their {@link fitChainToTarget} articulation, everything else is
+ * carried through unchanged.
  */
 const plantedJoints = (
   skeleton: IAutoMovieSkeleton,
@@ -516,65 +516,6 @@ const plantedJoints = (
     joints = fitted.joints;
   }
   return joints;
-};
-
-/**
- * Two-bone IK for one limb: the upper + mid articulation that lands the chain's
- * effector on the pinned world `target`, rooted at the chain's **current posed
- * root joint**. The lowering is the shared {@link twoBoneChainArticulation} (the
- * same algebra {@link reachPose} applies to an arm), fed a chain read from the
- * current pose with the limb zeroed, so the correction composes on top of the
- * clip's root/torso motion rather than replacing it.
- *
- * `jointAxes` / `restFrames` decide the clinical convention the two deltas are
- * lowered into. Canonical callers may omit them; ground-IK and retarget callers
- * supply the rig's own tables when its basis or rest frame is non-canonical,
- * which makes the resulting angles round-trip through the same FK convention.
- *
- * The returned `hinge` is the mid joint's world flexion axis under that same
- * zeroed chain. {@link fitChainToTarget} projects it onto the reach-normal plane
- * and searches the full circle: a ball-joint parent can rotate the hinge's
- * world plane while the mid joint remains legal flexion-only articulation.
- *
- * Returns `null` for a missing or degenerate chain.
- *
- * @evidence requirements/actors/skeleton-rig-and-retargeting.md#actor-joint-range-constraints Converts a reachable world target into clinical joint angles for the characterized chain.
- * @evidence specifications/performance-motion-and-staging/rig-deformation-and-retargeting.md#performance-rig-rom-control-driver-graph Derives the chain articulation in the same axes and rest-frame basis used by rig validation.
- * @author Samchon
- */
-export const solveChainPlant = (props: {
-  /** Rig the pose is resolved against. */
-  skeleton: IAutoMovieSkeleton;
-  /** Current frame pose the correction composes on top of. */
-  pose: IAutoMoviePose;
-  /** Chain being pinned. */
-  chain: IAutoMoviePlantChain;
-  /** World position the effector must land on. */
-  target: IAutoMovieVector3;
-  /** Pre-indexed hierarchy for the repeated FK. */
-  topology: IAutoMovieSkeletonTopology;
-  /** Clinical axis remap the recovered angles are expressed in. */
-  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
-  /** Clinical rest-frame remap the recovered angles are expressed in. */
-  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
-
-  /** Explicit bend-plane normal; omitted uses the world-down pole. */
-  bendNormal?: IAutoMovieVector3;
-}): {
-  upper: IAutoMovieJointPose;
-  lower: IAutoMovieJointPose;
-  hinge: IAutoMovieVector3;
-} | null => {
-  const prepared = prepareChainPlant(props);
-  return prepared === null
-    ? null
-    : solvePreparedChainPlant({
-        prepared,
-        target: props.target,
-        bendNormal: props.bendNormal,
-        jointAxes: props.jointAxes,
-        restFrames: props.restFrames,
-      });
 };
 
 interface IPreparedChainPlant {
@@ -636,7 +577,7 @@ const prepareChainPlant = (props: {
       lower.worldRotation,
       normalizeJointAxes(
         props.jointAxes?.[chain.lower] ?? DEFAULT_JOINT_AXES,
-        "solveChainPlant axes",
+        "prepareChainPlant axes",
       ).flexion,
     ),
     lowerOffset: Quaternion.rotateVector(

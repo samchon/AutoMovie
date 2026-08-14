@@ -4,7 +4,7 @@
 
 ### Asset 표면 {#review-system-asset-surface}
 
-<!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces Defines asset, shot, sequence, film and delivery as independent acceptance surfaces. -->
+<!-- @evidence requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces Defines subject, shot, sequence, film and delivery as independent acceptance surfaces. -->
 <!-- @evidence requirements/review/frame-range-and-whole-work.md#review-frame-range-whole-work Preserves frame, interval and whole-work reviews as distinct claims. -->
 
 각 검토 표면은 자신의 target identity, required criteria, sampling plan, evidence coverage와 verdict를 가진다. 하위 표면의 current pass는 상위 표면의 입력이 될 수 있지만 상위 표면의 독립 관찰과 판단을 대신하지 않는다.

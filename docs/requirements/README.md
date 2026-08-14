@@ -2,6 +2,8 @@
 
 이 디렉터리는 AutoMovie가 사용자의 영화 저작에서 제공해야 하는 결과와 지켜야 하는 경계를 주제별로 정의한다. 각 주제는 독립된 폴더를 가지며, 폴더 안의 각 문서는 하나의 검토 가능한 요구사항 단원을 소유한다.
 
+각 요구사항 단원의 소유자는 package마다 반복되는 `@evidenceExclude` 산문에서 역산하지 않고 `../contract-ownership/requirements.json`이 한 번만 긍정형으로 선언한다. 소유자는 실제 구현 package, 제품이 무엇을 공급하는지 함께 지목한 project source, 또는 이유를 적은 결정된 제외 중 하나이며, 선언되지 않은 단원은 `legacy` 원장에 남은 이행 부채로 계상된다. 선언 형식과 게이트는 [evidence graph skill](../../.agents/skills/evidence-graph/SKILL.md#declare-one-owner-per-contract-unit)이 소유한다.
+
 ## 요구사항의 역할 {#requirements-role}
 
 요구사항은 특정 package, 자료구조, 함수, 렌더러나 실행 절차를 정하지 않는다. 사용자가 무엇을 저작할 수 있어야 하는지, 어떤 결과를 관찰할 수 있어야 하는지, 어떤 변형을 허용해야 하는지, 무엇을 추정하지 말고 거부해야 하는지를 정한다.

@@ -72,8 +72,17 @@ The sample review queue is deliberately incomplete. Open the PNG printed by
 
 ## Offline geometry measurements
 
-Measurement scripts and tests may load the current project snapshot without an
-MCP session:
+Two measurements already ship. `npm run building:report` derives every drawing
+schedule over the buildings the compiled shots carry, including one row per room
+that keeps the declared cell and the measured content box apart, so what a space
+was declared to be and what actually landed in it are separate facts. `npm run
+texture:scale` re-checks each declared texture scale against the surface it was
+bound to over every model a build produced, and reports a census of what it
+examined beside its findings, because an empty finding list from a run that
+measured nothing reads exactly like a clean one.
+
+Beyond those, measurement scripts and tests may load the current project
+snapshot without an MCP session:
 
 ```ts
 import {
@@ -233,6 +242,27 @@ authored, and it is an inspection tool rather than a delivery path: it installs
 no capture hook, writes nothing, holds the shot's opening second, and shows the
 level of detail your own distance selects. Review evidence still comes from
 `npm run preview` and `npm run render`.
+
+`viewer/subject.html?shot=<id>&subject=<kind>:<id>` opens one authored thing
+alone and turns it around: the left and right arrows walk the deterministic
+turntable, up and down change its elevation ring, the wheel or `-` and `=` pull
+the eye in and out, `F` refits, `X` sections away whatever stands between you
+and a room's inside, and `Backspace` opens the owner. How far the downward ring
+may look up from under a subject is that subject's own answer, so a slate on a
+roof is read from beneath and a room is not read from underground. Spaces,
+elements, parts, instance sets and instance members are openable; opening the
+page with no `subject` lists every space and population of the shot to start
+from, and every panel entry is a link, so a room descends into the things
+standing in it, with a box to narrow a long list by name. The
+eye is derived from the subject's own CONTENT box rather than from the cell a
+room was declared over — those are different extents, and reading the first as
+the second aims a review camera at a wall — and both boxes are printed so the
+gap between them is visible. On screen beside the picture are the subject key,
+the compiled revision, and the current viewpoint id, which is what lets a
+finding name the thing rather than the pixel: a reviewer writes
+`element:<node>@<revision>` and the authoring agent opens exactly that. Same
+status as `inspect.html`: an inspection tool, no capture hook, nothing written,
+not a delivery path.
 
 ## Ownership
 

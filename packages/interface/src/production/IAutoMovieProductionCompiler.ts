@@ -34,6 +34,7 @@ import type {
   IAutoMovieExternalMotionMappingEntry,
   IAutoMovieExternalMotionTake,
 } from "./IAutoMovieAssetManifest";
+import type { IAutoMovieDerivedArtifactSource } from "./IAutoMovieDerivedArtifact";
 import {
   AutoMovieContentDigest,
   AutoMovieFormationCapability,
@@ -48,6 +49,7 @@ import {
   IAutoMovieShotPredicate,
   IAutoMovieWorldDesign,
 } from "./IAutoMovieProductionDesign";
+import type { IAutoMovieSubjectReviewTarget } from "./IAutoMovieSubjectReview";
 
 /**
  * Closed diagnostic identities currently emitted by compiler, lint, and MCP.
@@ -109,6 +111,15 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "content-input-unsafe",
   "contract-mismatch",
   "contract-realization-failed",
+  "derived-artifact-basis-missing",
+  "derived-artifact-basis-stale",
+  "derived-artifact-external-collision",
+  "derived-artifact-manifest-malformed",
+  "derived-artifact-manifest-missing",
+  "derived-artifact-output-malformed",
+  "derived-artifact-output-missing",
+  "derived-artifact-output-stale",
+  "derived-artifact-path-unsafe",
   "design-attachment-unsupported",
   "design-budget-exceeded",
   "design-capability-duplicate",
@@ -254,6 +265,9 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "review-missing",
   "review-observation-copied",
   "review-observation-empty",
+  "review-outcome-artifact-malformed",
+  "review-outcome-artifact-missing",
+  "review-outcome-contract-mismatch",
   "review-outcome-missing",
   "review-rendition-coverage-incomplete",
   "review-rendition-delivery-invalid",
@@ -266,6 +280,8 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "review-source-compile-blocked",
   "review-source-missing",
   "review-stale",
+  "review-subject-coverage-incomplete",
+  "review-subject-viewpoint-unsupported",
   "review-target-missing",
   "review-target-raced",
   "review-worksheet-stale",
@@ -479,6 +495,16 @@ export interface IAutoMovieProductionManifest {
    * @evidence specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Types `assetManifest` for the spec authoring partial target input system contract.
    */
   assetManifest?: ".automovie/assets.json";
+  /**
+   * Project-owned deterministic precomputation ledger.
+   *
+   * When declared, every generator, input, and output byte is verified before
+   * authored source executes, and only current artifacts enter source context.
+   *
+   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Makes the tracked derived-artifact ledger an explicit compiler input.
+   * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Selects the one canonical project-relative ledger path.
+   */
+  derivedArtifactManifest?: ".automovie/derived-artifacts.json";
   /**
    * Compiler-owned generated root.
    *
@@ -1960,6 +1986,13 @@ export interface IAutoMovieFilmBuildContext {
    */
   assets: readonly string[];
   /**
+   * Current verified deterministic artifacts keyed by canonical output path.
+   *
+   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Publishes only artifacts whose live basis and output passed the pre-execution gate.
+   * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Carries verified text or base64 bytes through the JSON source boundary.
+   */
+  derivedArtifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
+  /**
    * Current registered deterministic effect zones.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-source-result-link Exposes `effectZones` as the portable data boundary for the agent source result link requirement.
@@ -2243,6 +2276,13 @@ export interface IAutoMovieShotBuildContext {
    * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-derivation-state Types `models` for the spec authoring source derivation state system contract.
    */
   models: Readonly<Record<string, IAutoMovieModelRecipe>>;
+  /**
+   * Current verified deterministic artifacts keyed by canonical output path.
+   *
+   * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Publishes only artifacts whose live basis and output passed the pre-execution gate.
+   * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Carries verified text or base64 bytes through the JSON source boundary.
+   */
+  derivedArtifacts: Readonly<Record<string, IAutoMovieDerivedArtifactSource>>;
   /**
    * The production's story-clock light sources, when it declares any.
    *
@@ -4490,7 +4530,17 @@ export type IAutoMovieReviewTarget =
       kind: "film";
       /** Film id. */
       id: string;
-    };
+    }
+  | ({
+      /**
+       * One compiled subject observed as itself rather than at a film moment.
+       *
+       * The address is the compiled artifact plus the stable subject id, not a
+       * frame, so a shot that happens to contain the subject never stands in
+       * for this target.
+       */
+      kind: "subject";
+    } & IAutoMovieSubjectReviewTarget);
 
 /**
  * One target and its derived review state.

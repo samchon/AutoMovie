@@ -52,6 +52,14 @@ export const AUTOMOVIE_RENDER_REPORT_MAX_CONTRIBUTORS = 8;
  * A budget limit that is negative, fractional or non-finite is an authoring
  * mistake and throws, rather than becoming a budget that can never be met.
  *
+ * An `over` finding names somewhere the author can actually go. The limit is
+ * compared against the inventory's own total, frame passes and all, but the
+ * dominant-owner ranking is over the owners that hold their own cost; the
+ * passes are counted among the owners the report does not name and stated in
+ * the recovery as passes. A ranking that let them compete would put the same
+ * name first in every production that lights nothing, and that name is a guide
+ * pass no production declares.
+ *
  * @evidence requirements/rendering/budgets.md#rendering-budget-decision Produces the per-metric within, over, unbudgeted, unsupported, and not-run decisions required for an actionable render budget.
  * @evidence requirements/rendering/budgets.md#rendering-budget-tiers Evaluates the exact limits supplied by the caller's declared tier without treating a cheaper profile as equivalent clearance.
  * @evidence requirements/rendering/budgets.md#rendering-budget-refusal Returns over and incomplete preflight results before rendering when a declared limit is exceeded or a required metric is unavailable.
@@ -148,7 +156,7 @@ const evaluate = (props: {
   const { metric, inventory, budget, gap } = props;
   const measured = inventory.totals[metric];
   const declared = budget?.limits[metric] ?? null;
-  const ranked = rank(inventory, metric, props.limit);
+  const { passes, ...ranked } = rank(inventory, metric, props.limit);
 
   if (gap !== undefined)
     return {
@@ -193,6 +201,15 @@ const evaluate = (props: {
       recovery: null,
     };
   const dominant = ranked.contributors[0];
+  // What the frame passes add is stated beside the owners rather than among
+  // them. Without it the listed costs come up short of the measurement for no
+  // reason a reader can see, and the one shadow caster doubling the frame,
+  // often the cheapest edit on the page, would go unmentioned once it stopped
+  // being ranked as an owner.
+  const passed =
+    passes === null
+      ? ""
+      : `; a further ${passes.cost} of that total is frame passes redrawing the opaque owners, the largest "${passes.dominant.owner}" at ${passes.dominant.cost}`;
   return {
     metric,
     status: "over",
@@ -202,18 +219,33 @@ const evaluate = (props: {
     ...ranked,
     recovery:
       dominant === undefined
-        ? `"${metric}" measures ${measured} against a limit of ${declared}; the inventory attributed none of it to an owner, so raise the limit deliberately or reduce the whole scene`
-        : `"${metric}" measures ${measured} against a limit of ${declared}, ${measured - declared} over; the largest owner is "${dominant.owner}" at ${dominant.cost}, edited at ${dominant.source}`,
+        ? `"${metric}" measures ${measured} against a limit of ${declared}; the inventory attributed none of it to an editable owner, so raise the limit deliberately or reduce the whole scene${passed}`
+        : `"${metric}" measures ${measured} against a limit of ${declared}, ${measured - declared} over; the largest owner is "${dominant.owner}" at ${dominant.cost}, edited at ${dominant.source}${passed}`,
   };
 };
 
 /**
- * The dominant owners of one metric, and what the bound left out.
+ * The dominant owners of one metric, what the report leaves unnamed, and what
+ * the frame passes add.
  *
  * Sorted by cost descending, then by owner id ascending. The tie-break on the
  * id is what makes the list a property of the production rather than of the
  * order the inventory happened to visit owners in, so two runs of the same
  * design produce the same eight names.
+ *
+ * Ranking and accounting are two questions and one list cannot answer both. A
+ * frame pass redraws the geometry the drawable owners already paid for, so its
+ * cost is their sum and it can never lose a cost-descending ranking: leaving it
+ * in makes the first line of the table a constant, and for the outline pass it
+ * makes that line a name no production declares and no author can open. So the
+ * ranking is over `own` rows alone, while the passes stay in the omitted count
+ * and the omitted cost. Nothing is dropped: the contributors plus the omitted
+ * cost still add up to everything the inventory attributed, and the totals the
+ * report checks against a limit are the inventory's own, untouched.
+ *
+ * The `instanceSlots` and `fluidCells` rankings never had this problem and do
+ * not change: a resident cost is allocated once and reused by every pass, so no
+ * pass row exists to outrank the drawable that owns it.
  */
 const rank = (
   inventory: IAutoMovieRenderInventory,
@@ -223,28 +255,39 @@ const rank = (
   contributors: IAutoMovieRenderContributor[];
   omittedContributors: number;
   omittedCost: number;
+  passes: { cost: number; dominant: IAutoMovieRenderContributor } | null;
 } => {
   const totals = new Map<string, IAutoMovieRenderContributor>();
+  const passes = new Map<string, IAutoMovieRenderContributor>();
   for (const entry of inventory.owners) {
     if (entry.metric !== metric) continue;
-    const current = totals.get(entry.owner);
+    const into = entry.kind === "pass" ? passes : totals;
+    const current = into.get(entry.owner);
     if (current === undefined)
-      totals.set(entry.owner, {
+      into.set(entry.owner, {
         owner: entry.owner,
         source: entry.source,
         cost: entry.cost,
       });
     else current.cost += entry.cost;
   }
-  const ordered = [...totals.values()].sort(
-    (left, right) =>
-      right.cost - left.cost ||
-      compareAutoMovieRenderIds(left.owner, right.owner),
-  );
+  const order = (
+    left: IAutoMovieRenderContributor,
+    right: IAutoMovieRenderContributor,
+  ): number =>
+    right.cost - left.cost ||
+    compareAutoMovieRenderIds(left.owner, right.owner);
+  const ordered = [...totals.values()].sort(order);
+  const orderedPasses = [...passes.values()].sort(order);
+  const passCost = orderedPasses.reduce((sum, entry) => sum + entry.cost, 0);
   const omitted = ordered.slice(limit);
   return {
     contributors: ordered.slice(0, limit),
-    omittedContributors: omitted.length,
-    omittedCost: omitted.reduce((sum, entry) => sum + entry.cost, 0),
+    omittedContributors: omitted.length + orderedPasses.length,
+    omittedCost: omitted.reduce((sum, entry) => sum + entry.cost, 0) + passCost,
+    // A pass that costs nothing is a pass over an empty frame, and naming it
+    // would answer a question nobody asked.
+    passes:
+      passCost === 0 ? null : { cost: passCost, dominant: orderedPasses[0]! },
   };
 };

@@ -126,6 +126,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { inspectAutoMovieDerivedArtifacts } from "./derivedArtifacts";
 import { designReferenceDiagnostics } from "./designReferenceDiagnostics";
 import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
@@ -148,7 +149,11 @@ import {
   AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS,
   callAutoMovieSandboxEngine,
 } from "./sandboxEngineBridge";
-import { AUTOMOVIE_SANDBOX_ENGINE_SURFACE } from "./sandboxEngineSurface";
+import {
+  AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER,
+  AUTOMOVIE_SANDBOX_ENGINE_SURFACE,
+  autoMovieSandboxEngineImportRefusal,
+} from "./sandboxEngineSurface";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
@@ -174,7 +179,7 @@ import {
  * @evidence specifications/execution-and-recovery/portability-migration-and-compatibility.md#execution-semantic-change-identity Makes the protocol revision the portable semantic-change boundary.
  * @author Samchon
  */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v8";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v9";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
@@ -239,8 +244,9 @@ export type AutoMovieReviewQueueProvider = (
  * Deterministic source compiler and generated-ownership gate.
  *
  * Coding-agent TypeScript runs in a no-I/O VM with explicit design input and
- * deterministic geometry helpers. It may use loops and ordinary math, but no
- * runtime imports, wall clock, random source, process, network or filesystem.
+ * deterministic geometry helpers. It may use loops, ordinary math, linked
+ * project-relative modules, and named sandbox-package imports, but no wall
+ * clock, random source, process, network or filesystem.
  * The resulting scene, shot, models and sparse motions are validated by the
  * same engine consumers use and then materialized atomically as derived data.
  *
@@ -330,6 +336,8 @@ export class AutoMovieProductionCompiler {
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
     let declaredAssets: string[] = [];
     let assetRecords: IAutoMovieAssetProvenance[] = [];
+    let derivedArtifacts: IAutoMovieFilmBuildContext["derivedArtifacts"] = {};
+    let derivedArtifactsReady = true;
     let externalModels = new Map<
       string,
       IAutoMovieExternalModelRuntimeBinding
@@ -366,6 +374,28 @@ export class AutoMovieProductionCompiler {
           payload: new Uint8Array(),
         });
       }
+    if (input.scope !== "design") {
+      const inspection = inspectAutoMovieDerivedArtifacts({
+        root: this.project.root,
+        manifestPath: projectManifest.derivedArtifactManifest,
+        externalAssetPaths: assetRecords.map((asset) => asset.path),
+      });
+      contentFields.push(...inspection.fingerprintFields);
+      derivedArtifacts = inspection.artifacts;
+      derivedArtifactsReady = inspection.problems.length === 0;
+      diagnostics.push(
+        ...inspection.problems.map(
+          (problem): IAutoMovieDiagnostic => ({
+            code: problem.code,
+            category: "error",
+            phase: "project",
+            target: problem.target,
+            path: problem.path,
+            message: problem.message,
+          }),
+        ),
+      );
+    }
     const compiled = new Map<string, IAutoMovieCompiledShotSource>();
     const externalMotionConversions = new Map<
       string,
@@ -468,6 +498,7 @@ export class AutoMovieProductionCompiler {
     if (
       input.scope !== "design" &&
       designReady &&
+      derivedArtifactsReady &&
       filmSource !== null &&
       contentInputs !== undefined
     ) {
@@ -475,6 +506,7 @@ export class AutoMovieProductionCompiler {
         production: graph.production!,
         shots: Object.fromEntries(graph.shots),
         assets: declaredAssets,
+        derivedArtifacts,
         effectZones: graph.world!.effectZones,
       };
       filmEditSource = compileFilmEditSource({
@@ -484,7 +516,7 @@ export class AutoMovieProductionCompiler {
       });
     }
 
-    if (input.scope !== "design" && designReady) {
+    if (input.scope !== "design" && designReady && derivedArtifactsReady) {
       let previousVideo: ICompiledVideoClosing | null = null;
       for (const entry of shotCompileOrder(
         graph.shots,
@@ -512,6 +544,7 @@ export class AutoMovieProductionCompiler {
             context: {
               contract: entry.contract,
               models: Object.fromEntries(graph.models),
+              derivedArtifacts,
               // Undefined when the production declares no lighting, so the
               // frozen context a source reads is unchanged for every production
               // that says nothing about light.
@@ -1137,6 +1170,7 @@ interface ICompileShotSourceProps {
   context: {
     contract: IAutoMovieShotContract;
     models: IAutoMovieShotBuildContext["models"];
+    derivedArtifacts: IAutoMovieShotBuildContext["derivedArtifacts"];
     lighting: IAutoMovieShotBuildContext["lighting"];
     world: IAutoMovieWorldDesign;
     formations: IAutoMovieShotBuildContext["formations"];
@@ -4284,7 +4318,11 @@ const inspectSource = (
       path: sourcePath,
       message: `Template sentinel "${TEMPLATE_SENTINEL}" remains in ${sourcePath}. The placeholder says this scaffold section has no implementation, so compile and review cannot treat it as resident work. Implement the marked section and remove the exact sentinel.`,
     });
-  const report = (code: AutoMovieDiagnosticCode, capability: string): void => {
+  const report = (
+    code: AutoMovieDiagnosticCode,
+    capability: string,
+    reason?: string,
+  ): void => {
     const key = `${code}:${capability}`;
     if (found.has(key)) return;
     found.add(key);
@@ -4294,7 +4332,9 @@ const inspectSource = (
       phase: "source",
       target,
       path: sourcePath,
-      message: `${capability} is unavailable in deterministic shot source. Replace it with design input, an explicit seed, or an AutoMovie engine oracle in ${sourcePath}.`,
+      message:
+        reason ??
+        `${capability} is unavailable in deterministic shot source. Replace it with design input, an explicit seed, or an AutoMovie engine oracle in ${sourcePath}.`,
     });
   };
   const visit = (node: ts.Node): void => {
@@ -4309,8 +4349,20 @@ const inspectSource = (
       ts.isImportDeclaration(node) &&
       importDeclarationHasRuntimeBinding(node) &&
       isLinkableImport(node) === false
-    )
-      report("source-import-unsupported", "runtime import");
+    ) {
+      const refused = refusedEngineNames(node).flatMap((name) => {
+        const reason = autoMovieSandboxEngineImportRefusal({
+          name,
+          sourcePath,
+        });
+        return reason === null ? [] : [{ name, reason }];
+      });
+      if (refused.length === 0)
+        report("source-import-unsupported", "runtime import");
+      else
+        for (const entry of refused)
+          report("source-import-unsupported", entry.name, entry.reason);
+    }
     if (
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword
@@ -4370,15 +4422,14 @@ const importDeclarationHasRuntimeBinding = (
   return bindings.elements.some((element) => element.isTypeOnly === false);
 };
 
-/** The one deterministic runtime import exposed by the source VM. */
 /**
  * Whether a runtime import is one the sandbox can actually satisfy.
  *
- * Two kinds resolve. The engine surface is reimplemented inside the sandbox, so
- * a name absent from that stand-in must be refused here rather than fail at
- * execution with a message about a missing property. Project-relative source is
- * linked from the project's own reader, which keeps path escape and symlinks
- * refused exactly as they are for an entry module.
+ * Two kinds resolve. The engine surface is published by a reviewed bridge or
+ * deterministic stand-in, so a name absent from that surface must be refused
+ * here rather than fail at execution with a missing-property message.
+ * Project-relative source is linked from the project's own reader, which keeps
+ * path escape and symlinks refused exactly as they are for an entry module.
  *
  * A default or namespace import is refused for both. The sandbox registry hands
  * out a frozen exports object, and binding it as a whole hides which names a
@@ -4407,6 +4458,40 @@ const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
   return runtime.every((element) =>
     permitted.has(element.propertyName?.text ?? element.name.text),
   );
+};
+
+/**
+ * The engine names a refused import declaration asked for by name.
+ *
+ * Only a named import from the engine package yields anything, because that is
+ * the only shape in which the author addressed a capability rather than a
+ * module: a default, namespace or side-effect clause is refused for what it
+ * binds, not for which name it wanted, and no per-name reason would be true of
+ * it. Everything else keeps the declaration-level refusal.
+ *
+ * The names come back unfiltered. A mixed import naming one reachable and one
+ * withheld capability is refused as a whole, and telling the author which half
+ * caused it is the point; {@link autoMovieSandboxEngineImportRefusal} is what
+ * drops the reachable half.
+ */
+const refusedEngineNames = (
+  declaration: ts.ImportDeclaration,
+): readonly string[] => {
+  if (
+    ts.isStringLiteralLike(declaration.moduleSpecifier) === false ||
+    declaration.moduleSpecifier.text !== AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER
+  )
+    return [];
+  const clause = declaration.importClause;
+  if (
+    clause === undefined ||
+    clause.namedBindings === undefined ||
+    ts.isNamedImports(clause.namedBindings) === false
+  )
+    return [];
+  return clause.namedBindings.elements
+    .filter((element) => element.isTypeOnly === false)
+    .map((element) => (element.propertyName ?? element.name).text);
 };
 
 const LOCALE_SENSITIVE_SOURCE_MEMBERS = new Set([
@@ -7367,6 +7452,13 @@ export const currentAutoMovieProductionCompilerInputFingerprint = (
           payload: new Uint8Array(),
         });
       }
+    if (scope !== "design")
+      contentFields.push(
+        ...inspectAutoMovieDerivedArtifacts({
+          root: project.root,
+          manifestPath: project.manifest().derivedArtifactManifest,
+        }).fingerprintFields,
+      );
     return productionCompilerInputFingerprint(
       project.productionId,
       graph,
@@ -8409,6 +8501,8 @@ const reviewTargetKey = (
   target: IAutoMovieReviewQueue["entries"][number]["target"],
 ): string => {
   if (target.kind === "source") return `source:${target.path}`;
+  if (target.kind === "subject")
+    return `subject:${target.shot}:${target.subject}`;
   if (
     target.kind === "asset" ||
     target.kind === "shot" ||

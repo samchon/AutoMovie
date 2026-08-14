@@ -61,7 +61,7 @@ Keep every closing keyword out of the claim body. The body is written before any
 
 Parallel owners in one checkout collide on shared files, not on their own. Decide ownership before the first owner starts, and write it into the campaign ledger.
 
-**Each issue owner owns its own source and test files.** It edits nothing else.
+**Each issue owner owns its own source, test, and document files.** It edits nothing else.
 
 **The main agent owns every integration surface alone.** At minimum that is: package barrel `index.ts` files, the production compiler and its sandbox, materialization and design validation, the source-link export contract, the authoring interface, the scaffold viewer runtime and loader, the compiler's own test file, the pull-request body, and CI repair.
 
@@ -69,13 +69,23 @@ An owner that needs a change in an integration file finishes its own module and 
 
 When an owner finishes, its files become unowned. Assign them explicitly to whoever's consequence surface reaches them next, rather than leaving them for whoever notices.
 
+### Vertical Scope Is Not Path Ownership
+
+An issue's [vertical scope](SKILL.md#an-issue-stands-vertically) and this section's path ownership answer different questions. Vertical scope says which layers the issue is accountable for; path ownership says who types into which file. An owner is routinely accountable for a layer it may not edit.
+
+The sandbox engine surface is the standard case. A capability an authoring agent has to call belongs on that surface and the issue does not close until it is there, while the file itself falls under "the production compiler and its sandbox" in the list above and stays with the main agent. The owner builds and tests the capability, then hands over the exact entry, and the main agent applies it.
+
+Vertical scope therefore produces more hand-offs; it never authorizes editing an integration file. An owner that finishes its module and leaves the surface entry, the barrel, or the guide sentence to whoever notices has manufactured the exact "capability exists and cannot be reached" defect the vertical contract was written to prevent. Reporting that module as the issue done is the placeholder report [Honest Reporting Is Part Of The Work](#honest-reporting-is-part-of-the-work) forbids.
+
+Contract documents and guides are assigned per file, the same way source is. `docs/requirements`, `docs/specifications`, and `packages/mcp/prompts` hold one file per topic, so two issues usually write different files; a document two issues both need is an integration surface and the main agent owns it. Settle that in the ledger before dispatch rather than at the first collision.
+
 ## Implement In Parallel
 
 Dispatch one owner per issue in the current wave. Give each owner its issue, the campaign handover, the skills it needs, the settled facts from earlier waves, and its exact path ownership.
 
 Every owner:
 
-1. Implements its issue's source and tests, tracing the full consequence surface rather than the reported witness.
+1. Implements its issue across every layer the issue's **Scope** section names, tracing the full consequence surface rather than the reported witness. A layer that lands in an integration file is handed over, not edited.
 2. Leaves every source file it created or modified at 100% coverage, by testing rather than by hiding code. The obligation is per change; the repository total carries inherited gaps in files nobody touched, and an owner neither inherits those nor reports the total as its own result.
 3. Runs a complete solo Self-Review over its own surface under the [review skill's law](../review/SKILL.md#non-negotiable-review-law), repeating full rounds until one finds nothing.
 4. Runs `pnpm run format`, commits its own paths, and pushes.

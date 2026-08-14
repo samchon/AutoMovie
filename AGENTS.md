@@ -59,7 +59,7 @@ Solo repository-wide issue discovery, main-agent-vetted issue publication, DAG-o
 
 ### Experiment
 
-Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, driven by a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out or drive the MCP tools by hand.
+Ad-hoc experimentation: a disposable source-linked sandbox under `experimental/`, briefed and steered through a live Claude Code or Codex session against the working tree, `.agents/skills/experiment/SKILL.md`. Read when the user wants to try something out, run a benchmark against an authoring agent, or drive the MCP tools by hand.
 
 ### 3D Modeling
 
@@ -67,7 +67,7 @@ What automovie models and what it refuses to model, plus the verification discip
 
 ### Viewer Verification
 
-Driving the viewer/playground through Playwright MCP to inspect renders, poses, and motion against expectation, `.agents/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works.
+Driving the viewer/playground through the Playwright library to inspect renders, poses, and motion against expectation, `.agents/skills/viewer-verification/SKILL.md`. Read before claiming a viewer or render change works, and to reach a real GPU context rather than a software fallback that reads like one.
 
 ### MCP Server Design
 

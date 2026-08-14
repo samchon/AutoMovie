@@ -168,10 +168,12 @@ export const test_render_budget_preflight_evidence = (): void => {
         finding: "over",
         measured: peak,
         excess: 1,
-        // The depth pass is charged to the light that induced it, and one
-        // pass over every staged box outweighs any single staged node, so the
-        // caster is the dominant contributor rather than the largest mesh.
-        owner: "light:sun",
+        // The depth pass is charged to the light that induced it and stays in
+        // the peak, but its cost is by construction the sum of every staged
+        // box, so ranking it would make the first line of every refusal the
+        // same name. The ranking is over the staged nodes instead, and five
+        // boxes of equal cost are decided on the owner id.
+        owner: "node:lantern",
       },
     },
   );
@@ -323,10 +325,25 @@ export const test_render_budget_preflight_evidence = (): void => {
       refused: refusal !== null,
       shot: refusal?.includes("opening"),
       tier: refusal?.includes('Render tier "review"'),
-      owner: refusal?.includes('the largest owner is "light:sun"'),
+      owner: refusal?.includes(
+        `the largest owner is "node:lantern" at ${BOX_TRIANGLES}, edited at scene.nodes["lantern"]`,
+      ),
+      // The aggregate pass is still stated as a pass beside the light that
+      // induced it, so the numbers add up and the one edit that halves the
+      // frame is not hidden by being outside the owner-cost ranking.
+      pass: refusal?.includes(
+        `a further ${staged} of that total is frame passes redrawing the opaque owners, the largest "light:sun" at ${staged}`,
+      ),
       excess: refusal?.includes(`${peak} against a limit of ${peak - 1}`),
     },
-    { refused: true, shot: true, tier: true, owner: true, excess: true },
+    {
+      refused: true,
+      shot: true,
+      tier: true,
+      owner: true,
+      pass: true,
+      excess: true,
+    },
   );
 
   const findingless = autoMovieRenderBudgetRefusal(

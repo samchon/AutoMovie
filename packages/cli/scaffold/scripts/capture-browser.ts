@@ -11,6 +11,7 @@ import path from "node:path";
 import type { Browser, Page } from "playwright";
 
 import {
+  CaptureExecutableInstructedError,
   type ICaptureExecutableSnapshot,
   assertCaptureExecutable,
   assertCaptureExecutableBytes,
@@ -1123,7 +1124,15 @@ export const launchCaptureBrowser = async (
     throw new Error(
       `Capture browser launch failed: ${
         error instanceof Error ? error.message : String(error)
-      } Run npm run capture:install and npm run capture:doctor. If Linux reports missing shared libraries, run npx playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
+      } ${
+        // A guard that already named the command that answers it must not be
+        // followed by a generic one. Appending this unconditionally is what
+        // told an author whose browser was merely touched mid-run to reinstall
+        // it, which is a minute and a half that changes nothing.
+        error instanceof CaptureExecutableInstructedError
+          ? ""
+          : "Run npm run capture:install and npm run capture:doctor. "
+      }If Linux reports missing shared libraries, run npx playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
       { cause },
     );
   }

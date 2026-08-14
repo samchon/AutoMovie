@@ -25,25 +25,33 @@ const topicReferences = (
   },
 ];
 
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population is derived from the source tree instead of enumerated. The
+ * barrel is the only file outside it, because it re-exports declarations that
+ * already answer for their contracts at their definition.
+ */
+const allSources = ["src/**/*.ts", "!src/**/index.ts"];
+
 const captionSources = [
   "src/captionPlan.ts",
   "src/captionSidecar.ts",
   "src/captionSlice.ts",
 ];
+
+/**
+ * The rendering domain is the residual of the derived population.
+ *
+ * Writing it as a subtraction rather than a list is what keeps the default
+ * inside the graph: a new render source answers for the rendering and editorial
+ * contracts until someone deliberately assigns it to the model-export or
+ * screenplay domain, instead of silently answering for nothing.
+ */
 const renderSources = [
-  ...captionSources,
-  "src/chunkSequenceRender.ts",
-  "src/guidePasses.ts",
-  "src/headlessCapture.ts",
-  "src/plan.ts",
-  "src/poseKeypointPlan.ts",
-  "src/poseKeypointSidecar.ts",
-  "src/renderAndSee.ts",
-  "src/renderBudgetPreflight.ts",
-  "src/renderObservationAudit.ts",
-  "src/renderVideo.ts",
-  "src/sequenceRenderPlan.ts",
-  "src/sequenceRenderVideo.ts",
+  ...allSources,
+  "!src/exportModel.ts",
+  "!src/screenplay.ts",
 ];
 
 /**
@@ -106,7 +114,9 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       name: "render declarations implement editorial delivery specifications",
       type: "typescript",
-      files: ["src/screenplay.ts", ...renderSources],
+      // The residual carries its own negative patterns, so the screenplay this
+      // claim adds back has to follow them rather than precede them.
+      files: [...renderSources, "src/screenplay.ts"],
       symbol: ["type", "function", "property"],
       reference: topicReferences([
         "specifications/editorial-render-and-delivery",

@@ -2,7 +2,15 @@
 
 The tracked production design record stores global invariants, not screenplay prose. Read this before editing it.
 
-Choose one stable id, title, logline, target runtime, visual delivery, frame clock, primitive-3D art grammar, and deliverable inventory. `visualDelivery` is exactly `deterministic` or `repainted`: deterministic delivery ships compiler/render output directly, while repainted delivery keeps it as technical truth and additionally requires at least one required feature plus a receipt-bound rendition and separate visual review for every delivered shot. Runtime is the intended finished duration, not the duration of the current sample, and must equal an integer frame count divided by fps. Declare the whole film's runtime up front and leave it there: while the edit is still short of it, `source` scope reports `film-runtime-mismatch` as a warning naming the gap, and it becomes an error at `review` and `final`, where the assembled film must fill its declared clock exactly. Do not track the target down to whatever is built so far; that turns a stated intent into a derived number and hides how much film is left. Width, height, and fps become one clock-and-raster contract reused by compile, preview, review, captions, and render. Width and height are each bounded to 16,384 and their product must not exceed 16,777,216 pixels, because every required review frame must be capturable at the exact production raster.
+Choose one stable id, title, logline, target runtime, visual delivery, frame clock, primitive-3D art grammar, and deliverable inventory.
+
+`visualDelivery` is exactly `deterministic` or `repainted`. Deterministic delivery ships compiler/render output directly. Repainted delivery keeps that output as technical truth and adds obligations at both ends of the ladder: the design gate refuses the selection itself unless the inventory carries a `feature` deliverable marked required, because a repaint selection that ships only previews, guide passes, captions, audio, or optional features is nominal, and that refusal lands at `design` scope before a single shot compiles. The review gate then adds a receipt-bound rendition and its own visual review for every delivered shot.
+
+Runtime is the intended finished duration, not the duration of the current sample, and must equal an integer frame count divided by fps. Declare the whole film's runtime up front and leave it there: while the edit is still short of it, `source` scope reports `film-runtime-mismatch` as a warning naming the gap, and it becomes an error at `review` and `final`, where the assembled film must fill its declared clock exactly. Do not track the target down to whatever is built so far; that turns a stated intent into a derived number and hides how much film is left. Width, height, and fps become one clock-and-raster contract reused by compile, preview, review, captions, and render. Width and height are each bounded to 16,384 and their product must not exceed 16,777,216 pixels, because every required review frame must be capturable at the exact production raster.
+
+The deliverable inventory must not be empty, and each entry declares a `kind` over a closed vocabulary: `preview`, `feature`, `guide-pass`, `captions`, `audio-mix`. Only a `guide-pass` entry may own a `pass`, and that pass is a structural pass other than beauty; any other kind carrying one is refused at design scope. Declaring a guide pass here states what the production intends to output, and it is not what makes review capture one. The shot's own review frames decide that, so a production that wants a mask judged edits both records. Read `SHOT_CONTRACT`.
+
+A production whose deliverable is a set of held views (an exterior, a cut-away, one room) obeys the same clock as a film. There is no still-image compile scope and no survey exemption: each view is a shot with a duration on the production clock, every shot is placed in the edit or explicitly omitted there, and the declared runtime must equal the frame the assembled timeline ends on before `review` will pass. Declare a runtime you intend to fill rather than one the edit will chase, and give each held view enough frames that its review frames have somewhere to land. Read `EDITING` for the edit that places them.
 
 `storyClock` is optional and declares a second timeline: when the film says things happened, as distinct from the order it shows them. It carries only a unit and a non-blank statement of what story time zero denotes. Declaring it is what makes a shot's `storyTime` pin and a `story-sync` acceptance criterion legal; a production that asserts nothing about story time omits it and is unaffected. The frame clock stays the delivery clock — the story clock never changes a duration, a frame index, or the edit.
 
@@ -29,8 +37,9 @@ Required order:
 1. Edit the production design record.
 2. Edit model recipe records for referenced primitives.
 3. Edit the world design record.
-4. Edit formation and shot-contract records.
-5. Edit acceptance records.
-6. Run the scaffold source compile command or `compileAutoMovieProduction({ scope: "source" })`.
+4. Edit the screenplay index. Every shot and acceptance citation joins to it, and a resident shot contract with no index is refused at every scope, `design` included.
+5. Edit formation and shot-contract records.
+6. Edit acceptance records.
+7. Run the scaffold source compile command or `compileAutoMovieProduction({ scope: "source" })`.
 
 Do not declare a deliverable required unless the repository has or will have a deterministic command that materializes and proves it.

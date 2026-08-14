@@ -318,7 +318,7 @@ export interface IAutoMovieMcpTransform {
    * (identity), a placement that only slides a node needs no angles.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   rotation?: IAutoMovieEuler | null;
 
@@ -326,7 +326,7 @@ export interface IAutoMovieMcpTransform {
    * Per-axis scale factor (`1` = identity). Non-positive is rejected.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   scale: IAutoMovieVector3;
 }
@@ -335,14 +335,14 @@ export interface IAutoMovieMcpTransform {
  * Minimal model geometry lookup accepted by MCP query tools.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpGeometryModel {
   /**
    * Model id referenced by scene nodes.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   id: string;
 
@@ -350,7 +350,7 @@ export interface IAutoMovieMcpGeometryModel {
    * Skeleton used for FK and reach queries; null for props.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   skeleton: IAutoMovieSkeleton | null;
 }
@@ -359,14 +359,14 @@ export interface IAutoMovieMcpGeometryModel {
  * The `getShotEndState` query result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieGetShotEndStateOutput {
   /**
    * The engine-derived resumable end-state, ready for `commitBeatEnd`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   beatEnd: IAutoMovieBeatEndState | null;
 
@@ -374,7 +374,7 @@ export interface IAutoMovieGetShotEndStateOutput {
    * Why derivation failed when `beatEnd` is null; null on success.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reason: string | null;
 }
@@ -383,14 +383,14 @@ export interface IAutoMovieGetShotEndStateOutput {
  * The `getResolvedPose` query result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieGetResolvedPoseOutput {
   /**
    * Actor pose resolved into world-space bone transforms, or null.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   resolvedPose: IAutoMovieMcpResolvedPose | null;
 
@@ -398,7 +398,7 @@ export interface IAutoMovieGetResolvedPoseOutput {
    * Which lookup failed when `resolvedPose` is null; null on success.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reason: string | null;
 }
@@ -407,14 +407,14 @@ export interface IAutoMovieGetResolvedPoseOutput {
  * Actor pose after sampling motion and running forward kinematics.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpResolvedPose {
   /**
    * Scene-node id of the resolved actor.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   node: string;
 
@@ -422,7 +422,7 @@ export interface IAutoMovieMcpResolvedPose {
    * Model id placed by the scene node.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   model: string;
 
@@ -430,7 +430,7 @@ export interface IAutoMovieMcpResolvedPose {
    * Motion id sampled for this query, or null for a held pose.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   motion: string | null;
 
@@ -438,7 +438,7 @@ export interface IAutoMovieMcpResolvedPose {
    * Shot-local time used for sampling, seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   t: number;
 
@@ -446,7 +446,7 @@ export interface IAutoMovieMcpResolvedPose {
    * Sparse pose sampled or held before FK.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   pose: IAutoMoviePose;
 
@@ -454,7 +454,7 @@ export interface IAutoMovieMcpResolvedPose {
    * Bone transforms in scene world space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   bones: IAutoMovieMcpResolvedBone[];
 }
@@ -463,14 +463,14 @@ export interface IAutoMovieMcpResolvedPose {
  * A single resolved bone transform in scene world space.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpResolvedBone {
   /**
    * Bone name.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   bone: AutoMovieHumanoidBone;
 
@@ -478,7 +478,7 @@ export interface IAutoMovieMcpResolvedBone {
    * Local bone rotation after rest and articulation compose.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   localRotation: IAutoMovieQuaternion;
 
@@ -486,7 +486,7 @@ export interface IAutoMovieMcpResolvedBone {
    * World-space bone origin.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   worldPosition: IAutoMovieVector3;
 
@@ -494,7 +494,7 @@ export interface IAutoMovieMcpResolvedBone {
    * World-space bone orientation.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   worldRotation: IAutoMovieQuaternion;
 }
@@ -503,14 +503,14 @@ export interface IAutoMovieMcpResolvedBone {
  * The `getReach` query result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieGetReachOutput {
   /**
    * Reach report, or null when actor/target cannot resolve to rigged points.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reach: IAutoMovieMcpReachReport | null;
 
@@ -518,7 +518,7 @@ export interface IAutoMovieGetReachOutput {
    * Which lookup failed when `reach` is null; null on success.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reason: string | null;
 }
@@ -527,14 +527,14 @@ export interface IAutoMovieGetReachOutput {
  * Reachability report for one actor against one target.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpReachReport {
   /**
    * Scene-node id of the actor.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   actor: string;
 
@@ -542,7 +542,7 @@ export interface IAutoMovieMcpReachReport {
    * Target resolved into world space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   target: IAutoMovieVector3;
 
@@ -550,7 +550,7 @@ export interface IAutoMovieMcpReachReport {
    * Left arm report, or null when the rig lacks that arm chain.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   left: IAutoMovieMcpArmReach | null;
 
@@ -558,7 +558,7 @@ export interface IAutoMovieMcpReachReport {
    * Right arm report, or null when the rig lacks that arm chain.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   right: IAutoMovieMcpArmReach | null;
 
@@ -569,7 +569,7 @@ export interface IAutoMovieMcpReachReport {
    * {@link IAutoMovieMcpArmReach.romViolations} for that (#1338).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reachable: boolean;
 }
@@ -578,14 +578,14 @@ export interface IAutoMovieMcpReachReport {
  * Reachability and IK pose for one arm.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpArmReach {
   /**
    * Arm side.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   side: "left" | "right";
 
@@ -593,7 +593,7 @@ export interface IAutoMovieMcpArmReach {
    * Distance from shoulder to target in model space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   targetDistance: number;
 
@@ -601,7 +601,7 @@ export interface IAutoMovieMcpArmReach {
    * Shoulder-to-hand reach length in model space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   maximumDistance: number;
 
@@ -609,7 +609,7 @@ export interface IAutoMovieMcpArmReach {
    * Positive miss distance; zero means the target is within arm's length.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   gap: number;
 
@@ -624,7 +624,7 @@ export interface IAutoMovieMcpArmReach {
    * about ONE candidate pose (see {@link romViolations}).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reachable: boolean;
 
@@ -641,7 +641,7 @@ export interface IAutoMovieMcpArmReach {
    * direction, asserting an impossibility from a single unsuccessful attempt.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   poseWithinRom: boolean;
 
@@ -653,7 +653,7 @@ export interface IAutoMovieMcpArmReach {
    * staging and blocking against it.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   romViolations: IAutoMovieConstraintViolation[];
 
@@ -663,7 +663,7 @@ export interface IAutoMovieMcpArmReach {
    * use). `null` when no pose could be solved, and {@link poseReason} says why.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   pose: IAutoMoviePose | null;
 
@@ -680,7 +680,7 @@ export interface IAutoMovieMcpArmReach {
    * its arm chain is authored to bend (#1346).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   poseReason: string | null;
 }
@@ -689,14 +689,14 @@ export interface IAutoMovieMcpArmReach {
  * The `measureDistance` query result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMeasureDistanceOutput {
   /**
    * Distance report, or null when either endpoint failed to resolve.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   measurement: IAutoMovieMcpDistanceMeasurement | null;
 
@@ -704,7 +704,7 @@ export interface IAutoMovieMeasureDistanceOutput {
    * Which endpoint failed to resolve when `measurement` is null; else null.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reason: string | null;
 }
@@ -713,14 +713,14 @@ export interface IAutoMovieMeasureDistanceOutput {
  * Resolved endpoints and their Euclidean distance.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpDistanceMeasurement {
   /**
    * First endpoint in world space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   from: IAutoMovieVector3;
 
@@ -728,7 +728,7 @@ export interface IAutoMovieMcpDistanceMeasurement {
    * Second endpoint in world space.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   to: IAutoMovieVector3;
 
@@ -736,7 +736,7 @@ export interface IAutoMovieMcpDistanceMeasurement {
    * Euclidean distance between endpoints, meters.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   distance: number;
 }
@@ -745,14 +745,14 @@ export interface IAutoMovieMcpDistanceMeasurement {
  * Validation tool result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieValidateOutput {
   /**
    * Success or field-located violations.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 }
@@ -765,14 +765,14 @@ export interface IAutoMovieValidateOutput {
  * possibly-stale snapshot over current truth.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpSlateDigest {
   /**
    * Whether a script is committed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   script: boolean;
 
@@ -780,7 +780,7 @@ export interface IAutoMovieMcpSlateDigest {
    * Whether a staged scene is committed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   scene: boolean;
 
@@ -788,7 +788,7 @@ export interface IAutoMovieMcpSlateDigest {
    * Committed shot ids.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   shots: string[];
 
@@ -796,7 +796,7 @@ export interface IAutoMovieMcpSlateDigest {
    * Committed beat-end beats.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   beatEnds: string[];
 
@@ -804,7 +804,7 @@ export interface IAutoMovieMcpSlateDigest {
    * Open review note count.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   notes: number;
 
@@ -812,7 +812,7 @@ export interface IAutoMovieMcpSlateDigest {
    * Whether the assembled film is committed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   film: boolean;
 
@@ -822,7 +822,7 @@ export interface IAutoMovieMcpSlateDigest {
    * downstream was invalidated (including every refusal).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   cleared: string[];
 }
@@ -839,7 +839,7 @@ export interface IAutoMovieCommitOutput {
    * `validation.success`, the one-word answer, not a second status channel.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   committed: boolean;
 
@@ -847,7 +847,7 @@ export interface IAutoMovieCommitOutput {
    * The slate's identity digest after this call (unchanged on refusal).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   state: IAutoMovieMcpSlateDigest;
 
@@ -858,7 +858,7 @@ export interface IAutoMovieCommitOutput {
    * `getShot` / `nextSteps` instead of trusting a per-write echo.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   slate?: IAutoMovieMcpWritableSlate;
 
@@ -866,7 +866,7 @@ export interface IAutoMovieCommitOutput {
    * Success or field-located violations explaining why commit was refused.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 }
@@ -875,14 +875,14 @@ export interface IAutoMovieCommitOutput {
  * Render planning result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePlanRenderOutput {
   /**
    * Success or field-located violations explaining why render cannot start.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 
@@ -890,7 +890,7 @@ export interface IAutoMoviePlanRenderOutput {
    * Deterministic render plan, or null when validation failed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   plan: IAutoMovieMcpRenderPlan | null;
 }
@@ -899,14 +899,14 @@ export interface IAutoMoviePlanRenderOutput {
  * Preview-frame planning result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieSeeFrameOutput {
   /**
    * Success or field-located violations explaining why preview cannot resolve.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 
@@ -914,7 +914,7 @@ export interface IAutoMovieSeeFrameOutput {
    * Preview frame contract, or null when validation failed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   preview: IAutoMovieMcpFramePreview | null;
 }
@@ -923,14 +923,14 @@ export interface IAutoMovieSeeFrameOutput {
  * Shot or sequence selected for rendering.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpRenderTarget {
   /**
    * Render target kind.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   kind: "shot" | "sequence";
 
@@ -938,7 +938,7 @@ export interface IAutoMovieMcpRenderTarget {
    * Committed shot or sequence id.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   id: string;
 }
@@ -947,14 +947,14 @@ export interface IAutoMovieMcpRenderTarget {
  * Deterministic render plan exposed through MCP.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpRenderPlan {
   /**
    * Selected committed target.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   target: IAutoMovieMcpRenderTarget;
 
@@ -962,7 +962,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Target duration in seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   duration: number;
 
@@ -970,7 +970,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Number of frames to capture.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameCount: number;
 
@@ -978,7 +978,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Clip-local sample instants, seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   times: number[];
 
@@ -986,7 +986,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Directory where frame files would be written.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameDir: string;
 
@@ -994,7 +994,7 @@ export interface IAutoMovieMcpRenderPlan {
    * First frame path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   firstFrame: string;
 
@@ -1002,7 +1002,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Last frame path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   lastFrame: string;
 
@@ -1010,7 +1010,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Ffmpeg input pattern for the frame sequence.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   inputPattern: string;
 
@@ -1018,7 +1018,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Encoded output path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   outputPath: string;
 
@@ -1026,7 +1026,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Ffmpeg argument vector for encoding the frames.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   ffmpegArgs: string[];
 
@@ -1034,7 +1034,7 @@ export interface IAutoMovieMcpRenderPlan {
    * Per-pass guide output locations (beauty only unless more requested).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   passes: IAutoMovieGuidePassOutput[];
 }
@@ -1048,14 +1048,14 @@ export interface IAutoMovieMcpRenderPlan {
  * (one entry per chunk, not per frame) even for an hours-long timeline.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpRenderChunk {
   /**
    * Chunk ordinal (0-based, capture order).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   index: number;
 
@@ -1063,7 +1063,7 @@ export interface IAutoMovieMcpRenderChunk {
    * First global output frame index in this chunk (inclusive).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameStart: number;
 
@@ -1071,7 +1071,7 @@ export interface IAutoMovieMcpRenderChunk {
    * One past the last global output frame index (exclusive).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameEnd: number;
 
@@ -1079,7 +1079,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Number of frames in this chunk.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameCount: number;
 
@@ -1087,7 +1087,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Global output second of this chunk's first frame.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   startSeconds: number;
 
@@ -1095,7 +1095,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Global output second of this chunk's last frame.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   endSeconds: number;
 
@@ -1103,7 +1103,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Directory where this chunk's frame files should be written.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameDir: string;
 
@@ -1111,7 +1111,7 @@ export interface IAutoMovieMcpRenderChunk {
    * First chunk frame path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   firstFrame: string;
 
@@ -1119,7 +1119,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Last chunk frame path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   lastFrame: string;
 
@@ -1127,7 +1127,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Ffmpeg input pattern for this chunk's frame sequence.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   inputPattern: string;
 
@@ -1135,7 +1135,7 @@ export interface IAutoMovieMcpRenderChunk {
    * This chunk's encoded video output path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   outputPath: string;
 
@@ -1143,7 +1143,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Exact ffmpeg argument vector for this chunk's encoded output.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   ffmpegArgs: string[];
 
@@ -1151,7 +1151,7 @@ export interface IAutoMovieMcpRenderChunk {
    * Per-pass output locations inside this chunk (present only with passes).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   passOutputs?: IAutoMovieGuidePassOutput[];
 }
@@ -1162,14 +1162,14 @@ export interface IAutoMovieMcpRenderChunk {
  * a two-hour render chunk by chunk without ever holding the whole timeline.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpRenderChunkPlan {
   /**
    * Render target identity.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   target: IAutoMovieMcpRenderTarget;
 
@@ -1177,7 +1177,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * Output fps.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   renderFps: number;
 
@@ -1185,7 +1185,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * Total output frames across all chunks.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frameCount: number;
 
@@ -1193,7 +1193,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * Frames per chunk (the last chunk may be shorter).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   chunkFrames: number;
 
@@ -1201,7 +1201,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * Number of chunks.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   chunkCount: number;
 
@@ -1209,7 +1209,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * The chunks, in capture order.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   chunks: IAutoMovieMcpRenderChunk[];
 
@@ -1217,7 +1217,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * How to stitch the chunk outputs into the final video.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reassembly: IAutoMovieRenderReassembly;
 
@@ -1225,7 +1225,7 @@ export interface IAutoMovieMcpRenderChunkPlan {
    * Per-pass whole-timeline walk orders (present only with passes).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   passManifests?: IAutoMovieRenderPassManifest[];
 }
@@ -1234,14 +1234,14 @@ export interface IAutoMovieMcpRenderChunkPlan {
  * Chunked render planning result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePlanChunkedRenderOutput {
   /**
    * Success or field-located violations explaining why chunking cannot start.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 
@@ -1249,7 +1249,7 @@ export interface IAutoMoviePlanChunkedRenderOutput {
    * Chunked render plan, or null when validation failed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   plan: IAutoMovieMcpRenderChunkPlan | null;
 }
@@ -1258,14 +1258,14 @@ export interface IAutoMoviePlanChunkedRenderOutput {
  * Caption sidecar planning result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePlanCaptionsOutput {
   /**
    * Success or field-located violations explaining why captions cannot plan.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 
@@ -1273,7 +1273,7 @@ export interface IAutoMoviePlanCaptionsOutput {
    * The whole-film caption sidecar, or null when validation failed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   sidecar: IAutoMovieCaptionSidecar | null;
 
@@ -1283,7 +1283,7 @@ export interface IAutoMoviePlanCaptionsOutput {
    * no chunking was requested (or on validation failure).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   chunks: IAutoMovieCaptionSidecar[] | null;
 }
@@ -1292,14 +1292,14 @@ export interface IAutoMoviePlanCaptionsOutput {
  * Pose-keypoint sidecar planning result (#1168).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePlanPoseKeypointsOutput {
   /**
    * Success or field-located violations explaining why keypoints cannot plan.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 
@@ -1307,7 +1307,7 @@ export interface IAutoMoviePlanPoseKeypointsOutput {
    * The per-frame pose-keypoint sidecar, or null when validation failed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   sidecar: IAutoMoviePoseKeypointSidecar | null;
 }
@@ -1318,14 +1318,14 @@ export interface IAutoMoviePlanPoseKeypointsOutput {
  * file belongs. The adapter owns the browser/renderer; the server only plans.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpCaptureRequest {
   /**
    * Selected committed target.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   target: IAutoMovieMcpRenderTarget;
 
@@ -1333,7 +1333,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Zero-based frame index.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frame: number;
 
@@ -1341,7 +1341,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Clip-local sample time in seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   time: number;
 
@@ -1349,7 +1349,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Guide pass to draw.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   pass: AutoMovieGuidePass;
 
@@ -1357,7 +1357,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Deterministic pass-tagged frame path the capture should produce.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   framePath: string;
 
@@ -1365,7 +1365,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Render width in pixels.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   width: number;
 
@@ -1373,7 +1373,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Render height in pixels.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   height: number;
 
@@ -1381,7 +1381,7 @@ export interface IAutoMovieMcpCaptureRequest {
    * Tone mapping requested by the render spec.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   toneMapping: IAutoMovieRenderSpec["toneMapping"];
 }
@@ -1390,14 +1390,14 @@ export interface IAutoMovieMcpCaptureRequest {
  * The captured image the adapter returns for one request.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpCapturedImage {
   /**
    * Frame path the adapter actually wrote (normally the requested one).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   framePath: string;
 
@@ -1405,7 +1405,7 @@ export interface IAutoMovieMcpCapturedImage {
    * Image MIME type, or null when the adapter wrote a file only.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   mimeType: string | null;
 
@@ -1413,7 +1413,7 @@ export interface IAutoMovieMcpCapturedImage {
    * Inline image payload for immediate inspection, or null when file-only.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   dataUrl: string | null;
 }
@@ -1425,7 +1425,7 @@ export interface IAutoMovieMcpCapturedImage {
  * validation issue, and propagates as a tool error.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export type AutoMovieMcpFrameCapture = (
   request: IAutoMovieMcpCaptureRequest,
@@ -1435,14 +1435,14 @@ export type AutoMovieMcpFrameCapture = (
  * Preview frame returned by `seeFrame`.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpFramePreview {
   /**
    * Selected committed target.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   target: IAutoMovieMcpRenderTarget;
 
@@ -1450,7 +1450,7 @@ export interface IAutoMovieMcpFramePreview {
    * Zero-based frame index.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frame: number;
 
@@ -1458,7 +1458,7 @@ export interface IAutoMovieMcpFramePreview {
    * Clip-local sample time in seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   time: number;
 
@@ -1466,7 +1466,7 @@ export interface IAutoMovieMcpFramePreview {
    * Guide pass drawn (or planned, when no adapter is attached).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   pass: AutoMovieGuidePass;
 
@@ -1474,7 +1474,7 @@ export interface IAutoMovieMcpFramePreview {
    * Deterministic pass-tagged frame path.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   framePath: string;
 
@@ -1482,7 +1482,7 @@ export interface IAutoMovieMcpFramePreview {
    * Render width in pixels.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   width: number;
 
@@ -1490,7 +1490,7 @@ export interface IAutoMovieMcpFramePreview {
    * Render height in pixels.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   height: number;
 
@@ -1498,7 +1498,7 @@ export interface IAutoMovieMcpFramePreview {
    * Tone mapping requested by the render spec.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   toneMapping: IAutoMovieRenderSpec["toneMapping"];
 
@@ -1507,7 +1507,7 @@ export interface IAutoMovieMcpFramePreview {
    * when the server has no adapter and only planned the frame.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   status: "captured" | "no-capture-adapter";
 
@@ -1515,7 +1515,7 @@ export interface IAutoMovieMcpFramePreview {
    * The captured image, or null when no adapter is attached.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   image: IAutoMovieMcpCapturedImage | null;
 }
@@ -1524,14 +1524,14 @@ export interface IAutoMovieMcpFramePreview {
  * The `stage` tool's result (a single object wrapping the engine's union).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieStageOutput {
   /**
    * The staged scene on success, or the staging violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   staged: IAutoMovieStagedSet;
 }
@@ -1540,14 +1540,14 @@ export interface IAutoMovieStageOutput {
  * The `block` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieBlockOutput {
   /**
    * The blocked beat on success, or the blocking violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   blocked: IAutoMovieBlockedBeat;
 }
@@ -1560,14 +1560,14 @@ export interface IAutoMovieBlockOutput {
  * MCP-supplied gait limbs.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpActorContext {
   /**
    * Skeleton id every synthesized clip targets.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   skeleton: string;
 
@@ -1575,7 +1575,7 @@ export interface IAutoMovieMcpActorContext {
    * Gaits this actor can perform, without tuple-valued bezier controls.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   gaits: IAutoMovieMcpGait[];
 
@@ -1586,7 +1586,7 @@ export interface IAutoMovieMcpActorContext {
    * explicit call (or a beat with no committed predecessor) must pass it.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   position?: IAutoMovieVector3;
 
@@ -1594,7 +1594,7 @@ export interface IAutoMovieMcpActorContext {
    * Locomotion speed (m/s): how fast a `locomote` carries the actor.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   speed: number;
 
@@ -1604,7 +1604,7 @@ export interface IAutoMovieMcpActorContext {
    * committed end-state facing.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   facingDeg?: number;
 
@@ -1616,7 +1616,7 @@ export interface IAutoMovieMcpActorContext {
    * one. `null` (or omission with nothing recorded) starts the cycle at zero.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   gaitPhase?: number | null;
 
@@ -1624,7 +1624,7 @@ export interface IAutoMovieMcpActorContext {
    * Eye height above the actor's position (meters): where a `lookAt` aims from.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   eyeHeight: number;
 
@@ -1632,7 +1632,7 @@ export interface IAutoMovieMcpActorContext {
    * The pose the actor settles into for a `hold`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   restPose: IAutoMoviePose;
 
@@ -1645,7 +1645,7 @@ export interface IAutoMovieMcpActorContext {
    * declare instead of putting the whole angle on the head.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   rig?: IAutoMovieSkeleton;
 
@@ -1658,7 +1658,7 @@ export interface IAutoMovieMcpActorContext {
    * angles. A custom table must be paired with the same frames on the player.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   restFrames?: IAutoMovieActorContext["restFrames"];
 }
@@ -1672,7 +1672,7 @@ export interface IAutoMovieMcpActorContext {
  * them back.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpActorSpec extends Omit<
   IAutoMovieMcpActorContext,
@@ -1682,7 +1682,7 @@ export interface IAutoMovieMcpActorSpec extends Omit<
    * The scene node / cast id this context belongs to (the storage key).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   node: string;
 }
@@ -1693,14 +1693,14 @@ export interface IAutoMovieMcpActorSpec extends Omit<
  * express here.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpGait {
   /**
    * Stable name (`"walk"`, `"trot"`, `"gallop"`, `"stalk"`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   name: string;
 
@@ -1708,7 +1708,7 @@ export interface IAutoMovieMcpGait {
    * Stride period (one full cycle) in seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   period: number;
 
@@ -1719,7 +1719,7 @@ export interface IAutoMovieMcpGait {
    * to leave root placement entirely to travel/staging.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   rootBob?: IAutoMovieGaitRootBob;
 
@@ -1730,7 +1730,7 @@ export interface IAutoMovieMcpGait {
    * (diagonal pairs).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   limbs: IAutoMovieMcpGaitLimb[];
 }
@@ -1739,14 +1739,14 @@ export interface IAutoMovieMcpGait {
  * JSON-safe gait limb channel accepted by the MCP `perform` tool.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpGaitLimb {
   /**
    * The bone this limb's swing drives (a leg's upper bone).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   bone: AutoMovieHumanoidBone;
 
@@ -1756,7 +1756,7 @@ export interface IAutoMovieMcpGaitLimb {
    * `"twist"` for axial gait details.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   axis?: "flexion" | "abduction" | "twist";
 
@@ -1765,7 +1765,7 @@ export interface IAutoMovieMcpGaitLimb {
    * that distinguishes one gait's footfall sequence from another's.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   phase: number;
 
@@ -1775,7 +1775,7 @@ export interface IAutoMovieMcpGaitLimb {
    * walk has a high duty (long ground contact); a gallop a low one.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   duty: number;
 
@@ -1783,7 +1783,7 @@ export interface IAutoMovieMcpGaitLimb {
    * Peak swing on `axis` (degrees) about the limb's neutral.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   amplitude: number;
 
@@ -1792,7 +1792,7 @@ export interface IAutoMovieMcpGaitLimb {
    * means `"linear"`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   stanceEasing?: AutoMovieEasing;
 
@@ -1801,7 +1801,7 @@ export interface IAutoMovieMcpGaitLimb {
    * `"linear"`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   swingEasing?: AutoMovieEasing;
 
@@ -1815,7 +1815,7 @@ export interface IAutoMovieMcpGaitLimb {
    * forces once you try to bend a knee at all.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   neutral?: number;
 }
@@ -1827,7 +1827,7 @@ export interface IAutoMovieMcpGaitLimb {
  * named object fields so MCP schema generation stays JSON-schema compatible.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export type IAutoMovieMcpPerformedShot =
   | IAutoMovieMcpPerformedShot.ISuccess
@@ -1837,14 +1837,14 @@ export namespace IAutoMovieMcpPerformedShot {
    * The performance compiled and every clip passed validation.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   export interface ISuccess {
     /**
      * Discriminator.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     success: true;
 
@@ -1852,7 +1852,7 @@ export namespace IAutoMovieMcpPerformedShot {
      * The shot, ready for the cut.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     shot: IAutoMovieShot;
 
@@ -1860,7 +1860,7 @@ export namespace IAutoMovieMcpPerformedShot {
      * Compact identity and duration for each synthesized clip.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     motionSummary: IAutoMovieMcpPerformedMotionSummary[];
 
@@ -1870,7 +1870,7 @@ export namespace IAutoMovieMcpPerformedShot {
      * reads the same-session registry instead.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     motions: Record<string, IAutoMovieMcpMotion>;
   }
@@ -1879,14 +1879,14 @@ export namespace IAutoMovieMcpPerformedShot {
    * The action list contradicted the stage, or a compiled clip broke ROM.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   export interface IFailure {
     /**
      * Discriminator.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     success: false;
 
@@ -1894,7 +1894,7 @@ export namespace IAutoMovieMcpPerformedShot {
      * Every violation found, for the correction round.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     violations: IAutoMovieConstraintViolation[];
   }
@@ -1904,14 +1904,14 @@ export namespace IAutoMovieMcpPerformedShot {
  * One compact entry for a synthesized motion clip.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpPerformedMotionSummary {
   /**
    * Scene node the clip animates.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   node: string;
 
@@ -1919,7 +1919,7 @@ export interface IAutoMovieMcpPerformedMotionSummary {
    * Stable clip id the shot references.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   id: string;
 
@@ -1927,7 +1927,7 @@ export interface IAutoMovieMcpPerformedMotionSummary {
    * Total clip duration in seconds.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   duration: number;
 }
@@ -1936,14 +1936,14 @@ export interface IAutoMovieMcpPerformedMotionSummary {
  * One profile-bound channel component clamped while resolving a prop frame.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpPropClamp {
   /**
    * Concrete node channel that exceeded its declared profile limit.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   channel: string;
 
@@ -1951,7 +1951,7 @@ export interface IAutoMovieMcpPropClamp {
    * Profile whose declared limit applied.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   profile: string;
 
@@ -1959,7 +1959,7 @@ export interface IAutoMovieMcpPropClamp {
    * Index within the channel value vector.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   component: number;
 
@@ -1967,7 +1967,7 @@ export interface IAutoMovieMcpPropClamp {
    * Whether the lower or upper limit applied.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   bound: "min" | "max";
 
@@ -1975,7 +1975,7 @@ export interface IAutoMovieMcpPropClamp {
    * Authored value before the clamp.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   actual: number;
 
@@ -1983,7 +1983,7 @@ export interface IAutoMovieMcpPropClamp {
    * Value enforced by the declared limit.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   limit: number;
 }
@@ -1992,14 +1992,14 @@ export interface IAutoMovieMcpPropClamp {
  * Resolved articulated-prop state at one committed shot instant.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpResolvedPropFrame {
   /**
    * Concrete lowered node id to column-major world matrix.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   world: Record<string, number[]>;
 
@@ -2007,7 +2007,7 @@ export interface IAutoMovieMcpResolvedPropFrame {
    * Every declared limit that clamped this frame.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   clamps: IAutoMovieMcpPropClamp[];
 
@@ -2015,7 +2015,7 @@ export interface IAutoMovieMcpResolvedPropFrame {
    * Driver kinds deferred because this one-frame query cannot step them.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   deferredDriverTypes: string[];
 }
@@ -2024,14 +2024,14 @@ export interface IAutoMovieMcpResolvedPropFrame {
  * Resident articulated-prop frame query result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieGetResolvedPropFrameOutput {
   /**
    * Resolved frame, or null when the resident scene/shot cannot resolve.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   frame: IAutoMovieMcpResolvedPropFrame | null;
 
@@ -2039,7 +2039,7 @@ export interface IAutoMovieGetResolvedPropFrameOutput {
    * Actionable absence or validation reason, null on success.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   reason: string | null;
 }
@@ -2050,14 +2050,14 @@ export interface IAutoMovieGetResolvedPropFrameOutput {
  * `enact` action plays (#1148).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpMotion {
   /**
    * Stable id so scenes and exports can cite this clip.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   id: string;
 
@@ -2065,7 +2065,7 @@ export interface IAutoMovieMcpMotion {
    * Which skeleton this clip animates. Every keyframe pose targets this rig.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   skeleton: string;
 
@@ -2073,7 +2073,7 @@ export interface IAutoMovieMcpMotion {
    * Total clip length, seconds. Every keyframe `time` must be `<= duration`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   duration: number;
 
@@ -2082,7 +2082,7 @@ export interface IAutoMovieMcpMotion {
    * keyframe to be continuous with the first.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   loop: boolean;
 
@@ -2091,7 +2091,7 @@ export interface IAutoMovieMcpMotion {
    * clip needs a start and an end to interpolate between.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   keyframes: IAutoMovieMcpKeyframe[];
 
@@ -2101,7 +2101,7 @@ export interface IAutoMovieMcpMotion {
    * end. Absent/null = no cycle to resume.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   gaitCycle?: IAutoMovieGaitCycle | null;
 }
@@ -2110,7 +2110,7 @@ export interface IAutoMovieMcpMotion {
  * JSON-safe keyframe returned by the MCP `perform` tool.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpKeyframe {
   /**
@@ -2119,7 +2119,7 @@ export interface IAutoMovieMcpKeyframe {
    * engine's temporal verifier.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   time: number;
 
@@ -2127,7 +2127,7 @@ export interface IAutoMovieMcpKeyframe {
    * The body pose held at this instant.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   pose: IAutoMoviePose;
 
@@ -2138,7 +2138,7 @@ export interface IAutoMovieMcpKeyframe {
    * across the segment, and one authored only at the near keyframe fades out.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   expression: IAutoMovieExpression | null;
 
@@ -2146,7 +2146,7 @@ export interface IAutoMovieMcpKeyframe {
    * How to interpolate from this keyframe toward the next.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   easing: AutoMovieEasing;
 
@@ -2157,7 +2157,7 @@ export interface IAutoMovieMcpKeyframe {
    * numbers instead. Same values, same order.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   bezier: IAutoMovieMcpBezier | null;
 }
@@ -2168,14 +2168,14 @@ export interface IAutoMovieMcpKeyframe {
  * convention).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpBezier {
   /**
    * First control point x, in `[0, 1]`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   x1: number;
 
@@ -2183,7 +2183,7 @@ export interface IAutoMovieMcpBezier {
    * First control point y.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   y1: number;
 
@@ -2191,7 +2191,7 @@ export interface IAutoMovieMcpBezier {
    * Second control point x, in `[0, 1]`.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   x2: number;
 
@@ -2199,7 +2199,7 @@ export interface IAutoMovieMcpBezier {
    * Second control point y.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   y2: number;
 }
@@ -2208,14 +2208,14 @@ export interface IAutoMovieMcpBezier {
  * The `perform` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePerformOutput {
   /**
    * The performed shot on success, or the performance violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   performed: IAutoMovieMcpPerformedShot;
 }
@@ -2224,14 +2224,14 @@ export interface IAutoMoviePerformOutput {
  * The `cut` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieCutOutput {
   /**
    * The cut film on success, or the assemble violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   cut: IAutoMovieCut;
 }
@@ -2240,14 +2240,14 @@ export interface IAutoMovieCutOutput {
  * The `forge` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieForgeOutput {
   /**
    * The forged cast on success, or the forge violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   forged: IAutoMovieForgedCast;
 }
@@ -2256,14 +2256,14 @@ export interface IAutoMovieForgeOutput {
  * A source-to-output value range, the JSON-safe form of a `[from, to]` pair.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpRange {
   /**
    * Range start.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   from: number;
 
@@ -2271,7 +2271,7 @@ export interface IAutoMovieMcpRange {
    * Range end.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   to: number;
 }
@@ -2282,7 +2282,7 @@ export interface IAutoMovieMcpRange {
  * cannot express tuples), converted to the engine's pairs in `convert.ts`.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpDrivenDriver extends Omit<
   IAutoMovieDrivenDriver,
@@ -2292,7 +2292,7 @@ export interface IAutoMovieMcpDrivenDriver extends Omit<
    * Source value range mapped onto {@link outRange}. Omit when `curve` is set.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   inRange?: IAutoMovieMcpRange;
 
@@ -2300,7 +2300,7 @@ export interface IAutoMovieMcpDrivenDriver extends Omit<
    * Output value range. Omit when `curve` is set.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   outRange?: IAutoMovieMcpRange;
 }
@@ -2309,7 +2309,7 @@ export interface IAutoMovieMcpDrivenDriver extends Omit<
  * A prop profile driver as the MCP boundary accepts it, tuple-free.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export type IAutoMovieMcpPropDriver =
   | IAutoMovieCopyDriver
@@ -2326,14 +2326,14 @@ export type IAutoMovieMcpPropDriver =
  * `perform` tool's actor contexts instead.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpPropProfile {
   /**
    * Stable profile id.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   id: string;
 
@@ -2341,7 +2341,7 @@ export interface IAutoMovieMcpPropProfile {
    * Profile name (e.g. `"hinge"`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   name: string;
 
@@ -2349,7 +2349,7 @@ export interface IAutoMovieMcpPropProfile {
    * The named controls this profile exposes.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   controls: IAutoMovieProfileControl[];
 
@@ -2357,7 +2357,7 @@ export interface IAutoMovieMcpPropProfile {
    * Drivers coupling the prop's joints, tuple-free.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   drivers: IAutoMovieMcpPropDriver[];
 
@@ -2365,7 +2365,7 @@ export interface IAutoMovieMcpPropProfile {
    * Value constraints over the prop's joints (the hinge's 0..110°).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   limits: IAutoMovieChannelLimit[];
 }
@@ -2374,14 +2374,14 @@ export interface IAutoMovieMcpPropProfile {
  * A prop's self-declared moving parts as the MCP boundary accepts them.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpPropArticulation {
   /**
    * The prop's internal joint nodes.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   nodes: IAutoMovieNode[];
 
@@ -2389,7 +2389,7 @@ export interface IAutoMovieMcpPropArticulation {
    * The declared capability over those nodes.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   profile: IAutoMovieMcpPropProfile;
 
@@ -2397,7 +2397,7 @@ export interface IAutoMovieMcpPropArticulation {
    * The application of the profile onto the nodes (`boneMap`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   binding: IAutoMovieProfileBinding;
 }
@@ -2407,14 +2407,14 @@ export interface IAutoMovieMcpPropArticulation {
  * rich meaning: body, affordances, self-declared articulation.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpPropSpec {
   /**
    * The scene node this prop will occupy (the staging join key).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   node: string;
 
@@ -2422,7 +2422,7 @@ export interface IAutoMovieMcpPropSpec {
    * The prop model: generated, skeleton-less, primitive parts.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   model: IAutoMovieModel;
 
@@ -2430,7 +2430,7 @@ export interface IAutoMovieMcpPropSpec {
    * Self-declared moving parts, or `null` for a rigid prop.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   articulation: IAutoMovieMcpPropArticulation | null;
 }
@@ -2441,7 +2441,7 @@ export interface IAutoMovieMcpPropSpec {
  * LLM schema cannot express).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export type IAutoMovieMcpForgedProp =
   | IAutoMovieMcpForgedProp.ISuccess
@@ -2451,14 +2451,14 @@ export namespace IAutoMovieMcpForgedProp {
    * The prop passed both contracts.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   export interface ISuccess {
     /**
      * Discriminator.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     success: true;
 
@@ -2466,7 +2466,7 @@ export namespace IAutoMovieMcpForgedProp {
      * The accepted spec, echoed for the staging join.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     prop: IAutoMovieMcpPropSpec;
   }
@@ -2475,14 +2475,14 @@ export namespace IAutoMovieMcpForgedProp {
    * The spec broke a contract.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   export interface IFailure {
     /**
      * Discriminator.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     success: false;
 
@@ -2490,7 +2490,7 @@ export namespace IAutoMovieMcpForgedProp {
      * Every violation found, for the correction round.
      *
      * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+     * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
      */
     violations: IAutoMovieConstraintViolation[];
   }
@@ -2500,14 +2500,14 @@ export namespace IAutoMovieMcpForgedProp {
  * The `forgeProp` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieForgePropOutput {
   /**
    * The forged prop on success, or the forge violations on failure.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   forged: IAutoMovieMcpForgedProp;
 
@@ -2520,7 +2520,7 @@ export interface IAutoMovieForgePropOutput {
    * byte-compatible, and on failed forges, which write nothing.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   stored?: boolean;
 
@@ -2533,7 +2533,7 @@ export interface IAutoMovieForgePropOutput {
    * contract's own verdict.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation?: IAutoMovieValidation;
 }
@@ -2543,14 +2543,14 @@ export interface IAutoMovieForgePropOutput {
  * binary assets the manifest tracks (#614: the project folder is the memory).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieMcpProjectSummary {
   /**
    * Absolute project root directory.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   root: string;
 
@@ -2558,7 +2558,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Whether `script.json` exists.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   script: boolean;
 
@@ -2566,7 +2566,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Whether `scene.json` exists.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   scene: boolean;
 
@@ -2574,7 +2574,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Committed shot ids (`shots/<beat>.json`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   shots: string[];
 
@@ -2582,7 +2582,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Committed beat-end beats (`beatEnds/<beat>.json`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   beatEnds: string[];
 
@@ -2590,7 +2590,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Open review note count.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   notes: number;
 
@@ -2598,7 +2598,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Whether `film.json` exists.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   film: boolean;
 
@@ -2606,7 +2606,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Stored forged prop nodes (`props/<node>.json`).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   props: string[];
 
@@ -2614,7 +2614,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Stored actor context nodes (`actors/<node>.json`, #1176).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   actors: string[];
 
@@ -2630,7 +2630,7 @@ export interface IAutoMovieMcpProjectSummary {
    * yet).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   staleRenders: string[];
 
@@ -2638,7 +2638,7 @@ export interface IAutoMovieMcpProjectSummary {
    * Tracked binary asset paths, project-relative, in registration order.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   assets: string[];
 }
@@ -2647,14 +2647,14 @@ export interface IAutoMovieMcpProjectSummary {
  * The `openProject` tool's result.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieOpenProjectOutput {
   /**
    * The activated project's summary.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   project: IAutoMovieMcpProjectSummary;
 }
@@ -2665,14 +2665,14 @@ export interface IAutoMovieOpenProjectOutput {
  * mistake existed and its files were removed (with the downstream cascade).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieEraseOutput {
   /**
    * True only when the named artifact existed and was removed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   erased: boolean;
 
@@ -2680,7 +2680,7 @@ export interface IAutoMovieEraseOutput {
    * The resident slate's identity digest after the erase (#1132).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   state: IAutoMovieMcpSlateDigest;
 
@@ -2688,7 +2688,7 @@ export interface IAutoMovieEraseOutput {
    * Success, or the violations explaining why the erase was refused.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 }
@@ -2700,14 +2700,14 @@ export interface IAutoMovieEraseOutput {
  * the documented downstream cascade).
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieSetOutput {
   /**
    * True only when the named target existed and was replaced.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   updated: boolean;
 
@@ -2715,7 +2715,7 @@ export interface IAutoMovieSetOutput {
    * The resident slate's identity digest after the set (#1132).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   state: IAutoMovieMcpSlateDigest;
 
@@ -2723,7 +2723,7 @@ export interface IAutoMovieSetOutput {
    * Success, or the violations explaining why the set was refused.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 }
@@ -2735,14 +2735,14 @@ export interface IAutoMovieSetOutput {
  * places is refused: unstaging is `commitScene`'s job, not a spec erase's.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMoviePropEraseOutput {
   /**
    * True only when the named prop spec existed and its file was removed.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   erased: boolean;
 
@@ -2750,7 +2750,7 @@ export interface IAutoMoviePropEraseOutput {
    * Stored prop nodes after the call (unchanged when refused).
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   props: string[];
 
@@ -2758,7 +2758,7 @@ export interface IAutoMoviePropEraseOutput {
    * Success, or the violations explaining why the erase was refused.
    *
    * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
    */
   validation: IAutoMovieValidation;
 }
@@ -2771,7 +2771,7 @@ export interface IAutoMoviePropEraseOutput {
  * beats depend on, and unstaging is `commitScene`'s job.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps this public package contract available to ordinary typed source instead of hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the five-tool MCP authoring surface.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps this code-native declaration outside the MCP authoring surface.
  */
 export interface IAutoMovieActorEraseOutput {
   /**

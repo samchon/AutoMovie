@@ -124,7 +124,7 @@ export interface IAutoMovieProductionProjectSummary {
  * One declared coding-agent input whose bytes enter compile identity.
  *
  * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Represents each declared repository file whose exact presence and bytes determine a coding-agent build.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives compiler identity a typed content record independent of the five-tool transport.
+ * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives compiler identity a typed content record independent of the transport.
  */
 export interface IAutoMovieProductionContentInput {
   /**
@@ -2843,6 +2843,13 @@ export class AutoMovieProductionProject {
           "film",
           `${encodeId(target.id)}.json`,
         );
+      case "subject":
+        return path.join(
+          this.reviewRoot,
+          "subjects",
+          encodeId(target.shot),
+          `${encodeId(target.subject)}.json`,
+        );
     }
   }
 
@@ -3585,13 +3592,15 @@ const validateManifest = (
         ))) ||
     (record.assetManifest !== undefined &&
       record.assetManifest !== ".automovie/assets.json") ||
+    (record.derivedArtifactManifest !== undefined &&
+      record.derivedArtifactManifest !== ".automovie/derived-artifacts.json") ||
     typeof record.generatedRoot !== "string" ||
     record.generatedRoot.trim().length === 0 ||
     typeof record.renderRoot !== "string" ||
     record.renderRoot.trim().length === 0
   )
     throw new Error(
-      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json".`,
+      `Invalid production manifest "${file}". Provide projectId, sourceRoots, generatedRoot and renderRoot; when present, assetManifest must be ".automovie/assets.json" and derivedArtifactManifest must be ".automovie/derived-artifacts.json".`,
     );
   const manifest = record as IAutoMovieProductionManifest &
     Record<string, unknown>;
@@ -4165,6 +4174,8 @@ const modelRecipeDependsOn = (
 const reviewConsequenceKey = (target: IAutoMovieReviewTarget): string => {
   if (target.kind === "design") return `design:${targetKey(target.design)}`;
   if (target.kind === "source") return `source:${target.path}`;
+  if (target.kind === "subject")
+    return `subject:${target.shot}:${target.subject}`;
   return `${target.kind}:${target.id}`;
 };
 

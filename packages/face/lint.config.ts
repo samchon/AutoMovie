@@ -1,19 +1,20 @@
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-/** Declarations reachable from the package barrel. */
-const publicLeaves: string[] = [
-  "src/canonicalFace.ts",
-  "src/eyeShells.ts",
-  "src/faceMorphs.ts",
-  "src/hairShell.ts",
-  "src/hairTails.ts",
-  "src/headMorph.ts",
-  "src/profileAmplitude.ts",
-  "src/silhouetteBands.ts",
-  "src/similarity2.ts",
-  "src/taubinSmooth.ts",
-];
+/**
+ * Every supported public declaration under `src` is selected for contract evidence.
+ *
+ * The population is derived from the source tree instead of enumerated, so a
+ * file joins the graph by existing rather than by someone remembering to list
+ * it here. The barrel is the only exclusion: it re-exports declarations that
+ * already answer for their contracts at their definition.
+ *
+ * Deriving the population is maintenance of the frozen package rather than an
+ * extension of it. It adds no export, no geometry, and no fidelity; it only
+ * lets the graph check the frozen-boundary citations these declarations already
+ * carry.
+ */
+const publicLeaves: string[] = ["src/**/*.ts", "!src/**/index.ts"];
 
 const graph: ITtscEvidenceGraphConfig = {
   claims: [

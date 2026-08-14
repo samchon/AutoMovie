@@ -24,7 +24,7 @@ This division keeps creative judgment with the user and coding agent while makin
 
 The coding agent owns `src`, `docs`, `test`, and `public`. It writes ordinary files and runs ordinary package commands. AutoMovie owns bounded design state, compiler output, review records, render receipts, and content-addressed delivery artifacts.
 
-The MCP server is deliberately narrow. It exposes exactly five tools for facts that a normal coding channel cannot carry safely:
+The MCP server is deliberately narrow. It exposes only the facts a normal coding channel cannot carry safely, and the table below is the whole surface:
 
 | Tool               | Responsibility                                                           |
 | ------------------ | ------------------------------------------------------------------------ |
@@ -69,7 +69,7 @@ The generated README explains the complete tracked-authoring, compile, capture, 
 | [`@automovie/ingest`](./packages/ingest)                     | Digest-bound glTF, GLB, and VRM inspection for registered external models.                                                          |
 | [`@automovie/face`](./packages/face)                         | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary.                                     |
 | [`@automovie/archetypes`](./packages/archetypes)             | Primitive model archetype catalogue: parameter schemas, bounds, and geometry builders behind one registry.                          |
-| [`@automovie/mcp`](./packages/mcp)                           | Five-tool knowledge, host-evidence, optional repaint, and verdict-last review boundary.                                             |
+| [`@automovie/mcp`](./packages/mcp)                           | Knowledge, host-evidence, optional repaint, and verdict-last review boundary.                                             |
 | [`@automovie/cli`](./packages/cli)                           | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
 | [`create-automovie`](./packages/create-automovie)            | Package-manager-native one-command project creator.                                                                                 |
 | [`@automovie/playground`](./packages/playground)             | Browser demonstrations for inspecting deterministic models, motion, cameras, and imported assets.                                   |

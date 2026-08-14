@@ -6,6 +6,7 @@ import {
   productionRuntimeModelId,
   productionRuntimeSkeletonId,
   seededValue,
+  srgbHexToLinearColor,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
@@ -1286,17 +1287,15 @@ const materialOf = (
   const [name, hex] = Object.entries(recipe.palette).sort(([left], [right]) =>
     compareCodeUnits(left, right),
   )[0]!;
-  const channels = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)!;
   return {
     id: name,
     name,
-    baseColor: {
-      r: Number.parseInt(channels[1]!, 16) / 255,
-      g: Number.parseInt(channels[2]!, 16) / 255,
-      b: Number.parseInt(channels[3]!, 16) / 255,
-      a: 1,
-      hex,
-    },
+    // A recipe palette is an sRGB swatch and `baseColor` is linear, so the
+    // digits are decoded rather than divided by 255. Dividing was this
+    // repository's only sRGB-to-linear "conversion", and being an identity it
+    // made every generated material about 2.3x too bright at midtones while
+    // instanced slots covering the same surface decoded theirs correctly.
+    baseColor: srgbHexToLinearColor(hex),
     metallic: 0,
     roughness: 0.7,
     emissive: null,

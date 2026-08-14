@@ -18,6 +18,10 @@ import { soloist } from "./soloist";
  * not an individual inside it. So this subject renders nothing on its own and
  * the formation that holds it is what a shot stages. What it owns is the
  * member's measured facts and the LOD ladder those facts imply.
+ *
+ * @evidence docs/characters/chorus.md Answers the Scale section for one member:
+ *   the document states 1.7 m and "a head shorter than the soloist" at once,
+ *   and this class is where both readings are held against each other.
  */
 export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "chorus-hero";
@@ -174,6 +178,11 @@ export const chorusHero = new ChorusMember();
  * built model. A tier with no skeleton and no profile bakes nothing, so a box
  * tier is a row standing frozen behind rows that walk, which is the one thing
  * the group must never look like.
+ *
+ * @evidence docs/characters/chorus.md Answers the Life section at distance:
+ *   that section holds "at every distance the group is seen from", so the
+ *   coarse rungs are still articulated figures with a baked stride rather than
+ *   boxes, which is the only reading of it that survives the far tier.
  */
 export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public constructor(

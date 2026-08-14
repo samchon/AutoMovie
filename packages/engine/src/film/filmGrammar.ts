@@ -63,6 +63,21 @@ export interface IAutoMovieGrammarSubjectObservation {
    */
   height: number;
   /**
+   * Half the subject's horizontal diagonal in metres, or 0 when nothing
+   * horizontal could be measured.
+   *
+   * The same number {@link IAutoMovieFramedBox.radius} states, and read here for
+   * the same reason the framing solve reads it: a subject wider than the frame
+   * can hold at its declared height is placed by its width, so a shot size
+   * measured from the height alone reports a framing no camera delivered. A
+   * figure is taller than it is wide at every shot size and its radius decides
+   * nothing; a 60 m facade is the opposite.
+   *
+   * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.radius supplies deterministic spatial-grammar analysis: Half the subject's horizontal diagonal in metres, so a width-placed camera is read at the size it delivers.
+   * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar IAutoMovieGrammarSubjectObservation.radius realizes deterministic continuity-grammar analysis: Half the subject's horizontal diagonal in metres, or 0 when nothing horizontal could be measured, read for the same reason the framing solve reads it: a subject wider than the frame can hold at its declared height is placed by its width, so a shot size measured from the height alone reports a framing no camera delivered.
+   */
+  radius: number;
+  /**
    * Resolved gaze target over the shot, or null when it is not observed.
    *
    * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar IAutoMovieGrammarSubjectObservation.eyeline supplies deterministic spatial-grammar analysis: Resolved gaze target over the shot, or null when it is not observed.
@@ -497,16 +512,22 @@ export const grammarDiagnosticsToReviewNotes = (props: {
   }));
 
 /**
- * Classify a subject's measured fraction of total frame height.
+ * Classify a subject's measured fraction of the frame.
  *
- * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar classifyGrammarShotSize supplies deterministic spatial-grammar analysis: Classify a subject's measured fraction of total frame height.
- * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar classifyGrammarShotSize realizes deterministic continuity-grammar analysis: Classify a subject's measured fraction of total frame height.
+ * The fraction is of the frame's own height for a subject the frame holds
+ * vertically, and of its width for one whose width is what placed the camera:
+ * {@link FRAMING_HEIGHT_FRACTION} is applied to both axes by the framing solve,
+ * so the axis that fills the most of its own side is the one that states the
+ * size delivered.
+ *
+ * @evidence requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar classifyGrammarShotSize supplies deterministic spatial-grammar analysis: Classify a subject's measured fraction of the frame, of its height or of its width, whichever the subject fills more.
+ * @evidence specifications/editorial-render-and-delivery/editorial-audiovisual-continuity.md#spec-editorial-continuity-grammar classifyGrammarShotSize realizes deterministic continuity-grammar analysis: Classify a subject's measured fraction of the frame. The fraction is of the frame's own height for a subject the frame holds vertically, and of its width for one whose width is what placed the camera: the framing fractions are applied to both axes by the framing solve, so the axis that fills the most of its own side is the one that states the size delivered.
  */
 export const classifyGrammarShotSize = (
-  verticalFrameOccupancy: number,
+  frameOccupancy: number,
 ): IAutoMovieCameraIntent["framing"] => {
-  positive(verticalFrameOccupancy, "verticalFrameOccupancy");
-  const visibleHeightMultiple = 1 / verticalFrameOccupancy;
+  positive(frameOccupancy, "frameOccupancy");
+  const visibleHeightMultiple = 1 / frameOccupancy;
   return (
     Object.entries(FRAMING_HEIGHT_FRACTION) as [
       IAutoMovieCameraIntent["framing"],
@@ -562,6 +583,7 @@ const normalizeShot = (
     finiteVector(subject.start, `${input.id}.${subject.id}.start`);
     finiteVector(subject.end, `${input.id}.${subject.id}.end`);
     positive(subject.height, `${input.id}.${subject.id}.height`);
+    nonNegative(subject.radius, `${input.id}.${subject.id}.radius`);
     if (subject.eyeline !== null) {
       nonBlank(
         subject.eyeline.target,
@@ -876,7 +898,16 @@ const measuredShotSize = (
     camera.aspect,
   );
   if (base.depth <= EPSILON || top.depth <= EPSILON) return null;
-  const occupancy = Math.abs(top.ndcY - base.ndcY) / 2;
+  // Both axes, because the solve places the camera at whichever distance holds
+  // the subject on the axis that binds: `compileCameraMove` takes the greater
+  // of the height-derived and width-derived distances, so at the distance it
+  // chose, the subject fills the declared fraction of exactly one axis and less
+  // of the other. Reading the vertical fill alone therefore reports a wide
+  // subject one or two sizes looser than the camera actually delivered, and
+  // asks the author to move in until the ends of the mass leave the frame.
+  const vertical = Math.abs(top.ndcY - base.ndcY) / 2;
+  const horizontal = subject.radius / (base.depth * halfY * camera.aspect);
+  const occupancy = Math.max(vertical, horizontal);
   return occupancy <= EPSILON ? null : classifyGrammarShotSize(occupancy);
 };
 
@@ -961,6 +992,11 @@ const screenRelation = (direction: {
 const positive = (value: number, path: string): void => {
   if (Number.isFinite(value) === false || value <= 0)
     throw new Error(`${path} must be finite and positive.`);
+};
+
+const nonNegative = (value: number, path: string): void => {
+  if (Number.isFinite(value) === false || value < 0)
+    throw new Error(`${path} must be finite and non-negative.`);
 };
 
 const nonBlank = (value: string, path: string): void => {

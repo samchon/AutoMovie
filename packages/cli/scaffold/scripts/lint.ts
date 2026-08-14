@@ -17,6 +17,15 @@ import config from "../automovie.config";
  * says nothing about whether the work so far is structurally sound. Without a
  * choice here the only in-progress check left is `lint:source`, which is a
  * TypeScript pass and runs none of the `automovie` rules.
+ *
+ * A scope selects which gates run; it is not a filter over the `phase` field a
+ * diagnostic carries. `phase` names the pipeline stage that owns the
+ * correction, so the review queue reports a consumed model asset at the
+ * `source` phase because a source import is what the author must stop, and that
+ * label says nothing about which scope raised it. Measured on a freshly
+ * generated project: `review` scope reports sixteen `review-missing` and four
+ * `asset-review-missing`, and `source` scope reports none of the twenty,
+ * because the review gate runs only at `review` and `final`.
  */
 const scope = ((): "design" | "source" | "review" | "final" => {
   const index = process.argv.indexOf("--scope");

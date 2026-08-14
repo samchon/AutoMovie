@@ -31,13 +31,23 @@ import {
   productionSourceRenderFingerprint,
 } from "./renditionIdentity";
 
-/** Optional host repaint orchestration and immutable rendition provenance. */
+/**
+ * Optional host repaint orchestration and immutable rendition provenance.
+ *
+ * @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence Orchestrates repaint only after current deterministic source evidence and review prerequisites are proved.
+ * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Enforces the host handoff and immutable rendition-provenance boundary.
+ */
 export class AutoMovieProductionRepaintService {
   public constructor(
     private readonly adapter?: AutoMovieProductionShotRepaint,
   ) {}
 
-  /** Repaint one current shot from verified deterministic controls. */
+  /**
+   * Repaint one current shot from verified deterministic controls.
+   *
+   * @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-refusal Refuses the operation until the addressed shot has current complete source evidence and review.
+   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Executes the eligible handoff and records the exact host-produced rendition facts.
+   */
   public async repaint(
     services: IAutoMovieProductionServices,
     input: IAutoMovieRepaintShot.IProps,

@@ -26,6 +26,8 @@ import {
  * owner and staging cannot disagree with a committed scene. Returns whether the
  * shape is safe to hand to that validator.
  *
+ * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope Locates every malformed space field at the caller-provided input path.
+ * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope Preserves structural space locations before delegating semantic validation to the engine.
  * @author Samchon
  */
 export const validateSpaceShape = (

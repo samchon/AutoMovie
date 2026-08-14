@@ -2,7 +2,7 @@
 
 ## 판정 대상의 정체성 {#acceptance-target-identity}
 
-Acceptance 요청은 작품, sequence, shot, 시간 구간, 자산, actor, formation, 공간, camera, 음향, render product, delivery package 또는 명시된 하위 범위를 안정된 identity로 가리킬 수 있어야 한다.
+Acceptance 요청은 작품, sequence, shot, 시간 구간, 자산, actor, formation, 공간, element, part, camera, 음향, render product, delivery package 또는 명시된 하위 범위를 안정된 identity로 가리킬 수 있어야 한다.
 
 대상 identity는 version, variant, profile과 판정 시점을 구분해야 하며, 이름이 같더라도 내용이나 의존 상태가 다른 대상을 같은 승인 대상으로 합치지 않아야 한다.
 

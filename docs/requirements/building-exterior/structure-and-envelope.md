@@ -6,7 +6,7 @@ Foundation, column, beam, wall, slab, core, brace와 roof structure를 non-struc
 
 ### 지지 관계 {#building-structural-support}
 
-Mass, slab, roof, facade, balcony, equipment와 attachment가 foundation, structure, subframe 또는 declared set support 중 무엇에 지지되는지 표현하고 떠 있거나 연결이 끊긴 주요 요소를 찾을 수 있어야 한다. 시각적 support 검토와 전문 구조 성능 분석은 구분해야 한다.
+Mass, slab, roof, facade, balcony, equipment와 attachment가 foundation, structure, subframe 또는 declared set support 중 무엇에 지지되는지 표현하고 떠 있거나 연결이 끊긴 주요 요소를 찾을 수 있어야 한다. 프로젝트 소스는 element 또는 compact population과 그 named support 사이의 `bearing` 또는 `suspended` 관계를 선언하고, 제품은 그 배치의 world bounds와 support face를 같은 배치 법칙에서 파생하여 resting, floating, sunk, support 밖 또는 명시적으로 suspended인지 질의하는 기능과 named neighbour의 bounds overlap 질의를 제공해야 한다. 각 답에는 그 수치를 어떤 근거로 쟀는지 함께 제시하여, 전개하지 않은 population이나 기록이 형상을 담지 않은 element처럼 정밀도가 낮은 측정을 정확한 측정으로 오독하지 않게 해야 한다. 시각적 support 검토와 전문 구조 성능 분석은 구분하며, 이 결과를 capacity, code compliance 또는 안전성 판정으로 확대하지 않아야 한다.
 
 ### Envelope Layer {#building-envelope-layers}
 

@@ -23,6 +23,17 @@ system Chrome or Edge must be selected explicitly in `automovie.config.ts`.
 Never edit `generated`; correct its owning source or design and compile. Never
 mark visual review complete without opening current bundle frames. A design,
 source, generated, or frame change makes dependent review stale by design.
+
+Open `viewer/inspect.html?shot=<id>` to fly a free camera through a compiled
+shot when the authored framing is what hides a fault; it prints the eye's
+position so an oddity is reported by coordinate. It writes nothing and is not a
+delivery path, so it never substitutes for review evidence. Open
+`viewer/subject.html?shot=<id>&subject=<kind>:<id>` to look at one thing alone
+instead; without `?subject=` it lists the shot's spaces and instance sets. Its
+eye is derived from the subject's content extent rather than its declared cell,
+and `X` sections the near side, without which an opened room shows only its
+outer wall. It writes nothing and is not a delivery path either. Read
+`DEBUGGING`.
 The project write hook also protects `renders`, capture receipts, and
 `.automovie/productions`; use the command named by its refusal.
 

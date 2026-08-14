@@ -14,6 +14,8 @@ Dimension과 annotation은 표시 문자열이 아니라 측정 대상, 기준 p
 
 Room, door, window, finish, furniture, fixture, equipment, light와 service terminal schedule은 stable identity, type, count, location, state와 relevant property를 제공해야 한다.
 
+Room schedule의 location은 선언된 cell과 실제 content extent를 함께 제공하고 둘을 같은 값으로 합치지 않아야 한다. Zone에 무엇이 있는지는 element와 population이 선언한 space membership으로 답해야 하며 id 이름 매칭이나 model 옆의 별도 목록으로 대체하지 않아야 한다. Schedule이 다루지 못하는 subject, 측정하지 못한 extent와 아직 산출하지 않은 location은 빈 값이나 0이 아니라 gap으로 남겨야 한다.
+
 ### Quantity와 Waste {#interior-quantities-waste}
 
 Area, length, volume, count, module, cut, package와 waste를 source geometry, unit, scope, rounding와 exclusions와 함께 산출해야 한다.

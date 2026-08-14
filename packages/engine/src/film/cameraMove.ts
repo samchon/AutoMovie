@@ -157,18 +157,24 @@ export interface IAutoMovieFramedSubject {
   /**
    * Half the subject's widest horizontal span about {@link base}, in meters.
    *
-   * A single figure has no horizontal extent worth solving from: it is taller
-   * than it is wide at every shot size, so its framing is the vertical fit and
-   * always has been. A mass is the opposite — two thousand figures on a field
-   * are a hundred meters across and one and a half tall — and framing that from
-   * height alone puts the camera where one person would fill the frame and the
-   * unit runs off both edges.
+   * Measured from what the subject draws, on every subject that draws anything:
+   * a mass from its members' union, a single node from its model's own rest box
+   * ({@link computeModelRestExtent}). Height alone decides a distance only when
+   * nothing horizontal could be measured, which is what an absent or zero value
+   * states.
    *
-   * Absent or zero states that no horizontal extent was measured, which leaves
-   * the vertical fit in sole charge exactly as before.
+   * The fit is `max(vertical, horizontal)`, so a measured width changes a
+   * framing only where it demands the further stand: for a raster of aspect `a`
+   * that is `width > height * a`. A figure never reaches it — it is taller than
+   * it is wide at every shot size — which is why solving a person from height
+   * alone was right and stays byte-identical. A mass and a building both do
+   * reach it: two thousand figures on a field are a hundred meters across and
+   * one and a half tall, and a 60 m facade is 24 m high, and framing either from
+   * height alone puts the camera where one person would fill the frame while the
+   * subject runs off both edges.
    *
    * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing IAutoMovieFramedSubject.radius supplies the horizontal half-span the framing solve must contain when subject width demands more distance than height.
-   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.radius realizes landmark-based framing: Half the subject's widest horizontal span about {@link base}, in meters. A single figure has no horizontal extent worth solving from: it is taller than it is wide at every shot size, so its framing is the vertical fit and always has been. A mass is the opposite — two thousand figures on a field are a hundred meters across and one and a half tall — and framing that from height alone puts the camera where one person would fill the frame and the unit runs off both edges. Absent or zero states that no horizontal extent was measured, which leaves the vertical fit in sole charge exactly as before.
+   * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations IAutoMovieFramedSubject.radius realizes landmark-based framing: Half the subject's widest horizontal span about {@link base}, in meters. Measured from what the subject draws, on every subject that draws anything: a mass from its members' union, a single node from its model's own rest box. Height alone decides a distance only when nothing horizontal could be measured, which is what an absent or zero value states. The fit is max(vertical, horizontal), so a measured width changes a framing only where it demands the further stand: for a raster of aspect a that is width > height * a. A figure never reaches it — it is taller than it is wide at every shot size — which is why solving a person from height alone was right and stays byte-identical. A mass and a building both do reach it: two thousand figures on a field are a hundred meters across and one and a half tall, and a 60 m facade is 24 m high, and framing either from height alone puts the camera where one person would fill the frame while the subject runs off both edges.
    */
   radius?: number;
 
@@ -632,10 +638,38 @@ const restWorldFrames = (
 export const computeModelRestExtentY = (
   model: IAutoMovieModel,
 ): { min: number; max: number } | null => {
+  const extent = computeModelRestExtent(model);
+  return extent === null ? null : { min: extent.min.y, max: extent.max.y };
+};
+
+/**
+ * A model's rest-pose box in model space: the axis-aligned range of the geometry
+ * a renderer would actually draw, on all three axes.
+ *
+ * {@link computeModelRestExtentY} is this measurement read on one axis, and the
+ * two are the same traversal for the reason the vertical one gives: every part
+ * is placed the way the renderer places it, and primitives are measured through
+ * {@link tessellate}, the code that produces the vertices, so the extent cannot
+ * drift from the picture.
+ *
+ * The horizontal half is what a subject wider than it is tall is framed and
+ * graded from. A figure is taller than it is wide at every shot size, so its
+ * width never decides its distance; a building element is the opposite, and a
+ * 60 m facade authored outward from its element origin has a drawn box of
+ * `x 0…60, y 0…24, z −1…1` where the vertical read alone reports only
+ * `y 0…24`. Returns null when a model has nothing to measure, leaving the
+ * caller's own fallback in charge rather than inventing an extent.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing computeModelRestExtent measures drawn geometry in model space on all three axes so landmark framing uses the subject's visible horizontal extent as well as its vertical one.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations computeModelRestExtent realizes landmark-based framing: A model's rest-pose box in model space: the axis-aligned range of the geometry a renderer would actually draw, on all three axes. computeModelRestExtentY is this measurement read on one axis, and the two are the same traversal for the reason the vertical one gives: every part is placed the way the renderer places it, and primitives are measured through tessellate, the code that produces the vertices, so the extent cannot drift from the picture. The horizontal half is what a subject wider than it is tall is framed and graded from. A figure is taller than it is wide at every shot size, so its width never decides its distance; a building element is the opposite, and a 60 m facade authored outward from its element origin has a drawn box of x 0…60, y 0…24, z −1…1 where the vertical read alone reports only y 0…24. Returns null when a model has nothing to measure, leaving the caller's own fallback in charge rather than inventing an extent.
+ */
+export const computeModelRestExtent = (
+  model: IAutoMovieModel,
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 } | null => {
   const frames =
     model.skeleton === null ? null : restWorldFrames(model.skeleton);
-  let min = Infinity;
-  let max = -Infinity;
+  const min: IAutoMovieVector3 = { x: Infinity, y: Infinity, z: Infinity };
+  const max: IAutoMovieVector3 = { x: -Infinity, y: -Infinity, z: -Infinity };
   for (const part of model.parts) {
     const positions =
       part.geometry.type === "primitive"
@@ -650,21 +684,35 @@ export const computeModelRestExtentY = (
         y: positions[index + 1]!,
         z: positions[index + 2]!,
       };
-      const placed = local === null ? point : placeInParent(local, point);
-      const y =
+      const placed =
+        local === null ? point : placeTransformedPoint(local, point);
+      const world =
         frame === undefined
-          ? placed.y
-          : Vector3.add(frame.pos, Quaternion.rotateVector(frame.rot, placed))
-              .y;
-      if (y < min) min = y;
-      if (y > max) max = y;
+          ? placed
+          : Vector3.add(frame.pos, Quaternion.rotateVector(frame.rot, placed));
+      if (world.x < min.x) min.x = world.x;
+      if (world.y < min.y) min.y = world.y;
+      if (world.z < min.z) min.z = world.z;
+      if (world.x > max.x) max.x = world.x;
+      if (world.y > max.y) max.y = world.y;
+      if (world.z > max.z) max.z = world.z;
     }
   }
-  return min === Infinity ? null : { min, max };
+  return min.y === Infinity ? null : { min, max };
 };
 
-/** Apply one TRS transform to a point, scale first, as a renderer does. */
-const placeInParent = (
+/**
+ * Apply one TRS transform to a point, scale first, as a renderer does.
+ *
+ * Exported because the same arithmetic places a model's parts for measurement
+ * and carries a measured model box out into the world a camera frames it in. A
+ * second copy is how the box a shot is graded against comes to disagree with
+ * the box it was solved from.
+ *
+ * @evidence requirements/camera/framing-and-shot-size.md#camera-landmark-framing placeTransformedPoint applies one placement to a measured landmark point so framing reads geometry where the renderer draws it.
+ * @evidence specifications/camera-light-and-visibility/framing-axis-and-camera-path.md#clv-framing-landmark-relations placeTransformedPoint realizes landmark-based framing: Apply one TRS transform to a point, scale first, as a renderer does. Exported because the same arithmetic places a model's parts for measurement and carries a measured model box out into the world a camera frames it in. A second copy is how the box a shot is graded against comes to disagree with the box it was solved from.
+ */
+export const placeTransformedPoint = (
   transform: IAutoMovieTransform,
   point: IAutoMovieVector3,
 ): IAutoMovieVector3 =>

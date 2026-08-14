@@ -146,6 +146,13 @@ export const AUTOMOVIE_FLOW_BYTES = 8;
  * in the mask name the same thing. Shared resources that draw no pixels of
  * their own carry a `material:`, `texture:` or `light:` identity instead.
  *
+ * A row that is one further whole-frame pass over geometry the other rows
+ * already counted, such as a shadow map's depth pass or the outline guide pass,
+ * is marked `pass` rather than `own`. The pass belongs in the conservative
+ * one-frame peak and its own identity is worth keeping, but its cost is the sum
+ * of every drawable that preceded it rather than the owner's own complexity, so
+ * the report keeps its attribution without ranking it as an editable owner.
+ *
  * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Measures geometry, decoded texture memory, lights, instances, fluids, and simulated drawables into one complete inventory.
  * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Reports the conservative one-frame peak per metric and its semantic owner without substituting an average or whole-film total.
  * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Charges each enabled shadow map and its opaque depth passes to the stable id of the light that casts them.
@@ -189,8 +196,12 @@ export const measureAutoMovieRenderInventory = (props: {
     source: string,
     metric: AutoMovieRenderMetric,
     cost: number,
+    // A row is the owner's own cost unless the caller says it is one further
+    // pass over what the rows before it already counted. Only the frame passes
+    // below say otherwise, and the report ranks the two differently.
+    kind: NonNullable<IAutoMovieRenderOwnerCost["kind"]> = "own",
   ): void => {
-    owners.push({ owner, source, metric, cost });
+    owners.push({ owner, source, metric, cost, kind });
   };
 
   // Every material the subject declares, drawn or not. A simulated drawable
@@ -701,7 +712,10 @@ export const measureAutoMovieRenderInventory = (props: {
     add(`light:${light.id}`, `scene.lights["${light.id}"]`, "shadowMaps", 1);
   }
   // Each shadow map is one further depth pass over every opaque draw already
-  // counted, and the environment background costs one full-screen draw.
+  // counted, and the environment background costs one full-screen draw. A pass
+  // row is marked as one: its cost is by construction the sum of every drawable
+  // before it, so the report has to keep it in the total and state the caster
+  // separately without ranking that aggregate as the owner's own complexity.
   const shadowMaps = casters.length;
   const opaqueDraws = drawCalls;
   const opaqueTriangles = triangles;
@@ -713,12 +727,14 @@ export const measureAutoMovieRenderInventory = (props: {
       `scene.lights["${caster}"]`,
       "drawCalls",
       opaqueDraws,
+      "pass",
     );
     add(
       `light:${caster}`,
       `scene.lights["${caster}"]`,
       "triangles",
       opaqueTriangles,
+      "pass",
     );
   }
   // Outline is another complete geometry pass. With no shadow caster it is
@@ -727,12 +743,19 @@ export const measureAutoMovieRenderInventory = (props: {
   if (casters.length === 0) {
     drawCalls += opaqueDraws;
     triangles += opaqueTriangles;
-    add("render-pass:outline", "render.pass.outline", "drawCalls", opaqueDraws);
+    add(
+      "render-pass:outline",
+      "render.pass.outline",
+      "drawCalls",
+      opaqueDraws,
+      "pass",
+    );
     add(
       "render-pass:outline",
       "render.pass.outline",
       "triangles",
       opaqueTriangles,
+      "pass",
     );
   }
   const image = subject.scene.environment?.image ?? null;

@@ -168,24 +168,42 @@ export interface IAutoMovieRenderFinding {
    * the id so the list is deterministic rather than dependent on the order the
    * inventory happened to visit owners.
    *
+   * These are the places an author can edit, so only the inventory's `own`
+   * rows are ranked here. A frame pass redraws what the listed owners already
+   * paid for, which makes its cost their sum and its position in a
+   * cost-descending list a constant; it is counted in
+   * {@link omittedContributors} and {@link omittedCost} instead, and named in
+   * {@link recovery} as a pass rather than as somewhere to go and change.
+   *
    * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Exposes `contributors` as the portable data boundary for the rendering compile render distinction requirement.
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision Exposes only editable cost owners as the dominant contributors of a budget decision.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Types `contributors` for the spec render artifact lifecycle system contract.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Types the bounded editable-owner ranking separately from repeated frame-pass work.
    */
   contributors: IAutoMovieRenderContributor[];
 
   /**
-   * Owners the bound left out.
+   * Owners the report does not name: those past the bound, and the frame
+   * passes that are never ranked.
    *
    * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Exposes `omittedContributors` as the portable data boundary for the rendering compile render distinction requirement.
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision Counts every attributed owner left outside the bounded dominant-owner list.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Types `omittedContributors` for the spec render artifact lifecycle system contract.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Keeps frame passes and bounded-out owners visible as omitted contributors.
    */
   omittedContributors: number;
 
   /**
-   * Total cost carried by the owners the bound left out.
+   * Total cost carried by the owners the report does not name.
+   *
+   * The listed contributors plus this number are the whole of what the
+   * inventory attributed to the metric, frame passes included, so a report
+   * never leaves a shortfall nothing on it explains.
    *
    * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-compile-render-distinction Exposes `omittedCost` as the portable data boundary for the rendering compile render distinction requirement.
+   * @evidence requirements/rendering/budgets.md#rendering-budget-decision Preserves the full measured cost beside the bounded dominant-owner list.
    * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-artifact-lifecycle Types `omittedCost` for the spec render artifact lifecycle system contract.
+   * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Keeps excluded pass cost inside the accounted preflight total.
    */
   omittedCost: number;
 

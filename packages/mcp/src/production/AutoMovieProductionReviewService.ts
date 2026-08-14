@@ -1,4 +1,8 @@
 import {
+  foldAutoMovieSubjectReviewCoverage,
+  resolveAutoMovieSubjectReviewUnit,
+} from "@automovie/engine";
+import {
   AutoMovieContentDigest,
   AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceOutcomeReference,
@@ -21,13 +25,16 @@ import {
   IAutoMovieReviewQueue,
   IAutoMovieReviewTarget,
   IAutoMovieStoredReview,
+  IAutoMovieSubjectReviewCoverage,
+  IAutoMovieSubjectReviewTarget,
+  IAutoMovieSubjectReviewUnit,
   IAutoMovieSubmitReviewInput,
   IAutoMovieSubmitReviewOutput,
 } from "@automovie/interface";
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
-import typia from "typia";
+import typia, { IValidation } from "typia";
 
 import {
   AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL,
@@ -63,6 +70,7 @@ import {
 import { assertProductionRenditionTimelineDelivery } from "./muxProductionFeatureMp4";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { autoMovieStorySyncOutcome } from "./storySyncDiagnostics";
+import { readAutoMovieSubjectInspection } from "./subjectInspection";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
 type AutoMovieReviewWorksheet = Omit<
@@ -130,6 +138,12 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "material-and-outline-legibility",
     "turntable-coverage",
   ],
+  subject: [
+    "identity-and-composition",
+    "placement-and-bounds",
+    "viewpoint-coverage",
+    "subject-frame-separation",
+  ],
   design: [
     "identity-and-references",
     "scope-and-ownership",
@@ -184,6 +198,23 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Preserves submitted criterion outcomes without manufacturing a human verdict.
  * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Keeps deterministic worksheet validation separate from reviewer judgment.
  * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary Refuses invalid worksheets without making the aesthetic judgment itself.
+ * @evidence requirements/review/subject-inspection.md#review-subject-identity Addresses one stable compiled subject instead of reconstructing it from names.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Reads the shared compiled-subject record rather than defining a second one.
+ * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Owns the viewpoint plan for the asset subject kind rather than inheriting an authored camera: the six required turntable views fix angle, elevation, and pose, and a shot frame that happens to contain the asset discharges none of them. Space, element, and part subjects have no review target kind here yet, so this answers the unit for assets alone.
+ * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds asset subject evidence to target identity, compile and target fingerprints, and the exact angle, elevation, pose, and pass of every required view, and binds a compiled subject to the exact compile its description was read from.
+ * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the asset population from the model recipes the production actually consumes, so a completeness claim is measured against an enumerated set rather than asserted over an unstated one.
+ * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Keeps asset subject freshness on the asset's own fingerprint, so rerendering a shot does not make an asset review current and completing an asset review does not discharge a frame obligation.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Realizes the viewpoint plan as the fixed six-view asset turntable set, with each view addressed by angle, elevation, and pose.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Stores each asset observation against its required view, refusing an invented selector or a frame the receipt does not back.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Keys asset subject freshness to the target fingerprint, so a changed recipe invalidates the worksheet rather than silently carrying it forward.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Aggregates asset coverage over the enumerated consumed-recipe population instead of over whatever happened to be captured.
+ * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-propagation Reports an asset review as no longer current when the recipe it addressed changed, which is the propagation this service can measure; propagation from a prototype to the placements sharing it is not measured here.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps missing, malformed, and contract-incompatible compiler artifacts distinct from absent acceptance outcomes.
+ * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Preserves the compiler-owned artifact path and exact validator failure paths without blaming an unchanged author input for an internal contract mismatch.
+ * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Refuses each compiler artifact at its actual read boundary while retaining independently readable scenario evidence.
+ * @evidenceExclude requirements/review/subject-inspection.md#review-observable-judgeable-parity The parity between what may be judged and what may be observed is a statement about the requirement layer's own units, not a behaviour any single service performs.
+ * @evidenceExclude requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface The service carries the asset surface it already implements; declaring the full subject surface an acceptance request may name belongs with the contract that defines those target kinds.
+ * @evidenceExclude specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Resolving an arbitrary judgeable target to its observation unit requires target kinds this surface does not yet carry.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories Worksheets carry criterion observations, not a defect category taxonomy.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary The service has no defect-versus-accepted-variation classification record.
  * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-severity-priority Criterion outcomes do not assign defect severity or scheduling priority.
@@ -241,7 +272,18 @@ export class AutoMovieProductionReviewService {
   ): IAutoMoviePrepareReviewOutput {
     const graph = this.project.graph();
     const diagnostics: IAutoMovieDiagnostic[] = [];
-    const targetValue = targetValueOf(this.project, input.target);
+    const subjectUnit =
+      input.target.kind === "subject"
+        ? currentSubjectReviewUnit(this.project, input.target, context)
+        : null;
+    const subjectCoverage =
+      subjectUnit === null
+        ? null
+        : publishedSubjectCoverage(this.project, subjectUnit);
+    const targetValue =
+      input.target.kind === "subject"
+        ? (subjectUnit?.description ?? null)
+        : targetValueOf(this.project, input.target);
     if (targetValue === null)
       diagnostics.push({
         code: "review-target-missing",
@@ -361,27 +403,51 @@ export class AutoMovieProductionReviewService {
         message:
           "This visual target has no verified current PNG frame. Capture every required current view and pass before submitReview. Correction feedback does not authorize deleting the artifact.",
       });
+    // This warning is no longer the standing state of the surface. It says one
+    // thing now: nothing has ever inspected this subject, so there is no
+    // denominator to measure against and coverage is indeterminate rather than
+    // merely unobserved. Once a plan is published the code stops applying, and
+    // an honest not-run, partial or stale is reported through coverage instead
+    // of through a warning that would say the same thing less precisely.
+    if (
+      input.target.kind === "subject" &&
+      (subjectCoverage === null || subjectCoverage.state === "indeterminate")
+    )
+      diagnostics.push({
+        code: "review-subject-viewpoint-unsupported",
+        category: "warning",
+        phase: "review",
+        target: reviewTargetKey(input.target),
+        path: targetPath(this.project, input.target),
+        message:
+          "Nothing has inspected this subject yet, so no viewpoint plan is published for it under .automovie/inspections/ and subject-view coverage is indeterminate rather than unobserved. Run inspectSubject on this exact compiled id: it derives a turntable from the subject's own measured extent, draws every viewpoint in it, and publishes that plan beside one revision-bearing receipt per observation, which this surface then reads. A subject it cannot frame is refused under this same code, and for that one the range stays permanently unobservable. Until a plan exists, record what you inspected structurally and leave the viewpoint range explicitly unobserved.",
+      });
     const quotable =
-      input.target.kind === "design" && targetValue !== null
-        ? jsonPointers(targetValue, input.target.design)
-        : input.target.kind === "asset"
-          ? targetValue === null
-            ? []
-            : jsonPointers(targetValue, {
-                kind: "model",
-                id: input.target.id,
-              })
-          : input.target.kind === "source"
-            ? sourceSelectors(this.project, input.target.path, diagnostics)
-            : input.target.kind === "shot"
-              ? shotSourceSelectors(
-                  this.project,
-                  graph.shots.get(input.target.id)?.source.module,
-                  diagnostics,
-                )
-              : input.target.kind === "sequence" || input.target.kind === "film"
-                ? sourceSelectors(this.project, "src/film.ts", diagnostics)
-                : [];
+      input.target.kind === "subject"
+        ? subjectUnit === null
+          ? []
+          : subjectPointers(subjectUnit.description, subjectUnit.target)
+        : input.target.kind === "design" && targetValue !== null
+          ? jsonPointers(targetValue, input.target.design)
+          : input.target.kind === "asset"
+            ? targetValue === null
+              ? []
+              : jsonPointers(targetValue, {
+                  kind: "model",
+                  id: input.target.id,
+                })
+            : input.target.kind === "source"
+              ? sourceSelectors(this.project, input.target.path, diagnostics)
+              : input.target.kind === "shot"
+                ? shotSourceSelectors(
+                    this.project,
+                    graph.shots.get(input.target.id)?.source.module,
+                    diagnostics,
+                  )
+                : input.target.kind === "sequence" ||
+                    input.target.kind === "film"
+                  ? sourceSelectors(this.project, "src/film.ts", diagnostics)
+                  : [];
     const safeDiagnostics = diagnostics
       .map(appendReviewCorrectionSafety)
       .sort(compareDiagnostics);
@@ -398,6 +464,10 @@ export class AutoMovieProductionReviewService {
       frames,
       renditions,
       outcomes,
+      subjectReview:
+        subjectUnit === null || subjectCoverage === null
+          ? null
+          : { unit: subjectUnit, coverage: subjectCoverage },
       diagnostics: safeDiagnostics,
     };
   }
@@ -516,6 +586,9 @@ export class AutoMovieProductionReviewService {
    * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes missing, stale, incomplete, revise, and complete review state.
    * @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Compares required queue entries with the actual current review records.
    * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Reports the queue state without implying a verdict.
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps compiler-artifact refusal states visible while calculating aggregate queue readiness.
+   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Retains every artifact read diagnostic from the prepared target instead of collapsing unreadable evidence into a missing review.
+   * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Reuses one snapshot-bound reader result per target while deriving queue state.
    */
   public queue(
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
@@ -715,6 +788,24 @@ const validateWorksheet = (
           `A completed asset review must cite every required current view digest. Missing: ${missing.join(", ")}.`,
         );
     }
+    // The gate is now a measurement rather than a standing refusal. Only a plan
+    // wholly observed at this unit's own revision discharges it, and the
+    // viewpoints that do not are named, because an "incomplete" that does not
+    // say which look is missing costs the caller a round to find out. A target
+    // that resolved no subject at all is answered by review-target-missing
+    // alone; reporting coverage over a thing that does not exist would be a
+    // second complaint about one fault, and the numbers in it would be about
+    // nothing.
+    const subjectCoverage = prepared.subjectReview?.coverage;
+    if (
+      input.target.kind === "subject" &&
+      subjectCoverage !== undefined &&
+      subjectCoverage.state !== "reviewed"
+    )
+      add(
+        "review-subject-coverage-incomplete",
+        `A subject review is complete only when every viewpoint the inspection planned has been observed at the current compiled revision, and no structural reading discharges that. Subject-view coverage is "${subjectCoverage.state}", with ${subjectCoverage.observed.length} of ${subjectCoverage.planned.length} planned viewpoint(s) observed, unobserved [${subjectCoverage.missing.join(", ")}], stale [${subjectCoverage.stale.join(", ")}]. Run inspectSubject on this compiled subject id, prepare the review again, and submit with complete false meanwhile, recording the unobserved range.`,
+      );
     if (prepared.renditions.length !== 0) {
       const requiredShots = [
         ...new Set(prepared.renditions.map((rendition) => rendition.shot)),
@@ -1076,6 +1167,36 @@ const validateEvidence = (
         "review-evidence-stale",
         "diagnostic actual must exactly equal the current diagnostic message.",
       );
+  } else if (evidence.kind === "subject") {
+    const subject = prepared.subjectReview;
+    if (
+      subject === null ||
+      canonicalizeAutoMovieJson(subject.unit.target) !==
+        canonicalizeAutoMovieJson(evidence.target)
+    )
+      fail(
+        "review-evidence-target-mismatch",
+        "subject evidence addresses a compiled subject this worksheet did not prepare. Quote the prepared subject target.",
+      );
+    else {
+      const resolved = resolveJsonPointer(
+        subject.unit.description,
+        evidence.pointer,
+      );
+      if (resolved.found === false)
+        fail(
+          "review-evidence-selector-invalid",
+          `JSON pointer "${evidence.pointer}" does not exist in the current compiled subject description. Use a selector returned by prepareReview.`,
+        );
+      else if (
+        canonicalizeAutoMovieJson(resolved.value) !==
+        canonicalizeAutoMovieJson(evidence.exactValue)
+      )
+        fail(
+          "review-evidence-stale",
+          `JSON pointer "${evidence.pointer}" no longer equals exactValue. Prepare the review again.`,
+        );
+    }
   } else if (evidence.kind === "outcome") {
     const current = prepared.outcomes.find(
       (outcome) => outcome.scenario === evidence.scenario,
@@ -1145,6 +1266,8 @@ const targetValueOf = (
       return null;
     }
   }
+  if (target.kind === "subject")
+    return currentSubjectReviewUnit(project, target)?.description ?? null;
   const graph = project.graph();
   if (target.kind === "shot") return graph.shots.get(target.id) ?? null;
   if (target.kind === "rendition")
@@ -1157,6 +1280,76 @@ const targetValueOf = (
       null
     );
   return graph.production?.id === target.id ? graph.production : null;
+};
+
+/**
+ * Resolve one compiled subject from the artifact the target names.
+ *
+ * The revision is digested from the exact bytes the description was read from
+ * rather than copied out of the manifest, so a description can never claim a
+ * revision it did not come from. Every unreadable, non-conforming, or absent
+ * subject resolves to null and is reported as a missing review target instead
+ * of being silently reviewed against another compile.
+ *
+ */
+const currentSubjectReviewUnit = (
+  project: AutoMovieProductionProject,
+  target: Extract<IAutoMovieReviewTarget, { kind: "subject" }>,
+  context?: IReviewReadContext,
+): IAutoMovieSubjectReviewUnit | null => {
+  try {
+    const bytes = currentGeneratedFile(
+      project,
+      `shots/${encodeAutoMoviePathSegment(target.shot)}.json`,
+      context,
+    );
+    const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
+      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
+    );
+    if (validation.success === false) return null;
+    return resolveAutoMovieSubjectReviewUnit(
+      { revision: digestAutoMovieBytes(bytes), compiled: validation.data },
+      { shot: target.shot, subject: target.subject },
+    );
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Fold what the inspection published for one subject against its own plan.
+ *
+ * The denominator is read rather than recomputed, and that is the design. A
+ * viewpoint id is a property of the look that was taken, not of the subject:
+ * the viewer page lays its turntable out against a fixed 16:9 reference aspect
+ * while the tool lays one out against the raster its caller asked for, and both
+ * ground the low ring on the subject's own box, so one subject plans different
+ * id sets under the two. A third computation here would measure observations
+ * against a denominator nothing was obliged to meet, which is the axis mixing
+ * subject coverage forbids.
+ *
+ * The published directory is keyed by the compiled subject id, which is exactly
+ * what a resolved unit carries, so a caller who reached the tool through the
+ * viewer's spelling and a reviewer who named the compiled id land on one
+ * record. Freshness needs no code here either: every receipt states the
+ * revision it was drawn at and the fold compares it against this unit's, so a
+ * sweep taken before a recompile reports as stale rather than as observed.
+ */
+const publishedSubjectCoverage = (
+  project: AutoMovieProductionProject,
+  unit: IAutoMovieSubjectReviewUnit,
+): IAutoMovieSubjectReviewCoverage => {
+  const published = readAutoMovieSubjectInspection({
+    projectRoot: project.root,
+    productionId: project.productionId,
+    shot: unit.target.shot,
+    subject: unit.description.id,
+  });
+  return foldAutoMovieSubjectReviewCoverage(
+    unit,
+    published.planned,
+    published.observations,
+  );
 };
 
 const reviewFingerprint = (
@@ -1224,6 +1417,12 @@ const reviewFingerprint = (
         `frame:${canonicalizeAutoMovieJson(frame.target)}:${frame.pass}`,
         frame,
       );
+    fields.push(compilerField());
+  } else if (target.kind === "subject") {
+    // The description carries its own compile revision, so this one field
+    // keys freshness to the compiled subject rather than to a shot render or
+    // a delivery regeneration, neither of which changes these bytes.
+    addJson("subject-description", targetValueOf(project, target));
     fields.push(compilerField());
   } else if (target.kind === "design") {
     addJson("design", project.design(target.design));
@@ -1624,6 +1823,183 @@ const sequenceShotIds = (
     .sort(compareCodeUnits);
 };
 
+type AutoMovieReviewArtifactRead<T> =
+  | {
+      status: "ready";
+      data: T;
+    }
+  | {
+      status: "refused";
+    };
+
+interface IReviewArtifactContractMismatch {
+  path: string;
+  expected: string;
+}
+
+/**
+ * Reopen one manifest-owned compiler artifact without losing why it failed.
+ *
+ * Review reaches this reader only after the compiler fingerprint is current.
+ * A missing publication and damaged bytes remain user-recoverable compiler
+ * state, while an exact-schema disagreement is a writer-reader product defect.
+ */
+const readReviewArtifact = <T>(props: {
+  project: AutoMovieProductionProject;
+  generated: IAutoMovieGeneratedManifest;
+  relativePath: string;
+  label: string;
+  target: IAutoMovieReviewTarget;
+  diagnostics: IAutoMovieDiagnostic[];
+  context?: IReviewReadContext;
+  validate: (input: unknown) => IValidation<T>;
+  semanticMismatches: (data: T) => IReviewArtifactContractMismatch[];
+}): AutoMovieReviewArtifactRead<T> => {
+  const entry = props.generated.files.find(
+    (candidate) => candidate.path === props.relativePath,
+  );
+  if (entry === undefined) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-missing",
+        `Compiler-owned ${props.label} is absent from the current generated manifest. Compile the same current inputs to restore the missing publication before review.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  let bytes: Uint8Array;
+  try {
+    bytes = currentGeneratedFile(
+      props.project,
+      props.relativePath,
+      props.context,
+    );
+  } catch (error) {
+    const missing = currentGeneratedArtifactMissing(
+      props.project,
+      props.relativePath,
+      props.context,
+    );
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        missing
+          ? "review-outcome-artifact-missing"
+          : "review-outcome-artifact-malformed",
+        missing
+          ? `Compiler-owned ${props.label} is absent even though the current manifest owns it. Compile the same current inputs to restore the missing publication before review.`
+          : `Compiler-owned ${props.label} cannot be read: ${reviewReadErrorMessage(error)}. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  if (digestAutoMovieBytes(bytes) !== entry.digest) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-malformed",
+        `Compiler-owned ${props.label} bytes disagree with the current manifest digest. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+    ) as unknown;
+  } catch (error) {
+    props.diagnostics.push(
+      reviewArtifactReadDiagnostic(
+        props.target,
+        props.relativePath,
+        "review-outcome-artifact-malformed",
+        `Compiler-owned ${props.label} is not intact UTF-8 JSON: ${reviewReadErrorMessage(error)}. Remove only the damaged compiler publication, compile the same current inputs, then prepare review again.`,
+      ),
+    );
+    return { status: "refused" };
+  }
+  const validation = props.validate(parsed);
+  if (validation.success === false) {
+    appendReviewArtifactContractMismatch(
+      props,
+      validation.errors.map((error) => ({
+        path: error.path,
+        expected: error.expected,
+      })),
+    );
+    return { status: "refused" };
+  }
+  const mismatches = props.semanticMismatches(validation.data);
+  if (mismatches.length !== 0) {
+    appendReviewArtifactContractMismatch(props, mismatches);
+    return { status: "refused" };
+  }
+  return { status: "ready", data: validation.data };
+};
+
+const appendReviewArtifactContractMismatch = (
+  props: {
+    relativePath: string;
+    label: string;
+    target: IAutoMovieReviewTarget;
+    diagnostics: IAutoMovieDiagnostic[];
+  },
+  mismatches: readonly IReviewArtifactContractMismatch[],
+): void => {
+  const paths = [...mismatches]
+    .sort((left, right) =>
+      compareCodeUnits(
+        `${left.path}\u0000${left.expected}`,
+        `${right.path}\u0000${right.expected}`,
+      ),
+    )
+    .map((mismatch) => `${mismatch.path}: expected ${mismatch.expected}`)
+    .join("; ");
+  props.diagnostics.push(
+    reviewArtifactReadDiagnostic(
+      props.target,
+      props.relativePath,
+      "review-outcome-contract-mismatch",
+      `Compiler-owned ${props.label} is valid JSON but disagrees with the current reader contract at ${paths}. This is an internal compiler-reader contract defect; unchanged recompilation is not a user recovery. Report the artifact path and failed contract paths.`,
+    ),
+  );
+};
+
+const currentGeneratedArtifactMissing = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+  context?: IReviewReadContext,
+): boolean =>
+  context?.generatedFiles !== undefined
+    ? context.generatedFiles.has(relativePath) === false
+    : fs.existsSync(
+        path.join(project.generatedRoot(), ...relativePath.split("/")),
+      ) === false;
+
+const reviewReadErrorMessage = (error: unknown): string => String(error);
+
+const reviewArtifactReadDiagnostic = (
+  target: IAutoMovieReviewTarget,
+  artifactPath: string,
+  code:
+    | "review-outcome-artifact-missing"
+    | "review-outcome-artifact-malformed"
+    | "review-outcome-contract-mismatch",
+  message: string,
+): IAutoMovieDiagnostic => ({
+  code,
+  category: "error",
+  phase: "review",
+  target: reviewTargetKey(target),
+  path: artifactPath,
+  message,
+});
+
 const currentAcceptanceOutcomes = (
   project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
@@ -1675,99 +2051,122 @@ const currentAcceptanceOutcomes = (
       );
     return [];
   }
-  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
-  const realizations = new Map<string, IAutoMovieCompiledContractRealization>();
-  let retainedTimeline: IAutoMovieFilmTimeline | null | undefined;
-  const readTimeline = (): IAutoMovieFilmTimeline | null => {
-    if (retainedTimeline !== undefined) return retainedTimeline;
-    try {
-      retainedTimeline = currentFilmTimeline(
+  const compiled = new Map<
+    string,
+    AutoMovieReviewArtifactRead<IAutoMovieCompiledShotSource>
+  >();
+  const realizations = new Map<
+    string,
+    AutoMovieReviewArtifactRead<IAutoMovieCompiledContractRealization>
+  >();
+  let retainedTimeline:
+    | AutoMovieReviewArtifactRead<IAutoMovieFilmTimeline>
+    | undefined;
+  const readTimeline =
+    (): AutoMovieReviewArtifactRead<IAutoMovieFilmTimeline> => {
+      if (retainedTimeline !== undefined) return retainedTimeline;
+      retainedTimeline = readReviewArtifact({
         project,
-        generated.inputFingerprint,
+        generated,
+        relativePath: "film-timeline.json",
+        label: "film timeline",
+        target,
+        diagnostics,
         context,
-      );
-    } catch {
-      retainedTimeline = null;
-    }
-    return retainedTimeline;
-  };
-  const readCompiled = (shot: string): IAutoMovieCompiledShotSource | null => {
+        validate: (input) =>
+          typia.validateEquals<IAutoMovieFilmTimeline>(input),
+        semanticMismatches: (timeline) =>
+          timeline.inputFingerprint === generated.inputFingerprint
+            ? []
+            : [
+                {
+                  path: "$input.inputFingerprint",
+                  expected: JSON.stringify(generated.inputFingerprint),
+                },
+              ],
+      });
+      return retainedTimeline;
+    };
+  const readCompiled = (
+    shot: string,
+  ): AutoMovieReviewArtifactRead<IAutoMovieCompiledShotSource> => {
     const retained = compiled.get(shot);
     if (retained !== undefined) return retained;
-    try {
-      const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
-        JSON.parse(
-          Buffer.from(
-            currentGeneratedFile(
-              project,
-              `shots/${encodeAutoMoviePathSegment(shot)}.json`,
-              context,
-            ),
-          ).toString("utf8"),
-        ) as unknown,
-      );
-      if (validation.success === false) return null;
-      compiled.set(shot, validation.data);
-      return validation.data;
-    } catch {
-      return null;
-    }
+    const result = readReviewArtifact({
+      project,
+      generated,
+      relativePath: `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+      label: `compiled shot "${shot}"`,
+      target,
+      diagnostics,
+      context,
+      validate: (input) =>
+        typia.validateEquals<IAutoMovieCompiledShotSource>(input),
+      semanticMismatches: (artifact) =>
+        artifact.shot.id === shot
+          ? []
+          : [{ path: "$input.shot.id", expected: JSON.stringify(shot) }],
+    });
+    compiled.set(shot, result);
+    return result;
   };
   const readRealization = (
     shot: string,
-  ): IAutoMovieCompiledContractRealization | null => {
+  ): AutoMovieReviewArtifactRead<IAutoMovieCompiledContractRealization> => {
     const retained = realizations.get(shot);
     if (retained !== undefined) return retained;
-    try {
-      const validation =
-        typia.validateEquals<IAutoMovieCompiledContractRealization>(
-          JSON.parse(
-            Buffer.from(
-              currentGeneratedFile(
-                project,
-                `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
-                context,
-              ),
-            ).toString("utf8"),
-          ) as unknown,
-        );
-      if (validation.success === false) return null;
-      realizations.set(shot, validation.data);
-      return validation.data;
-    } catch {
-      return null;
-    }
+    const result = readReviewArtifact({
+      project,
+      generated,
+      relativePath: `realizations/${encodeAutoMoviePathSegment(shot)}.json`,
+      label: `contract realization "${shot}"`,
+      target,
+      diagnostics,
+      context,
+      validate: (input) =>
+        typia.validateEquals<IAutoMovieCompiledContractRealization>(input),
+      semanticMismatches: (artifact) =>
+        artifact.shot === shot
+          ? []
+          : [{ path: "$input.shot", expected: JSON.stringify(shot) }],
+    });
+    realizations.set(shot, result);
+    return result;
   };
   const outcomes: IAutoMovieAcceptanceOutcomeReference[] = [];
   for (const scenario of scenarios) {
     const criterion = scenario.criterion;
-    if (
-      target.kind === "film" &&
-      criterion.kind !== "event" &&
-      acceptanceBelongsToFilm(graph, scenario, readTimeline()) === false
-    )
-      continue;
+    if (target.kind === "film" && criterion.kind !== "event") {
+      const timeline = readTimeline();
+      if (
+        timeline.status === "refused" ||
+        acceptanceBelongsToFilm(graph, scenario, timeline.data) === false
+      )
+        continue;
+    }
     if (criterion.kind === "frame") continue;
     if (criterion.kind === "event") {
       const shot =
         criterion.shot ??
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
-      const event =
-        shot === undefined
-          ? undefined
-          : readRealization(shot)?.events.find(
-              (candidate) => candidate.id === criterion.event,
-            );
-      if (
-        target.kind === "film" &&
-        acceptanceBelongsToFilm(
-          graph,
-          scenario,
-          readTimeline(),
-          event?.time,
-        ) === false
-      )
-        continue;
+      const realization = shot === undefined ? null : readRealization(shot);
+      if (realization?.status === "refused") continue;
+      const event = realization?.data.events.find(
+        (candidate) => candidate.id === criterion.event,
+      );
+      if (target.kind === "film") {
+        const timeline = readTimeline();
+        if (
+          timeline.status === "refused" ||
+          acceptanceBelongsToFilm(
+            graph,
+            scenario,
+            timeline.data,
+            event?.time,
+          ) === false
+        )
+          continue;
+      }
       if (shot === undefined || event === undefined) {
         diagnostics.push(
           outcomeMissingDiagnostic(
@@ -1793,24 +2192,34 @@ const currentAcceptanceOutcomes = (
       // per-shot event outcomes already read. A missing realization leaves the
       // outcome unresolved rather than absent, which keeps the reviewer looking
       // at the failure instead of at nothing.
+      const required = acceptanceCriterionShots(scenario).map(readRealization);
+      if (required.some((artifact) => artifact.status === "refused")) continue;
       outcomes.push({
         kind: "story-sync",
         scenario: scenario.id,
         ...autoMovieStorySyncOutcome({
           criterion,
           contracts: graph.shots,
-          realization: readRealization,
+          realization: (shot) => {
+            const artifact = readRealization(shot);
+            return artifact.status === "ready" ? artifact.data : null;
+          },
         }),
       });
       continue;
     }
     const fps = graph.production!.frameFormat.fps;
-    const filmFrames =
-      scenario.target.kind === "film" ? readTimeline()?.totalFrames : null;
+    const filmTimeline =
+      scenario.target.kind === "film" ? readTimeline() : null;
+    if (filmTimeline?.status === "refused") continue;
+    const compiledShot =
+      scenario.target.kind === "shot" ? readCompiled(scenario.target.id) : null;
+    if (compiledShot?.status === "refused") continue;
+    const filmFrames = filmTimeline?.data.totalFrames ?? null;
     const actual =
-      scenario.target.kind === "shot"
-        ? readCompiled(scenario.target.id)?.shot.duration
-        : filmFrames === null || filmFrames === undefined
+      compiledShot?.status === "ready"
+        ? compiledShot.data.shot.duration
+        : filmFrames === null
           ? null
           : filmFrames / fps;
     if (actual === undefined || actual === null) {
@@ -2635,10 +3044,7 @@ const frameClockClose = (left: number, right: number): boolean =>
   Math.abs(left - right) <=
   Number.EPSILON * 64 * Math.max(1, Math.abs(left), Math.abs(right));
 
-const jsonPointers = (
-  value: unknown,
-  target: IAutoMovieDesignTarget,
-): IAutoMoviePrepareReviewOutput["quotable"] => {
+const jsonPointerPaths = (value: unknown): string[] => {
   const pointers: string[] = [];
   const visit = (current: unknown, pointer: string): void => {
     if (pointers.length >= 256) return;
@@ -2655,8 +3061,28 @@ const jsonPointers = (
         );
   };
   visit(value, "");
-  return pointers.map((pointer) => ({ kind: "design", target, pointer }));
+  return pointers;
 };
+
+const jsonPointers = (
+  value: unknown,
+  target: IAutoMovieDesignTarget,
+): IAutoMoviePrepareReviewOutput["quotable"] =>
+  jsonPointerPaths(value).map((pointer) => ({
+    kind: "design",
+    target,
+    pointer,
+  }));
+
+const subjectPointers = (
+  value: unknown,
+  target: IAutoMovieSubjectReviewTarget,
+): IAutoMoviePrepareReviewOutput["quotable"] =>
+  jsonPointerPaths(value).map((pointer) => ({
+    kind: "subject",
+    target,
+    pointer,
+  }));
 
 const sourceSelectors = (
   project: AutoMovieProductionProject,
@@ -2738,6 +3164,8 @@ const highRiskCriteria = (target: IAutoMovieReviewTarget): string[] => {
   switch (target.kind) {
     case "asset":
       return ["silhouette-and-proportion", "rig-convention-and-rom"];
+    case "subject":
+      return ["identity-and-composition", "viewpoint-coverage"];
     case "design":
       return ["identity-and-references"];
     case "source":
@@ -2818,6 +3246,8 @@ const sameStringSet = (
 
 const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
   if (target.kind === "source") return `source:${target.path}`;
+  if (target.kind === "subject")
+    return `subject:${target.shot}:${target.subject}`;
   if (
     target.kind === "asset" ||
     target.kind === "shot" ||
@@ -2837,6 +3267,17 @@ const targetPath = (
 ): string | null => {
   const production = encodeAutoMoviePathSegment(project.productionId);
   if (target.kind === "source") return target.path;
+  if (target.kind === "subject")
+    return normalizeSlash(
+      path.relative(
+        project.root,
+        path.join(
+          project.generatedRoot(),
+          "shots",
+          `${encodeAutoMoviePathSegment(target.shot)}.json`,
+        ),
+      ),
+    );
   if (target.kind === "asset")
     return `.automovie/design/shared/models/${encodeAutoMoviePathSegment(target.id)}.json`;
   if (target.kind === "shot")
@@ -3012,7 +3453,12 @@ const currentGeneratedFile = (
 ): Uint8Array => {
   if (context?.generatedFiles === undefined)
     return project.readGeneratedFile(relativePath);
-  return context.generatedFiles.get(relativePath)!;
+  const retained = context.generatedFiles.get(relativePath);
+  if (retained === undefined)
+    throw new Error(
+      `Generated file "${relativePath}" is absent from the current compiler snapshot.`,
+    );
+  return retained;
 };
 
 const currentFilmTimeline = (
