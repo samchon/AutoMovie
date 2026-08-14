@@ -8,7 +8,9 @@ Read this document when the experiment is driven by a Claude Code or Codex sessi
 
 `codex exec resume <session-uuid> "<message>"` runs exactly one turn and exits. Two readings of the process table are therefore both wrong: a live process is not proof the agent is working, and an exited process is not proof it has stopped.
 
-Read the session file instead. `~/.codex/sessions/` holds one file per session, and it grows second by second while a turn runs and stops the moment the turn ends. Its modification time is the signal; poll that.
+Read the session file instead. `~/.codex/sessions/` holds one file per session, and it grows second by second while a turn runs and stops the moment the turn ends. **Poll its size, not its timestamp.** On Windows the last-write time does not move while the writer holds the file open, so a working turn presents a frozen stamp that is indistinguishable from a finished one: three drivers measured it independently on one campaign, one of them watching the file grow by 88,539 bytes across 54 seconds while the stamp sat unchanged, already three minutes stale. Two consecutive equal sizes over a sensible interval mean idle; growth means alive.
+
+Better still, when the turn was launched as a process you can watch: `codex exec` runs one turn and exits, so its exit is the turn boundary exactly, and a completion notification costs nothing to wait on. Take that as the primary signal and size as the cross-check. Never kill a session on a size reading alone.
 
 Both misreadings were made in one campaign and both were expensive. Two hours twenty minutes went to a turn killed while it was still working, and one hour forty-seven to a finished turn left idle because a plan it had stated read as work in progress.
 
