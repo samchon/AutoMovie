@@ -72,8 +72,17 @@ The sample review queue is deliberately incomplete. Open the PNG printed by
 
 ## Offline geometry measurements
 
-Measurement scripts and tests may load the current project snapshot without an
-MCP session:
+Two measurements already ship. `npm run building:report` derives every drawing
+schedule over the buildings the compiled shots carry, including one row per room
+that keeps the declared cell and the measured content box apart, so what a space
+was declared to be and what actually landed in it are separate facts. `npm run
+texture:scale` re-checks each declared texture scale against the surface it was
+bound to over every model a build produced, and reports a census of what it
+examined beside its findings, because an empty finding list from a run that
+measured nothing reads exactly like a clean one.
+
+Beyond those, measurement scripts and tests may load the current project
+snapshot without an MCP session:
 
 ```ts
 import {
