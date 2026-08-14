@@ -787,6 +787,19 @@ const openMemberOnClick = (open: (key: string) => void): void =>
     const target = (event.target as HTMLElement | null)?.closest("a")?.dataset
       .subject;
     if (target === undefined) return;
+    // A modified click is the reader asking the BROWSER for the link, not this
+    // page for the subject, and the anchor is written to be worth asking for.
+    // Swallowing it would take back the new tab and the new window this row
+    // offers by being an anchor at all, which is the same promise the href
+    // keeps for hovering and copying.
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    )
+      return;
     event.preventDefault();
     open(target);
   });
