@@ -605,9 +605,16 @@ interface ISubjectTreeRow {
  * nodes: their members have not been described, and a tree whose every node is
  * a bounded sample could not honestly report a whole-subtree search anyway. So
  * the box counts the rows it can actually see. Within that reach a match is
- * never buried: an ancestor holding one is shown open even when the reviewer
- * had closed it, and clearing the box restores what they chose, because the
+ * never buried: an ancestor holding one lists its children even when the
+ * reviewer had closed it, and clearing the box hides them again, because the
  * reveal is a way of looking rather than a change to their state.
+ *
+ * A revealed ancestor keeps its twist reading CLOSED while it lists them, and
+ * that disagreement is the honest one. The twist is the reviewer's own state
+ * and it is the state {@link OPEN_PARAMETER} carries, so a mark that flipped
+ * under a needle would show an open set the address does not name, and would
+ * leave no way to tell which nodes survive clearing the box. The rows appear
+ * because the filter is looking; the mark stays because nobody opened it.
  */
 const subjectTree = (rootIds: readonly string[]): HTMLElement[] => {
   const built: ISubjectTreeRow[] = [];
@@ -760,6 +767,29 @@ async function digestOf(text: string): Promise<string> {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")}`;
 }
+
+/**
+ * The one click handler both ways of drawing the panel install.
+ *
+ * A member row is an anchor so it can be hovered, copied, and opened in a new
+ * tab like the link it is; this is what makes a plain click INSIDE the page
+ * mean "show me that" rather than "throw this page away and load another one".
+ * Both ways in want it for the same reason, and only one of them used to have
+ * it. On the index the anchor's own href ran instead, so a member the compiled
+ * shot cannot describe landed the reviewer on a page carrying one line of
+ * refusal, no tree and no link — the loss that the twist's in-place refusal was
+ * written to avoid, reached from the other side. A tree that refuses a dead id
+ * where its children would be and then hands the same id over as a live link
+ * has not stopped costing the click; it has moved it one row across.
+ */
+const openMemberOnClick = (open: (key: string) => void): void =>
+  panel.addEventListener("click", (event) => {
+    const target = (event.target as HTMLElement | null)?.closest("a")?.dataset
+      .subject;
+    if (target === undefined) return;
+    event.preventDefault();
+    open(target);
+  });
 
 /** Stage the named subject and keep the page on it until another is opened. */
 const openSubjectPage = async (key: string): Promise<void> => {
@@ -1047,13 +1077,7 @@ const openSubjectPage = async (key: string): Promise<void> => {
     // scroll.
     { passive: false },
   );
-  panel.addEventListener("click", (event) => {
-    const target = (event.target as HTMLElement | null)?.closest("a")?.dataset
-      .subject;
-    if (target === undefined) return;
-    event.preventDefault();
-    navigate(target);
-  });
+  openMemberOnClick(navigate);
   window.addEventListener("popstate", () => {
     const next = new URLSearchParams(window.location.search);
     const back = next.get("subject");
@@ -1092,8 +1116,46 @@ const openSubjectPage = async (key: string): Promise<void> => {
   }
 };
 
+/**
+ * Open a member named on the index, or refuse it and keep the tree standing.
+ *
+ * The index holds no scene, so opening a subject from here is a page load
+ * rather than a restage. The refusal therefore has to happen BEFORE that load:
+ * a member the compiled shot does not carry — a space may list a grouping
+ * element that owns no scene node, and 24 of the medieval residence's do —
+ * would otherwise be discovered by the next page, which has nothing left to
+ * show but the message. Asking first costs one memoised description and leaves
+ * the reviewer where they were, with the twists they had opened still open,
+ * exactly as a refused descent does on the subject page.
+ *
+ * Both boxes are checked because both are refusals a staged page would have
+ * raised: a key naming nothing, and a key naming something with no extent to
+ * aim at.
+ */
+const openFromIndex = (key: string): void => {
+  try {
+    extentOf(resolve(parseAutoMovieViewerSubjectKey(key)));
+  } catch (error) {
+    // Redrawn first so the ways in survive the refusal, then the reason is put
+    // above them. `renderIndex` rebuilds from the same open set the address
+    // carries, so the tree comes back as the reviewer left it.
+    renderIndex();
+    panel.prepend(
+      line(error instanceof Error ? error.message : `${error}`, "stale"),
+    );
+    return;
+  }
+  const next = new URLSearchParams();
+  next.set("shot", shotId);
+  next.set("subject", key);
+  // The address the row's own href already carries, so a click and a middle
+  // click reach the same page.
+  window.location.search = next.toString();
+};
+
 if (requestedKey === null) {
   renderIndex();
+  openMemberOnClick(openFromIndex);
   status.textContent =
     `${shotId}: no subject named.\n` +
     "Add ?subject=<kind>:<id>, or pick one on the right.\n" +
