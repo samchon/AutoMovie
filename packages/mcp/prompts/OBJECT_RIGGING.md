@@ -16,7 +16,7 @@ Parent according to mechanical or anatomical motion. Put a pivot at the true hin
 
 Where that pivot is written down depends on what the moving thing belongs to, and the two answers are not interchangeable. A building's own door, shutter, gate, or sash states its axis and pivot inside its opening record, in the coordinates the next section names. A prop states them as the local transform of its own articulation node. Authoring the first as if it were the second produces a leaf that no opening drives and no clearance check measures.
 
-The classic arm-axis failure is a mesh modeled along one axis while the skeleton and rest-frame contract assume another. Never fix that with unexplained corrective rotations scattered through animation. Record the asset’s basis, retarget once, and verify named left/right chains in rest and extreme poses.
+The classic arm-axis failure is a mesh modeled along one axis while the skeleton and rest-frame contract assume another. Never fix that with unexplained corrective rotations scattered through animation. Record the asset's basis, retarget once, and verify named left/right chains in rest and extreme poses.
 
 For humanoids, preserve a conventional hips-rooted hierarchy with stable left/right names and a documented T- or A-pose conversion. VRM 1.0 assets use meters, a right-handed Y-up coordinate system, and a normalized humanoid T-pose facing +Z; normalize external assets at ingest instead of leaking foreign conventions downstream.
 
@@ -96,4 +96,10 @@ Check:
 
 ## Review recipe
 
-Capture rest and range-of-motion turntables in beauty and relevant structural passes. Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
+`captureTurntable({ asset })` is the whole first step. One call commits the set an asset review is judged from: four horizontal quarters, the overhead outline pass, and the extreme-range pose of a rigged model. Assembling that set by hand is where the one angle a defect was on gets dropped.
+
+Then frame what a whole-model view cannot resolve. `captureFrame` accepts a `part` on an asset target and narrows the camera onto one compiled part with the model still around it, which is how a hinge, a pintle, a stile, or a pivot cover is actually looked at.
+
+Judge silhouette before detail, then hierarchy, pivots, limits, material separation, and every shot-required capability. A capability absent from the profile is not available just because a mesh visually suggests it.
+
+Close with `prepareReview` and `submitReview` under `REVIEW_ASSET`. The worksheet names which required views are still missing, so an object nobody finished looking at cannot read as reviewed.

@@ -14,9 +14,9 @@ Give each layer a narrative job. If two sounds compete for the same job, simplif
 
 ## What an authored cue plays
 
-An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source frame the edit begins at, the span of source it uses, a gain, fades and a bus. The mix plays that asset — read at its own rate from the stated offset, stretched only by the ratio between the source span and the film span, and silent past the asset's end rather than looped. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
+An audio cue on the film timeline names its `asset` and states where it sits: a film-global start, a duration, the source frame the edit begins at, the span of source it uses, a gain, fades and a bus. The mix plays that asset read at its own rate from the stated offset, stretched only by the ratio between the source span and the film span, and silent past the asset's end rather than looped. Decoding happens outside the mix: whoever renders hands the decoded samples in, exactly as it does for synthesized dialogue, so a codec never reaches a mix that has to produce the same bytes on every machine.
 
-A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in — a bed for music, filtered noise for ambience and effects. That is scaffolding for a film mid-authoring and not the sound design: a review that judges a cue before its asset is decoded is judging the stand-in.
+A cue whose asset has not been decoded still sounds, as a bus-shaped stand-in: a bed for music, filtered noise for ambience and effects. That is scaffolding for a film mid-authoring and not the sound design: a review that judges a cue before its asset is decoded is judging the stand-in.
 
 ## Event-derived cues
 
@@ -53,3 +53,9 @@ Shape ambience across edits with L-cuts and J-cuts. Crossfade room tone where co
 ## Verification
 
 Probe final media facts, resident sample count, duration, channel count, sample rate, codec, and audiovisual runtime. Listen on headphones and small speakers at a stable level. Check dialogue, event sync, spatial motion, loops, clipping, accidental gaps, captions, and the first and last second of every sequence.
+
+## Evidence for a sound verdict
+
+Sound has no turntable, so its evidence is the media facts and the delivered timeline rather than a frame. Probe the final media, then record the verdict where it survives: `prepareReview` and `submitReview` under `REVIEW_SEQUENCE` for a cut's own audio, and under `REVIEW_FILM` for the mix, the dialogue intelligibility, and the audiovisual runtime.
+
+A picture review never discharges a sound obligation, and neither does a waveform nobody listened to.

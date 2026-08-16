@@ -44,3 +44,9 @@ Open and watch the committed MP4 itself, then prepare `target:{kind:"rendition",
 - Commit refusal: no accepted receipt exists; resolve the named provenance disagreement.
 
 Every reroll changes output identity and requires a new visual review, even with the same seed or prompt.
+
+## The rendition owes its own review
+
+An adopted rendition never inherits the deterministic shot's verdict. Complete the `shot` review first, because a repaint of a shot nobody accepted is a repaint of an unaccepted shot.
+
+Then run `prepareReview` and `submitReview` on the `rendition` target under `REVIEW_SHOT`. Every reroll changes output identity and stales that review, so the last rendition anybody looked at is the only one the film may ship.

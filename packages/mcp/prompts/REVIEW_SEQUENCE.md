@@ -11,7 +11,7 @@ Call `prepareReview` for the exact treatment sequence id. Inspect current covera
 The canonical criteria are:
 
 - `cross-shot-continuity`: action, pose, gaze, eyeline, screen direction, props, light, ambience, and narrative state carry deliberately across cuts.
-- `rhythm-against-intent`: shot duration, internal motion, dialogue, silence, and cut placement express the sequence’s escalation, release, or suspension.
+- `rhythm-against-intent`: shot duration, internal motion, dialogue, silence, and cut placement express the sequence's escalation, release, or suspension.
 - `spatial-model-maintenance`: the viewer can reconstruct or intentionally lose geography according to declared style intent.
 - `coverage-sufficiency`: the cut has enough distinct, purposeful material to communicate every beat without redundant filler.
 - `acceptance-scenarios`: all sequence-relevant deterministic predicates and evidence requirements pass.

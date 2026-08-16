@@ -8,7 +8,7 @@ The boundary is worth stating plainly, because the temptation runs the other way
 
 AutoMovie runs no diffusion model of its own. The adapter is host-owned: it receives the verified deterministic frames, the authorized reference bytes, and the exact parameters, and it hands back encoded video with its provider, model, version, and execution boundary named. A host with no adapter configured gets a concrete provisioning script instead of a rendition, which is a configuration answer rather than a generation that failed.
 
-Model quality, licensing, deployment, controls, and provider behavior change quickly. Before choosing an adapter, search current official model cards, documentation, license terms, supported control inputs, temporal consistency method, resolution and duration bounds, privacy or retention policy, and reproducibility limits. Record the evidence and date. Do not treat this handbook’s publication date or a remembered leaderboard as current SOTA.
+Model quality, licensing, deployment, controls, and provider behavior change quickly. Before choosing an adapter, search current official model cards, documentation, license terms, supported control inputs, temporal consistency method, resolution and duration bounds, privacy or retention policy, and reproducibility limits. Record the evidence and date. Do not treat this handbook's publication date or a remembered leaderboard as current SOTA.
 
 Prefer a method that accepts:
 

@@ -6,7 +6,7 @@ Editing authors time and relation. The EDL is not a dump of every rendered shot;
 
 Start with the dramatic change. Cut when the outgoing image has delivered its value and the incoming image can redirect attention. Hold when anticipation, discomfort, observation, or performance needs duration. Remove time when no meaningful state changes.
 
-Use Walter Murch’s priority order when criteria conflict:
+Use Walter Murch's priority order when criteria conflict:
 
 1. emotion;
 2. story;
@@ -25,7 +25,7 @@ Maintain action direction, pose phase, eyeline, prop state, light, and ambience 
 
 ## Rhythm
 
-Rhythm emerges from shot duration, internal movement, dialogue, sound envelope, and expectation. Fast cutting cannot rescue inert shots; a long take is not automatically contemplative. Shape acceleration and deceleration against the sequence’s dramatic curve. Leave room before important information to focus attention and after it to register consequence.
+Rhythm emerges from shot duration, internal movement, dialogue, sound envelope, and expectation. Fast cutting cannot rescue inert shots; a long take is not automatically contemplative. Shape acceleration and deceleration against the sequence's dramatic curve. Leave room before important information to focus attention and after it to register consequence.
 
 Evaluate cuts at delivery frame rate. Snap edits to the production frame grid. Check source interval bounds, exact output frames, and transition overlap. A transition consumes time from both sides and must not erase the action or line it is meant to connect.
 
@@ -42,3 +42,12 @@ Use a J-cut when incoming sound prepares or pulls the viewer into the next image
 ## Review pass
 
 Watch once without stopping for story and emotion, once with the frame ruler for continuity and event timing, and once listening without looking for dialogue, ambience, rhythm, and accidental silence. Inspect every boundary in both directions. Sequence review owns local cut logic; film review owns the accumulated pace and narrative completion.
+
+## Look at the cut
+
+An edit is judged across boundaries, so evidence is taken on both sides of each one.
+
+1. `captureFrame` on the outgoing and incoming shots at the exact frames a cut joins, and one frame either side.
+2. `prepareReview` and `submitReview` under `REVIEW_SEQUENCE` for local cut logic, then under `REVIEW_FILM` for the whole assembly.
+
+Sequence review owns the boundary; film review owns the arc. Completing one never completes the other.
