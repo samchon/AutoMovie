@@ -21,7 +21,7 @@ When a client cannot author something it reasonably should, the answer is the mi
 ## Server/tool arrangement is not settled
 
 How many servers, and how tools group across them, is a **standing design question, not a one-time decision**.
-Today canonical `AutoMovieApplication` is the evidence surface: `getGuideDocument`, `captureFrame`, `repaintShot`, `inspectSubject`, `prepareReview`, and `submitReview`.
+Today canonical `AutoMovieApplication` is the evidence surface: `getGuideDocument`, `captureFrame`, `captureTurntable`, `repaintShot`, `inspectSubject`, `prepareReview`, and `submitReview`.
 Ordinary screenplay and shot implementation, design records, deterministic compilation, geometry inspection, status, migration, tests, and render orchestration stay in repository code or package/CLI APIs.
 The former legacy, granular, gateway, and production application families are retired, and `automovie-mcp` is the only MCP binary.
 Whenever this surface changes:

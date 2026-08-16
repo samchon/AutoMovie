@@ -18,6 +18,14 @@ Know what a `mask` frame separates before you cite it. A SHOT target paints the 
 
 A colour means nothing without the document that names it. The palette is the sidecar, `renderAutoMovieSemanticMaskSidecar` is its exact bytes, and every entry carries the semantic id, its kind and label, and the `owner` chain that resolves a door leaf to its opening, its wall boundary, its room, and its building unit. Derive it from the same compiled shot you captured, never from a design that has moved on since; the capture receipt does not carry it for you yet, so a mask frame you cite for identity travels with a palette you derived and stored yourself.
 
+## The whole asset turntable in one call
+
+`captureTurntable` takes `{ asset, productionId?, width?, height? }` and captures the complete view set an asset review is judged from: the four horizontal quarters at fifteen degrees, the steep `outline` pass overhead, and a rigged model's `rom-extremes` pose. The set belongs to the review contract rather than to the request, which is the point of the tool. An asset covered from the angles its author chose is an asset whose back nobody looked at.
+
+Every view runs through the same path `captureFrame` uses, so each one carries the same receipt and the same refusals. What comes back is a ledger, not six receipts: `views` lists every required view in canonical order with the project-relative `frame` it committed, or `null` where that view was refused, and `captured` is true only when every one of them committed. A refused view is named by the diagnostic whose target reads `<asset>#<view id>`.
+
+Use `captureFrame` for one view you want for a specific question. Use `captureTurntable` when what you owe is an asset review.
+
 ## Success evidence
 
 `captured:true` means the target resolved through the current compiler registry, the host returned a decodable PNG, raster and snapped time matched the request, and the bytes reopened through an atomic render manifest. Check all of:
@@ -42,4 +50,4 @@ Refusals arrive in two shapes and only one of them carries diagnostics. A refusa
 - Receipt invalid: discard the pixels. The host, compiler state, or manifest changed during capture; retry after the repository is stable.
 - `captured:false`: read every returned diagnostic, correct its owner, and repeat the same target. It is never partial evidence.
 
-Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set `prepareReview` returns for that model. Read `REVIEW_SHOT` or `REVIEW_ASSET`, call `prepareReview`, and let its `review-evidence-missing` diagnostics name the exact production, target, time, and pass still owed.
+Which views are enough is not yours to decide. A shot owes every frame-and-pass pair its contract's `reviewFrames` declare; an asset owes the fixed turntable set, which is exactly what `captureTurntable` captures. Read `REVIEW_SHOT` or `REVIEW_ASSET`, call `prepareReview`, and let its `review-evidence-missing` diagnostics name the exact production, target, time, and pass still owed.
