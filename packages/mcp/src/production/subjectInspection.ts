@@ -21,11 +21,15 @@ import { PNG } from "pngjs";
 import typia from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
-import type { IAutoMovieProductionServices } from "./AutoMovieProductionContext";
+import type {
+  AutoMovieProductionContext,
+  IAutoMovieProductionServices,
+} from "./AutoMovieProductionContext";
 import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { requireAutoMovieGuides } from "./guideGate";
 
 /**
  * Project-relative directory every subject observation artifact is written to.
@@ -36,9 +40,6 @@ import {
  * describes it. The separation is a location, not a convention someone has to
  * remember.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Keeps an inspection-owned observation out of the population a delivery review reads.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Places the observation artifact outside the delivery render bundle the specification separates it from.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::artifact-separation The observation artifact is published under an inspection root outside the render bundle tree a delivery review collects frames from.
  * @author Samchon
  */
 export const AUTOMOVIE_SUBJECT_INSPECTION_ROOT = ".automovie/inspections";
@@ -54,8 +55,6 @@ export const AUTOMOVIE_SUBJECT_INSPECTION_ROOT = ".automovie/inspections";
  * legitimately planned differently in two places. Counting observations against
  * a denominator nobody was answering is worse than counting nothing.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-coverage Publishes the planned viewpoint population an observation set is measured against.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Fixes where the declared denominator of one subject's coverage is read from.
  * @author Samchon
  */
 export const AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE = "plan.json";
@@ -63,8 +62,6 @@ export const AUTOMOVIE_SUBJECT_INSPECTION_PLAN_FILE = "plan.json";
 /**
  * One subject's published viewpoint plan.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the viewpoint population one inspection answered for.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the persisted denominator of subject coverage.
  * @author Samchon
  */
 export interface IAutoMovieSubjectInspectionPlanRecord {
@@ -92,8 +89,6 @@ export interface IAutoMovieSubjectInspectionPlanRecord {
  * a revision could not tell a picture drawn before a recompile from one drawn
  * after it.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Persists which subject, revision, and viewpoint the artifact answers, beside the artifact.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the persisted subject observation record.
  * @author Samchon
  */
 export interface IAutoMovieSubjectInspectionObservationRecord {
@@ -143,58 +138,35 @@ const DEFAULT_ELEVATIONS_DEG: readonly number[] = [20];
  * looking at a thing, and it states the coordinate space it is expressed in so
  * a model-local prototype and a world-placed element are never confused.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership States an eye the inspection owns rather than one an authored camera imposed.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the resolved camera state one viewpoint plan entry produces.
  * @author Samchon
  */
 export interface IAutoMovieSubjectInspectionPose {
   /**
    * Coordinate basis both {@link position} and {@link target} are stated in.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-identity Keeps a model-local prototype eye apart from a world-placed placement eye.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the coordinate basis the resolved camera state belongs to.
    */
   coordinateSpace: "model" | "world";
   /**
    * Eye position in metres.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Places the inspection's own eye.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the resolved eye position.
    */
   position: IAutoMovieVector3;
   /**
    * Point the eye looks at, in metres.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Orients the inspection's own eye.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the resolved eye orientation as a look-at point.
    */
   target: IAutoMovieVector3;
   /**
    * Vertical field of view in degrees.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Records the lens the inspection picked to reveal the subject.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the projection's vertical field of view.
    */
   fovDeg: number;
   /**
    * Viewport width divided by height.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Fits the subject to the viewport the inspection actually renders into.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the projection's viewport ratio.
    */
   aspect: number;
   /**
    * Near clip distance in metres, derived from the subject's own size.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Clips a small part and a large elevation sensibly under one rule.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the resolved projection's near plane.
    */
   near: number;
   /**
    * Far clip distance in metres, derived from the subject's own size.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Clips a small part and a large elevation sensibly under one rule.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the resolved projection's far plane.
    */
   far: number;
 }
@@ -210,10 +182,6 @@ export interface IAutoMovieSubjectInspectionPose {
  * travelling the same path. Separating the instrument makes a subject image
  * structurally incapable of arriving with a delivery receipt attached.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Provides the host instrument the request surface needs to answer a named subject and viewpoint with an image.
- * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Leaves actual pixel production with the host that executes the real project.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the host instrument whose absence the surface must refuse by name.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::host-absence-refusal A separate host instrument is what the surface names when it is absent, so a missing instrument is refused rather than answered with an invented observation.
  * @author Samchon
  */
 export type AutoMovieProductionSubjectInspection = (input: {
@@ -247,58 +215,35 @@ export type AutoMovieProductionSubjectInspection = (input: {
 /**
  * One observation the inspection produced, with the eye it was taken from.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Records the chosen viewpoint condition and the artifact that observation produced.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types one entry of the subject observation record the surface returns.
  * @author Samchon
  */
 export interface IAutoMovieSubjectInspectionView {
   /**
    * Viewpoint identity from the plan this observation answers.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-coverage States which planned viewpoint the observation discharges.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the observation's viewpoint plan reference.
    */
   viewpoint: string;
   /**
    * Camera state the image was drawn through.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-evidence Preserves the observation condition so the same look can be reopened.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the per-viewpoint condition of the observation.
    */
   pose: IAutoMovieSubjectInspectionPose;
   /**
    * Project-relative PNG the host instrument produced.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Hands back the artifact a party that cannot see a screen asked for.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the artifact location the surface returns.
    */
   path: string;
   /**
    * Exact digest of the written PNG bytes.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds the observation to the exact bytes it was made of.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the byte identity the observation receipt carries.
    */
   digest: AutoMovieContentDigest;
   /**
    * Decoded pixel width.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-evidence Records the raster the observation was made at.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the observation raster width.
    */
   width: number;
   /**
    * Decoded pixel height.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-evidence Records the raster the observation was made at.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the observation raster height.
    */
   height: number;
   /**
    * Receipt in the shape subject coverage counts.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Emits subject-view evidence a frame obligation cannot consume and which no frame receipt can satisfy.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the receipt the coverage fold admits.
    */
   observation: IAutoMovieSubjectReviewObservation;
 }
@@ -310,82 +255,47 @@ export interface IAutoMovieSubjectInspectionView {
  * so a consumer requiring delivery evidence refuses this record at the type
  * level instead of by a reviewer remembering to.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Returns the resolved subject, the inspection-owned plan, and the artifacts a named request produced.
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Marks the whole answer as something no delivery review may consume.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request surface's complete answer.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::request-inputs-and-answer The answer carries the resolved subject record, the viewpoint plan, each viewpoint's resolved camera state and artifact, and the coverage they discharge.
  * @author Samchon
  */
 export interface IAutoMovieInspectSubject {
   /**
    * True only when every planned viewpoint produced a verified observation.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-coverage Refuses to report a partial sweep as a completed inspection.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the surface's success discriminator.
    */
   inspected: boolean;
   /**
    * Production namespace the request resolved against.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Makes the namespace the observation came from explicit.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the resolved production identity.
    */
   productionId: string;
   /**
    * Compiled artifact and stable subject id that were opened.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-identity Answers the exact identity that was named rather than a neighbouring one.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Types the address the record resolves.
    */
   target: IAutoMovieSubjectReviewTarget;
   /**
    * Revision of the compiled artifact the subject was read from, or null.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-evidence States which compiled state the observation was taken against.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Types the revision the freshness key is built on.
    */
   revision: string | null;
   /**
    * Compiled description of the subject, or null when it did not resolve.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-identity Returns compiled truth about the named subject instead of a private reconstruction.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Types the resolved subject record.
    */
   subject: AutoMovieSubjectReviewDescription | null;
   /**
    * Inspection-owned viewpoint plan in deterministic order.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the viewpoint population the observation coverage is measured against.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the deterministic plan the surface states.
    */
   plan: IAutoMovieSubjectReviewViewpoint[];
   /**
    * One entry per observation the host instrument actually produced.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Hands the requester the artifacts it asked for.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Types the produced observation records.
    */
   views: IAutoMovieSubjectInspectionView[];
   /**
    * Planned against observed coverage, or null when nothing resolved.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-coverage Separates the planned population from what was actually observed.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Types the explicit numerator and denominator of one inspection.
    */
   coverage: IAutoMovieSubjectReviewCoverage | null;
   /**
    * Always `false`, and typed as the literal so it can never be widened.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Marks a subject observation as something that cannot be offered as delivery evidence.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Fixes the delivery-evidence refusal in the returned shape itself.
-   * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::delivery-evidence-refusal The literal false in the returned shape is what refuses a delivery-evidence consumer, rather than a rule a caller has to remember.
    */
   deliveryEvidence: false;
   /**
    * Exact refusal diagnostics, empty on success.
-   *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Names what is missing instead of inventing an observation.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the refusal the surface returns in place of an observation.
    */
   diagnostics: IAutoMovieDiagnostic[];
 }
@@ -394,68 +304,42 @@ export namespace IAutoMovieInspectSubject {
   /**
    * One subject inspection request.
    *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Lets a party that cannot see a screen name a subject and a viewpoint rule.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request surface's inputs.
    * @author Samchon
    */
   export interface IProps {
     /**
      * Optional production namespace; required when the host has no default.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Selects the namespace the subject is named inside.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request's namespace selector.
      */
     productionId?: string;
     /**
      * Compiled shot artifact that owns the stable subject id.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-identity Qualifies the subject id by the artifact that owns it.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Types the artifact half of the subject address.
      */
     shot: string;
     /**
      * Stable namespaced subject id, such as `element:hall-oriel-2`.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-identity Names the subject by what it is rather than by a frame containing it.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Types the identity half of the subject address.
      */
     subject: string;
     /**
      * Evenly spaced azimuths per elevation ring; six by default.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-coverage Fixes how many directions per ring the planned coverage contains.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the plan's horizontal sampling rule.
      */
     azimuthCount?: number;
     /**
      * Elevation rings in degrees, in the order they are walked; `[20]` by
      * default.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-coverage Fixes which heights the planned coverage contains.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the plan's vertical sampling rule.
      */
     elevationsDeg?: number[];
     /**
      * Multiplier on the distance that exactly fits the subject, where `1` fits
      * it and larger values leave surrounding context in frame; `1.25` by
      * default.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-coverage Fixes the framing margin the planned coverage was taken at.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Types the plan's distance rule.
      */
     distanceFactor?: number;
     /**
      * Optional positive integer width no larger than production width.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-evidence Records the raster the observation is requested at.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request's raster width.
      */
     width?: number;
     /**
      * Optional positive integer height no larger than production height.
-     *
-     * @evidence requirements/review/subject-inspection.md#review-subject-evidence Records the raster the observation is requested at.
-     * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Types the request's raster height.
      */
     height?: number;
   }
@@ -472,11 +356,6 @@ export namespace IAutoMovieInspectSubject {
  * planned by one rule and two requesters naming the same subject receive the
  * same viewpoints in the same order.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Derives angle, distance and projection from the subject's own extent instead of from an authored camera.
- * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Makes two requests naming the same subject and rule open the same thing under the same condition.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach States the deterministic viewpoint identities and camera state one subject and one plan rule produce for any requester.
- * @evidencePart specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach::plan-determinism The same subject extent and the same plan rule yield the same viewpoint identities in the same order, so two requesters receive one plan rather than two.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Implements the deterministic viewpoint selection rule, producing the same identities and order for the same inputs.
  * @author Samchon
  */
 export const autoMovieSubjectInspectionPlan = (props: {
@@ -566,9 +445,6 @@ export const autoMovieSubjectInspectionPlan = (props: {
  * collapse onto one angle collapse into one viewpoint, because two identical
  * angles are one viewpoint however they were asked for.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Keeps the chosen angle one that reveals the subject instead of one that buries the eye beneath it.
- * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Protects a requester that cannot see the returned picture from recording an underground frame as an observation.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Derives the plan's admissible vertical range from the subject's own extent.
  * @author Samchon
  */
 export const autoMovieSubjectInspectionElevations = (props: {
@@ -602,8 +478,6 @@ export const autoMovieSubjectInspectionElevations = (props: {
  * large one, and the second reads as two surfaces fighting over one distant
  * pixel, which looks like a modelling defect and is not.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Produces an eye unbound from authored camera, shot boundary and playback time.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Resolves one plan entry into camera state without taking film time as input.
  * @author Samchon
  */
 export const autoMovieSubjectInspectionPose = (props: {
@@ -655,12 +529,6 @@ export const autoMovieSubjectInspectionPose = (props: {
  * adapter from frame capture, the artifacts are written outside the render
  * root, and the answer carries `deliveryEvidence` as a literal `false`.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Implements the request surface a party that cannot see a screen uses to open a subject.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds every observation to the subject identity, the compiled revision and the exact bytes it produced.
- * @evidence requirements/review/subject-inspection.md#review-subject-coverage Reports planned against observed viewpoints rather than asserting that the subject was reviewed.
- * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence Returns host-produced pixels and refuses when no host instrument produced them.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Implements the request surface, its artifact separation and its host-absence refusal.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Emits the observation records the coverage fold admits.
  * @author Samchon
  */
 export class AutoMovieProductionSubjectInspectionService {
@@ -670,10 +538,21 @@ export class AutoMovieProductionSubjectInspectionService {
   ) {}
 
   /**
-   * Open one compiled subject from every planned viewpoint.
+   * Serve one inspection request against the session context.
    *
-   * @evidence requirements/review/subject-inspection.md#review-subject-inspection-reach Produces the artifact set one named request asked for, or names why it could not.
-   * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Executes the request surface contract end to end.
+   * The knowledge gate runs before the production is resolved, so an ungated
+   * caller is told what to read rather than which production failed to open.
+   */
+  public async serve(
+    context: AutoMovieProductionContext,
+    input: IAutoMovieInspectSubject.IProps,
+  ): Promise<IAutoMovieInspectSubject> {
+    requireAutoMovieGuides(context, "inspectSubject");
+    return this.inspect(context.forProduction(input.productionId), input);
+  }
+
+  /**
+   * Open one compiled subject from every planned viewpoint.
    */
   public async inspect(
     services: IAutoMovieProductionServices,
@@ -1063,8 +942,6 @@ const inspectionFrame = (
  * used, so a name pasted from the viewer page and the same subject named the
  * compiler's way publish into one place instead of two.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-identity Keeps one subject's observations under one identity however the requester spelled it.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach Fixes where one subject's published plan and observations are found.
  * @author Samchon
  */
 export const inspectionDirectory = (
@@ -1089,10 +966,6 @@ export const inspectionDirectory = (
  * is not an observation, and letting it count is the fabricated pass the whole
  * refusal exists to prevent.
  *
- * @evidence requirements/review/subject-inspection.md#review-subject-coverage Supplies the declared plan and the observations actually on disk so coverage is counted rather than asserted.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Admits an observation only while the exact artifact it names still answers for it.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Reads the persisted numerator and denominator of one subject's coverage.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Returns observations with the revision each was taken at, so a stale one is visible as stale.
  * @author Samchon
  */
 export const readAutoMovieSubjectInspection = (props: {

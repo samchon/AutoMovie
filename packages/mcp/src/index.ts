@@ -20,6 +20,7 @@ export * from "./production/designReferenceDiagnostics";
 export * from "./production/inspectDesignReferenceAsset";
 export * from "./production/filmGrammarDiagnostics";
 export * from "./production/filmTimeline";
+export * from "./production/guideGate";
 export * from "./production/linkProductionSource";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";

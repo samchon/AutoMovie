@@ -1,14 +1,17 @@
 # `@automovie/mcp`
 
-`@automovie/mcp` exposes exactly five MCP tools. They exist for facts an ordinary coding channel cannot carry safely: session-scoped guide acknowledgement, host-produced pixel or diffusion evidence, and evidence-first human judgment.
+`@automovie/mcp` exposes exactly six MCP tools. They exist for facts an ordinary coding channel cannot carry safely: session-scoped guide acknowledgement, host-produced pixel or diffusion evidence, and evidence-first human judgment.
 
 | Tool               | Responsibility                                                           |
 | ------------------ | ------------------------------------------------------------------------ |
 | `getGuideDocument` | serve one exact packaged guide and record session read credit            |
 | `captureFrame`     | produce and receipt an actual shot or asset PNG through the host adapter |
 | `repaintShot`      | optionally derive and receipt a structure-preserving diffusion rendition |
+| `inspectSubject`   | open one compiled subject from every planned viewpoint, outside delivery |
 | `prepareReview`    | derive the current four-surface worksheet and evidence inventory         |
 | `submitReview`     | validate and store a fresh verdict-last worksheet                        |
+
+Every method of `AutoMovieApplication` is one tool and one delegating line. Its implementation lives in the service class or namespace function it names under `src/production`, so the class holds the contract a client reads and nothing else.
 
 The server has no design setters, project switcher, compiler, status query, geometry query, renderer, or internal LLM. Coding agents edit tracked repository files. The scaffold and package APIs own compile, lint/status, geometry, rendering, verification, and migration.
 

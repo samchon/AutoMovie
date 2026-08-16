@@ -13,7 +13,10 @@ import fs from "node:fs";
 import path from "node:path";
 import typia from "typia";
 
-import type { IAutoMovieProductionServices } from "./AutoMovieProductionContext";
+import type {
+  AutoMovieProductionContext,
+  IAutoMovieProductionServices,
+} from "./AutoMovieProductionContext";
 import { AutoMovieProductionInputRaceError } from "./AutoMovieProductionProject";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
@@ -21,6 +24,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import { AUTOMOVIE_REPAINT_GUIDE, requireAutoMovieGuides } from "./guideGate";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
@@ -33,9 +37,6 @@ import {
 
 /**
  * Optional host repaint orchestration and immutable rendition provenance.
- *
- * @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence Orchestrates repaint only after current deterministic source evidence and review prerequisites are proved.
- * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Enforces the host handoff and immutable rendition-provenance boundary.
  */
 export class AutoMovieProductionRepaintService {
   public constructor(
@@ -43,10 +44,57 @@ export class AutoMovieProductionRepaintService {
   ) {}
 
   /**
-   * Repaint one current shot from verified deterministic controls.
+   * Serve one repaint request against the session context.
    *
-   * @evidence requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-refusal Refuses the operation until the addressed shot has current complete source evidence and review.
-   * @evidence specifications/asset-and-representation/generated-assets-and-repaint-handoff.md#asset-spec-repaint-execution-eligibility Executes the eligible handoff and records the exact host-produced rendition facts.
+   * The tracked delivery mode is read before the DIFFUSION_ENHANCE gate on
+   * purpose.
+   *
+   * A production that never asked for a rendition is owed the design change it
+   * would have to make, not an order to read a guide it will not use.
+   */
+  public async serve(
+    context: AutoMovieProductionContext,
+    input: IAutoMovieRepaintShot.IProps,
+  ): Promise<IAutoMovieRepaintShot> {
+    requireAutoMovieGuides(context, "repaintShot");
+    const refusal = (
+      code: AutoMovieDiagnosticCode,
+      message: string,
+    ): IAutoMovieRepaintShot => ({
+      repainted: false,
+      productionId: input.productionId,
+      shot: input.shot,
+      receipt: null,
+      diagnostics: [diagnostic(code, input.shot, message, "render")],
+    });
+    if (
+      input.productionId.trim().length === 0 ||
+      input.productionId.trim() !== input.productionId
+    )
+      return refusal(
+        "repaint-production-invalid",
+        "repaintShot productionId must be a trimmed non-empty production namespace.",
+      );
+    let services: IAutoMovieProductionServices;
+    try {
+      services = context.forProduction(input.productionId);
+    } catch (error) {
+      return refusal(
+        "repaint-production-unregistered",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    if (services.project.graph().production?.visualDelivery !== "repainted")
+      return refusal(
+        "repaint-delivery-disabled",
+        'The current production design declares visualDelivery "deterministic". Change that tracked contract to "repainted", recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.',
+      );
+    requireAutoMovieGuides(context, "repaintShot", AUTOMOVIE_REPAINT_GUIDE);
+    return this.repaint(services, input);
+  }
+
+  /**
+   * Repaint one current shot from verified deterministic controls.
    */
   public async repaint(
     services: IAutoMovieProductionServices,
@@ -549,10 +597,11 @@ const diagnostic = (
   code: AutoMovieDiagnosticCode,
   target: string,
   message: string,
+  phase: IAutoMovieDiagnostic["phase"] = "compile",
 ): IAutoMovieDiagnostic => ({
   code,
   category: "error",
-  phase: "compile",
+  phase,
   target,
   path: null,
   message,

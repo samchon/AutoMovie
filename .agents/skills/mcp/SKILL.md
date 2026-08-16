@@ -21,7 +21,7 @@ When a client cannot author something it reasonably should, the answer is the mi
 ## Server/tool arrangement is not settled
 
 How many servers, and how tools group across them, is a **standing design question, not a one-time decision**.
-Today canonical `AutoMovieApplication` is the evidence surface: `getGuideDocument`, `captureFrame`, `repaintShot`, `prepareReview`, and `submitReview`.
+Today canonical `AutoMovieApplication` is the evidence surface: `getGuideDocument`, `captureFrame`, `repaintShot`, `inspectSubject`, `prepareReview`, and `submitReview`.
 Ordinary screenplay and shot implementation, design records, deterministic compilation, geometry inspection, status, migration, tests, and render orchestration stay in repository code or package/CLI APIs.
 The former legacy, granular, gateway, and production application families are retired, and `automovie-mcp` is the only MCP binary.
 Whenever this surface changes:
@@ -40,6 +40,8 @@ When adding or rewriting either, count the actual rendered description length ra
 
 ## Other conventions
 
+- `packages/mcp` is outside the repository contract graph. Its `lint.config.ts` runs `evidence/documented` and `evidence/todo` only, so a comment on this surface states what the tool does for its client and cites nothing; the [evidence-graph skill](../evidence-graph/SKILL.md) owns the reason and the recorded cost.
+- Each public method delegates its whole implementation to a service class or namespace function under `src/production`, so `AutoMovieApplication` reads as the contract a client is shown. Add a tool by writing the service and one delegating method, never by growing a method body.
 - A PR that adds or changes an MCP tool checks whether the guide corpus (`packages/mcp/prompts/`) needs the same change (see `packages/mcp/prompts/README.md`); a guide that does not know a tool teaches only the expensive corrections.
 - A PR that touches the MCP surface or package wiring runs `pnpm run e2e:tgz` (`internals/e2e-tgz.mjs`). It packs the published chain, installs the tarballs fresh, and drives the packaged bin over stdio, catching `files`/`bin`/publishConfig regressions the in-repo gate cannot. Slow and network-dependent, so it stays outside the c8 coverage gate.
 - An MCP tool's return must be a single object type, never a bare union. The engine's success/violations unions are each wrapped (`IAutoMovieStageOutput { staged: IAutoMovieStagedSet }`) rather than returned directly.
