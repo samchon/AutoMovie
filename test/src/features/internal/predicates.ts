@@ -57,6 +57,31 @@ export const throwsError = (
   }
 };
 
+/**
+ * True when an asynchronous task rejects with an Error whose message contains
+ * every requested fragment.
+ *
+ * An async tool refuses by rejecting rather than by throwing into the caller's
+ * frame, so {@link throwsError} would report the promise as a returned value
+ * and pass a case that asserted the refusal.
+ */
+export const rejectsError = async (
+  task: () => Promise<unknown>,
+  messageIncludes: string | readonly string[] = [],
+): Promise<boolean> => {
+  const fragments =
+    typeof messageIncludes === "string" ? [messageIncludes] : messageIncludes;
+  try {
+    await task();
+    return false;
+  } catch (error) {
+    return (
+      error instanceof Error &&
+      fragments.every((fragment) => error.message.includes(fragment))
+    );
+  }
+};
+
 /** True when the validation failed with at least one matching violation. */
 export const hasViolation = (
   v: IAutoMovieValidation,
@@ -162,6 +187,24 @@ export const namedFacts = (
   const output: Record<string, boolean> = {};
   for (const [name, evaluate] of entries) {
     output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
+ * The same ordered facts for asynchronous steps.
+ *
+ * Kept beside {@link namedFacts} rather than folded into it: awaiting a value
+ * that is not a promise would let a synchronous case pass its own bug through
+ * as a resolved fact.
+ */
+export const namedFactsAsync = async (
+  entries: ReadonlyArray<readonly [string, () => Promise<boolean>]>,
+): Promise<Record<string, boolean>> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = await evaluate();
     if (output[name] === false) break;
   }
   return output;

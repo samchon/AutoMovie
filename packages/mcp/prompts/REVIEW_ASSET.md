@@ -16,7 +16,9 @@ The worksheet reads no view at all until generated output is a clean compile of 
 
 The required views are fixed by the service, not chosen by the reviewer. `turntable-front`, `turntable-right`, `turntable-back`, and `turntable-left` are rest-pose beauty frames at azimuth 0, 90, 180, and 270 degrees, each at 15 degrees elevation. `top-outline` is a rest-pose outline frame at azimuth 0 and 65 degrees elevation. `rig-rom-extremes` is a beauty frame at the front angle in the `rom-extremes` pose, and it joins the required set only when the compiled model carries a skeleton: a rigless prop, panel, or building part owes the rest-pose views alone, and asking `captureFrame` for its extremes is refused. That is the whole set; `prepareReview` returns exactly the views this model owes, and the worksheet is the authority on which of them are still missing.
 
-Capture them with `angleDeg` in `[0, 360)` and `elevationDeg` in `[-85, 85]`, at production raster with no width or height override. A turntable's time is `angleDeg / 30` on a fixed twelve-second clock, so each required azimuth is one exact frame index rather than a nearby one. A view captured at a smaller raster, or against a different production frame rate, is downgraded with a `render-frame-invalid` warning and can never discharge a required view.
+Capture the whole set with one `captureTurntable({ asset })` call, which reads the same declaration this section describes and returns a per-view ledger of what committed and what refused. Reproducing the set by hand through `captureFrame` is supported and is where a reviewer drops the one angle the defect was on, so reach for it only when a single view answers a specific question.
+
+Either way the views are captured at production raster with no width or height override. A turntable's time is `angleDeg / 30` on a fixed twelve-second clock, so each required azimuth is one exact frame index rather than a nearby one. A view captured at a smaller raster, or against a different production frame rate, is downgraded with a `render-frame-invalid` warning and can never discharge a required view.
 
 The canonical criteria are:
 

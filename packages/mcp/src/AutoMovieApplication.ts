@@ -2,6 +2,7 @@ import {
   AutoMovieProductionFrameCapture,
   AutoMovieProductionShotRepaint,
   IAutoMovieCaptureFrame,
+  IAutoMovieCaptureTurntable,
   IAutoMovieGetGuideDocument,
   IAutoMoviePrepareReview,
   IAutoMovieRepaintShot,
@@ -12,6 +13,7 @@ import { AutoMovieProductionContext } from "./production/AutoMovieProductionCont
 import { AutoMovieProductionGuideService } from "./production/AutoMovieProductionGuideService";
 import { AutoMovieProductionRepaintService } from "./production/AutoMovieProductionRepaintService";
 import { captureAutoMovieProductionFrame } from "./production/captureProductionFrame";
+import { captureAutoMovieProductionTurntable } from "./production/captureProductionTurntable";
 import type { AutoMovieModelArchetypeRegistry } from "./production/productionArchetypes";
 import {
   prepareAutoMovieReviewWorksheet,
@@ -34,10 +36,10 @@ export type { IAutoMovieDiagnosticCatalogEntry } from "./production/diagnosticCa
  * subject inspection, optional repaint, and evidence-bound review.
  *
  * `getGuideDocument` serves one packaged guide and is the only ungated call.
- * `captureFrame`, `repaintShot`, `inspectSubject`, `prepareReview`, and
- * `submitReview` refuse until this session has read the guides they name.
- * Start with `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })`, then read the
- * exact guides a refusal names and retry the same tool unchanged.
+ * `captureFrame`, `captureTurntable`, `repaintShot`, `inspectSubject`,
+ * `prepareReview`, and `submitReview` refuse until this session has read the
+ * guides they name. Start with `getGuideDocument({ name: "AUTOMOVIE_OVERALL" })`,
+ * then read what a refusal names and retry the tool unchanged.
  *
  * Screenplay and TypeScript authoring, compilation, project-state loading,
  * geometry, status, migration, rendering, and verification are ordinary package
@@ -125,6 +127,25 @@ export class AutoMovieApplication {
     props: IAutoMovieCaptureFrame.IProps,
   ): Promise<IAutoMovieCaptureFrame> {
     return captureAutoMovieProductionFrame(this.context, props);
+  }
+
+  /**
+   * Capture the complete view set one asset review is judged from: four
+   * horizontal quarters, the steep outline pass, and a rigged model's
+   * extreme-range pose.
+   *
+   * The views are the ones the review requires, not ones the caller picks, so
+   * an asset cannot be covered from whichever side happened to look correct.
+   * Each view carries the same proof one `captureFrame` carries.
+   *
+   * `captured` is true only when every required view committed pixels. A view
+   * that refused reports `frame: null`, and the diagnostic targeting
+   * `<asset>#<view id>` states what to correct.
+   */
+  public async captureTurntable(
+    props: IAutoMovieCaptureTurntable.IProps,
+  ): Promise<IAutoMovieCaptureTurntable> {
+    return captureAutoMovieProductionTurntable(this.context, props);
   }
 
   /**

@@ -51,6 +51,7 @@ import {
   acceptanceAddressesShot,
   acceptanceCriterionShots,
 } from "./acceptanceScope";
+import { autoMovieAssetReviewViews } from "./assetReviewViews";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL,
@@ -2289,14 +2290,6 @@ const currentAcceptanceEventTime = (
   }
 };
 
-interface IRequiredAssetReviewView {
-  id: string;
-  angleDeg: number;
-  elevationDeg: number;
-  pose: "rest" | "rom-extremes";
-  pass: IAutoMovieFrameEvidenceReference["pass"];
-}
-
 const currentAssetFrames = (
   project: AutoMovieProductionProject,
   target: Extract<IAutoMovieReviewTarget, { kind: "asset" }>,
@@ -2351,54 +2344,9 @@ const currentAssetFrames = (
     });
     return [];
   }
-  const required: IRequiredAssetReviewView[] = [
-    {
-      id: "turntable-front",
-      angleDeg: 0,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      id: "turntable-right",
-      angleDeg: 90,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      id: "turntable-back",
-      angleDeg: 180,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      id: "turntable-left",
-      angleDeg: 270,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      id: "top-outline",
-      angleDeg: 0,
-      elevationDeg: 65,
-      pose: "rest",
-      pass: "outline",
-    },
-    ...(model.skeleton === null
-      ? []
-      : [
-          {
-            id: "rig-rom-extremes",
-            angleDeg: 0,
-            elevationDeg: 15,
-            pose: "rom-extremes" as const,
-            pass: "beauty" as const,
-          },
-        ]),
-  ];
+  const required = autoMovieAssetReviewViews({
+    rigged: model.skeleton !== null,
+  });
   const covered = new Set<string>();
   const frames: IAutoMovieFrameEvidenceReference[] = [];
   const inventory =

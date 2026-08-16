@@ -1,11 +1,12 @@
 # `@automovie/mcp`
 
-`@automovie/mcp` exposes exactly six MCP tools. They exist for facts an ordinary coding channel cannot carry safely: session-scoped guide acknowledgement, host-produced pixel or diffusion evidence, and evidence-first human judgment.
+`@automovie/mcp` exposes exactly seven MCP tools. They exist for facts an ordinary coding channel cannot carry safely: session-scoped guide acknowledgement, host-produced pixel or diffusion evidence, and evidence-first human judgment.
 
 | Tool               | Responsibility                                                           |
 | ------------------ | ------------------------------------------------------------------------ |
 | `getGuideDocument` | serve one exact packaged guide and record session read credit            |
 | `captureFrame`     | produce and receipt an actual shot or asset PNG through the host adapter |
+| `captureTurntable` | capture the complete review-required turntable of one asset in one call |
 | `repaintShot`      | optionally derive and receipt a structure-preserving diffusion rendition |
 | `inspectSubject`   | open one compiled subject from every planned viewpoint, outside delivery |
 | `prepareReview`    | derive the current four-surface worksheet and evidence inventory         |
@@ -86,6 +87,8 @@ const status = inspectAutoMovieProduction(
 ## Evidence provenance
 
 `captureFrame` resolves only ids in the current compiler-owned `manifests/compile.json`, delegates actual pixels to `AutoMovieProductionFrameCapture`, decodes the PNG, verifies dimensions and visible variance, and atomically commits a content-addressed render bundle and receipt.
+
+`captureTurntable` runs that same path once per view of the set an asset review requires, and answers with a per-view ledger rather than a second receipt shape: the view set is owned by the review contract, so the tool that produces the evidence and the review that consumes it cannot drift apart.
 
 `repaintShot` is unavailable unless the host injects `AutoMovieProductionShotRepaint`. It also requires a current completed deterministic `shot` review before any pixels leave for the adapter. Accepted MP4 output is parsed and committed with a receipt binding compiler, source-render, source-review, control, reference, adapter/model, parameter, and output identities. Review the active output through a separate `rendition` target; rerolling replaces only the active pointer and stales rendition/sequence/film review, not unchanged deterministic truth.
 

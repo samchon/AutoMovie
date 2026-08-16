@@ -19,6 +19,7 @@ import type { AutoMovieProductionContext } from "./AutoMovieProductionContext";
 export const AUTOMOVIE_TOOL_GUIDES = {
   getGuideDocument: [],
   captureFrame: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
+  captureTurntable: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
   repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT"],
   inspectSubject: ["AUTOMOVIE_OVERALL", "SUBJECT_INSPECTION"],
   prepareReview: ["AUTOMOVIE_OVERALL"],
