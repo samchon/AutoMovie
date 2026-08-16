@@ -18,7 +18,9 @@ The required views are fixed by the service, not chosen by the reviewer. `turnta
 
 Capture the whole set with one `captureTurntable({ asset })` call, which reads the same declaration this section describes and returns a per-view ledger of what committed and what refused. Reproducing the set by hand through `captureFrame` is supported and is where a reviewer drops the one angle the defect was on, so reach for it only when a single view answers a specific question.
 
-Either way the views are captured at production raster with no width or height override. A turntable's time is `angleDeg / 30` on a fixed twelve-second clock, so each required azimuth is one exact frame index rather than a nearby one. A view captured at a smaller raster, or against a different production frame rate, is downgraded with a `render-frame-invalid` warning and can never discharge a required view.
+A part-framed capture is not one of these views. `captureFrame` accepts a `part` on an asset target and frames the turntable on that one piece, which is how you judge a mullion or a hinge, but the required set is of the whole model and no part view discharges any of it. Take them when a whole-model view cannot answer the question, and expect the worksheet to keep asking for the six.
+
+Either way the required views are captured at production raster with no width or height override. A turntable's time is `angleDeg / 30` on a fixed twelve-second clock, so each required azimuth is one exact frame index rather than a nearby one. A view captured at a smaller raster, or against a different production frame rate, is downgraded with a `render-frame-invalid` warning and can never discharge a required view.
 
 The canonical criteria are:
 

@@ -37,6 +37,15 @@ export type AutoMovieCaptureTarget =
       elevationDeg?: number;
       /** Rest or extreme-range rig pose, rest by default. */
       pose?: "rest" | "rom-extremes";
+      /**
+       * Compiled part id to frame instead of the whole model.
+       *
+       * The turntable fits that one part, which is how a mullion, a hinge, or a
+       * hand is inspected without exporting a model for it. A part view is a
+       * diagnostic look and never discharges a required asset review view,
+       * because what that review judges is the whole silhouette.
+       */
+      part?: string;
       /** Requested beauty or structural render pass. */
       pass?: AutoMovieGuidePass;
     };

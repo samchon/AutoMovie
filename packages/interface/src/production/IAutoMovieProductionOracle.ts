@@ -255,6 +255,15 @@ export interface IAutoMoviePreviewFrameInput {
         elevationDeg: number;
         /** Rest or required extreme-range rig pose. */
         pose: "rest" | "rom-extremes";
+        /**
+         * Compiled part id to frame instead of the whole model, when given.
+         *
+         * The turntable then fits that one part, which is how a mullion, a
+         * hinge, or a hand is looked at without exporting a separate model for
+         * it. A framed part is a diagnostic view: the asset review's required
+         * turntable is of the whole model and no part view discharges it.
+         */
+        part?: string;
       };
   /**
    * Finite non-negative shot-local time no later than shot duration. The oracle
@@ -470,6 +479,13 @@ export interface IAutoMovieRenderBundleManifest {
         elevationDeg: number;
         /** Rest or required extreme-range rig pose. */
         pose: "rest" | "rom-extremes";
+        /**
+         * Compiled part the turntable framed, when it framed one.
+         *
+         * Absent means the whole model was framed, which is the only form the
+         * asset review's required views accept.
+         */
+        part?: string;
       }
     | {
         /** Shot target. */

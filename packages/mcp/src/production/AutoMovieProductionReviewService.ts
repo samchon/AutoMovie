@@ -2367,6 +2367,10 @@ const currentAssetFrames = (
     const manifest = project.verifiedRenderManifest(entry.path);
     if (manifest === null || manifest.target.kind !== "asset") continue;
     const manifestTarget = manifest.target;
+    // A part view frames one piece of the model at a required angle, which is a
+    // diagnostic look and not the silhouette this review judges. Matching it
+    // here would let a hinge close out the view the whole prop owed.
+    if (manifestTarget.part !== undefined) continue;
     const requirement = required.find(
       (item) =>
         item.angleDeg === manifestTarget.angleDeg &&
