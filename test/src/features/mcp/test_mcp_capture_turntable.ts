@@ -11,12 +11,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFactsAsync, rejectsError } from "../internal/predicates";
+import { recordingCapture } from "./captureHost";
 import {
   productionCompileSucceeded,
   productionFixture,
-  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
-import { inspectionPng } from "./test_mcp_inspect_subject";
 
 const ASSET = "soloist";
 
@@ -29,36 +28,6 @@ const REQUIRED_VIEWS = [
   "top-outline",
   "rig-rom-extremes",
 ];
-
-/** Answer every requested view with a decodable, non-blank PNG. */
-const recordingCapture = (): {
-  adapter: AutoMovieProductionFrameCapture;
-  calls: Array<Parameters<AutoMovieProductionFrameCapture>[0]>;
-} => {
-  const calls: Array<Parameters<AutoMovieProductionFrameCapture>[0]> = [];
-  return {
-    calls,
-    adapter: (input) => {
-      calls.push(input);
-      const width = input.width ?? 0;
-      const height = input.height ?? 0;
-      return Promise.resolve({
-        bytes: inspectionPng(width, height),
-        runtimeIdentity: testCaptureRuntimeIdentity(),
-        width,
-        height,
-        observation: {
-          status: "not-run" as const,
-          reason: "The turntable capture stub draws no shot scene graph.",
-        },
-        maskSidecar: {
-          status: "not-run" as const,
-          reason: "The turntable capture stub derives no semantic mask.",
-        },
-      });
-    },
-  };
-};
 
 /** The angle, elevation, pose, and pass the host was actually asked for. */
 const requestedView = (

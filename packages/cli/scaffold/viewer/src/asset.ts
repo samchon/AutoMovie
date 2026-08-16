@@ -44,8 +44,27 @@ scene.add(new THREE.HemisphereLight(0xdce8ff, 0x26303c, 2.2));
 const key = new THREE.DirectionalLight(0xffffff, 2.4);
 key.position.set(4, 6, 5);
 scene.add(key);
-const bounds = new THREE.Box3().setFromObject(built.object);
-if (bounds.isEmpty()) throw new Error(`Compiled model "${assetId}" is empty.`);
+// A part request frames that one piece instead of the whole model, which is how
+// a mullion, a hinge, or a hand is looked at without exporting a model for it.
+// The object is still the whole model: what narrows is the camera, so the part
+// is seen in the context that gives its proportions meaning.
+const partId = parameters.get("part");
+const framed =
+  partId === null || partId.trim().length === 0
+    ? built.object
+    : (built.parts.get(partId) ??
+      (() => {
+        throw new Error(
+          `Compiled model "${assetId}" has no addressable part "${partId}".`,
+        );
+      })());
+const bounds = new THREE.Box3().setFromObject(framed);
+if (bounds.isEmpty())
+  throw new Error(
+    partId === null
+      ? `Compiled model "${assetId}" is empty.`
+      : `Part "${partId}" of compiled model "${assetId}" is empty.`,
+  );
 const center = bounds.getCenter(new THREE.Vector3());
 const size = bounds.getSize(new THREE.Vector3());
 const radius = Math.max(size.length() / 2, 0.1);

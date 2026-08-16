@@ -245,6 +245,8 @@ const capturePage = (
       url.searchParams.set("asset", input.target.id);
       url.searchParams.set("elevation", String(input.target.elevationDeg));
       url.searchParams.set("pose", input.target.pose);
+      if (input.target.part !== undefined)
+        url.searchParams.set("part", input.target.part);
     }
     try {
       ++captureMetrics.navigations;
@@ -420,6 +422,9 @@ const capturePageSubject = (
         id: input.target.id,
         elevationDeg: input.target.elevationDeg,
         pose: input.target.pose,
+        // A page framed on one part cannot serve the whole model, so the part
+        // belongs in the identity that decides page reuse.
+        part: input.target.part,
       };
 
 const capturePageKey = (
