@@ -1,12 +1,12 @@
 # Screenplay Writing Handbook
 
-The user may provide only a premise, mood, subject, or “make something.” You are responsible for turning that into a shootable dramatic ladder before designing shots. Prose is the root asset: models, worlds, motion, coverage, sound, and acceptance all exist to serve it.
+The user may provide only a premise, mood, subject, or "make something." You are responsible for turning that into a shootable dramatic ladder before designing shots. Prose is the root asset: models, worlds, motion, coverage, sound, and acceptance all exist to serve it.
 
 ## Build the ladder
 
 Start with one logline containing protagonist or subject, goal, obstacle, and stakes. If any element is unknowable, make a specific bounded choice consistent with the request; vague placeholders merely postpone the decision into more expensive production.
 
-Write treatment sequences next. Each sequence has a dramatic question and a state change. Break it into beats that can be shown or heard. A beat uses an active verb: discovers, refuses, advances, breaks, recognizes. “There is a battle” is a topic, not a beat.
+Write treatment sequences next. Each sequence has a dramatic question and a state change. Break it into beats that can be shown or heard. A beat uses an active verb: discovers, refuses, advances, breaks, recognizes. "There is a battle" is a topic, not a beat.
 
 Then write scenes with a conventional heading, action, and dialogue:
 
@@ -24,8 +24,8 @@ Enter late and leave early. Establish only the information the coming action nee
 
 Externalize state with choices:
 
-- Replace “she is afraid” with distance, breath, gaze avoidance, an interrupted reach, or a refusal to cross a threshold.
-- Replace “the formation loses confidence” with spacing drift, delayed alignment, broken cadence, glances, and sound changes.
+- Replace "she is afraid" with distance, breath, gaze avoidance, an interrupted reach, or a refusal to cross a threshold.
+- Replace "the formation loses confidence" with spacing drift, delayed alignment, broken cadence, glances, and sound changes.
 - Replace exposition with a prop, landmark, action consequence, or conflict over incomplete information.
 
 For short work, compression is not speed. One precise image and one irreversible choice often carry more story than many nominal events.

@@ -12,7 +12,7 @@ The exact allowlist in `build/prompt.mjs` names every Markdown guide served by `
 ## Writing rules
 
 - Ground every behavioral claim in current interface, service, compiler, engine, renderer, or scaffold behavior.
-- Address the coding agent as “you”. State the observable rule, why it matters, and a correction recipe.
+- Address the coding agent as "you". State the observable rule, why it matters, and a correction recipe.
 - Keep TypeScript examples in fenced blocks tagged `ts`. `test_mcp_guide_snippet_compilation` compiles every tagged snippet against the workspace packages under the scaffold's own compiler options, which is the configuration a generated production is written against. Use `text` for deliberately incomplete fragments.
 - Write an engine function in call form (``` `tessellateSurface(` ```) only where shot source may call it. Call form is what `test_mcp_guide_surface_reachability` reads as a claim that `AUTOMOVIE_SANDBOX_ENGINE_SURFACE` publishes the name, so a function only a `scripts/` module can reach is named bare instead. A bare mention, a type name, and a member call claim nothing and are never checked.
 - Let a `ts` example that is shot source name only `@automovie/engine`, `@automovie/archetypes`, `@automovie/interface`, and project-relative modules, and mark every type binding in it `type`. `test_mcp_guide_surface_reachability` reads such an example through the compiler's own import gate, so an unmarked type binding is refused exactly as it would be in a real shot module. An example that runs outside the sandbox names the package it actually runs against, which is how that case knows to leave it alone.

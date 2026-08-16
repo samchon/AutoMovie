@@ -94,3 +94,11 @@ Only a captured frame closes the path. Treat the asset as delivered when a frame
 - current asset review proves the delivery appearance and range;
 - a captured frame shows the asset in place;
 - no untracked remote alias is required to recreate the accepted state.
+
+## Prove the ingested asset with its own turntable
+
+Registration proves provenance. It proves nothing about how the asset came out the other end of ingest, where scale, axes, rest pose, and materials are what actually break.
+
+1. `captureTurntable({ asset })` opens the recipe that binds the asset from every required angle in one call.
+2. `captureFrame` with a `part` frames one compiled part when the fault is a fitting rather than the whole body. Imported geometry is refused there, because this surface addresses no interior node of a loaded GLB; author the piece as its own recipe part when you need to frame it.
+3. `prepareReview` and `submitReview` under `REVIEW_ASSET`, whose provenance axis is where the licence, digest, and conversion chain are answered for beside the picture.

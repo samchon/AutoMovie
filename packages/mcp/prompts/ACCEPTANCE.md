@@ -12,8 +12,16 @@ A `story-sync` criterion states that events in different shots happened at one m
 
 Required scenarios enter the review and final gates. A required scenario also adds a design review of its own record to the queue that same compile asks to be complete, so authoring one is authoring two obligations.
 
-An event or metric review must cite its exact passing compiler-derived outcome, not merely quote the acceptance contract. A frame review must cite the exact current frame and pass. Write expectations so another agent can falsify them from current evidence. “Looks good” is not an expectation; “the front rank remains legible against smoke in the mask pass” is.
+An event or metric review must cite its exact passing compiler-derived outcome, not merely quote the acceptance contract. A frame review must cite the exact current frame and pass. Write expectations so another agent can falsify them from current evidence. "Looks good" is not an expectation; "the front rank remains legible against smoke in the mask pass" is.
 
 That derived outcome is not recomputed for the review. It is read back from the compiler's own publication under `generated`, digest-matched against the current manifest, and when the reader cannot obtain it review refuses by name rather than deriving a substitute. An absent publication and damaged bytes each carry their own code and are recovered by compiling the same current inputs again; a publication that is valid JSON yet disagrees with the reader's schema carries a third, and it is a product defect rather than anything your source did, so recompiling unchanged is not a fix for it. Read `REVIEW_SHOT` before treating one as an authoring error.
 
 Keep historical assertions in cited research documents and translate only observable consequences into acceptance. The engine cannot prove that a disputed quotation happened; it can prove timing, distance, continuity, visibility, grounding, and deliverable identity.
+
+## A criterion is proved from evidence, not from a compile
+
+A scenario states what must be observable. Nothing about it is settled until the observation exists.
+
+1. `captureFrame` on the shot target at the exact time and pass the criterion names. A criterion whose frame nobody captured is refused as `review-evidence-missing`, and that refusal is the scenario working.
+2. `captureTurntable({ asset })` when the criterion is about an authored thing rather than a staged moment.
+3. `prepareReview` and `submitReview` cite the criterion ids on the `acceptance-scenarios` check, which is where a scenario becomes a recorded verdict rather than a sentence in a file.

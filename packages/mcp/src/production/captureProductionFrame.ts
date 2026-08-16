@@ -177,6 +177,7 @@ const previewCaptureTarget = async (
           angleDeg: props.target.angleDeg,
           elevationDeg: props.target.elevationDeg ?? 0,
           pose: props.target.pose ?? "rest",
+          part: props.target.part,
         },
         time: 0,
         pass: props.target.pass,
@@ -221,7 +222,8 @@ const reopensThroughReceipt = (props: {
           manifest.target.id === target.id &&
           manifest.target.angleDeg === target.angleDeg &&
           manifest.target.elevationDeg === (target.elevationDeg ?? 0) &&
-          manifest.target.pose === (target.pose ?? "rest");
+          manifest.target.pose === (target.pose ?? "rest") &&
+          manifest.target.part === target.part;
     return (
       props.compileFingerprint === registry.inputFingerprint &&
       status.success &&
@@ -275,6 +277,7 @@ const captureTargetOf = (
         angleDeg: target.angleDeg,
         elevationDeg: target.elevationDeg ?? 0,
         pose: target.pose ?? "rest",
+        part: target.part,
         pass: frame.pass,
       };
 

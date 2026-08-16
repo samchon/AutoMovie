@@ -70,8 +70,18 @@ The compile reads the edit and says what it found. An undeclared crossing, jump 
 
 That read measures the subject the camera was solved for, from the same box, and it takes a shot size from whichever axis the subject fills more of: its share of the frame's height, or its share of the frame's width. Because the solve stands at the further of the two fits, a mass the frame holds by its width fills less of the frame's height than its declared framing implies, so a height-only read would report a size no camera delivered and then ask you to move in until the ends of the mass left the frame. A subject with nothing horizontal to measure, the one `SHOT_CONTRACT` describes as keeping a vertical segment at its root, is read vertically exactly as it always was.
 
-For edit decisions, preserve Walter Murch’s priority: emotion, story, rhythm, eye trace, two-dimensional screen plane, then three-dimensional continuity. A lower priority may yield to a higher one, but the trade must be observed and intentional.
+For edit decisions, preserve Walter Murch's priority: emotion, story, rhythm, eye trace, two-dimensional screen plane, then three-dimensional continuity. A lower priority may yield to a higher one, but the trade must be observed and intentional.
 
 ## Coverage recipe
 
 For each beat, design an establishing or orienting view when geography matters, the decisive readable action view, and only the reaction or detail coverage that changes interpretation. Mark required subjects, events, review times, and acceptance checks. Then inspect current captures at the intended raster, not only camera numbers.
+
+## Look at the frames
+
+A camera number is a claim about a frame; only the frame settles it. Capture at the production raster and never at a smaller one, because a downgraded frame can never discharge a required view.
+
+1. `captureFrame` on the shot target at every review time the contract declares, in `beauty`.
+2. `captureFrame` in a structural pass when the question is occlusion, silhouette separation, or depth rather than appearance.
+3. `prepareReview` and `submitReview` under `REVIEW_SHOT` for composition, staging, and continuity.
+
+Judge from what came back, not from what the solve intended. `captured:false` is a refusal, not a frame.

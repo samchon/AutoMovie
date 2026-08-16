@@ -48,3 +48,13 @@ The end state is part of the clip contract. Record pose, position, facing, held 
 ## Review
 
 Watch at speed, half speed, and frame step. Look for foot slide, penetration, float, instant acceleration, broken arcs, joint flips, contact drift, eye pops, frozen holds, and mismatched settle. Then judge the dramatic verb: correct mechanics that communicate the wrong intention are still a failed motion.
+
+## Look at the motion
+
+Reading a clip's numbers is not watching it move. Capture the frames the fault would be on rather than the frames that happen to be convenient.
+
+1. `captureFrame` on the shot target at each contact, each extreme, and one frame either side of the moment the fault would appear. Foot slide, penetration, and contact drift are visible in adjacent frames and invisible in one.
+2. `captureFrame` with the `pose` structural pass when the question is skeletal rather than pictorial.
+3. `prepareReview` and `submitReview` under `REVIEW_SHOT`, whose performance axis is where a motion verdict is recorded.
+
+A shot contract's declared review times are the floor, not the whole answer. Add the times this motion makes decisive.

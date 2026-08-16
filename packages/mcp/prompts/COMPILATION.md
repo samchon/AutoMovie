@@ -24,3 +24,9 @@ The input fingerprint includes compiler identity and protocol, ordered design, n
 The final scope trusts neither manifest labels nor old hashes. The renderer-owned aggregate receipt must match the current render manifest and every current file byte. AutoMovie decodes PNG and WebVTT output and parses MP4 tracks again to verify raster, frame count, frame rate, runtime, codec, channels, and sample rate as applicable. Caption readability produces a verdict only when the production selected a versioned profile; without one, compilation preserves measurements and a `not-run` reason instead of applying hidden default thresholds. Read `AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION` from the package API before selecting the installed algorithm and Unicode/ICU revision. A different requested segmentation stays `not-run` as unsupported and is never evaluated through a fallback.
 
 Use the narrowest scope that answers the current question. Exploration should not fake review completion, and final delivery should not bypass it.
+
+## A clean compile is not a look
+
+Compilation proves that the records agree with each other. It proves nothing about what the production looks like, and every defect that survived a full production survived a clean compile first.
+
+A clean source compile is the precondition for evidence, not a substitute for it: `captureTurntable` and `captureFrame` refuse against a stale compile, and `prepareReview` reports evidence as missing until the frames exist. Compile, then look, then record the verdict.

@@ -888,6 +888,42 @@ export class AutoMovieProductionOracleService {
             }. Use rest pose for props or compile a valid rig.`,
           );
         }
+      const part = input.target.part;
+      if (part !== undefined) {
+        let model: IAutoMovieModel;
+        try {
+          const validation = typia.validateEquals<IAutoMovieModel>(
+            JSON.parse(
+              Buffer.from(this.project.readGeneratedFile(targetPath)).toString(
+                "utf8",
+              ),
+            ) as unknown,
+          );
+          if (validation.success === false)
+            throw new Error("the compiled model has an invalid schema");
+          model = validation.data;
+        } catch (error) {
+          return previewFailure(
+            generated.inputFingerprint,
+            "preview-input-invalid",
+            `Asset part capture is unavailable because ${
+              error instanceof Error ? error.message : String(error)
+            }. Compile the model before framing one of its parts.`,
+          );
+        }
+        if (model.origin === "imported")
+          return previewFailure(
+            generated.inputFingerprint,
+            "preview-input-invalid",
+            `Compiled model "${input.target.id}" is imported geometry, whose interior nodes this surface does not address. Capture the whole model, or author the piece you need to frame as its own recipe part.`,
+          );
+        if (model.parts.some((candidate) => candidate.id === part) === false)
+          return previewFailure(
+            generated.inputFingerprint,
+            "preview-input-invalid",
+            `Compiled model "${input.target.id}" has no part "${part}". Frame one of its current parts: ${namedParts(model)}.`,
+          );
+      }
     }
     if (duration === undefined || targetMaterialized === false)
       return previewFailure(
@@ -1608,6 +1644,20 @@ const rayBoundsIntersectionLength = (
     if (enter >= exit) return 0;
   }
   return Math.max(0, exit - enter);
+};
+
+/**
+ * Name the parts a caller may frame, bounded so the refusal stays readable.
+ *
+ * A building compiles to hundreds of parts, and a refusal that pastes all of
+ * them is one nobody reads. The first twenty plus a count is enough to correct
+ * a misspelling and to see that the inventory is larger than the message.
+ */
+const namedParts = (model: IAutoMovieModel): string => {
+  const ids = model.parts.map((part) => part.id).sort(compareCodeUnits);
+  return ids.length <= 20
+    ? ids.join(", ")
+    : `${ids.slice(0, 20).join(", ")}, and ${ids.length - 20} more`;
 };
 
 const previewFailure = (
