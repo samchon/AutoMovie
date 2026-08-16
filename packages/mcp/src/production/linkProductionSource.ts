@@ -7,23 +7,14 @@ import {
 
 /**
  * One project source module the compiler linked into a deterministic build.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary compiler code a typed record of each source module admitted to a production build.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Represents the deterministic link graph as code data rather than MCP-managed module state.
  */
 export interface IAutoMovieLinkedSourceModule {
   /**
    * Project-relative path, which is also the specifier it is required by.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves a module's project-relative identity for typed source registries and diagnostics.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes module identity during deterministic linking instead of letting an MCP session choose paths.
    */
   path: string;
   /**
    * Normalized source text.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Carries normalized authored TypeScript text into the ordinary compiler registry.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Supplies deterministic sandbox evaluation with linker-normalized bytes, not text rewritten through MCP.
    */
   source: string;
   /**
@@ -32,18 +23,12 @@ export interface IAutoMovieLinkedSourceModule {
    * Resolution happens once, here. The sandbox looks a specifier up rather than
    * resolving it again, so there is no second implementation of this arithmetic
    * that could disagree about which module a spelling names.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes every authored specifier and its resolved source module to typed compiler consumers.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves import spelling once in the deterministic linker, leaving MCP no second resolution policy.
    */
   imports: Record<string, string>;
 }
 
 /**
  * What a link attempt produced, or why it could not finish.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary build code consume successful modules and source refusals through one typed result.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes linking outcome a deterministic compiler record instead of MCP conversation state.
  */
 export interface IAutoMovieSourceLinkResult {
   /**
@@ -51,9 +36,6 @@ export interface IAutoMovieSourceLinkResult {
    *
    * Ordered so a plain synchronous registry can evaluate each module once, with
    * everything it requires already registered.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Delivers linked TypeScript modules to ordinary evaluators in dependency-first order.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Orders the sandbox registry deterministically before evaluation, without an MCP loading workflow.
    */
   modules: IAutoMovieLinkedSourceModule[];
   /**
@@ -63,16 +45,10 @@ export interface IAutoMovieSourceLinkResult {
    * that looked it up in {@link modules} would need a fallback for a case that
    * cannot happen, and a branch nothing can reach is a branch nothing can
    * test.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring States the entry module's resolved imports directly for typed source execution.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Avoids a runtime search branch by sealing entry dependencies in deterministic link output outside MCP.
    */
   entryImports: Record<string, string>;
   /**
    * Refusals, each naming the file that caused it.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reports each rejected authored file and reason to ordinary compiler diagnostics.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Records deterministic link refusals as build evidence rather than MCP-authored recovery decisions.
    */
   failures: Array<{ path: string; reason: string }>;
 }
@@ -84,9 +60,6 @@ export interface IAutoMovieSourceLinkResult {
  * second time, because a second list is exactly what let a stand-in exist that
  * no source could reach: the gate refused the import, the compile failed, and
  * the byte-parity gate reported a mismatch for a comparison it never ran.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives authored TypeScript an inspectable allowlist derived from the engine surface it can actually import.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Pins engine imports to deterministic sandbox exports instead of exposing package discovery through MCP.
  */
 export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set(
   AUTOMOVIE_SANDBOX_ENGINE_SURFACE,
@@ -102,9 +75,6 @@ export const AUTOMOVIE_SANDBOX_ENGINE_EXPORTS: ReadonlySet<string> = new Set(
  * package boundary is what a source module writes, and a gate that folded both
  * into one set would accept an engine name imported from the archetypes
  * package.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the frozen archetype tables available to ordinary production modules under their real package boundary.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Admits only serialized deterministic archetype data, with no MCP-selected runtime behavior.
  */
 export const AUTOMOVIE_SANDBOX_ARCHETYPE_EXPORTS: ReadonlySet<string> = new Set(
   ["CAT_GAITS", "HORSE_GAITS", "HUMANOID_GAITS"],
@@ -112,9 +82,6 @@ export const AUTOMOVIE_SANDBOX_ARCHETYPE_EXPORTS: ReadonlySet<string> = new Set(
 
 /**
  * Which names one permitted runtime package may contribute to a source.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Maps each permitted package spelling to the exact exports ordinary authored modules may request.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces the deterministic package/name boundary in compiler code rather than MCP tool metadata.
  */
 export const AUTOMOVIE_SANDBOX_MODULE_EXPORTS: ReadonlyMap<
   string,
@@ -126,9 +93,6 @@ export const AUTOMOVIE_SANDBOX_MODULE_EXPORTS: ReadonlyMap<
 
 /**
  * Whether a specifier addresses a module inside the project's own source.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets typed linker code distinguish project source imports from runtime package imports.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies one deterministic specifier classification before sandbox execution, without MCP interpretation.
  */
 export const isProjectSourceSpecifier = (specifier: string): boolean =>
   specifier.startsWith("./") || specifier.startsWith("../");
@@ -143,9 +107,6 @@ const POSIX = /\\/gu;
  * refused here rather than left for the reader, since the reader's own root
  * check would report it as a missing file and hide what the author actually
  * did.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Resolves an authored relative specifier to one normalized project path for ordinary compiler use.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Refuses root escape in deterministic source arithmetic before any MCP-facing diagnostic is produced.
  */
 export const resolveProjectSourceSpecifier = (
   from: string,
@@ -217,9 +178,6 @@ const runtimeSpecifiers = (path: string, source: string): string[] => {
  * The reader is the project's own owned-source reader, so path escape,
  * symlinks, and missing files stay refused exactly as they are for an entry
  * module. Nothing here widens what the compiler is willing to open.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Builds the complete dependency-ordered module registry from a production's ordinary TypeScript entry.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps source traversal, cycle refusal, and owned-file reads inside the deterministic compiler boundary, not MCP authoring.
  */
 export const linkProductionSource = (props: {
   entryPath: string;

@@ -23,37 +23,22 @@ const WAVE_FORMAT_EXTENSIBLE = 0xfffe;
  * identity: a plan then states what the file is rather than what the mix wanted
  * it to be, and a cue whose declared source span disagrees with the file is
  * caught at planning instead of surfacing as a silent tail.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Exposes observed source facts and the bounded decoded buffer separately.
- * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Delivers the deterministic decode result consumed by the mix.
  */
 export interface IAutoMovieDecodedProductionAudioAsset {
   /**
    * Sample rate the container declares, in Hz, before any resampling.
-   *
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio Preserves the source container's observed sample rate.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Separates the container rate fact from the derived decode rate.
    */
   sourceSampleRate: number;
   /**
    * Channel count the container declares, before the mono downmix.
-   *
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio Preserves the source container's observed channel count.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Keeps channel facts distinct from the derived mono buffer.
    */
   sourceChannels: number;
   /**
    * Sample frames the container carries, before any resampling.
-   *
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio Preserves the exact observed source frame count.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Reports source sample-frame facts before processing.
    */
   sourceFrames: number;
   /**
    * Exact source runtime: `sourceFrames / sourceSampleRate` seconds.
-   *
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio Derives duration from the observed source clock and frame count.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-audio-inspection Exposes the container-derived duration separately from mix placement.
    */
   durationSeconds: number;
   /**
@@ -61,9 +46,6 @@ export interface IAutoMovieDecodedProductionAudioAsset {
    *
    * This is exactly the buffer shape {@link renderProductionSound} accepts for
    * an asset, so a decoded asset goes straight into the mix.
-   *
-   * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Keeps the decoded and resampled buffer as an explicit decode result.
-   * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Delivers the bounded mono sample representation consumed by the mix.
    */
   samples: Float32Array;
 }
@@ -111,11 +93,6 @@ export interface IAutoMovieDecodedProductionAudioAsset {
  * codec, no clock, no locale, only IEEE-754 arithmetic. The same asset decodes
  * to the same samples on every machine, which is what lets the mix downstream
  * stay reproducible.
- *
- * @evidence requirements/sound/sources-and-external-assets.md#sound-decode-contract Implements the declared RIFF/WAVE subset and refuses unsupported container facts.
- * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure Names and refuses an unsupported declared source instead of substituting silence.
- * @evidence specifications/simulation-effects-and-sound/sound-sources-events-dialogue-and-foley.md#sound-decoder-input-contract Produces a deterministic decoded sample buffer from exact input bytes.
- * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-external-hard-refusal Identifies the refused input without selecting a replacement source.
  */
 export const decodeProductionAudioAsset = (props: {
   /** Project-relative declared asset path, named in every refusal. */

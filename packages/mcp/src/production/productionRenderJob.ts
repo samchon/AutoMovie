@@ -11,44 +11,26 @@ import path from "node:path";
 
 /**
  * Package-owned encoder identity fenced into every chunk.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project code persist the encoder facts that make render bytes reproducible.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes encoder identity a deterministic package record rather than MCP-authored state.
  */
 export interface IAutoMovieProductionEncoderIdentity {
   /**
    * Exact installed package name.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the installed encoder package selection to repository-owned render planning.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Pins encoder provenance in typed data without adding a package-selection tool.
    */
   package: string;
   /**
    * Exact installed package version.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows source-controlled jobs to record the exact encoder release they depend on.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps encoder-version selection in package inputs, outside MCP mutation.
    */
   version: string;
   /**
    * Digest of the resolved executable JavaScript entry.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary code a byte identity for the executable that performed encoding.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fences executable verification into deterministic render metadata instead of a tool action.
    */
   entryDigest: AutoMovieContentDigest;
   /**
    * Closed codec family emitted by the foundation adapter.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the supported video codec an inspectable compile-time choice for project code.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Closes the codec family in the package contract rather than exposing codec authoring through MCP.
    */
   codec: "h264";
   /**
    * Every encoder argument that can affect output bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets repository code capture every encoder control that can change output bytes.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Treats encoder tuning as deterministic adapter identity, not an MCP command surface.
    */
   arguments: {
     /** Constant-rate-factor analogue accepted by the package encoder. */
@@ -62,292 +44,172 @@ export interface IAutoMovieProductionEncoderIdentity {
 
 /**
  * Capture and encoder identity for one homogeneous render job.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives a source-authored render job one reviewable capture-and-encode environment identity.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Binds runtime provenance in deterministic records without widening the evidence tools.
  */
 export interface IAutoMovieProductionRenderRuntimeIdentity {
   /**
    * Render-runtime identity schema.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project code reject runtime records whose schema predates the current contract.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Versions the package-owned runtime envelope independently of MCP protocol state.
    */
   protocolVersion: "automovie.production-render-runtime.v1";
   /**
    * Digest of declared viewer, capture, asset, and package input bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes one content fingerprint for all declared inputs that can alter a capture.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries capture input closure through deterministic data, not hidden tool memory.
    */
   sourceDigest: AutoMovieContentDigest;
   /**
    * Package-owned browser and graphics identity.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows repository logic to compare the browser and graphics stack used for frame capture.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Imports capture identity as package evidence without creating an MCP runtime chooser.
    */
   capture: IAutoMovieCaptureRuntimeIdentity;
   /**
    * Package-owned encoder binary and argument identity.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source-controlled verification the exact encoder identity paired with captured frames.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Composes encoder provenance into the job boundary instead of delegating encoding choices to MCP.
    */
   encoder: IAutoMovieProductionEncoderIdentity;
 }
 
 /**
  * Explicit cost/quality tier sharing one compiler-owned edit.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets authors declare proxy economics without changing the compiler-owned edit.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps quality-tier policy in typed project configuration rather than an MCP render instruction.
  */
 export interface IAutoMovieProductionRenderTier {
   /**
    * Stable tier identity used in slots, chunks, and publication paths.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source paths a stable distinction between review proxies and final output.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Restricts tier selection to the package plan instead of a new MCP operation.
    */
   kind: "proxy" | "final";
   /**
    * Output raster multiplier in `(0, 1]`; final is exactly one.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows ordinary code to state the proxy raster tradeoff explicitly and reviewably.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies resolution economy as deterministic plan data, outside the tool vocabulary.
    */
   resolutionScale: number;
   /**
    * Keep every Nth source frame; final is exactly one.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes temporal decimation an explicit source-owned proxy policy.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps frame skipping reproducible in package code instead of session-driven tooling.
    */
   frameStep: number;
 }
 
 /**
  * One source image participating in a film-global output frame.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Represents transition source contributions as inspectable typed edit data.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves compositing inputs in the deterministic render model, not through MCP authorship.
  */
 export interface IAutoMovieProductionRenderLayer {
   /**
    * Compiler-owned shot id.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves the compiler-assigned shot identity for source-side frame inspection.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries shot selection as compiled data without a shot-authoring tool.
    */
   shot: string;
   /**
    * Exact shot-local integer source frame.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the precise shot-local sample chosen by the compiled edit.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps timeline sampling in deterministic package output rather than MCP state.
    */
   sourceFrame: number;
   /**
    * Linear compositing weight in `[0, 1]`.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets code audit the exact contribution of each shot during a transition.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encodes compositing weight as a pure plan fact instead of a tool-side adjustment.
    */
   weight: number;
 }
 
 /**
  * One exact film-global frame with transitions already resolved.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives repository code the fully resolved edit state for one output frame.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Places frame resolution behind a deterministic function rather than MCP-generated timing.
  */
 export interface IAutoMovieProductionRenderFrame {
   /**
    * Exact zero-based output frame in this render tier.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Provides an exact tier-relative address for every emitted frame.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Assigns output-frame identity deterministically without an MCP clock.
    */
   globalFrame: number;
   /**
    * Exact frame on the compiler-owned full-rate film timeline.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Retains the full-rate edit coordinate behind a decimated proxy frame.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Grounds proxy samples in compiler time instead of tool-session sequencing.
    */
   timelineFrame: number;
   /**
    * Derived film time, never an accumulated clock.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes frame time derivable and inspectable in ordinary project logic.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives seconds from the declared frame clock without hidden MCP time accumulation.
    */
   timeSeconds: number;
   /**
    * One hard-cut/fade layer or two dissolve layers, back to front.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the ordered transition layers that source-owned render code must combine.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes transition composition in typed frame data rather than tool-directed blending.
    */
   layers: IAutoMovieProductionRenderLayer[];
 }
 
 /**
  * One deterministic, independently lockable render/encode range.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project code partition a film into reproducible, independently recoverable work.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines chunk scheduling as deterministic package data rather than an MCP orchestration primitive.
  */
 export interface IAutoMovieProductionRenderChunk {
   /**
    * Stable operational slot before content identity changes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives repository automation a stable lock and publication address across content revisions.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Separates operational slot identity from MCP session identity.
    */
   slot: string;
   /**
    * Content id over edit, pass, frame range, raster, and runtime.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows ordinary code to invalidate work whenever any byte-affecting chunk input changes.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes chunk currency content-addressed instead of tool-session dependent.
    */
   id: AutoMovieContentDigest;
   /**
    * Production deliverable id that owns the completed range.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Connects every rendered range to its source-declared deliverable namespace.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries deliverable ownership through the plan without exposing publication authorship to MCP.
    */
   deliverable: string;
   /**
    * Final moving-image deliverable class that owns this video-only chunk.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets typed source distinguish the feature stream from diagnostic guide streams.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Closes video range classification in the package schema rather than a tool option.
    */
   kind: "feature" | "guide-pass";
   /**
    * Beauty or the one structural pass declared for this range.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes which compiled beauty or structural channel ordinary render code must capture.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Selects a declared guide pass through deterministic plan data, not MCP direction.
    */
   pass: AutoMovieGuidePass;
   /**
    * Inclusive zero-based film frame.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives workers an unambiguous source-owned beginning for resumable work.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives the inclusive range boundary in package planning rather than tool state.
    */
   frameStart: number;
   /**
    * Exclusive film-frame boundary.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives repository workers an exact nonoverlapping stopping boundary.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes exclusive range termination in deterministic plan construction.
    */
   frameEndExclusive: number;
   /**
    * Exact edit mapping for every frame in the range.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Supplies source-owned capture code with every resolved frame in the assigned range.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Materializes edit sampling before execution instead of asking MCP to reconstruct it.
    */
   frames: IAutoMovieProductionRenderFrame[];
 }
 
 /**
  * Persisted plan reopened by every `automovie render` subcommand.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives every render subcommand one source-controlled, reopenable statement of work.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Persists render planning at the deterministic package boundary rather than in MCP memory.
  */
 export interface IAutoMovieProductionRenderJobPlan {
   /**
    * Plan schema.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows project code to reject persisted plans from an incompatible schema generation.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Versions the disk contract without coupling it to the MCP protocol.
    */
   version: 3;
   /**
    * Exact production namespace that owns every slot and output.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Names the production that repository paths, locks, and completed outputs belong to.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Anchors output ownership in compiled plan data instead of tool context.
    */
   productionId: string;
   /**
    * Compiler source-input fingerprint used by all captures.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary verification detect any change to compiler-consumed source inputs.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries compiler provenance as a stable digest without exposing compilation as MCP authorship.
    */
   compileFingerprint: AutoMovieContentDigest;
   /**
    * Digest of the compiler-owned film edit.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows project code to distinguish a new film edit from unchanged source infrastructure.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Records edit identity in deterministic planning rather than a tool-authored revision marker.
    */
   editFingerprint: AutoMovieContentDigest;
   /**
    * Homogeneous capture and encoder identity.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the capture and encoding environment reviewable beside the planned edit.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Embeds runtime closure in package output rather than hidden MCP execution context.
    */
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
   /**
    * Proxy/final cost policy; both retain the same edit fingerprint.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets the same authored edit be rendered under an explicit proxy or final cost policy.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Stores quality policy as deterministic package input, not an MCP session preference.
    */
   tier: IAutoMovieProductionRenderTier;
   /**
    * Compiler-owned full-quality clock and raster before tier sampling.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves the compiler's full-quality raster and clock for audit and tier derivation.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps the authoritative source format in typed compiler output rather than tool state.
    */
   sourceFrameFormat: IAutoMovieProductionDesign["frameFormat"];
   /**
    * Exact production raster and frame clock.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives capture code the exact tier-adjusted raster and frame clock it must honor.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves emitted format deterministically before any host worker runs.
    */
   frameFormat: IAutoMovieProductionDesign["frameFormat"];
   /**
    * Exact total film frame count.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets repository automation bound progress against an exact film length.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries total schedule extent as compiled data without an MCP progress clock.
    */
   totalFrames: number;
   /**
    * Maximum frames assigned to one independently resumable chunk.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the source-owned recovery granularity explicit and reproducible.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes chunk sizing in plan construction instead of tool-side scheduling.
    */
   chunkFrames: number;
   /**
    * Content-addressed video ranges in deterministic order.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary workers a stable ordered queue derived from the authored production.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Materializes the work queue in deterministic package output, outside MCP orchestration.
    */
   chunks: IAutoMovieProductionRenderChunk[];
   /**
    * Non-video compiler tracks used during terminal publication.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Keeps authored captions and audio available to terminal publication code beside video work.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Transfers non-video compiler tracks through the plan without adding media-authoring tools.
    */
   tracks: {
     /** Canonical WebVTT derived from the caption placements. */
@@ -361,95 +223,56 @@ export interface IAutoMovieProductionRenderJobPlan {
 
 /**
  * Byte-exact PNG committed by one completed chunk.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source-owned verification a byte-exact account of each rendered frame artifact.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines frame completion as deterministic receipt data rather than MCP observation.
  */
 export interface IAutoMovieProductionRenderedFrameReceipt {
   /**
    * Exact zero-based film frame.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Associates resident PNG facts with the exact film coordinate they prove.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Grounds receipt ordering in the compiled frame schedule, not tool arrival order.
    */
   globalFrame: number;
   /**
    * Chunk-directory-relative PNG path.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives repository publication code a relocatable path to the captured PNG.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps artifact location relative to the deterministic chunk boundary.
    */
   path: string;
   /**
    * Digest of the resident PNG bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code prove that resident PNG bytes still match completion.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Content-addresses the captured frame without relying on MCP-held evidence.
    */
   digest: AutoMovieContentDigest;
   /**
    * Positive resident PNG byte count.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows source-side receipt checks to reject empty or truncated PNG artifacts.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Records byte extent in parser-verified package facts rather than a tool report.
    */
   bytes: number;
   /**
    * Decoded PNG width.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets repository checks compare decoded frame width with the planned raster.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries parser-measured width through deterministic receipt verification.
    */
   width: number;
   /**
    * Decoded PNG height.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project logic reject frames whose decoded height diverges from the plan.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes raster-height proof a package receipt fact, not an MCP visual judgment.
    */
   height: number;
 }
 
 /**
  * Content-only completion facts; attempts and PIDs are deliberately absent.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives resumable project automation durable completion evidence without process-local noise.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Separates content proof from transient worker state at the deterministic package boundary.
  */
 export interface IAutoMovieProductionRenderChunkReceipt {
   /**
    * Receipt schema.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets repository readers reject completion records from a future incompatible layout.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Versions completion persistence independently from tool protocol evolution.
    */
   version: 1;
   /**
    * Stable operational slot.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Associates durable completion with the same stable operational address used by the plan.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Joins receipts to slots through package identity rather than worker-session context.
    */
   slot: string;
   /**
    * Exact current chunk content id.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows source-side recovery to distinguish current completion from stale bytes in the same slot.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Binds completion to content identity without consulting MCP history.
    */
   chunk: AutoMovieContentDigest;
   /**
    * Ordered byte facts for the full frame range.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Provides ordinary verification every captured-frame byte fact in scheduled order.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries complete range proof in the receipt rather than an MCP summary.
    */
   frames: IAutoMovieProductionRenderedFrameReceipt[];
   /**
    * Parser-verified chunk MP4.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives publication code parser-backed identity for the chunk's encoded video.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encapsulates MP4 proof in deterministic completion data instead of a tool assertion.
    */
   encoded: {
     /** Chunk-directory-relative MP4 path. */
@@ -463,127 +286,76 @@ export interface IAutoMovieProductionRenderChunkReceipt {
 
 /**
  * Ephemeral attempt state stored outside a completion receipt.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source-owned schedulers explicit transient failure state without corrupting completion facts.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Models attempts as host-process data outside both durable receipts and MCP state.
  */
 export interface IAutoMovieProductionRenderAttempt {
   /**
    * Stable operational slot.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary recovery correlate an attempt with the operational range it occupied.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Addresses attempt state by plan slot rather than MCP call identity.
    */
   slot: string;
   /**
    * Chunk identity attempted by the process.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Identifies exactly which planned content a running or failed process attempted.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Connects ephemeral execution to deterministic chunk identity without tool memory.
    */
   chunk: AutoMovieContentDigest;
   /**
    * Non-content attempt state.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes incomplete worker lifecycle state inspectable to repository automation.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Closes attempt classification to scheduler-owned execution states.
    */
   state: "running" | "failed";
   /**
    * Exact recovery action or failure message.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives source-side operators a concrete retry action or failure explanation.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps recovery guidance in scheduler output rather than MCP-authored advice.
    */
   correction: string;
 }
 
 /**
  * One resumable status row with an exact next action.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary render commands one actionable, typed status row per planned range.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives resumable status from package records instead of MCP conversation state.
  */
 export interface IAutoMovieProductionRenderChunkStatus {
   /**
    * Stable operational slot.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project diagnostics retain the stable range address behind each status.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keys status computation to the persisted plan, not a tool invocation.
    */
   slot: string;
   /**
    * Current planned content identity.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Shows ordinary code which exact content identity the status evaluates.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Prevents stale slot state from masquerading as current deterministic work.
    */
   chunk: AutoMovieContentDigest;
   /**
    * Current completion/recovery classification.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes each range's completion or recovery class available to source-owned control flow.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Computes lifecycle classification at the package boundary rather than through MCP inference.
    */
   status: "planned" | "running" | "complete" | "stale" | "failed";
   /**
    * Exact next action for this state.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Supplies repository automation the exact next operation implied by current artifacts.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Produces correction text deterministically from plan, receipt, and attempt facts.
    */
   correction: string;
 }
 
 /**
  * Parser/preflight identity for one compiler-declared audio source asset.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes every compiler-referenced audio dependency reviewable before a render runs.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Supplies deterministic audio preflight data without turning MCP into a media importer.
  */
 export interface IAutoMovieProductionAudioAssetIdentity {
   /**
    * Project-relative compiler-declared asset path.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves the source-authored project path that the compiler placed on the timeline.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves audio ownership from repository paths rather than tool-managed uploads.
    */
   path: string;
   /**
    * Digest of the exact current asset bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project verification detect any replacement of the referenced audio bytes.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Content-addresses audio dependencies in package preflight instead of MCP storage.
    */
   digest: AutoMovieContentDigest;
   /**
    * Declared source duration.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary scheduling code the declared audio extent used for placement checks.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Carries decoded duration as deterministic adapter input, not tool-derived timing.
    */
   durationSeconds: number;
   /**
    * Declared PCM clock used by the deterministic adapter.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the PCM clock ordinary publication code must reproduce.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes audio sample timing in typed preflight data rather than MCP configuration.
    */
   sampleRate: number;
   /**
    * Declared channel count used by the deterministic adapter.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the decoded channel layout available to repository-owned adapter validation.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Pins channel count as a deterministic media fact outside the MCP tool surface.
    */
   channels: number;
 }
 
 /**
  * Build content-addressed chunks from the compiler-owned film edit.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary project code compile a film edit into content-addressed, resumable render work.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs render planning as a pure package operation instead of an MCP authoring command.
  */
 export const planProductionRenderJob = (props: {
   timeline: IAutoMovieFilmTimeline;
@@ -756,9 +528,6 @@ export const planProductionRenderJob = (props: {
 
 /**
  * Prove a persisted plan is exactly reproducible from current compiler inputs.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Enables repository automation to prove a saved plan still follows the current authored inputs.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Recomputes plan identity deterministically without consulting MCP session history.
  */
 export const verifyProductionRenderJobPlan = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -787,9 +556,6 @@ export const verifyProductionRenderJobPlan = (props: {
 
 /**
  * Resolve one global frame, including exact dissolve and fade weights.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets source-owned renderers resolve cuts, fades, and dissolves at an exact film frame.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Samples compiled transition math deterministically rather than asking an MCP client to compose frames.
  */
 export const sampleProductionRenderFrame = (
   timeline: IAutoMovieFilmTimeline,
@@ -864,9 +630,6 @@ export const sampleProductionRenderFrame = (
  * Beauty is alpha composited. Structural guide passes are classifications or
  * geometric fields, so linearly blending their pixels invents invalid values;
  * they select the dominant shot layer instead (incoming wins an exact tie).
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary capture code the valid shot inputs for beauty or structural guide output.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Applies pass-specific transition semantics in package logic, outside the MCP evidence surface.
  */
 export const productionRenderLayersForPass = (
   frame: IAutoMovieProductionRenderFrame,
@@ -886,9 +649,6 @@ export const productionRenderLayersForPass = (
 
 /**
  * Canonical WebVTT derived only from compiled caption placements.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows project publication code to derive captions reproducibly from the compiled timeline.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Generates canonical WebVTT as deterministic package output rather than MCP-authored text.
  */
 export const canonicalProductionWebVtt = (
   timeline: IAutoMovieFilmTimeline,
@@ -921,9 +681,6 @@ export const canonicalProductionWebVtt = (
 
 /**
  * Classify current identities without treating an old slot as current.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets source-owned orchestration classify every planned chunk from durable and transient records.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Computes recovery status in deterministic package code instead of an MCP workflow.
  */
 export const productionRenderChunkStatuses = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -973,9 +730,6 @@ export const productionRenderChunkStatuses = (props: {
 
 /**
  * Verify completion identity, exact range coverage, raster, and byte facts.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Allows repository commands to prove that completed frame and MP4 bytes match their current chunk.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Validates completion from parser and content facts without MCP judgment.
  */
 export const verifyProductionRenderChunkReceipt = (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -1034,9 +788,6 @@ const productionRenderChunkLifecycleFailure = (
 
 /**
  * Schedule only non-current chunks through host-owned lock/byte adapters.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary host code a bounded worker scheduler for only the chunks that still need bytes.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Executes deterministic work through host-owned lock and byte adapters rather than MCP side effects.
  */
 export const runProductionRenderJob = async (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -1210,9 +961,6 @@ const closeProductionOwnedDescriptor = (
  * physical descendant of `root`. Every directory and the file are identified
  * before the read and rechecked afterwards, so a replacement cannot turn a
  * verified content-addressed path into different resident bytes.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets repository code read a verified production descendant without trusting mutable path traversal.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces production-owned artifact access in package code instead of exposing filesystem reads as an MCP tool.
  */
 export function readAutoMovieProductionOwnedFile(props: {
   /** Physical production ownership root. */
@@ -1227,9 +975,6 @@ export function readAutoMovieProductionOwnedFile(props: {
 /**
  * Read one required production-owned file without following a link in its
  * namespace.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary project code a deterministic read of its own required artifact instead of relying on hidden MCP session state.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps required artifact access in a typed repository API rather than a tool-authored content operation.
  */
 export function readAutoMovieProductionOwnedFile(props: {
   /** Physical production ownership root. */
@@ -1241,9 +986,6 @@ export function readAutoMovieProductionOwnedFile(props: {
 }): Uint8Array;
 /**
  * Execute the production-owned read with an explicit optionality policy.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Implements the code-owned read boundary whose result remains reproducible outside an MCP session.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Performs repository-owned artifact access without turning the evidence surface into an authoring API.
  */
 export function readAutoMovieProductionOwnedFile(props: {
   root: string;
@@ -1385,9 +1127,6 @@ const normalizeRenderTier = (
 
 /**
  * Derive the exact even raster and frame clock for one render tier.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets project planning derive a codec-safe proxy or final raster from authored frame format.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Resolves tier dimensions and clock through deterministic math rather than MCP render settings.
  */
 export const resolveProductionRenderTierFrameFormat = (
   source: IAutoMovieProductionDesign["frameFormat"],

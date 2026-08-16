@@ -4,74 +4,44 @@ import { IAutoMovieProductionRenderJobPlan } from "./productionRenderJob";
 
 /**
  * One renderer-owned disk entry considered by mark-and-sweep.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives renderer host code a typed candidate record for supplying its own disk inventory.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Treats render-file discovery as deterministic host input rather than an MCP authoring operation.
  */
 export interface IAutoMovieProductionRenderGcCandidate {
   /**
    * Canonical logical ownership path reported by the renderer host.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary host code identify each candidate by its canonical renderer-owned path.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Accepts path identity from deterministic renderer bookkeeping instead of making MCP inspect storage.
    */
   path: string;
   /**
    * Ownership class; active locks and attempts are deliberately absent.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the renderer's closed ownership classes to typed cleanup callers.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps locks and attempts outside the deterministic candidate set, without adding MCP file-management commands.
    */
   kind: "chunk" | "chunk-pointer" | "chunk-tree" | "quarantine" | "publication";
   /**
    * Chunk digest for chunk, pointer, and tree entries; otherwise null.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes chunk identity available as a typed digest while non-content entries state `null` explicitly.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Feeds deterministic reachability from renderer content identities, not from MCP session knowledge.
    */
   digest: AutoMovieContentDigest | null;
   /**
    * Recursive resident byte count reported by the host.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets typed host inventories attach the recursively measured resident bytes to each entry.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Uses deterministic host measurements for reclamation accounting rather than asking MCP to probe the filesystem.
    */
   bytes: number;
 }
 
 /**
  * Dry-run result; hosts may delete only the exact `remove` entries.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Provides ordinary maintenance code with a typed, inspectable dry-run GC decision.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Returns deterministic keep/remove data for a host to execute, without turning MCP into a deletion surface.
  */
 export interface IAutoMovieProductionRenderGcPlan {
   /**
    * GC plan schema.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Pins the GC record version as a literal ordinary TypeScript consumers can discriminate.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Versions deterministic planner output in code instead of negotiating cleanup state through MCP.
    */
   version: 1;
   /**
    * Entries retained because a current plan or publication marks them.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives host code the exact typed candidates preserved by current plans and publications.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Publishes the deterministic mark set as data while MCP remains uninvolved in retention policy.
    */
   keep: IAutoMovieProductionRenderGcCandidate[];
   /**
    * Unreferenced entries safe to sweep.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Hands ordinary cleanup code the precise typed entries that are safe to sweep.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Separates deterministic sweep classification from any MCP command that could mutate renderer storage.
    */
   remove: IAutoMovieProductionRenderGcCandidate[];
   /**
    * Exact sum of removable resident bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes the exact byte total ordinary host code can report before performing a sweep.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives reclamation size from deterministic candidate accounting, not an MCP-side estimate.
    */
   reclaimableBytes: number;
 }
@@ -82,9 +52,6 @@ export interface IAutoMovieProductionRenderGcPlan {
  * Locks, attempts, and arbitrary paths never enter this planner. The CLI keeps
  * those operational records outside the candidate inventory so GC cannot race
  * an active worker.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary renderer maintenance code compute mark-and-sweep from explicit plans, publications, and candidates.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements cleanup as a deterministic pure planner whose result a host may apply outside MCP.
  */
 export const planProductionRenderGc = (props: {
   /** Current plans from every retained tier. */

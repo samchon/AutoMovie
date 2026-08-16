@@ -35,9 +35,6 @@ const blank = (value: string): boolean => value.trim().length === 0;
  * conditions the way an uncovered scene is; a ledger that contradicts itself is
  * wrong at the moment it is written, and the earliest compile is the cheapest
  * place to hear it.
- *
- * @evidence requirements/story/coverage-and-acceptance.md#story-orphan-gap Refuses missing or contradictory joins between screenplay promises, shot contracts, and acceptance ownership.
- * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-coverage-gap-status Validates the current story coverage graph as one deterministic ledger.
  */
 export const screenplayLedgerDiagnostics = (props: {
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;

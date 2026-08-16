@@ -35,9 +35,6 @@ import { validateSpaceShape } from "./space";
  * Shared artifact validators over the MCP-facing scene/shot/sequence shapes,
  * consumed by both the standalone `validate*` tools and the `commit*`
  * preconditions, so a commit can never accept what validation would reject.
- *
- * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope Reports scene validation at the exact input path and affected structural scope.
- * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope Preserves path-local scene failures through the shared validation boundary.
  */
 export const validateSceneArtifact = (
   scene: IAutoMovieScene,
@@ -349,9 +346,6 @@ const remapSpaceViolations = (
  * engine's own `performShot` must satisfy, and keeping a second copy beside the
  * commit gate is what let a produced shot pass one definition and fail the
  * other five separate times (#1320).
- *
- * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-path-and-scope Reports shot and motion-registry failures at their exact input paths and scopes.
- * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-path-scope Preserves the engine and host validation locations in one returned result.
  */
 export const validateShotArtifact = (
   shot: IAutoMovieShot,
@@ -396,9 +390,6 @@ export const validateShotArtifact = (
 
 /**
  * Validate one sequence and its complete referenced shot collection.
- *
- * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-aggregate-boundary Collects independent sequence findings in one deterministic result.
- * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-aggregate-execution Evaluates the full supplied sequence boundary without mutating it.
  */
 export const validateSequenceArtifact = (
   sequence: IAutoMovieSequence,

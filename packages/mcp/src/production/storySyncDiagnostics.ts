@@ -9,9 +9,6 @@ import type {
 
 /**
  * The cross-shot half of one acceptance criterion, when it has one.
- *
- * @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance Selects only the authored criterion that binds events across shots.
- * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-sync-criterion Keeps the cross-shot event surface tied to the declared acceptance record.
  */
 export const storySyncCriterionOf = (
   scenario: IAutoMovieAcceptanceScenario,
@@ -28,10 +25,6 @@ export const storySyncCriterionOf = (
  * verdict a compile refuses on and the outcome a reviewer must cite are the
  * same measurement over the same realized event times, never two readings that
  * can disagree.
- *
- * @evidence requirements/story/coverage-and-acceptance.md#story-acceptance-judgment-measurement Computes event timing while leaving subjective story judgment outside this function.
- * @evidence requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary Limits the automated outcome to declared timing and leaves subjective story judgment external.
- * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-human-machine-verdict Applies only the declared numeric simultaneity tolerance.
  */
 export const autoMovieStorySyncOutcome = (props: {
   criterion: Extract<
@@ -59,9 +52,6 @@ export const autoMovieStorySyncOutcome = (props: {
  * against them rather than against their permitted range. Only required
  * scenarios block: an optional one still surfaces, as a warning, because a
  * missed simultaneity is a fact about the film either way.
- *
- * @evidence requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance Reports whether current realized events satisfy each declared cross-shot condition.
- * @evidence specifications/narrative-and-intent/scene-coverage-and-acceptance.md#narrative-intent-story-sync-criterion Emits a deterministic required-or-optional finding for the cross-shot event surface.
  */
 export const storySyncDiagnostics = (props: {
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;

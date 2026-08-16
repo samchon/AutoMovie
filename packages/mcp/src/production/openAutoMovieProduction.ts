@@ -36,9 +36,6 @@ const PROJECT_MARKERS = [
  * The production still chooses whether to adopt this identity and owns every
  * threshold. A different algorithm or Unicode/ICU revision is reported as
  * unsupported and never evaluated through a substitute profile.
- *
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Makes the supported segmentation revision explicit without supplying thresholds.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Binds evaluation to the installed Unicode and ICU segmentation data.
  */
 export const AUTOMOVIE_CAPTION_GRAPHEME_SEGMENTATION = Object.freeze({
   algorithm: "intl-segmenter-grapheme",
@@ -51,9 +48,6 @@ const CAPTION_GRAPHEME_SEGMENTER = new Intl.Segmenter("en", {
 
 /**
  * Find the nearest immutable AutoMovie workspace from one host-owned seed.
- *
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Requires the host path to identify one operation namespace.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Resolves one stable root before services are opened.
  */
 export const findAutoMovieProjectRoot = (
   seed: string = process.cwd(),
@@ -81,9 +75,6 @@ export const findAutoMovieProjectRoot = (
 
 /**
  * Open the non-MCP compiler, oracle, review, and project runtime.
- *
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-requested-effective-work Keeps the requested production distinct from the opened effective namespace.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Binds all returned services to the same requested and effective project-production identity.
  */
 export const openAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -127,9 +118,6 @@ export const openAutoMovieProduction = (props: {
 
 /**
  * Compile through the package API without exposing compilation as an MCP tool.
- *
- * @evidence requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-idempotent-deterministic-results Reuses only deterministic results for the same explicit scope.
- * @evidence specifications/execution-and-recovery/retry-backoff-and-idempotency.md#execution-deterministic-result-reuse Keeps compilation behind the ordinary package API and its verified inputs.
  */
 export const compileAutoMovieProduction = (props: {
   /** Host-owned path at or below the project root. */
@@ -145,13 +133,6 @@ export const compileAutoMovieProduction = (props: {
 
 /**
  * Project status projection for CLI/lint consumers, never an MCP tool.
- *
- * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth Reports current state without converting missing work into success.
- * @evidence requirements/rendering/scope-and-artifact-identity.md#rendering-planned-materialized Distinguishes planned render targets from materialized current manifests in inspection.
- * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-domain-result-separation Keeps inspection facts separate from operation state.
- * @evidence specifications/execution-and-recovery/state-machine-and-admission.md#execution-terminal-outcome Preserves incomplete work as a non-success terminal outcome.
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Includes measure-only caption outcomes only for the current compiled timeline.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Delivers caption measurements and supported-profile verdicts in inspection.
  */
 export const inspectAutoMovieProduction = (
   services: IAutoMovieProductionServices,
@@ -246,9 +227,6 @@ export const inspectAutoMovieProduction = (
  * Missing profiles retain measurements with `not-run`. Unsupported requested
  * segmentation is also `not-run`; the fixed installed segmenter still reports
  * measure-only facts but is never substituted to produce a verdict.
- *
- * @evidence requirements/delivery-and-accessibility/captions-subtitles-and-cues.md#delivery-caption-readability-profile Always reports cue metrics and reserves thresholds and verdict authority for the production.
- * @evidence specifications/editorial-render-and-delivery/delivery-audio-text-and-localization.md#spec-delivery-caption-readability-measurement Separates measurement, segmentation support, boundary comparison, and not-run outcomes.
  */
 export const inspectAutoMovieCaptionReadability = (
   timeline: IAutoMovieFilmTimeline,

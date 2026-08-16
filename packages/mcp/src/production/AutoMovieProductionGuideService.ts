@@ -5,6 +5,7 @@ import {
 import path from "node:path";
 
 import { AUTOMOVIE_GUIDE_CONSTANT } from "../guides/AutoMovieGuideConstant";
+import type { AutoMovieProductionContext } from "./AutoMovieProductionContext";
 
 /** Installed MCP version attached to guide responses. */
 const MCP_VERSION = (
@@ -15,9 +16,6 @@ const MCP_VERSION = (
 
 /**
  * Exact guide names served by the application.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Enumerates the stable topic names an author can request.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Enumerates the exact topic document identities served as knowledge output.
  */
 export const AUTOMOVIE_PRODUCTION_GUIDE_NAMES = [
   "AUTOMOVIE_OVERALL",
@@ -58,16 +56,25 @@ export const AUTOMOVIE_PRODUCTION_GUIDE_NAMES = [
 
 /**
  * Exact packaged guide lookup for the production coordinator.
- *
- * @evidence requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance Delivers packaged contract guidance without modifying a production.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Keeps knowledge lookup read-only and versioned.
  */
 export class AutoMovieProductionGuideService {
   /**
-   * Serve one production guide by exact name.
+   * Deliver one guide and credit this session for reading it.
    *
-   * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Resolves only one exact discoverable guide identity.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Returns the selected packaged document and version.
+   * The credit is recorded after the lookup, so a misspelled name teaches
+   * nothing and unlocks nothing.
+   */
+  public serve(
+    context: AutoMovieProductionContext,
+    props: IAutoMovieGetGuideDocument.IProps,
+  ): IAutoMovieGetGuideDocument {
+    const output = this.get(props.name);
+    context.recordGuide(props.name);
+    return output;
+  }
+
+  /**
+   * Serve one production guide by exact name.
    */
   public get(name: AutoMovieProductionGuideName): IAutoMovieGetGuideDocument {
     const content: string | undefined = AUTOMOVIE_GUIDE_CONSTANT[name];

@@ -22,8 +22,6 @@ import {
 /**
  * Tracked ledger selected by a production that uses deterministic precompute.
  *
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Keeps project derivation out of the external asset provenance ledger.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Fixes one portable manifest identity for generation and compile-time verification.
  * @author Samchon
  */
 export const AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH =
@@ -32,8 +30,6 @@ export const AUTOMOVIE_DERIVED_ARTIFACT_MANIFEST_PATH =
 /**
  * Domain separator for generator and declared-input basis identities.
  *
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Makes digest-protocol changes explicit instead of silently reinterpreting old records.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-basis Versions the length-delimited dependency closure.
  * @author Samchon
  */
 export const AUTOMOVIE_DERIVED_ARTIFACT_BASIS_PROTOCOL =
@@ -52,17 +48,12 @@ type AutoMovieDerivedArtifactGenerationErrorCode =
 /**
  * Structured refusal from one explicit precomputation attempt.
  *
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Refuses failed or nondeterministic attempts without publishing their bytes.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Preserves the failed generation phase and correction cause for ordinary scripts.
  * @author Samchon
  */
 export class AutoMovieDerivedArtifactGenerationError extends Error {
   public constructor(
     /**
      * Stable generation refusal classification.
-     *
-     * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Lets a caller distinguish deterministic refusal from execution or publication failure.
-     * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Classifies the exact attempt phase that prevented publication.
      */
     public readonly code: AutoMovieDerivedArtifactGenerationErrorCode,
     message: string,
@@ -132,11 +123,6 @@ const WINDOWS_DEVICE =
  * still the one the attempt read. This function runs in an ordinary Node
  * script, never inside the compile sandbox.
  *
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Provides the explicit non-compile generation path and rejects nondeterministic output.
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication Publishes exact bytes before a manifest-last atomic current transition.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Implements duplicate execution, optimistic basis confirmation, and atomic publication.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Applies one physical-root and canonical-path rule on every host.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-budget-boundary Accepts exact empty or large outputs without changing the compiler source-execution clock or inventing an unmeasured transfer cap.
  * @author Samchon
  */
 export const generateAutoMovieDerivedArtifact = (
@@ -261,10 +247,6 @@ export const generateAutoMovieDerivedArtifact = (
  * retain present, absent, stale, and malformed bytes so guarded compilation can
  * detect a race over the same closure.
  *
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Refuses missing, malformed, stale, unsafe, and digest-mismatched artifacts before source receives them.
- * @evidence requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation Detects a derived output claimed by the external asset ledger.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-freshness Implements the compile-time current-state matrix without generator execution.
- * @evidence specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Verifies every resident path under one physical project root.
  * @author Samchon
  */
 export const inspectAutoMovieDerivedArtifacts = (props: {

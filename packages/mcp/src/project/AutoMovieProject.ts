@@ -97,9 +97,6 @@ import { beatOf, shotIdOf } from "./shotKey";
  *
  * The prerequisite graph (#615) reads {@link summary}; guides (#616) and
  * per-artifact erase (#617) land beside this.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Makes the visible project tree, rather than a private conversation, the durable memory that ordinary code can inspect and revise.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps resident slate, artifact, and revision persistence in the typed package boundary instead of inventing MCP-only project state.
  */
 export class AutoMovieProject {
   private manifest: IManifest;
@@ -115,9 +112,6 @@ export class AutoMovieProject {
   private constructor(
     /**
      * Canonical root that owns this resident project state.
-     *
-     * @evidence requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-job-identity-inputs Makes project scope explicit for every mutation.
-     * @evidence specifications/execution-and-recovery/scope-and-execution-identities.md#execution-logical-job-identity Binds project operations to one stable root identity.
      */
     public readonly root: string,
     private readonly rootDevice: string,
@@ -149,9 +143,6 @@ export class AutoMovieProject {
    * Open (or initialize) the project at `rootDir`: the directory tree and
    * manifest are created when missing, and missing slice files simply mean an
    * empty slate, a fresh directory is a valid empty project.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary code establish a visible project repository from an empty directory without requiring prior conversational state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Places project initialization in the package API so MCP tools consume the same resident files as every other caller.
    */
   public static open(rootDir: string): AutoMovieProject {
     const root = path.resolve(rootDir);
@@ -185,9 +176,6 @@ export class AutoMovieProject {
 
   /**
    * The stored slate assembled from the slice files (film excluded).
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reconstructs the author-editable slate from its resident slice files for direct use by ordinary code.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Exposes persisted non-film authoring state through the package rather than through a tool-session mirror.
    */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
     return this.withRootNamespace(() => {
@@ -233,9 +221,6 @@ export class AutoMovieProject {
 
   /**
    * The full writable slate, including the film slice.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary code the complete author-editable slate assembled from the same files that hold project memory.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps full slate retrieval a deterministic package read, with no dependence on MCP conversation history.
    */
   public writableSlate(): IAutoMovieMcpWritableSlate {
     return this.withRootNamespace(() => {
@@ -267,9 +252,6 @@ export class AutoMovieProject {
    * sorting by the same `${encodeURIComponent(beat)}.json` filename the store
    * writes closes that cross-mode gap without a second disk read. Non-keyed
    * slices (script/scene/notes/film) are untouched.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Normalizes beat slices into the stable filename order an author receives on the next code-level read.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Defines resident ordering in reusable source logic so tool and non-tool commits observe the same project state.
    */
   public orderResidentSlate(
     slate: IAutoMovieMcpWritableSlate,
@@ -294,9 +276,6 @@ export class AutoMovieProject {
    * The flush itself is a sequence of atomic per-file renames, not one atomic
    * batch, a hard crash mid-flush remains a documented microsecond window,
    * surfaced by the per-slice load validation on the next open.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Materializes an entire authored slate as readable slice files while preserving transactional project ownership.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Centralizes whole-slate reconciliation and revision guarding below the MCP surface for every package caller.
    */
   public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
     const shots = new Map(
@@ -468,9 +447,6 @@ export class AutoMovieProject {
 
   /**
    * The stored prop specs, one per `props/<node>.json`, in filename order.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Returns the authored prop recipes directly from their project-resident JSON files in reproducible order.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes prop inventory a package-level filesystem read instead of knowledge retained by an MCP call.
    */
   public storedProps(): IAutoMovieMcpPropSpec[] {
     return this.withRootNamespace(() => {
@@ -491,9 +467,6 @@ export class AutoMovieProject {
    * Upsert ONE forged prop spec as `props/<node>.json` (#671, the #617 upsert
    * rule below the slate): re-forging a prop replaces exactly its own file,
    * leaving sibling props byte-identical.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Persists one author-owned prop recipe without rewriting unrelated project artifacts.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Supplies the typed prop upsert primitive that higher-level tools may invoke without owning persistence rules.
    */
   public saveProp(spec: IAutoMovieMcpPropSpec): void {
     const file = path.join(this.root, "props", sliceFilename(spec.node));
@@ -509,9 +482,6 @@ export class AutoMovieProject {
    * filesystem's upsert rename would silently destroy (#1093, the prop twin of
    * the #1011 beat-slice guard). `null` when no such sibling exists: an exact
    * id match is the ordinary upsert, not a collision.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Protects ordinary source edits from silently aliasing two distinct prop identifiers on case-insensitive filesystems.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements portable prop-path collision detection once beneath every authoring entry point.
    */
   public propCaseCollision(node: string): string | null {
     return this.withRootNamespace(() => this.sliceCaseCollision("props", node));
@@ -523,9 +493,6 @@ export class AutoMovieProject {
    * loaded context flows through `perform`'s actor-registry gate, the same gate
    * explicit input passes, which reports tampered fields against
    * `$slate.actors` with full precision.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Loads actor context from author-visible project files so code remains the source of reusable performance inputs.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Leaves actor registry retrieval and downstream validation in package code rather than duplicating it inside a tool handler.
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {
     return this.withRootNamespace(() => {
@@ -552,9 +519,6 @@ export class AutoMovieProject {
    * reported failure looked like N commits to a second session. Staging first
    * (serializeJson is the throw-prone step) makes it all-or-nothing, exactly as
    * {@link saveSlate} does.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Commits an authored actor registry as one visible, revisioned transaction instead of leaving partial conversational output.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Provides one package transaction for actor files so clients do not reconstruct atomicity through repeated MCP operations.
    */
   public saveActors(specs: readonly IAutoMovieMcpActorSpec[]): void {
     const staged = specs.map((spec) => ({
@@ -569,9 +533,6 @@ export class AutoMovieProject {
 
   /**
    * The actor twin of {@link propCaseCollision} (#1093).
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Detects actor identifiers that would overwrite a differently cased author-owned file on portable project storage.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Shares actor-path collision semantics across typed callers rather than binding them to one tool protocol.
    */
   public actorCaseCollision(node: string): string | null {
     return this.withRootNamespace(() =>
@@ -581,9 +542,6 @@ export class AutoMovieProject {
 
   /**
    * Remove ONE stored actor context's file; the caller checks existence.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Removes exactly the selected actor context from the visible project tree while preserving sibling authoring work.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps actor-file deletion as a scoped package mutation that any client can compose safely.
    */
   public removeActor(node: string): void {
     const file = path.join(this.root, "actors", sliceFilename(node));
@@ -606,9 +564,6 @@ export class AutoMovieProject {
 
   /**
    * Remove ONE stored prop spec's file; the caller checks existence first.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Deletes one named prop recipe from project memory without erasing unrelated author-authored artifacts.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes targeted prop removal a reusable filesystem operation below the constrained MCP tool set.
    */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));
@@ -623,9 +578,6 @@ export class AutoMovieProject {
    * overwrites**: an already-registered path, or bytes aimed at an existing
    * file, throw. Registering without bytes tracks a file the host's adapter
    * writes (or wrote) itself.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Records an externally written or supplied binary as a visible, guarded project asset ordinary code can reference later.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Separates asset byte ownership from manifest tracking in a package primitive usable beyond MCP adapters.
    */
   public registerAsset(relativePath: string, bytes?: Uint8Array): string {
     const normalized = normalizeAssetPath(relativePath);
@@ -666,9 +618,6 @@ export class AutoMovieProject {
 
   /**
    * What the project holds: which slices exist, and the tracked assets.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Reports the resident slices and assets from inspectable project files rather than from hidden authoring memory.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Gives tools a derived package summary without making the MCP layer authoritative for project inventory.
    */
   public summary(): IAutoMovieMcpProjectSummary {
     return this.withRootNamespace(() => {
@@ -829,9 +778,6 @@ const RESERVED_DIRS = [
  * `..` escapes, no empty segments. Returns the normalized path, or the fault
  * describing the escape, the non-throwing core shared by the store (which
  * throws on fault) and the MCP tool surface (which reports it as a violation).
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets ordinary authoring code validate portable asset references before they enter the resident project manifest.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Shares one non-throwing path-policy core between the project store and any MCP diagnostic adapter.
  */
 export const checkAssetPath = (
   relativePath: string,
