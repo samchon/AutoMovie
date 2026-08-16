@@ -9,9 +9,6 @@ import type { IAutoMovieAcceptanceScenario } from "@automovie/interface";
  * event realizes, changes the verdict. Callers that ask "which shots does this
  * scenario read" must go through here, or a criterion spanning shots will look
  * like a criterion owning none and quietly stop invalidating its reviews.
- *
- * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion Computes the exact declared shot dependency set without changing criterion ownership.
- * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-criterion-dependency-scope Preserves every addressed shot in deterministic declaration order.
  */
 export const acceptanceCriterionShots = (
   scenario: IAutoMovieAcceptanceScenario,
@@ -25,9 +22,6 @@ export const acceptanceCriterionShots = (
 
 /**
  * Whether one acceptance scenario targets or reads one exact shot.
- *
- * @evidence requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion Tests explicit target and criterion dependencies as separate inclusion routes.
- * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-criterion-dependency-scope Keeps invalidation scope tied to the criterion's declared references.
  */
 export const acceptanceAddressesShot = (
   scenario: IAutoMovieAcceptanceScenario,

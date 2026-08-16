@@ -2,70 +2,16 @@
   "version": 1,
   "layer": "requirements",
   "declarations": {
-    "requirements/acceptance/criteria-and-observables.md#acceptance-numeric-observable": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/criteria-and-observables.md#acceptance-perceptual-observable": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/criteria-and-observables.md#acceptance-semantic-observable": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/criteria-and-observables.md#acceptance-structural-observable": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-lineage-integrity": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/acceptance/profiles-and-aggregation.md#acceptance-required-severity": {
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
       }
     },
-    "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-sequence-surface": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/acceptance/scope-targets-and-authority.md#acceptance-requestable-unit": {
       "owner": {
         "kind": "package",
         "package": "@automovie/engine"
-      }
-    },
-    "requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/actors/body-scale-and-landmarks.md#actor-bounds-shot-scale": {
@@ -170,24 +116,6 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-provider-neutrality": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/agent-authoring/partial-work.md#agent-declared-omission": {
       "owner": {
         "kind": "package",
@@ -198,12 +126,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
-      }
-    },
-    "requirements/agent-authoring/partial-work.md#agent-resumable-authoring": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/agent-authoring/roles-and-authorities.md#agent-author-authority": {
@@ -644,30 +566,6 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-incomplete": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/editorial/continuity-and-film-grammar.md#editorial-match-on-action": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/editorial/continuity-and-film-grammar.md#editorial-reaction-information": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/editorial/continuity-and-film-grammar.md#editorial-state-continuity": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/editorial/pacing-and-rhythm.md#editorial-duration-pattern": {
       "owner": {
         "kind": "package",
@@ -780,12 +678,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/engine"
-      }
-    },
-    "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-refusal": {
@@ -914,24 +806,6 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-algorithm-change-and-collision": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-byte-and-semantic-identity": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-mutable-reference-snapshot": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-boundary-integrity-check": {
       "owner": {
         "kind": "package",
@@ -1058,12 +932,6 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/external-inputs/media-families-and-declared-facts.md#external-media-extensible-families": {
       "owner": {
         "kind": "package",
@@ -1080,12 +948,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/ingest"
-      }
-    },
-    "requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/external-inputs/refresh-version-pinning-and-offline.md#external-provider-tool-version-pinning": {
@@ -1136,12 +998,6 @@
         "package": "@automovie/ingest"
       }
     },
-    "requirements/external-inputs/unsupported-and-degradation.md#external-user-chosen-degradation": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-adoption-gate": {
       "owner": {
         "kind": "package",
@@ -1152,18 +1008,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/ingest"
-      }
-    },
-    "requirements/formations/budgets-and-validation.md#formation-budget-policy-selection": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/formations/budgets-and-validation.md#formation-complexity-worst-case": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/formations/budgets-and-validation.md#formation-determinism": {
@@ -1248,12 +1092,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/viewer"
-      }
-    },
-    "requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/formations/terrain-and-routes.md#formation-group-path": {
@@ -2186,24 +2024,6 @@
         "package": "@automovie/cli"
       }
     },
-    "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-failure-isolation": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/operations-and-recovery/idempotency-and-side-effects.md#operations-duplicate-submission": {
       "owner": {
         "kind": "package",
@@ -2294,24 +2114,6 @@
         "package": "@automovie/cli"
       }
     },
-    "requirements/product/authorability.md#product-discoverable-control": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/product/extensibility-and-compatibility.md#product-explicit-protocol-change": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/product/prototype-quality.md#product-authored-variation-determinism": {
       "owner": {
         "kind": "package",
@@ -2328,12 +2130,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/render"
-      }
-    },
-    "requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction-acceptance": {
@@ -2414,12 +2210,6 @@
         "package": "@automovie/interface"
       }
     },
-    "requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/production-design/scope-and-source-of-truth.md#production-design-story-boundary": {
       "owner": {
         "kind": "package",
@@ -2442,12 +2232,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/engine"
-      }
-    },
-    "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-repaint-boundary": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-tier-transition": {
@@ -2660,66 +2444,6 @@
         "package": "@automovie/interface"
       }
     },
-    "requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-refusal": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/eligibility-and-prerequisites.md#repaint-source-failure-first": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/identity-and-provenance.md#repaint-derivation-chain": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/identity-and-provenance.md#repaint-source-review-freshness": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/scope-and-user-choice.md#repaint-no-automatic-routing": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/scope-and-user-choice.md#repaint-provider-independence": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/source-frames-and-reference-locking.md#repaint-project-relative-references": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-refusal": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/review/annotations-findings-and-verdicts.md#review-finding-lifecycle": {
       "owner": {
         "kind": "package",
@@ -2732,40 +2456,10 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/review/records-and-completeness.md#review-completeness-claim": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/review/records-and-completeness.md#review-planned-actual-coverage": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/review/records-and-completeness.md#review-verdict-receipt": {
       "owner": {
         "kind": "package",
         "package": "@automovie/interface"
-      }
-    },
-    "requirements/review/reproducible-context.md#review-context-source-artifact-identity": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/review/scope-and-authority.md#review-validation-decision-boundary": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
-    "requirements/review/subject-inspection.md#review-subject-inspection-reach": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/sound/dialogue-voice-and-visemes.md#sound-dialogue-refusal": {
@@ -2862,12 +2556,6 @@
       "owner": {
         "kind": "package",
         "package": "@automovie/engine"
-      }
-    },
-    "requirements/sound/sources-and-external-assets.md#sound-decode-contract": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
       }
     },
     "requirements/sound/sources-and-external-assets.md#sound-derived-source-closure": {
@@ -3122,12 +2810,6 @@
         "package": "@automovie/engine"
       }
     },
-    "requirements/story/coverage-and-acceptance.md#story-orphan-gap": {
-      "owner": {
-        "kind": "package",
-        "package": "@automovie/mcp"
-      }
-    },
     "requirements/story/dialogue-language-and-silence.md#story-dialogue-action-interaction": {
       "owner": {
         "kind": "package",
@@ -3263,15 +2945,21 @@
     "requirements/acceptance/change-regression-and-revalidation.md#acceptance-target-change": "sha256:e1c7914c600b7dd01cf34c36e74463d8db01c3d94db3b4971da89bbcbd2b1015",
     "requirements/acceptance/criteria-and-observables.md#acceptance-criterion-completeness": "sha256:5208d899338da5f74f09907b332bff4298429342f5294bd8e5472cbfeeaee256",
     "requirements/acceptance/criteria-and-observables.md#acceptance-falsifiable-statement": "sha256:eadd5c004f8373ed154c2e9cf00e4a7e87f64686df73a3aea9dffff2a98adbc9",
+    "requirements/acceptance/criteria-and-observables.md#acceptance-numeric-observable": "sha256:57b6659a22229fd3be0024d71a4b070987d53b53f40b2cd3b0c6baf45f90cc0d",
     "requirements/acceptance/criteria-and-observables.md#acceptance-observable-kinds": "sha256:9ed7bbd6a88b762f2fd0f4a7ff742c631935429aa1f46872440dc5390d083391",
+    "requirements/acceptance/criteria-and-observables.md#acceptance-perceptual-observable": "sha256:b47dd8c43fdc165a814bbf5bd0fe608c9a61932e188bf5201aac9b695e397222",
     "requirements/acceptance/criteria-and-observables.md#acceptance-preconditions-consumers": "sha256:8d2cef9a2494b047333c2cf88f570917e6af94be49cf4804b48f24877d681343",
     "requirements/acceptance/criteria-and-observables.md#acceptance-preconditions-consumers-group": "sha256:6c25a5866bf7876a6fe7692293750d2ae75edf06a130b393dfd566dacd89604a",
+    "requirements/acceptance/criteria-and-observables.md#acceptance-semantic-observable": "sha256:6d2a00165e188076ccb34a279de673aca7302bbc46c3110ca5fd1dfee3889281",
     "requirements/acceptance/criteria-and-observables.md#acceptance-single-responsibility": "sha256:783f47e1933749b0372c63410b1981cee0582c925086651d03c5c0630a843834",
+    "requirements/acceptance/criteria-and-observables.md#acceptance-structural-observable": "sha256:7d85ff1e291e0bfacae84d6eadecca0d89426cad2c6b48dbb8787ba371d8cb7b",
+    "requirements/acceptance/criteria-and-observables.md#acceptance-subjective-verdict-boundary": "sha256:14a86d5cc917e65ec6458d706f0ea2de5968b16e56ed7962b54f2e7e4cccad4e",
     "requirements/acceptance/criteria-and-observables.md#acceptance-verdict-determinism": "sha256:83c673d318e61de79c4ca08ab7634a6b97807ffdf78e0ff39c32b089eaec7bdc",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-current-historical-evidence": "sha256:b188a8d81a29e1dfad11a5e2baea6c30b911c1eda649a4f854386ee2b1c7943a",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-conflict": "sha256:5646b8adc341058487304784d27d8009f5e49c6b839658a010b14cb25a8ee58e",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-conflict-group": "sha256:ed06c4f29c36d7e50a90fc412984b9de3871134e11048c0e2aa2349e58743b6b",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-freshness": "sha256:fa5312108dcc27e22ea9e20fd63e858aa6c04a55b0af877ec7955b525eb097ec",
+    "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-lineage-integrity": "sha256:d3cc8e1375dbc2c1fe0327221f5be4d47fb9610043701d337d75cd1e2d610436",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-evidence-sufficiency": "sha256:d59841627a65bcf2d7063101e06d4280e578f6017030135e2ce2d02183a5558c",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-numeric-evidence": "sha256:54e239faef880c774318559ed0aa439164ba9920efb5f251531ea3fc1766581d",
     "requirements/acceptance/evidence-and-freshness.md#acceptance-perceptual-evidence": "sha256:f7eb5e54520efbf8d603a92b9f94e0feb5522dceb3aa49180e89477a7703d54a",
@@ -3298,6 +2986,7 @@
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-presentation-conditions-group": "sha256:15137587de3d4134ceab3aea7c01fcf4ca6831668a85a90fa799c6cd066e3be9",
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-review-surfaces": "sha256:f7b0f8348f5b1448d7a57452a2f7979392828a3324bc0ad03a4e72aa706e5b91",
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-sample-interval-claim": "sha256:94c8e7b00748652a34df5c49f597610c3221516d04e3ceb6ae27d54880ae45ef",
+    "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-sequence-surface": "sha256:1770e35ec00d9a1c6427324ff70dbcbca3ba0557678e6004e4d5bd68034574d5",
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-shot-surface": "sha256:9d70f107bdfd5e5b8f7c42ae5cd244169568c33b3bbb936ef3921379117d5286",
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-spatial-view-sampling": "sha256:8927783bf427549a85652c9752c35d759bd2c2b5faea46305f2909b9f355866a",
     "requirements/acceptance/review-surfaces-and-sampling.md#acceptance-spatial-view-sampling-group": "sha256:59ab30acdab7150513ddfa1c25d337fb9fd3939ff493ec8594b06a227806f587",
@@ -3309,6 +2998,7 @@
     "requirements/acceptance/scope-targets-and-authority.md#acceptance-criterion-owner-authority": "sha256:59b70df44a77fabfc24b738600dd6c4115b955b12c6aaafdbf03ecd2e1e6fc9e",
     "requirements/acceptance/scope-targets-and-authority.md#acceptance-publication-authority": "sha256:663cc1169b2ef40de666a872fa55525d9bcbf6511b7e8544dd8e450b1432c0c8",
     "requirements/acceptance/scope-targets-and-authority.md#acceptance-review-approval-authority": "sha256:6951956e055028bd2c9cd00d68b212e81010f5d3e325a5165a35476600f91af0",
+    "requirements/acceptance/scope-targets-and-authority.md#acceptance-scope-inclusion-exclusion": "sha256:0570e3bfbf72a093fccda88c03409ab8b62f109bc7606c60e8a76a9765715a10",
     "requirements/acceptance/scope-targets-and-authority.md#acceptance-target-identity": "sha256:82dc24f2a1d1c178a64a82f148092fed16321e1f1f065cd2a2425225f0714cd8",
     "requirements/acceptance/tolerances-and-boundaries.md#acceptance-absolute-relative-tolerance": "sha256:f66ec760baeb115aa604b9ff27d681619f937dcb0834b517dca0d8791127b304",
     "requirements/acceptance/tolerances-and-boundaries.md#acceptance-asymmetric-directional-tolerance": "sha256:2458ccb89dc5c1011762e295d7d9d57c2312a0c2f6515e51c361d04f4ad5ef36",
@@ -3320,6 +3010,7 @@
     "requirements/acceptance/tolerances-and-boundaries.md#acceptance-rounding-quantization": "sha256:6a30603ab99fdcc6580327c35de451e4faf927aa75d0ac84ba43d1bec71d52ac",
     "requirements/acceptance/tolerances-and-boundaries.md#acceptance-spatiotemporal-tolerance": "sha256:8858cd1cf90b452aa83cc9aff14e9c3ab3bdfa0be5df8df8458b608c62bc4ce5",
     "requirements/acceptance/tolerances-and-boundaries.md#acceptance-tolerance-declaration": "sha256:53ae8c9273ecea7daeebe507818f4153c653f9d53ce20dbb1c2e2d3a35db9cde",
+    "requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts": "sha256:4bbaff73630a2b255d1ae653a239f5b381e1dd30aa51f4fa048ca39b34367e9f",
     "requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts-group": "sha256:52b70ec677830cad80f3e80fd45910b7bc2413ab27faf77f62929ad5e49db992",
     "requirements/acceptance/uncertainty-and-partial-success.md#acceptance-numeric-uncertainty": "sha256:9d41478b65d3115f59a85c030c461ec01b1e3a0359302f0478ad2f8e3d9911ea",
     "requirements/acceptance/uncertainty-and-partial-success.md#acceptance-partial-artifact": "sha256:6fb589f982566d0d286b6127c0b437a15e60bc82f73e605195bbc747f12ffa57",
@@ -3398,14 +3089,18 @@
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation": "sha256:553a98ee4d0d51b38696595f727452ac5dc47ac7bc632ec9e9fb28c9c8455421",
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-portable-publication": "sha256:3cf125989045a80d417cf7d5884a35b5b423ed192632f5221a11b1e1cb18a3e3",
     "requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-provenance-separation": "sha256:39b035d184ab3584c10d251324f763dfc60e44cf5eb04137f2106ac9cffa946c",
+    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-authoring-api-refusal": "sha256:22018defae7611820bd84e28c168ba5f6e8a84ca4777a1a16f7ffe603cdabdd6",
     "requirements/agent-authoring/mcp-boundary.md#agent-mcp-content-supply-refusal": "sha256:81daef8e53ee88316eaa7a7b119bdda4b35c33e148d20f69212ee191f9569a31",
     "requirements/agent-authoring/mcp-boundary.md#agent-mcp-contract-guidance": "sha256:99ec151b797377e3a3aba26850af007d39f374c01f6202e8ce8e27ce2ffe9290",
     "requirements/agent-authoring/mcp-boundary.md#agent-mcp-host-evidence": "sha256:7d081e14fb6c84c48d87c1e955d727f261b1f25428928511ea74e5358c14e13c",
     "requirements/agent-authoring/mcp-boundary.md#agent-mcp-knowledge-boundary": "sha256:ab7e6fddf5d84d6993f66ccd491fa913c3eca8ec8e2b274c18354db1891c0ecf",
+    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-no-surprise-external-effects": "sha256:3b7ee831c0fea3ca7931a722fdd5e3c9240bd0eaa0d41f9c2837106dc86a31b0",
+    "requirements/agent-authoring/mcp-boundary.md#agent-mcp-provider-neutrality": "sha256:17f1b3d484820e86ae670ba45862fc684e428d93e4380cdcb9d91fb46c844bb0",
     "requirements/agent-authoring/partial-work.md#agent-atomic-compilation": "sha256:915de1afe8afedb51b0284ef27acfe6605a2205e87531a9135418e447f86444b",
     "requirements/agent-authoring/partial-work.md#agent-honest-partial-work": "sha256:12605a13e654900e214f483a5bb29b464694a81be9545500c85616cc1e6fe469",
     "requirements/agent-authoring/partial-work.md#agent-partial-verification-scope": "sha256:f36edd8eb1a4e814eeaabc1e638b74dfe5fe0531ed80664115ceea4d4c46221f",
     "requirements/agent-authoring/partial-work.md#agent-partial-work-gap-distinction": "sha256:1782748b1d4ec30e7ebb4aa5d336d014121fc2ea90fce34cc0a421d1a8c3fa7b",
+    "requirements/agent-authoring/partial-work.md#agent-resumable-authoring": "sha256:f5c31336cb5386af5aa5b3990ff7c1ecbd2a19ecfea27484baa6d5527d1f0aff",
     "requirements/agent-authoring/project-ownership.md#agent-ambiguous-ownership-refusal": "sha256:d1e509688a61f508feb6b5209747237e727204b899218fe396aa46bb198f85b9",
     "requirements/agent-authoring/project-ownership.md#agent-authoring-tool-replaceability": "sha256:444e3e2464e05006e3b86efdd61b0197a55b276c465066dba345aacba1dfc037",
     "requirements/agent-authoring/project-ownership.md#agent-editable-source-authority": "sha256:81cb955f2734f754bd06e8158b0655995806f0115f9370fca603749140af9f13",
@@ -3835,8 +3530,12 @@
     "requirements/editorial/conform-and-media-references.md#editorial-time-channel-conform": "sha256:dc0391590fa183b853a2d02279f3c97ed18944e7b7a8c196ca7361fd313f5f0d",
     "requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-film-grammar": "sha256:80e7220e21447265cc07866dd89c89fa35617ee301dab516e9bf2021a890e2ce",
     "requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-finding": "sha256:aa351d008775792d579916b21dce08f6ceabc7a35c30b550fc1062b5b5f54d64",
+    "requirements/editorial/continuity-and-film-grammar.md#editorial-continuity-incomplete": "sha256:7177ff658d7730da04b8c236287e1b7ef716af7d4c051c43b45f02f86252e1ea",
     "requirements/editorial/continuity-and-film-grammar.md#editorial-grammar-violation": "sha256:22fe1d72bb6a95c7afb2a8d5e0c654a56f2f826535f1c3b4c2dc16063f5d5134",
+    "requirements/editorial/continuity-and-film-grammar.md#editorial-match-on-action": "sha256:f3a129807ec0df6e41eeb58b5f9fb98c892f7c2cefa9b70855712830989cf7fa",
+    "requirements/editorial/continuity-and-film-grammar.md#editorial-reaction-information": "sha256:0187101f16177b6bb292b3d77f5366bcfa98364cd723579cd726082a22318fba",
     "requirements/editorial/continuity-and-film-grammar.md#editorial-spatial-grammar": "sha256:2a20a885cceb6f4d3bb6c921717159e328cc035b6db0df9151540624bd05c8fa",
+    "requirements/editorial/continuity-and-film-grammar.md#editorial-state-continuity": "sha256:aff64193d5ba43265a28eb3fa0024819063bf1f2f8807b91041b58dad3860c3d",
     "requirements/editorial/markers-effects-and-metadata.md#editorial-effect-ordering": "sha256:5f4258abfec9be9c8f8501b7b9a089893c2a4868ea2aa199df322689aaa98a08",
     "requirements/editorial/markers-effects-and-metadata.md#editorial-effects": "sha256:564548259be0d78489b829f7aa2c606adf1a83dc1bde947538ced3ec75e842bb",
     "requirements/editorial/markers-effects-and-metadata.md#editorial-marker-event-distinction": "sha256:4971793d2f61b6d0b76efbd88824d56c60ac742cc471765f5798945e90650adb",
@@ -3890,6 +3589,7 @@
     "requirements/editorial/versions-and-alternative-cuts.md#editorial-version-refusal": "sha256:9eccb69a7008a3df8b5536f3b570047f5a2e35cb41585107ec8368b2aa4e95e7",
     "requirements/editorial/versions-and-alternative-cuts.md#editorial-version-stale-review": "sha256:530d96459156442f1d98a51ea869c123fbb7ae2ff84a572b21b6b8894fb81797",
     "requirements/editorial/versions-and-alternative-cuts.md#editorial-versions-alternative-cuts": "sha256:2475ddc0b1610cb47c3ad247734b7817b69939fc187cf720d7b05d5789761e44",
+    "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission": "sha256:4d56d9f8ee59f1e120f7d56461255cbd104ca702f4f8e7caa85ec4240edfea5d",
     "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-composition": "sha256:bfaf6814ef7598e6261c67c125c5b74559ec655dacabdf2637216a3694046491",
     "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-identity": "sha256:3becc5e21260cc43ca37faced14c64fd776fec1857934588e5267c6f3a763249",
     "requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budgets-bounded-work": "sha256:518b27dfb43b15cdf7545b82346411faa2000f978a15228ccb58339c09eb5b71",
@@ -3948,8 +3648,11 @@
     "requirements/effects-and-simulation/validation-and-evidence.md#effects-seek-equivalence-evidence": "sha256:d9db1fb6a05c938e8e41c33ba25c9269da837d0911bb5c4f91cfe905dcde65a6",
     "requirements/effects-and-simulation/validation-and-evidence.md#effects-validation-evidence": "sha256:e0cdaf55cac877a22eca8d3c6b3a27d46abca58e725934f48a8548cda8364794",
     "requirements/effects-and-simulation/validation-and-evidence.md#effects-visual-review": "sha256:a43b16f3704897bdf1d10baa44ba7f74316d4cff195c7c78780a172f58c25e4b",
+    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-algorithm-change-and-collision": "sha256:424f67f6658a16b570caa0123b3fb5f0e27b7d89cfca02f9c750e362223e6801",
     "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-binary-dependency-closure": "sha256:4249714222cfe4ea5bfc7810c5e730200a4f869ff8100b95613ff5783a33ee1e",
+    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-byte-and-semantic-identity": "sha256:a37c9d8e4d1efdc442824501c1098a017a4a635fc1a240e96a409d7463139371",
     "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-canonical-content-identity": "sha256:77cbca155d951e0e44c399f3177c4f05d07a20ae93cb120e1a55c138a896405d",
+    "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-mutable-reference-snapshot": "sha256:7b41530732939ef97937769388cb9733ef456003d904851f3e60c4e5b1a959ff",
     "requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-structured-canonicalization": "sha256:ceb15cc536f026cb6aa17d451c414836b26006df86913331f265e62e9c297737",
     "requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-chain-traceability": "sha256:0876552588f0fe2714c8c90d857601d1e2a3ee5237ba6ad968f859b33ab9b4f6",
     "requirements/evidence-and-provenance/chain-of-custody-and-tamper-detection.md#custody-distributed-copy-verification": "sha256:4877b3f9f6c7cf1bcdbd0221507d1f933ff9eeaafc4f80877a4fa33ebe4683be",
@@ -4016,8 +3719,10 @@
     "requirements/external-inputs/identity-coordinates-and-units.md#external-identity-spatial-coordinates-units": "sha256:beb1821d7d76dbb5e1503bebd7eece16e5d93b72949089c14570cf9de3aedde0",
     "requirements/external-inputs/identity-coordinates-and-units.md#external-identity-value-interpretation": "sha256:af08c07d07c4889a2678e1c939dded0e3ceafe5cb97a5a46f5db8b12e95edf42",
     "requirements/external-inputs/identity-coordinates-and-units.md#external-import-identity": "sha256:41c97f33f008ef479f14bf38de2b8a22c82fd58d5282f81632ad0c32a065b749",
+    "requirements/external-inputs/media-families-and-declared-facts.md#external-media-audio": "sha256:faad09279310b9f7e0f8e57e8e2571e16185812d58cc651179e844bba34b3908",
     "requirements/external-inputs/media-families-and-declared-facts.md#external-media-family-contract": "sha256:a9862e4487b00c54216f83fdcb41df4d4e3e17f22a7ad9a5667232ffab6818fb",
     "requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video": "sha256:dc850dcf3858262f1f77ac2ecd6c6f2b5271924879798bdac6e5342a42dd2d4c",
+    "requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data": "sha256:60683ff35ae0b89a587742d11fe932f7b6c792d5bfa2a304db2cec967edfceb7",
     "requirements/external-inputs/media-families-and-declared-facts.md#external-media-text-metadata": "sha256:531d6ede78b9efd5d71832c728522a08e19744bf3cca9b6f7537abe7f88ee4b4",
     "requirements/external-inputs/refresh-version-pinning-and-offline.md#external-cache-identity-trust": "sha256:52611e02a8ff1ae6d94aafee0d2ad1cde7e2bac6228b26a8405361438ebe8f04",
     "requirements/external-inputs/refresh-version-pinning-and-offline.md#external-cache-miss-unavailable-source": "sha256:2837ff1bceb6ac17974bff7ea05457fad8138af85899b9d4e2815e4963cbf617",
@@ -4037,12 +3742,15 @@
     "requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-degradation": "sha256:cfec36afd57029b34c542de46272eae6fb8d1931711f84e9d9015b8eb2cbf747",
     "requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature": "sha256:240aa6f4e1cbdc003c105d09e24591b1c8d7bae820f3158d791bebae1c3c2b8c",
     "requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure": "sha256:3be0a5db28efec156243d4dc0f48431c9904d6a43a67f322b177d23e9d8da28f",
+    "requirements/external-inputs/unsupported-and-degradation.md#external-user-chosen-degradation": "sha256:350fe42522b29a4a2c19f0bbd8e5f095001baccfcf327ae4c78b8367582f19d6",
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-active-content": "sha256:ed333d183cb76d64a1f43f0fb05e2fd11740b9958af7e9247e2c3ff967c893f7",
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-content-facts": "sha256:4d7b69261c86a53ea08d5a13945090d49df1ec6f51fe9d921ecbff2c5aa8eaf6",
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-quarantine": "sha256:dd9b1d2618487559a6f1f25c952f20bf326118e3ec7c1a356f78538befc43b40",
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-quarantine-handling": "sha256:6fd5bff48b83186ec28e03cf70eb2ba29b707e041d9491efa6260b63cc4431dc",
     "requirements/external-inputs/validation-and-quarantine.md#external-validation-structure-semantics": "sha256:e282ca011aa612af472d09bddefddc4ca125719acb5384e7e927ff4cbaafa0c4",
+    "requirements/formations/budgets-and-validation.md#formation-budget-policy-selection": "sha256:5b389afab0dfa09cadf0e84610cd86ef853a90972841a3d1c6e1a11da2dbe8b8",
     "requirements/formations/budgets-and-validation.md#formation-budgets-validation": "sha256:7081db9b2e1a123740511dc41c971c80e2194d07e71692d2685a344a2c526777",
+    "requirements/formations/budgets-and-validation.md#formation-complexity-worst-case": "sha256:5562f99d7a00892f02b56ba0be2571e2cd3da915eb3865c6bab6bba28e546b0a",
     "requirements/formations/budgets-and-validation.md#formation-failure-status": "sha256:3e69b37c90a65410259a4c6f09fcd3d5f6743a502ce3dec25b9c82142ed9c9a1",
     "requirements/formations/budgets-and-validation.md#formation-layout-validation": "sha256:dfffb1e2b727d028d865b0974f8beee6275b20e72c553496107139af3c875a41",
     "requirements/formations/budgets-and-validation.md#formation-motion-validation": "sha256:9f041b101e5b90803439abb014a60034e46f1643a92c2888101c21df494e323f",
@@ -4080,6 +3788,7 @@
     "requirements/formations/spacing-overlap-and-avoidance.md#formation-avoidance-refusal": "sha256:ce78ee14d28784b41f1f4cf1eb21df2119814df432f1d70f02f2fd22a9fa4a57",
     "requirements/formations/spacing-overlap-and-avoidance.md#formation-bounded-avoidance": "sha256:9535b81d321f3074e6b24812af873f513820ae1980c73d695c0ac195bda9171d",
     "requirements/formations/spacing-overlap-and-avoidance.md#formation-spacing-overlap-avoidance": "sha256:02d3e8af1d99a8c0186db9f644e72d34022a5bc200ad18db61d65a73acc6415e",
+    "requirements/formations/spacing-overlap-and-avoidance.md#formation-static-spacing": "sha256:79d9b01ba833faecf2d280f769b06eacc5829b3dcc7269dd58ad7fe3efa68dff",
     "requirements/formations/spacing-overlap-and-avoidance.md#formation-temporal-overlap": "sha256:34af6edb89a6cc355c0c3704eca9199c268ba3beb45128f82b1ba1f81c50863d",
     "requirements/formations/terrain-and-routes.md#formation-relief-adaptation": "sha256:3d273bded27f8a867769ae9d87a9b679ad6fbc8b74513b7f784fd49c585c8fd6",
     "requirements/formations/terrain-and-routes.md#formation-route-interior": "sha256:c551f6858bf685b790a438151c7a93b106267cc59830988baceee1e91f90f299",
@@ -4510,6 +4219,8 @@
     "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-concurrent-shared-result-reuse": "sha256:5b70bde6148382062fb88efddde3b5ff3bc25b196a87477fe8fdc5bb794157ae",
     "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-deadlock-queue-stall": "sha256:a6d9307debb9d9a582b8393437288b0b02fc4b5fa697a327c3b4a5fddefd72ba",
     "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-duplicate-job-concurrency": "sha256:7bf00f21c0f814af4b85186d504d153228e3fbabc8ddca7bd483a3354996bc32",
+    "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-late-writer-fencing": "sha256:a7c881b5bec44858b8ec395462008d2277e161aaeb2143088f8ffcad03f20218",
+    "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-lock-scope-owner": "sha256:06b9dc0809a0fea8fbdeb36ab7269972ed8ebad9ee28a75760eb9cb364fbf5a2",
     "requirements/operations-and-recovery/concurrent-runs-and-locking.md#operations-stale-lock-recovery": "sha256:d898e78d3fd1415c259c8a45da95b6937a9de4ac904a99506fb3c0069170025e",
     "requirements/operations-and-recovery/disaster-recovery.md#operations-backup-independence-integrity": "sha256:c50373228d665a5cbabe23b9a079660e9b25b08c4153a8b51cd7e7a77e5c68b5",
     "requirements/operations-and-recovery/disaster-recovery.md#operations-disaster-authoritative-state": "sha256:16ace3923baeebc026d6c7ccc2baad4bdbe58ca7ddfc497878ef3723e7e71eec",
@@ -4518,6 +4229,7 @@
     "requirements/operations-and-recovery/disaster-recovery.md#operations-failover-split-brain": "sha256:69c604225616eb4b03ddd654ef59601a508e53adc84777319bf7ffc20197d570",
     "requirements/operations-and-recovery/disaster-recovery.md#operations-recovery-exercise-gap": "sha256:f8ee766e171b7f064788f82e5a9c12f79ebf5df4a64c88be082739343a897b76",
     "requirements/operations-and-recovery/disaster-recovery.md#operations-restore-validation": "sha256:26aff44d74c7a95e18a542d497d7579995b4309fc1af38b041312d78eeb4f4a9",
+    "requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-failure-isolation": "sha256:5ae0a3de3a6cac3e0a05e699ea6a218e13df2aca0d1dadcf92c5c47bec0fda21",
     "requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-failure-modes-recovery": "sha256:e7b39ce771a9f47a9d2413b7eb953199e801d90f79b9036cccd1ecb01613f611",
     "requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-network-storage-failure": "sha256:bda8d30fbea143320f80581d17b7a1c48c3a38274c62b193d4e12068fa3ebcb1",
     "requirements/operations-and-recovery/failure-modes-and-recovery.md#operations-process-crash-power-loss": "sha256:27d51f977525637f74f2347d8cc026a14b752afe943eb8ef539b6e70d978a9fb",
@@ -4559,6 +4271,7 @@
     "requirements/operations-and-recovery/scope-job-identity-and-state.md#operations-terminal-state-truth": "sha256:e4d023413ec954ada7e58b6541ecbece92438a480df6dde49245d05ecc57832a",
     "requirements/product/authorability.md#product-authorability-threshold": "sha256:4369a14170719dc0f88f4c88a73b73139b19a380b285f9cd5a76131a7c8981a4",
     "requirements/product/authorability.md#product-authoring-choice-space": "sha256:9d7a0b9b46fdae466ee35a2ec0158ea6a601c39736ddd44c1cc455ec0f48f6af",
+    "requirements/product/authorability.md#product-discoverable-control": "sha256:4e1ad83288e6c75ca52fd83e5fd955fa269eb4ce5854f2e4017c3d0bf152a600",
     "requirements/product/authorability.md#product-explicit-control": "sha256:021085a3c49b1ee21f9f9645808a1dc132f0083de067f3607596a40e1881fb49",
     "requirements/product/authorability.md#product-hidden-inference-refusal": "sha256:75b9f95b73797efdd14429037879002c08bf2e703e8c0381d1f5490906daceaf",
     "requirements/product/capability-and-content.md#product-catalogue-refusal": "sha256:19912b87db97f69101e1bd3a2c1dd12bec47792375d6c7c36a0d04914f370679",
@@ -4571,12 +4284,14 @@
     "requirements/product/charter.md#product-deterministic-prototype": "sha256:ad3ac2273642f8079375428c8612d7fb2652881f46c6d9d182dfc9099cb906d8",
     "requirements/product/charter.md#product-reproducible-judgment": "sha256:6b953439ccc09f4c582ac8950e21acf6fc3016dda309bca1682c150b2e38e7a8",
     "requirements/product/charter.md#product-structural-output": "sha256:c48b2c5587463b09dc24917fd11f4960aa4641e55a624a8cbf8bfe5164251ab2",
+    "requirements/product/choice-and-external-services.md#product-delegation-not-proxy-decision": "sha256:efaa2c41a181088565f2017bbc6fd2d17be52f75a7a1799da3a639bfb9e7d106",
     "requirements/product/choice-and-external-services.md#product-deterministic-external-adoption": "sha256:5b07f885b4ae7370c757411f81d1a35a9312c4f8a07dbc2e6b1ec48a1d2b725f",
     "requirements/product/choice-and-external-services.md#product-external-substitution-choice": "sha256:c24c76d7616162adb9b90ff2e84a73fd6964f583ddcc2ca8b5889801dd3c56c2",
     "requirements/product/choice-and-external-services.md#product-provider-neutral-capability": "sha256:ac0d3c89fa9a9b4c2bed725cdf10cf7dc801a18320044d72d9f024e8c5dccc02",
     "requirements/product/choice-and-external-services.md#product-user-controlled-choice": "sha256:b1cd782ee673e4cab0bc24abafdc245e8f4fabfb16876061407bb1c56880fa6b",
     "requirements/product/extensibility-and-compatibility.md#product-additive-expression": "sha256:b10959b83abe4f53eb7e0d5b88bccc9bfcace7a681cda0ae44f078c5c1223da2",
     "requirements/product/extensibility-and-compatibility.md#product-capability-gap": "sha256:9fabfa173e3222ea2a5fdc231b0ed98c6cce41c35784b199f3e641c0cfab5b1d",
+    "requirements/product/extensibility-and-compatibility.md#product-explicit-protocol-change": "sha256:aea380ec989de9fcc9bf278cffa8216d0499fa632e0b6d3dd92f48ce6a2061e0",
     "requirements/product/extensibility-and-compatibility.md#product-independent-extension-axes": "sha256:809b3ba3fc5ac6a09f3c510177e8d986cba0754495ec95f134b3ce0937848977",
     "requirements/product/extensibility-and-compatibility.md#product-omission-compatibility": "sha256:3c24f73ee0d9afc0010e74dade5486acbb04273400247732c5f82d17ac84fe60",
     "requirements/product/prototype-quality.md#product-blocking-pass": "sha256:1c4342e25676f59f744a883cb8a625e470a012b07a69baab55a5fcd05c59e875",
@@ -4587,6 +4302,7 @@
     "requirements/product/scope-and-exclusions.md#product-all-objects-motion": "sha256:bdd937bc4d283f824a037fa183d38ebeeeb902b7ffdcbbe6f1048e5565773da9",
     "requirements/product/scope-and-exclusions.md#product-content-catalogue-exclusion": "sha256:4d0f8c8ea7e5457c28f93c86599d5d930ebe96505e0eca81723b7c3ca784a5f4",
     "requirements/product/scope-and-exclusions.md#product-exclusion-reopening": "sha256:39d5e58fd2b4853c3ba3dd4e998026925e0c983522b8d6b4191bf574d02eef64",
+    "requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion": "sha256:c0f2b9c957ade2fde6c5e6a548d13650be3e1502e5548cc337ce7fdae329234b",
     "requirements/production-design/art-direction-and-visual-language.md#production-design-art-direction": "sha256:4e7e2287ac98f6b10fcef28230f007410bef4d8521c98963c9397c1798273d48",
     "requirements/production-design/art-direction-and-visual-language.md#production-design-graphic-language": "sha256:2514a4439fe7e615962424eeb7dd77c42265562b514a2712a158dab7f4cdb481",
     "requirements/production-design/art-direction-and-visual-language.md#production-design-phase-visual-language": "sha256:d9469b786d3509e85ce90c666a87ee7c3978317aee4cd26d06a21a7ec0053f25",
@@ -4639,6 +4355,7 @@
     "requirements/production-design/references-and-provenance.md#production-design-reference-rights-consumer": "sha256:4a438ca751aaf63c92ac27464a05abc04166e54620bf9de2ff3724a2c35dd2c6",
     "requirements/production-design/references-and-provenance.md#production-design-reference-secret-boundary": "sha256:720fa2a3c08e17fe6301b230510d7cd792050eee5d3d31edcd2ecdaab170b04f",
     "requirements/production-design/references-and-provenance.md#production-design-references-provenance": "sha256:5509a50c853cd0d0edcf9d85b93d26da271ca3d8d445e60a3aa4ccdc943e1738",
+    "requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound": "sha256:61acd3dac682db0deee70ffd7f46dda6b1bc0dbd70ead1d7387c79cd8b306234",
     "requirements/production-design/scale-proportion-and-silhouette.md#production-design-detail-frequency": "sha256:70520c55084d61399d8ff5271388e12fc7a7cc8dbbc89244891e21b1eb882a08",
     "requirements/production-design/scale-proportion-and-silhouette.md#production-design-host-clearance": "sha256:4fa11c7eff4e801fce67f3df9161217f2ddeffbda9e7f31a7604c726a565bb76",
     "requirements/production-design/scale-proportion-and-silhouette.md#production-design-proportion-rules-exceptions": "sha256:97ebbe7bda9e6f0839eeabf9b601c5c744f192850a0274d4a8727c43b745166e",
@@ -4673,6 +4390,7 @@
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-delivery-passes": "sha256:d3874ffdfd04363ca7bcb2a7bd9bd805f14c2c8be68776eda8a39a9b3c58d744",
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-fidelity-acceptance": "sha256:5a5bd8295e07769869506add6433793130f9f4c898ee61b356b45ef91c797c6c",
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-fidelity-rationale": "sha256:4ad1d41a635b9e254c70a7ef97e2c634c302a28d3ddc821edd8e191ee29b8962",
+    "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-repaint-boundary": "sha256:02e8594ea76df57f9e003c5cf003aec46d2886f93c887e1e6cacc5e09274deaa",
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-representation-tier": "sha256:d986a1fbf523a945be33dba03736b72e99e339951eafa81de3796d04717645c4",
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-unsupported-fidelity": "sha256:19da997f54bb0a5e37334e9934cf9c855dcd4f82537626c725c31e36fc3c7955",
     "requirements/production-design/visual-delivery-and-fidelity-tiers.md#production-design-visual-delivery": "sha256:6de4e89cf9bb3eda9dac0e04e89d33c9ad77580cef4e468f009f975be7d4bce6",
@@ -4744,10 +4462,16 @@
     "requirements/rendering/validation.md#rendering-validation-recovery": "sha256:e429bcace654da344845e9cb324d7d04df0e38b75a85a4611d9e661be05540ad",
     "requirements/rendering/validation.md#rendering-validation-refusal": "sha256:28ce1f757e33db98b567b6029a2f371cde606b458e424c870a0578864e145045",
     "requirements/rendering/validation.md#rendering-visual-review": "sha256:6b7818797490e30e99dc4cb8845735edbde9deb76682c10f25d380479b418123",
+    "requirements/repaint/eligibility-and-prerequisites.md#repaint-current-evidence": "sha256:480af7b9af952ff52c8768dd3a269b73474dc08e51ea1a98a58e848f1c90c970",
     "requirements/repaint/eligibility-and-prerequisites.md#repaint-delivery-declaration": "sha256:4504c2cfae71dd195424e1cdaed197678500f21fb698b252b1b8d7c9bface77c",
     "requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-prerequisites": "sha256:76ea25f78133c38ea14280cdbcb3e82e15499be9a017d1f7649b206784596523",
+    "requirements/repaint/eligibility-and-prerequisites.md#repaint-eligibility-refusal": "sha256:86fab774dd1e964fa005417d11ca88cb53be77cadfaae5464389ba6608e2c70d",
+    "requirements/repaint/eligibility-and-prerequisites.md#repaint-source-failure-first": "sha256:67985c5cf87469556d3234ca6d5b8b19699543d14784761c86877e508dacf0a1",
+    "requirements/repaint/identity-and-provenance.md#repaint-derivation-chain": "sha256:97f1d8f11fad8fa8752090902d6c6a17a422ca2d2ad4ccbed8e295f5ade0a24b",
     "requirements/repaint/identity-and-provenance.md#repaint-identity-provenance": "sha256:b2df63b39d3339572c3888ddf343d8cf2a467d4682d961da25daa5923ff59f59",
     "requirements/repaint/identity-and-provenance.md#repaint-nondeterminism-record": "sha256:7614770fc5f757172a4655e5e6eee11a7b01afe70df40163e7b9c522ee8b8cec",
+    "requirements/repaint/identity-and-provenance.md#repaint-provenance-refusal": "sha256:d46cefbf87ec8d1f7e56e2eb47cc9b8cc34b24ad23606dc8745a50fc949188a0",
+    "requirements/repaint/identity-and-provenance.md#repaint-source-review-freshness": "sha256:a130f72f74fc9a098c9f563b98c0796ad797fd64e3c854be33f009704af308e5",
     "requirements/repaint/prompts-controls-and-constraints.md#repaint-negative-prompt": "sha256:ce7a6d52204d2c8eb9649458c899f414ed8819044ea51a24c93842f6a5c718b4",
     "requirements/repaint/prompts-controls-and-constraints.md#repaint-prompt-scope": "sha256:7015e552e28fff932f75524f0bba4066fcd9c5c0ff32beb1d18d0566630be730",
     "requirements/repaint/prompts-controls-and-constraints.md#repaint-prompts-controls-constraints": "sha256:b6d01edd00b066ab5d96c288073269e403cc47f8bc006b49b96b00bb0dd8dece",
@@ -4769,6 +4493,8 @@
     "requirements/repaint/retries-seeds-and-variation.md#repaint-retry-request-boundary": "sha256:e76678d57d5768c43c517d6a9d72097f485a1e883ebffc25640c051e0922fbea",
     "requirements/repaint/retries-seeds-and-variation.md#repaint-seed-semantics": "sha256:72a6cdb34eef0c6e5b273154394781dd80cf70e5f5a230760a0a18bbc6aaa878",
     "requirements/repaint/scope-and-user-choice.md#repaint-independent-artifact": "sha256:68c5d9d9febbcc637b0d7568481e54f62333b1b2ae3659109ac0031fdd656c78",
+    "requirements/repaint/scope-and-user-choice.md#repaint-no-automatic-routing": "sha256:f254012ecb279cedaacd4b03ea3317f1986601ffedeb21469e0369f361709a16",
+    "requirements/repaint/scope-and-user-choice.md#repaint-provider-independence": "sha256:ff0d695a4a6522a0cac5b38e6986a27fa317be65ca9c91f22b2757c456ddf6fd",
     "requirements/repaint/scope-and-user-choice.md#repaint-scope-user-choice": "sha256:eed8e5147d701749638ec4ccbd25a218599aac6403ad5f401b970b9bab660eb1",
     "requirements/repaint/scope-and-user-choice.md#repaint-structure-appearance": "sha256:d5b88523fadc5855a8f417544fbf3feeb3129edf2ed1144b01eb9c412d61ed74",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-continuity-baseline-changes": "sha256:401aaf7d73e0ef18f21de1c8480bb8cc6b0f82a47d1bc7b03caa0708bf486e09",
@@ -4779,6 +4505,8 @@
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-sequence-continuity-publication": "sha256:a2159045bdadd5697c1c53840e9df202b1e5f7ce23ebb6f82b7dba3f2611b221",
     "requirements/repaint/sequence-continuity-and-publication.md#repaint-temporal-artifacts": "sha256:ce3b006f1c7aa581089f5af8f5e88dc2a8821b03b43552ffff000ee4bc0ebbe7",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-control-alignment": "sha256:e78c7f37960a09c30ea853e8b1927a21f8207f928654499ada26f358c1b2b04c",
+    "requirements/repaint/source-frames-and-reference-locking.md#repaint-project-relative-references": "sha256:c257cc9a221c69a02cc7307d86ddf8b2fb24b41cd1729739dae583fa65a3f631",
+    "requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-refusal": "sha256:01cf9445f69f4856e58b8dc7591c365370a154c58e3ef156d4bf23a01408b937",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-reference-roles": "sha256:a214bc941193317531500bcfb9406ff7003cc7a80c06a875429adc2f6e50c3bb",
     "requirements/repaint/source-frames-and-reference-locking.md#repaint-source-reference-lock": "sha256:b1af9d7059738432bd3323d9743f48bb346a64aada285e86ab8b6ff9b3ff9979",
     "requirements/repaint/structural-comparison-and-review.md#repaint-pixel-structure-distinction": "sha256:75fca50b432b2d4afd28b3aa8c8d6e21182196f58946d93c0a923c30fe87f415",
@@ -4821,17 +4549,21 @@
     "requirements/review/frame-range-and-whole-work.md#review-range-inspection": "sha256:25adb3934b7fe429b0bc020e7c94aa7189211fc28b5a039253f0f19475623adc",
     "requirements/review/frame-range-and-whole-work.md#review-sampling-full-coverage": "sha256:3fa7468e6735f9a544c75d71f1c741f5d340bfe3e267d4c36434e59e160ef7d6",
     "requirements/review/frame-range-and-whole-work.md#review-whole-work-inspection": "sha256:3377b6f9ca0e5772b3f47c590ee511f89072272b1c5a0efbe626e2e0db62ddbf",
+    "requirements/review/records-and-completeness.md#review-completeness-claim": "sha256:925bc064e590275ade063679d642de23631e9ba2d84750cff23d2948ce6f6d6d",
     "requirements/review/records-and-completeness.md#review-execution-status": "sha256:aa4ba197bb961a3d7d3b6bf040f61a0a9360b878adebc5fdef8fc8c3b4986b1e",
     "requirements/review/records-and-completeness.md#review-incomplete-review": "sha256:367fd079b4a6771ed5738cdfc0c4897ff0e34c2e3182e64e7eb3b2b34e0d8e26",
+    "requirements/review/records-and-completeness.md#review-planned-actual-coverage": "sha256:64240e83d3894a6965707a997e82fe062e528f464de4a4d0d6c6769172f1ca43",
     "requirements/review/records-and-completeness.md#review-records-completeness": "sha256:bebd1b6a3337ff86f908cc77fd38ed80ccc9b42f5aad2bc57f190b9b2853f1af",
     "requirements/review/reproducible-context.md#review-context-criteria-reference": "sha256:2e5ad22ae7a84776d9493b1675900cc7147480c872a1d745005de70ae5c622aa",
     "requirements/review/reproducible-context.md#review-context-presentation": "sha256:78d4ff977d3efdab20a5464bdd7a8c99253fb6a32d99d352e38d52c3a85590aa",
+    "requirements/review/reproducible-context.md#review-context-source-artifact-identity": "sha256:60b6de941eea0797fe07e15c63a8b35addcae74a58acf4dd5017a3e22a82bcf4",
     "requirements/review/reproducible-context.md#review-context-time-playback": "sha256:20dcc40681ecf69538132d12ea4063461c253df53cd6ca6b2daf83a9096c9488",
     "requirements/review/reproducible-context.md#review-context-unavailable": "sha256:4b667290e274fb9e83bba14d3fe8e871ac2375cf295f3cf06ccda1f95538a78d",
     "requirements/review/reproducible-context.md#review-reproducible-context": "sha256:c98a0dd21fdb592ef1bc52d174e76235cb1a3fc35a96c8a74d6e56b14456a93d",
     "requirements/review/scope-and-authority.md#review-human-final-authority": "sha256:b0e7049aab1c09a9a6b371b895ecdbb79fb843f9a63408c554f19b84bb9238b0",
     "requirements/review/scope-and-authority.md#review-no-implied-approval": "sha256:18ac17b2b825b3504062d0c4f4c2d97637f094e7ad9ac1a989b4d119a2aaf682",
     "requirements/review/scope-and-authority.md#review-scope-authority": "sha256:372021e470b93a6311d4e4ed2ba91f85512a6897de28844c6edfc1e19b670e28",
+    "requirements/review/scope-and-authority.md#review-validation-decision-boundary": "sha256:1d01e5e742b1e9d2b170f9cd15e51eed05e0a93ad27137718935dbf5bdfd65e0",
     "requirements/review/scope-and-authority.md#review-verdict-scope-boundary": "sha256:5e1fa33fc3b770f1d8aec535961f2399321547f006779818d73a4edc3e36cd3c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-compiled-truth": "sha256:52c1a49c9bb6698d4e8904c61743c49d9e4df9eba6cfe6fad6ca2ebbc1e5920c",
     "requirements/review/subject-description-and-structural-change.md#review-subject-description": "sha256:0e6449626b7007fb3879d6a5c53a597984d3be36279d265dd4b46dabdc852063",
@@ -4842,6 +4574,7 @@
     "requirements/review/subject-inspection.md#review-subject-evidence": "sha256:ed3c71755a9d6f8a50ed6a4ab35421c96dfa09b0c75a1801d91ad960720189dc",
     "requirements/review/subject-inspection.md#review-subject-identity": "sha256:7568b3ff09f6b0f5ba7c81f7fd3bf9b02cff8ae934b1b21f7388b496b76e7d96",
     "requirements/review/subject-inspection.md#review-subject-inspection": "sha256:d1463a8da12737dba17b4c1d1a1503461e02e49296b578c6f65ec35ea47cba9b",
+    "requirements/review/subject-inspection.md#review-subject-inspection-reach": "sha256:e2ee8505efc92be0051f7f52aff7fc2fd578f2c651df37da6663626418492a9d",
     "requirements/review/subject-inspection.md#review-subject-time-noninterchange": "sha256:00998cd1ec70f39f4e4095ae1b2969e1550fb1ca3acb1365d97982c67f63114a",
     "requirements/review/subject-inspection.md#review-subject-viewpoint-ownership": "sha256:bb39490ccc46b810e3eb7bd4e3335e5b28a424e14d74d0e2cf3d9357f0c94ff2",
     "requirements/review/visual-change-reporting.md#review-visual-change-catalog-identity": "sha256:e5b96955fba593a3094214f75c9e6dbbc81db3baefb02b84ad5d0e530c8147a1",
@@ -4898,6 +4631,7 @@
     "requirements/sound/scope-and-identity.md#sound-provider-neutrality": "sha256:6949d016dcc26d1b655cdfacc8187b4f7e472e9b03169b9745fe78a02bb46765",
     "requirements/sound/scope-and-identity.md#sound-scope-identity": "sha256:92caeac78bfb8025712b5072311d0e4e4dd048a336d6fcbedddd13bb4b2381e4",
     "requirements/sound/scope-and-identity.md#sound-story-world-binding": "sha256:74306b3c62f2934d637fa30c8867784a5d35fd4b9979b80c3e306e279707ebb7",
+    "requirements/sound/sources-and-external-assets.md#sound-decode-contract": "sha256:c007aafd0ca7468f74155350c09244ce68a842060da4203cc07ef729ec2ed36c",
     "requirements/sound/sources-and-external-assets.md#sound-source-choice": "sha256:2ec81e4886415f7450c35b9c548f35207fc4d8a25c481a714804e548215103de",
     "requirements/sound/sources-and-external-assets.md#sound-source-immutable-adoption": "sha256:16a521ec3d47badaa27db136c27c46c285868c2522c1951f354637416e0b6452",
     "requirements/sound/sources-and-external-assets.md#sound-source-provenance": "sha256:ef70a9c4162ce85f02956b5aaff5b606b169012b4799bc7d7b9d0420eedad30c",
@@ -4980,6 +4714,7 @@
     "requirements/story/coverage-and-acceptance.md#story-coverage-roles-duplication": "sha256:c336fa68df7f46dcf4b9c0e99b08cd9e19974d6307124880f2b5348c6be85694",
     "requirements/story/coverage-and-acceptance.md#story-film-level-review": "sha256:be426addfcf8045cf1509818de34343a864cfed9e249cba5ba9b7e393ea9a3eb",
     "requirements/story/coverage-and-acceptance.md#story-final-acceptance": "sha256:6d6e0589c3a44554d16e27930e6dd320f4a72699cb81c36692b136542dd2c96b",
+    "requirements/story/coverage-and-acceptance.md#story-orphan-gap": "sha256:aa87b7970a0b252f3731138124baf2401a82eb99f0faac12364d9308f952f34e",
     "requirements/story/coverage-and-acceptance.md#story-scene-event-acceptance": "sha256:766564a78bc6824baad8cbec9e9fc921330a615bf29c2ac3547dc08caa17cf44",
     "requirements/story/coverage-and-acceptance.md#story-sequence-acceptance": "sha256:64764c7244d168e45324cfc323b11822ed8daaed8a1385334cfb81187d746a05",
     "requirements/story/dialogue-language-and-silence.md#story-dialogue-continuity": "sha256:abbe811fb9027088b225f688a96148229049ed68f2d9ea1fd90b98df24f78602",

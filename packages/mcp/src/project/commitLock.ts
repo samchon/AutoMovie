@@ -52,9 +52,6 @@ interface ICommitLockDescriptorFailure {
 
 /**
  * Aggregate of one lock-read failure and the descriptor cleanup that followed.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Preserves both the lock-read fault and cleanup fault for ordinary code that must diagnose a failed project commit safely.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Exposes descriptor-cleanup failure as a typed package error instead of reducing it to tool-session text.
  */
 export class CommitLockDescriptorCleanupError extends AggregateError {}
 
@@ -174,9 +171,6 @@ const reclaimCommitLock = (lockPath: string, token: string): void => {
 /**
  * Take the commit lock, returning the owner token to pass to
  * {@link releaseCommitLock}. Throws after ~2 s if the lock never frees.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary source mutations an ownership token that serializes resident project commits across concurrent authors.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Implements filesystem locking below the MCP boundary so every typed mutation obeys the same concurrency rule.
  */
 export const acquireCommitLock = (lockPath: string): string => {
   const current = held.get(lockPath);
@@ -215,9 +209,6 @@ export const acquireCommitLock = (lockPath: string): string => {
  * removed the complete lock namespace; this invalidates every matching nesting
  * level and always returns without resident-path I/O because none can still own
  * the deleted physical lock.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Releases only the caller's verified lock identity, preventing one ordinary-code session from deleting a successor's commit guard.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Encapsulates quarantine, replacement detection, and re-entrant retirement in the shared package lock protocol.
  */
 export const releaseCommitLock = (
   lockPath: string,

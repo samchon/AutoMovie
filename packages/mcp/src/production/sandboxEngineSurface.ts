@@ -6,9 +6,6 @@ import * as AutoMovieEngine from "@automovie/engine";
  * Spelled once, because the import gate, the sandbox's module table, and the
  * refusal an author reads all have to mean the same package, and a second
  * spelling is how one of them ends up meaning a package that does not exist.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Fixes the one package spelling ordinary authored source uses to reach the engine.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps the deterministic module boundary named by code rather than by MCP session convention.
  */
 export const AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER = "@automovie/engine";
 
@@ -19,9 +16,6 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER = "@automovie/engine";
  * table keyed by the surface is complete by construction: a member added here
  * turns an incomplete table into a compile error instead of a silent hole that
  * only the ten-minute byte-parity gate would notice.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets authoring source name only the engine exports the sandbox deliberately exposes.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes additions to the sandbox vocabulary trigger compile-time completeness checks.
  */
 export type AutoMovieSandboxEngineExport =
   | "AutoMovieSubject"
@@ -100,9 +94,6 @@ export type AutoMovieSandboxEngineExport =
  * {@link AUTOMOVIE_SANDBOX_WITHHELD_ENGINE_EXPORTS}, which is derived rather
  * than remembered, and {@link autoMovieSandboxEngineImportRefusal}, which tells
  * a blocked author which of the two situations they are in.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the sorted runtime export inventory used by guides, refusals, bridges, and stand-ins.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps runtime parity validation anchored to one code-owned list rather than session memory.
  */
 export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineExport[] =
   [
@@ -177,9 +168,6 @@ const REACHABLE: ReadonlySet<string> = new Set(
  * Types are absent by construction. `IAutoMovieSurfacePattern` is erased before
  * this object exists, so nothing here can be read as a claim that a type is a
  * runtime capability.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Separates an engine capability that exists from one that does not, so an author is not told a name is missing when it is only withheld.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Supplies the exact target an unsupported-capability refusal has to name.
  */
 export const AUTOMOVIE_ENGINE_RUNTIME_EXPORTS: ReadonlySet<string> = new Set(
   Object.keys(AutoMovieEngine),
@@ -205,9 +193,6 @@ export const AUTOMOVIE_ENGINE_RUNTIME_EXPORTS: ReadonlySet<string> = new Set(
  *
  * Sorted by code unit, so the order is a published fact rather than whatever
  * order the engine's own module graph happened to evaluate in.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Publishes the gap between documented engine capability and what shot source can reach, as one artifact an author can read.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Gives the unsupported-capability refusal a stable, complete population to name its reason from.
  */
 export const AUTOMOVIE_SANDBOX_WITHHELD_ENGINE_EXPORTS: readonly string[] = [
   ...AUTOMOVIE_ENGINE_RUNTIME_EXPORTS,
@@ -226,9 +211,6 @@ export const AUTOMOVIE_SANDBOX_WITHHELD_ENGINE_EXPORTS: readonly string[] = [
  *
  * `null` for a reachable name, so a mixed import naming one reachable and one
  * withheld capability reports the withheld one only.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Tells a blocked author whether the capability exists at all, so an oversight is not read as a missing surface.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Returns the stable reason, owning boundary, exact target and next action an unsupported-capability refusal owes.
  */
 export const autoMovieSandboxEngineImportRefusal = (props: {
   name: string;
@@ -249,9 +231,6 @@ export const autoMovieSandboxEngineImportRefusal = (props: {
  * was on the surface, documented, and read, and still went uncalled at the
  * moment it was needed. A sorted inventory of identifiers is addressed by a name
  * the author already knows; a question is addressed by the thing they do not.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Indexes the reachable surface by the product question an author brings rather than by package or identifier order.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Lets a knowledge request answer from the author's question instead of an implementation inventory.
  */
 export type AutoMovieSandboxCapabilityQuestion =
   | "How do I write a subject and a shot at all?"
@@ -302,9 +281,6 @@ const QUESTION_ORDER: Readonly<
  *
  * Derived from {@link QUESTION_ORDER}, whose keys are exactly the union, so this
  * is complete by construction and a guide that walks it walks the whole surface.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Publishes the authoring questions in the order a guide walks an author through them.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Fixes the order a knowledge response presents authoring topics in.
  */
 export const AUTOMOVIE_SANDBOX_CAPABILITY_QUESTIONS: readonly AutoMovieSandboxCapabilityQuestion[] =
   (Object.keys(QUESTION_ORDER) as readonly AutoMovieSandboxCapabilityQuestion[])
@@ -406,9 +382,6 @@ const QUESTION_OF_EXPORT: Readonly<
  * only seven were named anywhere, and an author reading that sentence had no way
  * to learn that `builtEnvironmentSpaceFidelity` existed. A count nobody types
  * cannot drift from the surface it counts.
- *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Lets an author arrive at a capability family from the question they are asking rather than from a name they already know.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Supplies a knowledge response with the authoring topic grouping instead of a package-shaped identifier list.
  */
 export const AUTOMOVIE_SANDBOX_CAPABILITY_INDEX: readonly {
   readonly question: AutoMovieSandboxCapabilityQuestion;

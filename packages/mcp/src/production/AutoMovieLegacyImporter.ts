@@ -118,18 +118,12 @@ const removeLegacyImportTemporary = (
  * containing provenance and drafts; every pre-existing legacy byte remains
  * untouched. Rollback is allowed only while that imported state is exact and
  * any production-owned directories created by a later open remain empty.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Gives ordinary source code a non-destructive v1-to-v2 migration boundary with explicit plan, apply, and rollback phases.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Keeps legacy byte inspection and filesystem migration orchestration in a typed importer rather than a tool conversation.
  */
 export class AutoMovieLegacyImporter {
   public constructor(private readonly rootDirectory: string) {}
 
   /**
    * Inspect and validate a legacy project without mutating its directory.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets callers inspect a validated immutable import plan before deciding to write production state.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Computes the migration preview from captured filesystem bytes in package code.
    */
   public plan(): IAutoMovieLegacyImportPlan {
     const root = validateLegacyRoot(this.rootDirectory);
@@ -146,9 +140,6 @@ export class AutoMovieLegacyImporter {
 
   /**
    * Persist one immutable import plan and v2 provenance atomically.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets source-controlled workflows atomically publish the planned v2 provenance without rewriting legacy material.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Makes application of the import a deterministic filesystem transaction invoked by code.
    */
   public apply(): IAutoMovieLegacyImportApplyOutput {
     const root = validateLegacyRoot(this.rootDirectory);
@@ -240,9 +231,6 @@ export class AutoMovieLegacyImporter {
 
   /**
    * Remove one still-untouched applied import, preserving all legacy bytes.
-   *
-   * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets callers remove only an unchanged applied import while preserving every resident legacy byte.
-   * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Enforces rollback identity and emptiness checks inside the importer rather than delegating them to an MCP tool.
    */
   public rollback(): IAutoMovieLegacyImportRollbackOutput {
     const root = validateLegacyRoot(this.rootDirectory);

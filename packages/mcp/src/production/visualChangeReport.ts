@@ -15,15 +15,6 @@ const SHA256 = /^sha256:[0-9a-f]{64}$/u;
  * and gone views, and sorts by stable subject then view identity. It refuses
  * ambiguous snapshots before producing a partial report. The returned shape
  * carries no review verdict or structural subject change.
- *
- * @evidence requirements/review/visual-change-reporting.md#review-visual-change-catalog-identity Compares only two snapshots that declare one catalog and unique stable subject-view keys.
- * @evidence requirements/review/visual-change-reporting.md#review-visual-change-four-states Produces the exhaustive changed, unchanged, new, and gone classification with exact counts.
- * @evidence requirements/review/visual-change-reporting.md#review-visual-change-digest-reuse Validates and compares supplied digests without reading, decoding, rendering, or hashing image bytes.
- * @evidence requirements/review/visual-change-reporting.md#review-visual-change-evidence-boundary Returns progress facts without granting review freshness, completion, quality, or structural meaning.
- * @evidence specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-revision-snapshot Enforces snapshot identity, digest, uniqueness, and cross-catalog invariants without mutating inputs.
- * @evidence specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-states Implements the deterministic union join and four-state count invariant.
- * @evidence specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-digest-boundary Restricts execution to a pure fold over already-produced digest records.
- * @evidence specifications/review-and-acceptance/visual-change-reporting.md#review-system-visual-change-evidence-separation Keeps visual byte change separate from review evidence and compiled-subject structure.
  */
 export const compareAutoMovieVisualRevisions = (
   before: IAutoMovieVisualRevisionSnapshot,

@@ -6,9 +6,6 @@ import { digestAutoMovieBytes } from "./contentIdentity";
 
 /**
  * Read and authenticate the current compiler-owned evidence target registry.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets source validators read a typed registry only after its compiler-owned bytes pass digest authentication.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Owns registry parsing and integrity verification as package code.
  */
 export const readAutoMovieProductionRegistry = (
   project: AutoMovieProductionProject,

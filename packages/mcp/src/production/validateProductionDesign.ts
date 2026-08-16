@@ -34,51 +34,31 @@ const AUTOMOVIE_DIAGNOSTIC_CODE_SET = new Set<string>(
 /**
  * In-memory canonical design graph used for cross-reference validation.
  *
- * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps validation anchored to tracked production design facts.
- * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Defines the tracked-source graph boundary represented here without claiming authority-conflict resolution.
  * @author Samchon
  */
 export interface IAutoMovieProductionDesignGraph {
   /**
    * Active production design.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Identifies the production-owned canonical record.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the production slice inside the tracked design graph.
    */
   production: IAutoMovieProductionDesign | null;
   /**
    * Model recipes keyed by id.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Preserves authored model recipes as design-owned facts.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the model slice in the tracked-source design graph.
    */
   models: ReadonlyMap<string, IAutoMovieModelRecipe>;
   /**
    * Project-shared world design.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Carries the tracked world record without runtime invention.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Includes the world slice in the tracked-source design graph.
    */
   world: IAutoMovieWorldDesign | null;
   /**
    * Formations keyed by id.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Preserves authored formation design as source-owned input.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Keeps the formation slice in the tracked-source design graph.
    */
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
   /**
    * Shot contracts keyed by id.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps shot contracts in tracked design source.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Represents the shot slice without granting runtime authority.
    */
   shots: ReadonlyMap<string, IAutoMovieShotContract>;
   /**
    * Acceptance scenarios keyed by id.
-   *
-   * @evidence requirements/production-design/scope-and-source-of-truth.md#production-design-source-ownership Keeps acceptance intent in the production-owned design record.
-   * @evidence specifications/narrative-and-intent/design-authority-and-visual-language.md#narrative-intent-design-graph-ownership Includes the acceptance slice without turning validation into approval authority.
    */
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
 }
@@ -86,40 +66,30 @@ export interface IAutoMovieProductionDesignGraph {
 /**
  * Maximum exact production raster accepted by design and frame review.
  *
- * @evidence requirements/rendering/budgets.md#rendering-frame-total-budget Bounds the exact per-frame raster admitted before capture.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-raster-admission-bound Applies the exact raster admission ceiling without claiming full render validation.
  * @author Samchon
  */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
 /**
  * Maximum live billboards reserved by one effect recipe.
  *
- * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Makes particle admission finite before simulation.
- * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Materializes the effect-budget preflight ceiling.
  * @author Samchon
  */
 export const AUTOMOVIE_MAX_EFFECT_PARTICLES = 4_096;
 /**
  * Maximum aggregate live billboards across declared effect zones.
  *
- * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Caps aggregate admitted particle work.
- * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Implements aggregate effect-budget admission.
  * @author Samchon
  */
 export const AUTOMOVIE_EFFECT_PARTICLE_BUDGET = 16_384;
 /**
  * Maximum declared effect recipes and placed zones in one world.
  *
- * @evidence requirements/effects-and-simulation/budgets-and-bounded-work.md#effects-budget-admission Bounds declared effect work before runtime.
- * @evidence specifications/simulation-effects-and-sound/budget-admission.md#effect-budget-preflight-admission Enforces finite declaration admission.
  * @author Samchon
  */
 export const AUTOMOVIE_EFFECT_DECLARATION_LIMIT = 256;
 /**
  * Largest supported absolute metric coordinate in deterministic runtimes.
  *
- * @evidence requirements/production-design/scale-proportion-and-silhouette.md#production-design-coordinate-magnitude-bound Bounds authored and derived coordinates in the deterministic runtime range.
- * @evidence specifications/world-and-site/spatial-reference-and-identity.md#world-site-coordinate-magnitude-admission Applies the inclusive coordinate magnitude admission contract.
  * @author Samchon
  */
 export const AUTOMOVIE_WORLD_COORDINATE_LIMIT = 1_000_000_000;
@@ -127,25 +97,18 @@ export const AUTOMOVIE_WORLD_COORDINATE_LIMIT = 1_000_000_000;
 /**
  * Maximum compact formation slots in one production.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds worst-case formation membership.
- * @evidence requirements/formations/budgets-and-validation.md#formation-budget-policy-selection Materializes the selected formation count and memory policy as explicit constants.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Materializes the formation worst-case budget.
  * @author Samchon
  */
 export const AUTOMOVIE_MAX_FORMATION_MEMBERS = 100_000;
 /**
  * Named rigged exceptions remain explicit nodes and source performances.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds exceptional rigged formation actors.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Accounts for hero exceptions in the worst-case budget.
  * @author Samchon
  */
 export const AUTOMOVIE_MAX_FORMATION_HEROES = 256;
 /**
  * One 4x4 transform plus one deterministic phase scalar per LOD instance.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Makes per-member memory cost explicit.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Defines the deterministic instance-cost term.
  * @author Samchon
  */
 export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
@@ -153,32 +116,24 @@ export const AUTOMOVIE_FORMATION_INSTANCE_BYTES =
 /**
  * Maximum aggregate anonymous instance storage across all declared LOD tiers.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Caps anonymous formation storage.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Enforces the aggregate instance-buffer budget.
  * @author Samchon
  */
 export const AUTOMOVIE_FORMATION_INSTANCE_BUFFER_BUDGET_BYTES = 8 * 1024 * 1024;
 /**
  * Conservative generated compact-runtime envelope.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds generated compact-runtime state.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Reserves a finite runtime envelope.
  * @author Samchon
  */
 export const AUTOMOVIE_FORMATION_RUNTIME_BUDGET_BYTES = 128 * 1024;
 /**
  * Maximum general instances retained as compact deterministic world data.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Bounds generalized instance populations.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Applies the same worst-case admission discipline to general instances.
  * @author Samchon
  */
 export const AUTOMOVIE_MAX_GENERAL_INSTANCES = 250_000;
 /**
  * Maximum per-instance matrix, color, and declared trait storage.
  *
- * @evidence requirements/formations/budgets-and-validation.md#formation-complexity-worst-case Caps generalized instance-buffer storage.
- * @evidence specifications/performance-motion-and-staging/formation-motion-resolution-and-budgets.md#performance-formation-budget-worst-case-cost Enforces a finite byte budget for deterministic instances.
  * @author Samchon
  */
 export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
@@ -186,8 +141,6 @@ export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 /**
  * Validate graph-level production invariants after structural validation.
  *
- * @evidence requirements/diagnostics/collection-fail-fast-and-determinism.md#diagnostics-completeness-determinism Collects deterministic graph diagnostics without hiding later independent failures.
- * @evidence specifications/validation-and-diagnostics/collection-order-and-termination.md#validation-result-completeness-determinism Implements deterministic complete validation results.
  * @author Samchon
  */
 export const validateAutoMovieProductionGraph = (
@@ -3133,8 +3086,6 @@ const validatePredicates = (
 /**
  * Whether a time is numerically equivalent to one integer production frame.
  *
- * @evidence requirements/editorial/rational-time-and-ranges.md#editorial-frame-grid Tests authored time against the declared integer frame grid.
- * @evidence specifications/editorial-render-and-delivery/rational-timeline-and-composition.md#spec-editorial-frame-grid-predicate Implements only the integer production frame-grid predicate.
  * @author Samchon
  */
 export const isProductionFrameTime = (time: number, fps: number): boolean => {

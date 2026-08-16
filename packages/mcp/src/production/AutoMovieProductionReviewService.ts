@@ -127,9 +127,6 @@ interface IReviewReadContext {
 
 /**
  * Required review criteria in their canonical submission order.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Publishes the complete ordered criterion vocabulary for typed review worksheet producers and validators.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Fixes review criterion ordering as code data shared by review services rather than session-owned knowledge.
  */
 export const AUTOMOVIE_REVIEW_CRITERIA = {
   asset: [
@@ -193,33 +190,6 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * target identity, exact selectors, actual current PNG and repaint bytes,
  * receipt provenance, checklist coverage, self-consistency and fingerprint
  * freshness, then stores the external agent's worksheet as a tracked record.
- *
- * @evidence requirements/review/scope-and-authority.md#review-validation-decision-boundary Validates evidence while leaving the review outcome with the external reviewer.
- * @evidence requirements/acceptance/uncertainty-and-partial-success.md#acceptance-criterion-verdicts Preserves submitted criterion outcomes without manufacturing a human verdict.
- * @evidence requirements/evidence-and-provenance/observations-claims-and-human-judgments.md#evidence-automated-finding-boundary Keeps deterministic worksheet validation separate from reviewer judgment.
- * @evidence specifications/review-and-acceptance/verdict-authority-and-dissent.md#review-system-automated-check-boundary Refuses invalid worksheets without making the aesthetic judgment itself.
- * @evidence requirements/review/subject-inspection.md#review-subject-identity Addresses one stable compiled subject instead of reconstructing it from names.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record Reads the shared compiled-subject record rather than defining a second one.
- * @evidence requirements/review/subject-inspection.md#review-subject-viewpoint-ownership Owns the viewpoint plan for the asset subject kind rather than inheriting an authored camera: the six required turntable views fix angle, elevation, and pose, and a shot frame that happens to contain the asset discharges none of them. Space, element, and part subjects have no review target kind here yet, so this answers the unit for assets alone.
- * @evidence requirements/review/subject-inspection.md#review-subject-evidence Binds asset subject evidence to target identity, compile and target fingerprints, and the exact angle, elevation, pose, and pass of every required view, and binds a compiled subject to the exact compile its description was read from.
- * @evidence requirements/review/subject-inspection.md#review-subject-coverage Declares the asset population from the model recipes the production actually consumes, so a completeness claim is measured against an enumerated set rather than asserted over an unstated one.
- * @evidence requirements/review/subject-inspection.md#review-subject-time-noninterchange Keeps asset subject freshness on the asset's own fingerprint, so rerendering a shot does not make an asset review current and completing an asset review does not discharge a frame obligation.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-viewpoint-plan Realizes the viewpoint plan as the fixed six-view asset turntable set, with each view addressed by angle, elevation, and pose.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation Stores each asset observation against its required view, refusing an invented selector or a frame the receipt does not back.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness Keys asset subject freshness to the target fingerprint, so a changed recipe invalidates the worksheet rather than silently carrying it forward.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage Aggregates asset coverage over the enumerated consumed-recipe population instead of over whatever happened to be captured.
- * @evidence specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-propagation Reports an asset review as no longer current when the recipe it addressed changed, which is the propagation this service can measure; propagation from a prototype to the placements sharing it is not measured here.
- * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps missing, malformed, and contract-incompatible compiler artifacts distinct from absent acceptance outcomes.
- * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Preserves the compiler-owned artifact path and exact validator failure paths without blaming an unchanged author input for an internal contract mismatch.
- * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Refuses each compiler artifact at its actual read boundary while retaining independently readable scenario evidence.
- * @evidenceExclude requirements/review/subject-inspection.md#review-observable-judgeable-parity The parity between what may be judged and what may be observed is a statement about the requirement layer's own units, not a behaviour any single service performs.
- * @evidenceExclude requirements/acceptance/review-surfaces-and-sampling.md#acceptance-subject-surface The service carries the asset surface it already implements; declaring the full subject surface an acceptance request may name belongs with the contract that defines those target kinds.
- * @evidenceExclude specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-target-parity Resolving an arbitrary judgeable target to its observation unit requires target kinds this surface does not yet carry.
- * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-categories Worksheets carry criterion observations, not a defect category taxonomy.
- * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-defect-variation-boundary The service has no defect-versus-accepted-variation classification record.
- * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-severity-priority Criterion outcomes do not assign defect severity or scheduling priority.
- * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-reproduction-frequency The service stores no defect reproduction state or frequency.
- * @evidenceExclude specifications/review-and-acceptance/observations-findings-and-defects.md#review-system-duplicate-common-impact The worksheet model has no duplicate-defect or shared-impact relation.
  */
 export class AutoMovieProductionReviewService {
   public constructor(
@@ -230,9 +200,6 @@ export class AutoMovieProductionReviewService {
 
   /**
    * Prepare current selectors, frames and required criteria for one target.
-   *
-   * @evidence requirements/review/reproducible-context.md#review-context-source-artifact-identity Prepares review from current target-local source and artifact identities.
-   * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-source-artifact-binding Binds the worksheet to exact source and artifact identities.
    */
   public prepare(
     input: IAutoMoviePrepareReviewInput,
@@ -474,9 +441,6 @@ export class AutoMovieProductionReviewService {
 
   /**
    * Validate and store one external-agent review worksheet.
-   *
-   * @evidence requirements/review/records-and-completeness.md#review-completeness-claim Refuses any incomplete criterion set.
-   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-completeness-claim Rechecks current evidence before storing completion.
    */
   public submit(
     input: IAutoMovieSubmitReviewInput,
@@ -582,13 +546,6 @@ export class AutoMovieProductionReviewService {
    *
    * A compiler-provided snapshot reuses the exact declared content bytes that
    * formed its input fingerprint instead of opening a second filesystem scan.
-   *
-   * @evidence requirements/review/records-and-completeness.md#review-execution-status Distinguishes missing, stale, incomplete, revise, and complete review state.
-   * @evidence requirements/review/records-and-completeness.md#review-planned-actual-coverage Compares required queue entries with the actual current review records.
-   * @evidence specifications/review-and-acceptance/evidence-freshness-and-completeness.md#review-system-execution-status Reports the queue state without implying a verdict.
-   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-unsupported-and-not-run Keeps compiler-artifact refusal states visible while calculating aggregate queue readiness.
-   * @evidence requirements/evidence-and-provenance/completeness-freshness-and-refusal.md#evidence-honest-refusal Retains every artifact read diagnostic from the prepared target instead of collapsing unreadable evidence into a missing review.
-   * @evidence specifications/review-and-acceptance/target-scope-and-context.md#review-system-compiler-artifact-read-refusal Reuses one snapshot-bound reader result per target while deriving queue state.
    */
   public queue(
     currentCompileStatus: IAutoMovieCompileProjectOutput = this.compileStatus(),
@@ -1290,7 +1247,6 @@ const targetValueOf = (
  * revision it did not come from. Every unreadable, non-conforming, or absent
  * subject resolves to null and is reported as a missing review target instead
  * of being silently reviewed against another compile.
- *
  */
 const currentSubjectReviewUnit = (
   project: AutoMovieProductionProject,

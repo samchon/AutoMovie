@@ -15,9 +15,6 @@ import {
  * and unowned-output diagnostics. The explicit state fields close the remaining
  * adapter boundary: cached manifest semantics, exact manifest and incarnation
  * bytes, compiler-owned bytes, and the live evidence-bound review queue.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets publication workflows fingerprint every live source, design, manifest, compiler, and review input before reuse.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Calculates terminal publication identity from typed state and bytes rather than conversational context.
  */
 export const productionPublicationInputFingerprint = (
   project: AutoMovieProductionProject,

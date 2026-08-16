@@ -36,9 +36,6 @@ const comparableProse = (value: string): string =>
  * A fenced block is illustration, not authored scene prose. Counting a heading
  * inside one would let a guide that shows the heading format be mistaken for a
  * screenplay that declares the scene.
- *
- * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Reads only authored scene headings and observable prose rather than examples in fenced code.
- * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Projects scene-prose identities for comparison with the typed index.
  */
 export const parseScreenplayProse = (content: string): IMarkdownScene[] => {
   const scenes: IMarkdownScene[] = [];
@@ -96,9 +93,6 @@ export const parseScreenplayProse = (content: string): IMarkdownScene[] => {
  * once prose is split, the index path names one of those very files, so
  * counting an owned unit from it would find its heading twice and refuse a
  * correct project.
- *
- * @evidence requirements/story/scenes-and-observable-action.md#story-screenplay-index-prose Refuses when typed scene ownership and resident authored prose no longer describe the same scenes.
- * @evidence specifications/narrative-and-intent/story-authority-and-hierarchy.md#narrative-intent-scene-prose-index Validates the one-to-one addressable join between scene index entries and prose documents.
  */
 export const screenplayProseDiagnostics = (props: {
   screenplay: IAutoMovieScreenplayIndex | null;

@@ -33,13 +33,6 @@ const JPEG_FRAME_MARKERS = new Set([
  * this host ships neither. Reporting `unsupported` keeps the frame the author
  * declared unverified rather than silently blessed, which is the opposite of
  * returning a plausible-looking guess.
- *
- * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Preserves byte-observed image extents without trusting a filename.
- * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Represents recognized inputs whose extent this inspector cannot derive.
- * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-user-chosen-degradation Leaves any degradation choice to the caller by stating the missing fact.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Reports measured raster or SVG facts from the container.
- * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix Represents feature support independently of container recognition.
- * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-explicit-degradation-policy Reports the unsupported fact without inventing a fallback.
  */
 export type IAutoMovieDesignReferenceBounds =
   | {
@@ -59,34 +52,18 @@ export type IAutoMovieDesignReferenceBounds =
 
 /**
  * What one design-reference asset's bytes actually are.
- *
- * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Returns byte-inspected image facts in one envelope.
- * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Returns byte-inspected drawing facts in the same bounded envelope.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Separates image-family dispatch from its observed fact result.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Separates drawing-family dispatch from its observed fact result.
  */
 export interface IAutoMovieInspectedDesignReference {
   /**
    * Container family sniffed from the bytes themselves, never from a name.
-   *
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Uses byte evidence rather than a filename to select an image inspector.
-   * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Uses byte evidence rather than a filename to recognize a drawing family.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Records a confirmed image family used for dispatch.
-   * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Records a confirmed drawing family used for dispatch.
    */
   media: AutoMovieDesignReferenceMedia;
   /**
    * SHA-256 of the exact inspected bytes.
-   *
-   * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-byte-and-semantic-identity Binds inspection facts to the exact inspected bytes.
-   * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-byte-semantic-identity Supplies the raw byte identity behind the interpreted fact envelope.
    */
   digest: AutoMovieContentDigest;
   /**
    * Source-space extent, or the reason this host cannot measure it.
-   *
-   * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-format-feature Distinguishes measured extent support from recognized-but-unmeasured input.
-   * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-format-feature-support-matrix Carries the feature support result without a guessed extent.
    */
   bounds: IAutoMovieDesignReferenceBounds;
 }
@@ -114,15 +91,6 @@ export interface IAutoMovieInspectedDesignReference {
  *
  * The whole function is a pure function of `bytes`: no filesystem, no clock, no
  * locale, so the same asset inspects identically on every machine.
- *
- * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-image-video Dispatches image reference families from verified bytes and returns observed facts.
- * @evidence requirements/external-inputs/media-families-and-declared-facts.md#external-media-spatial-data Recognizes drawing reference families from verified bytes without inventing extents.
- * @evidence requirements/external-inputs/unsupported-and-degradation.md#external-unsupported-hard-failure Names the exact source when its container is refused.
- * @evidence requirements/evidence-and-provenance/canonical-digests-and-content-identity.md#integrity-byte-and-semantic-identity Binds every inspection result to the exact input bytes.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-image-video-inspection Inspects bounded image facts from confirmed containers.
- * @evidence specifications/interchange-and-adoption/media-inspection-boundaries.md#interchange-design-drawing-inspection Preserves unsupported drawing analysis as an explicit result.
- * @evidence specifications/interchange-and-adoption/support-degradation-and-refusal.md#interchange-external-hard-refusal Refuses unknown containers without selecting a substitute.
- * @evidence specifications/evidence-and-provenance/canonical-digests-and-content-identity.md#evp-byte-semantic-identity Keeps interpreted observations related to, but distinct from, immutable byte identity.
  */
 export const inspectDesignReferenceAsset = (props: {
   /** Project-relative declared asset path, named in every refusal. */

@@ -17,51 +17,30 @@ interface IDiagnosticFamilyContract {
 
 /**
  * One immutable behavioral explanation delivered for a closed diagnostic code.
- *
- * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Requires one enumerable, versioned explanation for every emitted code.
- * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Delivers the invariant and user-owned recovery without mutating source.
  */
 export interface IAutoMovieDiagnosticCatalogEntry {
   /**
    * Closed diagnostic identity resolved by this entry.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Joins actual delivery to one catalog entry.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Uses the compiler's exhaustive code union as the lookup key.
    */
   readonly code: AutoMovieDiagnosticCode;
   /**
    * Existing MCP guide that explains the owning workflow.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Keeps recovery on the user-facing knowledge surface.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Routes lookup through the existing guide delivery rather than a new tool.
    */
   readonly guide: AutoMovieProductionGuideName;
   /**
    * Stable, versioned behavioral-reference identity and guide anchor.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Gives this code exactly one behavioral reference.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Couples catalog revision, reference identity, and resolvable path.
    */
   readonly reference: Readonly<IAutoMovieDiagnosticReference>;
   /**
    * Contract family the reported occurrence failed to satisfy.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Explains the invariant behind the refusal.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Keeps the reference behavioral instead of mirroring display prose.
    */
   readonly invariant: string;
   /**
    * User-owned recovery boundary; this catalog never applies it.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Requires an actionable correction without automatic mutation.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Preserves the author or operator as correction owner.
    */
   readonly correction: string;
   /**
    * Operation whose fresh result decides whether correction succeeded.
-   *
-   * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-correction-and-recheck Requires the affected consequence surface to be checked again.
-   * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-correction-revalidation Names revalidation without claiming it already ran.
    */
   readonly recheck: string;
 }
@@ -408,9 +387,6 @@ const DIAGNOSTIC_CATALOG_BY_CODE = new Map(
  *
  * The lookup is descriptive and read-only. It neither edits production source
  * nor applies the returned correction.
- *
- * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Makes every shipped code and exactly one reference enumerable.
- * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Delivers the same-revision complete catalog without adding an MCP tool.
  */
 export const listAutoMovieDiagnosticCatalog =
   (): readonly Readonly<IAutoMovieDiagnosticCatalogEntry>[] =>
@@ -418,9 +394,6 @@ export const listAutoMovieDiagnosticCatalog =
 
 /**
  * Resolve one diagnostic code without changing project or catalog state.
- *
- * @evidence requirements/diagnostics/identity-path-and-context.md#diagnostics-code-catalog-reference Requires code lookup on the user-facing knowledge surface.
- * @evidence specifications/validation-and-diagnostics/diagnostic-identity-location-and-severity.md#validation-diagnostic-code-catalog-reference Returns one versioned behavioral reference or null for an unknown code.
  */
 export const findAutoMovieDiagnosticCatalogEntry = (
   code: string,

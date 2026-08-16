@@ -53,6 +53,14 @@ Derive a domain-partitioned population by subtraction. A specialized claim may n
 
 A derived population makes a carrier's citations checked; it does not make citations mandatory. `evidence/graph` runs its obligation from the reference toward the claim, so a new file carrying a wrong citation is an error while a new file carrying none at all is silent. `singleEvidencePerSymbol` does not close that gap, because it demands exactly one unit per host where this repository's hosts answer for several. Until the contributor grows a per-host lower bound, that bound belongs to a structural guard, and `#1900` deliberately removed the repository-shape test class that would host one. Record the unpaid edge instead of reporting the population as self-enforcing.
 
+## Packages outside the graph
+
+`@automovie/mcp` and `@automovie/playground` carry no `evidence/graph` claim. Their `lint.config.ts` keeps `evidence/documented` and `evidence/todo`, so every export still owes a comment and an unpaid `@todo` still fails the build, but no export cites a requirement or a specification.
+
+The MCP surface is out by decision, not by omission. Its JSDoc is shipped API text: `typia.llm.controller` turns the class comment into the MCP server instruction and each method comment into a tool description under a hard length cap, and the [mcp skill](../mcp/SKILL.md) keeps the server and tool arrangement a standing experiment. Citations there competed with the prose an MCP client actually reads, and every reshuffle of an experimental surface rewrote them.
+
+What that costs is recorded rather than hidden. The units MCP used to own returned to `legacy` in `docs/contract-ownership/`, where they read as debt nobody owns instead of as a promise a package answers for. Read that trade before proposing a graph claim for either package again.
+
 ## Declare one owner per contract unit
 
 The positive edge families prove that a unit has a claimant or a disclaimer. They cannot separate a promise project source owns by design from a promise nobody took, because both are spelled as one exclusion per package. `docs/contract-ownership/requirements.json` and `specifications.json` carry that missing statement, and `internals/contract-ownership.mjs` checks it.

@@ -8,9 +8,6 @@ import { PNG } from "pngjs";
 
 /**
  * Parse renderer-owned bytes instead of trusting manifest media claims.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets production code derive media facts from output bytes before accepting deliverables.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Centralizes format-specific parsing and profile validation in deterministic source code.
  */
 export const probeProductionMedia = (props: {
   kind: IAutoMovieProductionDeliverable["kind"];
@@ -216,9 +213,6 @@ export const probeProductionMedia = (props: {
 
 /**
  * Parse one H.264-only intermediate production video.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Exposes an H.264-only intermediate parser to source workflows that assemble or verify video.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Derives video timing and dimensions directly from MP4 samples in package code.
  */
 export const probeProductionVideoMp4 = (
   bytes: Uint8Array,

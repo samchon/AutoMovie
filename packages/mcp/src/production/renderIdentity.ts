@@ -14,9 +14,6 @@ import {
 
 /**
  * Versioned identity protocol for target-local deterministic render inputs.
- *
- * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-canonical-fingerprint Versions the canonical target-local render fingerprint.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-fingerprint-protocol Includes the protocol revision in the content-addressing input closure.
  */
 export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
   "automovie.render.target.v3";
@@ -32,9 +29,6 @@ export const AUTOMOVIE_RENDER_TARGET_FINGERPRINT_PROTOCOL =
  * aggregate compile fingerprint remains recorded for provenance, but this
  * identity decides whether verified pixels can survive an unrelated source
  * edit.
- *
- * @evidence requirements/rendering/frame-identity-and-content-addressing.md#rendering-frame-dependency-closure Includes only the generated target payload and explicitly declared render dependencies.
- * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-target-dependency-fingerprint Computes target-local content identity without merging unrelated source revisions.
  */
 export const productionRenderTargetFingerprint = (
   project: AutoMovieProductionProject,

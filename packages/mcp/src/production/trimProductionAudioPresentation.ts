@@ -3,9 +3,6 @@ import { BoxParser, createFile } from "mp4box";
 /**
  * Add one ISO edit that removes Opus encoder priming and tail padding while
  * retaining the real duration of every coded packet.
- *
- * @evidence requirements/agent-authoring/source-owned-loop.md#agent-ordinary-code-authoring Lets feature assembly express exact audible duration while retaining all encoded Opus packets.
- * @evidence specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Adds the ISO presentation edit deterministically during package-level muxing.
  */
 export const trimProductionAudioPresentation = (props: {
   file: ReturnType<typeof createFile>;

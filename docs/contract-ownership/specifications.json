@@ -85,40 +85,6 @@
           }
         }
       }
-    },
-    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach": {
-      "obligations": {
-        "artifact-separation": {
-          "owner": {
-            "kind": "package",
-            "package": "@automovie/mcp"
-          }
-        },
-        "delivery-evidence-refusal": {
-          "owner": {
-            "kind": "package",
-            "package": "@automovie/mcp"
-          }
-        },
-        "host-absence-refusal": {
-          "owner": {
-            "kind": "package",
-            "package": "@automovie/mcp"
-          }
-        },
-        "plan-determinism": {
-          "owner": {
-            "kind": "package",
-            "package": "@automovie/mcp"
-          }
-        },
-        "request-inputs-and-answer": {
-          "owner": {
-            "kind": "package",
-            "package": "@automovie/mcp"
-          }
-        }
-      }
     }
   },
   "legacy": {
@@ -1064,6 +1030,7 @@
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-coverage": "sha256:280c454af3ee204595a2bf04a6183e54da9fac86cbf64460e471e55cdf947491",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-freshness": "sha256:bb4eca619e7b9ea4dc86a8ffc98396488454d15cf1f25e68b286168bc6ab6483",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection": "sha256:d76a6301dec6f64ca24fd09e902ef8e5d79a4a630a4b74033c1c57c94db509fb",
+    "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-inspection-reach": "sha256:53438d2f53dd1526c6673042788c50abaae5c5ccb3c2f49569af204e00dbf7a5",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-observation": "sha256:a058d263e3488adf3ae9e0818a3818a04c0b2aa30d9c349e90e2c1f16574fad8",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-propagation": "sha256:8d84ce0af6186992f6eb23e4e3b36ca112200b3e3bc8bceeac8a45aebda19aa9",
     "specifications/review-and-acceptance/subject-surface-and-inspection.md#review-system-subject-record": "sha256:8aa04b9cd5fbf0dd1a45d55af448e6997ec74cd635d86478e13860dd8569fcc3",
