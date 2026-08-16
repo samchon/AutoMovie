@@ -51,7 +51,9 @@ const CRATE: IAutoMovieModelRecipe = {
  * 3. `captureTurntable` refuses the same two production faults with the same
  *    codes, so one tool's namespace rules are not a second dialect.
  * 4. A rigless model's turntable is exactly the five rest-pose views.
- * 5. With the compiler registry removed, both tools refuse as
+ * 5. A registered asset whose compiled model is gone is refused by name rather
+ *    than swept at the view set a rigged model would owe.
+ * 6. With the compiler registry removed, both tools refuse as
  *    `capture-registry-unavailable` rather than capturing against a target
  *    nothing can currently prove.
  */
@@ -205,6 +207,28 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
         ],
         poses: ["rest"],
         diagnostics: [],
+      },
+    );
+
+    fs.rmSync(path.join(project.generatedRoot(), "models", "soloist.json"), {
+      force: true,
+    });
+    const modelless = await opened.captureTurntable({ asset: "soloist" });
+    TestValidator.equals(
+      "a registered asset with no readable compiled model is refused by name",
+      {
+        captured: modelless.captured,
+        views: modelless.views.length,
+        codes: modelless.diagnostics.map((entry) => entry.code),
+        namesTheAsset: modelless.diagnostics.some((entry) =>
+          entry.message.includes("no readable current compiled model"),
+        ),
+      },
+      {
+        captured: false,
+        views: 0,
+        codes: ["capture-target-missing"],
+        namesTheAsset: true,
       },
     );
 
