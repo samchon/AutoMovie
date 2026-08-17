@@ -13,6 +13,8 @@ interface IDensityRange {
   least: number;
   /** Greatest of the same ratio; above 1 the texels are crowded. */
   most: number;
+  /** Triangles with no surface area, which contribute no ratio to either bound. */
+  degenerate: number;
 }
 
 /**
@@ -23,14 +25,20 @@ interface IDensityRange {
  * shrunken one draws the same texels over more surface, which reads only as a
  * finish that is slightly the wrong size somewhere. Both areas are taken from
  * the mesh's own buffers, so the ratio is 1 exactly when the map preserves area
- * and nothing about how the mesh sits in space can move it. Degenerate
- * triangles carry no area to compare and are skipped rather than counted as 1.
+ * and nothing about how the mesh sits in space can move it.
+ *
+ * A triangle with no surface area has no ratio to report and is counted rather
+ * than skipped in silence. Skipping quietly is how a bound comes to be taken
+ * over a shrinking subset: a collapsed band would drop out of both extremes and
+ * leave the survivors looking well behaved, so the case asserts the count is
+ * zero and every reported bound therefore comes from real area.
  */
 const densityRange = (mesh: IAutoMovieMesh): IDensityRange => {
   const indices = mesh.indices!;
   const range: IDensityRange = {
     least: Number.POSITIVE_INFINITY,
     most: Number.NEGATIVE_INFINITY,
+    degenerate: 0,
   };
   for (let at = 0; at < indices.length; at += 3) {
     const corner = (
@@ -61,7 +69,10 @@ const densityRange = (mesh: IAutoMovieMesh): IDensityRange => {
         first[2]! * second[0]! - first[0]! * second[2]!,
         first[0]! * second[1]! - first[1]! * second[0]!,
       ) / 2;
-    if (surface <= 1e-12) continue;
+    if (surface <= 1e-12) {
+      range.degenerate += 1;
+      continue;
+    }
     const atlas =
       Math.abs(
         (alpha.atlas[0]! - origin.atlas[0]!) *
@@ -162,6 +173,9 @@ const STRAIGHT_PATH = [
  *    carry the identical `v` span, both exactly the path length, although only
  *    the straight one's atlas keeps its area. `v` is therefore a fact about the
  *    path and blind to the surface it is laid on.
+ * 7. None of the five bounds was taken over a shrinking subset. Every mesh
+ *    measured carries zero triangles without surface area, so no collapsed band
+ *    dropped out of an extreme and left the survivors looking well behaved.
  */
 export const test_geometry_loft_atlas_density = (): void => {
   const straight = loftAutoMovieSections({
@@ -254,5 +268,23 @@ export const test_geometry_loft_atlas_density = (): void => {
       taperedCarriesTheSameSpan: true,
       yetOnlyOneOfThemKeptItsArea: true,
     },
+  );
+
+  TestValidator.equals(
+    "every bound above was taken over real area, none of it over a collapsed band",
+    namedFacts(
+      (
+        [
+          ["straight", level],
+          ["prism", prism],
+          ["taper", tapered],
+          ["turn", turn],
+          ["larger", larger],
+        ] as ReadonlyArray<readonly [string, IDensityRange]>
+      ).map(
+        ([name, measured]) => [name, () => measured.degenerate === 0] as const,
+      ),
+    ),
+    { straight: true, prism: true, taper: true, turn: true, larger: true },
   );
 };
