@@ -33,7 +33,7 @@ Whatever you send inherits your authority over the guides the agent works under,
 
 | Sent | What it actually was |
 | --- | --- |
-| Make the coursed ashlar, slate, flags, and boards from texture images | `WORLD_BUILDING.md` forbids exactly that: those are physical modules, not texture repeats. The masonry had to be retracted and rebuilt |
+| Make the coursed ashlar, slate, flags, and boards from texture images | `BUILT_ENVIRONMENT.md` forbids exactly that: those are physical modules, not texture repeats. The masonry had to be retracted and rebuilt |
 | The west facade renders as a different material from the south | The light rig. A fill 2.3 times more blue than red at a third of the key's intensity, so one material read as two colours |
 | Check whether the leaf-count cap is clamping the foliage | The cap throws rather than clamps, so a clamp would have surfaced as a refusal. The recipe was asking for 288 leaves against a cap of 512 |
 

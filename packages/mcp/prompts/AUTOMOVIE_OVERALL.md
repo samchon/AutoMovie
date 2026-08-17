@@ -31,7 +31,7 @@ Read only the route that matches the next owned decision. Contract guides define
 - `PRODUCTION_DESIGN`: production clock, deliverables, art direction, visual-delivery declaration, render budgets, and site context.
 - `MODEL_RECIPE`: bounded primitive and external model recipes, and physically-based surface materials.
 - `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, freshness refusals, and the source-context boundary.
-- `WORLD_DESIGN`: terrain, routes, landmarks, bounded effects, and instance sets. The site a work stands on is the world's; the work itself is `WORLD_BUILDING`'s.
+- `WORLD_DESIGN`: terrain, routes, landmarks, bounded effects, instance sets, and the site craft that arranges them. The ground a work stands on is the world's; the work itself is `BUILT_ENVIRONMENT`'s.
 - `FORMATION_DESIGN`: repeated-unit layouts, heroes, and formation motion.
 - `SHOT_CONTRACT`: source binding, events, camera intent, review times, and rendition policy.
 - `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
@@ -58,7 +58,8 @@ Read only the route that matches the next owned decision. Contract guides define
 - `CINEMATOGRAPHY`: shot-size meaning, 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
 - `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
 - `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting. A door, shutter, gate, or sash belongs to the building that owns its opening rather than to a prop rigged from scratch, so operable openings are here too: travelling leaves, the named states they stand in, hardware, and the refusals `validateBuiltEnvironment` and the prop gate each raise by name.
-- `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, environmental storytelling, and the built environment: building graphs, finishes and patterns, service networks, environmental analysis, drawings and quantities, phasing, cloth/planting/water, and prop placement.
+- `BUILT_ENVIRONMENT`: one work as a measured record: building and space graphs, populations, finishes and patterns, operable openings, service networks, phasing, cloth, planting and water, prop placement, and room culling.
+- `BUILDING_STUDIES`: what a declared building is read for once it stands: environmental analysis, and drawings, schedules, and quantities. Both run from a project script.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
