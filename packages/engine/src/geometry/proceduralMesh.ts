@@ -1002,6 +1002,14 @@ export const extrudeAutoMovieRegion = (props: {
  * one moulding, stretched on the outside of the turn and crowded on the inside.
  * A constant section does not save it; the bend alone produces it.
  *
+ * `d` is the offset in the plane the path turns in, not the distance from the
+ * path, and the difference is what an author can act on. A point displaced only
+ * perpendicular to that plane carries `d` of zero however far out it sits, so
+ * around a level bend it is the section's width that costs density and not its
+ * height: a tall thin fillet loses almost nothing where a wide flat band of the
+ * same reach loses a third on the outside and doubles on the inside. Turn a
+ * band on edge before turning it into a curve, or mitre it.
+ *
  * That is declared rather than pending, for the reason the revolution's shear
  * is. Making `v` measure surface distance would give every section point its
  * own `v` at one station, which is a developed layout of a bent tube rather

@@ -95,13 +95,25 @@ const longestAlong = (mesh: IAutoMovieMesh): number => {
   return longest;
 };
 
-/** A square section of the given half-width, wound counter-clockwise. */
-const square = (half: number): { x: number; y: number }[] => [
-  { x: -half, y: -half },
-  { x: half, y: -half },
-  { x: half, y: half },
-  { x: -half, y: half },
+/**
+ * A rectangular section, wound counter-clockwise.
+ *
+ * `x` runs in the plane the path turns in and `y` perpendicular to it, which is
+ * the distinction the bend cases are built to separate.
+ */
+const rectangle = (
+  halfWidth: number,
+  halfHeight: number,
+): { x: number; y: number }[] => [
+  { x: -halfWidth, y: -halfHeight },
+  { x: halfWidth, y: -halfHeight },
+  { x: halfWidth, y: halfHeight },
+  { x: -halfWidth, y: halfHeight },
 ];
+
+/** A square section of the given half-width. */
+const square = (half: number): { x: number; y: number }[] =>
+  rectangle(half, half);
 
 /** A quarter-turn path of radius `radius`, sampled as a polyline. */
 const quarterTurn = (
@@ -117,13 +129,17 @@ const quarterTurn = (
     };
   });
 
-/** One loft of a constant square section around a quarter turn. */
-const bend = (radius: number, half: number): IAutoMovieMesh =>
+/** One loft of a constant rectangular section around a quarter turn. */
+const bend = (
+  radius: number,
+  halfWidth: number,
+  halfHeight: number,
+): IAutoMovieMesh =>
   loftAutoMovieSections({
     path: quarterTurn(radius, 96),
     sections: [
-      { at: 0, outer: square(half) },
-      { at: 1, outer: square(half) },
+      { at: 0, outer: rectangle(halfWidth, halfHeight) },
+      { at: 1, outer: rectangle(halfWidth, halfHeight) },
     ],
   });
 
@@ -173,9 +189,14 @@ const STRAIGHT_PATH = [
  *    carry the identical `v` span, both exactly the path length, although only
  *    the straight one's atlas keeps its area. `v` is therefore a fact about the
  *    path and blind to the surface it is laid on.
- * 7. None of the five bounds was taken over a shrinking subset. Every mesh
- *    measured carries zero triangles without surface area, so no collapsed band
- *    dropped out of an extreme and left the survivors looking well behaved.
+ * 7. The negative twin, one property away. `d` is the offset into the plane the
+ *    path turns in and not the distance from the path, so a section four times
+ *    as tall at the same width reads the identical extremes while a tenth of
+ *    the width reads a tenth of the spread and twice the width reads 0.667 to
+ *    2. Around a level bend the width costs density and the height costs none.
+ * 8. None of the bounds was taken over a shrinking subset. Every mesh measured
+ *    carries zero triangles without surface area, so no collapsed band dropped
+ *    out of an extreme and left the survivors looking well behaved.
  */
 export const test_geometry_loft_atlas_density = (): void => {
   const straight = loftAutoMovieSections({
@@ -225,7 +246,7 @@ export const test_geometry_loft_atlas_density = (): void => {
     nclose(tapered.most, 1, 1e-12),
   );
 
-  const turn = densityRange(bend(2, 0.5));
+  const turn = densityRange(bend(2, 0.5, 0.5));
   TestValidator.equals(
     "a bend stretches the outside and crowds the inside by R / (R +- d)",
     namedFacts([
@@ -240,7 +261,7 @@ export const test_geometry_loft_atlas_density = (): void => {
     },
   );
 
-  const larger = densityRange(bend(40, 10));
+  const larger = densityRange(bend(40, 10, 10));
   TestValidator.equals(
     "d / R alone decides it, so a member twenty times the size reads the same",
     namedFacts([
@@ -248,6 +269,32 @@ export const test_geometry_loft_atlas_density = (): void => {
       ["sameInside", () => nclose(larger.most, turn.most, 1e-12)],
     ]),
     { sameOutside: true, sameInside: true },
+  );
+
+  // The negative twin: one property away, where the loss must not appear. Both
+  // sections reach further from the path than the square above, one across the
+  // turn and one perpendicular to it, and only the first pays for it.
+  const tall = densityRange(bend(2, 0.5, 2));
+  const narrow = densityRange(bend(2, 0.05, 2));
+  const flat = densityRange(bend(2, 1, 0.05));
+  TestValidator.equals(
+    "d is the offset into the turn, so height costs nothing and width costs all",
+    namedFacts([
+      ["fourTimesTallerReadsIdentically", () => nclose(tall.least, turn.least)],
+      ["andIdenticallyInside", () => nclose(tall.most, turn.most)],
+      ["aTenthTheWidthOutside", () => nclose(narrow.least, 2 / 2.05, 1e-9)],
+      ["aTenthTheWidthInside", () => nclose(narrow.most, 2 / 1.95, 1e-3)],
+      ["twiceTheWidthOutside", () => nclose(flat.least, 2 / 3, 1e-9)],
+      ["twiceTheWidthInside", () => nclose(flat.most, 2 / 1, 1e-3)],
+    ]),
+    {
+      fourTimesTallerReadsIdentically: true,
+      andIdenticallyInside: true,
+      aTenthTheWidthOutside: true,
+      aTenthTheWidthInside: true,
+      twiceTheWidthOutside: true,
+      twiceTheWidthInside: true,
+    },
   );
 
   TestValidator.equals(
@@ -280,11 +327,23 @@ export const test_geometry_loft_atlas_density = (): void => {
           ["taper", tapered],
           ["turn", turn],
           ["larger", larger],
+          ["tall", tall],
+          ["narrow", narrow],
+          ["flat", flat],
         ] as ReadonlyArray<readonly [string, IDensityRange]>
       ).map(
         ([name, measured]) => [name, () => measured.degenerate === 0] as const,
       ),
     ),
-    { straight: true, prism: true, taper: true, turn: true, larger: true },
+    {
+      straight: true,
+      prism: true,
+      taper: true,
+      turn: true,
+      larger: true,
+      tall: true,
+      narrow: true,
+      flat: true,
+    },
   );
 };
