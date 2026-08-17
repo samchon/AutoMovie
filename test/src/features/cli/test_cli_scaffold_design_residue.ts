@@ -32,15 +32,18 @@ import { formationDesign, productionFixture } from "../mcp/productionFixtures";
  *
  * Scenarios:
  *
- * 1. The project enumerates every resident design record across all six design
+ * 1. The inventory reports exactly the six fields the emitter turns into
+ *    targets, so a seventh added later cannot leave a whole kind of record
+ *    resident and invisible.
+ * 2. The project enumerates every resident design record across all six design
  *    kinds, so "resident minus derived" is computable rather than guessed.
- * 2. Every enumerated record maps to a project-relative `.automovie/design`
+ * 3. Every enumerated record maps to a project-relative `.automovie/design`
  *    file that exists, so a refusal names something the author can open.
- * 3. No enumerated record resolves to the screenplay index's own file, so the
+ * 4. No enumerated record resolves to the screenplay index's own file, so the
  *    one record the emitter deliberately leaves alone can never be accused.
- * 4. Deleting a record removes it from the inventory, so the remedy the
+ * 5. Deleting a record removes it from the inventory, so the remedy the
  *    refusal names actually shrinks the residue.
- * 5. The scaffold's emitter registers each record inside `emit` rather than in
+ * 6. The scaffold's emitter registers each record inside `emit` rather than in
  *    a list beside the calls, reads the resident set from the project, and
  *    refuses by naming each record's own path.
  */
@@ -73,6 +76,17 @@ export const test_cli_scaffold_design_residue = (): void => {
       "a formation record can be stored into the fixture",
       project.setFormationDesign(formation).accepted,
       true,
+    );
+
+    // The emitter turns the inventory into targets by naming its fields one by
+    // one, and nothing in the type system objects when the inventory grows a
+    // seventh. A record of a kind nobody listed would then be resident and
+    // invisible, which is the exact failure this whole gate exists to end, so
+    // the field set is pinned here rather than trusted.
+    TestValidator.equals(
+      "the inventory reports exactly the kinds the emitter enumerates",
+      Object.keys(project.inventory()).sort(compareCodeUnits),
+      ["acceptance", "formations", "models", "production", "shots", "world"],
     );
 
     const resident = targets();
