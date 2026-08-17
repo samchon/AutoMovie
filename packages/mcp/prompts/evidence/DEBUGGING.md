@@ -47,6 +47,8 @@ When the authored camera is the reason you cannot see the fault, stop reasoning 
 
 The starter's `viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in your hands. Fly with the arrow keys or W A S D, rise and descend with Space and C, and click for pointer-lock mouse look. It prints the eye's position and lens on screen, so anything odd is reported by coordinate rather than by adjective.
 
+A set heavy enough to draw slowly flies slower than the speed you asked it for, and the line says so: when the pace the eye is actually keeping differs from the pace you set, both are printed. Plan a flight from the second number and raise the speed until it reads what you wanted. The position beside it is exact whatever the frames cost, so a finding is still written from a coordinate.
+
 That is what makes it a debugging instrument. A staging fault hidden behind the shot camera, geometry that only reads wrong from an angle nobody authored, and a placement you believed rather than measured all become one observation.
 
 It installs no capture hook, writes nothing, holds the shot's opening second, and shows the level of detail your own distance selects, so it proves nothing on its own. Review evidence still comes from `npm run preview` and `npm run render`, and a coordinate you read there is a hypothesis to confirm against the engine query that owns it.
