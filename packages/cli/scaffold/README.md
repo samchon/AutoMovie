@@ -70,6 +70,25 @@ The sample review queue is deliberately incomplete. Open the PNG printed by
 `preview`, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or
 `REVIEW_FILM` contract through MCP, and review current evidence.
 
+## Your own film
+
+The starter is one complete film, so starting yours means replacing it, and the
+design records are the half that is easy to leave behind. They are derived:
+`scripts/emitDesign.ts` builds each record from the typed source that owns it and
+`npm run design` stores it. That script is this production's own code and names
+your modules explicitly, so it is edited in the same pass as the sources it
+imports.
+
+Two consequences decide how a replacement goes. The emitter writes and never
+deletes, so a starter record you stop deriving stays resident and keeps asking
+for the shot it names; delete the file under `.automovie/design` yourself. And
+the screenplay index is not derived at all, by design.
+
+Replacement is one pass rather than a milestone you can close halfway. Documents,
+source, and design cite each other in both directions, so the build stays red
+from the first deletion until the last authored record lands. Read
+`PRODUCTION_DESIGN` through MCP for the ordered procedure.
+
 ## Offline geometry measurements
 
 Two measurements already ship. `npm run building:report` derives every drawing

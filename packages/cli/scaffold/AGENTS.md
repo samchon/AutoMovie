@@ -20,6 +20,16 @@ Run `npm run capture:install` and `npm run capture:doctor` after dependency chan
 before the first preview/render. Do not silently fall back to a machine browser;
 system Chrome or Edge must be selected explicitly in `automovie.config.ts`.
 
+The tracked design records under `.automovie/design` are derived, not hand-kept.
+`scripts/emitDesign.ts` builds each one from the typed source that owns it and
+`npm run design` stores it, so that script is this production's code: it imports
+your units, formations, world, and shots by path and states each shot's module
+and export. Replace those sources and you edit that script in the same pass. It
+writes and never deletes, so a record you stop deriving stays resident and keeps
+its obligations; delete the file yourself. The screenplay index stays
+hand-authored. Read `PRODUCTION_DESIGN` before replacing the starter film, which
+is one pass and cannot be closed green halfway.
+
 Never edit `generated`; correct its owning source or design and compile. Never
 mark visual review complete without opening current bundle frames. A design,
 source, generated, or frame change makes dependent review stale by design.
