@@ -1279,6 +1279,7 @@ export const mergeAutoMovieMeshes = (
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Carries a member's coordinate set through a placement unchanged, which is what keeps the set measured in the frame the member was built in and what reverses its handedness under a mirroring scale.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::coordinate-absence-and-composition Implements the placement half of the fragment the merge answers for the composition half of: coordinates move with the surface rather than being recut, which is free for a rotation and costs a metric set its unit under a scale.
  */
 export const transformAutoMovieMesh = (
   mesh: IAutoMovieMesh,
