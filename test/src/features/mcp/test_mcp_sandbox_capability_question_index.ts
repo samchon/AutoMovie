@@ -17,7 +17,7 @@ import { namedFacts } from "../internal/predicates";
  * identifiers is addressed by a name the author already holds, so the index is
  * keyed by the question instead. This pins that the index is a partition of the
  * surface rather than a curated subset of it — the property that makes a family's
- * size derived, which is what `WORLD_BUILDING` got wrong when it called the
+ * size derived, which is what the built-environment guide got wrong when it called the
  * built-environment queries "the six" while eight were reachable.
  *
  * Scenarios:

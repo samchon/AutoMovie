@@ -64,7 +64,7 @@ const namesTool = (spans: readonly string[], tool: string): boolean =>
  * shafts, and an armoury held no weapons. Every one of those compiled, linted,
  * passed the suite, and shipped, because the guide the agent was reading while
  * it built them named no way to look at what it had built. Capture, inspection,
- * and review all existed; `WORLD_BUILDING`, `OBJECT_RIGGING`, `MODEL_RECIPE`,
+ * and review all existed; `BUILT_ENVIRONMENT`, `OBJECT_RIGGING`, `MODEL_RECIPE`,
  * `MOTION`, `CINEMATOGRAPHY`, and `GEOMETRY` mentioned none of them.
  *
  * A capability an author is never told to reach for is a capability the product

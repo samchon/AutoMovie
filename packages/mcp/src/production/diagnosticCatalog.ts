@@ -151,8 +151,8 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
     recheck: "Run engine validation and then the same compile scope.",
   },
   environment: {
-    guide: "WORLD_BUILDING",
-    path: "prompts/WORLD_BUILDING.md#world-building-handbook",
+    guide: "BUILT_ENVIRONMENT",
+    path: "prompts/BUILT_ENVIRONMENT.md#built-environment",
     invariant:
       "Environment context must name valid authored spatial owners and may not derive physical facts from labels or appearance.",
     correction:

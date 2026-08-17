@@ -19,7 +19,7 @@ import ts from "typescript-compiler";
  * A guide that teaches a technique the import gate refuses leaves an authoring
  * agent to invent a workaround, and the workaround compiles, passes its tests
  * and looks plausible in a frame. That is how #1904 shipped texture-repeat
- * masonry into a production while WORLD_BUILDING forbade exactly that, and it
+ * masonry into a production while the built-environment guide forbade exactly that, and it
  * is what this guard exists to make impossible to repeat.
  */
 export const test_mcp_guide_surface_reachability = (): void => {
@@ -155,7 +155,7 @@ const splitGuide = (
  * and nothing else, and the surface makes no claim about any of them.
  *
  * The rule this leaves a guide author is one sentence: write an engine function
- * in call form only where shot source may call it. `WORLD_BUILDING` states that
+ * in call form only where shot source may call it. `BUILT_ENVIRONMENT` states that
  * a project script under `scripts/` reaches the whole of `@automovie/engine`, so
  * a script-only engine function is named bare or shown inside an example that
  * imports a package the sandbox does not serve.

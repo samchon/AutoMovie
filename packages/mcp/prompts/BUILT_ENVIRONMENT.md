@@ -1,6 +1,8 @@
-# World Building Handbook
+# Built Environment
 
-A world is a system of meaningful places, routes, constraints, and environmental cues. Decorative density is not world design. Begin with the actions and spatial decisions the screenplay requires, then build enough terrain and landmarks to make those decisions readable.
+One work, its interiors and its facade, written as a record the engine measures rather than as geometry somebody assembled. Read this before authoring a building, a room, an opening, a finish, a service run, or anything placed inside one.
+
+The site the work stands on is not here. Terrain, routes, landmarks, and the placement of the building itself belong to `WORLD_DESIGN`. What a finished building is then read for, its analyses and its take-offs, belongs to `BUILDING_STUDIES`.
 
 ## World and building are different owners
 
@@ -124,38 +126,6 @@ A wet zone binds a logical space to a `dry`, `damp`, `wet`, or `immersed` grade 
 
 Declare the network from shot source, where it is validated with the building it serves, and draw it from a project script. `lowerServiceNetwork` sweeps a regular section along every authored centre line and refuses an invalid graph outright, because a picture of a working installation placed in front of the reason it does not work is the one outcome this record exists to prevent. `lowerWetZoneDrainage` turns a zone's own supply inlets and drains into the sources and sinks of the fluid domain standing in that room, which is how a floor that falls to a gully composes the water solver instead of describing water twice. A zone whose room holds no declared domain has nothing to drain into, and `npm run building:report` reports that as `not-run` rather than lowering an installation that appears to drain.
 
-## Environmental analysis
-
-An analysis reads the design and the site; it never writes either. The site is the production's `environmentContext`: north, a reference ground plane, the environmental instants it wants answered, and neighbouring occluder masses. Ids there may not collide with the building's own, and no lowering, scene graph, or take-off ever emits that context as part of the work.
-
-An analysis run names a domain from the closed set `daylight`, `artificial-light`, `thermal`, `moisture`, `air`, `acoustic`, the subject it analysed, the design revision it read, its solver, a digest of its settings, and its outcome. The revision is what makes a result perishable: a run that read `r7` is evidence about `r7` and nothing else. The outcome is `solved`, `unsupported`, or `not-run`; a solved one carries at least one metric, an optional spatial sample field, and non-fatal warnings, and the other two carry a reason and a remedy instead of a fabricated number.
-
-Every metric states its key, its unit, its measured value or `null`, its declared target and comparison direction or `null`, and a status. A target carries its unit beside its value, because 300 lux and 300 candela are different requirements and a bare number would let one clear the other. The statuses are `meets`, `misses`, `untargeted` (a number exists but nobody said what good is), `unsupported` (no adapter), and `not-run` (an adapter exists but did not execute), and the last two carry a gap naming what is missing and the exact change that would produce a value.
-
-The report is one row per domain plus a bounded gap list with the remainder counted, and its status cannot be cleared by silence. A required domain nobody answered, a run that read a superseded revision, and a metric no adapter could produce all land in the gaps and force `incomplete`. Report `unsupported` and `not-run` as they are. Naming a domain is not a claim that it is solved, a data structure is not a simulation, and an absent analysis reported as a pass is a false capability claim, which is worse than no analysis.
-
-The solvers answer those domains and one fold rolls them up, and every one of them is called from a project script: `analyzeAutoMovieDaylight` for `daylight` and `artificial-light`, `analyzeAutoMovieEnvelope` for `thermal` and `moisture` as two runs of one build-up, `analyzeAutoMovieSpaceAir` for `air`, `analyzeAutoMovieAcoustics` for `acoustic`, and `summarizeAutoMovieAnalysis` for the report over them. Each takes one request naming the subject, the revision it read, and the measured inputs the study needs; `npm run building:report` supplies the run id, the revision and the site, and the study itself is yours to declare. A production that declares no study runs none, and the sidecar records that gap rather than an empty verdict that would read as a pass.
-
-## Drawings, schedules, and quantities
-
-A drawing is a question asked of the design, never a second copy of it. A view states a cut plane, a direction, a scale, a filter, and a pen; every line, area, and quantity comes from the building the view is applied to, so a sheet cannot disagree with the model the way a hand-drafted one does the moment either moves.
-
-The projections are two decisions rather than an algorithm apiece: where the cut plane is and which side survives. `plan` looks down and draws what the plane passes through as cut and what lies below as projected. `reflected-ceiling-plan` looks up and mirrors the page basis, so a coffer lands on the same page point it occupies in the plan, which is what "reflected" has always meant. `section` cuts on a vertical plane and keeps what is beyond it. `elevation` has no cut at all. The `discipline` label is open, because a filter a catalogue never anticipated must be expressible over the same design rather than as a new drawing type nobody can add.
-
-A schedule is the same design counted instead of drawn. It counts one subject per run, `space`, `opening` or `connector`. The mark on every row is assigned from canonical order rather than from an authored label, each row names a bounded sample of its members with the remainder counted, and the row counts sum to the design's own occurrence total. A schedule therefore cannot lose or invent a door.
-
-Ask your project script for the room schedule first, and ask it rather than building an index of your own. `space` groups differently from the other subjects on purpose: an opening schedule collapses three hundred identical doors into one type row, while a room is its own row, because two rooms alike in every column are still two rooms somebody has to visit. Each room row carries a `place`: the building unit that owns it, its parent space, the declared cell and the measured content box kept apart, volume fidelity, what stands in it, what it adjoins and what connects to it. Every one of those is the built environment's own query rather than a second derivation, so the schedule cannot disagree with the model it is a reading of.
-
-`contents` is read from declared membership, which is the only reading that is right. An element and a population each state the one space they occupy, so the row names an element as `<environment>/<element>` and a whole population once as `instance-set:<set>`, bounded like any sample with `omittedContents` carrying the rest. Matching an id prefix against the model answers a different question and answers it low: a field authored as one compact set contributes nothing to a name scan, and a room whose floor, walls and ceiling are populations reads as nearly empty while being the fullest room in the building. If you are about to grep ids to learn what is in a room, this row is the thing you were about to write.
-
-Read the two boxes as two facts. `declared` is how far the zone reaches and `content` is where its contents actually are; a room is routinely far larger than the thing standing in it, so a camera derived from the declared cell frames a wall. A space that states no volume, or one whose cells no box can bound, is `unmeasured` with null dimensions and a stated gap, and its contents are measured either way, because a purely semantic container full of things is not an empty one. What the row does not carry is stated too: finish, furniture, fixture, equipment, light and service terminal are not scheduled subjects, and an absent finish row is not an unfinished room. An opening and a connector row carry no `place` at all yet and say so as a gap, so their location is still read from the design.
-
-A quantity report answers a closed subject list every time: space floor area, space volume, opening area, connector length, element count, opening count, and model occurrence count. A subject with nothing to measure reports a zero total over zero owners and says so, rather than vanishing and reading as a building with no openings. Every number carries a `basis`: `exact` for a footprint's area, `approximate` for a volume assembled from overlapping convex cells. A support patch's floor area is its outer ring less its holes, so an atrium void is floor nobody pours rather than floor somebody orders. Read the basis before you order anything; a report that printed both as plain numbers would be worse than one that printed neither. Contributors are bounded and what the bound left out is counted and summed rather than dropped, and a derivation the report could not perform is a stated gap.
-
-Every one of these derivations runs from a project script and never from shot source. `deriveAutoMovieDrawing` takes one environment and one view; `deriveAutoMovieDrawingSchedule` takes one environment and one subject, and counts its rooms, openings or connectors off the same graph; `measureAutoMovieQuantities` answers the closed subject list; and `autoMovieDrawingToSvg` exports a view when a human has to look at it, refusing a drawing serialized with a different view's pen. The SVG is a sidecar of the derived drawing, not a source; edit the design and derive again. `npm run building:report` performs every one of them over every building the compiled shots carry and writes the sheets beside the record they came from.
-
-There are disciplines this derivation cannot serve, and it says so on every sheet rather than on none. `deriveAutoMovieDrawing` is handed the built environment alone, so a services view draws no segment, port or penetration even where a network is authored, and a finish plan hatches no layer order, thickness or coursing even where an assembly is. Both come back as the `service-network` and `material-build-up` gaps, `unsupported` rather than `not-run`, because what is missing is the derivation and not your input. Ask for those sheets anyway and read their gaps: a discipline label is a filter over one model, never a second model, and a sheet that looked complete while the pipework lived somewhere else is how a coordination failure reaches site.
-
 ## Phases, variants, and change
 
 A renovation, a staged build, and a design still choosing between two options are the same record. Lineage deliberately imports none of the graphs it annotates: it attaches to a bare id plus the open name of the graph that id came from (`element`, `space`, `opening`, `material-layer`, `service-port`, `instance-slot`, `asset`), so a fold that does not exist yet can be phased and impact-traced without this record gaining a field. Registering an identity is the whole act of opting a graph into lineage.
@@ -239,45 +209,6 @@ State a `footprint` when the volume that matters is not the volume you modelled:
 ## Culling by room
 
 A building's own space graph answers what the camera can possibly see, and the rule is one sentence: a space is hidden only when it is proved unreachable from the camera through every opening, connector, and exterior route the design declares. Everything else stays drawn. Aggressive culling trades a wrong frame for a faster one, and a wrong frame is not a cheaper frame, it is a different film. So an exterior camera hides nothing, a camera the design cannot place in exactly one leaf space hides nothing, and a space whose extent was never stated hides nothing. The exterior is a node of the portal graph rather than the absence of one, which is why a sealed interior room still hides the other windowed rooms while a windowed room keeps them. A boundary carrying an opening is a portal even when a door leaf fills it, because whether that leaf is shut is movable state, so a closed door widens no frame and hides nothing.
-
-## Semantic layout
-
-List stable anchors before generating detail:
-
-- entrances, exits, objectives, threats, refuges, observation points, and horizon features;
-- routes with width, slope, surface, direction, and traversal class;
-- regions with narrative function, material, vegetation, occupancy, and visibility;
-- ground contacts and height references for every staged subject;
-- light, weather, atmosphere, and effect bounds.
-
-Give each anchor a stable id. Shot contracts and acceptance scenarios refer to meaning, not guessed coordinates. Coordinates remain deterministic engine facts derived from the authored world record.
-
-## Scale and traversal
-
-Choose world units from the production contract and verify human, vehicle, building, terrain, and formation scale together. A road wide enough in a map may fail when a formation, turning radius, camera, and occlusion are considered. Test travel distance, slope, clearance, reach, line of sight, and camera distance with engine queries rather than by eye. The building queries and `worldSurfaceHeight(` are on the sandbox surface, so a shot module checks its own staging as it builds it; only a study that writes a document has to run from a project script.
-
-Preserve walkable or traversable continuity. Place barriers where they communicate or constrain action, not where procedural noise happens to put them. Mark dangerous or forbidden regions explicitly. Do not rely on render detail to enforce a physical rule the engine does not know.
-
-## Procedural generation
-
-Use deterministic seeds and bounded algorithms. Generate from semantic anchors outward:
-
-1. lock story-critical anchors and routes;
-2. derive large terrain forms and visibility corridors;
-3. allocate secondary regions;
-4. scatter repeated detail with exclusion zones and density limits;
-5. add authored hero exceptions;
-6. verify bounds, contacts, overlaps, and required sightlines.
-
-OpenUSD composition is a useful mental model for complex external worlds: references and payloads let assets compose without destructive copying, while variant sets preserve explicit alternatives. Regardless of format, register exact source, license, digest, conversion, and chosen variant in AutoMovie ownership.
-
-## Environmental storytelling
-
-Let the world show prior action, use, culture, logistics, weather, and conflict through wear, orientation, debris, routes, defenses, vegetation, sound, and light. Repetition establishes a system; one deliberate exception directs attention. Keep hero landmarks distinct in silhouette and value so they remain useful to both characters and camera.
-
-## Atmosphere and effects
-
-Fog, smoke, dust, rain, fire, and crowds need spatial and temporal bounds. They may reveal scale, hide transitions, carry wind, or change visibility, but they must not erase required subjects or acceptance evidence. Treat effects as authored systems with source, lifetime, region, density, and delivery cost.
 
 ## Verification
 

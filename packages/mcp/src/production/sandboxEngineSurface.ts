@@ -377,7 +377,7 @@ const QUESTION_OF_EXPORT: Readonly<
  * The reachable surface, grouped by the question each family answers.
  *
  * Derived from the per-name record rather than written out, so a family cannot
- * be described with the wrong count. `WORLD_BUILDING` called the built-environment
+ * be described with the wrong count. `BUILT_ENVIRONMENT` called the built-environment
  * queries "the six `builtEnvironment*` queries" while eight were reachable and
  * only seven were named anywhere, and an author reading that sentence had no way
  * to learn that `builtEnvironmentSpaceFidelity` existed. A count nobody types
