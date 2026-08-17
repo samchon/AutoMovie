@@ -53,6 +53,19 @@ const MAX_SPEED = 100;
 /** Seconds of travel one frame may integrate; see {@link frame}. */
 const MAX_FRAME_SECONDS = 0.1;
 
+/**
+ * Frames the speed line measures the eye's real pace over; see
+ * {@link speedReadout}.
+ *
+ * The count is a window in frames rather than in seconds because it is read as
+ * a median, and a median wants a fixed number of samples. Fifteen is a quarter
+ * of a second on a set that draws at sixty frames a second and about five
+ * seconds on one that draws at three, which is the right way round: a light
+ * scene changes pace often and a heavy one holds whatever pace its geometry
+ * imposes.
+ */
+const FLIGHT_SAMPLE_FRAMES = 15;
+
 /** Height is world-up, never the eye's own up. */
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
@@ -125,6 +138,8 @@ let yaw = opening.y;
 let pitch = THREE.MathUtils.clamp(opening.x, -MAX_PITCH, MAX_PITCH);
 let speed = DEFAULT_SPEED;
 let lastElapsed = 0;
+/** Real seconds each of the last {@link FLIGHT_SAMPLE_FRAMES} frames cost. */
+const frameSeconds: number[] = [];
 let viewWidth = 0;
 let viewHeight = 0;
 
@@ -212,11 +227,61 @@ function heading(radians: number): number {
   );
 }
 
+/**
+ * The speed line: the pace the eye was asked for, and the pace it is actually
+ * keeping when those are not the same number.
+ *
+ * {@link MAX_FRAME_SECONDS} is what separates them. A frame that cost more than
+ * the budget still carries the eye only a budget's worth, so on a set heavy
+ * enough to draw at three frames a second an eye told to fly at 4 m/s covers
+ * about a metre in that second. That was always true of a flight over a large
+ * building; what was missing was any way to read it off the page, and an
+ * operator who multiplied the printed speed by the seconds held arrived at a
+ * coordinate the eye had never been to. A page whose whole purpose is to let a
+ * fault be reported by coordinate cannot be wrong about how its coordinates are
+ * reached.
+ *
+ * The pace is taken from the MEDIAN of the frames just drawn, for two reasons.
+ * A ratio recomputed from the newest frame alone jitters at the frame rate and
+ * is least readable exactly when it matters. And the single enormous interval a
+ * backgrounded tab returns with — the event {@link MAX_FRAME_SECONDS} exists
+ * for — would drag a mean to nothing and report a stall that never happened,
+ * while a median of fifteen ignores it outright.
+ *
+ * Both numbers are printed, and only when they differ at the precision printed.
+ * The asked-for speed is the one `Q` and `E` move and the flown speed is the
+ * one a distance is computed from, so an operator who wants a metre a second on
+ * a heavy set raises the first until the second reads what was wanted. Frames
+ * inside the budget cost nothing, so they print one number and no explanation
+ * of a limit that is not biting.
+ */
+function speedReadout(
+  speed: number,
+  frames: readonly number[],
+  budgetSeconds: number,
+): string {
+  const asked = speed.toFixed(2);
+  const sorted = [...frames].sort((a, b) => a - b);
+  const median = sorted[sorted.length >> 1] ?? 0;
+  // Frames inside the budget lose nothing to it. Dividing anyway would report a
+  // sixty-frame-a-second eye flying at six times the speed it was given.
+  if (median <= budgetSeconds) return `${asked}m/s`;
+  const flown = (speed * (budgetSeconds / median)).toFixed(2);
+  return flown === asked
+    ? `${asked}m/s`
+    : `${asked}m/s (flying ${flown}m/s at ${(1 / median).toFixed(1)}fps)`;
+}
+
 function frame(elapsed: number): boolean {
   // Clamped because a backgrounded tab comes back with one enormous delta,
-  // which would fling the eye across the set before it drew again.
-  const delta = Math.min(Math.max(elapsed - lastElapsed, 0), MAX_FRAME_SECONDS);
+  // which would fling the eye across the set before it drew again. What the
+  // clamp costs is charged to the readout rather than absorbed silently:
+  // `speedReadout` is handed the same budget and the same frames, so the speed
+  // it prints is the speed this line integrates.
+  const real = Math.max(elapsed - lastElapsed, 0);
+  const delta = Math.min(real, MAX_FRAME_SECONDS);
   lastElapsed = elapsed;
+  if (frameSeconds.push(real) > FLIGHT_SAMPLE_FRAMES) frameSeconds.shift();
   // The canvas is sized once when the viewer is mounted, which is enough for a
   // capture at a fixed viewport and not for a page somebody keeps open while
   // dragging the window. Following the element here keeps the picture
@@ -257,6 +322,7 @@ function frame(elapsed: number): boolean {
     ` z=${eye.position.z.toFixed(2)}` +
     `  yaw=${heading(yaw).toFixed(1)}°` +
     ` pitch=${THREE.MathUtils.radToDeg(pitch).toFixed(1)}°` +
-    `  fov=${eye.fov.toFixed(1)}°  speed=${speed.toFixed(2)}m/s`;
+    `  fov=${eye.fov.toFixed(1)}°` +
+    `  speed=${speedReadout(speed, frameSeconds, MAX_FRAME_SECONDS)}`;
   return true;
 }
