@@ -137,6 +137,8 @@ A face's coordinates are anchored on its own mesh origin, so the continuity abov
 
 Riding along is free for a rotation and it is not free for a scale. A metre in the atlas means a metre of surface, and a scaled placement stretches the surface while leaving the numbers alone, so a member built at unit size and placed at three times it reads 1 where the surface now measures 3 and its finish comes out three times too large. A non-uniform scale is worse: each face takes its own factor, so the set stops being metric by any single number. Nothing catches it either, because `validateTextureScale` measures a binding against the part's own coordinate span and never reads a placement. Author an atlas-bearing member at the size it will be seen at and place it with translation and rotation only, or leave `coordinateSource` off it rather than claiming metres the scale has already falsified.
 
+Reuse is what makes this bite. `mergeAutoMovieMeshParts(` places every member through the same transform before concatenating, so building one member and placing it at several sizes, which is the economy that function exists for, is exactly the case that falsifies the declaration. Build a second member where the size differs.
+
 `extrudeAutoMovieProfile`, `sweepAutoMovieProfile`, `buildAutoMovieWall`, and `tessellateSurface` emit no coordinates at all.
 
 The region extrusion replaces the profile extrusion and the wall, and a loft carrying the same section at `at` 0 and `at` 1 replaces the sweep. Build a member that carries a finish with the replacement.
