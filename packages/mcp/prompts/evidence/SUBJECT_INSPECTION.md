@@ -106,7 +106,7 @@ That is also why inspection is not another `captureFrame` target. A capture rece
 - `capture-input-changed` means the compile moved mid-sweep, so the pictures are of two different models. Discard them, compile, and inspect again.
 - `capture-failed`, `capture-png-invalid` and `capture-size-mismatch` are the instrument answering badly: it threw, returned bytes that are not a decodable PNG, or drew a raster other than the one asked for. Repair the host rather than the subject.
 
-A prototype and a prototype part are measured in model space and stand nowhere in a shot, so a world eye aimed at one would photograph whatever occupies the origin. The starter's host refuses those through `capture-failed` and names the placement to open instead, which is the same prototype-and-placement rule this guide states above, enforced at the point where ignoring it would return a confident picture of the wrong place.
+A prototype and a prototype part are measured in model space and stand nowhere in a shot, so a world eye aimed at one would photograph whatever occupies the origin. The starter's host refuses those through `review-subject-viewpoint-unsupported` and names the placement to open instead, which is the same prototype-and-placement rule this guide states above, enforced at the point where ignoring it would return a confident picture of the wrong place. Read that code as a refusal about the subject rather than about the instrument: the staged page stays open, so the rest of the sweep does not pay for a rebuild, and the range is reported unsupported rather than as work you still owe.
 
 ## Look inside a building: section planes
 

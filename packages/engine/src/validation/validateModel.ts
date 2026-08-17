@@ -348,7 +348,7 @@ const validateTextureBinding = (
     collector.push(
       "range",
       `${path}.texCoord`,
-      "generated automovie geometry currently supports UV set 0",
+      "a surface carries one coordinate set; a packed atlas and a second set are a decided exclusion, so only UV set 0 exists to select",
       texture.texCoord,
     );
   if (texture.colorSpace !== expectedColorSpace)
