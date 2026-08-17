@@ -454,11 +454,11 @@ export const extrudeAutoMovieProfile = (props: {
  * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
  * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
  * escape here that it is for the coordinate-less builders. It measures this
- * same pair, a tapered loft shears the same way, and it gives up something this
- * one keeps: a loft's `v` is path distance rather than surface distance, so a
- * taper or a bend costs it texel density as well as angle where the map here is
- * exactly equiareal. Where the form has to stay a true surface of revolution,
- * the finish on it stays non-directional.
+ * same pair and a tapered loft shears the same way, and it gives up something
+ * this one keeps: the map here is exactly equiareal, while a loft's `v` is path
+ * distance rather than surface distance, so a taper or a bend costs it texel
+ * density on top of the angle. Where the form has to stay a true surface of
+ * revolution, the finish on it stays non-directional.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.

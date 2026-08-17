@@ -124,15 +124,15 @@ const STRAIGHT_PATH = [
 /**
  * The texel density a lofted atlas keeps, and the two ways it does not.
  *
- * The surface coordinate convention calls a developed frame equiareal, and for
- * a surface of revolution it is: `v` there is the meridian's own length, so the
- * whole distortion is shear and a directional finish is the only thing at risk.
- * A loft measures the same pair of distances but takes `v` along the path
- * rather than along the surface, and wherever those two differ the atlas gains
- * or loses area outright. That is the failure an author cannot see coming,
- * because a stretched atlas produces no blur and no skew to explain itself, and
- * the contract therefore has to state which forms keep density and which do
- * not.
+ * The surface coordinate convention calls a developed frame equiareal only
+ * where `v` measures the surface's own travel, which on a revolution it does:
+ * `v` there is the meridian's own length, so the whole distortion is shear and
+ * a directional finish is the only thing at risk. A loft measures the same pair
+ * of distances but takes `v` along the path instead, and wherever those two
+ * differ the atlas gains or loses area outright. That is the failure an author
+ * cannot see coming, because a stretched atlas produces no blur and no skew to
+ * explain itself, so this pins the boundary the contract draws between the
+ * forms that keep density and the forms that do not.
  *
  * Every expected number is the geometry's own, not the builder's. A taper tilts
  * each ruling off the path by its own angle, so a leg carries that angle's
