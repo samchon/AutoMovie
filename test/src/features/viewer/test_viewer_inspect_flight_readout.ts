@@ -313,32 +313,57 @@ const literal = (page: ts.SourceFile, name: string): number => {
 };
 
 /** The source text a named local of one function is initialized from. */
-const initializer = (host: ts.Node, name: string): string => {
-  let found: string | undefined;
-  walk(host, (node) => {
-    if (
+const initializer = (host: ts.Node, name: string): string =>
+  only(
+    collect(host, (node) =>
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
       node.name.text === name &&
       node.initializer !== undefined
-    )
-      found = node.initializer.getText();
+        ? node.initializer.getText()
+        : undefined,
+    ),
+    `a binding of "${name}"`,
+  );
+
+/** The argument expressions one call inside a function is written with. */
+const args = (host: ts.Node, callee: string): string[] =>
+  only(
+    collect(host, (node) =>
+      ts.isCallExpression(node) && node.expression.getText() === callee
+        ? node.arguments.map((argument) => argument.getText())
+        : undefined,
+    ),
+    `a call to "${callee}"`,
+  );
+
+/** Everything one reading of the frame function finds. */
+const collect = <T>(
+  host: ts.Node,
+  read: (node: ts.Node) => T | undefined,
+): T[] => {
+  const found: T[] = [];
+  walk(host, (node) => {
+    const value = read(node);
+    if (value !== undefined) found.push(value);
   });
-  if (found === undefined)
-    throw new Error(`inspect.ts no longer binds "${name}" inside its frame.`);
   return found;
 };
 
-/** The argument expressions one call inside a function is written with. */
-const args = (host: ts.Node, callee: string): string[] => {
-  let found: string[] | undefined;
-  walk(host, (node) => {
-    if (ts.isCallExpression(node) && node.expression.getText() === callee)
-      found = node.arguments.map((argument) => argument.getText());
-  });
-  if (found === undefined)
-    throw new Error(`inspect.ts no longer calls "${callee}" inside its frame.`);
-  return found;
+/**
+ * The single member, or a failure naming what was expected.
+ *
+ * Taking the last of several would leave a second call site unread, which is
+ * exactly the divergence this case exists to refuse: two readouts told two
+ * different budgets would pass a check that only ever looked at one of them.
+ */
+const only = <T>(found: readonly T[], what: string): T => {
+  if (found.length !== 1)
+    throw new Error(
+      `inspect.ts holds ${found.length} of ${what} inside its frame rather ` +
+        `than one, so this case is no longer measuring what it names.`,
+    );
+  return found[0]!;
 };
 
 const walk = (node: ts.Node, visit: (node: ts.Node) => void): void => {
