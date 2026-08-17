@@ -44,6 +44,7 @@ import {
   IAutoMovieVector3,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
+import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 import typia from "typia";
@@ -1066,7 +1067,7 @@ export class AutoMovieProductionOracleService {
       width,
       height,
     };
-    const retained = verifiedRetainedFrames(
+    const retained = retainedBundleFrames(
       this.project,
       bundleRoot,
       {
@@ -1077,10 +1078,8 @@ export class AutoMovieProductionOracleService {
         renderSpec,
       },
       duration,
-    ).filter(
-      (entry) => entry.frame.index !== index || entry.frame.pass !== pass,
-    );
-    const frames = [...retained.map((entry) => entry.frame), nextFrame].sort(
+    ).filter((frame) => frame.index !== index || frame.pass !== pass);
+    const frames = [...retained, nextFrame].sort(
       (left, right) =>
         left.index - right.index || compareCodeUnits(left.pass, right.pass),
     );
@@ -1096,10 +1095,7 @@ export class AutoMovieProductionOracleService {
     try {
       this.project.commitRenderBundle(
         relativeBundle,
-        new Map([
-          ...retained.map((entry) => [entry.frame.path, entry.bytes] as const),
-          [relativeFrame, bytes],
-        ]),
+        new Map([[relativeFrame, bytes]]),
         manifest,
         captureInputsCurrent,
       );
@@ -1536,7 +1532,33 @@ const groundSample = (
       };
 };
 
-const verifiedRetainedFrames = (
+/**
+ * The frames this bundle already holds, kept without opening one of them.
+ *
+ * Appending a frame used to read, digest, and decode every frame already in the
+ * bundle, and then write all of them back. That made one capture cost the whole
+ * bundle and a capture loop cost its square: 1.7 seconds per frame at 139
+ * frames, 14 seconds at 163, which is what made a 432-capture scenario take
+ * hours and stop being a canary anybody would run (`#1957`).
+ *
+ * Two of those three were duplicate work. `verifiedRenderManifest` already
+ * reads every frame in the bundle, digests it against the manifest, and probes
+ * its raster, so decoding each one a second time proved nothing the read had not
+ * just proved, and pixel variance cannot change while the digest holds. The
+ * rewrite proved even less: the bytes were being written back exactly as they
+ * were read, which is what made an append cost the bundle twice over.
+ *
+ * So the retained bytes are neither decoded again nor rewritten. The caller
+ * commits the one new frame beside the manifest, and the frames already on disk
+ * stay where the captures that made them put them.
+ *
+ * What remains here is the part that is about this append rather than about the
+ * bytes: the manifest must describe this exact target and render spec, a frame's
+ * index and time must agree with the production clock, and its file must still
+ * be inside this bundle and still exist. A frame whose file is gone is dropped,
+ * so the manifest never names one that is not there.
+ */
+const retainedBundleFrames = (
   project: AutoMovieProductionProject,
   bundleRoot: string,
   expected: Pick<
@@ -1548,10 +1570,7 @@ const verifiedRetainedFrames = (
     | "renderSpec"
   >,
   duration: number,
-): Array<{
-  frame: IAutoMovieRenderBundleManifest["frames"][number];
-  bytes: Uint8Array;
-}> => {
+): IAutoMovieRenderBundleManifest["frames"] => {
   const manifest = project.verifiedRenderManifest(
     path.join(bundleRoot, "manifest.json"),
   );
@@ -1576,10 +1595,7 @@ const verifiedRetainedFrames = (
     ) === false
   )
     return [];
-  const retained: Array<{
-    frame: IAutoMovieRenderBundleManifest["frames"][number];
-    bytes: Uint8Array;
-  }> = [];
+  const retained: IAutoMovieRenderBundleManifest["frames"] = [];
   const bundlePrefix = `${path.resolve(bundleRoot)}${path.sep}`;
   for (const frame of manifest.frames)
     try {
@@ -1592,19 +1608,8 @@ const verifiedRetainedFrames = (
         continue;
       const absolute = path.resolve(bundleRoot, frame.path);
       if (absolute.startsWith(bundlePrefix) === false) continue;
-      const relative = normalizeSlash(
-        path.relative(project.renderRoot(), absolute),
-      );
-      const bytes = project.readRenderFile(relative);
-      if (digestAutoMovieBytes(bytes) !== frame.digest) continue;
-      const png = PNG.sync.read(Buffer.from(bytes));
-      if (
-        png.width !== frame.width ||
-        png.height !== frame.height ||
-        hasVisiblePixelVariance(png) === false
-      )
-        continue;
-      retained.push({ frame, bytes });
+      if (fs.statSync(absolute).isFile() === false) continue;
+      retained.push(frame);
     } catch {
       continue;
     }
