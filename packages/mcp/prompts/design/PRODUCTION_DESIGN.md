@@ -62,6 +62,32 @@ Required order:
 
 Do not declare a deliverable required unless the repository has or will have a deterministic command that materializes and proves it.
 
+## Where these records come from in a scaffold production
+
+The order above says which records to edit. In a production stamped from the scaffold it does not say to edit them by hand, because `scripts/emitDesign.ts` derives every one of them from the typed sources that own them and `npm run design` stores what it derived. A record and its typed source are two representations of one fact and the compiler refuses the pair when they disagree, so editing the JSON alone produces that refusal rather than the change you wanted.
+
+That script is production-owned code rather than scaffolding to inherit and leave alone. It imports your units, formations, world, and shots by module path, and it states each shot's own `module` and `export`, because a module cannot know the path anything reaches it by and an export cannot read its own name. Sources that move while that script does not leave a design layer still describing the film you deleted.
+
+Three properties of the derivation decide how a replacement goes.
+
+- **It writes and never deletes.** A record you stop deriving stays resident, and a resident shot contract is a live obligation at every scope, `design` included. Delete the file under `.automovie/design/` yourself.
+- **An unchanged record is not re-stored.** A design mutation stales every dependent shot, review, and render by design, so re-deriving an identical record is deliberately not a mutation.
+- **The screenplay index is not derived at all.** It stays hand-authored and `SCREENPLAY_WRITING` owns it. Why a scene covers a beat is stated in no document, so nothing can generate it.
+
+## Replacing the starter with your own film
+
+The scaffold ships one complete film. Starting your own means replacing all of it, and that is one pass rather than a stage you can close green in the middle.
+
+The evidence graph binds documents, source, and design in both directions, so a partial replacement is red from either side: delete the starter's documents and its classes cite nothing, delete its classes and its documents claim subjects nobody authored. One measured run left the starter's documents standing while it moved everything else and read about forty unresolved evidence targets for it. Expect red from the first deletion until the last authored record lands, and treat it as red you are walking through rather than red you are diagnosing.
+
+1. Author your own documents under `docs/<name>`, and your own screenplay index.
+2. Author your own subjects, world, formations, and shots under `src`.
+3. Rewrite `scripts/emitDesign.ts` to derive from those modules, then run `npm run design`.
+4. Delete the starter records that script no longer derives, and the starter modules and documents nothing cites any more.
+5. Compile, and read the diagnostics as the remaining list.
+
+Do not plan a documents-only milestone that ends on a green build. It cannot exist, and one benchmark run spent two authoring turns discovering that.
+
 ## What the design declaration commits you to looking at
 
 Every deliverable this record declares is a review surface somebody owes evidence for, and the declaration decides which one.
