@@ -453,9 +453,12 @@ export const extrudeAutoMovieProfile = (props: {
  * {@link buildAutoMoviePolyhedron}, whose per-face frame is isometric, or as a
  * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
  * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
- * escape here that it is for the coordinate-less builders, because it measures
- * this same pair and a tapered loft shears the same way. Where the form has to
- * stay a true surface of revolution, the finish on it stays non-directional.
+ * escape here that it is for the coordinate-less builders. It measures this
+ * same pair, a tapered loft shears the same way, and it gives up something this
+ * one keeps: a loft's `v` is path distance rather than surface distance, so a
+ * taper or a bend costs it texel density as well as angle where the map here is
+ * exactly equiareal. Where the form has to stay a true surface of revolution,
+ * the finish on it stays non-directional.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
@@ -979,9 +982,38 @@ export const extrudeAutoMovieRegion = (props: {
  * section is wide folds the surface through itself, and this kernel measures
  * neither the turn nor the width.
  *
+ * Where this atlas differs from a revolution's is worth stating, because the
+ * difference is texel density rather than the angle between the axes, and
+ * density is the distortion an author cannot see coming. A revolution's `v` is
+ * the meridian's own length, so its map is exactly equiareal and only shears. A
+ * loft's `v` is distance along the path, which is not distance along the
+ * surface, and the gap between those two is area the atlas gains or loses.
+ *
+ * It opens two ways, and both are closed forms rather than tendencies. A
+ * changing section tilts each ruling off the path by the taper angle, so the
+ * ruling is longer than the path step by that angle's secant and the whole leg
+ * carries `cos` of it: a section growing 0.5 m over 4 m of path reads 0.9923.
+ * A turning path is the larger one. At a point of the path whose curvature
+ * radius is `R`, a section point sitting a signed `d` away from the path
+ * travels `(R + d) / R` times as far as the path does, so its area ratio is
+ * `R / (R + d)`. That depends on `d / R` alone, so scaling the whole member up
+ * changes nothing: a section a quarter of the bend radius wide spans 0.8 to
+ * 1.333 across itself, a 1.67:1 density range on one moulding, stretched on the
+ * outside of the turn and crowded on the inside. A constant section does not
+ * save it; the bend alone produces it.
+ *
+ * That is declared rather than pending, for the reason the revolution's shear
+ * is. Making `v` measure surface distance would give every section point its
+ * own `v` at one station, which is a developed layout of a bent tube rather
+ * than this frame, and it would rewrite the coordinates of every surface
+ * already authored against this one. So a finish wanting even texel density
+ * belongs on a straight run of constant section, and a cornice that has to turn
+ * a corner carries a finish that does not report its own density.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Connects authored planar sections along a declared path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Refuses incompatible ring topology rather than inventing correspondence.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Measures section travel against path travel in the same developed metre frame the convention states, so one declared scale reads the same on a loft as on a flat face.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-atlas-shear Carries the half of the bound that is not area-preserving, bounding a taper's loss by the taper angle's cosine and a bend's by `R / (R + d)` rather than claiming the revolution's equiareal map.
  */
 export const loftAutoMovieSections = (props: {
   path: readonly IAutoMovieVector3[];

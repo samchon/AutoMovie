@@ -62,7 +62,7 @@ Reuse is what the difference decides. Under `"surface-metres"` one binding serve
 
 Read `GEOMETRY` for which constructor emits coordinates and in which frame.
 
-`texCoord` is zero, and `validateModel` refuses every other value on an imported model record as much as on a generated one. That is not a default among several sets: there is no second set to select, because generated geometry emits set zero alone and no packed atlas exists to author against.
+`texCoord` is zero, and `validateModel` refuses every other value on an imported model record as much as on a generated one. That is not a default among several sets, and it is not a limit waiting to be lifted: a surface carries one coordinate set, and packing several regions into one image is a decided exclusion. A packing rule is a layout decision no authoring agent can state in prose, and a layout only earns its keep once it can leave the engine as something an image model paints into, which the product has no path for. So an image you generate is either tileable at a real-world size or fills one flat region whose own extent you already know. Different artwork on different faces of one object is outside the engine, and painted-to-fit artwork is finished-look work the repaint lane owns. `GEOMETRY` states the same boundary beside the frames it applies to.
 
 Declaring a source also makes the pairing checkable. `validateTextureScale` reads a model's parts beside its materials, refuses a `"normalized"` binding on a set measuring more than one, and warns when a `"surface-metres"` binding implies a tile larger than the surface it is bound to and the axis does not clamp.
 

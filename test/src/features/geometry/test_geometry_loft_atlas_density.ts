@@ -1,0 +1,258 @@
+import {
+  extrudeAutoMovieRegion,
+  loftAutoMovieSections,
+} from "@automovie/engine";
+import type { IAutoMovieMesh } from "@automovie/interface";
+import { TestValidator } from "@nestia/e2e";
+
+import { namedFacts, nclose } from "../internal/predicates";
+
+/** The smallest and largest texel density any triangle of a mesh carries. */
+interface IDensityRange {
+  /** Least emitted-uv-area over surface-area; below 1 the texels are stretched. */
+  least: number;
+  /** Greatest of the same ratio; above 1 the texels are crowded. */
+  most: number;
+}
+
+/**
+ * Measure emitted atlas area against real surface area, triangle by triangle.
+ *
+ * Area is the half of the distortion an author cannot diagnose from a frame: a
+ * sheared atlas draws a square as a parallelogram, which is visible, while a
+ * shrunken one draws the same texels over more surface, which reads only as a
+ * finish that is slightly the wrong size somewhere. Both areas are taken from
+ * the mesh's own buffers, so the ratio is 1 exactly when the map preserves area
+ * and nothing about how the mesh sits in space can move it. Degenerate
+ * triangles carry no area to compare and are skipped rather than counted as 1.
+ */
+const densityRange = (mesh: IAutoMovieMesh): IDensityRange => {
+  const indices = mesh.indices!;
+  const range: IDensityRange = {
+    least: Number.POSITIVE_INFINITY,
+    most: Number.NEGATIVE_INFINITY,
+  };
+  for (let at = 0; at < indices.length; at += 3) {
+    const corner = (
+      offset: number,
+    ): { position: readonly number[]; atlas: readonly number[] } => {
+      const index = indices[at + offset]!;
+      return {
+        position: [
+          mesh.positions[index * 3]!,
+          mesh.positions[index * 3 + 1]!,
+          mesh.positions[index * 3 + 2]!,
+        ],
+        atlas: [mesh.uvs![index * 2]!, mesh.uvs![index * 2 + 1]!],
+      };
+    };
+    const origin = corner(0);
+    const alpha = corner(1);
+    const beta = corner(2);
+    const first = alpha.position.map(
+      (value, axis) => value - origin.position[axis]!,
+    );
+    const second = beta.position.map(
+      (value, axis) => value - origin.position[axis]!,
+    );
+    const surface =
+      Math.hypot(
+        first[1]! * second[2]! - first[2]! * second[1]!,
+        first[2]! * second[0]! - first[0]! * second[2]!,
+        first[0]! * second[1]! - first[1]! * second[0]!,
+      ) / 2;
+    if (surface <= 1e-12) continue;
+    const atlas =
+      Math.abs(
+        (alpha.atlas[0]! - origin.atlas[0]!) *
+          (beta.atlas[1]! - origin.atlas[1]!) -
+          (alpha.atlas[1]! - origin.atlas[1]!) *
+            (beta.atlas[0]! - origin.atlas[0]!),
+      ) / 2;
+    const ratio = atlas / surface;
+    range.least = Math.min(range.least, ratio);
+    range.most = Math.max(range.most, ratio);
+  }
+  return range;
+};
+
+/** The largest `v` any vertex of a mesh carries. */
+const longestAlong = (mesh: IAutoMovieMesh): number => {
+  let longest = Number.NEGATIVE_INFINITY;
+  for (let at = 1; at < mesh.uvs!.length; at += 2)
+    longest = Math.max(longest, mesh.uvs![at]!);
+  return longest;
+};
+
+/** A square section of the given half-width, wound counter-clockwise. */
+const square = (half: number): { x: number; y: number }[] => [
+  { x: -half, y: -half },
+  { x: half, y: -half },
+  { x: half, y: half },
+  { x: -half, y: half },
+];
+
+/** A quarter-turn path of radius `radius`, sampled as a polyline. */
+const quarterTurn = (
+  radius: number,
+  steps: number,
+): { x: number; y: number; z: number }[] =>
+  Array.from({ length: steps + 1 }, (_station, at) => {
+    const angle = (at / steps) * (Math.PI / 2);
+    return {
+      x: radius * Math.sin(angle),
+      y: 0,
+      z: radius - radius * Math.cos(angle),
+    };
+  });
+
+/** One loft of a constant square section around a quarter turn. */
+const bend = (radius: number, half: number): IAutoMovieMesh =>
+  loftAutoMovieSections({
+    path: quarterTurn(radius, 96),
+    sections: [
+      { at: 0, outer: square(half) },
+      { at: 1, outer: square(half) },
+    ],
+  });
+
+const STRAIGHT_PATH = [
+  { x: 0, y: 0, z: 0 },
+  { x: 0, y: 0, z: 4 },
+];
+
+/**
+ * The texel density a lofted atlas keeps, and the two ways it does not.
+ *
+ * The surface coordinate convention calls a developed frame equiareal, and for
+ * a surface of revolution it is: `v` there is the meridian's own length, so the
+ * whole distortion is shear and a directional finish is the only thing at risk.
+ * A loft measures the same pair of distances but takes `v` along the path
+ * rather than along the surface, and wherever those two differ the atlas gains
+ * or loses area outright. That is the failure an author cannot see coming,
+ * because a stretched atlas produces no blur and no skew to explain itself, and
+ * the contract therefore has to state which forms keep density and which do
+ * not.
+ *
+ * Every expected number is the geometry's own, not the builder's. A taper tilts
+ * each ruling off the path by its own angle, so a leg carries that angle's
+ * cosine; a bend of curvature radius `R` carries a section point sitting `d`
+ * from the path through `(R + d) / R` times the path's own travel, so its area
+ * ratio is `R / (R + d)`. A polyline path only approaches a true arc, so the
+ * inner extreme is allowed the error its own sampling admits while the outer
+ * one, which falls on a station rather than between two, is exact.
+ *
+ * Scenarios:
+ *
+ * 1. A straight run of constant section is exactly equiareal, every triangle
+ *    reading 1, so the frame itself is not what loses area.
+ * 2. A region extrusion, which is developed in the same metre frame, is exactly
+ *    equiareal too. Being developed is therefore not the cause; taking `v` from
+ *    the path is.
+ * 3. A section growing 0.5 m over 4 m of path reads `cos(atan(0.125))` on every
+ *    side triangle, which is the ruling's secant and nothing else.
+ * 4. A bend costs far more than a taper. A 2 m turn carrying a 0.5 m half
+ *    section reads exactly `R / (R + d)` at 0.8 outside and `R / (R - d)` at
+ *    4 / 3 inside: a 1.67 to 1 density range across one member, from a section
+ *    that never changes.
+ * 5. `d / R` alone decides it. A bend twenty times as large carrying a section
+ *    twenty times as wide reports the identical extremes, so building the
+ *    member bigger is not the remedy an author would reach for first.
+ * 6. The mechanism, not just the symptom: the tapered loft and the straight one
+ *    carry the identical `v` span, both exactly the path length, although only
+ *    the straight one's atlas keeps its area. `v` is therefore a fact about the
+ *    path and blind to the surface it is laid on.
+ */
+export const test_geometry_loft_atlas_density = (): void => {
+  const straight = loftAutoMovieSections({
+    path: STRAIGHT_PATH,
+    sections: [
+      { at: 0, outer: square(0.5) },
+      { at: 1, outer: square(0.5) },
+    ],
+  });
+  const level = densityRange(straight);
+  TestValidator.equals(
+    "a straight run of constant section keeps every texel exactly",
+    namedFacts([
+      ["leastIsOne", () => nclose(level.least, 1, 1e-12)],
+      ["mostIsOne", () => nclose(level.most, 1, 1e-12)],
+    ]),
+    { leastIsOne: true, mostIsOne: true },
+  );
+
+  const prism = densityRange(
+    extrudeAutoMovieRegion({ outer: square(0.5), depth: 4 }),
+  );
+  TestValidator.equals(
+    "a region extrusion is developed and equiareal, so developed is not the cause",
+    namedFacts([
+      ["leastIsOne", () => nclose(prism.least, 1, 1e-12)],
+      ["mostIsOne", () => nclose(prism.most, 1, 1e-12)],
+    ]),
+    { leastIsOne: true, mostIsOne: true },
+  );
+
+  // Half-width 0.5 grows to 1 over 4 m of path, so each face leans 0.125 off it.
+  const taper = loftAutoMovieSections({
+    path: STRAIGHT_PATH,
+    sections: [
+      { at: 0, outer: square(0.5) },
+      { at: 1, outer: square(1) },
+    ],
+  });
+  const tapered = densityRange(taper);
+  TestValidator.predicate(
+    "a taper loses exactly the cosine of the angle its rulings lean off the path",
+    nclose(tapered.least, 1 / Math.hypot(1, 0.125), 1e-9),
+  );
+  TestValidator.predicate(
+    "and its caps, which are the section's own coordinates, keep their area",
+    nclose(tapered.most, 1, 1e-12),
+  );
+
+  const turn = densityRange(bend(2, 0.5));
+  TestValidator.equals(
+    "a bend stretches the outside and crowds the inside by R / (R +- d)",
+    namedFacts([
+      ["outsideIsExact", () => nclose(turn.least, 2 / 2.5, 1e-9)],
+      ["insideMatchesTheForm", () => nclose(turn.most, 2 / 1.5, 1e-3)],
+      ["whichIsAWideRange", () => turn.most / turn.least > 1.66],
+    ]),
+    {
+      outsideIsExact: true,
+      insideMatchesTheForm: true,
+      whichIsAWideRange: true,
+    },
+  );
+
+  const larger = densityRange(bend(40, 10));
+  TestValidator.equals(
+    "d / R alone decides it, so a member twenty times the size reads the same",
+    namedFacts([
+      ["sameOutside", () => nclose(larger.least, turn.least, 1e-12)],
+      ["sameInside", () => nclose(larger.most, turn.most, 1e-12)],
+    ]),
+    { sameOutside: true, sameInside: true },
+  );
+
+  TestValidator.equals(
+    "v counts the path rather than the surface, which is where the area goes",
+    namedFacts([
+      [
+        "straightAlongIsThePath",
+        () => nclose(longestAlong(straight), 4, 1e-12),
+      ],
+      [
+        "taperedCarriesTheSameSpan",
+        () => nclose(longestAlong(taper), longestAlong(straight), 1e-12),
+      ],
+      ["yetOnlyOneOfThemKeptItsArea", () => tapered.least < level.least],
+    ]),
+    {
+      straightAlongIsThePath: true,
+      taperedCarriesTheSameSpan: true,
+      yetOnlyOneOfThemKeptItsArea: true,
+    },
+  );
+};

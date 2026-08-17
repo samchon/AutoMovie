@@ -47,7 +47,12 @@
 
 결합 기록이 이름 붙이는 좌표 집합은 세 종류로 구분되고, 그 종류가 좌표 변환의 축척을 읽는 단위를 결정한다. Metric surface 집합은 1 단위가 표면 위 1 m이므로 이미지 한 바퀴가 `tile` m를 덮을 때 축척은 `1 / tile`이고 표면 extent 항이 들어가지 않는다. Normalized 집합은 자기 표면을 정확히 한 번 덮으므로 축척은 `extent / tile`이며, 측정된 span이 1을 넘으면 선언이 결합된 기하와 모순이므로 거부한다. Source 집합은 임의의 저작 layout을 유지하므로 일반 물리 축척 공식이 없고 원본 layout이나 채택 기록이 변환을 공급한다. 좌표 종류를 선언하지 않은 결합은 어떤 단위 주장도 하지 않으며, 세 종류는 결합 기록만으로 구분되지 않으므로 결합이 그 종류를 직접 말한다.
 
-<!-- @evidenceObligation coordinate-source-declaration 결합이 이름 붙이는 좌표 집합의 세 종류와 각 종류에서 실제 축척을 읽는 방법. -->
+<!-- @evidence requirements/production-design/palette-material-and-state.md#production-design-texture-scale-mapping 반복 규칙과 non-repeat 규칙이 각각 어떤 좌표 사실 위에서 성립하는지, 그리고 어느 쪽이 제품 경계 밖인지 고정한다. -->
+<!-- @evidence requirements/product/scope-and-exclusions.md#product-exclusion-reopening packed layout 제외를 backlog가 아니라 다시 여는 조건을 가진 결정으로 기록한다. -->
+
+한 표면은 좌표 집합을 하나만 가지고, 결합은 그 하나 외의 집합을 지목할 수 없으며 지목하는 선언은 거부된다. 여러 영역을 한 image 안에 배치하는 packed layout은 미결이 아니라 결정된 제외다. 배치 규칙은 저작 에이전트가 산문으로 말할 수 있는 종류의 결정이 아니고, layout은 engine 밖으로 나가 image를 그릴 대상이 될 때 비로소 값을 가지는데 제품에는 그 export 경로가 없다. 그래서 형상에 맞춰 그린 artwork는 blocking pass가 아니라 마감 lane이 답할 일이고, 저작 가능한 image는 실제 크기로 tile되는 것이거나 자기 extent를 이미 아는 하나의 평면 영역을 채우는 것이다. Non-repeat는 두 번째 집합이 아니라 표면 span 이상을 덮는 metric tile과 그 축을 clamp하는 sampler로 선언한다. 이 제외는 저작 에이전트가 packing 규칙을 직접 통제할 수 있고 layout이 나갈 곳이 생길 때 다시 검토한다.
+
+<!-- @evidenceObligation coordinate-source-declaration 결합이 이름 붙이는 좌표 집합의 세 종류, 각 종류에서 실제 축척을 읽는 방법, 표면이 집합을 하나만 가진다는 사실과 packed layout 제외. -->
 
 좌표를 내는 모든 기하 연산은 하나의 handedness를 쓴다. 어느 삼각형에서든 u가 커지는 방향과 v가 커지는 방향의 외적은 그 면의 outward normal이고, 따라서 방향성 있는 무늬는 어느 연산이 만든 표면에서도 같은 쪽으로 읽히며 normal map의 tangent basis는 여러 member를 합친 buffer 전체에서 한 방향을 유지한다. 특정 연산을 보정하려고 이미지를 미리 뒤집지 않는다. 축의 홀수 개를 뒤집는 mirroring placement가 이 규약이 뒤집히는 유일한 지점이다. 그 placement는 outward face가 밖을 향하도록 winding을 뒤집으면서 좌표는 다시 자르지 않고 옮기므로 그 member의 atlas는 반대 handedness가 되고, 한 buffer 안에서 두 handedness가 섞이면 하나의 tangent basis가 양쪽을 답하지 못한다.
 
@@ -61,9 +66,13 @@
 
 <!-- @evidenceObligation developed-metric-frame 단면을 잇는 연산이 쓰는 around·along 거리 좌표의 원점, 방향, 절단과 cap 규약. -->
 
-Developed frame은 정확히 equiareal이다. Jacobian determinant가 어디서나 1이므로 texel 밀도는 표면 전체에서 일정하고 왜곡은 두 축 사이의 각도로만 나타난다. 단면이 일정하면 왜곡이 없고 단면이 변하면 shear가 생기며, 회전면의 최악 anisotropy는 반지름이 아니라 meridian이 축에서 기운 정도로만 정해져서 `k = 2 * pi * |dr / ds|`에 대해 `(sqrt(k * k + 4) + k) / (sqrt(k * k + 4) - k)`이다. 축에서 6.5도에서 2, 13.8도에서 4, 45도 원뿔에서 21.7이고 meridian이 수평에 접근하면 41.5이다. 이 값은 pole의 성질이 아니라 기울기의 성질이므로 끝을 잘라낸 frustum도 같은 만큼 shear한다. 방향성 있는 finish는 단면이 일정한 구간에서만 정확하고, 그 밖의 형태는 평면 face로 저작하거나 방향성 없는 finish를 쓴다.
+Developed frame이 정확히 equiareal인 것은 v가 재는 거리가 표면 자신의 이동 거리와 같을 때뿐이고, 회전면이 그 경우다. 회전면의 v는 meridian 자신의 polyline 길이이므로 Jacobian determinant가 어디서나 1이고, texel 밀도는 표면 전체에서 일정하며 왜곡은 두 축 사이의 각도로만 나타난다. 그 최악 anisotropy는 반지름이 아니라 meridian이 축에서 기운 정도로만 정해져서 `k = 2 * pi * |dr / ds|`에 대해 `(sqrt(k * k + 4) + k) / (sqrt(k * k + 4) - k)`이다. 축에서 6.5도에서 2, 13.8도에서 4, 45도 원뿔에서 21.7이고 meridian이 수평에 접근하면 41.5이다. 이 값은 pole의 성질이 아니라 기울기의 성질이므로 끝을 잘라낸 frustum도 같은 만큼 shear한다.
 
-<!-- @evidenceObligation developed-atlas-shear Developed frame의 면적 보존과 단면 변화가 만드는 shear의 상한. -->
+Path를 따라 단면을 잇는 연산의 v는 path의 이동 거리이지 표면의 이동 거리가 아니므로, 그 연산은 면적까지 잃거나 얻는다. 단면이 변하면 ruling이 path 걸음보다 taper 각의 secant만큼 길어져서 면적비는 그 각의 cosine이다. Path가 휘면 단면 점이 path에서 벗어난 부호 있는 거리 `d`와 그 지점 곡률 반경 `R`에 대해 면적비가 `R / (R + d)`이므로, 단면이 일정해도 바깥쪽 texel은 늘어나고 안쪽은 조밀해진다. `d / R`이 0.25이면 한 부재 안에서 밀도가 0.8배와 1.333배 사이로 벌어지고, 이 값은 `d / R`만의 함수이므로 부재를 키워도 줄지 않는다. 밀도가 일정하다는 주장은 따라서 회전면과 곧은 path 위의 일정 단면에만 해당하며, 휘거나 taper된 형태에서 밀도 변화는 선언된 성질이지 고칠 결함이 아니다. v를 표면 거리로 바꾸면 이미 저작된 모든 좌표가 다시 쓰이기 때문이다.
+
+방향성 있는 finish나 균일한 texel 밀도를 요구하는 finish는 단면이 일정하고 path가 곧은 구간, 그리고 축을 거의 벗어나지 않는 meridian에서만 정확하다. 그 밖의 형태는 평면 face로 저작하거나 방향성 없는 finish를 쓴다.
+
+<!-- @evidenceObligation developed-atlas-shear Developed frame이 면적을 보존하는 경우와 보존하지 않는 경우, 그리고 단면 변화·path 곡률·meridian 기울기가 만드는 shear와 밀도 변화의 상한. -->
 
 좌표를 내지 않는 연산은 채움값을 넣지 않고 좌표 자체를 내지 않는다. 0으로 채우면 그 표면 전체가 한 texel에 고정되어 평평한 도장처럼 보이고 그 손실을 결합 시점에 귀속시킬 수 없기 때문이다. Placement는 표면을 옮길 뿐 atlas를 다시 자르지 않으므로 좌표를 그대로 옮기며, 그래서 member의 좌표는 배치된 위치가 아니라 만들어진 frame에서 잰 값으로 남는다. 여러 mesh를 합치는 연산은 모든 member가 좌표를 가질 때만 좌표를 유지하고 하나라도 없으면 결과 전체가 좌표를 잃는다.
 
