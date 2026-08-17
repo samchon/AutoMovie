@@ -246,7 +246,11 @@ function heading(radians: number): number {
  * is least readable exactly when it matters. And the single enormous interval a
  * backgrounded tab returns with — the event {@link MAX_FRAME_SECONDS} exists
  * for — would drag a mean to nothing and report a stall that never happened,
- * while a median of fifteen ignores it outright.
+ * while a median of fifteen ignores it outright. What a typical frame cannot
+ * describe is a frame rate that alternates, where the line under-states the
+ * travel; it is a plan for a flight rather than a proof of one, and what a
+ * finding is written from is the position printed beside it, which is exact
+ * whatever the frames cost.
  *
  * Both numbers are printed, and only when they differ at the precision printed.
  * The asked-for speed is the one `Q` and `E` move and the flown speed is the

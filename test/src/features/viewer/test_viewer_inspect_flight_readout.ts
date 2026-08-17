@@ -46,6 +46,11 @@ import ts from "typescript-compiler";
  *    reported: the median is what separates a returning tab from a slow set.
  * 8. A window with no samples yet, and one of instantaneous frames, print the
  *    asked-for speed rather than dividing by nothing.
+ * 9. A window still filling reports the slow frame instead of averaging it away.
+ * 10. The printed pace is the distance a held key buys, replayed against the
+ *     page's own integration over one second: it reproduces the 2.80 m the
+ *     report measured, and on an alternating frame rate it under-states the
+ *     travel by a stated amount rather than an unknown one.
  */
 export const test_viewer_inspect_flight_readout = (): void => {
   const page = ts.createSourceFile(
@@ -181,7 +186,65 @@ export const test_viewer_inspect_flight_readout = (): void => {
     readout(4, [0, 0.3668], 0.1),
     "4.00m/s (flying 1.09m/s at 2.7fps)",
   );
+
+  //----
+  // 10. THE PRINTED PACE IS THE DISTANCE A HELD KEY BUYS
+  //----
+  // The point of the line, replayed against the page's own integration: one
+  // second of holding `W` moves `speed` times the sum of the clamped frames it
+  // contains. Seven 0.1429 s frames fill that second and each carries 0.1 s of
+  // budget, so the eye covers 4 x 7 x 0.1 = 2.80 m -- the distance the report
+  // measured on the mansion -- and the line now prints exactly that number.
+  //
+  // A frame rate that alternates is where the median stops being the whole
+  // truth, and the shortfall is stated here rather than left to be discovered.
+  // A window of 0.3 s and 0.05 s frames has a median of 0.3 s and reads
+  // 1.33 m/s, while the first second of it holds three long frames and two
+  // short ones and so buys 4 x (3 x 0.1 + 2 x 0.05) = 1.60 m. The line is a
+  // plan and not a proof; what a finding is written from is the position
+  // printed beside it, which is exact whatever the frames cost.
+  TestValidator.equals(
+    "the flown figure is the metres one second of holding a key actually buys",
+    [
+      readout(4, filled(0.1429), 0.1),
+      travelled(4, filled(0.1429), 0.1).toFixed(2),
+      readout(4, bimodal(), 0.1),
+      travelled(4, bimodal(), 0.1).toFixed(2),
+    ],
+    [
+      "4.00m/s (flying 2.80m/s at 7.0fps)",
+      "2.80",
+      "4.00m/s (flying 1.33m/s at 3.3fps)",
+      "1.60",
+    ],
+  );
 };
+
+/**
+ * Metres the eye covers over the first second of these frames, by the page's
+ * own rule: every frame carries `speed` for as long as it lasted, and never for
+ * longer than the budget.
+ */
+const travelled = (
+  speed: number,
+  frames: readonly number[],
+  budgetSeconds: number,
+): number => {
+  let elapsed = 0;
+  let distance = 0;
+  for (const interval of frames) {
+    if (elapsed >= 1) break;
+    elapsed += interval;
+    distance += speed * Math.min(interval, budgetSeconds);
+  }
+  return distance;
+};
+
+/** A window whose frame rate alternates, where a median is not a mean. */
+const bimodal = (): number[] =>
+  new Array<number>(15)
+    .fill(0)
+    .map((_unused, index) => (index % 2 === 0 ? 0.3 : 0.05));
 
 /** The shipped page, which every generated project inherits verbatim. */
 const INSPECT_SOURCE = path.resolve(
