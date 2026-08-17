@@ -236,7 +236,6 @@ const requestedKey = parameters.get("subject");
  */
 const indexRoots = (): string[] => {
   const environments = compiled.builtEnvironments ?? [];
-  const drawnNodes = new Set(compiled.scene.nodes.map((node) => node.id));
   const populated = new Set(
     environments.flatMap((environment) =>
       (environment.populations ?? []).map((population) => population.set.id),
@@ -256,10 +255,13 @@ const indexRoots = (): string[] => {
     // wall and a foundation belong to no room. Before this it was also
     // unreachable, because the only way down ran through the spaces, so one
     // measured production left 671 of 3,474 elements openable only by an author
-    // who already knew the key. Only the tops are listed; everything under them
-    // arrives through its own parent's members.
+    // who already knew the key. Only the hierarchy roots are listed; everything
+    // under them arrives through its own parent's members, which is why the
+    // engine no longer takes the drawn-node set: a transform-only group answers
+    // for itself now, so the tops are named whether or not they draw anything
+    // (`#1959`).
     ...environments.flatMap((environment) =>
-      builtEnvironmentUnclaimedElements(environment, drawnNodes).map(
+      builtEnvironmentUnclaimedElements(environment).map(
         (node) => `element:${node}`,
       ),
     ),

@@ -4,7 +4,7 @@ import type { Page } from "playwright";
 import { createServer } from "vite";
 
 import config from "../automovie.config";
-import type { IAutoMovieInspectionImage } from "../viewer/src/inspection";
+import type { IAutoMovieInspectionAnswer } from "../viewer/src/inspection";
 import {
   type IAutoMovieCaptureBrowserSession,
   inspectCaptureGraphics,
@@ -272,7 +272,7 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
       input.productionId,
     );
     const resident = await inspectionPage(session, input);
-    let drawn: IAutoMovieInspectionImage;
+    let answer: IAutoMovieInspectionAnswer;
     try {
       // Waited for on every viewpoint, not only when the page is opened. A
       // sweep is many draws through one resident page, and anything that
@@ -286,7 +286,7 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
       await resident.page.waitForFunction(
         () => window.__automovieInspect?.ready === true,
       );
-      drawn = await resident.page.evaluate(
+      answer = await resident.page.evaluate(
         ({ pose, viewpoint, subject }) =>
           window.__automovieInspect!.view(pose, viewpoint, subject),
         {
@@ -301,14 +301,27 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
           resident.diagnostics.join(" | ") || "none reported"
         }`,
       );
-      // A page that refused one viewpoint is not trusted with the next, so it
-      // leaves the cache before the failure travels.
+      // A page that FAILED one viewpoint is not trusted with the next, so it
+      // leaves the cache before the failure travels. Reaching here means the
+      // evaluate itself threw, which is the page losing its execution context
+      // rather than the page having an opinion about the subject.
       session.pages.delete(pageKey(input));
       await preserveCaptureBrowserCleanup({ error: failure }, [
         { resource: "inspection page", cleanup: () => resident.page.close() },
       ]);
       throw failure;
     }
+    // The page answered, so the page is working. A subject it cannot frame is a
+    // fact about that subject and not about the staged scene behind it, and
+    // discarding the page over one would rebuild the whole shot for the next
+    // subject - the cost `#1956` was opened to remove. Measured on the starter
+    // production: a sweep holding one page across 42 subjects and 252 draws
+    // opened a second page as soon as one model-space subject was asked for,
+    // and the prototype review obligation asks for a population that is
+    // entirely model-space. So the page stays resident and the refusal travels
+    // as the surface's unsupported-viewpoint answer instead.
+    if (answer.refused !== null) return { refused: answer.refused };
+    const drawn = answer.image;
     const prefix = "data:image/png;base64,";
     if (drawn.dataUrl.startsWith(prefix) === false)
       throw new Error(
