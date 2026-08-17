@@ -25,6 +25,20 @@ That campaign's brief handed over ten reference images and a layout sheet, and t
 
 Withholding costs something you accept knowingly. The agent may take a route you would not have, and that route is the observation.
 
+Withholding fails at the filesystem before it fails at the prompt. One campaign kept its method out of every brief and put it in a `HANDOFF.md` inside `experimental/<name>/`, which is the authoring agent's own working directory; the session read it in its first turn, and the transcript carries the read and the contents. Four axes of that run were then declared unmeasurable, because an agent that has been handed the instrument's traps, the campaign's list of missing scripts, and the fact that `git status` is being watched cannot discover any of them afterwards. Keep every operational document outside the work root. The brief is what the agent may read.
+
+A sandbox under `experimental/` also sits inside this repository's git root, and Codex discovers `.agents/skills/` from that root and injects the whole skill index into the session. The same run measured five repository `SKILL.md` files read, none of them this skill's own documents or `.wiki/`, so what leaks is the repository's engineering practice rather than the experiment's method. No brief can withhold it. Record it as a condition of the run rather than reporting the agent's behaviour as if it had arrived unprimed.
+
+## Naming A Tool Spends The Measurement It Would Have Made
+
+Decide before turn one whether the run measures what an agent does with the tools or whether it finds them, because the brief can only buy one.
+
+One run's session called `getGuideDocument` nine times in the single turn whose message named that tool and told it which guide to read first, and zero times in every turn afterwards. It read product source under `node_modules/@automovie/**` in all of them, twelve times in the same turn it used the tool nine times and twenty times out of twenty-three calls in the turn it used it never, and what it read there (`realizeShotContract.ts`, `stageScene.ts`, the compiler and its interface) is what three of the guides answer. So that run has evidence the tool works and none that an agent reaches for it.
+
+Two consequences for a brief. A tool named once is named for the whole session, so a later turn is not a control for an earlier one. And the observation is not that the agent avoided a costly channel: under Codex both the guide call and the shell call are functions in the same executed cell, so they cost the same, and the difference was the naming.
+
+Measuring discoverability needs a run in which the name appears in no message at all, including the ones that only list what the agent may read.
+
 ## Send Observations, Not Causes
 
 The withholding rule outlives the brief, and this is the form it takes afterwards. Report what you measured and where you measured it. Name a cause only when you have read the code path that produces it, which as the observer you usually have not.
