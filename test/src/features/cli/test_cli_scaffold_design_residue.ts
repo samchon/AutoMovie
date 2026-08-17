@@ -10,11 +10,15 @@ import { formationDesign, productionFixture } from "../mcp/productionFixtures";
 /**
  * A design record no source derives is nameable, and only the emitter can ask.
  *
- * Replacing the starter moves three layers and the evidence graph watches two.
- * The third is compiler-owned JSON that carries no citation, and the half of it
- * that is internally consistent is worse than uncaught: measured in a real
- * sandbox replacement, restoring `models/{soloist,chorus-*}.json` and
- * `formations/chorus.json` into a finished production left `compile` at
+ * The production evidence graph watches `docs/**` and four directories under
+ * `src`, and a starter id survives in several places it does not reach:
+ * `.automovie/design/**` entirely, and `src/film.ts` and `src/production.ts`,
+ * which sit inside `src` and outside both of its claims. This case owns the
+ * design tree, which is the part nothing else can reach at all.
+ *
+ * The half of that tree which is internally consistent is worse than uncaught.
+ * Measured in a real sandbox replacement, restoring `models/{soloist,chorus-*}`
+ * and `formations/chorus` into a finished production left `compile` at
  * `success: true` with zero diagnostics while it built those records into that
  * production's `generated` output. Nothing about them is wrong. They reference
  * only each other, so no dangling-citation refusal can reach them, and no
