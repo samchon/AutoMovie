@@ -1,6 +1,7 @@
 import type {
   AutoMovieDiagnosticCode,
   IAutoMovieAcceptanceScenario,
+  IAutoMovieDesignTarget,
   IAutoMovieDiagnostic,
   IAutoMovieScreenplayCatalogEntry,
   IAutoMovieScreenplayIndex,
@@ -40,17 +41,31 @@ export const screenplayLedgerDiagnostics = (props: {
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   screenplay: IAutoMovieScreenplayIndex | null;
+  /**
+   * Where one design record lives, so a dangling citation names its own file.
+   *
+   * A record that cites a scene the index never declares is usually a record
+   * that should have been deleted, and the author reading "shot contract
+   * \"opening\" cites scene \"SCN-001\"" looks for the cause in `src` because
+   * nothing said the citation was written in a compiler-owned JSON file. Two
+   * measured productions spent authoring turns exactly there.
+   */
+  designRecordPath: (target: IAutoMovieDesignTarget) => string;
 }): IAutoMovieDiagnostic[] => {
   const screenplay = props.screenplay;
   if (screenplay === null) return [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
-  const refuse = (code: AutoMovieDiagnosticCode, message: string): void => {
+  const refuse = (
+    code: AutoMovieDiagnosticCode,
+    message: string,
+    owner: IAutoMovieDesignTarget | null = null,
+  ): void => {
     diagnostics.push({
       code,
       category: "error",
       phase: "compile",
       target: "screenplay",
-      path: null,
+      path: owner === null ? null : props.designRecordPath(owner),
       message,
     });
   };
@@ -287,14 +302,16 @@ export const screenplayLedgerDiagnostics = (props: {
   // and resolves to nothing. Records without evidence are silent here, since
   // the coverage check owns whether evidence is required at all.
   const cite = (
-    owner: string,
+    owner: IAutoMovieDesignTarget & { id: string },
     evidence: IAutoMovieShotContract["evidence"],
   ): void => {
+    const label = `${owner.kind === "shot" ? "Shot contract" : "Acceptance scenario"} "${owner.id}"`;
     for (const entry of evidence ?? []) {
       if (scenes.has(entry.scene) === false)
         refuse(
           "screenplay-citation-scene-absent",
-          `${owner} cites scene "${entry.scene}", which the screenplay index does not declare. The downstream join dangles outside the ledger. Correct the scene id or restore its active or OMITTED record, then compile again.`,
+          `${label} cites scene "${entry.scene}", which the screenplay index does not declare. That citation is written in the compiler-owned design record this diagnostic's path names, so correct the scene id, restore its active or OMITTED record, or delete a design record the production no longer owns, then compile again.`,
+          owner,
         );
       if (
         entry.claim !== undefined &&
@@ -303,13 +320,14 @@ export const screenplayLedgerDiagnostics = (props: {
       )
         refuse(
           "screenplay-citation-claim-absent",
-          `${owner} cites continuity claim "${entry.claim}", which the screenplay index does not declare. The trace is not attached to a canon fact or a proof owner. Correct or add the claim, then compile again.`,
+          `${label} cites continuity claim "${entry.claim}", which the screenplay index does not declare. The trace is not attached to a canon fact or a proof owner. Correct or add the claim, then compile again.`,
+          owner,
         );
     }
   };
   for (const [id, contract] of props.contracts)
-    cite(`Shot contract "${id}"`, contract.evidence);
+    cite({ kind: "shot", id }, contract.evidence);
   for (const [id, scenario] of props.acceptance)
-    cite(`Acceptance scenario "${id}"`, scenario.evidence);
+    cite({ kind: "acceptance", id }, scenario.evidence);
   return diagnostics;
 };

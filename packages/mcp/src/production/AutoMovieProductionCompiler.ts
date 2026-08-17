@@ -698,6 +698,7 @@ export class AutoMovieProductionCompiler {
         acceptance: graph.acceptance,
         contracts: graph.shots,
         screenplay,
+        designRecordPath: (target) => this.project.designRecordPath(target),
       }),
       ...screenplayProseDiagnostics({
         screenplay,

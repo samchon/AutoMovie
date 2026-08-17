@@ -2787,6 +2787,22 @@ export class AutoMovieProductionProject {
     };
   }
 
+  /**
+   * The project-relative file one design record is stored in.
+   *
+   * Exposed so a diagnostic can name the file rather than only the id. The
+   * design tree's layout is this project's to decide, and a caller that spelled
+   * `.automovie/design/shots/<id>.json` for itself would be restating that
+   * layout in a second place and would be wrong the day it changes.
+   *
+   * It answers for a record whether or not one is resident, because the caller
+   * that most needs the path is the one reporting a record that should not be
+   * there any more.
+   */
+  public designRecordPath(target: IAutoMovieDesignTarget): string {
+    return relativeToRoot(this.root, this.designPath(target));
+  }
+
   private designPath(target: IAutoMovieDesignTarget): string {
     switch (target.kind) {
       case "production":
