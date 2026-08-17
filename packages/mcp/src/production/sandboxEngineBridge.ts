@@ -80,8 +80,8 @@ export type IAutoMovieSandboxEngineAnswer =
  * `AUTOMOVIE_SANDBOX_ENGINE_SURFACE` as well, so no stand-in answers it and shot
  * source cannot name it at all. That is the ordinary state of an engine export
  * rather than a distinction, since reach is granted per name; it is written down
- * here because the rest of the site kit around it is reachable and a reader
- * would otherwise take the hole for an oversight. It samples a caller-supplied
+ * here because every builder it sits among is reachable and a reader would
+ * otherwise take the hole for an oversight. It samples a caller-supplied
  * `(x, z) => y` function, and a function is exactly what a JSON round trip
  * cannot carry, so bridging is not open to it either; standing it in would mean
  * a second copy of the sampling math inside the sandbox, which is the failure
