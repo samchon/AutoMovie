@@ -41,6 +41,63 @@ Dialogue mouth motion follows final decoded audio and its adopted alignment when
 
 At grip, footfall, collision, or impact, inspect both bodies and their relative velocity. Preserve hand-to-object, foot-to-ground, and weapon-to-shoulder contacts across interpolation. Engine collision and timing results are facts. Default reactions derived from them are hints; you may author a stronger or subtler reaction when story, training, surprise, or style warrants it, but declare the variation and keep physical causality legible.
 
+## Measure the contact you claimed
+
+Foot slide, penetration, float, and a body that could not hold the pose it holds are measurable, and the engine measures them. Nothing measures them for you. Each check needs the contact semantics only the action knows, so a clip nobody annotated is a clip nobody checked, and a check that never ran looks exactly like a check that passed.
+
+Declare what the action asserts, then ask the engine whether the clip keeps it.
+
+- `validateGroundContact` sweeps feet, and whole-body capsule proxies when you give them, against a flat ground plane or a height source that answers a `y` for each `(x, z)`, so a hip through a ramp is found and not only a foot through a floor.
+- `validateFootSkate` reads the time spans you declare a foot planted and reports the horizontal speed of a foot that was supposed to be still.
+- `validateBalanceSupport` projects the segment-mass weighted centre of mass onto the support polygon your declared contact bones span, which is the check for a lean, a reach, or a one-foot balance.
+- `validateSelfIntersection` tests the capsule pairs you name as parts that may not meet, and pairing is explicit because adjacent limbs share joints and overlap legally.
+- `detectBodyCollision` measures two actors against each other from their rigs, clips, capsules, and bodies, and returns the contact events and a suggested response at the deepest penetration alongside the warnings.
+
+Every one of them is a warning tier, not a gate. A film may be deliberately unphysical, so a phasing ghost, a moonwalk, or a wire-fu freeze sets `physicsIntent` on the check and the matching warnings are suppressed, while malformed input (an unknown bone, a detached bone, a non-positive radius, an inverted window) stays an error.
+
+Read the result accordingly. A physical implausibility rides `warnings` on a validation whose `success` is `true`, so code that branches on `success` alone reports a clean run over a clip whose planted foot travels half a metre.
+
+These calls run in a project script under `scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { validateFootSkate, validateGroundContact } from "@automovie/engine";
+import type { IAutoMovieValidation } from "@automovie/interface";
+
+/** Physical-plausibility feedback, whether the run succeeded or failed. */
+const findings = (
+  validation: IAutoMovieValidation,
+): IAutoMovieValidation.IFailure["violations"] =>
+  validation.success ? (validation.warnings ?? []) : validation.violations;
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+const compiled = state.generated.shots.get("approach");
+if (compiled === undefined) throw new Error('shot "approach" is not compiled');
+for (const motion of compiled.motions) {
+  const rigged = [...state.generated.models.values()].find(
+    (model) => model.skeleton !== null && model.skeleton.id === motion.skeleton,
+  );
+  if (rigged === undefined || rigged.skeleton === null) continue;
+  const checks = [
+    validateGroundContact({ motion, skeleton: rigged.skeleton }),
+    validateFootSkate({
+      motion,
+      skeleton: rigged.skeleton,
+      contacts: [{ bone: "leftFoot", start: 0, end: 0.4 }],
+    }),
+  ];
+  for (const violation of checks.flatMap(findings))
+    console.log(motion.id, violation.severity, violation.path, violation.expected);
+}
+```
+
+Sampling decides what can be seen. Each check samples on its own clock rather than on your keyframes, so a contact shorter than one sample interval falls between samples, and a rate far above the delivery frame rate buys precision the frame never shows.
+
 ## Continuity
 
 The end state is part of the clip contract. Record pose, position, facing, held objects, gait phase, expression, and unresolved momentum needed by the next shot. Match-on-action requires compatible direction and phase across both source intervals, not identical clip names.

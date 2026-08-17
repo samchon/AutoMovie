@@ -21,6 +21,8 @@ The canonical criteria are:
 - `representability`: the registered assets, profiles, formations, effects, and deterministic engine can actually produce the authored claim.
 - `acceptance-scenarios`: every required current frame, event, and metric predicate passes.
 
+Measure the contact before judging it. `performance-credibility` turns on whether feet stay planted, whether a body could hold the pose it holds, and whether two bodies pass through each other, and `MOTION` names the engine checks that answer each of those over the same compiled clip this worksheet judges. A foot sliding eleven centimetres through its plant is a number, not an impression. The measurement is not worksheet evidence and discharges no frame: it tells you which frame to capture and what your observation is about.
+
 Watch the full interval, not only hero stills. Compare adjacent shots when the shot establishes or pays off eyeline, screen direction, pose, action, lighting, or sound continuity.
 
 ## Prepare the rendition worksheet

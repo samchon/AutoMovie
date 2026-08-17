@@ -54,6 +54,47 @@ export const unsupportedBodies = (
   });
 ```
 
+Resting is not standing. `builtEnvironmentSupportStatus` answers whether a body meets its support; it does not answer whether the body stays there once it does. `detectSupportToppling` takes the object's centre of mass and the contact points it stands on, projects the centre onto the ground plane, and warns when it overhangs the convex hull of those contacts past `margin`, returning the pivot edge and the direction it falls. `detectFreeFall` asks the same question of a body held up by nothing: given a declared physical body, its support contacts, and whether it is attached or already falling, it warns and offers the fall arc. A shelf bracket that rests on its wall and a vase resting on two centimetres of a table edge both pass the support query, and only these two separate them.
+
+State the contacts yourself. Neither derives them from the building, so the top face a thing stands on is an authored input here, and a contact list that describes a face nobody modelled produces a confident answer about nothing. Both are advisory: their findings ride `warnings` on a validation whose `success` is `true`, which `MOTION` states in full for the motion side of the same tier, and a deliberately levitating prop sets `physicsIntent` to say so.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import {
+  builtEnvironmentPlacementBounds,
+  detectSupportToppling,
+} from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+const environment = state.generated.shots.get("kitchen")?.builtEnvironments?.[0];
+if (environment === undefined)
+  throw new Error('shot "kitchen" compiles no built environment');
+const table = builtEnvironmentPlacementBounds({
+  environment,
+  target: { kind: "element", id: "counter" },
+});
+if (table === null || table.basis === "element-origin-point")
+  throw new Error("the counter resolved to no measured volume to stand on");
+const result = detectSupportToppling({
+  node: "kettle",
+  // The prop's own centre of mass, in the same world frame as the contacts.
+  centerOfMass: { x: 1.2, y: 0.94, z: 0.4 },
+  support: [
+    { x: table.min.x, y: table.max.y, z: table.min.z },
+    { x: table.max.x, y: table.max.y, z: table.min.z },
+    { x: table.max.x, y: table.max.y, z: table.max.z },
+    { x: table.min.x, y: table.max.y, z: table.max.z },
+  ],
+});
+if (result.toppling !== null)
+  console.log("overhangs by", result.toppling.overshoot, "metres");
+```
+
 A prop is a crude primitive proxy with rich meaning. The geometry stays simple boxes and cylinders while the physics body, the contact affordances, and a self-declared articulation carry what the engine validates. Articulation is the object-side counterpart of a character's skeleton and range of motion: the prop's own joint nodes, a profile whose limits bound them and whose drivers couple them (a handle that mirrors a hinge), and the binding that maps profile keys onto those nodes. A rigid prop leaves the whole articulation `null`.
 
 A prop may cite `modelRef` when the drawn appearance is imported bytes, and that hatch buys the appearance alone. `origin` becomes `imported`, the sealed closure must be a rigid `gltf-static-v1` appearance mapping no humanoid bones and carrying well-formed digests over paths its own ledger covers, and the authored parts stay the deterministic proxy every geometric judgment is made against, which is how an imported chair keeps a seat face other props can be proven to rest on. A humanoid appearance is a performer and goes to the cast instead. Whether the reference resolves to a registration, and whether each digest matches bytes on disk, is the compiler's question, not the record's.

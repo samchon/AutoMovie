@@ -39,6 +39,49 @@ Prefer a direct cut by default. Dissolve for relation, passage, memory, or tonal
 
 Use a J-cut when incoming sound prepares or pulls the viewer into the next image. Use an L-cut when outgoing sound preserves reaction, continuity, or emotional residue. Keep dialogue intelligible and avoid phase or ambience jumps. Sound edits still obey source ownership and exact timeline offsets.
 
+## Measure the boundary
+
+Watching a cut tells you whether it reads. It does not tell you that the actor stands where the previous beat left them, because half a metre of drift at a wide angle is invisible and half a metre in the next close-up is the shot.
+
+`validateFilmContinuity` walks a film's beats in playback order and compares each beat's opening state against the previous beat's end state, per actor: world position drift past `positionTolerance` metres, facing drift past `facingToleranceDeg` degrees, a persistent mount that was dropped or changed, and an actor missing entirely from the incoming opening. `validateContinuity` is the same comparison for one boundary you already hold both sides of.
+
+Drift is advisory, never a gate. A hard cut may legitimately jump an actor to a new mark for a time skip or new blocking, so the finding names the actor, the offset, and the tolerance and leaves the decision with you. It rides `warnings` on a validation whose `success` is `true`, the same tier `MOTION` describes.
+
+Order the beats by the timeline rather than by whatever order the compiled shots happen to enumerate in. A continuity check run over the wrong order reports drift between shots that never touch.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { validateFilmContinuity } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+const film = state.generated.film;
+if (film === null) throw new Error("this production compiles no film timeline");
+const validation = validateFilmContinuity({
+  beats: film.segments.flatMap((segment) => {
+    const compiled = state.generated.shots.get(segment.shot);
+    return compiled === undefined
+      ? []
+      : [
+          {
+            beat: segment.shot,
+            scene: compiled.scene,
+            shot: compiled.shot,
+            motions: compiled.motions,
+          },
+        ];
+  }),
+});
+for (const violation of validation.success
+  ? (validation.warnings ?? [])
+  : validation.violations)
+  console.log(violation.path, violation.expected);
+```
+
 ## Review pass
 
 Watch once without stopping for story and emotion, once with the frame ruler for continuity and event timing, and once listening without looking for dialogue, ambience, rhythm, and accidental silence. Inspect every boundary in both directions. Sequence review owns local cut logic; film review owns the accumulated pace and narrative completion.
