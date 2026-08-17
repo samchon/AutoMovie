@@ -86,9 +86,10 @@ for the shot it names. `npm run design` refuses while one is there and prints
 its project-relative path, so this layer's removal set is one command rather
 than a hunt. Delete the file it names, or derive it from a source that owns it.
 And the screenplay index is not derived at all, by design, so it is never named
-there. Sources outside `docs` and `src` still answer to you: `src/film.ts`,
-`src/production.ts`, `automovie.config.ts`, `.automovie/assets.json`, and `test`
-all name the starter's ids and no evidence claim covers any of them.
+there. Starter ids also survive where no evidence claim reaches at all:
+`src/film.ts` and `src/production.ts` sit inside `src` and outside both of its
+claims, and `automovie.config.ts`, `.automovie/assets.json` and `test` are
+outside the graph entirely. Those five are yours to find; nothing counts them.
 
 That refusal is the only place the question can be asked. A resident record that
 references only other resident records is internally consistent, so the compiler
