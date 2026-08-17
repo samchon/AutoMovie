@@ -46,7 +46,8 @@ import ts from "typescript-compiler";
  *    reported: the median is what separates a returning tab from a slow set.
  * 8. A window with no samples yet, and one of instantaneous frames, print the
  *    asked-for speed rather than dividing by nothing.
- * 9. A window still filling reports the slow frame instead of averaging it away.
+ * 9. A window still filling reports the slow frame rather than averaging it
+ *    away.
  * 10. The printed pace is the distance a held key buys, replayed against the
  *     page's own integration over one second: it reproduces the 2.80 m the
  *     report measured, and on an alternating frame rate it under-states the
@@ -291,8 +292,8 @@ const declaration = (
   );
   if (found === undefined)
     throw new Error(
-      `inspect.ts no longer declares "${name}" at the top level, so this case ` +
-        `is measuring nothing; re-read the page before re-pinning it.`,
+      `inspect.ts no longer declares "${name}" at the top level, so this` +
+        ` case is measuring nothing; re-read the page before re-pinning it.`,
     );
   return found;
 };
