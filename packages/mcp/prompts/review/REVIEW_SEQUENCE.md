@@ -16,6 +16,8 @@ The canonical criteria are:
 - `coverage-sufficiency`: the cut has enough distinct, purposeful material to communicate every beat without redundant filler.
 - `acceptance-scenarios`: all sequence-relevant deterministic predicates and evidence requirements pass.
 
+`cross-shot-continuity` is partly measurable. `EDITING` names the engine check that compares each beat's opening state against the previous beat's end state and reports per-actor position drift, facing drift, and a dropped mount, which is the half of continuity a wide angle hides. Run it over the sequence's run before scrubbing, then scrub for what it cannot see: eyeline, light, ambience, and narrative state. The findings are not worksheet evidence and cite nothing on their own.
+
 Scrub every cut in both directions. A locally good outgoing frame can still make an incoherent edit when paired with the next incoming frame.
 
 ## Submit
