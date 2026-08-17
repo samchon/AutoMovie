@@ -344,6 +344,8 @@ export const AUTOMOVIE_DIAGNOSTIC_CODES = [
   "source-path-outside-root",
   "source-registration-mismatch",
   "source-scene-content-invalid",
+  "source-scene-coverage-incomplete",
+  "source-scene-physics-invalid",
   "source-template-sentinel",
   "source-transpile-failed",
   "stage-invalid",
