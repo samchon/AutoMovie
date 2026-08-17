@@ -252,12 +252,12 @@ function heading(radians: number): number {
  * finding is written from is the position printed beside it, which is exact
  * whatever the frames cost.
  *
- * Both numbers are printed, and only when they differ at the precision printed.
- * The asked-for speed is the one `Q` and `E` move and the flown speed is the
- * one a distance is computed from, so an operator who wants a metre a second on
- * a heavy set raises the first until the second reads what was wanted. Frames
- * inside the budget cost nothing, so they print one number and no explanation
- * of a limit that is not biting.
+ * Both numbers are printed, and only once they differ at the precision the line
+ * shows. The asked-for speed is the one `Q` and `E` move and the flown speed is
+ * the one a distance is computed from, so an operator who wants a metre a
+ * second on a heavy set raises the first until the second reads what was
+ * wanted. Frames inside the budget cost nothing, so they print one number and
+ * no explanation of a limit that is not biting.
  */
 function speedReadout(
   speed: number,
@@ -266,7 +266,7 @@ function speedReadout(
 ): string {
   const asked = speed.toFixed(2);
   const sorted = [...frames].sort((a, b) => a - b);
-  const median = sorted[sorted.length >> 1] ?? 0;
+  const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
   // Frames inside the budget lose nothing to it. Dividing anyway would report a
   // sixty-frame-a-second eye flying at six times the speed it was given.
   if (median <= budgetSeconds) return `${asked}m/s`;
