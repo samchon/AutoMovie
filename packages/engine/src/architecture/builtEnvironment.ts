@@ -1074,59 +1074,44 @@ export const builtEnvironmentSpaceSurfaces = (
 };
 
 /**
- * The elements of a building no space claims and no visible ancestor reaches.
+ * The elements of a building that neither a logical space nor a parent reaches.
  *
  * An element's assignment to a logical space is authored, and an exterior wall, a
  * foundation, or a structural frame belongs to no room, so leaving one unassigned
- * is correct rather than careless. One measured production left 671 of 3,474
- * elements that way. The consequence was not the assignment: it was that the only
- * path down into a building ran through its spaces, so those 671 could be opened
- * only by an author who already knew their keys, and a key is exactly what a
- * reviewer looking for an unknown defect does not have.
+ * is correct rather than careless. Measured on one authored building, 9 of its 30
+ * elements are claimed by no space, and every one of the nine is envelope or
+ * vertical-transport machinery — curtain panels, a facade ladder, a lift car and
+ * its counterweight — while every floor slab, partition, door and leaf is claimed.
+ * The assignment is a fact about what occupies a room, not a measure of care.
  *
- * This names the tops of that population and nothing else. An element a space
- * claims is listed by that space, and an element whose ancestor is itself visible
- * is listed among that ancestor's members, so both are already reachable and
- * neither belongs in a second listing. What is left is the roots, which is what a
- * listing needs in order to be a way in rather than a flat dump of a building.
+ * The reach path therefore belongs on the element hierarchy rather than on the
+ * space tree, and that is the record's own arrangement:
+ * {@link IAutoMovieBuiltEnvironment.buildings} states that ownership is total,
+ * every element descending from exactly one unit's roots. A space is an index
+ * over that hierarchy, so an unassigned element is not detached, only unindexed.
  *
- * `visible` is the set of node ids a caller can actually open, given as the
- * caller's own fact because what is drawn is decided by the compiled scene rather
- * than by this record. A group the compiler drew nothing for is transparent: it
- * cannot be opened, so it never becomes a root, and the search continues into its
- * own children.
+ * What is left over is therefore small and exact. A child is listed among its
+ * parent's members, and a claimed element is listed by the space that claims it,
+ * so the only element nothing names is one that is a root of the hierarchy and
+ * carries no space of its own. Naming anything more would list the same element
+ * twice and tell the reader it hangs from nothing while the record says
+ * otherwise, which is what happened when this took the compiled scene's drawn set
+ * as its notion of reach: on that same building it named seven envelope pieces as
+ * roots although their unit root is claimed by a space.
  *
- * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentUnclaimedElements` names the visible building elements no logical space claims, so authored interior and envelope state stays reachable for review instead of being addressable only by a key nobody has.
+ * A resolvable hierarchy is the precondition, which `validateBuiltEnvironment`
+ * enforces by rejecting an unresolved parent and a parent cycle.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentUnclaimedElements` names the building elements no logical space and no parent element reaches, so authored interior and envelope state stays reachable for review instead of being addressable only by a key nobody has.
  * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentUnclaimedElements` derives those roots from the element hierarchy of one building rather than from a space assignment it does not have.
  * @author Samchon
  */
 export const builtEnvironmentUnclaimedElements = (
   environment: IAutoMovieBuiltEnvironment,
-  visible: ReadonlySet<string>,
-): string[] => {
-  const byId = new Map(
-    environment.elements.map((element) => [element.id, element] as const),
-  );
-  const reached = (
-    parent: string | null,
-    seen: Set<string> = new Set(),
-  ): boolean => {
-    if (parent === null || seen.has(parent)) return false;
-    seen.add(parent);
-    const element = byId.get(parent);
-    if (element === undefined) return false;
-    if (visible.has(`${environment.id}/${element.id}`)) return true;
-    return reached(element.parent, seen);
-  };
-  return environment.elements
-    .filter(
-      (element) =>
-        element.space === null &&
-        visible.has(`${environment.id}/${element.id}`) &&
-        reached(element.parent) === false,
-    )
+): string[] =>
+  environment.elements
+    .filter((element) => element.space === null && element.parent === null)
     .map((element) => `${environment.id}/${element.id}`);
-};
 
 /**
  * Name what is staged in a logical space and its descendants.
