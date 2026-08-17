@@ -87,6 +87,7 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
   IAutoMovieReviewQueue,
+  IAutoMovieReviewTarget,
   IAutoMovieScene,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
@@ -715,7 +716,7 @@ export class AutoMovieProductionCompiler {
         }),
       );
     if (input.scope === "review" || input.scope === "final")
-      diagnostics.push(...reviewGateDiagnostics(reviews));
+      diagnostics.push(...reviewGateDiagnostics(reviews, input.scope));
     if (input.scope === "final")
       diagnostics.push(
         ...finalDeliverableDiagnostics(
@@ -7864,8 +7865,28 @@ const screenplayResidencyDiagnostics = (props: {
         },
       ];
 
+/**
+ * Which scope an unfinished review blocks, by what the target is.
+ *
+ * An authored prototype is the one target a production accumulates hundreds of
+ * while it is still being built, so demanding it at `review` scope would stop a
+ * building mid-massing for work that only matters before delivery. It is reported
+ * there and refused at `final`, which is the same shape the product already uses
+ * for physical plausibility: visible while there is still time to act, binding
+ * when the thing ships.
+ *
+ * Every other target keeps the severity it had. A shot, a sequence, a film, and a
+ * consumed asset are each few in number and each already gate at `review`.
+ */
+const reviewGateSeverity = (
+  target: IAutoMovieReviewTarget,
+  scope: "review" | "final",
+): "error" | "warning" =>
+  target.kind === "subject" && scope === "review" ? "warning" : "error";
+
 const reviewGateDiagnostics = (
   queue: IAutoMovieReviewQueue,
+  scope: "review" | "final",
 ): IAutoMovieDiagnostic[] =>
   queue.entries.flatMap((entry): IAutoMovieDiagnostic[] =>
     entry.state === "complete"
@@ -7882,14 +7903,16 @@ const reviewGateDiagnostics = (
                     : entry.state === "revise"
                       ? "review-revise"
                       : "review-incomplete",
-            category: "error",
+            category: reviewGateSeverity(entry.target, scope),
             phase: entry.target.kind === "asset" ? "source" : "review",
             target: reviewTargetKey(entry.target),
             path: null,
             message:
               entry.target.kind === "asset"
                 ? `Consumed model asset "${entry.target.id}" review state is ${entry.state}. Capture its current isolated turntable, run prepareReview, and submitReview before any shot may import it. Correction feedback does not authorize deleting the artifact.`
-                : `Review state is ${entry.state}. Run prepareReview, correct the target, and submitReview before this compile scope. Correction feedback does not authorize deleting the artifact.`,
+                : entry.target.kind === "subject"
+                  ? `Authored subject "${entry.target.subject}" review state is ${entry.state}. Run inspectSubject on that exact compiled id in shot "${entry.target.shot}", then prepareReview and submitReview under REVIEW_SUBJECT. A frame that happens to contain it discharges nothing, and this is a warning at review scope and a refusal at final. Correction feedback does not authorize deleting the artifact.`
+                  : `Review state is ${entry.state}. Run prepareReview, correct the target, and submitReview before this compile scope. Correction feedback does not authorize deleting the artifact.`,
           },
         ],
   );
