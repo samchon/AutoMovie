@@ -152,7 +152,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   environment: {
     guide: "BUILT_ENVIRONMENT",
-    path: "prompts/building/BUILT_ENVIRONMENT.md#built-environment",
+    path: "prompts/built-environment/INDEX.md#built-environment",
     invariant:
       "Environment context must name valid authored spatial owners and may not derive physical facts from labels or appearance.",
     correction:
@@ -281,7 +281,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   review: {
     guide: "AUTOMOVIE_OVERALL",
-    path: "prompts/AUTOMOVIE_OVERALL.md#guide-selection",
+    path: "prompts/INDEX.md#guide-selection",
     invariant:
       "Review completion requires fresh target-local evidence, every required criterion, an observation, correction state, and a non-copied outcome.",
     correction:

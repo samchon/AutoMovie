@@ -36,9 +36,9 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
 - `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, and freshness refusals.
 
-### `building/` one work, as a measured record
+### `built-environment/` one work, as a measured record
 
-- `BUILT_ENVIRONMENT`: the index of this group. Building and space graphs, populations, phasing, room culling, and the queries that read all of it.
+- `BUILT_ENVIRONMENT`: this area's `INDEX.md`. Building and space graphs, populations, phasing, room culling, and the queries that read all of it.
 - `BUILDING_FINISHES`: what a surface is made of, and the repeated modules that cover it.
 - `BUILDING_SERVICES`: water, drainage, power, data, air, fire, control, and wet zones.
 - `BUILDING_PROPS`: placing a thing inside a work and proving it stands where you meant.
@@ -71,7 +71,7 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 
 ### `review/` recording a judgment that outlives you
 
-- `REVIEW`: the index of this group, and the discipline every review shares. Both review tools are gated on it.
+- `REVIEW`: this area's `INDEX.md`, and the discipline every review shares. Both review tools are gated on it.
 - `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
 - `REVIEW_SUBJECT`: one compiled subject's worksheet, its inspection-owned viewpoints, and its coverage states.
 - `REVIEW_SHOT`: shot and rendition worksheets, and composition, performance, continuity, and acceptance axes.
