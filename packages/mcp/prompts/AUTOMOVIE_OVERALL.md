@@ -24,49 +24,65 @@ The host fixes project root and default production at startup. No tool payload m
 
 ## Guide selection
 
-Read only the route that matches the next owned decision. Contract guides define records and gates; handbooks provide recipes and judgment.
+The corpus is grouped by what you are deciding, one folder per group, and this is its index. Read the group that owns your next decision, then the one document in it that owns your question. Do not read a group as ritual.
 
-### Contracts and deterministic boundaries
+### `design/` the tracked records
 
 - `PRODUCTION_DESIGN`: production clock, deliverables, art direction, visual-delivery declaration, render budgets, and site context.
 - `MODEL_RECIPE`: bounded primitive and external model recipes, and physically-based surface materials.
-- `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, freshness refusals, and the source-context boundary.
-- `WORLD_DESIGN`: terrain, routes, landmarks, bounded effects, instance sets, and the site craft that arranges them. The ground a work stands on is the world's; the work itself is `BUILT_ENVIRONMENT`'s.
+- `WORLD_DESIGN`: terrain, routes, landmarks, instance sets, cloth, planting and water, and the site craft that arranges them.
 - `FORMATION_DESIGN`: repeated-unit layouts, heroes, and formation motion.
 - `SHOT_CONTRACT`: source binding, events, camera intent, review times, and rendition policy.
 - `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
-- `SOURCE_OWNERSHIP`: coding-agent, compiler, renderer, and review ownership.
-- `COMPILATION`: design/source/review/final scopes and atomic publication.
-- `GEOMETRY`: direct engine geometry and project-state queries outside the compile sandbox, and the mesh constructors source-owned models are built from.
-- `SUBJECT_INSPECTION`: render-free descriptions of compiled elements, parts, prototypes, instances, sets, and spaces, bounded structural diffs between two compiled artifacts, and the section planes that open a building whose outside hides its inside. It also owns the one part of that ground which draws, `inspectSubject`, whose turntable observations are inspection-owned and never delivery evidence.
-- `VISUAL_CHANGE_REPORT`: changed, unchanged, new, and gone views across two existing digest catalogs; this is neither structural diff nor review evidence.
+- `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, and freshness refusals.
 
-### MCP gate contracts
+### `building/` one work, as a measured record
 
-- `CAPTURE_FRAME`: exact `captureFrame` and `captureTurntable` targets, passes, receipts, and refusal recovery.
-- `REPAINT_SHOT`: exact `repaintShot` inputs, source-grid requirements, provenance, and refusal recovery.
-- `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
-- `REVIEW_SUBJECT`: one compiled subject's worksheet, its inspection-owned viewpoints, and its coverage states.
-- `REVIEW_SHOT`: shot worksheet and composition, performance, continuity, and acceptance axes.
-- `REVIEW_SEQUENCE`: sequence coverage, editorial rhythm, transition, and continuity worksheet.
-- `REVIEW_FILM`: whole-film story, pacing, audiovisual delivery, and terminal consistency worksheet.
-- `REVIEW_DEPENDENCY`: temporary design/source dependency worksheets exposed by the current schema; these are not additional visual surfaces.
+- `BUILT_ENVIRONMENT`: the index of this group. Building and space graphs, populations, phasing, room culling, and the queries that read all of it.
+- `BUILDING_FINISHES`: what a surface is made of, and the repeated modules that cover it.
+- `BUILDING_SERVICES`: water, drainage, power, data, air, fire, control, and wet zones.
+- `BUILDING_PROPS`: placing a thing inside a work and proving it stands where you meant.
+- `BUILDING_STUDIES`: what a finished work is read back for: environmental analysis, drawings, schedules, and quantities.
 
-### Authoring handbooks
+### `craft/` the decisions no record can make for you
 
 - `SCREENPLAY_WRITING`: logline-to-scene screenplay craft and revision rubric.
-- `CINEMATOGRAPHY`: shot-size meaning, 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
+- `CINEMATOGRAPHY`: shot-size meaning, the 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
 - `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
-- `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting. A door, shutter, gate, or sash belongs to the building that owns its opening rather than to a prop rigged from scratch, so operable openings are here too: travelling leaves, the named states they stand in, hardware, and the refusals `validateBuiltEnvironment` and the prop gate each raise by name.
-- `BUILT_ENVIRONMENT`: one work as a measured record: building and space graphs, populations, finishes and patterns, operable openings, service networks, phasing, cloth, planting and water, prop placement, and room culling.
-- `BUILDING_STUDIES`: what a declared building is read for once it stands: environmental analysis, and drawings, schedules, and quantities. Both run from a project script.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
-- `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
-- `DIFFUSION_ENHANCE`: current-model research, reference locking, structural controls, repaint review, and reroll discipline.
-- `EVIDENCE_GRAPH`: which folder an artifact belongs in and what it must cite: the staged prose ladder, the spec library, and the source vocabulary as one obligation graph.
-- `SOURCE_COMPOSITION`: how a production's source is arranged once its shots repeat: typed subject vocabulary, seeded variation, shot factories, and one table the modules, design records, and edit all derive from.
+- `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, retargeting, and the operable openings a building owns.
+
+### `source/` what you write, and what compiles it
+
 - `TYPESCRIPT`: deterministic source-module patterns and typed registration.
+- `SOURCE_COMPOSITION`: how a production's source is arranged once its shots repeat.
+- `SOURCE_OWNERSHIP`: coding-agent, compiler, renderer, and review ownership.
+- `COMPILATION`: design, source, review, and final scopes, and atomic publication.
+- `GEOMETRY`: the mesh constructors source-owned models are built from, their texture coordinates, and the project-state queries outside the compile sandbox.
+- `EVIDENCE_GRAPH`: which folder a production document belongs in and what it must cite.
+
+### `evidence/` producing and reading what is actually there
+
+- `CAPTURE_FRAME`: exact `captureFrame` and `captureTurntable` targets, passes, receipts, and refusal recovery.
+- `SUBJECT_INSPECTION`: render-free descriptions of compiled elements, parts, prototypes, instances, sets, and spaces; bounded structural diffs; section planes; and `inspectSubject`, whose observations are inspection-owned and never delivery evidence.
+- `VISUAL_CHANGE_REPORT`: changed, unchanged, new, and gone views across two existing digest catalogs. This is neither a structural diff nor review evidence.
 - `DEBUGGING`: diagnostics-first correction across ownership, derived artifacts, compile, structural inspection, render, repaint, and review.
 
-If you do not know the next guide, locate the next file or tool you must touch in Flow, then read the one route that owns it. Do not read every handbook as ritual; route deliberately and return here when the stage changes.
+### `review/` recording a judgment that outlives you
+
+- `REVIEW`: the index of this group, and the discipline every review shares. Both review tools are gated on it.
+- `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
+- `REVIEW_SUBJECT`: one compiled subject's worksheet, its inspection-owned viewpoints, and its coverage states.
+- `REVIEW_SHOT`: shot and rendition worksheets, and composition, performance, continuity, and acceptance axes.
+- `REVIEW_SEQUENCE`: sequence coverage, editorial rhythm, transition, and continuity worksheet.
+- `REVIEW_FILM`: whole-film story, pacing, audiovisual delivery, and terminal consistency worksheet.
+- `REVIEW_DEPENDENCY`: design and source dependency worksheets. These are not additional visual surfaces.
+
+### `external/` what comes from outside the repository
+
+- `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
+- `REPAINT_SHOT`: exact `repaintShot` inputs, source-grid requirements, provenance, and refusal recovery.
+- `DIFFUSION_ENHANCE`: current-model research, reference locking, structural controls, repaint review, and reroll discipline.
+
+If you do not know the next guide, locate the next file or tool you must touch in Flow, then read the one group that owns it. Return here when the stage changes.

@@ -3,8 +3,8 @@
 // every install/build. The unified AutoMovieApplication exposes each document
 // by exact SCREAMING_SNAKE_CASE filename stem through getGuideDocument({ name }).
 // One file, one export.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,55 +14,32 @@ const OUT_DIR = resolve(PACKAGE_ROOT, "src/guides");
 const OUT_FILE = resolve(OUT_DIR, "AutoMovieGuideConstant.ts");
 mkdirSync(OUT_DIR, { recursive: true });
 
-const SERVED_GUIDES = [
-  "AUTOMOVIE_OVERALL",
-  "PRODUCTION_DESIGN",
-  "MODEL_RECIPE",
-  "DERIVED_ARTIFACTS",
-  "WORLD_DESIGN",
-  "FORMATION_DESIGN",
-  "SHOT_CONTRACT",
-  "ACCEPTANCE",
-  "SOURCE_OWNERSHIP",
-  "COMPILATION",
-  "GEOMETRY",
-  "CAPTURE_FRAME",
-  "REPAINT_SHOT",
-  "REVIEW_ASSET",
-  "REVIEW_SUBJECT",
-  "REVIEW_SHOT",
-  "REVIEW_SEQUENCE",
-  "REVIEW_FILM",
-  "REVIEW_DEPENDENCY",
-  "SCREENPLAY_WRITING",
-  "CINEMATOGRAPHY",
-  "EDITING",
-  "OBJECT_RIGGING",
-  "BUILT_ENVIRONMENT",
-  "BUILDING_STUDIES",
-  "SUBJECT_INSPECTION",
-  "VISUAL_CHANGE_REPORT",
-  "MOTION",
-  "SOUND_DESIGN",
-  "ASSET_SOURCING",
-  "DIFFUSION_ENHANCE",
-  "EVIDENCE_GRAPH",
-  "SOURCE_COMPOSITION",
-  "TYPESCRIPT",
-  "DEBUGGING",
-];
-const files = SERVED_GUIDES.map((name) => `${name}.md`);
+// The corpus is grouped in folders, one per topic area, exactly as the skills
+// are. A guide joins the served set by existing under `prompts/`, so a document
+// nobody wired is impossible rather than merely unlikely; `README.md` is the
+// corpus's own note to its maintainers and is the one file that never serves.
+const guideFiles = (directory) =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const full = resolve(directory, entry.name);
+    if (entry.isDirectory()) return guideFiles(full);
+    if (entry.name === "README.md" || !entry.name.endsWith(".md")) return [];
+    return [full];
+  });
+
+const files = guideFiles(PROMPTS_ROOT).sort();
 
 const record = {};
 for (const file of files) {
-  const stem = file.slice(0, -".md".length);
+  const stem = basename(file, ".md");
   if (!/^[A-Z][A-Z0-9_]*$/.test(stem))
     throw new Error(
       `Prompt file "${file}" is not a SCREAMING_SNAKE_CASE guide key (expected e.g. AUTOMOVIE_OVERALL.md or STAGING.md)`,
     );
-  record[stem] = readFileSync(resolve(PROMPTS_ROOT, file), "utf8")
-    .replaceAll("\r\n", "\n")
-    .trim();
+  if (record[stem] !== undefined)
+    throw new Error(
+      `Guide key "${stem}" is authored twice; one key names one document.`,
+    );
+  record[stem] = readFileSync(file, "utf8").replaceAll("\r\n", "\n").trim();
 }
 
 const sorted = Object.fromEntries(

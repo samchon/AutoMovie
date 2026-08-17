@@ -74,6 +74,7 @@ export const test_mcp_subject_review_unit = (): void => {
 
     const application = new AutoMovieApplication({ projectRoot: fixture.root });
     application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+    application.getGuideDocument({ name: "REVIEW" });
     application.getGuideDocument({ name: "REVIEW_SUBJECT" });
     const prepared = application.prepareReview({ target: TARGET });
     TestValidator.equals(

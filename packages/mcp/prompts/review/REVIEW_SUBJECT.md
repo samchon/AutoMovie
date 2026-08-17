@@ -32,7 +32,7 @@ The review target identifies one unit. Production-wide prototype population and 
 
 ## The required criteria
 
-`prepareReview` returns these ids in this order, and `submitReview` demands every one of them exactly once in that order. Each needs its own observation and at least one current evidence item, and two criteria carrying the same observation text with the same evidence set are refused as a copy, so decide what each criterion independently establishes before writing it.
+`REVIEW` owns what a submission has to satisfy for every target, including these ids arriving in this order and each needing its own observation and evidence. What is particular to a subject is the coverage below.
 
 - `identity-and-composition`: is this the thing that was authored, made of the members it should be made of? Read `/id`, `/kind`, `/semanticKind`, `/prototype`, `/placement`, `/owner`, `/materials`, and `/members`, counting `/members/total` rather than the length of the bounded `/members/items` sample. A window that compiled to one unit box and a rack that holds nothing both fail here, and both look correct in a wide shot.
 - `placement-and-bounds`: read `/transform` and `/bounds`, and compare the declared extent with the measured content extent under the `/bounds/coordinateSpace` each was measured in. A brace spanning three bays while rising a fraction of a metre is visible here as numbers long before it is visible as pixels.

@@ -33,10 +33,8 @@ A rendition worksheet returns no quotable selectors, no frames, and no acceptanc
 
 ## Submit
 
-Call `submitReview` only from the fresh worksheet. Quote exact selectors and frame, outcome, or rendition identities supplied by `prepareReview`. Cover every criterion exactly once, in returned order, each with its own observation and at least one evidence item.
+`REVIEW` owns the submission discipline. What is particular here is what a shot and a rendition each owe.
 
-A true completion basis carries the high-risk criterion ids verbatim, because the gate looks for those exact strings and prose naming the same ideas is refused: `beat-fidelity` and `representability` for a shot, `visual-fidelity-to-source` and `anatomy-and-artifact-integrity` for a rendition. Those criteria must also pass, and not-applicable cannot discharge any required criterion.
-
-Put corrections before the final boolean; `complete:true` requires none, and `complete:false` is refused unless a revise verdict or a correction states what the next round changes.
+Quote exact selectors and frame, outcome, or rendition identities supplied by `prepareReview`. The high-risk criterion ids are `beat-fidelity` and `representability` for a shot, and `visual-fidelity-to-source` and `anatomy-and-artifact-integrity` for a rendition.
 
 Design and source dependency targets currently exposed by the schema use `REVIEW_DEPENDENCY`, not this visual checklist.

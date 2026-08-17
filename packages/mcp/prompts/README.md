@@ -1,6 +1,25 @@
 # Guide Corpus
 
-The exact allowlist in `build/prompt.mjs` names every Markdown guide served by `AutoMovieApplication.getGuideDocument`. The build bundles only those filename stems into the generated `src/guides/AutoMovieGuideConstant.ts`; edit Markdown, never the constant. `README.md` documents the corpus and is not served.
+Every Markdown file under `prompts/` is served by `AutoMovieApplication.getGuideDocument` under its own SCREAMING_SNAKE_CASE stem. `build/prompt.mjs` walks the tree and bundles them into the generated `src/guides/AutoMovieGuideConstant.ts`; edit Markdown, never the constant. This `README.md` is the one file that never serves.
+
+A guide joins the corpus by existing, so a document nobody wired is impossible rather than merely unlikely. What that costs is a stem collision, which the build refuses by name, and a served name that no closed union admits, which `test_mcp_guide_corpus_closure` refuses against `AUTOMOVIE_PRODUCTION_GUIDE_NAMES`.
+
+## Folders are the topic grouping
+
+The corpus is grouped the way the repository skills are: one folder per area, and inside the areas that need one, an index document that owns what the whole area shares.
+
+| Folder | Holds | Index |
+| --- | --- | --- |
+| root | `AUTOMOVIE_OVERALL`, the constitution and the router every session starts from | itself |
+| `design/` | the tracked records a production authors | none; each record stands alone |
+| `building/` | one work as a measured record | `BUILT_ENVIRONMENT` |
+| `craft/` | the decisions no record can make for you | none; each craft stands alone |
+| `source/` | what you write, and what compiles it | none |
+| `evidence/` | producing and reading what is actually there | none |
+| `review/` | recording a judgment that outlives you | `REVIEW` |
+| `external/` | what comes from outside the repository | none |
+
+An area gets an index when its documents share a discipline that would otherwise be restated in each of them. `REVIEW` earned one because six target guides were repeating the same submission rules; `BUILT_ENVIRONMENT` earned one because its topics are conditional readings of one record. Do not add an index that is only a list of links; the constitution's Guide selection is already that list.
 
 ## Document classes
 

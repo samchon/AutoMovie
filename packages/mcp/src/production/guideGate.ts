@@ -22,8 +22,8 @@ export const AUTOMOVIE_TOOL_GUIDES = {
   captureTurntable: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
   repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT"],
   inspectSubject: ["AUTOMOVIE_OVERALL", "SUBJECT_INSPECTION"],
-  prepareReview: ["AUTOMOVIE_OVERALL"],
-  submitReview: ["AUTOMOVIE_OVERALL"],
+  prepareReview: ["AUTOMOVIE_OVERALL", "REVIEW"],
+  submitReview: ["AUTOMOVIE_OVERALL", "REVIEW"],
 } as const satisfies Record<
   keyof AutoMovieApplication,
   readonly AutoMovieProductionGuideName[]

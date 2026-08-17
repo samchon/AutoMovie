@@ -81,6 +81,7 @@ export const test_mcp_submit_review_gate = (): void => {
     const project = AutoMovieProductionProject.open(fixture.root);
     const application = new AutoMovieApplication({ projectRoot: fixture.root });
     application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+    application.getGuideDocument({ name: "REVIEW" });
     application.getGuideDocument({ name: "REVIEW_DEPENDENCY" });
 
     const prepared = application.prepareReview({ target: MODEL_TARGET });

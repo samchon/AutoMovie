@@ -20,4 +20,4 @@ Scrub every cut in both directions. A locally good outgoing frame can still make
 
 ## Submit
 
-Call `submitReview` with the unchanged prepared fingerprint. Cover each returned criterion once with current evidence. A true completion basis carries the criterion ids `cross-shot-continuity` and `spatial-model-maintenance` verbatim -- the gate looks for those exact strings, so prose naming the same ideas is refused -- explains any intentional discontinuity, and leaves no correction.
+`REVIEW` owns the submission discipline. A sequence's high-risk criterion ids are `cross-shot-continuity` and `spatial-model-maintenance`, and its completion basis also has to explain any intentional discontinuity rather than leave it reading as an accident.

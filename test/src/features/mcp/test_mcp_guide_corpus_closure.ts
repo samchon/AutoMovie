@@ -56,11 +56,26 @@ const PROMPT_ROOT = path.resolve(__dirname, "../../../../packages/mcp/prompts");
  * claims no served name.
  */
 const authoredGuideNames = (): string[] =>
-  fs
-    .readdirSync(PROMPT_ROOT)
-    .filter((file) => file.endsWith(".md") && file !== "README.md")
-    .map((file) => file.slice(0, -".md".length))
+  walkGuideFiles(PROMPT_ROOT)
+    .map((file) => path.basename(file, ".md"))
     .sort(compareCodeUnits);
+
+/**
+ * Every authored guide, wherever its topic folder put it.
+ *
+ * The corpus is grouped in folders the way the skills are, so a flat read of the
+ * root would report the whole set as missing the moment one moved.
+ */
+const walkGuideFiles = (directory: string): string[] =>
+  fs
+    .readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? walkGuideFiles(path.join(directory, entry.name))
+        : entry.name.endsWith(".md") && entry.name !== "README.md"
+          ? [path.join(directory, entry.name)]
+          : [],
+    );
 
 const inspectCorpusClosure = (application: AutoMovieApplication): void => {
   TestValidator.equals(

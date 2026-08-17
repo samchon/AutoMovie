@@ -48,7 +48,7 @@ export interface IAutoMovieDiagnosticCatalogEntry {
 const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   acceptance: {
     guide: "ACCEPTANCE",
-    path: "prompts/ACCEPTANCE.md#acceptance-scenarios",
+    path: "prompts/design/ACCEPTANCE.md#acceptance-scenarios",
     invariant:
       "Acceptance outcomes must be derived from current, addressable criteria and current compiled observations.",
     correction:
@@ -58,7 +58,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   asset: {
     guide: "ASSET_SOURCING",
-    path: "prompts/ASSET_SOURCING.md#asset-sourcing-handbook",
+    path: "prompts/external/ASSET_SOURCING.md#asset-sourcing-handbook",
     invariant:
       "Every adopted asset must resolve to declared bytes, interpretation metadata, provenance, permission, and a supported consumer representation.",
     correction:
@@ -67,7 +67,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   blocking: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Authored blocking must lower to valid deterministic stage relations for the registered shot contract.",
     correction:
@@ -76,7 +76,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   builder: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "A shot builder must execute successfully inside the deterministic source boundary.",
     correction:
@@ -85,7 +85,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   capture: {
     guide: "CAPTURE_FRAME",
-    path: "prompts/CAPTURE_FRAME.md#captureframe-contract",
+    path: "prompts/evidence/CAPTURE_FRAME.md#captureframe-contract",
     invariant:
       "A review capture must reopen as current host-produced pixels bound to the exact production, target, renderer, and compile fingerprint.",
     correction:
@@ -95,7 +95,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   compile: {
     guide: "COMPILATION",
-    path: "prompts/COMPILATION.md#compilation",
+    path: "prompts/source/COMPILATION.md#compilation",
     invariant:
       "Compilation consumes one current, stable input closure and publishes derived state only after the requested scope succeeds.",
     correction:
@@ -104,7 +104,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   content: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Compiler input must remain inside the declared deterministic and security boundary.",
     correction:
@@ -113,7 +113,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   contract: {
     guide: "SHOT_CONTRACT",
-    path: "prompts/SHOT_CONTRACT.md#shot-contract",
+    path: "prompts/design/SHOT_CONTRACT.md#shot-contract",
     invariant:
       "The registered shot and its realized source must agree with one exact authored contract.",
     correction:
@@ -123,7 +123,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   design: {
     guide: "COMPILATION",
-    path: "prompts/COMPILATION.md#compilation",
+    path: "prompts/source/COMPILATION.md#compilation",
     invariant:
       "Tracked design must be complete, internally consistent, addressable, and supported before downstream compilation can consume it.",
     correction:
@@ -133,7 +133,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   derived: {
     guide: "DERIVED_ARTIFACTS",
-    path: "prompts/DERIVED_ARTIFACTS.md#deterministic-derived-artifacts",
+    path: "prompts/design/DERIVED_ARTIFACTS.md#deterministic-derived-artifacts",
     invariant:
       "Every derived artifact must have one current, portable, project-owned generator, dependency closure, ledger record, and exact output before source execution.",
     correction:
@@ -143,7 +143,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   engine: {
     guide: "DEBUGGING",
-    path: "prompts/DEBUGGING.md#debugging-handbook",
+    path: "prompts/evidence/DEBUGGING.md#debugging-handbook",
     invariant:
       "Engine validation must succeed before its output can be accepted as compiled production state.",
     correction:
@@ -152,7 +152,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   environment: {
     guide: "BUILT_ENVIRONMENT",
-    path: "prompts/BUILT_ENVIRONMENT.md#built-environment",
+    path: "prompts/building/BUILT_ENVIRONMENT.md#built-environment",
     invariant:
       "Environment context must name valid authored spatial owners and may not derive physical facts from labels or appearance.",
     correction:
@@ -162,7 +162,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   film: {
     guide: "EDITING",
-    path: "prompts/EDITING.md#editing-handbook",
+    path: "prompts/craft/EDITING.md#editing-handbook",
     invariant:
       "The compiled film must account for every selected shot, transition, cue, clock join, and deliverable interval on one exact timeline.",
     correction:
@@ -171,7 +171,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   generated: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Compiler-owned generated output must exactly match the current source closure and its manifest.",
     correction:
@@ -180,7 +180,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   geometry: {
     guide: "GEOMETRY",
-    path: "prompts/GEOMETRY.md#geometry",
+    path: "prompts/source/GEOMETRY.md#geometry",
     invariant:
       "Geometry queries must use supported selectors that resolve inside the current compiled production.",
     correction:
@@ -189,7 +189,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   grammar: {
     guide: "SCREENPLAY_WRITING",
-    path: "prompts/SCREENPLAY_WRITING.md#screenplay-writing-handbook",
+    path: "prompts/craft/SCREENPLAY_WRITING.md#screenplay-writing-handbook",
     invariant:
       "Authored style intent must account for deliberate film-grammar departures observed in the compiled result.",
     correction:
@@ -198,7 +198,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   legacy: {
     guide: "COMPILATION",
-    path: "prompts/COMPILATION.md#compilation",
+    path: "prompts/source/COMPILATION.md#compilation",
     invariant:
       "Legacy import must preserve source, disclose every default or reconstruction, and refuse facts that cannot be recovered.",
     correction:
@@ -208,7 +208,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   model: {
     guide: "ASSET_SOURCING",
-    path: "prompts/ASSET_SOURCING.md#asset-sourcing-handbook",
+    path: "prompts/external/ASSET_SOURCING.md#asset-sourcing-handbook",
     invariant:
       "A model recipe must use a registered archetype and supported, bounded parameter contract.",
     correction:
@@ -217,7 +217,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   performance: {
     guide: "MOTION",
-    path: "prompts/MOTION.md#motion-handbook",
+    path: "prompts/craft/MOTION.md#motion-handbook",
     invariant:
       "Authored performance must lower to supported deterministic pose, motion, expression, and timing state.",
     correction:
@@ -226,7 +226,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   pipeline: {
     guide: "DEBUGGING",
-    path: "prompts/DEBUGGING.md#debugging-handbook",
+    path: "prompts/evidence/DEBUGGING.md#debugging-handbook",
     invariant:
       "The deterministic source-to-film pipeline must complete before its result can be accepted.",
     correction:
@@ -235,7 +235,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   preview: {
     guide: "CAPTURE_FRAME",
-    path: "prompts/CAPTURE_FRAME.md#captureframe-contract",
+    path: "prompts/evidence/CAPTURE_FRAME.md#captureframe-contract",
     invariant:
       "Preview may render only a valid, current, registered target under the host capture contract.",
     correction:
@@ -244,7 +244,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   production: {
     guide: "COMPILATION",
-    path: "prompts/COMPILATION.md#compilation",
+    path: "prompts/source/COMPILATION.md#compilation",
     invariant:
       "Every operation must remain bound to one registered production namespace and its current addressable state.",
     correction:
@@ -253,7 +253,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   registration: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Source registration must bind the declared production, shot, and export identities exactly once.",
     correction:
@@ -262,7 +262,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   render: {
     guide: "COMPILATION",
-    path: "prompts/COMPILATION.md#compilation",
+    path: "prompts/source/COMPILATION.md#compilation",
     invariant:
       "Rendered delivery must be complete, current, byte-verified, media-verified, and owned by its exact production input.",
     correction:
@@ -271,7 +271,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   repaint: {
     guide: "REPAINT_SHOT",
-    path: "prompts/REPAINT_SHOT.md#repaintshot-contract",
+    path: "prompts/external/REPAINT_SHOT.md#repaintshot-contract",
     invariant:
       "Optional repaint may consume only current reviewed source pixels, declared controls, references, provider facts, and immutable receipts.",
     correction:
@@ -291,7 +291,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   screenplay: {
     guide: "SCREENPLAY_WRITING",
-    path: "prompts/SCREENPLAY_WRITING.md#screenplay-writing-handbook",
+    path: "prompts/craft/SCREENPLAY_WRITING.md#screenplay-writing-handbook",
     invariant:
       "The screenplay ladder must preserve unique identities, ordered coverage, evidence ownership, locks, and explicit omissions from intent to scene.",
     correction:
@@ -301,7 +301,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   source: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Tracked source must export the registered deterministic contract and stay inside the compiler sandbox and ownership boundary.",
     correction:
@@ -310,7 +310,7 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
   },
   stage: {
     guide: "SOURCE_OWNERSHIP",
-    path: "prompts/SOURCE_OWNERSHIP.md#source-ownership",
+    path: "prompts/source/SOURCE_OWNERSHIP.md#source-ownership",
     invariant:
       "Authored stage state must remain valid, bounded, and consumable by the deterministic pipeline.",
     correction:
@@ -324,7 +324,7 @@ const CODE_CONTRACTS: Readonly<
 > = {
   "review-outcome-artifact-malformed": {
     guide: "REVIEW_SHOT",
-    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    path: "prompts/review/REVIEW_SHOT.md#shot-review-contract",
     invariant:
       "A current compiler-owned acceptance artifact must remain readable, digest-matched UTF-8 JSON before review can derive an outcome from it.",
     correction:
@@ -334,7 +334,7 @@ const CODE_CONTRACTS: Readonly<
   },
   "review-outcome-artifact-missing": {
     guide: "REVIEW_SHOT",
-    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    path: "prompts/review/REVIEW_SHOT.md#shot-review-contract",
     invariant:
       "Every manifest-owned acceptance artifact required by a current compile must be resident before review derives an outcome.",
     correction:
@@ -344,7 +344,7 @@ const CODE_CONTRACTS: Readonly<
   },
   "review-outcome-contract-mismatch": {
     guide: "REVIEW_SHOT",
-    path: "prompts/REVIEW_SHOT.md#shot-review-contract",
+    path: "prompts/review/REVIEW_SHOT.md#shot-review-contract",
     invariant:
       "The compiler writer and review reader shipped in one revision must agree on the exact schema and identity of every acceptance artifact.",
     correction:

@@ -178,6 +178,7 @@ export const test_mcp_capture_turntable = async (): Promise<void> => {
       },
     );
 
+    application.getGuideDocument({ name: "REVIEW" });
     application.getGuideDocument({ name: "REVIEW_ASSET" });
     const worksheet = application.prepareReview({
       target: { kind: "asset", id: ASSET },
