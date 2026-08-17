@@ -1,8 +1,32 @@
 # Review
 
-Every review, whatever it judges, is the same two calls and the same discipline. This document owns that discipline. The guide for your exact target owns what that target is, what its worksheet carries, and which criteria it must answer.
+Every review, whatever it judges, is the same two calls and the same discipline. This document owns that discipline, and both review tools are gated on it. The guide for your exact target owns what that target is, what its worksheet carries, and which criteria it must answer.
 
-Read this once, then read the target guide: `REVIEW_ASSET`, `REVIEW_SUBJECT`, `REVIEW_SHOT` (for `shot` and `rendition`), `REVIEW_SEQUENCE`, `REVIEW_FILM`, or `REVIEW_DEPENDENCY` (for `design` and `source`).
+Read the discipline below once, then the one target guide summarized under it.
+
+## [`REVIEW_ASSET`](REVIEW_ASSET.md)
+
+Target kind `asset`: one registry model recipe, judged from the fixed turntable set rather than from an authored camera that happened to point at it. Owns the six required views, the silhouette, rig, material, and provenance criteria, and the rule that a worksheet may cite only design pointers, its own frames, and its own diagnostics.
+
+## [`REVIEW_SUBJECT`](REVIEW_SUBJECT.md)
+
+Target kind `subject`: one compiled thing judged on its own, independent of any shot that stages it. Owns the inspection-owned viewpoint plan, the coverage states that plan produces, and the rule that completion needs a current sweep rather than a frame.
+
+## [`REVIEW_SHOT`](REVIEW_SHOT.md)
+
+Target kinds `shot` and `rendition`: the staged moment, and the optional diffusion rendition derived from it. Owns both worksheets, the composition, performance, continuity, and acceptance criteria, and the separation that keeps an accepted shot from accepting its own repaint.
+
+## [`REVIEW_SEQUENCE`](REVIEW_SEQUENCE.md)
+
+Target kind `sequence`: an ordered run of current shots, judged as authored treatment intent rather than as arithmetic over its members. Owns cross-shot continuity, rhythm against intent, spatial-model maintenance, and coverage sufficiency.
+
+## [`REVIEW_FILM`](REVIEW_FILM.md)
+
+Target kind `film`: the whole assembly, judged for narrative completion, tone, and delivery readiness. Owns the terminal consistency the deliverable is gated on, and the rule that every rerender, remix, recut, reroll, and receipt change stales it.
+
+## [`REVIEW_DEPENDENCY`](REVIEW_DEPENDENCY.md)
+
+Target kinds `design` and `source`: the records and modules a visual surface stands on. Owns their criteria, the stricter rule that every criterion owes its own distinct evidence, and the boundary that a dependency completion never claims anything looks correct.
 
 ## Prepare, then judge what came back
 

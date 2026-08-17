@@ -280,8 +280,8 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
       "Repeat the same repaint request after its declared prerequisites are current.",
   },
   review: {
-    guide: "AUTOMOVIE_OVERALL",
-    path: "prompts/INDEX.md#guide-selection",
+    guide: "REVIEW",
+    path: "prompts/review/INDEX.md#review",
     invariant:
       "Review completion requires fresh target-local evidence, every required criterion, an observation, correction state, and a non-copied outcome.",
     correction:

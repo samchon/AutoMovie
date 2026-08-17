@@ -4,7 +4,23 @@ One work, its interiors and its facade, written as a record the engine measures 
 
 The site the work stands on is not here. Terrain, routes, landmarks, and the placement of the building itself belong to `WORLD_DESIGN`. What a finished building is then read for, its analyses and its take-offs, belongs to `BUILDING_STUDIES`.
 
-Four topics under this one are read when their own condition applies, and not before: `BUILDING_FINISHES` when a surface has to carry a material or a repeated module, `BUILDING_SERVICES` when the work carries water, power, air, or drainage, `BUILDING_PROPS` when something is placed inside it, and `BUILDING_STUDIES` when a finished work is read back for an analysis or a take-off.
+Four topics under this one are read when their own condition applies, and not before.
+
+## [`BUILDING_FINISHES`](BUILDING_FINISHES.md)
+
+Read when a surface has to carry a material. Owns substance, surface, and build-up, and the population of repeated modules that covers a field of one, plus how a finish is judged at the distance the shot actually uses.
+
+## [`BUILDING_SERVICES`](BUILDING_SERVICES.md)
+
+Read when the work carries a system rather than only rooms. Owns water, drainage, power, data, air, fire suppression, and control as one graph of systems, nodes, segments, and penetrations, and the wet zones a building grades.
+
+## [`BUILDING_PROPS`](BUILDING_PROPS.md)
+
+Read when something is placed inside the work. Owns placement relations, the support and overlap queries that answer whether a thing rests where you meant, and the frame that shows whether the room reads as furnished.
+
+## [`BUILDING_STUDIES`](BUILDING_STUDIES.md)
+
+Read when a finished work is read back rather than authored. Owns environmental analysis and the drawings, schedules, and quantities derived from the record, both from a project script, and the rule that a number the picture contradicts is a fault in the record.
 
 ## World and building are different owners
 

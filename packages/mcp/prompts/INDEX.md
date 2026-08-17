@@ -22,11 +22,13 @@ AutoMovie produces a deterministic prototype: a blocking pass whose staging, mot
 
 The host fixes project root and default production at startup. No tool payload may activate another filesystem root. Registry identity is `production / artifact id / time-or-angle-and-pass / fingerprint`; all evidence must reopen through that identity.
 
-## Guide selection
+## The corpus
 
-The corpus is grouped by what you are deciding, one folder per group, and this is its index. Read the group that owns your next decision, then the one document in it that owns your question. Do not read a group as ritual.
+The corpus is grouped by what you are deciding, one folder per group, and this document is its index. Read the group that owns your next decision, then the one document in it that owns your question. Do not read a group as ritual.
 
-### `design/` the tracked records
+Two groups carry their own index, `built-environment/` and `review/`, because their documents share something worth stating once. Ask for those by the area's own name: `BUILT_ENVIRONMENT` and `REVIEW`.
+
+## [`design/`](design/): the tracked records
 
 - `PRODUCTION_DESIGN`: production clock, deliverables, art direction, visual-delivery declaration, render budgets, and site context.
 - `MODEL_RECIPE`: bounded primitive and external model recipes, and physically-based surface materials.
@@ -36,7 +38,7 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
 - `DERIVED_ARTIFACTS`: explicit deterministic precomputation, tracked dependency and output digests, and freshness refusals.
 
-### `built-environment/` one work, as a measured record
+## [`built-environment/`](built-environment/): one work, as a measured record
 
 - `BUILT_ENVIRONMENT`: this area's `INDEX.md`. Building and space graphs, populations, phasing, room culling, and the queries that read all of it.
 - `BUILDING_FINISHES`: what a surface is made of, and the repeated modules that cover it.
@@ -44,7 +46,7 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `BUILDING_PROPS`: placing a thing inside a work and proving it stands where you meant.
 - `BUILDING_STUDIES`: what a finished work is read back for: environmental analysis, drawings, schedules, and quantities.
 
-### `craft/` the decisions no record can make for you
+## [`craft/`](craft/): the decisions no record can make for you
 
 - `SCREENPLAY_WRITING`: logline-to-scene screenplay craft and revision rubric.
 - `CINEMATOGRAPHY`: shot-size meaning, the 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
@@ -53,7 +55,7 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, retargeting, and the operable openings a building owns.
 
-### `source/` what you write, and what compiles it
+## [`source/`](source/): what you write, and what compiles it
 
 - `TYPESCRIPT`: deterministic source-module patterns and typed registration.
 - `SOURCE_COMPOSITION`: how a production's source is arranged once its shots repeat.
@@ -62,14 +64,14 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `GEOMETRY`: the mesh constructors source-owned models are built from, their texture coordinates, and the project-state queries outside the compile sandbox.
 - `EVIDENCE_GRAPH`: which folder a production document belongs in and what it must cite.
 
-### `evidence/` producing and reading what is actually there
+## [`evidence/`](evidence/): producing and reading what is actually there
 
 - `CAPTURE_FRAME`: exact `captureFrame` and `captureTurntable` targets, passes, receipts, and refusal recovery.
 - `SUBJECT_INSPECTION`: render-free descriptions of compiled elements, parts, prototypes, instances, sets, and spaces; bounded structural diffs; section planes; and `inspectSubject`, whose observations are inspection-owned and never delivery evidence.
 - `VISUAL_CHANGE_REPORT`: changed, unchanged, new, and gone views across two existing digest catalogs. This is neither a structural diff nor review evidence.
 - `DEBUGGING`: diagnostics-first correction across ownership, derived artifacts, compile, structural inspection, render, repaint, and review.
 
-### `review/` recording a judgment that outlives you
+## [`review/`](review/): recording a judgment that outlives you
 
 - `REVIEW`: this area's `INDEX.md`, and the discipline every review shares. Both review tools are gated on it.
 - `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
@@ -79,7 +81,7 @@ The corpus is grouped by what you are deciding, one folder per group, and this i
 - `REVIEW_FILM`: whole-film story, pacing, audiovisual delivery, and terminal consistency worksheet.
 - `REVIEW_DEPENDENCY`: design and source dependency worksheets. These are not additional visual surfaces.
 
-### `external/` what comes from outside the repository
+## [`external/`](external/): what comes from outside the repository
 
 - `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
 - `REPAINT_SHOT`: exact `repaintShot` inputs, source-grid requirements, provenance, and refusal recovery.
