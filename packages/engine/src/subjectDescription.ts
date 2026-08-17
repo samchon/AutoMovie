@@ -125,6 +125,16 @@ interface IDescriptionContext {
     }
   >;
   populationSpaces: Map<string, string>;
+  /**
+   * Scene-node children of one built element, by that element's node id.
+   *
+   * An element's assignment to a logical space is authored, and an exterior wall,
+   * a foundation, or a structural frame legitimately belongs to no room. One
+   * measured production left 671 of 3,474 elements in no space for exactly that
+   * reason, and a space that lists nothing about them was the only way down, so
+   * nothing could be opened without already knowing its key.
+   */
+  elementChildren: Map<string, string[]>;
 }
 
 const createDescriptionContext = (
@@ -148,7 +158,45 @@ const createDescriptionContext = (
         spaceId(environment.id, population.space),
       );
   }
-  return { artifact, models, builtElements, populationSpaces };
+  const drawn = new Set(artifact.compiled.scene.nodes.map((node) => node.id));
+  const elementChildren: IDescriptionContext["elementChildren"] = new Map();
+  for (const environment of artifact.compiled.builtEnvironments ?? []) {
+    const byParent = new Map<string, string[]>();
+    for (const element of environment.elements) {
+      if (element.parent === null) continue;
+      const siblings = byParent.get(element.parent) ?? [];
+      siblings.push(element.id);
+      byParent.set(element.parent, siblings);
+    }
+    // A group the compiler draws no node for cannot be described, so listing it
+    // would hand back an id that resolves to nothing. It becomes transparent
+    // instead: its own drawn descendants take its place, which keeps every
+    // element reachable from above without naming one that is not there.
+    const drawnDescendants = (
+      id: string,
+      seen: Set<string> = new Set(),
+    ): string[] => {
+      if (seen.has(id)) return [];
+      seen.add(id);
+      return (byParent.get(id) ?? []).flatMap((child) =>
+        drawn.has(`${environment.id}/${child}`)
+          ? [elementId(`${environment.id}/${child}`)]
+          : drawnDescendants(child, seen),
+      );
+    };
+    for (const element of environment.elements) {
+      const node = `${environment.id}/${element.id}`;
+      if (drawn.has(node) === false) continue;
+      elementChildren.set(node, drawnDescendants(element.id));
+    }
+  }
+  return {
+    artifact,
+    models,
+    builtElements,
+    populationSpaces,
+    elementChildren,
+  };
 };
 
 const describePrototype = (
@@ -243,9 +291,14 @@ const describeElement = (
       coordinateSpace: "world",
     },
     materials: model === undefined ? [] : materialsOf(model),
-    members: summarizeMembers(
-      model?.parts.map((part) => elementPartId(node.id, part.id)) ?? [],
-    ),
+    // Parts and child elements together, because both are things this subject
+    // contains and both are ids this surface resolves. Without the children
+    // there is no way down to an element no space claims, and the reviewer who
+    // needs one most is the one who does not know it exists.
+    members: summarizeMembers([
+      ...(model?.parts.map((part) => elementPartId(node.id, part.id)) ?? []),
+      ...(context.elementChildren.get(node.id) ?? []),
+    ]),
   };
 };
 

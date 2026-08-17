@@ -1074,6 +1074,61 @@ export const builtEnvironmentSpaceSurfaces = (
 };
 
 /**
+ * The elements of a building no space claims and no visible ancestor reaches.
+ *
+ * An element's assignment to a logical space is authored, and an exterior wall, a
+ * foundation, or a structural frame belongs to no room, so leaving one unassigned
+ * is correct rather than careless. One measured production left 671 of 3,474
+ * elements that way. The consequence was not the assignment: it was that the only
+ * path down into a building ran through its spaces, so those 671 could be opened
+ * only by an author who already knew their keys, and a key is exactly what a
+ * reviewer looking for an unknown defect does not have.
+ *
+ * This names the tops of that population and nothing else. An element a space
+ * claims is listed by that space, and an element whose ancestor is itself visible
+ * is listed among that ancestor's members, so both are already reachable and
+ * neither belongs in a second listing. What is left is the roots, which is what a
+ * listing needs in order to be a way in rather than a flat dump of a building.
+ *
+ * `visible` is the set of node ids a caller can actually open, given as the
+ * caller's own fact because what is drawn is decided by the compiled scene rather
+ * than by this record. A group the compiler drew nothing for is transparent: it
+ * cannot be opened, so it never becomes a root, and the search continues into its
+ * own children.
+ *
+ * @evidence requirements/interior/scope-and-host-boundary.md#interior-current-product-scope `builtEnvironmentUnclaimedElements` names the visible building elements no logical space claims, so authored interior and envelope state stays reachable for review instead of being addressable only by a key nobody has.
+ * @evidence specifications/interior-space/scope-and-host.md#interior-space-building-interior-boundary `builtEnvironmentUnclaimedElements` derives those roots from the element hierarchy of one building rather than from a space assignment it does not have.
+ * @author Samchon
+ */
+export const builtEnvironmentUnclaimedElements = (
+  environment: IAutoMovieBuiltEnvironment,
+  visible: ReadonlySet<string>,
+): string[] => {
+  const byId = new Map(
+    environment.elements.map((element) => [element.id, element] as const),
+  );
+  const reached = (
+    parent: string | null,
+    seen: Set<string> = new Set(),
+  ): boolean => {
+    if (parent === null || seen.has(parent)) return false;
+    seen.add(parent);
+    const element = byId.get(parent);
+    if (element === undefined) return false;
+    if (visible.has(`${environment.id}/${element.id}`)) return true;
+    return reached(element.parent, seen);
+  };
+  return environment.elements
+    .filter(
+      (element) =>
+        element.space === null &&
+        visible.has(`${environment.id}/${element.id}`) &&
+        reached(element.parent) === false,
+    )
+    .map((element) => `${environment.id}/${element.id}`);
+};
+
+/**
  * Name what is staged in a logical space and its descendants.
  *
  * This is the join that keeps the visible model and the semantic partition from
