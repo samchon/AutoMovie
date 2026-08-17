@@ -69,9 +69,10 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
     const compiled = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    if (productionCompileSucceeded("capture refusal fixture", compiled))
-      TestValidator.equals("the refusal fixture compiles", true, true);
-    else throw new Error("The capture-refusal fixture did not compile.");
+    if (
+      productionCompileSucceeded("capture refusal fixture", compiled) === false
+    )
+      throw new Error("The capture-refusal fixture did not compile.");
 
     const host = recordingCapture();
     const opened = new AutoMovieApplication({

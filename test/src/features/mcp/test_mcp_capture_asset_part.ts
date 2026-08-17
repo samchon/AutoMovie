@@ -44,9 +44,8 @@ export const test_mcp_capture_asset_part = async (): Promise<void> => {
     const compiled = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    if (productionCompileSucceeded("asset part fixture", compiled))
-      TestValidator.equals("the asset part fixture compiles", true, true);
-    else throw new Error("The asset-part fixture did not compile.");
+    if (productionCompileSucceeded("asset part fixture", compiled) === false)
+      throw new Error("The asset-part fixture did not compile.");
 
     const model = JSON.parse(
       Buffer.from(project.readGeneratedFile(`models/${ASSET}.json`)).toString(
