@@ -991,16 +991,16 @@ export const extrudeAutoMovieRegion = (props: {
  *
  * It opens two ways, and both are closed forms rather than tendencies. A
  * changing section tilts each ruling off the path by the taper angle, so the
- * ruling is longer than the path step by that angle's secant and the whole leg
- * carries `cos` of it: a section growing 0.5 m over 4 m of path reads 0.9923.
- * A turning path is the larger one. At a point of the path whose curvature
- * radius is `R`, a section point sitting a signed `d` away from the path
- * travels `(R + d) / R` times as far as the path does, so its area ratio is
- * `R / (R + d)`. That depends on `d / R` alone, so scaling the whole member up
- * changes nothing: a section a quarter of the bend radius wide spans 0.8 to
- * 1.333 across itself, a 1.67:1 density range on one moulding, stretched on the
- * outside of the turn and crowded on the inside. A constant section does not
- * save it; the bend alone produces it.
+ * ruling is longer than the path step by that angle's secant and the leg's area
+ * ratio is that angle's cosine: a section growing 0.5 m over 4 m of path reads
+ * 0.9923. A turning path is the larger one. At a point of the path whose
+ * curvature radius is `R`, a section point sitting a signed `d` away from the
+ * path travels `(R + d) / R` times as far as the path does, so its area ratio
+ * is `R / (R + d)`. That depends on `d / R` alone, so scaling the whole member
+ * up changes nothing: a section reaching a quarter of the bend radius on each
+ * side of the path spans 0.8 to 1.333 across itself, a 1.67:1 density range on
+ * one moulding, stretched on the outside of the turn and crowded on the inside.
+ * A constant section does not save it; the bend alone produces it.
  *
  * That is declared rather than pending, for the reason the revolution's shear
  * is. Making `v` measure surface distance would give every section point its
