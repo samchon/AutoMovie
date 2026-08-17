@@ -70,7 +70,7 @@ Developed frame이 정확히 equiareal인 것은 v가 재는 거리가 표면 �
 
 Path를 따라 단면을 잇는 연산의 v는 path의 이동 거리이지 표면의 이동 거리가 아니므로, 그 연산은 면적까지 잃거나 얻는다. 단면이 변하면 ruling이 path 걸음보다 taper 각의 secant만큼 길어져서 면적비는 그 각의 cosine이다. Path가 휘면 단면 점이 path에서 벗어난 부호 있는 거리 `d`와 그 지점 곡률 반경 `R`에 대해 면적비가 `R / (R + d)`이므로, 단면이 일정해도 바깥쪽 texel은 늘어나고 안쪽은 조밀해진다. `d / R`이 0.25이면 한 부재 안에서 밀도가 0.8배와 1.333배 사이로 벌어지고, 이 값은 `d / R`만의 함수이므로 부재를 키워도 줄지 않는다. 밀도가 일정하다는 주장은 따라서 회전면과 곧은 path 위의 일정 단면에만 해당하며, 휘거나 taper된 형태에서 밀도 변화는 선언된 성질이지 고칠 결함이 아니다. v가 표면 거리를 재려면 한 station 안에서도 단면 점마다 v가 달라져야 하는데 그것은 휜 관을 펼친 layout이지 이 frame이 아니고, 그 변경은 이 frame에 맞춰 이미 저작된 모든 좌표를 다시 쓴다.
 
-방향성 있는 finish나 균일한 texel 밀도를 요구하는 finish는 단면이 일정하고 path가 곧은 구간, 그리고 축을 거의 벗어나지 않는 meridian에서만 정확하다. 그 밖의 형태는 평면 face로 저작하거나 방향성 없는 finish를 쓴다.
+Developed frame 위에서 방향성 있는 finish나 균일한 texel 밀도를 요구하는 finish가 정확한 구간은 단면이 일정하고 path가 곧은 구간, 그리고 축을 거의 벗어나지 않는 meridian뿐이다. 투영 frame은 face 평면의 강체 운동이므로 shear도 밀도 변화도 없고, 그래서 그 밖의 형태는 평면 face로 저작하거나 방향성 없는 finish를 쓴다.
 
 <!-- @evidenceObligation developed-atlas-shear Developed frame이 면적을 보존하는 경우와 보존하지 않는 경우, 그리고 단면 변화·path 곡률·meridian 기울기가 만드는 shear와 밀도 변화의 상한. -->
 
