@@ -20,9 +20,9 @@ interface InspectionSession {
   pages: Map<string, IInspectionPageEntry>;
 }
 
-/** One cached page, beside the subject identity that supersedes it. */
+/** One cached page, beside the shot identity that supersedes it. */
 interface IInspectionPageEntry {
-  subject: string;
+  shot: string;
   opening: Promise<InspectionPage>;
 }
 
@@ -129,10 +129,15 @@ const inspectionSession = async (
  * serves the mixed frame in the first place.
  */
 /**
- * The subject a page stands for, without the state it was opened at.
+ * The shot a page stands for, without the state it was opened at.
  *
  * Two pages under this one identity are the same thing at two compiles, and
  * only the newer one can still be asked for a frame.
+ *
+ * The subject is deliberately not in it. Staging the compiled shot is what a
+ * page costs, and the page draws any subject standing in that shot, so keying
+ * by subject rebuilt one 14 MB scene per subject: 4.3 of the 6.2 seconds one
+ * observation took, and 70% of a whole production's sweep (`#1956`).
  */
 const pageSubject = (
   input: Parameters<AutoMovieProductionSubjectInspection>[0],
@@ -140,7 +145,6 @@ const pageSubject = (
   JSON.stringify({
     productionId: input.productionId,
     shot: input.target.shot,
-    subject: input.target.subject,
     width: input.width,
     height: input.height,
   });
@@ -153,7 +157,6 @@ const pageKey = (
     compileFingerprint: input.compileFingerprint,
     revision: input.revision,
     shot: input.target.shot,
-    subject: input.target.subject,
     width: input.width,
     height: input.height,
   });
@@ -165,9 +168,9 @@ const inspectionPage = (
   const key = pageKey(input);
   const existing = session.pages.get(key);
   if (existing !== undefined) return existing.opening;
-  const subject = pageSubject(input);
+  const shot = pageSubject(input);
   const pending = (async (): Promise<InspectionPage> => {
-    // A recompile gives one subject a second key, and the page opened under the
+    // A recompile gives one shot a second key, and the page opened under the
     // first can never be asked for a frame again: the fingerprint moved, so
     // every later request misses it. Left in the map it would hold a whole
     // staged scene open for the lifetime of the host, once per compile. The
@@ -175,7 +178,7 @@ const inspectionPage = (
     // recovers the subject by re-parsing its own key; carrying it beside the
     // entry keeps that identity from depending on how the key was spelled.
     for (const [candidateKey, candidate] of session.pages)
-      if (candidateKey !== key && candidate.subject === subject) {
+      if (candidateKey !== key && candidate.shot === shot) {
         session.pages.delete(candidateKey);
         const previous = await candidate.opening.catch(() => null);
         if (previous !== null) await previous.page.close();
@@ -208,7 +211,6 @@ const inspectionPage = (
       ),
     );
     url.searchParams.set("shot", input.target.shot);
-    url.searchParams.set("subject", input.target.subject);
     url.searchParams.set("revision", input.revision);
     try {
       await page.goto(url.href, { waitUntil: "networkidle" });
@@ -239,7 +241,7 @@ const inspectionPage = (
       throw failure;
     }
   })();
-  const entry = { subject, opening: pending };
+  const entry = { shot, opening: pending };
   session.pages.set(key, entry);
   void pending.catch(() => {
     if (session.pages.get(key) === entry) session.pages.delete(key);
@@ -285,9 +287,13 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
         () => window.__automovieInspect?.ready === true,
       );
       drawn = await resident.page.evaluate(
-        ({ pose, viewpoint }) =>
-          window.__automovieInspect!.view(pose, viewpoint),
-        { pose: input.pose, viewpoint: input.viewpoint },
+        ({ pose, viewpoint, subject }) =>
+          window.__automovieInspect!.view(pose, viewpoint, subject),
+        {
+          pose: input.pose,
+          viewpoint: input.viewpoint,
+          subject: input.target.subject,
+        },
       );
     } catch (error) {
       const failure = new Error(
