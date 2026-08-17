@@ -1,4 +1,5 @@
 import {
+  assertWorldPlacements,
   autoMovieAssemblyOpeningReveal,
   autoMoviePatternInstanceTransforms,
   autoMoviePatternTextureTransforms,
@@ -39,6 +40,12 @@ import {
   triangulateAutoMovieRegion,
   validateAutoMovieMaterialAssembly,
   validateAutoMovieMaterialSubstance,
+  worldAlongRoute,
+  worldBlock,
+  worldGrid,
+  worldRamp,
+  worldScatter,
+  worldTerrain,
 } from "@automovie/engine";
 
 import { AutoMovieSandboxEngineExport } from "./sandboxEngineSurface";
@@ -61,6 +68,14 @@ export type IAutoMovieSandboxEngineAnswer =
  * rewritten as two divisions, an angle conversion folded into one constant —
  * each a rounding difference the byte-parity gate reported hours later and an
  * author would have seen as a frame that moved.
+ *
+ * `worldHeightfield` is absent on purpose and is the one member of the site kit
+ * that stays withheld: it samples a caller-supplied `(x, z) => y` function, and a
+ * function is exactly what a JSON round trip cannot carry. Standing it in would
+ * mean a second copy of the sampling math inside the sandbox, which is the failure
+ * this table exists to prevent. A production that needs a sampled heightfield
+ * derives it in a project script and imports the resulting data, which is what
+ * `DERIVED_ARTIFACTS` is for.
  *
  * A name absent here is answered by a stand-in the sandbox defines itself.
  * `defineShot` and the subject classes are one reason: they carry a closure or
@@ -111,6 +126,13 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "triangulateAutoMovieRegion",
     "validateAutoMovieMaterialAssembly",
     "validateAutoMovieMaterialSubstance",
+    "assertWorldPlacements",
+    "worldAlongRoute",
+    "worldBlock",
+    "worldGrid",
+    "worldRamp",
+    "worldScatter",
+    "worldTerrain",
   ];
 
 /**
@@ -127,7 +149,14 @@ const bridged =
 
 const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
   {
+    assertWorldPlacements: bridged(assertWorldPlacements),
     autoMovieAssemblyOpeningReveal: bridged(autoMovieAssemblyOpeningReveal),
+    worldAlongRoute: bridged(worldAlongRoute),
+    worldBlock: bridged(worldBlock),
+    worldGrid: bridged(worldGrid),
+    worldRamp: bridged(worldRamp),
+    worldScatter: bridged(worldScatter),
+    worldTerrain: bridged(worldTerrain),
     autoMoviePatternInstanceTransforms: bridged(
       autoMoviePatternInstanceTransforms,
     ),

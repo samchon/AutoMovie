@@ -49,13 +49,17 @@ Declare what the action asserts, then ask the engine whether the clip keeps it.
 
 - `validateGroundContact` sweeps feet, and whole-body capsule proxies when you give them, against a flat ground plane or a height source that answers a `y` for each `(x, z)`, so a hip through a ramp is found and not only a foot through a floor.
 - `validateFootSkate` reads the time spans you declare a foot planted and reports the horizontal speed of a foot that was supposed to be still.
-- `validateBalanceSupport` projects the segment-mass weighted centre of mass onto the support polygon your declared contact bones span, which is the check for a lean, a reach, or a one-foot balance.
+- `validateBalanceSupport` projects the segment-mass weighted centre of mass onto the support polygon your declared contact bones span, which is the check for a lean, a reach, or a one-foot balance. It derives that centre from the resolved pose itself, and `bodyCenterOfMass` is the same question asked of a model rather than a performer: the body's declared centre when it states one, the volume-weighted centroid of its primitives when it does not.
 - `validateSelfIntersection` tests the capsule pairs you name as parts that may not meet, and pairing is explicit because adjacent limbs share joints and overlap legally.
 - `detectBodyCollision` measures two actors against each other from their rigs, clips, capsules, and bodies, and returns the contact events and a suggested response at the deepest penetration alongside the warnings.
 
 Every one of them is a warning tier, not a gate. A film may be deliberately unphysical, so a phasing ghost, a moonwalk, or a wire-fu freeze sets `physicsIntent` on the check and the matching warnings are suppressed, while malformed input (an unknown bone, a detached bone, a non-positive radius, an inverted window) stays an error.
 
 Read the result accordingly. A physical implausibility rides `warnings` on a validation whose `success` is `true`, so code that branches on `success` alone reports a clean run over a clip whose planted foot travels half a metre.
+
+Feed them from the record rather than from a constant. `spaceGround` adapts a space into the ground source the contact checks read, so a clip over a ramp or a platform is judged against the surfaces the production authored instead of a flat plane at zero, and `groundFunction` is the one place a scalar and a height callback become the same thing. `bodyCenterOfMass` answers a model's centre for the object-side of the same question `validateBalanceSupport` asks of a performer.
+
+Two of the answers come with a correction, and neither applies itself. `plantStanceFeet` is the pass that removes skate: it detects stance, solves the leg back onto the pinned contact, and clamps the result into the rig's own range of motion, so a residual it cannot hold stays a warning rather than a silent edit. `detectBodyCollision` returns the response `suggestCollisionResponse` computes at the deepest contact, bounded by joint range of motion into a flinch. Both are hints; the authored reaction stays yours, and `MOTION`'s contact section already says why a stronger or subtler one can be right.
 
 These calls run in a project script under `scripts/`, never in shot source. They read a compiled clip, and a build function is the thing that produces one.
 

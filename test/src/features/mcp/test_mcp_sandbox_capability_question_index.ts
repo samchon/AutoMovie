@@ -50,6 +50,7 @@ export const test_mcp_sandbox_capability_question_index = (): void => {
     "How do I turn a declared building into the geometry a frame shows?",
     "How do I name a part of something I placed?",
     "How do I derive a placed object's world frame from its relation?",
+    "How do I build the site the building stands on?",
     "How high is the ground under this point?",
   ];
 

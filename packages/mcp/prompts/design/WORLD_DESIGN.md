@@ -69,6 +69,12 @@ Use deterministic seeds and bounded algorithms. Generate from semantic anchors o
 5. add authored hero exceptions;
 6. verify bounds, contacts, overlaps, and required sightlines.
 
+The site is built with named engine calls rather than with hand-written records, and those calls are reachable from the module a shot imports. `worldTerrain(` builds one flat terrain primitive from an explicit world-XZ footprint. `worldRamp(` builds a rectangular ramp from a centre line and an explicit rise, which is the piece a figure walks up. `worldBlock(` builds one box-proxy wall or building from a grounded base and a size, and hands back three things together: the registered primitive recipe, the static scene node that uses it, and the exact axis-aligned volume it occupies. The volume matters because it is what another placement is checked against, and a volume derived a second time from the transform you wrote is a chance to disagree with the thing that was drawn. `worldGrid(`, `worldScatter(`, and `worldAlongRoute(` turn one prototype plus a layout rule into a compact instance set: a rectangular field, a seeded disk scatter, or a run along a route, each returning the caller's own parameters rather than an expansion of them. `assertWorldPlacements(` refuses material contradictions between blocks, surfaces, routes, and landmarks before a shot is built, which is the one call in this family that exists to stop work rather than to produce it.
+
+`worldHeightfield` is the exception, and the reason is worth knowing before you reach for it: it samples a height function, a function cannot cross the sandbox boundary, and a copy of the sampling math inside the sandbox would be a second implementation to disagree with the first. Derive a sampled heightfield in a project script and import the result as data; `DERIVED_ARTIFACTS` owns that path.
+
+Read the ground back through the same record. `worldSurfaceHeight(` answers the height under one XZ point, which is what a placement, a contact, and a support sweep all measure against.
+
 OpenUSD composition is a useful mental model for complex external worlds: references and payloads let assets compose without destructive copying, while variant sets preserve explicit alternatives. Regardless of format, register exact source, license, digest, conversion, and chosen variant in AutoMovie ownership.
 
 ## Environmental storytelling

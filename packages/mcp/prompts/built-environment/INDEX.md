@@ -108,6 +108,47 @@ Read the split as a question about the output rather than about difficulty. A dr
 
 The starter ships that script. `npm run building:report` runs `scripts/deriveBuilding.ts`, which requires current compiler-owned state, reads every built environment, service network, fluid domain and water feature the compiled shots carry, and writes its sidecars under `reports/<building>/`. Reading generated state rather than your own modules is what makes a sheet a projection of the same bytes a frame was drawn from, and requiring the state to be current is what stops a document from describing a design that no longer exists. The studies the script asks for are declared in the script itself, because a workplane, a build-up's thermal conductivity, a surface's absorption and a supply flow are measured facts of your production and this repository ships neither a material catalogue nor climate data.
 
+## Measure the passage, do not eyeball it
+
+A connector is a declaration, and whether the stair it declares actually climbs its storey is a measurement. `builtConnectorGeometry` takes the environment and one connector id and answers the traversal: the signed `rise` from the first station to the last, the horizontal `run`, the total three-dimensional `length`, the `slope` in radians, and the ordered `stations` and `landings` themselves. `builtConnectorSectionAt` answers the section at one distance along that route, which is where a headroom or a width claim is checked rather than assumed. `builtConnectorCarriagePlacements` answers where the treads, the carriage, or the cabin actually land, optionally under one named operating state. `builtBoundaryWallCut` answers the cut one boundary carries, which is the same question asked of a wall rather than of a passage.
+
+Read them because the alternative is your eyes. A stair whose slope is comfortable in a frame and wrong in metres is the defect this family exists to catch, and no capture shows it: two flights that differ by a fifth of a radian look like two stairs.
+
+The four run in a project script under `scripts/`, where the whole engine is available. They read a compiled building, and a build function is the thing that produces one.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { builtConnectorGeometry } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+for (const [shot, compiled] of state.generated.shots)
+  for (const environment of compiled.builtEnvironments ?? [])
+    for (const connector of environment.connectors) {
+      const route = builtConnectorGeometry(environment, connector.id);
+      console.log(
+        shot,
+        environment.id,
+        connector.id,
+        connector.kind,
+        "rise",
+        route.rise.toFixed(3),
+        "run",
+        route.run.toFixed(3),
+        "slope deg",
+        ((route.slope * 180) / Math.PI).toFixed(1),
+        "stations",
+        route.stations.length,
+        "landings",
+        route.landings.length,
+      );
+    }
+```
+
 ## Phases, variants, and change
 
 A renovation, a staged build, and a design still choosing between two options are the same record. Lineage deliberately imports none of the graphs it annotates: it attaches to a bare id plus the open name of the graph that id came from (`element`, `space`, `opening`, `material-layer`, `service-port`, `instance-slot`, `asset`), so a fold that does not exist yet can be phased and impact-traced without this record gaining a field. Registering an identity is the whole act of opting a graph into lineage.
@@ -118,7 +159,11 @@ Phases are a graph of prerequisites, not a line. Variants are alternatives prese
 
 ## Culling by room
 
-A building's own space graph answers what the camera can possibly see, and the rule is one sentence: a space is hidden only when it is proved unreachable from the camera through every opening, connector, and exterior route the design declares. Everything else stays drawn. Aggressive culling trades a wrong frame for a faster one, and a wrong frame is not a cheaper frame, it is a different film. So an exterior camera hides nothing, a camera the design cannot place in exactly one leaf space hides nothing, and a space whose extent was never stated hides nothing. The exterior is a node of the portal graph rather than the absence of one, which is why a sealed interior room still hides the other windowed rooms while a windowed room keeps them. A boundary carrying an opening is a portal even when a door leaf fills it, because whether that leaf is shut is movable state, so a closed door widens no frame and hides nothing.
+Culling is a capability rather than a product obligation. The requirement permits deciding visible and hidden spaces from rooms, openings, portals, and the camera's position, and binds one thing absolutely: nothing story-relevant, and no consumer of a reflection, a shadow, or a sound, may be dropped merely for being off screen. The render path draws the building it is given, so the saving is the production's to ask for rather than something already applied on your behalf.
+
+`autoMovieRoomVisibility` is that answer. It takes the environment and the camera's world position and reports which of that building's spaces are visible, conservatively: unresolved containment or a space with no stated extent disables culling for that space instead of hiding a room nobody proved unreachable. Call it from a project script when you are deciding what a shot needs to stage, never as a substitute for the prohibition above: a saving that removes a reflection's source is not a saving.
+
+The rule any culling obeys is one sentence: a space is hidden only when it is proved unreachable from the camera through every opening, connector, and exterior route the design declares. Everything else stays drawn. Aggressive culling trades a wrong frame for a faster one, and a wrong frame is not a cheaper frame, it is a different film. So an exterior camera hides nothing, a camera the design cannot place in exactly one leaf space hides nothing, and a space whose extent was never stated hides nothing. The exterior is a node of the portal graph rather than the absence of one, which is why a sealed interior room still hides the other windowed rooms while a windowed room keeps them. A boundary carrying an opening is a portal even when a door leaf fills it, because whether that leaf is shut is movable state, so a closed door widens no frame and hides nothing.
 
 ## Verification
 

@@ -290,6 +290,7 @@ export const test_mcp_production_source_link = (): void => {
     [
       "AutoMovieSubject",
       "AutoMovieSubjectGroup",
+      "assertWorldPlacements",
       "autoMovieAssemblyOpeningReveal",
       "autoMoviePatternInstanceTransforms",
       "autoMoviePatternTextureTransforms",
@@ -331,7 +332,13 @@ export const test_mcp_production_source_link = (): void => {
       "triangulateAutoMovieRegion",
       "validateAutoMovieMaterialAssembly",
       "validateAutoMovieMaterialSubstance",
+      "worldAlongRoute",
+      "worldBlock",
+      "worldGrid",
+      "worldRamp",
+      "worldScatter",
       "worldSurfaceHeight",
+      "worldTerrain",
     ],
   );
 };
