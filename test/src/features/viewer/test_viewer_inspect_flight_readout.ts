@@ -179,9 +179,9 @@ export const test_viewer_inspect_flight_readout = (): void => {
   // 9. A WINDOW STILL FILLING REPORTS THE SLOW FRAME
   //----
   // The buffer starts empty, so the first frames are read from an even-length
-  // window. Taking the upper of the two middles keeps the reading pessimistic,
-  // which is the safe direction for a number an operator computes a distance
-  // from.
+  // window. Taking the upper of the two middles reports the slower frame, which
+  // is the reading that matches what the eye is about to do on a set that has
+  // only just started drawing slowly.
   TestValidator.equals(
     "a half-filled window does not average the slow frame away",
     readout(4, [0, 0.3668], 0.1),
