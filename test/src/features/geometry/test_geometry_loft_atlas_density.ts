@@ -1,8 +1,9 @@
 import {
+  buildAutoMoviePolyhedron,
   extrudeAutoMovieRegion,
   loftAutoMovieSections,
 } from "@automovie/engine";
-import type { IAutoMovieMesh } from "@automovie/interface";
+import type { IAutoMovieMesh, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { namedFacts, nclose } from "../internal/predicates";
@@ -115,6 +116,13 @@ const rectangle = (
 const square = (half: number): { x: number; y: number }[] =>
   rectangle(half, half);
 
+/** One polyhedron corner, written positionally so a face list stays readable. */
+const corner = (x: number, y: number, z: number): IAutoMovieVector3 => ({
+  x,
+  y,
+  z,
+});
+
 /** A quarter-turn path of radius `radius`, sampled as a polyline. */
 const quarterTurn = (
   radius: number,
@@ -173,9 +181,12 @@ const STRAIGHT_PATH = [
  *
  * 1. A straight run of constant section is exactly equiareal, every triangle
  *    reading 1, so the frame itself is not what loses area.
- * 2. A region extrusion, which is developed in the same metre frame, is exactly
- *    equiareal too. Being developed is therefore not the cause; taking `v` from
- *    the path is.
+ * 2. The other two frames keep area exactly: a region extrusion, developed in
+ *    the same metre pair, and a pyramid whose sloped and level faces exercise
+ *    both branches of the projected frame. Being developed is therefore not the
+ *    cause; taking `v` from the path is. Anisotropy would not have settled this,
+ *    because a frame scaled equally on both axes is isotropic and still moves
+ *    area, so the area ratio is read directly.
  * 3. A section growing 0.5 m over 4 m of path reads `cos(atan(0.125))` on every
  *    side triangle, which is the ruling's secant and nothing else.
  * 4. A bend costs far more than a taper. A 2 m turn carrying a 0.5 m half
@@ -219,13 +230,33 @@ export const test_geometry_loft_atlas_density = (): void => {
   const prism = densityRange(
     extrudeAutoMovieRegion({ outer: square(0.5), depth: 4 }),
   );
-  TestValidator.equals(
-    "a region extrusion is developed and equiareal, so developed is not the cause",
-    namedFacts([
-      ["leastIsOne", () => nclose(prism.least, 1, 1e-12)],
-      ["mostIsOne", () => nclose(prism.most, 1, 1e-12)],
+  // A pyramid exercises both branches of the projected frame at once: four
+  // sloped faces take world up projected into their plane, the base is level
+  // and takes world +X. An anisotropy of 1 would not settle this, because a
+  // frame scaled equally on both axes is isotropic and still changes area.
+  const faceted = densityRange(
+    buildAutoMoviePolyhedron([
+      [corner(-1, 0, -1), corner(1, 0, -1), corner(0, 2, 0)],
+      [corner(1, 0, -1), corner(1, 0, 1), corner(0, 2, 0)],
+      [corner(1, 0, 1), corner(-1, 0, 1), corner(0, 2, 0)],
+      [corner(-1, 0, 1), corner(-1, 0, -1), corner(0, 2, 0)],
+      [corner(-1, 0, -1), corner(-1, 0, 1), corner(1, 0, 1), corner(1, 0, -1)],
     ]),
-    { leastIsOne: true, mostIsOne: true },
+  );
+  TestValidator.equals(
+    "the other two frames keep area exactly, so being developed is not the cause",
+    namedFacts([
+      ["regionExtrusionLeast", () => nclose(prism.least, 1, 1e-12)],
+      ["regionExtrusionMost", () => nclose(prism.most, 1, 1e-12)],
+      ["projectedFrameLeast", () => nclose(faceted.least, 1, 1e-12)],
+      ["projectedFrameMost", () => nclose(faceted.most, 1, 1e-12)],
+    ]),
+    {
+      regionExtrusionLeast: true,
+      regionExtrusionMost: true,
+      projectedFrameLeast: true,
+      projectedFrameMost: true,
+    },
   );
 
   // Half-width 0.5 grows to 1 over 4 m of path, so each face leans 0.125 off it.
@@ -324,6 +355,7 @@ export const test_geometry_loft_atlas_density = (): void => {
         [
           ["straight", level],
           ["prism", prism],
+          ["faceted", faceted],
           ["taper", tapered],
           ["turn", turn],
           ["larger", larger],
@@ -338,6 +370,7 @@ export const test_geometry_loft_atlas_density = (): void => {
     {
       straight: true,
       prism: true,
+      faceted: true,
       taper: true,
       turn: true,
       larger: true,
