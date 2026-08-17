@@ -454,8 +454,8 @@ export const extrudeAutoMovieProfile = (props: {
  * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
  * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
  * escape here that it is for the coordinate-less builders. It measures this
- * same pair and a tapered loft shears the same way, and it gives up something
- * this one keeps: the map here is exactly equiareal, while a loft's `v` is path
+ * same pair, a tapered loft shears the same way, and it gives up something this
+ * one keeps: the map here is exactly equiareal, while a loft's `v` is path
  * distance rather than surface distance, so a taper or a bend costs it texel
  * density on top of the angle. Where the form has to stay a true surface of
  * revolution, the finish on it stays non-directional.
@@ -1016,7 +1016,7 @@ export const extrudeAutoMovieRegion = (props: {
  * around a level bend it is the section's width that costs density and not its
  * height: a tall thin fillet loses almost nothing where a wide flat band of the
  * same reach loses a third on the outside and doubles on the inside. Turn a
- * band on edge before turning it into a curve, or mitre it.
+ * band on edge before you curve it, or mitre a straight run instead.
  *
  * That is declared rather than pending, for the reason the revolution's shear
  * is. Making `v` measure surface distance would give every section point its
