@@ -54,7 +54,7 @@ export const test_mcp_inspect_subject_absent_files =
       if (
         productionCompileSucceeded("absent files fixture", compiled) === false
       )
-        return;
+        throw new Error("The absent files fixture did not compile.");
       const services = openAutoMovieProduction({
         projectRoot: fixture.root,
         productionId: "fixture-film",

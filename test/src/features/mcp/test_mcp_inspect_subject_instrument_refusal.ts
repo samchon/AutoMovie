@@ -91,7 +91,7 @@ export const test_mcp_inspect_subject_instrument_refusal =
         productionCompileSucceeded("instrument refusal fixture", compiled) ===
         false
       )
-        return;
+        throw new Error("The instrument refusal fixture did not compile.");
       const services = openAutoMovieProduction({
         projectRoot: fixture.root,
         productionId: "fixture-film",

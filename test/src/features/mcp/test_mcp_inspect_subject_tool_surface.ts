@@ -63,7 +63,7 @@ export const test_mcp_inspect_subject_tool_surface =
       if (
         productionCompileSucceeded("tool surface fixture", compiled) === false
       )
-        return;
+        throw new Error("The tool surface fixture did not compile.");
       const instrument = recordingInstrument();
       const application = new AutoMovieApplication({
         projectRoot: fixture.root,
