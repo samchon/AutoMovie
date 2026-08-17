@@ -143,13 +143,13 @@ Reuse is what makes this bite. `mergeAutoMovieMeshParts(` places every member th
 
 The region extrusion replaces the profile extrusion and the wall, and a loft carrying the same section at `at` 0 and `at` 1 replaces the sweep. Build a member that carries a finish with the replacement.
 
-Declaring the two sections the same removes the taper's loss from that substitute. It does not remove the bend's, and a sweep's own examples are a handrail, a cornice, an arch, and a duct, which are the curved runs the density law below bites hardest on. So the substitute is rigid where the path is straight, and where the path turns it replaces the geometry rather than the finish: read the texture section before you put a directional or density-critical finish on a curved replacement.
+Declaring the two sections the same removes the taper's loss from that substitute. It does not remove the bend's, and a sweep's own examples are a handrail, a cornice, an arch, and a duct, which are the curved runs the density law above bites hardest on. So the substitute is rigid where the path is straight, and where the path turns it replaces the geometry rather than the finish: reread that law before you put a directional or density-critical finish on a curved replacement.
 
 The support surface has no replacement, because its whole point is that the drawn ground is the queried ground. A level floor that has to carry a tile is a second drawable extruded from the same footprint, and a relieved one has no atlas-bearing equivalent at all, since a flat region does not follow its height rule.
 
 `mergeAutoMovieMeshes` and `mergeAutoMovieMeshParts` keep coordinates only when every member has them, so one coordinate-less member silently costs the whole assembly its finish. That is deliberate: filling the gap with zeros would pin that member to one texel and read as flat paint.
 
-Nothing recomputes a declared scale against the surface it landed on unless you ask.
+Nothing recomputes a declared scale against the surface it is bound to unless you ask.
 
 `validateTextureScale` is the engine's answer to that question, and it needs both halves at once, so it reads model records rather than a material on its own. A binding that declares `"normalized"` against a set measuring more than one is refused, because a normalized set covers its surface exactly once and a 9 m span is the declaration contradicting the geometry it was bound to. A `"surface-metres"` binding whose implied `1 / scale` tile is larger than the surface's own span is warned about instead, because that same geometry is how one image is legitimately fitted to a single face, and a binding whose sampler clamps that axis has already said so.
 
