@@ -7,8 +7,9 @@ output, geometry facts, actual-frame evidence, and review freshness.
 
 Treatment and screenplay prose are under `docs/{{name}}`. Keep their exact
 beat and `SCN-*` identities aligned with
-`.automovie/design/screenplay/index.json`; once shots exist, retain locked
-numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions.
+`.automovie/design/{{name}}/screenplay/index.json`; once shots exist, retain
+locked numbers, use `OMITTED` tombstones for deletions, and alpha ids for
+insertions.
 `npm run lint` checks those joins and requires compiled realization plus completed
 shot/film acceptance evidence for the same realized shot before an active scene
 leaves the coverage ledger. Catalog entries bind explicitly to shared model,
@@ -81,8 +82,17 @@ imports.
 
 Two consequences decide how a replacement goes. The emitter writes and never
 deletes, so a starter record you stop deriving stays resident and keeps asking
-for the shot it names; delete the file under `.automovie/design` yourself. And
-the screenplay index is not derived at all, by design.
+for the shot it names. `npm run design` refuses while one is there and prints
+its project-relative path, so the removal set is one command rather than a hunt.
+Delete the file it names, or derive it from a source that owns it. And the
+screenplay index is not derived at all, by design, so it is never named there.
+
+That refusal is the only place the question can be asked. A resident record that
+references only other resident records is internally consistent, so the compiler
+has nothing to refuse and builds it into `generated` instead: measured on a real
+replacement, four starter model recipes and a formation compiled into a finished
+production at `success: true` with zero diagnostics. Whether a record still has
+an owner is a question only the script that derives them can answer.
 
 Replacement is one pass rather than a milestone you can close halfway. Documents,
 source, and design cite each other in both directions, so the build stays red
