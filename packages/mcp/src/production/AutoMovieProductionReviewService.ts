@@ -1684,6 +1684,8 @@ const reviewTargets = (
     });
   for (const id of consumedModelIds(project, context))
     targets.push({ kind: "asset", id });
+  for (const target of authoredPrototypeTargets(project, context))
+    targets.push(target);
   if (graph.world !== null)
     targets.push({ kind: "design", design: { kind: "world" } });
   for (const id of graph.formations.keys())
@@ -1710,6 +1712,77 @@ const reviewTargets = (
     seen.add(key);
     return true;
   });
+};
+
+/**
+ * One review target per prototype this production's own source authored.
+ *
+ * The review rules bind frames, intervals, and work stages, and an authored thing
+ * is in none of those populations, so a production could satisfy every clause
+ * while nobody had ever looked at anything it built. `#1902` is the demonstration
+ * rather than the hypothesis: an oriel window that was a single box, fourteen
+ * polearms with no heads, and half-timber braces at 4.6 degrees all survived
+ * compile, lint, the module verification, the whole test suite, and a 24-view
+ * capture catalogue. Each one is obvious the moment the object is looked at
+ * alone, and no gate ever asked for that.
+ *
+ * The unit is the prototype rather than the placement, because that is where the
+ * defect lives and because the alternative is unusable: one measured production
+ * carried 3,474 placings of 192 authored prototypes, and 2,392 of those placings
+ * were the same slate. Reviewing one slate is the work; reviewing it 2,392 times
+ * is not.
+ *
+ * A prototype is addressed through the first compiled shot that carries it, in
+ * stable path order. The obligation is about the prototype, and one shot is enough
+ * to reach it: the worksheet binds that shot's compiled bytes, so editing the
+ * prototype stales the review through the same fingerprint every other target
+ * uses.
+ *
+ * Only what this production authored is listed. A model recipe the design graph
+ * declares is already an `asset` target, and a runtime model the compiler owns is
+ * not the production's to answer for, so both are excluded rather than counted
+ * twice or demanded of the wrong owner.
+ */
+const authoredPrototypeTargets = (
+  project: AutoMovieProductionProject,
+  context?: IReviewReadContext,
+): IAutoMovieReviewTarget[] => {
+  const generated = currentGeneratedManifest(project, context);
+  if (generated === null) return [];
+  const graph = project.graph();
+  const seen = new Set<string>();
+  const targets: IAutoMovieReviewTarget[] = [];
+  for (const entry of generated.files
+    .filter((file) => file.path.startsWith("shots/"))
+    .sort((left, right) => compareCodeUnits(left.path, right.path)))
+    try {
+      const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(
+        JSON.parse(
+          Buffer.from(
+            currentGeneratedFile(project, entry.path, context),
+          ).toString("utf8"),
+        ) as unknown,
+      );
+      if (validation.success === false) continue;
+      const compiled = validation.data;
+      for (const model of [
+        ...(compiled.authoredModels ?? []),
+        ...(compiled.builtEnvironments ?? []).flatMap(
+          (environment) => environment.models,
+        ),
+      ]) {
+        if (graph.models.has(model.id) || seen.has(model.id)) continue;
+        seen.add(model.id);
+        targets.push({
+          kind: "subject",
+          shot: compiled.shot.id,
+          subject: `prototype:${model.id}`,
+        });
+      }
+    } catch {
+      // Invalid generated shot bytes are already compiler diagnostics.
+    }
+  return targets;
 };
 
 const consumedModelIds = (

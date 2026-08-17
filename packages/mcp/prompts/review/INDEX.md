@@ -65,6 +65,14 @@ Only evidence the worksheet returned. In particular:
 - an inspection observation carries `deliveryEvidence: false` and discharges no delivery review, whatever it shows;
 - a review of one surface never stands in for another: an accepted design does not make a shot look right, and an accepted shot does not accept the rendition derived from it.
 
+## Every prototype you author owes a review of itself
+
+The queue lists one `subject` target per prototype this production's own source authored, addressed through a shot that carries it, and each one starts `missing`. Nothing else discharges it: a frame that happens to contain the thing is a claim about a film moment, and the defects this obligation exists for are invisible at a film moment. One measured production shipped an oriel window that was a single box, fourteen polearms with no heads, and braces spanning three bays while rising 0.84 metres, and every gate in the product passed while they stood, because nothing asked whether the object was right.
+
+The unit is the prototype rather than the placement, because that is where such a defect lives and because the alternative is unusable: the same production carried 3,474 placings of 192 prototypes, 2,392 of them the same slate. Review the slate once.
+
+It binds at delivery. An unreviewed prototype is a warning at `review` scope, because a building accumulates prototypes while it is still being massed and stopping that would be wrong, and it is a refusal at `final`. Read `REVIEW_SUBJECT` for the worksheet and `SUBJECT_INSPECTION` for the queries and the viewpoints that make looking possible.
+
 ## Staleness is the normal state
 
 Any change to the target or to what it derives from stales its review. A recompile, a source edit, a recapture, a repaint reroll, a recut, a remix, or a receipt change all mean the same thing: prepare again, look again, submit again.
