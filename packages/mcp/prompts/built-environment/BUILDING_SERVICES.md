@@ -16,6 +16,37 @@ A wet zone binds a logical space to a `dry`, `damp`, `wet`, or `immersed` grade 
 
 Declare the network from shot source, where it is validated with the building it serves, and draw it from a project script. `lowerServiceNetwork` sweeps a regular section along every authored centre line and refuses an invalid graph outright, because a picture of a working installation placed in front of the reason it does not work is the one outcome this record exists to prevent. `lowerWetZoneDrainage` turns a zone's own supply inlets and drains into the sources and sinks of the fluid domain standing in that room, which is how a floor that falls to a gully composes the water solver instead of describing water twice. A zone whose room holds no declared domain has nothing to drain into, and `npm run building:report` reports that as `not-run` rather than lowering an installation that appears to drain.
 
+## What the network cannot answer, by name
+
+A clean structural result is not a complete one. `validateServiceNetwork` answers whether the graph is whole and deliberately answers nothing about head loss, voltage drop, or duct pressure, so reading its success as "the installation works" is the failure this section exists to stop.
+
+`serviceAnalysisSupport` names the difference. It takes the network and the environment and reports one entry per analysis axis, each either supported and measured or explicitly `unsupported`, which is what separates an axis nobody measured from an axis with nothing wrong. Read it beside the validation and carry the `unsupported` axes into the review as unmeasured rather than as passing.
+
+Three more measurements answer questions the graph alone does not. `serviceSegmentBounds` gives one run's world box, which is what a clash or a clearance question is asked against. `serviceEnvelopeObstructions` names the runs that intrude on a stated maintenance volume, so "can this be serviced" is a list of ids rather than an impression. `serviceNetworkSchematic` lays one system out as a schematic, which is the document a reviewer reads when the geometry is too dense to trace by eye.
+
+All four run in a project script under `scripts/`; they read a compiled building rather than help build one.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { serviceAnalysisSupport } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+for (const [shot, compiled] of state.generated.shots)
+  for (const network of compiled.serviceNetworks ?? []) {
+    const environment = (compiled.builtEnvironments ?? []).find(
+      (candidate) => candidate.id === network.environment,
+    );
+    if (environment === undefined) continue;
+    for (const report of serviceAnalysisSupport({ network, environment }))
+      console.log(shot, network.id, report.check, report.status, report.reason);
+  }
+```
+
 ## Look at what the run does to the room
 
 A network that validates is a network whose graph is complete. Whether a run crosses a room where nothing should cross it, or lands a terminal where a camera will see it, is a question about the picture.

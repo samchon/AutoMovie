@@ -20,6 +20,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SPECIFIER = "@automovie/engine";
 export type AutoMovieSandboxEngineExport =
   | "AutoMovieSubject"
   | "AutoMovieSubjectGroup"
+  | "assertWorldPlacements"
   | "autoMovieAssemblyOpeningReveal"
   | "autoMoviePatternInstanceTransforms"
   | "autoMoviePatternTextureTransforms"
@@ -61,7 +62,13 @@ export type AutoMovieSandboxEngineExport =
   | "triangulateAutoMovieRegion"
   | "validateAutoMovieMaterialAssembly"
   | "validateAutoMovieMaterialSubstance"
-  | "worldSurfaceHeight";
+  | "worldAlongRoute"
+  | "worldBlock"
+  | "worldGrid"
+  | "worldRamp"
+  | "worldScatter"
+  | "worldSurfaceHeight"
+  | "worldTerrain";
 
 /**
  * The engine surface a deterministic source module may import at runtime.
@@ -99,6 +106,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
   [
     "AutoMovieSubject",
     "AutoMovieSubjectGroup",
+    "assertWorldPlacements",
     "autoMovieAssemblyOpeningReveal",
     "autoMoviePatternInstanceTransforms",
     "autoMoviePatternTextureTransforms",
@@ -140,7 +148,13 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "triangulateAutoMovieRegion",
     "validateAutoMovieMaterialAssembly",
     "validateAutoMovieMaterialSubstance",
+    "worldAlongRoute",
+    "worldBlock",
+    "worldGrid",
+    "worldRamp",
+    "worldScatter",
     "worldSurfaceHeight",
+    "worldTerrain",
   ];
 
 /**
@@ -244,6 +258,7 @@ export type AutoMovieSandboxCapabilityQuestion =
   | "How do I turn a declared building into the geometry a frame shows?"
   | "How do I name a part of something I placed?"
   | "How do I derive a placed object's world frame from its relation?"
+  | "How do I build the site the building stands on?"
   | "How high is the ground under this point?";
 
 /**
@@ -273,7 +288,8 @@ const QUESTION_ORDER: Readonly<
   "How do I turn a declared building into the geometry a frame shows?": 8,
   "How do I name a part of something I placed?": 9,
   "How do I derive a placed object's world frame from its relation?": 10,
-  "How high is the ground under this point?": 11,
+  "How do I build the site the building stands on?": 11,
+  "How high is the ground under this point?": 12,
 };
 
 /**
@@ -370,6 +386,13 @@ const QUESTION_OF_EXPORT: Readonly<
   placementChildNode: "How do I name a part of something I placed?",
   propAnchorFrame:
     "How do I derive a placed object's world frame from its relation?",
+  assertWorldPlacements: "How do I build the site the building stands on?",
+  worldAlongRoute: "How do I build the site the building stands on?",
+  worldBlock: "How do I build the site the building stands on?",
+  worldGrid: "How do I build the site the building stands on?",
+  worldRamp: "How do I build the site the building stands on?",
+  worldScatter: "How do I build the site the building stands on?",
+  worldTerrain: "How do I build the site the building stands on?",
   worldSurfaceHeight: "How high is the ground under this point?",
 };
 

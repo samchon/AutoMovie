@@ -1,3 +1,4 @@
+import * as AutoMovieEngine from "@automovie/engine";
 import {
   AUTOMOVIE_PRODUCTION_GUIDE_NAMES,
   AUTOMOVIE_SANDBOX_MODULE_EXPORTS,
@@ -37,6 +38,14 @@ import path from "node:path";
  * does not serve, which is what `SUBJECT_INSPECTION` already does, so that is
  * what this case asks for.
  *
+ * The tier's inputs belong to the same obligation, and they were missed once
+ * already. `supportContactsFor`, `affordanceSupportContacts`, and
+ * `bodyCenterOfMass` each say in their own prose that they produce exactly what
+ * these checks consume, and all three were unreachable while the checks were
+ * taught: the guide told an author to type contact coordinates by hand. A check
+ * an author can only feed by hand is a check fed by a claim, so the population
+ * here is the checks and the producers the engine's own prose points at.
+ *
  * Scenarios:
  *
  * 1. The scan finds physics-emitting exports and finds call sites for some of
@@ -49,6 +58,9 @@ import path from "node:path";
  *    than listed as an inventory. `#1935` is the precedent: a capability that
  *    was published, documented, and read still went uncalled at the moment it
  *    was needed.
+ * 4. Every engine export whose own JSDoc says it feeds one of those checks is
+ *    named by a guide too, so the tier stays teachable end to end rather than
+ *    only from the middle.
  */
 export const test_mcp_guide_physical_plausibility_teaching = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-physics-"));
@@ -196,6 +208,48 @@ const isScriptExample = (example: string): boolean =>
 const distinct = (values: readonly string[]): string[] =>
   [...new Set(values)].sort(compareCodeUnits);
 
+/**
+ * The exports the engine's own prose names as feeding one of these checks.
+ *
+ * Derived from the JSDoc rather than listed, on the same reasoning as the
+ * checks: a producer added later comes with the sentence that says what it
+ * produces for, and that sentence is what this reads. A file's own exports are
+ * excluded, since a validator naming its neighbours inside one module is
+ * describing its internals rather than an author's entry point.
+ *
+ * Only what the package publishes counts. A module-level export the engine never
+ * re-exports is not an author's entry point at all, and demanding a guide teach
+ * one would fill the corpus with internals: `contactMask` is the measured case,
+ * named in a validator's prose as the shared ground predicate and reachable from
+ * nowhere outside the engine.
+ */
+const inputProducers = (
+  checks: ReadonlySet<string>,
+): ReadonlyMap<string, string> => {
+  const produced = new Map<string, string>();
+  for (const file of walk(path.join(REPOSITORY_ROOT, "packages/engine/src"))) {
+    const text = fs.readFileSync(file, "utf8");
+    const own = [...text.matchAll(/^export const (\w+) = \(/gmu)].map(
+      (match) => match[1]!,
+    );
+    if (own.some((name) => checks.has(name))) continue;
+    for (const name of own) {
+      const declaration = text.indexOf(`export const ${name} = (`);
+      const head = text.slice(0, declaration);
+      const jsdoc = head.slice(head.lastIndexOf("/**"));
+      const cited = [...checks].find((check) =>
+        new RegExp(`(?:\\{@link |\`)${check}(?:\\}|\`)`, "u").test(jsdoc),
+      );
+      if (
+        cited !== undefined &&
+        typeof (AutoMovieEngine as Record<string, unknown>)[name] === "function"
+      )
+        produced.set(name, cited);
+    }
+  }
+  return produced;
+};
+
 const inspectPhysicsTeaching = (application: AutoMovieApplication): void => {
   const sources = new Map(
     SOURCE_ROOTS.flatMap((relative) =>
@@ -237,6 +291,31 @@ const inspectPhysicsTeaching = (application: AutoMovieApplication): void => {
           guides.some((guide) => mentions(guide.prose).includes(name)) ===
           false,
       ),
+    ),
+    [],
+  );
+
+  const producers = inputProducers(
+    new Set(uncalled.map((entry) => entry.name)),
+  );
+  TestValidator.equals(
+    "the engine names producers for the checks it asks an author to run",
+    producers.size > 0,
+    true,
+  );
+  TestValidator.equals(
+    "every producer of a taught check's input is taught as well",
+    distinct(
+      [...producers]
+        .filter(
+          ([producer]) =>
+            guides.some((guide) =>
+              new RegExp(`(?:^|[^\\w$.])${producer}(?![\\w$])`, "u").test(
+                guide.prose,
+              ),
+            ) === false,
+        )
+        .map(([producer, check]) => `${producer} (feeds ${check})`),
     ),
     [],
   );

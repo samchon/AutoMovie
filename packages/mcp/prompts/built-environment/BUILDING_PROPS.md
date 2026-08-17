@@ -111,7 +111,11 @@ for (const [shot, compiled] of state.generated.shots)
 
 Resting is not standing. `builtEnvironmentSupportStatus` answers whether a body meets its support; it does not answer whether the body stays there once it does. `detectSupportToppling` takes the object's centre of mass and the contact points it stands on, projects the centre onto the ground plane, and warns when it overhangs the convex hull of those contacts past `margin`, returning the pivot edge and the direction it falls. `detectFreeFall` asks the same question of a body held up by nothing: given a declared physical body, its support contacts, and whether it is attached or already falling, it warns and offers the fall arc. A shelf bracket that rests on its wall and a vase resting on two centimetres of a table edge both pass the support query, and only these two separate them.
 
-State the contacts yourself. Neither derives them from the building, so the top face a thing stands on is an authored input here, and a contact list that describes a face nobody modelled produces a confident answer about nothing. Both are advisory: their findings ride `warnings` on a validation whose `success` is `true`, which `MOTION` states in full for the motion side of the same tier, and a deliberately levitating prop sets `physicsIntent` to say so.
+Derive their inputs rather than typing coordinates. `supportContactsFor` takes a space and an object's footprint and returns a contact at each surface a footprint point stands over, walkable or not, contributing none where it stands over nothing. `affordanceSupportContacts` does the same for one `stack-top` affordance of a prop, carrying its extent corners through the affordance frame and the parent's world transform. `bodyCenterOfMass` answers the centre: the body's declared `centerOfMass` when it states one, and the volume-weighted centroid of the model's own primitives when it does not, in that model's own frame and `null` for a model with no volume to weigh. Both checks consume exactly what those three produce.
+
+Type a contact list only when you mean a face nobody modelled, and say why. A hand-written contact is a claim, and a claim about a face that does not exist buys a confident answer about nothing, which is the failure the derivation exists to remove.
+
+Both checks are advisory: their findings ride `warnings` on a validation whose `success` is `true`, which `MOTION` states in full for the motion side of the same tier, and a deliberately levitating prop sets `physicsIntent` to say so.
 
 ```ts
 import {
@@ -119,31 +123,59 @@ import {
   requireCurrentAutoMovieProjectState,
 } from "@automovie/cli";
 import {
+  Quaternion,
+  Vector3,
+  bodyCenterOfMass,
   builtEnvironmentPlacementBounds,
   detectSupportToppling,
+  propAnchorFrame,
 } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(
   loadAutoMovieProjectState({ root: process.cwd() }),
 );
-const environment = state.generated.shots.get("kitchen")?.builtEnvironments?.[0];
-if (environment === undefined)
-  throw new Error('shot "kitchen" compiles no built environment');
-const table = builtEnvironmentPlacementBounds({
+const compiled = state.generated.shots.get("kitchen");
+const environment = compiled?.builtEnvironments?.[0];
+const kettle = state.generated.models.get("kettle");
+if (compiled === undefined || environment === undefined || kettle === undefined)
+  throw new Error('shot "kitchen" compiles no kettle standing in a building');
+const counter = builtEnvironmentPlacementBounds({
   environment,
   target: { kind: "element", id: "counter" },
 });
-if (table === null || table.basis === "element-origin-point")
+if (counter === null || counter.basis === "element-origin-point")
   throw new Error("the counter resolved to no measured volume to stand on");
+// The centre comes from the model, not from a number typed here: a declared
+// centre of mass wins over the geometric one, and only the model knows which it
+// has. It arrives in the model's own frame, so it is carried into the world
+// through the frame the prop's own relation resolves to; adding it to a bounds
+// corner would be right only for a prop nobody rotated.
+const centre = bodyCenterOfMass(kettle);
+// A building surface resolves from the environment alone. A prop affordance
+// would need the current prop registry and the staged set as well, which the
+// relation section above says.
+const stand = propAnchorFrame({
+  target: {
+    kind: "surface",
+    environment: environment.id,
+    surface: "counter-top",
+  },
+  environments: [environment],
+});
+if (centre === null)
+  throw new Error("the kettle model carries no geometry to weigh");
+if (stand === null) throw new Error("the counter top resolved to no frame");
 const result = detectSupportToppling({
   node: "kettle",
-  // The prop's own centre of mass, in the same world frame as the contacts.
-  centerOfMass: { x: 1.2, y: 0.94, z: 0.4 },
+  centerOfMass: Vector3.add(
+    stand.translation,
+    Quaternion.rotateVector(stand.rotation, centre),
+  ),
   support: [
-    { x: table.min.x, y: table.max.y, z: table.min.z },
-    { x: table.max.x, y: table.max.y, z: table.min.z },
-    { x: table.max.x, y: table.max.y, z: table.max.z },
-    { x: table.min.x, y: table.max.y, z: table.max.z },
+    { x: counter.min.x, y: counter.max.y, z: counter.min.z },
+    { x: counter.max.x, y: counter.max.y, z: counter.min.z },
+    { x: counter.max.x, y: counter.max.y, z: counter.max.z },
+    { x: counter.min.x, y: counter.max.y, z: counter.max.z },
   ],
 });
 if (result.toppling !== null)

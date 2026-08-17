@@ -1,4 +1,5 @@
 import {
+  assertWorldPlacements,
   autoMovieAssemblyOpeningReveal,
   autoMoviePatternInstanceTransforms,
   autoMoviePatternTextureTransforms,
@@ -39,6 +40,12 @@ import {
   triangulateAutoMovieRegion,
   validateAutoMovieMaterialAssembly,
   validateAutoMovieMaterialSubstance,
+  worldAlongRoute,
+  worldBlock,
+  worldGrid,
+  worldRamp,
+  worldScatter,
+  worldTerrain,
 } from "@automovie/engine";
 
 import { AutoMovieSandboxEngineExport } from "./sandboxEngineSurface";
@@ -62,15 +69,29 @@ export type IAutoMovieSandboxEngineAnswer =
  * each a rounding difference the byte-parity gate reported hours later and an
  * author would have seen as a frame that moved.
  *
- * A name absent here is answered by a stand-in the sandbox defines itself.
- * `defineShot` and the subject classes are one reason: they carry a closure or
- * a prototype, and neither survives a JSON round trip. `worldSurfaceHeight` is
- * the other: the sandbox asks it once per placed slot, so bridging it would
- * serialise a whole terrain record per crowd member, and the copy stays inside
- * the sandbox where the byte-parity gate reads it.
+ * A surface name absent here is answered by a stand-in the sandbox defines
+ * itself. `defineShot` and the subject classes are one reason: they carry a
+ * closure or a prototype, and neither survives a JSON round trip.
+ * `worldSurfaceHeight` is the other: the sandbox asks it once per placed slot,
+ * so bridging it would serialise a whole terrain record per crowd member, and
+ * the copy stays inside the sandbox where the byte-parity gate reads it.
+ *
+ * `worldHeightfield` is the third case: absent from
+ * `AUTOMOVIE_SANDBOX_ENGINE_SURFACE` as well, so no stand-in answers it and shot
+ * source cannot name it at all. That is the ordinary state of an engine export
+ * rather than a distinction, since reach is granted per name; it is written down
+ * here because every builder it sits among is reachable and a reader would
+ * otherwise take the hole for an oversight. It samples a caller-supplied
+ * `(x, z) => y` function, and a function is exactly what a JSON round trip
+ * cannot carry, so bridging is not open to it either; standing it in would mean
+ * a second copy of the sampling math inside the sandbox, which is the failure
+ * this table exists to prevent. A production that needs a sampled heightfield
+ * derives it in a project script and imports the resulting data, which is what
+ * `DERIVED_ARTIFACTS` is for.
  */
 export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandboxEngineExport[] =
   [
+    "assertWorldPlacements",
     "autoMovieAssemblyOpeningReveal",
     "autoMoviePatternInstanceTransforms",
     "autoMoviePatternTextureTransforms",
@@ -111,6 +132,12 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "triangulateAutoMovieRegion",
     "validateAutoMovieMaterialAssembly",
     "validateAutoMovieMaterialSubstance",
+    "worldAlongRoute",
+    "worldBlock",
+    "worldGrid",
+    "worldRamp",
+    "worldScatter",
+    "worldTerrain",
   ];
 
 /**
@@ -127,6 +154,7 @@ const bridged =
 
 const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
   {
+    assertWorldPlacements: bridged(assertWorldPlacements),
     autoMovieAssemblyOpeningReveal: bridged(autoMovieAssemblyOpeningReveal),
     autoMoviePatternInstanceTransforms: bridged(
       autoMoviePatternInstanceTransforms,
@@ -179,6 +207,12 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     validateAutoMovieMaterialSubstance: bridged(
       validateAutoMovieMaterialSubstance,
     ),
+    worldAlongRoute: bridged(worldAlongRoute),
+    worldBlock: bridged(worldBlock),
+    worldGrid: bridged(worldGrid),
+    worldRamp: bridged(worldRamp),
+    worldScatter: bridged(worldScatter),
+    worldTerrain: bridged(worldTerrain),
   };
 
 /**
