@@ -18,6 +18,14 @@ import ts from "typescript-compiler";
  * for it: the page now prints the pace the frames it is actually drawing allow,
  * beside the pace it was asked for, whenever the two differ.
  *
+ * What the line reports is the share of real time the frames just drawn
+ * actually carried the eye, less the single largest interval, which a returning
+ * tab would otherwise turn into a stall that never happened. That share is the
+ * travel by definition rather than an estimate of it. Reading the median frame
+ * instead was tried first and flying the page refuted it: at a stuttering 4 fps
+ * it printed 1.61 m/s for an eye covering 0.88, and at a median frame of 58 ms
+ * it printed no deficit while three fifths of the travel was gone.
+ *
  * The page cannot be imported here — it opens with a top-level `fetch` and
  * needs a document — so the function under test is read out of the shipped
  * source by its declaration, compiled, and run. An extraction that finds
@@ -31,8 +39,8 @@ import ts from "typescript-compiler";
  *
  * 1. The page clamps and reports against one constant, `MAX_FRAME_SECONDS` at
  *    0.1 s, and the intervals the readout measures are the unclamped ones.
- * 2. Frames inside the budget print the asked-for speed alone, and in
- *    particular a 60 fps eye is not reported flying at six times its setting.
+ * 2. Frames inside the budget print the asked-for speed alone, and a 60 fps eye
+ *    is never reported flying faster than it was set to.
  * 3. The reported 2.80 m witness is reproduced: at the frame rate that produced
  *    it, the line would have told the operator 2.80 m/s.
  * 4. The frame-time census from the same report (a 0.3668 s median) reads as
@@ -46,12 +54,14 @@ import ts from "typescript-compiler";
  *    reported: the median is what separates a returning tab from a slow set.
  * 8. A window with no samples yet, and one of instantaneous frames, print the
  *    asked-for speed rather than dividing by nothing.
- * 9. A window still filling reports the slow frame rather than averaging it
- *    away.
+ * 9. A window of two cannot tell a slow set from a gap and says nothing; three
+ *    steady slow frames can and do.
  * 10. The printed pace is the distance a held key buys, replayed against the
  *     page's own integration over one second: it reproduces the 2.80 m the
- *     report measured, and on an alternating frame rate it under-states the
- *     travel by a stated amount rather than an unknown one.
+ *     report measured, and it tracks an alternating frame rate that a typical
+ *     frame could not describe.
+ * 11. A window whose typical frame is inside the budget and whose total is not
+ *     still reports its deficit. This is the case a real flight found.
  */
 export const test_viewer_inspect_flight_readout = (): void => {
   const page = ts.createSourceFile(
@@ -176,16 +186,16 @@ export const test_viewer_inspect_flight_readout = (): void => {
   );
 
   //----
-  // 9. A WINDOW STILL FILLING REPORTS THE SLOW FRAME
+  // 9. TWO FRAMES CANNOT TELL A SLOW SET FROM A GAP
   //----
-  // The buffer starts empty, so the first frames are read from an even-length
-  // window. Taking the upper of the two middles reports the slower frame, which
-  // is the reading that matches what the eye is about to do on a set that has
-  // only just started drawing slowly.
+  // The buffer starts empty, and the largest interval is always dropped, so a
+  // window of two has nothing left to measure once the drop is taken. It says
+  // nothing rather than guessing, which is the same refusal it owes a returning
+  // tab: at two samples those two situations are indistinguishable.
   TestValidator.equals(
-    "a half-filled window does not average the slow frame away",
-    readout(4, [0, 0.3668], 0.1),
-    "4.00m/s (flying 1.09m/s at 2.7fps)",
+    "a window too short to tell one from the other stays quiet",
+    [readout(4, [0, 0.3668], 0.1), readout(4, [0.3668, 0.3668, 0.3668], 0.1)],
+    ["4.00m/s", "4.00m/s (flying 1.09m/s at 2.7fps)"],
   );
 
   //----
@@ -197,13 +207,13 @@ export const test_viewer_inspect_flight_readout = (): void => {
   // budget, so the eye covers 4 x 7 x 0.1 = 2.80 m -- the distance the report
   // measured on the mansion -- and the line now prints exactly that number.
   //
-  // A frame rate that alternates is where the median stops being the whole
-  // truth, and the shortfall is stated here rather than left to be discovered.
-  // A window of 0.3 s and 0.05 s frames has a median of 0.3 s and reads
-  // 1.33 m/s, while the first second of it holds three long frames and two
-  // short ones and so buys 4 x (3 x 0.1 + 2 x 0.05) = 1.60 m. The line is a
-  // plan and not a proof; what a finding is written from is the position
-  // printed beside it, which is exact whatever the frames cost.
+  // An alternating frame rate is where a typical frame stops describing
+  // anything, and it is why the line sums rather than summarises. A window of
+  // 0.3 s and 0.05 s frames carries 1.05 s of travel out of the 2.45 s it costs
+  // once the largest is dropped, so it reads 1.71 m/s, and the first second of
+  // it holds three long frames and two short ones and buys
+  // 4 x (3 x 0.1 + 2 x 0.05) = 1.60 m. The reading a median took of the same
+  // window was 1.33 m/s.
   TestValidator.equals(
     "the flown figure is the metres one second of holding a key actually buys",
     [
@@ -215,9 +225,30 @@ export const test_viewer_inspect_flight_readout = (): void => {
     [
       "4.00m/s (flying 2.80m/s at 7.0fps)",
       "2.80",
-      "4.00m/s (flying 1.33m/s at 3.3fps)",
+      "4.00m/s (flying 1.71m/s at 5.7fps)",
       "1.60",
     ],
+  );
+
+  //----
+  // 11. A TYPICAL FRAME THAT IS FINE, OVER A TOTAL THAT IS NOT
+  //----
+  // Measured, not imagined. Flying the page under an induced 100x CPU throttle
+  // produced a window whose median frame was 58 ms — comfortably inside the
+  // budget — while the eye lost three fifths of its travel to the frames around
+  // that median, and the line said nothing at all. The shape is reproduced
+  // here: eight 0.05 s frames and seven 0.5 s ones put the median at 0.05 s,
+  // and the total carries 1.0 s out of 3.4 s once the largest is dropped, so
+  // the line now reports 1.18 m/s where reading the median frame reported no
+  // deficit whatsoever.
+  const stuttering = [
+    ...new Array<number>(8).fill(0.05),
+    ...new Array<number>(7).fill(0.5),
+  ];
+  TestValidator.equals(
+    "a deficit spread across the slow half is still reported",
+    readout(4, stuttering, 0.1),
+    "4.00m/s (flying 1.18m/s at 4.1fps)",
   );
 };
 
