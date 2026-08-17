@@ -54,6 +54,61 @@ export const unsupportedBodies = (
   });
 ```
 
+Asking about a pair you doubt is not the same as asking about the building. `builtEnvironmentSupportSweep` and `builtEnvironmentPlacementOverlapSweep` take the environment and nothing else: the first reports every body with clear air under it, the nearest measurable body below each one and the clearance to it, beside counts of what stood on the ground, what stood on something, and what could not be measured at all; the second reports every pair whose volumes intersect, graded by the share of the smaller body inside the larger and deepest first. Exact face contact is not intersection, so a slab bearing on a wall head and a tenon in its mortise produce nothing, and what remains is interpenetration. Neither claims a support relation. The first says what is under a body, which is a measurement; the declared relation stays yours to state and `builtEnvironmentSupportStatus` stays the way to judge it.
+
+Read the census before the findings. Both answers carry what they measured and what they cost, and an empty finding list from a sweep that resolved nothing reads exactly like a clean building. A body the record locates but carries no vertices for is judged as the point it states, so an `element-origin-point` basis on a floating finding is a claim about a point rather than about a member hanging in the air.
+
+The sweeps run in a project script under `scripts/`, where the whole engine is available, because they read a compiled building rather than help build one.
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import {
+  builtEnvironmentPlacementOverlapSweep,
+  builtEnvironmentSupportSweep,
+} from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+for (const [shot, compiled] of state.generated.shots)
+  for (const environment of compiled.builtEnvironments ?? []) {
+    const support = builtEnvironmentSupportSweep({ environment, groundY: 0 });
+    console.log(
+      shot,
+      environment.id,
+      "measured",
+      support.measured,
+      "grounded",
+      support.grounded,
+      "borne",
+      support.borne,
+      "unresolved",
+      support.unresolved.length,
+    );
+    for (const finding of support.floating)
+      console.log(
+        "  floating",
+        finding.body.kind,
+        finding.body.id,
+        finding.basis,
+        finding.below === null
+          ? "nothing below"
+          : finding.below.clearance.toFixed(3) + " m over " + finding.below.body.id,
+      );
+    const overlap = builtEnvironmentPlacementOverlapSweep({ environment });
+    for (const pair of overlap.pairs)
+      console.log(
+        "  intersects",
+        pair.left.id,
+        pair.right.id,
+        (pair.fraction * 100).toFixed(1) + "% of the smaller",
+      );
+  }
+```
+
 Resting is not standing. `builtEnvironmentSupportStatus` answers whether a body meets its support; it does not answer whether the body stays there once it does. `detectSupportToppling` takes the object's centre of mass and the contact points it stands on, projects the centre onto the ground plane, and warns when it overhangs the convex hull of those contacts past `margin`, returning the pivot edge and the direction it falls. `detectFreeFall` asks the same question of a body held up by nothing: given a declared physical body, its support contacts, and whether it is attached or already falling, it warns and offers the fall arc. A shelf bracket that rests on its wall and a vase resting on two centimetres of a table edge both pass the support query, and only these two separate them.
 
 State the contacts yourself. Neither derives them from the building, so the top face a thing stands on is an authored input here, and a contact list that describes a face nobody modelled produces a confident answer about nothing. Both are advisory: their findings ride `warnings` on a validation whose `success` is `true`, which `MOTION` states in full for the motion side of the same tier, and a deliberately levitating prop sets `physicsIntent` to say so.
