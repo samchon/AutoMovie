@@ -122,6 +122,10 @@ const declaredModel = (
  *    the same `"surface-metres"` declaration. A control declaring `"normalized"`
  *    over the same span is refused, which is what makes the two clean verdicts
  *    evidence that the validator looked rather than evidence that it skipped.
+ * 5. None of the three densities was taken over a shrinking subset. A collapsed
+ *    face carries no ratio, so it would drop out of both bounds and leave the
+ *    survivors looking better behaved than the surface is; all three meshes
+ *    report zero of them.
  */
 export const test_geometry_placement_scale_atlas = (): void => {
   const built = member();
@@ -211,5 +215,15 @@ export const test_geometry_placement_scale_atlas = (): void => {
       andSoIsTheScaledOne: true,
       withTheSameWarnings: true,
     },
+  );
+
+  TestValidator.equals(
+    "every density above was taken over real area, none of it over a collapsed face",
+    namedFacts([
+      ["turned", () => turned.degenerate === 0],
+      ["grown", () => grown.degenerate === 0],
+      ["stretched", () => stretched.degenerate === 0],
+    ]),
+    { turned: true, grown: true, stretched: true },
   );
 };
