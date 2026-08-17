@@ -251,14 +251,15 @@ for (const scenario of [...openingAcceptance, ...answerAcceptance])
  * second spelling of that layout. The screenplay index is deliberately absent,
  * because it is not a design target and nothing above derives it.
  */
-const resident = ((inventory) => [
+const inventory = project.inventory();
+const resident: IAutoMovieDesignTarget[] = [
   ...(inventory.production ? [{ kind: "production" } as const] : []),
   ...(inventory.world ? [{ kind: "world" } as const] : []),
   ...inventory.models.map((id) => ({ kind: "model", id }) as const),
   ...inventory.formations.map((id) => ({ kind: "formation", id }) as const),
   ...inventory.shots.map((id) => ({ kind: "shot", id }) as const),
   ...inventory.acceptance.map((id) => ({ kind: "acceptance", id }) as const),
-])(project.inventory());
+];
 
 /**
  * Refuse a resident design record no source in this script derives.

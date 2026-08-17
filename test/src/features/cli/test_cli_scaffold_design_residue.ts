@@ -93,27 +93,6 @@ export const test_cli_scaffold_design_residue = (): void => {
       [],
     );
 
-    // The refusal's remedy is "delete the file". A residue set that did not
-    // shrink when the author did that would send them round the same loop
-    // forever, so the shrink is the assertion rather than the deletion.
-    const doomed = resident.find(
-      (target): target is IAutoMovieDesignTarget & { kind: "model" } =>
-        target.kind === "model",
-    );
-    TestValidator.equals(
-      "the starter stores a model record to delete",
-      doomed !== undefined,
-      true,
-    );
-    fs.rmSync(path.join(fixture.root, project.designRecordPath(doomed!)));
-    TestValidator.equals(
-      "deleting a record removes it from the residue the emitter can see",
-      targets().some(
-        (target) => target.kind === "model" && target.id === doomed!.id,
-      ),
-      false,
-    );
-
     const index = path.join(
       fixture.root,
       ".automovie/design",
@@ -124,14 +103,38 @@ export const test_cli_scaffold_design_residue = (): void => {
       "the hand-authored screenplay index is resident and is never residue",
       {
         resident: fs.existsSync(index),
-        // No `IAutoMovieDesignTarget` addresses it, so nothing above can list
-        // it and the emitter cannot accuse the one record it deliberately
-        // leaves alone.
-        enumerated: targets().some(
-          (target) => (target as { kind: string }).kind === "screenplay",
+        // Proved by path rather than by kind. No `IAutoMovieDesignTarget`
+        // addresses the index, so the emitter cannot name the one record it
+        // deliberately leaves alone however the union later grows.
+        accusable: resident.some(
+          (target) =>
+            path.resolve(fixture.root, project.designRecordPath(target)) ===
+            path.resolve(index),
         ),
       },
-      { resident: true, enumerated: false },
+      { resident: true, accusable: false },
+    );
+
+    // The refusal's remedy is "delete the file". A residue set that did not
+    // shrink when the author did that would send them round the same loop
+    // forever, so the shrink is the assertion rather than the deletion. The
+    // record is chosen by sorted id so a directory-order change cannot make
+    // this case delete something else.
+    const doomed = resident
+      .filter((entry) => entry.kind === "model")
+      .map((entry) => (entry as { id: string }).id)
+      .sort(compareCodeUnits)[0];
+    TestValidator.equals(
+      "the starter stores a model record to delete",
+      doomed !== undefined,
+      true,
+    );
+    const target: IAutoMovieDesignTarget = { kind: "model", id: doomed! };
+    fs.rmSync(path.join(fixture.root, project.designRecordPath(target)));
+    TestValidator.equals(
+      "deleting a record removes it from the residue the emitter can see",
+      targets().some((entry) => entry.kind === "model" && entry.id === doomed),
+      false,
     );
 
     const emitter = fs.readFileSync(
