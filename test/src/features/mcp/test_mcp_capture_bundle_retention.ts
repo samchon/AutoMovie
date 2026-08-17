@@ -141,6 +141,7 @@ export const test_mcp_capture_bundle_retention = async (): Promise<void> => {
       { captured: true, passes: ["depth"] },
     );
 
+    application.getGuideDocument({ name: "REVIEW" });
     application.getGuideDocument({ name: "REVIEW_ASSET" });
     const worksheet = application.prepareReview({
       target: { kind: "asset", id: "soloist" },

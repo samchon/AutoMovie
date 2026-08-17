@@ -1,6 +1,27 @@
 # Guide Corpus
 
-The exact allowlist in `build/prompt.mjs` names every Markdown guide served by `AutoMovieApplication.getGuideDocument`. The build bundles only those filename stems into the generated `src/guides/AutoMovieGuideConstant.ts`; edit Markdown, never the constant. `README.md` documents the corpus and is not served.
+Every Markdown file under `prompts/` is served by `AutoMovieApplication.getGuideDocument`. `build/prompt.mjs` walks the tree and bundles them into the generated `src/guides/AutoMovieGuideConstant.ts`; edit Markdown, never the constant. This `README.md` is the one file that never serves.
+
+A document serves under its own SCREAMING_SNAKE_CASE stem, except an area's index. `INDEX.md` serves under the area's own name, so `review/INDEX.md` is `REVIEW` and `built-environment/INDEX.md` is `BUILT_ENVIRONMENT`, and the folder and the guide an agent asks for stay one word rather than two somebody has to keep in step. The corpus root is the one exception, and it has a reason: its index is the constitution, and `AUTOMOVIE_OVERALL` is the name every gate refusal, guide, and diagnostic already tells an agent to read.
+
+A guide joins the corpus by existing, so a document nobody wired is impossible rather than merely unlikely. What that costs is a stem collision, which the build refuses by name, and a served name that no closed union admits, which `test_mcp_guide_corpus_closure` refuses against `AUTOMOVIE_PRODUCTION_GUIDE_NAMES`.
+
+## Folders are the topic grouping
+
+The corpus is grouped the way the repository skills are: one folder per area, and inside the areas that need one, an index document that owns what the whole area shares.
+
+| Folder | Holds | Index |
+| --- | --- | --- |
+| root | the constitution and the router every session starts from | `INDEX.md`, served as `AUTOMOVIE_OVERALL` |
+| `design/` | the tracked records a production authors | none; each record stands alone |
+| `built-environment/` | one work as a measured record | `INDEX.md`, served as `BUILT_ENVIRONMENT` |
+| `craft/` | the decisions no record can make for you | none; each craft stands alone |
+| `source/` | what you write, and what compiles it | none |
+| `evidence/` | producing and reading what is actually there | none |
+| `review/` | recording a judgment that outlives you | `INDEX.md`, served as `REVIEW` |
+| `external/` | what comes from outside the repository | none |
+
+An area gets an index when its documents share a discipline that would otherwise be restated in each of them. `REVIEW` earned one because six target guides were repeating the same submission rules; `BUILT_ENVIRONMENT` earned one because its topics are conditional readings of one record. Do not add an index that is only a list of links; the constitution's Guide selection is already that list.
 
 ## Document classes
 

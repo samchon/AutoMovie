@@ -121,7 +121,7 @@ export const test_mcp_review_criterion_vocabulary = (): void => {
         kind: target.kind,
         agreed: true,
         overallFirst: "AUTOMOVIE_OVERALL" as const,
-        documents: 2,
+        documents: 3,
       })),
     );
 
@@ -129,7 +129,7 @@ export const test_mcp_review_criterion_vocabulary = (): void => {
       "the document a review target demands teaches every criterion it will be judged by",
       demanded.flatMap((entry) => {
         const topic = entry.prepare.filter(
-          (guide) => guide !== "AUTOMOVIE_OVERALL",
+          (guide) => guide !== "AUTOMOVIE_OVERALL" && guide !== "REVIEW",
         );
         const content = topic
           .map((guide) => reader.getGuideDocument({ name: guide }).content)
@@ -158,13 +158,14 @@ export const test_mcp_review_criterion_vocabulary = (): void => {
         })();
         return {
           gated: message.includes("prepareReview is knowledge-gated"),
-          credit: message.includes("0/2 required guides have session credit"),
+          credit: message.includes("0/3 required guides have session credit"),
           numbered:
             message.includes(
               '1. getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
             ) &&
+            message.includes('2. getGuideDocument({ name: "REVIEW" })') &&
             message.includes(
-              '2. getGuideDocument({ name: "REVIEW_DEPENDENCY" })',
+              '3. getGuideDocument({ name: "REVIEW_DEPENDENCY" })',
             ),
           retry: message.includes("Then retry prepareReview unchanged"),
           notPayload: message.includes(
@@ -196,7 +197,7 @@ export const test_mcp_review_criterion_vocabulary = (): void => {
       TARGETS.map((target) =>
         demandedGuides(() => topicsOnly.prepareReview({ target })).join(","),
       ),
-      TARGETS.map(() => "AUTOMOVIE_OVERALL"),
+      TARGETS.map(() => "AUTOMOVIE_OVERALL,REVIEW"),
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

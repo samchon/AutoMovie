@@ -18,10 +18,10 @@ A source worksheet also carries the compiler's own verdict on the module. Every 
 
 ## Submit
 
-Call `prepareReview`, resolve every diagnostic, then call `submitReview` with the same fingerprint and every returned criterion exactly once, in returned order.
+`REVIEW` owns the submission discipline. Two things are stricter here.
 
-Design and source are the kinds where every criterion owes its own evidence. Reusing one pointer or one source line across two criteria is refused as `review-evidence-reused`, and repeating an observation with the same evidence set is refused as `review-observation-copied`. Inspect and cite a distinct current selector for each concern.
+Design and source are the kinds where every criterion owes its own evidence. Reusing one pointer or one source line across two criteria is refused as `review-evidence-reused`. Inspect and cite a distinct current selector for each concern.
 
-A true completion basis names the high-risk criterion ids verbatim: `identity-and-references` for design, `determinism` and `engine-enforcement` for source. Those criteria must also pass, and not-applicable cannot discharge any required criterion. `complete:false` is refused unless a revise verdict or a correction states what the next round changes.
+The high-risk criterion ids are `identity-and-references` for design, and `determinism` and `engine-enforcement` for source.
 
 Do not use a dependency completion to claim that an asset, shot, rendition, sequence, or film looks correct. Each of those surfaces requires its own guide, current visual evidence, and submission.

@@ -19,4 +19,6 @@ Judge start and end, pacing over the entire runtime, audiovisual synchronization
 
 ## Submit
 
-Call `submitReview` with the exact prepared fingerprint and every criterion once. A true completion basis carries the criterion ids `narrative-completion` and `delivery-readiness` verbatim, because the gate looks for those exact strings and prose naming the same ideas is refused, with current evidence for each. Any rerender, remix, recut, source edit, repaint reroll, or receipt change requires a fresh worksheet.
+`REVIEW` owns the submission discipline. The film's high-risk criterion ids are `narrative-completion` and `delivery-readiness`.
+
+Every rerender, remix, recut, source edit, repaint reroll, and receipt change stales this worksheet, because the film is the surface every one of those reaches.

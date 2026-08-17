@@ -82,13 +82,18 @@ export const test_mcp_prepare_review_worksheet = (): void => {
             application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
             return throwsError(
               () => application.prepareReview({ target: MODEL_TARGET }),
-              ['getGuideDocument({ name: "REVIEW_DEPENDENCY" })', "1/2"],
+              [
+                'getGuideDocument({ name: "REVIEW" })',
+                'getGuideDocument({ name: "REVIEW_DEPENDENCY" })',
+                "1/3",
+              ],
             );
           },
         ],
         [
           "dependencyCreditAdmits",
           () => {
+            application.getGuideDocument({ name: "REVIEW" });
             application.getGuideDocument({ name: "REVIEW_DEPENDENCY" });
             return (
               application.prepareReview({ target: MODEL_TARGET }).target

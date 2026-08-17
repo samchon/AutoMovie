@@ -35,10 +35,8 @@ Also verify provenance and consumer permission when the asset came from outside 
 
 ## Submit
 
-Call `submitReview` with the exact prepared fingerprint. Include every required criterion once, in returned order. Each check needs its own observation and at least one evidence item. Corrections describe an observable problem and an observable corrected state.
+`REVIEW` owns the submission discipline: the unchanged fingerprint, every criterion once in returned order, one observation and one evidence item each, corrections before the boolean. What is particular to an asset is what it may cite and what completion costs.
 
 An asset worksheet accepts `design` JSON pointers into the current model recipe, `frame` entries it returned, and `diagnostic` entries from the same prepare snapshot. It returns no acceptance outcomes, no source selectors, and no renditions, so citing one of those is refused as stale evidence instead of read as a differing opinion, and no check may carry acceptance scenario ids.
 
-A completed review must cite the digest of every required current view, so a missing or superseded turntable frame refuses completion by name. A true completion basis carries the criterion ids `silhouette-and-proportion` and `rig-convention-and-rom` verbatim, because the gate looks for those exact strings and prose naming the same ideas is refused.
-
-Set `complete:true` only when every criterion passes and no correction remains. `complete:false` is refused unless at least one criterion says revise or at least one correction states what the next round changes, so a draft submission still has to name the defect. A stale fingerprint, missing view, duplicate check, invented evidence selector, or contradictory verdict is refused without storing false completion.
+A completed review must cite the digest of every required current view, so a missing or superseded turntable frame refuses completion by name. Its high-risk criterion ids are `silhouette-and-proportion` and `rig-convention-and-rom`.

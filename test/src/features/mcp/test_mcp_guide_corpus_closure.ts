@@ -56,11 +56,41 @@ const PROMPT_ROOT = path.resolve(__dirname, "../../../../packages/mcp/prompts");
  * claims no served name.
  */
 const authoredGuideNames = (): string[] =>
+  walkGuideFiles(PROMPT_ROOT).map(authoredGuideName).sort(compareCodeUnits);
+
+/**
+ * The name one authored file serves under.
+ *
+ * An area's index is `INDEX.md` and serves under the area's own name, so the
+ * folder and the guide an agent asks for are one word. The corpus root is the
+ * exception, because its index is the constitution and every gate refusal
+ * already names it `AUTOMOVIE_OVERALL`.
+ */
+const authoredGuideName = (file: string): string => {
+  const stem = path.basename(file, ".md");
+  if (stem !== "INDEX") return stem;
+  const area = path.basename(path.dirname(file));
+  return area === "prompts"
+    ? "AUTOMOVIE_OVERALL"
+    : area.replaceAll("-", "_").toUpperCase();
+};
+
+/**
+ * Every authored guide, wherever its topic folder put it.
+ *
+ * The corpus is grouped in folders the way the skills are, so a flat read of the
+ * root would report the whole set as missing the moment one moved.
+ */
+const walkGuideFiles = (directory: string): string[] =>
   fs
-    .readdirSync(PROMPT_ROOT)
-    .filter((file) => file.endsWith(".md") && file !== "README.md")
-    .map((file) => file.slice(0, -".md".length))
-    .sort(compareCodeUnits);
+    .readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? walkGuideFiles(path.join(directory, entry.name))
+        : entry.name.endsWith(".md") && entry.name !== "README.md"
+          ? [path.join(directory, entry.name)]
+          : [],
+    );
 
 const inspectCorpusClosure = (application: AutoMovieApplication): void => {
   TestValidator.equals(

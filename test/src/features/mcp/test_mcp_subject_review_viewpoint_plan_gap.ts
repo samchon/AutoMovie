@@ -163,6 +163,7 @@ export const test_mcp_subject_review_viewpoint_plan_gap =
         projectRoot: fixture.root,
       });
       application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+      application.getGuideDocument({ name: "REVIEW" });
       application.getGuideDocument({ name: "REVIEW_SUBJECT" });
       const coverageOf = (): {
         state: string;

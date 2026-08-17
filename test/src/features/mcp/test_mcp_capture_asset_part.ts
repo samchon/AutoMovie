@@ -115,6 +115,7 @@ export const test_mcp_capture_asset_part = async (): Promise<void> => {
           part,
         },
       });
+    application.getGuideDocument({ name: "REVIEW" });
     application.getGuideDocument({ name: "REVIEW_ASSET" });
     TestValidator.equals(
       "part views discharge no required asset review view",

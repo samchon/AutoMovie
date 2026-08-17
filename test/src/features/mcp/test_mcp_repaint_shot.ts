@@ -176,6 +176,7 @@ export const test_mcp_repaint_shot = async (): Promise<void> => {
     });
     for (const guide of [
       "AUTOMOVIE_OVERALL",
+      "REVIEW",
       "REVIEW_SHOT",
       "REPAINT_SHOT",
       "DIFFUSION_ENHANCE",
