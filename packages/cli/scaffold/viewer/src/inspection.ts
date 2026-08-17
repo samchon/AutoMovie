@@ -91,12 +91,19 @@ export interface IAutoMovieInspectionImage {
  * apart is what stops an inspection frame from ever travelling a delivery path.
  */
 export interface IAutoMovieInspectionHook {
-  /** True once the compiled shot is staged and the subject resolved. */
+  /** True once the compiled shot is staged. */
   ready: boolean;
-  /** Draw one pose and read the canvas back. */
+  /**
+   * Draw one subject of this shot from one pose and read the canvas back.
+   *
+   * The subject arrives per view rather than per page. Staging the shot is what
+   * costs, and one page serves every subject standing in it, so a sweep over a
+   * production's subjects builds the scene once instead of once each.
+   */
   view: (
     pose: IAutoMovieInspectionPose,
     viewpoint: string,
+    subject: string,
   ) => IAutoMovieInspectionImage;
 }
 
@@ -109,11 +116,6 @@ declare global {
 const { canvas, status } = viewerDocument();
 const parameters = new URLSearchParams(window.location.search);
 const shotId = parameters.get("shot") ?? "opening";
-const requestedSubject = parameters.get("subject");
-if (requestedSubject === null)
-  throw new Error(
-    "The inspection host requires ?subject=<id>; it opens exactly one named subject.",
-  );
 // The revision the MCP surface digested from the compiled bytes it read. The
 // page states it rather than recomputing one, so an observation can never be
 // labelled with a state the tool did not resolve the subject against.
@@ -159,36 +161,58 @@ const compiledSubjectSpellings = (subject: string): string[] => {
 const viewerKeyOf = (compiledId: string): string =>
   compiledId.replace(/^(?:element|prototype)-part:/, "part:");
 
-const resolve = (): IAutoMovieSubjectDescription => {
+const resolve = (requested: string): IAutoMovieSubjectDescription => {
   const refusals: string[] = [];
-  for (const candidate of compiledSubjectSpellings(requestedSubject))
+  for (const candidate of compiledSubjectSpellings(requested))
     try {
       return describeAutoMovieSubject(artifact, candidate);
     } catch (error) {
       refusals.push(error instanceof Error ? error.message : `${error}`);
     }
   throw new Error(
-    `"${requestedSubject}" names nothing in shot "${shotId}": ${refusals.join(" ")}`,
+    `"${requested}" names nothing in shot "${shotId}": ${refusals.join(" ")}`,
   );
 };
 
-const description = resolve();
-const bounds = description.bounds.content ?? description.bounds.declared;
-if (bounds === null)
-  throw new Error(
-    `${description.id} has neither a content nor a declared extent, so there is nothing to aim at.`,
-  );
-if (description.bounds.coordinateSpace !== "world")
-  throw new Error(
-    `${description.id} is measured in ${description.bounds.coordinateSpace} space and stands nowhere in shot ` +
-      `"${shotId}", so a world eye aimed at it would photograph whatever happens to occupy the origin. ` +
-      "Inspect a placement of it instead.",
-  );
+/** One subject of this shot, resolved once and kept for the page's lifetime. */
+interface IResolvedSubject {
+  description: IAutoMovieSubjectDescription;
+  bounds: IAutoMovieViewerSubjectBounds;
+  key: ReturnType<typeof parseAutoMovieViewerSubjectKey>;
+}
 
-// Resolved before anything is decoded. A subject whose compiled id the viewer
-// key grammar cannot spell is refused for the price of a message rather than
-// after a whole scene's worth of textures has been built to draw it.
-const subject = parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id));
+const resolved = new Map<string, IResolvedSubject>();
+
+/**
+ * Resolve one requested subject against the staged shot.
+ *
+ * Every refusal here is raised before anything is drawn, so a subject that is
+ * measured in model space, has no extent, or cannot be spelled in the viewer
+ * key grammar costs a message rather than a frame of the wrong thing.
+ */
+const resolveSubject = (requested: string): IResolvedSubject => {
+  const cached = resolved.get(requested);
+  if (cached !== undefined) return cached;
+  const description = resolve(requested);
+  const box = description.bounds.content ?? description.bounds.declared;
+  if (box === null)
+    throw new Error(
+      `${description.id} has neither a content nor a declared extent, so there is nothing to aim at.`,
+    );
+  if (description.bounds.coordinateSpace !== "world")
+    throw new Error(
+      `${description.id} is measured in ${description.bounds.coordinateSpace} space and stands nowhere in shot ` +
+        `"${shotId}", so a world eye aimed at it would photograph whatever happens to occupy the origin. ` +
+        "Inspect a placement of it instead.",
+    );
+  const entry: IResolvedSubject = {
+    description,
+    bounds: box,
+    key: parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id)),
+  };
+  resolved.set(requested, entry);
+  return entry;
+};
 
 const productionRuntimeResponse = await fetch(
   "/__automovie/production-runtime.json",
@@ -281,7 +305,8 @@ const sectionAt = (
 
 window.__automovieInspect = {
   ready: true,
-  view: (pose, viewpoint) => {
+  view: (pose, viewpoint, requested) => {
+    const { description, bounds, key: subject } = resolveSubject(requested);
     if (pose.coordinateSpace !== "world")
       throw new Error(
         `Viewpoint "${viewpoint}" states a ${pose.coordinateSpace}-space eye, and this page stages a world scene.`,
@@ -334,5 +359,5 @@ window.__automovieInspect = {
 };
 
 status.textContent =
-  `${description.id} @${requestedRevision}\n` +
-  `${description.kind} · ${description.semanticKind}  awaiting viewpoints`;
+  `${shotId} @${requestedRevision}\n` +
+  "staged, awaiting the first subject and viewpoint";
