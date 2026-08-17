@@ -169,10 +169,17 @@ export const test_cli_scaffold_design_residue = (): void => {
           () => emitter.includes("project.designRecordPath(target)"),
         ],
         [
+          // The bare presence of `throw new Error(` proves nothing here: the
+          // emitter already throws when a setter refuses a record. What has to
+          // hold is that the residue branch is the thing that throws, so this
+          // reads the first throw at or after that branch rather than any.
           "an unowned record fails the run rather than warning under it",
           () =>
             emitter.includes("if (orphaned.length !== 0)") &&
-            emitter.includes("throw new Error("),
+            emitter.indexOf(
+              "throw new Error(",
+              emitter.indexOf("if (orphaned.length !== 0)"),
+            ) !== -1,
         ],
       ]),
       {
