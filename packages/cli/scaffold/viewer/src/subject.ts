@@ -29,6 +29,7 @@
  */
 import {
   type IAutoMovieSectionPlane,
+  builtEnvironmentUnclaimedElements,
   describeAutoMovieSubject,
 } from "@automovie/engine";
 import type {
@@ -235,6 +236,7 @@ const requestedKey = parameters.get("subject");
  */
 const indexRoots = (): string[] => {
   const environments = compiled.builtEnvironments ?? [];
+  const drawnNodes = new Set(compiled.scene.nodes.map((node) => node.id));
   const populated = new Set(
     environments.flatMap((environment) =>
       (environment.populations ?? []).map((population) => population.set.id),
@@ -250,6 +252,17 @@ const indexRoots = (): string[] => {
         )
         .map((space) => `space:${environment.id}/${space.id}`);
     }),
+    // An element no space claims is correct rather than careless: an exterior
+    // wall and a foundation belong to no room. Before this it was also
+    // unreachable, because the only way down ran through the spaces, so one
+    // measured production left 671 of 3,474 elements openable only by an author
+    // who already knew the key. Only the tops are listed; everything under them
+    // arrives through its own parent's members.
+    ...environments.flatMap((environment) =>
+      builtEnvironmentUnclaimedElements(environment, drawnNodes).map(
+        (node) => `element:${node}`,
+      ),
+    ),
     ...compiled.instanceSets
       .filter((set) => populated.has(set.id) === false)
       .map((set) => `instance-set:${set.id}`),
@@ -268,7 +281,7 @@ const renderIndex = (): void => {
     line(`${shotId}: subjects to open`, "what"),
     line(
       "open a group to list what stands inside it; an element the environment " +
-        "assigns to no space is named only by its key",
+        "assigns to no space is listed here under the building it hangs from",
       "omitted",
     ),
     line("", "gap"),
