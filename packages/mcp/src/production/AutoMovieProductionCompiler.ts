@@ -156,6 +156,12 @@ import {
 } from "./sandboxEngineSurface";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
+import {
+  IAutoMovieSourceContentFinding,
+  autoMovieSourceContentDiagnostic,
+  autoMovieSourceContentFinding,
+  autoMovieValidationFindings,
+} from "./sourceContentDiagnostics";
 import { storySyncDiagnostics } from "./storySyncDiagnostics";
 import {
   IAutoMovieProductionDesignGraph,
@@ -2190,12 +2196,19 @@ const compileShotSource = (
     `shot:${props.id}`,
     props.path,
   );
+  // Severity decides, not count. Both halves used to be counted because both
+  // could only produce errors, and the moment one of them learned to warn, a
+  // warning would have withheld the compiled shot while explaining nothing: the
+  // author would read one advisory sentence and a film that reports the shot as
+  // never compiled.
   if (
-    sourceRuntime.diagnostics.length !== 0 ||
+    sourceRuntime.diagnostics.some(
+      (diagnostic) => diagnostic.category === "error",
+    ) ||
     adoptedMotions.diagnostics.some(
       (diagnostic) => diagnostic.category === "error",
     ) ||
-    runtime.diagnostics.length !== 0
+    runtime.diagnostics.some((diagnostic) => diagnostic.category === "error")
   )
     return {
       value: null,
@@ -2319,7 +2332,16 @@ const compileShotSource = (
     },
     closing: compiled.continuity.closing,
     conversions: adoptedMotions.conversions,
-    diagnostics: [...program.diagnostics, ...adoptedMotions.diagnostics],
+    // Every source-phase finding travels, including the two lists a shot used to
+    // publish only when it failed. Reaching here means neither carried an error,
+    // so what they carry is advice, and advice nobody is told about is the same
+    // as advice nobody wrote.
+    diagnostics: [
+      ...program.diagnostics,
+      ...sourceRuntime.diagnostics,
+      ...adoptedMotions.diagnostics,
+      ...runtime.diagnostics,
+    ],
   };
 };
 
@@ -2718,21 +2740,47 @@ const composeNativeRest = (
 };
 
 /**
+ * How one fold's validator paths are read as addresses in the program.
+ *
+ * Two shapes exist because the validators take two shapes of input, and a fold
+ * has to say which one it handed over. A validator given several lists roots its
+ * paths at those lists (`$input.features[0]`), and one given a single record
+ * roots them at the record's own fields (`$input.zones[0]`, `$input.id`), where
+ * the same text means something entirely different.
+ */
+interface IBindingAddress {
+  /** `$input` is one record of this program list, so every path hangs under it. */
+  root?: { key: string; index: number };
+
+  /** `$input.<name>[i]` addresses this program list at the mapped position. */
+  fields?: Readonly<
+    Record<string, { key: string; indices: readonly number[] }>
+  >;
+}
+
+/**
  * One binding's own address inside the program that declared it.
  *
  * A fold's validator is handed the records for one building, so its violation
  * paths count within that filtered list. An author reads the program, not the
  * filter, so each local index is mapped back to the position the record
  * actually occupies.
+ *
+ * A single-record fold needs the other direction. Its validator was handed the
+ * record itself, so `$input.zones[0]` means the zones of that record and not a
+ * program field called `zones`; without the record's own address in front, the
+ * author is handed a path to a field the program does not have. Three of the four
+ * folds here were reported that way, which is how a service network's finding
+ * arrived as `$program.penetrations[0]`.
  */
-const rewriteBindingPath = (
-  path: string,
-  fields: Readonly<Record<string, { key: string; indices: readonly number[] }>>,
-): string => {
+const rewriteBindingPath = (path: string, address: IBindingAddress): string => {
+  const inside = path.slice("$input".length);
+  if (address.root !== undefined)
+    return `$program.${address.root.key}[${address.root.index}]${inside}`;
   const matched = /^\$input\.([A-Za-z]+)\[(\d+)\]/u.exec(path);
-  if (matched === null) return `$program${path.slice("$input".length)}`;
-  const field = fields[matched[1]!];
-  if (field === undefined) return `$program${path.slice("$input".length)}`;
+  if (matched === null) return `$program${inside}`;
+  const field = address.fields?.[matched[1]!];
+  if (field === undefined) return `$program${inside}`;
   const local = Number(matched[2]);
   return `$program.${field.key}[${field.indices[local] ?? local}]${path.slice(matched[0].length)}`;
 };
@@ -2764,8 +2812,8 @@ const bindingsOfEnvironment = <T extends { environment: string }>(
  */
 const buildingBoundDiagnostics = (
   program: IAutoMovieProductionShotProgram,
-): string[] => {
-  const messages: string[] = [];
+): IAutoMovieSourceContentFinding[] => {
+  const messages: IAutoMovieSourceContentFinding[] = [];
   const environments = program.builtEnvironments ?? [];
   const known = new Set(environments.map((environment) => environment.id));
   const waterFeatures = program.waterFeatures ?? [];
@@ -2778,9 +2826,13 @@ const buildingBoundDiagnostics = (
   ): void => {
     items.forEach((item, index) => {
       if (known.has(item.environment)) return;
-      messages.push(
-        `$program.${key}[${index}].environment "${item.environment}" does not resolve to a building this shot stages. Declare that building, or bind the record to one the shot already carries.`,
-      );
+      // A name that resolves to nothing is the record's own content, so it takes
+      // the same identity a validator's `type` violation would.
+      messages.push({
+        kind: "type",
+        severity: "error",
+        message: `$program.${key}[${index}].environment "${item.environment}" does not resolve to a building this shot stages. Declare that building, or bind the record to one the shot already carries.`,
+      });
     });
   };
   unresolved("waterFeatures", waterFeatures);
@@ -2794,17 +2846,21 @@ const buildingBoundDiagnostics = (
   const plantingClusters = program.plantingClusters ?? [];
   const allOf = (items: readonly unknown[]): number[] =>
     items.map((_, index) => index);
+  // Both branches of the validation are read. A fold that produced only warnings
+  // succeeds, and reading the failure branch alone is how an uncited penetration
+  // never reached the author at all while the same warning beside an error
+  // reached them as a refusal.
   const say = (
     validation: IAutoMovieValidation,
-    fields: Readonly<
-      Record<string, { key: string; indices: readonly number[] }>
-    >,
+    address: IBindingAddress,
     remedy: string,
   ): void => {
-    if (validation.success === true) return;
-    for (const violation of validation.violations)
+    for (const violation of autoMovieValidationFindings(validation))
       messages.push(
-        `${rewriteBindingPath(violation.path, fields)} ${violation.expected}. ${remedy}`,
+        autoMovieSourceContentFinding(
+          violation,
+          `${rewriteBindingPath(violation.path, address)} ${violation.expected}. ${remedy}`,
+        ),
       );
   };
 
@@ -2818,8 +2874,10 @@ const buildingBoundDiagnostics = (
           domains: [...fluidDomains],
         }),
         {
-          features: { key: "waterFeatures", indices: water.indices },
-          domains: { key: "fluidDomains", indices: allOf(fluidDomains) },
+          fields: {
+            features: { key: "waterFeatures", indices: water.indices },
+            domains: { key: "fluidDomains", indices: allOf(fluidDomains) },
+          },
         },
         "Correct the water feature or the domain it binds before compiling the shot.",
       );
@@ -2832,8 +2890,13 @@ const buildingBoundDiagnostics = (
           domains: [...softBodyDomains],
         }),
         {
-          furnishings: { key: "softFurnishings", indices: cloth.indices },
-          domains: { key: "softBodyDomains", indices: allOf(softBodyDomains) },
+          fields: {
+            furnishings: { key: "softFurnishings", indices: cloth.indices },
+            domains: {
+              key: "softBodyDomains",
+              indices: allOf(softBodyDomains),
+            },
+          },
         },
         "Correct the soft furnishing or the domain it hangs before compiling the shot.",
       );
@@ -2850,29 +2913,34 @@ const buildingBoundDiagnostics = (
           domains: [...plantingDomains],
         }),
         {
-          installations: {
-            key: "plantingInstallations",
-            indices: planting.indices,
+          fields: {
+            installations: {
+              key: "plantingInstallations",
+              indices: planting.indices,
+            },
+            clusters: {
+              key: "plantingClusters",
+              indices: allOf(plantingClusters),
+            },
+            domains: {
+              key: "plantingDomains",
+              indices: allOf(plantingDomains),
+            },
           },
-          clusters: {
-            key: "plantingClusters",
-            indices: allOf(plantingClusters),
-          },
-          domains: { key: "plantingDomains", indices: allOf(plantingDomains) },
         },
         "Correct the planting installation, its cluster or its recipe before compiling the shot.",
       );
     serviceNetworks.forEach((network, index) => {
       if (network.environment !== environment.id) return;
-      const fields = { network: { key: "serviceNetworks", indices: [index] } };
+      const address = { root: { key: "serviceNetworks", index } };
       say(
         validateServiceNetwork({ network, environment }),
-        fields,
+        address,
         "Correct the port network before compiling the shot.",
       );
       say(
         validateWetZones({ network, environment }),
-        fields,
+        address,
         "Correct the wet zone before compiling the shot.",
       );
     });
@@ -2887,7 +2955,7 @@ const buildingBoundDiagnostics = (
     if (boundFluid.has(domain.id)) return;
     say(
       validateFluidDomain({ domain }),
-      { domain: { key: "fluidDomains", indices: [index] } },
+      { root: { key: "fluidDomains", index } },
       "Correct the fluid domain before compiling the shot.",
     );
   });
@@ -2898,7 +2966,7 @@ const buildingBoundDiagnostics = (
     if (boundCloth.has(domain.id)) return;
     say(
       validateSoftBodyDomain({ domain }),
-      { domain: { key: "softBodyDomains", indices: [index] } },
+      { root: { key: "softBodyDomains", index } },
       "Correct the soft body domain before compiling the shot.",
     );
   });
@@ -2909,7 +2977,7 @@ const buildingBoundDiagnostics = (
     if (boundPlanting.has(domain.id)) return;
     say(
       validatePlantingDomain({ domain }),
-      { domain: { key: "plantingDomains", indices: [index] } },
+      { root: { key: "plantingDomains", index } },
       "Correct the planting recipe before compiling the shot.",
     );
   });
@@ -2974,6 +3042,24 @@ const sourceRuntimeOf = (props: {
       path: props.sourcePath,
       message,
     });
+  };
+  /**
+   * Report one finding under the identity and severity its kind decides.
+   *
+   * `report` above is for the checks this compiler performs itself, where there
+   * is no engine classification to preserve and the answer is always a blocking
+   * content error. Anything a validator found comes through here instead, so a
+   * physical conflict and a coverage gap keep their own catalog entries and a
+   * warning stays a warning.
+   */
+  const classify = (finding: IAutoMovieSourceContentFinding): void => {
+    diagnostics.push(
+      autoMovieSourceContentDiagnostic({
+        finding,
+        target: props.target,
+        path: props.sourcePath,
+      }),
+    );
   };
   const acceptModel = (
     model: IAutoMovieModel,
@@ -3094,27 +3180,33 @@ const sourceRuntimeOf = (props: {
   // shot itself never names.
   (props.program.designLineages ?? []).forEach((lineage, index) => {
     const lineagePath = `$program.designLineages[${index}]`;
-    const coherent = validateDesignLineage({ lineage });
-    if (coherent.success === false)
-      for (const violation of coherent.violations)
-        report(
+    for (const violation of autoMovieValidationFindings(
+      validateDesignLineage({ lineage }),
+    ))
+      classify(
+        autoMovieSourceContentFinding(
+          violation,
           `${lineagePath}${violation.path.slice("$input".length)} ${violation.expected}. Correct the construction phase, alternative or derivation record before compiling the shot.`,
-        );
-  });
-
-  for (const message of buildingBoundDiagnostics(props.program))
-    report(message);
-
-  const propPlacement = validatePropPlacements({
-    props: props.program.props ?? [],
-    set: props.program.stage.set ?? [],
-    builtEnvironments: props.program.builtEnvironments ?? [],
-  });
-  if (propPlacement.success === false)
-    for (const violation of propPlacement.violations)
-      report(
-        `${violation.path} ${violation.expected}. Correct the code-authored prop registry or staged placement before compiling the shot.`,
+        ),
       );
+  });
+
+  for (const finding of buildingBoundDiagnostics(props.program))
+    classify(finding);
+
+  for (const violation of autoMovieValidationFindings(
+    validatePropPlacements({
+      props: props.program.props ?? [],
+      set: props.program.stage.set ?? [],
+      builtEnvironments: props.program.builtEnvironments ?? [],
+    }),
+  ))
+    classify(
+      autoMovieSourceContentFinding(
+        violation,
+        `${violation.path} ${violation.expected}. Correct the code-authored prop registry or staged placement before compiling the shot.`,
+      ),
+    );
 
   const available = new Set([
     ...Object.keys(runtimeModels),

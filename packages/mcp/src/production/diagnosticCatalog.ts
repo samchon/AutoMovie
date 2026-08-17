@@ -322,6 +322,26 @@ const FAMILY_CONTRACTS: Readonly<Record<string, IDiagnosticFamilyContract>> = {
 const CODE_CONTRACTS: Readonly<
   Partial<Record<AutoMovieDiagnosticCode, IDiagnosticFamilyContract>>
 > = {
+  "source-scene-coverage-incomplete": {
+    guide: "BUILDING_SERVICES",
+    path: "prompts/built-environment/BUILDING_SERVICES.md#service-networks-and-wet-zones",
+    invariant:
+      "Authored scene content must cover what it claims to cover: a declared region owes its membrane, its fall and a drain the fall reaches, and a declared opening owes a run that uses it.",
+    correction:
+      "Cover the region or use the opening the occurrence names, or withdraw the claim; a warning here states a gap to decide about rather than a value to fix.",
+    recheck:
+      "Compile the same shot again and read the named record's findings.",
+  },
+  "source-scene-physics-invalid": {
+    guide: "BUILDING_SERVICES",
+    path: "prompts/built-environment/BUILDING_SERVICES.md#service-networks-and-wet-zones",
+    invariant:
+      "Authored scene content must be physically possible in the space it is placed in: two bodies may not occupy one volume, and nothing may stand in the access a maintainable thing declares it needs.",
+    correction:
+      "Move one of the two bodies the occurrence names, or change the volume one of them claims; correcting a coordinate elsewhere in the record does not resolve a conflict between these two.",
+    recheck:
+      "Compile the same shot again and confirm the named pair no longer shares a volume.",
+  },
   "review-outcome-artifact-malformed": {
     guide: "REVIEW_SHOT",
     path: "prompts/review/REVIEW_SHOT.md#shot-review-contract",
