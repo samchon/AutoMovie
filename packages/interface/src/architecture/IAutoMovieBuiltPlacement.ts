@@ -151,3 +151,125 @@ export interface IAutoMovieBuiltPlacementBounds {
    */
   basis: Exclude<AutoMovieBuiltPlacementBasis, "surface-height-rule">;
 }
+
+/**
+ * One body the whole-building sweep found nothing under.
+ *
+ * The requirement asks for two different capabilities in one sentence: express
+ * what supports what, and be able to FIND the floating or disconnected elements.
+ * A named-pair query answers the first and cannot answer the second, because a
+ * body you have to name is a body you already suspect. This is the second half,
+ * and it makes no claim about a support relation: it reports what the record
+ * measures under a body, which is a measurement rather than an inferred bearing.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support Finds a floating or disconnected placed body without a project-authored relation naming it first.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Carries the signed clearance to the nearest measurable body below and the basis both extents were taken from.
+ * @author Samchon
+ */
+export interface IAutoMovieBuiltFloatingBody {
+  /** The element or compact population nothing supports at its underside. */
+  body: AutoMovieBuiltPlacementBodyLocator;
+  /** The derivation this body's own extent came from. */
+  basis: Exclude<AutoMovieBuiltPlacementBasis, "surface-height-rule">;
+  /**
+   * The highest measurable body under this one and the clearance to it in
+   * metres, or `null` when the sweep found nothing under this body at all. A
+   * clearance is always greater than the tolerance, since a body within it is
+   * reported as supported instead.
+   */
+  below: {
+    /** The nearest measurable body below. */
+    body: AutoMovieBuiltPlacementBodyLocator;
+    /** Positive vertical clearance from that body's top to this one's underside. */
+    clearance: number;
+  } | null;
+}
+
+/**
+ * What one whole-building support sweep measured, not only what it found.
+ *
+ * The census is part of the answer. An empty finding list from a sweep that
+ * resolved nothing reads exactly like a clean building, which is the failure a
+ * measurement script in this repository has already shipped once, so the counts
+ * travel beside the findings and a caller compares them.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support Reports the whole population a support sweep judged beside the floating bodies it found.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Separates measured, ground-borne, body-borne, floating, and unresolved outcomes instead of collapsing them into one list.
+ * @author Samchon
+ */
+export interface IAutoMovieBuiltSupportSweepReport {
+  /** Bodies whose extent resolved and were therefore judged. */
+  measured: number;
+  /**
+   * Candidate inspections performed after pruning, the sweep's own cost.
+   *
+   * It belongs in the answer for the same reason the overlap sweep's does: a
+   * caller deciding whether to run this every round needs the number, and a cost
+   * measured once in a document is a cost nobody can re-measure.
+   */
+  compared: number;
+  /** Bodies whose underside meets the stated ground plane within tolerance. */
+  grounded: number;
+  /** Bodies resting on another body's top within tolerance. */
+  borne: number;
+  /** Every body with clear air under it, in stable record order. */
+  floating: IAutoMovieBuiltFloatingBody[];
+  /** Bodies whose extent the record does not resolve, so nothing was judged. */
+  unresolved: AutoMovieBuiltPlacementBodyLocator[];
+}
+
+/**
+ * Two bodies of one building whose volumes intersect, and by how much.
+ *
+ * Exact face contact is not intersection, so joined construction that merely
+ * meets is absent from a sweep rather than filling it. What remains is graded:
+ * a quoin toothed one centimetre into its wall and a column standing entirely
+ * inside one are both intersections and are not the same finding, so the shared
+ * volume travels with the pair and the fraction says how much of the smaller
+ * body is inside the larger.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support Finds intruding placed bodies across a whole building rather than one named neighbour at a time.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Carries the shared volume, its share of the smaller body, and both measurement bases with every reported pair.
+ * @author Samchon
+ */
+export interface IAutoMovieBuiltPlacementOverlapPair {
+  /** The body that appears first in record order. */
+  left: AutoMovieBuiltPlacementBodyLocator;
+  /** The body that appears later in record order. */
+  right: AutoMovieBuiltPlacementBodyLocator;
+  /** Derivation of the left body's extent. */
+  leftBasis: Exclude<AutoMovieBuiltPlacementBasis, "surface-height-rule">;
+  /** Derivation of the right body's extent. */
+  rightBasis: Exclude<AutoMovieBuiltPlacementBasis, "surface-height-rule">;
+  /** Shared volume in cubic metres, always greater than zero. */
+  volume: number;
+  /**
+   * Shared volume over the smaller body's own volume, within `[0, 1]`. It is
+   * `0` when that body measures no volume, which an `element-origin-point`
+   * basis explains and which cannot intersect anything in the first place.
+   */
+  fraction: number;
+}
+
+/**
+ * What one whole-building overlap sweep measured, and what it cost.
+ *
+ * `compared` is the number of pair tests the sweep actually performed, which is
+ * the honest way to state the cost of a check whose naive form is quadratic. It
+ * belongs in the answer rather than in a benchmark somebody runs separately,
+ * because a caller deciding whether to run this every round needs it.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support Reports every intruding pair in a building beside the population and the work the sweep did.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Separates the measured population, the performed comparisons, the found pairs, and the unresolved bodies.
+ * @author Samchon
+ */
+export interface IAutoMovieBuiltPlacementOverlapReport {
+  /** Bodies whose extent resolved and were therefore compared. */
+  measured: number;
+  /** Pair tests performed after pruning, the sweep's own cost. */
+  compared: number;
+  /** Every intersecting pair, deepest share of the smaller body first. */
+  pairs: IAutoMovieBuiltPlacementOverlapPair[];
+  /** Bodies whose extent the record does not resolve, so nothing compared them. */
+  unresolved: AutoMovieBuiltPlacementBodyLocator[];
+}
