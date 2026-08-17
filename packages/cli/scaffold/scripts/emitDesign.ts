@@ -242,6 +242,12 @@ for (const scenario of [...openingAcceptance, ...answerAcceptance])
 // scenario discharges a continuity claim are stated in no document. Deriving
 // prose that only looks right is worse than transcribing prose that is read.
 
+/**
+ * What the project stores right now, read once.
+ *
+ * One snapshot rather than a read per kind, so the list below cannot describe
+ * a project that changed between two of its own lines.
+ */
 const inventory = project.inventory();
 
 /**

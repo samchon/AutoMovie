@@ -73,7 +73,7 @@ export const test_cli_scaffold_design_residue = (): void => {
 
     const resident = targets();
     TestValidator.equals(
-      "every design kind the starter stores is enumerable",
+      "every design kind a project can store is enumerable",
       [...new Set(resident.map((target) => target.kind))].sort(
         compareCodeUnits,
       ),
@@ -124,12 +124,12 @@ export const test_cli_scaffold_design_residue = (): void => {
       .flatMap((entry) => (entry.kind === "model" ? [entry.id] : []))
       .sort(compareCodeUnits)[0];
     TestValidator.equals(
-      "the starter stores a model record to delete",
+      "a model record is resident to delete",
       doomed !== undefined,
       true,
     );
-    const target: IAutoMovieDesignTarget = { kind: "model", id: doomed! };
-    fs.rmSync(path.join(fixture.root, project.designRecordPath(target)));
+    const doomedTarget: IAutoMovieDesignTarget = { kind: "model", id: doomed! };
+    fs.rmSync(path.join(fixture.root, project.designRecordPath(doomedTarget)));
     TestValidator.equals(
       "deleting a record removes it from the residue the emitter can see",
       targets().some((entry) => entry.kind === "model" && entry.id === doomed),
