@@ -88,9 +88,11 @@ export const test_mcp_capture_turntable = async (): Promise<void> => {
     const compiled = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
-    if (productionCompileSucceeded("capture turntable fixture", compiled))
-      TestValidator.equals("the turntable fixture compiles", true, true);
-    else throw new Error("The capture-turntable fixture did not compile.");
+    if (
+      productionCompileSucceeded("capture turntable fixture", compiled) ===
+      false
+    )
+      throw new Error("The capture-turntable fixture did not compile.");
 
     const host = recordingCapture();
     const application = new AutoMovieApplication({

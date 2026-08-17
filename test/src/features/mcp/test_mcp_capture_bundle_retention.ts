@@ -63,9 +63,10 @@ export const test_mcp_capture_bundle_retention = async (): Promise<void> => {
     const compiled = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    if (productionCompileSucceeded("bundle retention fixture", compiled))
-      TestValidator.equals("the retention fixture compiles", true, true);
-    else throw new Error("The bundle-retention fixture did not compile.");
+    if (
+      productionCompileSucceeded("bundle retention fixture", compiled) === false
+    )
+      throw new Error("The bundle-retention fixture did not compile.");
 
     const host = recordingCapture();
     const application = new AutoMovieApplication({

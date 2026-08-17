@@ -83,9 +83,11 @@ export const test_mcp_inspect_subject = async (): Promise<void> => {
     const compiled = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    if (productionCompileSucceeded("subject inspection fixture", compiled))
-      TestValidator.equals("the inspection fixture compiles", true, true);
-    else throw new Error("The subject-inspection fixture did not compile.");
+    if (
+      productionCompileSucceeded("subject inspection fixture", compiled) ===
+      false
+    )
+      throw new Error("The subject-inspection fixture did not compile.");
     const services = openAutoMovieProduction({
       projectRoot: fixture.root,
       productionId: "fixture-film",
