@@ -242,6 +242,8 @@ for (const scenario of [...openingAcceptance, ...answerAcceptance])
 // scenario discharges a continuity claim are stated in no document. Deriving
 // prose that only looks right is worse than transcribing prose that is read.
 
+const inventory = project.inventory();
+
 /**
  * Every design record resident in the project, as an addressable target.
  *
@@ -251,7 +253,6 @@ for (const scenario of [...openingAcceptance, ...answerAcceptance])
  * second spelling of that layout. The screenplay index is deliberately absent,
  * because it is not a design target and nothing above derives it.
  */
-const inventory = project.inventory();
 const resident: IAutoMovieDesignTarget[] = [
   ...(inventory.production ? [{ kind: "production" } as const] : []),
   ...(inventory.world ? [{ kind: "world" } as const] : []),
@@ -293,7 +294,7 @@ const orphaned = resident
 if (orphaned.length !== 0)
   throw new Error(
     [
-      `${orphaned.length} tracked design record(s) are resident that this script does not derive:`,
+      `${orphaned.length} resident design record(s) are derived by no source in this script:`,
       ...orphaned,
       "",
       "A design record and the typed source that owns it are two representations of one fact, so a record no source here derives is a record nothing in this production can correct. It stays resident, keeps every obligation it carries, and goes on describing whatever film it was written for.",

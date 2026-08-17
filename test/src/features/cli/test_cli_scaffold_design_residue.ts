@@ -32,10 +32,10 @@ import { formationDesign, productionFixture } from "../mcp/productionFixtures";
  *    kinds, so "resident minus derived" is computable rather than guessed.
  * 2. Every enumerated record maps to a project-relative `.automovie/design`
  *    file that exists, so a refusal names something the author can open.
- * 3. Deleting a record removes it from the inventory, so the remedy the
+ * 3. No enumerated record resolves to the screenplay index's own file, so the
+ *    one record the emitter deliberately leaves alone can never be accused.
+ * 4. Deleting a record removes it from the inventory, so the remedy the
  *    refusal names actually shrinks the residue.
- * 4. The screenplay index is resident and is not a design target, so it is
- *    never reported as residue. It is hand-authored and nothing derives it.
  * 5. The scaffold's emitter registers each record inside `emit` rather than in
  *    a list beside the calls, reads the resident set from the project, and
  *    refuses by naming each record's own path.
@@ -121,8 +121,7 @@ export const test_cli_scaffold_design_residue = (): void => {
     // record is chosen by sorted id so a directory-order change cannot make
     // this case delete something else.
     const doomed = resident
-      .filter((entry) => entry.kind === "model")
-      .map((entry) => (entry as { id: string }).id)
+      .flatMap((entry) => (entry.kind === "model" ? [entry.id] : []))
       .sort(compareCodeUnits)[0];
     TestValidator.equals(
       "the starter stores a model record to delete",

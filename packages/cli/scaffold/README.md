@@ -83,9 +83,12 @@ imports.
 Two consequences decide how a replacement goes. The emitter writes and never
 deletes, so a starter record you stop deriving stays resident and keeps asking
 for the shot it names. `npm run design` refuses while one is there and prints
-its project-relative path, so the removal set is one command rather than a hunt.
-Delete the file it names, or derive it from a source that owns it. And the
-screenplay index is not derived at all, by design, so it is never named there.
+its project-relative path, so this layer's removal set is one command rather
+than a hunt. Delete the file it names, or derive it from a source that owns it.
+And the screenplay index is not derived at all, by design, so it is never named
+there. Sources outside `docs` and `src` still answer to you: `src/film.ts`,
+`src/production.ts`, `automovie.config.ts`, `.automovie/assets.json`, and `test`
+all name the starter's ids and no evidence claim covers any of them.
 
 That refusal is the only place the question can be asked. A resident record that
 references only other resident records is internally consistent, so the compiler
