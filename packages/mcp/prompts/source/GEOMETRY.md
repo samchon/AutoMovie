@@ -137,7 +137,9 @@ A face's coordinates are anchored on its own mesh origin, so the continuity abov
 
 `extrudeAutoMovieProfile`, `sweepAutoMovieProfile`, `buildAutoMovieWall`, and `tessellateSurface` emit no coordinates at all.
 
-The region extrusion replaces the profile extrusion and the wall, and a loft carrying the same section at `at` 0 and `at` 1 replaces the sweep. That the two sections are the same is what keeps the substitute rigid, because it is the change between them that shears a loft. Build a member that carries a finish with the replacement.
+The region extrusion replaces the profile extrusion and the wall, and a loft carrying the same section at `at` 0 and `at` 1 replaces the sweep. Build a member that carries a finish with the replacement.
+
+Declaring the two sections the same removes the taper's loss from that substitute. It does not remove the bend's, and a sweep's own examples are a handrail, a cornice, an arch, and a duct, which are the curved runs the density law below bites hardest on. So the substitute is rigid where the path is straight, and where the path turns it replaces the geometry rather than the finish: read the texture section before you put a directional or density-critical finish on a curved replacement.
 
 The support surface has no replacement, because its whole point is that the drawn ground is the queried ground. A level floor that has to carry a tile is a second drawable extruded from the same footprint, and a relieved one has no atlas-bearing equivalent at all, since a flat region does not follow its height rule.
 

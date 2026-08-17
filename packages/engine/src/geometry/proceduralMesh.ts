@@ -528,6 +528,14 @@ export const revolveAutoMovieProfile = (props: {
  * hulled and lays a stated metric atlas over it. Reach for that one whenever
  * the member carries a finish.
  *
+ * Declaring both sections the same spares that substitute the taper's cost and
+ * not the bend's, which matters here more than anywhere because the members
+ * listed above are curved runs. A loft around a turn carries the density
+ * gradient stated on {@link loftAutoMovieSections}, so on a curved path the
+ * substitution replaces the geometry rather than the finish: read that contract
+ * before putting a directional or density-critical finish on the result, and
+ * mitre a straight run instead where the finish has to hold.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a solid by sweeping one authored section along a path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Connects section copies into a closed sweep topology.
  */
