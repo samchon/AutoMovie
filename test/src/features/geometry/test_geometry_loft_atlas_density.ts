@@ -6,87 +6,11 @@ import {
 import type { IAutoMovieMesh, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import {
+  IAtlasDensityRange,
+  atlasDensityRange,
+} from "../internal/atlasMeasure";
 import { namedFacts, nclose } from "../internal/predicates";
-
-/** The smallest and largest texel density any triangle of a mesh carries. */
-interface IDensityRange {
-  /** Least emitted-uv-area over surface-area; below 1 the texels are stretched. */
-  least: number;
-  /** Greatest of the same ratio; above 1 the texels are crowded. */
-  most: number;
-  /** Triangles with no surface area, which contribute no ratio to either bound. */
-  degenerate: number;
-}
-
-/**
- * Measure emitted atlas area against real surface area, triangle by triangle.
- *
- * Area is the half of the distortion an author cannot diagnose from a frame: a
- * sheared atlas draws a square as a parallelogram, which is visible, while a
- * shrunken one draws the same texels over more surface, which reads only as a
- * finish that is slightly the wrong size somewhere. Both areas are taken from
- * the mesh's own buffers, so the ratio is 1 exactly when the map preserves area
- * and nothing about how the mesh sits in space can move it.
- *
- * A triangle with no surface area has no ratio to report and is counted rather
- * than skipped in silence. Skipping quietly is how a bound comes to be taken
- * over a shrinking subset: a collapsed band would drop out of both extremes and
- * leave the survivors looking well behaved, so the case asserts the count is
- * zero and every reported bound therefore comes from real area.
- */
-const densityRange = (mesh: IAutoMovieMesh): IDensityRange => {
-  const indices = mesh.indices!;
-  const range: IDensityRange = {
-    least: Number.POSITIVE_INFINITY,
-    most: Number.NEGATIVE_INFINITY,
-    degenerate: 0,
-  };
-  for (let at = 0; at < indices.length; at += 3) {
-    const corner = (
-      offset: number,
-    ): { position: readonly number[]; atlas: readonly number[] } => {
-      const index = indices[at + offset]!;
-      return {
-        position: [
-          mesh.positions[index * 3]!,
-          mesh.positions[index * 3 + 1]!,
-          mesh.positions[index * 3 + 2]!,
-        ],
-        atlas: [mesh.uvs![index * 2]!, mesh.uvs![index * 2 + 1]!],
-      };
-    };
-    const origin = corner(0);
-    const alpha = corner(1);
-    const beta = corner(2);
-    const first = alpha.position.map(
-      (value, axis) => value - origin.position[axis]!,
-    );
-    const second = beta.position.map(
-      (value, axis) => value - origin.position[axis]!,
-    );
-    const surface =
-      Math.hypot(
-        first[1]! * second[2]! - first[2]! * second[1]!,
-        first[2]! * second[0]! - first[0]! * second[2]!,
-        first[0]! * second[1]! - first[1]! * second[0]!,
-      ) / 2;
-    if (surface <= 1e-12) {
-      range.degenerate += 1;
-      continue;
-    }
-    const atlas =
-      Math.abs(
-        (alpha.atlas[0]! - origin.atlas[0]!) *
-          (beta.atlas[1]! - origin.atlas[1]!) -
-          (alpha.atlas[1]! - origin.atlas[1]!) *
-            (beta.atlas[0]! - origin.atlas[0]!),
-      ) / 2;
-    const ratio = atlas / surface;
-    range.least = Math.min(range.least, ratio);
-    range.most = Math.max(range.most, ratio);
-  }
-  return range;
-};
 
 /** The largest `v` any vertex of a mesh carries. */
 const longestAlong = (mesh: IAutoMovieMesh): number => {
@@ -217,7 +141,7 @@ export const test_geometry_loft_atlas_density = (): void => {
       { at: 1, outer: square(0.5) },
     ],
   });
-  const level = densityRange(straight);
+  const level = atlasDensityRange(straight);
   TestValidator.equals(
     "a straight run of constant section keeps every texel exactly",
     namedFacts([
@@ -227,14 +151,14 @@ export const test_geometry_loft_atlas_density = (): void => {
     { leastIsOne: true, mostIsOne: true },
   );
 
-  const prism = densityRange(
+  const prism = atlasDensityRange(
     extrudeAutoMovieRegion({ outer: square(0.5), depth: 4 }),
   );
   // A pyramid exercises both branches of the projected frame at once: four
   // sloped faces take world up projected into their plane, the base is level
   // and takes world +X. An anisotropy of 1 would not settle this, because a
   // frame scaled equally on both axes is isotropic and still changes area.
-  const faceted = densityRange(
+  const faceted = atlasDensityRange(
     buildAutoMoviePolyhedron([
       [corner(-1, 0, -1), corner(1, 0, -1), corner(0, 2, 0)],
       [corner(1, 0, -1), corner(1, 0, 1), corner(0, 2, 0)],
@@ -267,7 +191,7 @@ export const test_geometry_loft_atlas_density = (): void => {
       { at: 1, outer: square(1) },
     ],
   });
-  const tapered = densityRange(taper);
+  const tapered = atlasDensityRange(taper);
   TestValidator.predicate(
     "a taper loses exactly the cosine of the angle its rulings lean off the path",
     nclose(tapered.least, 1 / Math.hypot(1, 0.125), 1e-9),
@@ -277,7 +201,7 @@ export const test_geometry_loft_atlas_density = (): void => {
     nclose(tapered.most, 1, 1e-12),
   );
 
-  const turn = densityRange(bend(2, 0.5, 0.5));
+  const turn = atlasDensityRange(bend(2, 0.5, 0.5));
   TestValidator.equals(
     "a bend stretches the outside and crowds the inside by R / (R +- d)",
     namedFacts([
@@ -292,7 +216,7 @@ export const test_geometry_loft_atlas_density = (): void => {
     },
   );
 
-  const larger = densityRange(bend(40, 10, 10));
+  const larger = atlasDensityRange(bend(40, 10, 10));
   TestValidator.equals(
     "d / R alone decides it, so a member twenty times the size reads the same",
     namedFacts([
@@ -305,9 +229,9 @@ export const test_geometry_loft_atlas_density = (): void => {
   // The negative twin: one property away, where the loss must not appear. Both
   // sections reach further from the path than the square above, one across the
   // turn and one perpendicular to it, and only the first pays for it.
-  const tall = densityRange(bend(2, 0.5, 2));
-  const narrow = densityRange(bend(2, 0.05, 2));
-  const flat = densityRange(bend(2, 1, 0.05));
+  const tall = atlasDensityRange(bend(2, 0.5, 2));
+  const narrow = atlasDensityRange(bend(2, 0.05, 2));
+  const flat = atlasDensityRange(bend(2, 1, 0.05));
   TestValidator.equals(
     "d is the offset into the turn, so height costs nothing and width costs all",
     namedFacts([
@@ -362,7 +286,7 @@ export const test_geometry_loft_atlas_density = (): void => {
           ["tall", tall],
           ["narrow", narrow],
           ["flat", flat],
-        ] as ReadonlyArray<readonly [string, IDensityRange]>
+        ] as ReadonlyArray<readonly [string, IAtlasDensityRange]>
       ).map(
         ([name, measured]) => [name, () => measured.degenerate === 0] as const,
       ),

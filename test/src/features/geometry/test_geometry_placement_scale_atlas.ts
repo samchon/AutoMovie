@@ -12,55 +12,8 @@ import type {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { atlasDensityRange } from "../internal/atlasMeasure";
 import { namedFacts, nclose, violationCount } from "../internal/predicates";
-
-/**
- * Atlas area over surface area, least and greatest across a mesh.
- *
- * A metric set claims one unit is one metre of surface, so this ratio is 1
- * exactly while the claim holds and reads `1 / s ** 2` once a scale `s` has
- * stretched the surface out from under coordinates that did not move.
- */
-const density = (mesh: IAutoMovieMesh): { least: number; most: number } => {
-  const indices = mesh.indices!;
-  let least = Number.POSITIVE_INFINITY;
-  let most = Number.NEGATIVE_INFINITY;
-  for (let at = 0; at < indices.length; at += 3) {
-    const corner = (
-      offset: number,
-    ): { at: readonly number[]; uv: number[] } => {
-      const index = indices[at + offset]!;
-      return {
-        at: [
-          mesh.positions[index * 3]!,
-          mesh.positions[index * 3 + 1]!,
-          mesh.positions[index * 3 + 2]!,
-        ],
-        uv: [mesh.uvs![index * 2]!, mesh.uvs![index * 2 + 1]!],
-      };
-    };
-    const origin = corner(0);
-    const alpha = corner(1);
-    const beta = corner(2);
-    const first = alpha.at.map((value, axis) => value - origin.at[axis]!);
-    const second = beta.at.map((value, axis) => value - origin.at[axis]!);
-    const surface =
-      Math.hypot(
-        first[1]! * second[2]! - first[2]! * second[1]!,
-        first[2]! * second[0]! - first[0]! * second[2]!,
-        first[0]! * second[1]! - first[1]! * second[0]!,
-      ) / 2;
-    if (surface <= 1e-12) continue;
-    const atlas =
-      Math.abs(
-        (alpha.uv[0]! - origin.uv[0]!) * (beta.uv[1]! - origin.uv[1]!) -
-          (alpha.uv[1]! - origin.uv[1]!) * (beta.uv[0]! - origin.uv[0]!),
-      ) / 2;
-    least = Math.min(least, atlas / surface);
-    most = Math.max(most, atlas / surface);
-  }
-  return { least, most };
-};
 
 /**
  * Advisory warnings a validation carries, or `-1` when it failed outright.
@@ -176,6 +129,7 @@ export const test_geometry_placement_scale_atlas = (): void => {
     translation: { x: 7, y: -2, z: 3 },
     rotation: { x: 0, y: Math.SQRT1_2, z: 0, w: Math.SQRT1_2 },
   });
+  const turned = atlasDensityRange(placed);
   TestValidator.equals(
     "a rotation and a translation keep both the atlas and what it means",
     namedFacts([
@@ -185,8 +139,8 @@ export const test_geometry_placement_scale_atlas = (): void => {
           placed.uvs!.length === built.uvs!.length &&
           placed.uvs!.every((value, at) => value === built.uvs![at]),
       ],
-      ["andStillReadsOneMetrePerUnit", () => nclose(density(placed).least, 1)],
-      ["onEveryTriangle", () => nclose(density(placed).most, 1)],
+      ["andStillReadsOneMetrePerUnit", () => nclose(turned.least, 1)],
+      ["onEveryTriangle", () => nclose(turned.most, 1)],
     ]),
     {
       uvBufferIsElementForElement: true,
@@ -198,7 +152,7 @@ export const test_geometry_placement_scale_atlas = (): void => {
   const enlarged = transformAutoMovieMesh(built, {
     scale: { x: 3, y: 3, z: 3 },
   });
-  const grown = density(enlarged);
+  const grown = atlasDensityRange(enlarged);
   TestValidator.equals(
     "a uniform scale of 3 leaves the atlas alone and makes every unit 3 m",
     namedFacts([
@@ -216,7 +170,7 @@ export const test_geometry_placement_scale_atlas = (): void => {
     },
   );
 
-  const stretched = density(
+  const stretched = atlasDensityRange(
     transformAutoMovieMesh(built, { scale: { x: 3, y: 1, z: 1 } }),
   );
   TestValidator.equals(
