@@ -330,7 +330,14 @@ const selectedPrototypeValue = (prototype: {
 const summarize = (ids: readonly string[]): IAutoMovieSubjectMemberSummary => {
   const sorted = [...ids].sort(compareAutoMovieRenderIds);
   const items = sorted.slice(0, AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT);
-  return { total: sorted.length, items, omitted: sorted.length - items.length };
+  // A diff consequence is one answer and not a page of one: nothing asks it for
+  // a later rank, so its sample always starts at the first.
+  return {
+    total: sorted.length,
+    offset: 0,
+    items,
+    omitted: sorted.length - items.length,
+  };
 };
 
 const tolerantEqual = (

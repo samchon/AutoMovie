@@ -62,6 +62,7 @@ const formationDescription = (
     formation,
     members: {
       total: formation.count,
+      offset: 0,
       items: heroes,
       omitted: formation.count - heroes.length,
     },

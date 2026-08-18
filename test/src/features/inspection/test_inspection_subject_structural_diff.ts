@@ -80,6 +80,7 @@ export const test_inspection_subject_structural_diff = (): void => {
       reshaped: ["prototype-part:chair/body", "prototype:chair"],
       unchanged: {
         total: 3,
+        offset: 0,
         items: [
           "element:stable",
           "prototype-part:stable/body",
@@ -137,7 +138,7 @@ export const test_inspection_subject_structural_diff = (): void => {
     {
       elements: 0,
       instances: 0,
-      instanceSets: { total: 0, items: [], omitted: 0 },
+      instanceSets: { total: 0, offset: 0, items: [], omitted: 0 },
       prototypeChanges: 0,
     },
   );

@@ -80,6 +80,7 @@ export const test_inspection_subject_diff_fanout = (): void => {
           instances: 2_392,
           instanceSets: {
             total: 1,
+            offset: 0,
             items: ["instance-set:roof-slates"],
             omitted: 0,
           },
@@ -93,6 +94,7 @@ export const test_inspection_subject_diff_fanout = (): void => {
           instances: 2_392,
           instanceSets: {
             total: 1,
+            offset: 0,
             items: ["instance-set:roof-slates"],
             omitted: 0,
           },
@@ -147,7 +149,7 @@ export const test_inspection_subject_diff_fanout = (): void => {
     {
       elements: 0,
       instances: 0,
-      instanceSets: { total: 0, items: [], omitted: 0 },
+      instanceSets: { total: 0, offset: 0, items: [], omitted: 0 },
       prototypeChanges: 1,
     },
   );
