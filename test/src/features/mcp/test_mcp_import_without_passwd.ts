@@ -117,6 +117,15 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
       : deny === "passwd-only"
         ? ["userInfo"]
         : [];
+  // Each probe fences its own directory. A lease is a file in the coordination
+  // root and it outlives the process that took it, so probes sharing one root
+  // would leave the later ones refused by the earlier ones' leftovers -- which
+  // is how this case first failed, and is the separate defect `#1994` names.
+  const cache = path.resolve(__dirname, "../../../node_modules/.cache");
+  fs.mkdirSync(cache, { recursive: true });
+  const directory = fs.mkdtempSync(path.join(cache, "automovie-passwd-"));
+  const root = path.join(directory, "root");
+  fs.mkdirSync(root);
   const script = `
     const os = require("node:os");
     const fail = (name: "userInfo" | "homedir"): void => {
@@ -134,8 +143,11 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
         out.imported = true;
         out.surface = typeof mcp.AutoMovieProductionProject === "function";
         try {
-          mcp.acquireProductionRootNamespace(process.cwd());
+          const lease = mcp.acquireProductionRootNamespace(${JSON.stringify(root)});
           out.leased = true;
+          // Released rather than dropped, so a passing run leaves the
+          // coordination root as it found it.
+          mcp.releaseProductionRootNamespace(lease);
         } catch (error) {
           out.refusal = error instanceof Error ? error.message : String(error);
         }
@@ -153,9 +165,6 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
   // launcher looks for a tsconfig starting from the script it is given, and a
   // system path has none above it. This is the same reason
   // `test_mcp_guide_snippet_compilation` writes its scratch modules here.
-  const cache = path.resolve(__dirname, "../../../node_modules/.cache");
-  fs.mkdirSync(cache, { recursive: true });
-  const directory = fs.mkdtempSync(path.join(cache, "automovie-passwd-"));
   const file = path.join(directory, "probe.ts");
   fs.writeFileSync(file, script, "utf8");
   let run: SpawnSyncReturns<string>;
