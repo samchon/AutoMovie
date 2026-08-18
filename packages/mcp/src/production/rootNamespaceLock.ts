@@ -101,6 +101,35 @@ const coordinatePath = (
   return path.join(coordinationRoot(), `${kind}-${digest}.lock`);
 };
 
+/**
+ * Make the coordination root usable, without enforcing a mode it may not own.
+ *
+ * The mode is set when this call creates the directory, and only then. It used
+ * to be re-applied unconditionally on every call, which meant a directory this
+ * process did not create — or could not write to — killed the process instead
+ * of being used.
+ *
+ * Two benchmark sandboxes measured that, and neither was an ownership problem
+ * the caller could fix:
+ *
+ * - one where `os.homedir()` resolved to another account's profile, so
+ *   `chmod` refused on a directory that belonged to somebody else;
+ * - one where the account **did** own it and the sandbox denied the write
+ *   anyway, because its writable roots are the workdir and the temporary
+ *   directories while the home is elsewhere. That is every sandboxed authoring
+ *   agent, which is the arrangement this product is built around.
+ *
+ * Both produced `EPERM: operation not permitted, chmod` from `open()`, which
+ * every project command crosses, and the process died during directory
+ * preparation — before any lock was read, so the refusals that name a lock's
+ * owner never got the chance to run.
+ *
+ * A directory somebody else made is theirs to permission. What this needs from
+ * it is that it exists and is a physical directory, which is still checked and
+ * still refused. Whether the coordination root belongs in a per-user path at
+ * all is a separate and larger question, recorded in `#2012`; this is the part
+ * that turns a fatal crash into a working lease.
+ */
 const ensureCoordinationRoot = (): void => {
   try {
     fs.mkdirSync(coordinationRoot(), { mode: 0o700 });
@@ -112,7 +141,6 @@ const ensureCoordinationRoot = (): void => {
     throw new Error(
       `AutoMovie root-lock coordination path "${coordinationRoot()}" is not a physical directory.`,
     );
-  fs.chmodSync(coordinationRoot(), 0o700);
 };
 
 // One fenced operation can invoke another inside the same process -- a guarded
