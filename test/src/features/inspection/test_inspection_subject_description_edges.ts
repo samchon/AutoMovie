@@ -151,7 +151,7 @@ export const test_inspection_subject_description_edges = (): void => {
       name: null,
       bounds: null,
       materials: [],
-      members: { total: 0, items: [], omitted: 0 },
+      members: { total: 0, offset: 0, items: [], omitted: 0 },
     },
   );
 

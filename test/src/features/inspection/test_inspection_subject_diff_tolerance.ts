@@ -40,6 +40,7 @@ export const test_inspection_subject_diff_tolerance = (): void => {
       reshaped: 0,
       unchanged: {
         total: 3,
+        offset: 0,
         items: [
           "element:subject",
           "prototype-part:subject/body",

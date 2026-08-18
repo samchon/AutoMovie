@@ -133,6 +133,7 @@ export const test_inspection_subject_instances = (): void => {
     {
       members: {
         total: 65,
+        offset: 0,
         items: Array.from(
           { length: 64 },
           (_, slot) => `instance:grid:slot:${String(slot).padStart(6, "0")}`,

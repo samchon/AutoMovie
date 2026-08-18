@@ -82,8 +82,23 @@ export const describeAutoMovieSubjects = (
 export const describeAutoMovieSubject = (
   artifact: IAutoMovieSubjectArtifact,
   subjectId: string,
+  props?: {
+    /**
+     * Rank of the first member to name, defaulting to the first.
+     *
+     * A whole number; a fractional or negative rank names no page that exists
+     * and is refused rather than rounded, because a caller paging by a value it
+     * computed would otherwise be told it had read everything.
+     */
+    memberOffset?: number;
+  },
 ): IAutoMovieSubjectDescription => {
-  const context = createDescriptionContext(artifact);
+  const memberOffset = props?.memberOffset ?? 0;
+  if (Number.isSafeInteger(memberOffset) === false || memberOffset < 0)
+    throw new Error(
+      `Subject member offset must be a whole number of members from the first, but was ${memberOffset}.`,
+    );
+  const context = createDescriptionContext(artifact, memberOffset);
   const model = [...context.models.values()].find(
     (candidate) => prototypeId(candidate.id) === subjectId,
   );
@@ -161,10 +176,20 @@ interface IDescriptionContext {
    * node under it, which is a flat dump of the building rather than a way in.
    */
   elementChildren: Map<string, string[]>;
+  /**
+   * Rank the membership sample starts at, for every summary this pass builds.
+   *
+   * On the context rather than threaded through eight describe functions,
+   * because it is one property of the request and not of any one subject: a
+   * caller asks a subject for its next page, and every summary that answer
+   * carries is that same page of its own members.
+   */
+  memberOffset: number;
 }
 
 const createDescriptionContext = (
   artifact: IAutoMovieSubjectArtifact,
+  memberOffset: number = 0,
 ): IDescriptionContext => {
   const models = new Map(
     artifact.compiled.models.map((model) => [model.id, model] as const),
@@ -199,6 +224,7 @@ const createDescriptionContext = (
     builtElements,
     populationSpaces,
     elementChildren,
+    memberOffset,
   };
 };
 
@@ -225,6 +251,7 @@ const describePrototype = (
   },
   materials: materialsOf(model),
   members: summarizeMembers(
+    context,
     model.parts.map((part) => prototypePartId(model.id, part.id)),
   ),
 });
@@ -252,7 +279,7 @@ const describePrototypePart = (
     coordinateSpace: "model",
   },
   materials: partMaterials(model, part),
-  members: summarizeMembers([]),
+  members: summarizeMembers(context, []),
 });
 
 const describeElement = (
@@ -298,7 +325,7 @@ const describeElement = (
     // contains and both are ids this surface resolves. Without the children
     // there is no way down to an element no space claims, and the reviewer who
     // needs one most is the one who does not know it exists.
-    members: summarizeMembers([
+    members: summarizeMembers(context, [
       ...(model?.parts.map((part) => elementPartId(node.id, part.id)) ?? []),
       ...(context.elementChildren.get(node.id) ?? []),
     ]),
@@ -349,7 +376,7 @@ const describeElementGroup = (
     transform: null,
     bounds: { declared: null, content: null, coordinateSpace: "world" },
     materials: [],
-    members: summarizeMembers(context.elementChildren.get(node) ?? []),
+    members: summarizeMembers(context, context.elementChildren.get(node) ?? []),
   };
 };
 
@@ -384,7 +411,7 @@ const describeElementPart = (
       coordinateSpace: "world",
     },
     materials: partMaterials(model, part),
-    members: summarizeMembers([]),
+    members: summarizeMembers(context, []),
   };
 };
 
@@ -419,7 +446,7 @@ const describeInstanceSet = (
       model === null || context.models.has(model) === false
         ? []
         : materialsOf(context.models.get(model)!),
-    members: summarizeInstanceMembers(set),
+    members: summarizeInstanceMembers(context, set),
   };
 };
 
@@ -456,7 +483,7 @@ const describeInstance = (
       coordinateSpace: "world",
     },
     materials: runtimeModel === undefined ? [] : materialsOf(runtimeModel),
-    members: summarizeMembers([]),
+    members: summarizeMembers(context, []),
   };
 };
 
@@ -483,7 +510,7 @@ const describeSpace = (
     coordinateSpace: "world",
   },
   materials: [],
-  members: summarizeMembers([
+  members: summarizeMembers(context, [
     ...environment.spaces
       .filter((candidate) => candidate.parent === space.id)
       .map((candidate) => spaceId(environment.id, candidate.id)),
@@ -507,21 +534,47 @@ const spaceId = (environment: string, space: string): string =>
   `space:${environment}/${space}`;
 
 const summarizeMembers = (
+  context: IDescriptionContext,
   ids: readonly string[],
 ): IAutoMovieSubjectMemberSummary => {
   const sorted = [...ids].sort(compareAutoMovieRenderIds);
-  const items = sorted.slice(0, AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT);
-  return { total: sorted.length, items, omitted: sorted.length - items.length };
+  const offset = Math.min(context.memberOffset, sorted.length);
+  const items = sorted.slice(
+    offset,
+    offset + AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT,
+  );
+  return {
+    total: sorted.length,
+    offset,
+    items,
+    omitted: sorted.length - items.length,
+  };
 };
 
 const summarizeInstanceMembers = (
+  context: IDescriptionContext,
   set: IAutoMovieCompiledInstanceSet,
 ): IAutoMovieSubjectMemberSummary => {
+  // Drawn from the slot range rather than from a list, because a compact set
+  // stores a count and not its members. The slot index is zero-padded, so slot
+  // order and id order are the same order and a page names the slots its own
+  // offset claims -- which sorting after an unsliced generation would not.
+  const offset = Math.min(context.memberOffset, set.count);
   const items = Array.from(
-    { length: Math.min(set.count, AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT) },
-    (_, slot) => instanceId(set, slot),
+    {
+      length: Math.min(
+        set.count - offset,
+        AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT,
+      ),
+    },
+    (_, slot) => instanceId(set, offset + slot),
   ).sort(compareAutoMovieRenderIds);
-  return { total: set.count, items, omitted: set.count - items.length };
+  return {
+    total: set.count,
+    offset,
+    items,
+    omitted: set.count - items.length,
+  };
 };
 
 const materialsOf = (model: IAutoMovieModel): IAutoMovieSubjectMaterial[] =>

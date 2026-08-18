@@ -112,6 +112,7 @@ export const test_inspection_subject_description_oracles = (): void => {
         owner: null,
         members: {
           total: 1,
+          offset: 0,
           items: ["prototype-part:guard-rack-west-pole-0-model/body"],
           omitted: 0,
         },
