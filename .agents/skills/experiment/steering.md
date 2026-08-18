@@ -37,7 +37,9 @@ Rooting at the launcher looks equivalent and fails at the one moment it matters.
 
 Matching the session UUID against command lines was the rule here until two drivers measured it in the same hour. Across their two trees the closure held 14 and 19 processes, matching the sandbox path found 7 of each (50% and 37%), and **matching the session UUID found none at all**. The rule identified nothing. What it missed is the expensive half: `node_repl.exe`, `codex-code-mode-host.exe`, command runners, `conhost.exe`, a `codex.exe` in one driver's own tree — and in both trees the authoring agent's own `powershell.exe` working shells, which are the processes actually doing the work under observation. A cleanup that does not recognise those orphans exactly what is being measured.
 
-String matching survives as a cross-check that under-reports by half or more. Ancestry is the rule.
+**That measurement was taken on first turns only, and a third driver showed it does not generalise.** On a `codex exec resume` turn the UUID *is* on the command line: it matched all three of that driver's processes exactly, while rooting the ancestry at the launcher returned a closure of one — the believable nothing again. On that turn the UUID was the only thing that found the live root. So the honest rule is that **neither signal is sound alone and which one fails depends on how the turn was started**: a first turn hides the UUID, and a reaped launcher hides the ancestry. Take both, and treat a disagreement as the answer being unknown rather than as one of them winning.
+
+String matching under-reports by half or more where it works at all. Ancestry rooted at the session process is the primary; the UUID is the cross-check that saves it when the launcher is gone.
 
 The adoption hazard is not hypothetical, and it does not need a reused id to bite. Two sessions of the same campaign started **55 seconds apart** with byte-for-byte identical process shape — `sh.exe → node.exe → codex.exe → { server.mjs, tsx scripts/mcp.ts }`, same names, same depth — and a driver that had pinned "the newest `codex.exe`" would have adopted its sibling's session outright. The **only** thing separating them was the sandbox path on the MCP server's command line. So the root is pinned by identity, never by recency, and the pinning is confirmed against something that names your sandbox before it is trusted.
 
@@ -47,7 +49,7 @@ Kill the main process only. Its children clean up behind it.
 
 ## Your Own Instruments Fail Plausibly Too
 
-The rule that an instrument is verified before the subject applies to the small ones you write while steering, not only to a capture sweep. Four process-inspection filters failed inside one campaign in one day, and **not one of them failed loudly**.
+The rule that an instrument is verified before the subject applies to the small ones you write while steering, not only to a capture sweep. Eight of them failed inside one campaign — process filters, hash comparisons, a pipe, a pattern — and **not one of them failed loudly**.
 
 | The filter | What it returns |
 | --- | --- |
@@ -55,9 +57,50 @@ The rule that an instrument is verified before the subject applies to the small 
 | `-and` and `-or` mixed without parentheses | Processes that match neither clause |
 | A hashtable keyed on `ParentProcessId`, a `UInt32`, read with an `Int32` | **No children** — the same answer as a turn that has ended |
 | `$queue[1..($queue.Count-1)]` on a one-element queue | `$queue[1..0]`, read as indices 1 then 0, re-adding the element: an infinite loop presenting as a two-minute hang on a machine that really is loaded |
-
 | A hash comparison whose input list came back empty | **`IDENTICAL`** — over zero files, while the directory held seven |
 | A per-shot comparand taken as the *first* recorded digest | Two frames reported `DIFFERENT` because round one had three digest directories and the first line was not the newest |
+| `Select-Object -First 40` on a running script's output | **exit -1**, while the script had written all seven of its files |
+| A `grep` for NUL whose pattern expands to empty | **NUL BYTES PRESENT** on a clean UTF-8 file |
+
+Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. **Two of them fail as *bad* news** — a truncated pipe killing a script that had already succeeded, and an empty pattern reporting corruption in a clean file — and both would have blocked correct work rather than waving wrong work through. So the family's signature is not "instruments flatter you". It is that **an instrument answers confidently about input it never received**, and it does that in whichever direction the accident happens to point. Neither instrument was wrong about what it saw; both were wrong about having seen anything. So the rule that catches this class is not care, it is arithmetic: **make an instrument state its input count, and treat zero as a failure rather than as a result.** An empty comparison should not be able to render a verdict at all. Another arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
+
+The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.** A notification is not one of the three; it either agrees with them or it is wrong.
+
+When a wrapper is reaped the transcript survives it: the `exec`ed process keeps its stdout redirect, and one measured log went on growing to 46 MB with nothing lost. So there is nothing to recover — identify the session process by ancestry again, re-arm on it, and carry on.
+
+## The Agent Will Rebut You, And May Be Right
+
+Tell the agent how you obtained every claim you send it, the same way [Read The Result](SKILL.md#read-the-result) requires it of your own conclusions. An agent that knows a claim came from a frame can challenge the frame; one handed a bare assertion can only comply with it.
+
+The observer was wrong seven times in that campaign. The most expensive one placed a defect that did not exist, an empty roof field and a flat ground-floor wall, at priorities one and two of a multi-agent fan-out. The real defect was in the observer's own 88-camera sweep renderer, which was dropping instanced geometry, and it surfaced only because the authoring agent pushed back:
+
+> The actionable remaining defect is in the external 88-camera sweep renderer's handling of GPU instancing, not the residence geometry.
+
+Settle that kind of rebuttal by measurement rather than by another look at the frames. Counting 39 oriel elements and 57 hub pieces in the compiled artifact withdrew two more claims immediately, and both of those claims would have survived another round of looking at frames.
+
+## Ask For Its List When Yours Is Empty
+
+Running out of findings is not the same as there being none left, so ask the agent for its own before you treat the run as closed.
+
+Told that the observer's list was empty, the agent in that campaign returned three priorities, one of which was its own review camera standing inside a room it was supposed to show. The observer had never considered it. The agent also named the exact evidence that would separate its three hypotheses, and that exchange was the most productive of the campaign.
+
+The closing condition itself belongs to the brief, which names the reference set both lists are checked against. See [Say What Ends The Run](briefing.md#say-what-ends-the-run).
+
+## Prove The Pixels Are New
+
+A checkpoint report is the agent's claim about its output, not a reading of it. One reported `revision 212, gables stand, spire clears the ridge` while the PNG on disk was byte-identical to the file written three hours earlier, which a hash caught and a description never would have.
+
+Compare every sweep against the previous round byte for byte. How many frames changed and which ones changed is the progress report: in round three, 25 of 88 changed and all 25 were the courtyard and the upper storeys, which said plainly that nothing had yet touched the rest.
+
+**That comparison holds only where the frames are written to a fixed path.** Where a production writes frames to content-addressed directories, a re-render lands in a *new* digest directory instead of overwriting an existing one, so re-reading the round-one paths returns `CHANGED 0` no matter what happened. Two drivers reported that zero as evidence of determinism before either checked; one had a shot carrying four digest directories at the time, the other measured 24 identical old paths while the digest directories per shot went 3 to 5 and the PNG count went 24 to 40. **A comparison whose answer is fixed by the addressing scheme cannot fail, so it is not a measurement.** Under content addressing the signal is the *new* paths appearing, and the old-path comparison survives only as a cheap tripwire, labelled as one.
+
+What replaces it is the propagation shape, which can fail and did not:
+
+- **Design untouched between rounds — nothing derived moves at all.** Measured at 122 files with `CHANGED 0 / NEW 0 / GONE 0` while the revision read 100, and separately at 0 of 216 with nothing in `generated/`.
+- **Design touched — its dependents move and nothing else.** One new curtain wall moved 22 of 222 artifacts, 19 of them in `generated/`, and the only two shots that moved were the two that face it.
+
+Hash what the product wrote and nothing else — `generated/`, the design and production records, the reports, the renders — and take the snapshot on both sides of the same command.
+ '`, whose pattern expands to empty | **`NUL BYTES PRESENT`** on a clean UTF-8 file |
 
 Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. The last two are the same shape from opposite ends: one compares nothing and calls it agreement, the other compares the wrong thing and calls it a change. **A comparison reports on whatever it was handed, including an empty list, so count the comparands before reading the verdict.** A fifth arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
 
