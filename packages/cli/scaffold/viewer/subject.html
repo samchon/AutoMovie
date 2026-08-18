@@ -98,6 +98,20 @@
         color: #9aa7b4;
       }
 
+      /* The control that asks a node for its next page. Underlined rather than
+         coloured like a link, because it navigates nowhere: it adds rows to the
+         node already open, and a reviewer who reads it as a link loses the
+         place they were looking at. */
+      #subject .more {
+        color: #9aa7b4;
+        cursor: pointer;
+        text-decoration: underline dotted;
+      }
+
+      #subject .more:hover {
+        color: #e6edf3;
+      }
+
       #subject .gap {
         height: 0.7em;
       }
