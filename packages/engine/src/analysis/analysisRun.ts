@@ -14,6 +14,7 @@ import {
 } from "@automovie/interface";
 
 import { autoMovieRenderDigest } from "../render/renderDigest";
+import { withArticle } from "../text/article";
 import { ViolationCollector } from "../validation/violation";
 
 /**
@@ -773,8 +774,8 @@ export const summarizeAutoMovieAnalysis = (props: {
         domain,
         metric: null,
         status: "not-run",
-        reason: `the production requires a ${domain} answer and no run was submitted`,
-        remedy: `run a ${domain} analysis against revision "${props.revision}", or stop requiring the domain`,
+        reason: `the production requires ${withArticle(domain)} answer and no run was submitted`,
+        remedy: `run ${withArticle(domain)} analysis against revision "${props.revision}", or stop requiring the domain`,
       });
   }
 

@@ -22,6 +22,7 @@ import {
   autoMovieRenderDigest,
   compareAutoMovieRenderIds,
 } from "../render/renderDigest";
+import { withArticle } from "../text/article";
 import {
   autoMovieOpeningExtent,
   autoMovieOpeningFillExtent,
@@ -207,7 +208,7 @@ export const deriveAutoMovieDrawingSchedule = (props: {
       // written, so the row's absent place is stated rather than implied.
       subject: `${subject}-location`,
       status: "not-run",
-      reason: `a ${subject} row states type, size and count but no place, so its location must still be read from the design rather than from the schedule`,
+      reason: `${withArticle(subject)} row states type, size and count but no place, so its location must still be read from the design rather than from the schedule`,
       remedy:
         subject === "opening"
           ? "resolve the opening's host boundary to the spaces it separates, then fill the row's place"

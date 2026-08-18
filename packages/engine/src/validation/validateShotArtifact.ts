@@ -11,6 +11,7 @@ import {
   LIGHT_CHANNEL_PROPERTIES,
   parseLightPointer,
 } from "../resolve/lightChannel";
+import { withArticle } from "../text/article";
 import {
   asArray,
   isRecord,
@@ -802,7 +803,7 @@ export const lightClipChannelGate =
         violations,
         "type",
         `${path}.pointer`,
-        `light clip track addresses "${target.property}", which a ${String(kind)} light does not carry`,
+        `light clip track addresses "${target.property}", which ${withArticle(String(kind))} light does not carry`,
         channel.pointer,
       );
   };

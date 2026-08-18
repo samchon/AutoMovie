@@ -559,7 +559,7 @@ export const validateServiceNetwork = (props: {
         out.push(
           "range",
           `${path}.radius`,
-          `a ${segment.radius} m run does not pass through the ${sleeve.radius} m sleeve "${id}"`,
+          `a run of ${segment.radius} m does not pass through the ${sleeve.radius} m sleeve "${id}"`,
           segment.radius,
           segment.radius - sleeve.radius,
         );

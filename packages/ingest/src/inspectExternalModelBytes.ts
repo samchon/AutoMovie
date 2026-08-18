@@ -1379,7 +1379,7 @@ const validateAccessorRange = (
   const end = offset + (count - 1) * stride + element;
   if (end > (view.byteLength as number))
     throw new Error(
-      `accessors[${index}] requires ${end} bytes inside a ${String(view.byteLength)}-byte bufferView.`,
+      `accessors[${index}] requires ${end} bytes inside a bufferView of ${String(view.byteLength)} bytes.`,
     );
 };
 

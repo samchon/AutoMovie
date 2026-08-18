@@ -144,7 +144,7 @@ export const decodeProductionAudioAsset = (props: {
     );
   if (format.size < 16)
     throw new Error(
-      `Audio asset "${props.path}" has a ${format.size}-byte "fmt " chunk; a WAVE format chunk is at least 16 bytes.`,
+      `Audio asset "${props.path}" has a "fmt " chunk of ${format.size} bytes; a WAVE format chunk is at least 16 bytes.`,
     );
   const declaredTag = view.getUint16(format.offset, true);
   const channels = view.getUint16(format.offset + 2, true);
@@ -186,7 +186,7 @@ export const decodeProductionAudioAsset = (props: {
   const blockBytes = channels * bytesPerSample;
   if (data.size % blockBytes !== 0)
     throw new Error(
-      `Audio asset "${props.path}" has a ${data.size}-byte "data" chunk, which is not a whole number of ${channels}-channel ${bitsPerSample}-bit sample frames.`,
+      `Audio asset "${props.path}" has a "data" chunk of ${data.size} bytes, which is not a whole number of ${channels}-channel ${bitsPerSample}-bit sample frames.`,
     );
   const sourceFrames = data.size / blockBytes;
   if (sourceFrames === 0)

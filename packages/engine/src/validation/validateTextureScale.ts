@@ -194,7 +194,7 @@ const checkBinding = (props: {
     props.out.warn(
       "range",
       path,
-      `part "${props.part.id}" spans ${axis.span} m in ${axis.name} but material "${props.material.id}" implies a ${tile} m tile on ${props.slot}; the surface cannot show one whole turn of a repeating image, so state the tile the surface can carry or clamp the axis to declare a deliberate fit`,
+      `part "${props.part.id}" spans ${axis.span} m in ${axis.name} but material "${props.material.id}" implies a tile of ${tile} m on ${props.slot}; the surface cannot show one whole turn of a repeating image, so state the tile the surface can carry or clamp the axis to declare a deliberate fit`,
       tile,
       tile - axis.span,
     );
