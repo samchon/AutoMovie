@@ -50,15 +50,57 @@ export const coverageTemporaryDirectory = () =>
  * and nothing else: the directory is this run's alone, so anything that is not
  * a record is not part of this measurement.
  */
-export const coverageRecordCount = (directory) => {
+export const coverageRecordCount = (directory) =>
+  coverageRecords(directory).count;
+
+/**
+ * What a run's own record directory holds, counted three ways.
+ *
+ * The count alone was not enough. A bad run and a good run of this suite both
+ * wrote **179** records, and the bad one reported 79,786 covered statements
+ * against the good one's 118,565 — the same files, a third of the coverage
+ * gone. So nothing failed to flush, and a count cannot tell a complete record
+ * from a directory entry for one that was still being written.
+ *
+ * Bytes and parsability can. A record caught mid-write has a name, an entry and
+ * a size, and no usable content; a short byte total or a short parsable count
+ * is that race. Equal figures in both modes move the question into the merge
+ * itself, which is the other branch and needs a different fix. Three numbers
+ * from one directory walk, on a step that already takes minutes.
+ */
+export const coverageRecords = (directory) => {
+  let count = 0;
+  let bytes = 0;
+  let parsed = 0;
+  let results = 0;
+  let entries;
   try {
-    return fs.readdirSync(directory).filter((entry) => entry.endsWith(".json"))
-      .length;
+    entries = fs.readdirSync(directory);
   } catch {
-    // A directory the run never created is zero records, which is exactly what
-    // a caller asking this question needs to be told.
-    return 0;
+    // A directory the run never created holds nothing, which is exactly what a
+    // caller asking this question needs to be told.
+    return { count, bytes, parsed, results };
   }
+  for (const entry of entries) {
+    if (entry.endsWith(".json") === false) continue;
+    count++;
+    let text;
+    try {
+      text = fs.readFileSync(path.join(directory, entry), "utf8");
+    } catch {
+      continue;
+    }
+    bytes += Buffer.byteLength(text);
+    try {
+      const record = JSON.parse(text);
+      parsed++;
+      if (Array.isArray(record.result)) results += record.result.length;
+    } catch {
+      // Counted in `count` and not in `parsed`, which is the difference this
+      // exists to expose.
+    }
+  }
+  return { count, bytes, parsed, results };
 };
 
 /** The measured set. One definition, so two runs cannot count different things. */
@@ -138,15 +180,18 @@ const measure = () => {
     );
     if (result.error !== undefined) throw result.error;
     // Printed because the report alone cannot say whether a low number means
-    // little ran or little was counted. One commit measured 813/813 tests
-    // passing and 141,395 statements instrumented on both platforms, and
-    // 118,208 statements covered on Ubuntu against 79,618 on Windows -- an
-    // identical denominator with a much smaller numerator, which is execution
-    // data collected and then not counted rather than positions mis-mapped.
-    // This line is what separates "not written" from "written and not merged",
-    // and it costs one directory read on a step that already took minutes.
+    // little ran or little was counted. This suite's total is bimodal -- about
+    // 83.6% or about 56.3%, on either platform, with an identical denominator
+    // and every test passing either way -- and the first reading of this line
+    // settled which half of that it is: a good run and a bad run both wrote
+    // 179 records. Nothing failed to flush; a third of the coverage is on disk
+    // and does not reach the total. The remaining numbers separate a record
+    // caught mid-write from a merge that drops complete ones, and they cost one
+    // directory read on a step that already took minutes.
+    const records = coverageRecords(temporary);
     console.log(
-      `coverage records: ${coverageRecordCount(temporary)} in ${temporary}`,
+      `coverage records: ${records.count} files, ${records.parsed} parsable, ` +
+        `${records.results} script entries, ${records.bytes} bytes in ${temporary}`,
     );
     process.exitCode = result.status ?? 1;
   } finally {

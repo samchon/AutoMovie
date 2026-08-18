@@ -46,23 +46,31 @@ import { namedFacts } from "../internal/predicates";
  * 4. The gap reporter reads the exact directory the entry point writes. These
  *    are two files with one path between them, and moving either alone reports
  *    a different run than the one just measured.
- * 5. The entry point can say how many per-process records a run left, counting
- *    records and nothing else. One commit measured 813/813 tests passing and
- *    141,395 statements instrumented on both platforms, with 118,208 covered on
- *    Ubuntu against 79,618 on Windows — an identical denominator under a much
- *    smaller numerator, which is data collected and not counted rather than
- *    positions mis-mapped. Counting the records is what separates "none were
- *    written" from "they were written and not merged", and a count that also
- *    counted a stray note or a nested directory would answer neither.
+ * 5. The entry point can say what a run's own record directory holds, counting
+ *    records and nothing else. The suite's total is bimodal — about 83.6% or
+ *    about 56.3%, on either platform, with an identical denominator and every
+ *    test passing either way — and the count settled which half of that it is:
+ *    a good run and a bad run both wrote **179** records, so nothing failed to
+ *    flush and a third of the coverage is on disk without reaching the total.
+ * 6. A record caught mid-write is counted as present and not as parsable. That
+ *    is the difference the next question turns on, and a walk that counted a
+ *    stray note, a nested directory, or a truncated record as usable would
+ *    answer neither question.
  */
 export const test_workspace_coverage_isolation = (): void => {
   const entry = path.join(ROOT, "internals", "coverage.mjs");
-  // A directory holding one record and two things that are not records, so the
-  // count is asserted against a mixture rather than against an empty answer.
+  // A directory holding a complete record, a truncated one, and two things that
+  // are not records at all, so every figure is asserted against a mixture rather
+  // than against an empty answer.
   const records = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-coverage-records-"),
   );
-  fs.writeFileSync(path.join(records, "coverage-1-2-0.json"), "{}");
+  fs.writeFileSync(
+    path.join(records, "coverage-1-2-0.json"),
+    JSON.stringify({ result: [{ url: "a" }, { url: "b" }, { url: "c" }] }),
+  );
+  // A record the collector had not finished writing when the walk reached it.
+  fs.writeFileSync(path.join(records, "coverage-1-2-1.json"), '{"result":[{"u');
   fs.writeFileSync(path.join(records, "notes.txt"), "");
   fs.mkdirSync(path.join(records, "nested"));
   const probe = spawnSync(
@@ -73,10 +81,11 @@ export const test_workspace_coverage_isolation = (): void => {
          const first = module.coverageTemporaryDirectory();
          const second = module.coverageTemporaryDirectory();
          const counted = module.coverageRecordCount(${JSON.stringify(records)});
+         const walked = module.coverageRecords(${JSON.stringify(records)});
          const absent = module.coverageRecordCount(${JSON.stringify(
            path.join(records, "never-created"),
          )});
-         console.log(JSON.stringify({ first, second, counted, absent }));
+         console.log(JSON.stringify({ first, second, counted, absent, walked }));
        });`,
     ],
     { cwd: ROOT, encoding: "utf8" },
@@ -89,6 +98,7 @@ export const test_workspace_coverage_isolation = (): void => {
     second: string;
     counted: number;
     absent: number;
+    walked: { count: number; bytes: number; parsed: number; results: number };
   } | null => {
     const line = probe.stdout
       .split("\n")
@@ -100,6 +110,12 @@ export const test_workspace_coverage_isolation = (): void => {
       second: string;
       counted: number;
       absent: number;
+      walked: {
+        count: number;
+        bytes: number;
+        parsed: number;
+        results: number;
+      };
     };
   })();
 
@@ -135,11 +151,24 @@ export const test_workspace_coverage_isolation = (): void => {
       // different question than the one it is printed to answer.
       [
         "it counts records and not the other contents",
-        () => drawn !== null && drawn.counted === 1,
+        () => drawn !== null && drawn.counted === 2,
       ],
       [
         "and a directory that was never created is zero rather than a throw",
         () => drawn !== null && drawn.absent === 0,
+      ],
+      // A record caught mid-write has a name, an entry and a size and no usable
+      // content, so a count alone reads it as present. Parsability is what
+      // separates the two, and the unparsable one must still be counted or the
+      // difference disappears.
+      [
+        "an unreadable record counts as present and not as parsable",
+        () =>
+          drawn !== null &&
+          drawn.walked.count === 2 &&
+          drawn.walked.parsed === 1 &&
+          drawn.walked.results === 3 &&
+          drawn.walked.bytes > 0,
       ],
     ]),
     {
@@ -150,6 +179,7 @@ export const test_workspace_coverage_isolation = (): void => {
       "importing it measured nothing": true,
       "it counts records and not the other contents": true,
       "and a directory that was never created is zero rather than a throw": true,
+      "an unreadable record counts as present and not as parsable": true,
     },
   );
 
