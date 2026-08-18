@@ -39,6 +39,8 @@ Matching the session UUID against command lines was the rule here until two driv
 
 String matching survives as a cross-check that under-reports by half or more. Ancestry is the rule.
 
+The adoption hazard is not hypothetical, and it does not need a reused id to bite. Two sessions of the same campaign started **55 seconds apart** with byte-for-byte identical process shape — `sh.exe → node.exe → codex.exe → { server.mjs, tsx scripts/mcp.ts }`, same names, same depth — and a driver that had pinned "the newest `codex.exe`" would have adopted its sibling's session outright. The **only** thing separating them was the sandbox path on the MCP server's command line. So the root is pinned by identity, never by recency, and the pinning is confirmed against something that names your sandbox before it is trusted.
+
 An indiscriminate `taskkill` destroys hours of the other campaign's work. It happened more than once here, and the killed fleets left orphan capture runners contending over the same state until the capture stopped updating without saying so.
 
 Kill the main process only. Its children clean up behind it.
@@ -54,7 +56,10 @@ The rule that an instrument is verified before the subject applies to the small 
 | A hashtable keyed on `ParentProcessId`, a `UInt32`, read with an `Int32` | **No children** — the same answer as a turn that has ended |
 | `$queue[1..($queue.Count-1)]` on a one-element queue | `$queue[1..0]`, read as indices 1 then 0, re-adding the element: an infinite loop presenting as a two-minute hang on a machine that really is loaded |
 
-Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. A fifth arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
+| A hash comparison whose input list came back empty | **`IDENTICAL`** — over zero files, while the directory held seven |
+| A per-shot comparand taken as the *first* recorded digest | Two frames reported `DIFFERENT` because round one had three digest directories and the first line was not the newest |
+
+Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. The last two are the same shape from opposite ends: one compares nothing and calls it agreement, the other compares the wrong thing and calls it a change. **A comparison reports on whatever it was handed, including an empty list, so count the comparands before reading the verdict.** A fifth arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
 
 The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.** A notification is not one of the three; it either agrees with them or it is wrong.
 
@@ -83,3 +88,12 @@ The closing condition itself belongs to the brief, which names the reference set
 A checkpoint report is the agent's claim about its output, not a reading of it. One reported `revision 212, gables stand, spire clears the ridge` while the PNG on disk was byte-identical to the file written three hours earlier, which a hash caught and a description never would have.
 
 Compare every sweep against the previous round byte for byte. How many frames changed and which ones changed is the progress report: in round three, 25 of 88 changed and all 25 were the courtyard and the upper storeys, which said plainly that nothing had yet touched the rest.
+
+**That comparison holds only where the frames are written to a fixed path.** Where a production writes frames to content-addressed directories, a re-render lands in a *new* digest directory instead of overwriting an existing one, so re-reading the round-one paths returns `CHANGED 0` no matter what happened. Two drivers reported that zero as evidence of determinism before either checked; one had a shot carrying four digest directories at the time, the other measured 24 identical old paths while the digest directories per shot went 3 to 5 and the PNG count went 24 to 40. **A comparison whose answer is fixed by the addressing scheme cannot fail, so it is not a measurement.** Under content addressing the signal is the *new* paths appearing, and the old-path comparison survives only as a cheap tripwire, labelled as one.
+
+What replaces it is the propagation shape, which can fail and did not:
+
+- **Design untouched between rounds — nothing derived moves at all.** Measured at 122 files with `CHANGED 0 / NEW 0 / GONE 0` while the revision read 100, and separately at 0 of 216 with nothing in `generated/`.
+- **Design touched — its dependents move and nothing else.** One new curtain wall moved 22 of 222 artifacts, 19 of them in `generated/`, and the only two shots that moved were the two that face it.
+
+Hash what the product wrote and nothing else — `generated/`, the design and production records, the reports, the renders — and take the snapshot on both sides of the same command.
