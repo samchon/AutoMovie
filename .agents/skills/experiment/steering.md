@@ -52,9 +52,11 @@ The rule that an instrument is verified before the subject applies to the small 
 | A hashtable keyed on `ParentProcessId`, a `UInt32`, read with an `Int32` | **No children** — the same answer as a turn that has ended |
 | `$queue[1..($queue.Count-1)]` on a one-element queue | `$queue[1..0]`, read as indices 1 then 0, re-adding the element: an infinite loop presenting as a two-minute hang on a machine that really is loaded |
 
-Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. An instrument that shows nothing is caught in a minute; these are the other kind.
+Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. A fifth arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
 
-The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.**
+The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.** A notification is not one of the three; it either agrees with them or it is wrong.
+
+When a wrapper is reaped the transcript survives it: the `exec`ed process keeps its stdout redirect, and one measured log went on growing to 46 MB with nothing lost. So there is nothing to recover — identify the session process by ancestry again, re-arm on it, and carry on.
 
 ## The Agent Will Rebut You, And May Be Right
 
