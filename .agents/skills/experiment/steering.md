@@ -49,6 +49,14 @@ An indiscriminate `taskkill` destroys hours of the other campaign's work. It hap
 
 Kill the main process only. Its children clean up behind it.
 
+## Moving The Home Moves The Session With It
+
+A sandboxed agent whose resolved home is a directory it cannot write to fails on every command that takes a lock, and the environment fix is to point `USERPROFILE` and `HOME` at somewhere inside the workdir. That works — `os.homedir()` follows it immediately on Windows — and it takes `~/.codex` with it.
+
+Which means the session file relocates, `codex exec resume` no longer finds the session, and the rollout stops growing where the instrument is watching. **A relocated rollout and a finished turn look identical**, so the fix for one failure manufactures the shape of another. Pin `CODEX_HOME` **before** the home moves, and afterwards verify all three: no `.codex` under the new home, the session resuming on the same UUID, and the rollout still growing where it was.
+
+The workaround also has a consequence worth writing into the record rather than discovering later: the driver and the agent then fence against **different coordination roots by construction**, which is exactly the silent half of a per-user lock path — mutual exclusion that never engages. Deliberately created, it is survivable only if the operational rule carries the safety instead: rounds run at turn boundaries and nowhere else. That stops being convenience and becomes a correctness precondition the moment the locks no longer separate the two processes.
+
 ## Your Own Instruments Fail Plausibly Too
 
 The rule that an instrument is verified before the subject applies to the small ones you write while steering, not only to a capture sweep. Eight of them failed inside one campaign — process filters, hash comparisons, a pipe, a pattern — and **not one of them failed loudly**.
