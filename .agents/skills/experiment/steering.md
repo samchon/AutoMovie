@@ -41,6 +41,8 @@ Matching the session UUID against command lines was the rule here until two driv
 
 String matching under-reports by half or more where it works at all. Ancestry rooted at the session process is the primary; the UUID is the cross-check that saves it when the launcher is gone.
 
+The same hazard reaches files, not only processes. A driver reading its coordination directory for its own lock found two that were not its own — sibling drivers' locks sharing one user profile — and neither matched the coordinate it had computed. **A one-shot directory listing does not tell you whose entries you are looking at.** Compute the identity you expect, then capture continuously until it appears, and report only what matches. Reporting the listing at the first look would have produced a confident wrong correction about a product that was behaving.
+
 The adoption hazard is not hypothetical, and it does not need a reused id to bite. Two sessions of the same campaign started **55 seconds apart** with byte-for-byte identical process shape — `sh.exe → node.exe → codex.exe → { server.mjs, tsx scripts/mcp.ts }`, same names, same depth — and a driver that had pinned "the newest `codex.exe`" would have adopted its sibling's session outright. The **only** thing separating them was the sandbox path on the MCP server's command line. So the root is pinned by identity, never by recency, and the pinning is confirmed against something that names your sandbox before it is trusted.
 
 An indiscriminate `taskkill` destroys hours of the other campaign's work. It happened more than once here, and the killed fleets left orphan capture runners contending over the same state until the capture stopped updating without saying so.
