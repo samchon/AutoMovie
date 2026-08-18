@@ -11,6 +11,7 @@ import {
   IAutoMovieFilmTimeline,
   IAutoMovieProductionInspection,
   IAutoMovieProductionNextAction,
+  IAutoMovieRenderBundleManifest,
 } from "@automovie/interface";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,6 +25,7 @@ import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import type { IAutoMovieProductionDesignGraph } from "./validateProductionDesign";
 
 const PROJECT_MARKERS = [
   "automovie.config.ts",
@@ -161,12 +163,17 @@ export const inspectAutoMovieProduction = (
   const compilation = services.compileStatus();
   const diagnostics = compilation.diagnostics;
   const reviews = services.review.queue(compilation);
+  const sequenceIds = new Set(
+    (services.project.screenplayIndex()?.treatment.sequences ?? []).map(
+      (sequence) => sequence.id,
+    ),
+  );
   const renders = listNamedFiles(services.project.renderRoot(), "manifest.json")
-    .map((file) => ({
-      path: normalizeSlash(path.relative(services.project.root, file)),
-      current: (() => {
-        const manifest = services.project.verifiedRenderManifest(file);
-        return (
+    .map((file) => {
+      const manifest = services.project.verifiedRenderManifest(file);
+      return {
+        path: normalizeSlash(path.relative(services.project.root, file)),
+        current:
           compilation.success &&
           generated !== null &&
           generated.inputFingerprint ===
@@ -177,10 +184,11 @@ export const inspectAutoMovieProduction = (
               services.project,
               generated,
               manifest.target,
-            )
-        );
-      })(),
-    }))
+            ),
+        target: manifest?.target ?? null,
+        owned: renderTargetOwned(graph, sequenceIds, manifest?.target ?? null),
+      };
+    })
     .sort((left, right) => compareCodeUnits(left.path, right.path));
   const nextActions: IAutoMovieProductionNextAction[] = [
     ...diagnostics
@@ -402,3 +410,41 @@ const listNamedFiles = (root: string, name: string): string[] =>
 
 const normalizeSlash = (value: string): string =>
   value.split(path.sep).join("/");
+
+/**
+ * Whether the design still carries the target a render bundle was made for.
+ *
+ * `current` says the bundle no longer matches its inputs, which is the ordinary
+ * result of iterating: on one measured production, 42 render entries carried 39
+ * `current: false`, and 38 of those were superseded renders of shots that still
+ * exist. The thirty-ninth was the render of a shot the design no longer carries,
+ * and nothing on the entry separated it from the other thirty-eight. Recovering
+ * that difference meant parsing a shot id out of a directory name and diffing it
+ * against the compile manifest by hand.
+ *
+ * `false` is an accusation, so it is only returned where ownership was actually
+ * resolved. An unreadable manifest reports owned, because a bundle is not garbage
+ * for having failed to open. So does a kind this cannot resolve, which is why the
+ * switch is exhaustive over the manifest's own union rather than defaulting: a
+ * new target kind added there should make this fail to compile instead of quietly
+ * calling every bundle of that kind unowned.
+ *
+ * Nothing here deletes anything. The reader decides.
+ */
+const renderTargetOwned = (
+  graph: IAutoMovieProductionDesignGraph,
+  sequenceIds: ReadonlySet<string>,
+  target: IAutoMovieRenderBundleManifest["target"] | null,
+): boolean => {
+  if (target === null) return true;
+  switch (target.kind) {
+    case "shot":
+      return graph.shots.has(target.id);
+    case "asset":
+      return graph.models.has(target.id);
+    case "sequence":
+      return sequenceIds.has(target.id);
+    case "film":
+      return graph.production?.id === target.id;
+  }
+};
