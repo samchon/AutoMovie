@@ -3194,17 +3194,52 @@ const refused = (
   };
 };
 
+/**
+ * Codes that report the review target itself is not there to be reviewed.
+ *
+ * The safety clause below protects an artifact from being deleted instead of
+ * corrected. These two say there is no artifact: `review-target-missing` fires
+ * when the target does not exist in current project bytes, and
+ * `review-source-missing` when the source file cannot be read at all. Telling a
+ * reader not to delete a thing the same sentence has just said does not exist
+ * is noise at best, and at worst reads as "it exists and is protected".
+ */
+const ABSENT_REVIEW_TARGET_CODES: ReadonlySet<string> = new Set([
+  "review-target-missing",
+  "review-source-missing",
+]);
+
+/**
+ * Say, on a diagnostic that can be answered by deleting something, that
+ * deleting it is not the answer — and say which thing.
+ *
+ * The clause guards a real move: a review diagnostic naming an artifact is
+ * silenced completely by removing the artifact, so an author under a green-lint
+ * instruction has a shortcut that satisfies every gate and destroys the work.
+ * That is why it rides on the diagnostics rather than living in a guide nobody
+ * re-reads.
+ *
+ * It named no artifact, which is what made it misfire. A `#1954` authoring
+ * agent replacing the starter production met `design` refusing an orphaned
+ * starter record with *"either derive it above from the source that owns it, or
+ * delete the file"* and, in the same session, a review diagnostic saying
+ * deletion is not authorized — two correct instructions about two different
+ * files, and a definite article standing between the author and knowing which.
+ * The target is on the diagnostic already, so the clause states it.
+ *
+ * {@link ABSENT_REVIEW_TARGET_CODES} carries the other half: a clause about not
+ * deleting an artifact has nothing to say when the diagnostic's own message is
+ * that the artifact is not there.
+ */
 const appendReviewCorrectionSafety = (
   diagnostic: IAutoMovieDiagnostic,
-): IAutoMovieDiagnostic =>
-  diagnostic.message.includes(
-    "Correction feedback does not authorize deleting the artifact.",
-  )
+): IAutoMovieDiagnostic => {
+  if (ABSENT_REVIEW_TARGET_CODES.has(diagnostic.code)) return diagnostic;
+  const clause = `Correction feedback does not authorize deleting "${diagnostic.target}".`;
+  return diagnostic.message.includes(clause)
     ? diagnostic
-    : {
-        ...diagnostic,
-        message: `${diagnostic.message} Correction feedback does not authorize deleting the artifact.`,
-      };
+    : { ...diagnostic, message: `${diagnostic.message} ${clause}` };
+};
 
 const sameDesignTarget = (
   left: IAutoMovieDesignTarget,
