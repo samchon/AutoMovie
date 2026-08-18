@@ -302,6 +302,7 @@ export const test_mcp_production_source_link = (): void => {
       "builtEnvironmentElementBounds",
       "builtEnvironmentPlacementBounds",
       "builtEnvironmentPlacementOverlap",
+      "builtEnvironmentSpaceBoundaries",
       "builtEnvironmentSpaceConnectors",
       "builtEnvironmentSpaceContentBounds",
       "builtEnvironmentSpaceFidelity",
