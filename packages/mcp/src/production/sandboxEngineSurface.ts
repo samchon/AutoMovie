@@ -33,6 +33,7 @@ export type AutoMovieSandboxEngineExport =
   | "builtEnvironmentPlacementBounds"
   | "builtEnvironmentPlacementOverlap"
   | "builtEnvironmentSupportStatus"
+  | "builtEnvironmentSpaceBoundaries"
   | "builtEnvironmentSpaceConnectors"
   | "builtEnvironmentSpaceContentBounds"
   | "builtEnvironmentSpaceFidelity"
@@ -119,6 +120,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "builtEnvironmentPlacementBounds",
     "builtEnvironmentPlacementOverlap",
     "builtEnvironmentSupportStatus",
+    "builtEnvironmentSpaceBoundaries",
     "builtEnvironmentSpaceConnectors",
     "builtEnvironmentSpaceContentBounds",
     "builtEnvironmentSpaceFidelity",
@@ -363,6 +365,8 @@ const QUESTION_OF_EXPORT: Readonly<
     "Does this building placement rest, float, sink, or overlap?",
   builtEnvironmentSupportStatus:
     "Does this building placement rest, float, sink, or overlap?",
+  builtEnvironmentSpaceBoundaries:
+    "What does the building I declared actually contain?",
   builtEnvironmentSpaceConnectors:
     "What does the building I declared actually contain?",
   builtEnvironmentSpaceContentBounds:

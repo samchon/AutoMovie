@@ -103,7 +103,7 @@ export const test_mcp_sandbox_capability_question_index = (): void => {
   );
 
   TestValidator.equals(
-    "the built-environment family is the nine reachable queries",
+    "the built-environment family is the ten reachable queries",
     index.find(
       ({ question }) =>
         question === "What does the building I declared actually contain?",
@@ -112,6 +112,7 @@ export const test_mcp_sandbox_capability_question_index = (): void => {
       "builtEnvironmentAdjacentSpaces",
       "builtEnvironmentBuildingOfSpace",
       "builtEnvironmentContainsPoint",
+      "builtEnvironmentSpaceBoundaries",
       "builtEnvironmentSpaceConnectors",
       "builtEnvironmentSpaceContentBounds",
       "builtEnvironmentSpaceFidelity",

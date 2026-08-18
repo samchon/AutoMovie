@@ -11,6 +11,7 @@ import {
   builtEnvironmentElementBounds,
   builtEnvironmentPlacementBounds,
   builtEnvironmentPlacementOverlap,
+  builtEnvironmentSpaceBoundaries,
   builtEnvironmentSpaceConnectors,
   builtEnvironmentSpaceContentBounds,
   builtEnvironmentSpaceFidelity,
@@ -104,6 +105,7 @@ export const AUTOMOVIE_SANDBOX_BRIDGED_ENGINE_EXPORTS: readonly AutoMovieSandbox
     "builtEnvironmentPlacementBounds",
     "builtEnvironmentPlacementOverlap",
     "builtEnvironmentSupportStatus",
+    "builtEnvironmentSpaceBoundaries",
     "builtEnvironmentSpaceConnectors",
     "builtEnvironmentSpaceContentBounds",
     "builtEnvironmentSpaceFidelity",
@@ -171,6 +173,7 @@ const BRIDGE: Readonly<Record<string, (args: readonly unknown[]) => unknown>> =
     builtEnvironmentPlacementBounds: bridged(builtEnvironmentPlacementBounds),
     builtEnvironmentPlacementOverlap: bridged(builtEnvironmentPlacementOverlap),
     builtEnvironmentSupportStatus: bridged(builtEnvironmentSupportStatus),
+    builtEnvironmentSpaceBoundaries: bridged(builtEnvironmentSpaceBoundaries),
     builtEnvironmentSpaceConnectors: bridged(builtEnvironmentSpaceConnectors),
     builtEnvironmentSpaceContentBounds: bridged(
       builtEnvironmentSpaceContentBounds,
