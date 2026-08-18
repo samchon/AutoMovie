@@ -38,6 +38,19 @@ import path from "node:path";
 
 let lockNonce = 0;
 
+/**
+ * How many times one acquire may try to take back a lock it proved dead.
+ *
+ * More than one because the transfer can fail for a reason that is neither the
+ * owner being alive nor the caller being wrong -- a handle held on the resident
+ * path -- and fewer than many because a reclaim that keeps failing is waiting on
+ * that handle, which retrying does not close.
+ */
+const COMMIT_LOCK_RECLAIM_ATTEMPTS = 3;
+
+/** Pause between those attempts, so they span the wait rather than crowd it. */
+const COMMIT_LOCK_RECLAIM_PAUSE_MS = 500;
+
 /** Locks this process holds, with their nesting depth. */
 const held = new Map<string, { token: string; depth: number }>();
 
@@ -188,7 +201,8 @@ export const acquireCommitLock = (lockPath: string): string => {
   }
   const token = commitLockToken();
   const deadline = Date.now() + 2_000;
-  let reclaimed = false;
+  let reclaims = 0;
+  let nextReclaim = Date.now();
   for (;;) {
     try {
       // Exclusive create admits only one owner. The token is fully written
@@ -199,15 +213,28 @@ export const acquireCommitLock = (lockPath: string): string => {
       return token;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      // One reclaim attempt per acquire. A second would mean the first handed
-      // the lock to a live contender, which is the ordinary case this loop is
-      // already waiting out.
-      if (reclaimed === false && reclaimDeadCommitLock(lockPath, token)) {
-        reclaimed = true;
-        held.set(lockPath, { token, depth: 1 });
-        return token;
+      // A few attempts, spaced, rather than one. The transfer renames onto the
+      // resident path, and a rename onto an existing path fails outright on
+      // Windows while anything else holds a handle on it -- `#1989` measured
+      // exactly that, transiently, on this product's own atomic publish. One
+      // attempt meant one such collision cost the caller the whole deadline and
+      // then a refusal reading "it should have been reclaimed automatically",
+      // which is the least useful thing this could say.
+      //
+      // Spaced, because a reclaim that keeps failing is a handle somebody is
+      // holding, and retrying it every two milliseconds would spend the deadline
+      // on renames instead of on waiting for that handle to close.
+      if (
+        reclaims < COMMIT_LOCK_RECLAIM_ATTEMPTS &&
+        Date.now() >= nextReclaim
+      ) {
+        ++reclaims;
+        nextReclaim = Date.now() + COMMIT_LOCK_RECLAIM_PAUSE_MS;
+        if (reclaimDeadCommitLock(lockPath, token)) {
+          held.set(lockPath, { token, depth: 1 });
+          return token;
+        }
       }
-      reclaimed = true;
       if (Date.now() > deadline) throw contendedCommitLockError(lockPath);
       waitForRelease(2);
     }

@@ -55,6 +55,10 @@ import { namedFacts } from "../internal/predicates";
  *    manual recovery instruction.
  * 5. A refusal on a set of coordinates names every held member and says that
  *    clearing one is not enough.
+ * 6. A transfer whose rename is held once still lands, inside the same wait.
+ *    One attempt would have spent the whole deadline and then refused with "it
+ *    should have been reclaimed automatically", which is the least useful thing
+ *    this could say about a collision it could simply have retried.
  */
 export const test_mcp_commit_lock_dead_owner = (): void => {
   const directory = fs.mkdtempSync(
@@ -138,6 +142,17 @@ export const test_mcp_commit_lock_dead_owner = (): void => {
         "every held coordinate is named": true,
       },
     );
+
+    TestValidator.equals(
+      "a transfer held once still lands inside the wait",
+      namedFacts(collidingReclaim(directory, shape({ pid: gone }))),
+      {
+        "the transfer was attempted more than once": true,
+        "the lock was taken anyway": true,
+        "inside the contention deadline": true,
+        "and no staging file was left behind": true,
+      },
+    );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
   }
@@ -200,6 +215,60 @@ const refusal = (
       fragments.every((fragment) => message.includes(fragment)),
     untouched: fs.readFileSync(lockPath, "utf8") === planted,
   };
+};
+
+/**
+ * Hold the transfer's rename once, and see whether the acquire still lands.
+ *
+ * The transfer renames onto the resident path, and on Windows a rename onto an
+ * existing path fails outright while anything else holds a handle on it —
+ * `#1989` measured exactly that, transiently, on this product's own atomic
+ * publish. A scanner reading the lock the moment it is taken back is enough.
+ *
+ * `EPERM` rather than an invented code, because that is the one that was
+ * measured, and the retry must be reached by the error the platform actually
+ * raises rather than by a broad catch.
+ */
+const collidingReclaim = (
+  directory: string,
+  planted: string,
+): ReadonlyArray<[string, () => boolean]> => {
+  const lockPath = path.join(directory, "collided.lock");
+  fs.writeFileSync(lockPath, planted, { flag: "wx" });
+  const native = fs.renameSync;
+  let attempts = 0;
+  let token: string | null = null;
+  let elapsed = Number.MAX_SAFE_INTEGER;
+  try {
+    fs.renameSync = ((from: fs.PathLike, to: fs.PathLike) => {
+      if (path.resolve(to.toString()) !== path.resolve(lockPath))
+        return native(from, to);
+      attempts += 1;
+      if (attempts === 1)
+        throw Object.assign(
+          new Error(`EPERM: operation not permitted, rename to ${lockPath}`),
+          { code: "EPERM" },
+        );
+      return native(from, to);
+    }) as typeof fs.renameSync;
+    const started = Date.now();
+    token = acquireCommitLock(lockPath);
+    elapsed = Date.now() - started;
+  } catch {
+    // Left null, which the facts below read as the acquire having failed.
+  } finally {
+    fs.renameSync = native;
+  }
+  if (token !== null) releaseCommitLock(lockPath, token);
+  return [
+    ["the transfer was attempted more than once", () => attempts > 1],
+    ["the lock was taken anyway", () => token !== null],
+    ["inside the contention deadline", () => elapsed < 2_000],
+    [
+      "and no staging file was left behind",
+      () => fs.existsSync(`${lockPath}.reclaim`) === false,
+    ],
+  ];
 };
 
 /**
