@@ -34,9 +34,42 @@ import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
  * the state these locks exist to prevent, so an unresolvable home is a refusal
  * naming the capability rather than a temporary directory nobody else will look
  * in.
+ *
+ * {@link AUTOMOVIE_COORDINATION_ROOT_VARIABLE} overrides the home entirely, and
+ * exists because the home does not always satisfy the one invariant this path
+ * has: **two processes reaching one project must compute the same path**. It
+ * fails that in two measured ways. On one machine `os.homedir()` resolved to
+ * `CodexSandboxOffline` for an authoring agent and to `samch` for the process
+ * driving it, so both computed the same coordinate under different roots and
+ * fenced nothing — the same name, two directories, no exclusion. On another the
+ * account owned the home and the sandbox denied the write regardless, because
+ * its writable roots are the workdir and the temporary directories while the
+ * home sits outside both. That is the arrangement this product is built around,
+ * so the default is wrong for its own target environment often enough to need a
+ * way out.
+ *
+ * The override is a path and not a switch: it moves the root, it never disables
+ * the fence. An operator pointing both processes at one directory satisfies the
+ * invariant by configuration, which is the only thing available while no path is
+ * both machine-global and writable by every account that runs this product. That
+ * larger question is `#2012` and this does not settle it.
+ *
+ * A relative override is refused rather than resolved, because it would resolve
+ * against each process's own working directory and reintroduce exactly the
+ * divergence it was set to remove.
  */
 const coordinationRoot = (): string => {
   if (resolvedCoordinationRoot !== null) return resolvedCoordinationRoot;
+  const configured = process.env[AUTOMOVIE_COORDINATION_ROOT_VARIABLE];
+  if (configured !== undefined && configured.trim().length !== 0) {
+    const value = configured.trim();
+    if (path.isAbsolute(value) === false)
+      throw new Error(
+        `${AUTOMOVIE_COORDINATION_ROOT_VARIABLE} is "${value}", which is not an absolute path. A relative coordination root resolves against each process's own working directory, so two processes fencing one project would compute two directories and exclude nothing. State an absolute path both processes can reach, or unset the variable to use this account's home.`,
+      );
+    resolvedCoordinationRoot = value;
+    return resolvedCoordinationRoot;
+  }
   const home = ((): string => {
     for (const read of [
       () => os.homedir(),
@@ -57,6 +90,19 @@ const coordinationRoot = (): string => {
 };
 
 let resolvedCoordinationRoot: string | null = null;
+
+/**
+ * Environment variable naming the root-lock coordination directory.
+ *
+ * Exported so a refusal, a guide, and a test all spell it the same way; the
+ * message an operator reads is the only instruction they get, and a variable
+ * misspelled in one of three places is a variable that does nothing.
+ *
+ * @evidence requirements/operations-and-recovery/concurrency-and-locking.md#operations-lock-scope Names the operator-supplied coordination root every process fencing one project must agree on.
+ * @evidence specifications/operations-and-recovery/locking-and-transactions.md#operations-spec-lock-identity Fixes the environment variable that selects the coordination root the lock identity is computed under.
+ */
+export const AUTOMOVIE_COORDINATION_ROOT_VARIABLE =
+  "AUTOMOVIE_COORDINATION_ROOT";
 
 /**
  * Held namespace reservation for one physical production project root.
@@ -141,6 +187,20 @@ const ensureCoordinationRoot = (): void => {
     throw new Error(
       `AutoMovie root-lock coordination path "${coordinationRoot()}" is not a physical directory.`,
     );
+  // Asked here rather than discovered at the lock file's own `open()`. The
+  // later refusal names the file and says waiting will not clear it, which is
+  // true and leaves the reader holding an errno about a path they never chose.
+  // A sandbox whose writable roots are the workdir and the temporary
+  // directories fails this every time, and the only useful thing to say is
+  // where to move the root to.
+  try {
+    fs.accessSync(coordinationRoot(), fs.constants.W_OK);
+  } catch (error) {
+    throw new Error(
+      `AutoMovie cannot write the root-lock coordination directory "${coordinationRoot()}", so it cannot fence this project against another process. This is the account's home by default, which a sandbox that admits only its workdir and the temporary directories does not grant. Set ${AUTOMOVIE_COORDINATION_ROOT_VARIABLE} to an absolute directory every process working on this project can write, and set it identically for all of them: two processes fencing against two directories exclude nothing.`,
+      { cause: error },
+    );
+  }
 };
 
 // One fenced operation can invoke another inside the same process -- a guarded
