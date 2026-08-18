@@ -154,7 +154,10 @@ export const test_drawing_opening_schedule = (): void => {
     schedule.gaps.map((gap) => [gap.subject, gap.status]),
     [
       ["opening-geometry", "not-run"],
-      ["opening-location", "not-run"],
+      // `unsupported` because nothing populates an opening row's place: the row
+      // builders write it as null on every path, so no input an author supplies
+      // reaches it. `not-run` would send them looking for one.
+      ["opening-location", "unsupported"],
       ["opening-performance", "unsupported"],
     ],
   );
@@ -300,7 +303,7 @@ export const test_drawing_opening_schedule = (): void => {
     "a connector schedule refuses to read a scheduled stair as a climbable one",
     connectors.gaps.map((gap) => [gap.subject, gap.status]),
     [
-      ["connector-location", "not-run"],
+      ["connector-location", "unsupported"],
       ["traversal-performance", "unsupported"],
     ],
   );

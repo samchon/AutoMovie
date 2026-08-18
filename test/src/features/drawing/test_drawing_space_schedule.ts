@@ -405,8 +405,10 @@ export const test_drawing_space_schedule = (): void => {
       ];
     }),
     [
-      [true, "not-run"],
-      [true, "not-run"],
+      // Unsupported rather than not-run: the place is absent because the
+      // derivation is unwritten, not because an author withheld an input.
+      [true, "unsupported"],
+      [true, "unsupported"],
     ],
   );
 };

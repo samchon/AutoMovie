@@ -206,13 +206,21 @@ export const deriveAutoMovieDrawingSchedule = (props: {
       // the space it is; an opening and a connector would answer through their
       // host boundary and their declared stops, and that derivation is not
       // written, so the row's absent place is stated rather than implied.
+      //
+      // `unsupported` rather than `not-run`, and the remedy addresses this
+      // product rather than the author. `not-run` says an author could supply
+      // something and has not, and no author can: these rows carry `place: null`
+      // on every path that builds them, while a space row fills it. An authoring
+      // agent hit the old pairing while closing a stage, was told to fill a
+      // field nothing populates, and only avoided spending the round on it by
+      // refusing the remedy and filing the gap unmet.
       subject: `${subject}-location`,
-      status: "not-run",
+      status: "unsupported",
       reason: `${withArticle(subject)} row states type, size and count but no place, so its location must still be read from the design rather than from the schedule`,
       remedy:
         subject === "opening"
-          ? "resolve the opening's host boundary to the spaces it separates, then fill the row's place"
-          : "resolve the connector's declared stops to their spaces, then fill the row's place",
+          ? "derive an opening's place from its host boundary and the spaces that boundary separates, once that derivation exists; until then read an opening's location from the design"
+          : "derive a connector's place from the spaces its declared stops stand in, once that derivation exists; until then read a connector's location from the design",
     });
   gaps.sort((left, right) =>
     compareAutoMovieRenderIds(left.subject, right.subject),
