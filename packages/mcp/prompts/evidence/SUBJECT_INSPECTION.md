@@ -34,7 +34,7 @@ That revision string is your label for the exact bytes you read. `prepareReview`
 
 ## Enumerate, then address
 
-`describeAutoMovieSubjects`, called with `{ revision, compiled }`, lists the directly stored subjects in stable order: prototypes, prototype parts, scene elements, instance sets, and logical spaces. `describeAutoMovieSubject`, called with the same pair and an id, resolves any of those and additionally regenerates a placed part or one compact instance on demand. The stable id namespaces are:
+`describeAutoMovieSubjects`, called with `{ revision, compiled }`, lists the directly stored subjects in stable order: prototypes, prototype parts, building elements, instance sets, and logical spaces. Building elements include the transform-only groups the compiler stages no scene node for, because a group is an authored element and a list that skipped it would be a list of the scene rather than of the work. `describeAutoMovieSubject`, called with the same pair and an id, resolves any of those and additionally regenerates a placed part or one compact instance on demand. The stable id namespaces are:
 
 - `prototype:<model>` and `prototype-part:<model>/<part>` for reusable geometry;
 - `element:<node>` and `element-part:<node>/<part>` for scene placements, where a built-environment element's node id reads `<environment>/<element>`;
@@ -52,6 +52,14 @@ Do not merge prototype and placement. A prototype answers what geometry and mate
 Describe the space; do not search for its contents. A `space:<environment>/<space>` subject carries in `/members` the child spaces under it, every element assigned to it, and every instance set placed in it, each as an id `describeAutoMovieSubject` opens directly. One read answers "what is in this room", from declared containment rather than from name similarity.
 
 Every `/members` is a bounded summary rather than a list. `total` is exact, `items` holds a sample of ids in stable order capped at `AUTOMOVIE_SUBJECT_MEMBER_SAMPLE_LIMIT`, and `omitted` states how many were left out. Count `total`. Reading the length of `items` as the population is how every rack larger than the sample reports as a rack of exactly the sample size.
+
+## Walk the building, not only its rooms
+
+A room-by-room survey is not a survey of a building. An element's assignment to a logical space is authored, and an exterior wall, a foundation, and a structural frame belong to no room, so a space claims none of them. Measured on the `ExampleBuilding` the scaffold ships as reading material, 9 of its 30 elements are claimed by no space, and every one of the nine is envelope or vertical-transport machinery: four curtain panels, a facade ladder, a lift car, its shell, a counterweight and its block. Every floor slab, partition, door and leaf is claimed. Nothing there is an authoring mistake, and filing a defect asking why the envelope was left out of the rooms is reading the space tree as something it is not.
+
+The space tree is an index over a building. What covers a building is its element hierarchy, and the record says so: `IAutoMovieBuiltEnvironment.buildings` states that ownership is total, every element descending from exactly one unit's roots. So walk the hierarchy, and use the spaces to ask what occupies a room.
+
+The walk needs no key you invented, and it starts wherever the index already names something. `builtEnvironmentUnclaimedElements`, given one environment record, names the elements nothing else lists, meaning a root of the hierarchy that carries no space of its own; the spaces no other space parents name everything under them; and each element's `/members` carries its child elements beside its placed parts, so one step down is always available. Like the rest of this guide it runs in a `scripts/` module, not in shot source. A transform-only group opens like anything else and reports null for its transform, its content bounds, its materials and its prototype, because it stages nothing itself: what it carries is the structure, which is the reason to open it. Walking that way, `ExampleBuilding` answers 30 of 30 elements from 2 index roots with nothing refused.
 
 ## Read bounds honestly
 
@@ -98,7 +106,7 @@ That is also why inspection is not another `captureFrame` target. A capture rece
 - `capture-input-changed` means the compile moved mid-sweep, so the pictures are of two different models. Discard them, compile, and inspect again.
 - `capture-failed`, `capture-png-invalid` and `capture-size-mismatch` are the instrument answering badly: it threw, returned bytes that are not a decodable PNG, or drew a raster other than the one asked for. Repair the host rather than the subject.
 
-A prototype and a prototype part are measured in model space and stand nowhere in a shot, so a world eye aimed at one would photograph whatever occupies the origin. The starter's host refuses those through `capture-failed` and names the placement to open instead, which is the same prototype-and-placement rule this guide states above, enforced at the point where ignoring it would return a confident picture of the wrong place.
+A prototype and a prototype part are measured in model space and stand nowhere in a shot, so a world eye aimed at one would photograph whatever occupies the origin. The starter's host refuses those through `review-subject-viewpoint-unsupported` and names the placement to open instead, which is the same prototype-and-placement rule this guide states above, enforced at the point where ignoring it would return a confident picture of the wrong place. Read that code as a refusal about the subject rather than about the instrument: the staged page stays open, so the rest of the sweep does not pay for a rebuild, and the range is reported unsupported rather than as work you still owe.
 
 ## Look inside a building: section planes
 

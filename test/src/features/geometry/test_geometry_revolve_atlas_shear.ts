@@ -136,7 +136,7 @@ const ring = (radius: number): { x: number; y: number }[] =>
  *    finish exactly; the atlas is rigid there rather than merely close.
  * 2. The shear follows meridian slope and nothing else, matching the stated
  *    closed form at 6.5, 13.8, 45 and 89.9 degrees off the axis, which are the
- *    2, 4, 21.5 and 41 the contract quotes.
+ *    2, 4, 21.7 and 41.5 the contract quotes.
  * 3. Distortion is entirely shear: every triangle's uv area equals its surface
  *    area, so no author can diagnose this by looking at texel density.
  * 4. The pole is not the cause. A cone with its tip cut away has no pole, no

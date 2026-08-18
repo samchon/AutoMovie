@@ -26,9 +26,12 @@ The tracked design records under `.automovie/design` are derived, not hand-kept.
 your units, formations, world, and shots by path and states each shot's module
 and export. Replace those sources and you edit that script in the same pass. It
 writes and never deletes, so a record you stop deriving stays resident and keeps
-its obligations; delete the file yourself. The screenplay index stays
-hand-authored. Read `PRODUCTION_DESIGN` before replacing the starter film, which
-is one pass and cannot be closed green halfway.
+its obligations. `npm run design` refuses while one is there and names its file,
+because nothing downstream can: a resident record that references only other
+resident records compiles clean and is built into your `generated` output.
+Delete the file it names, or derive it. The screenplay index is not a design
+record and is never named. Read `PRODUCTION_DESIGN` before replacing the starter
+film, which is one pass and cannot be closed green halfway.
 
 Never edit `generated`; correct its owning source or design and compile. Never
 mark visual review complete without opening current bundle frames. A design,

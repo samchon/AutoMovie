@@ -1,6 +1,5 @@
 import {
   builtEnvironmentUnclaimedElements,
-  describeAutoMovieSubject,
   validateBuiltEnvironment,
 } from "@automovie/engine";
 import type {
@@ -12,41 +11,40 @@ import { TestValidator } from "@nestia/e2e";
 
 import { makeProp, primitivePart } from "../internal/fixtures";
 import { namedFacts } from "../internal/predicates";
-import { subjectInspectionArtifact } from "../internal/subjectInspectionFixtures";
 
 /**
- * An element no space claims is reachable from above rather than by its key.
+ * Only a hierarchy root no space claims is left over for the index to name.
  *
- * Leaving an element unassigned is correct: an exterior wall, a foundation, and a
- * structural frame belong to no room. What was wrong is that the only path down
- * into a building ran through its spaces, so one measured production left 671 of
- * 3,474 elements openable only by an author who already knew the key, and a key is
- * exactly what a reviewer hunting an unknown defect does not have.
+ * Leaving an element unassigned is correct rather than careless: an exterior
+ * wall, a foundation, and a structural frame belong to no room. Measured on the
+ * scaffold's own `ExampleBuilding`, 9 of its 30 elements are claimed by no
+ * space, and all nine are envelope or vertical-transport machinery — four
+ * curtain panels, a facade ladder, a lift car, a car shell, a counterweight and
+ * its block — while every floor slab, partition, door and leaf is claimed. So
+ * the space tree indexes a building rather than covering it.
  *
- * Two halves make the path. The listing names the tops of that population, and an
- * element's own description now carries its child elements beside its parts, so a
- * walk that starts at a top reaches everything under it. A group the compiler drew
- * nothing for is transparent in both: it cannot be opened, so it is never named as
- * a top and never named as a member, and its own drawn descendants take its place.
+ * What covers it is the element hierarchy, which the record says is total:
+ * every element descends from exactly one unit's roots. A child therefore
+ * arrives among its parent's members and a claimed element among its space's,
+ * which leaves exactly one population over — a root carrying no space of its
+ * own. Taking the compiled scene's drawn set as the notion of reach instead
+ * named seven of `ExampleBuilding`'s envelope pieces as roots although the unit
+ * root above them is claimed by a space, so the listing said they hang from
+ * nothing while the record said otherwise.
  *
  * Scenarios:
  *
- * 1. An unassigned element under a transform-only group is a top, because nothing
- *    visible above it could list it.
- * 2. An unassigned element under a visible parent is not a top: that parent's
- *    members list it, which the description proves.
- * 3. An element a space claims is never a top, whatever its parent is.
- * 4. A description's members carry child elements and placed parts together, so a
- *    walk from a top reaches an element two levels down.
+ * 1. A unit root no space claims is named, because nothing else lists it.
+ * 2. A unit root a space claims is not named: that space lists it.
+ * 3. An element with a parent is never named, whether or not a space claims it
+ *    and whether or not the compiler drew its parent, because its parent lists
+ *    it.
+ * 4. The fixture carrying all three is a legal building, so the rule is read
+ *    off a record the engine accepts rather than off an invented one.
  */
 export const test_architecture_unclaimed_elements = (): void => {
   const record = environment();
-  const drawn = new Set([
-    "yard/outer-wall",
-    "yard/wall-buttress",
-    "yard/hearth",
-    "yard/room-shelf",
-  ]);
+
   TestValidator.equals(
     "the fixture is a legal building",
     validateBuiltEnvironment({ environment: record }).success,
@@ -54,94 +52,48 @@ export const test_architecture_unclaimed_elements = (): void => {
   );
 
   TestValidator.equals(
-    "only the tops of the unclaimed population are named",
-    builtEnvironmentUnclaimedElements(record, drawn),
-    ["yard/outer-wall", "yard/hearth"],
+    "only a root no space claims is left over",
+    builtEnvironmentUnclaimedElements(record),
+    ["residence/garden-wall-root"],
   );
-
-  const artifact = subjectInspectionArtifact();
-  const castle = artifact.compiled.builtEnvironments![0]!;
-  castle.elements.push(
-    {
-      id: "shell",
-      kind: "building",
-      parent: null,
-      transform: place(0, 0, 0),
-      model: null,
-      space: null,
-    },
-    {
-      id: "outer-wall",
-      kind: "wall",
-      parent: "shell",
-      transform: place(20, 0, 0),
-      model: "solar-oriel-model",
-      space: null,
-    },
-    {
-      id: "wall-buttress",
-      kind: "structure",
-      parent: "outer-wall",
-      transform: place(20, 0, 2),
-      model: "solar-oriel-model",
-      space: null,
-    },
-  );
-  artifact.compiled.scene.nodes.push(
-    {
-      id: "castle/outer-wall",
-      model: "solar-oriel-model",
-      transform: place(20, 0, 0),
-      motion: null,
-      pose: null,
-    },
-    {
-      id: "castle/wall-buttress",
-      model: "solar-oriel-model",
-      transform: place(20, 0, 2),
-      motion: null,
-      pose: null,
-    },
-  );
-  const drawnCastle = new Set(
-    artifact.compiled.scene.nodes.map((node) => node.id),
-  );
-  const wall = describeAutoMovieSubject(artifact, "element:castle/outer-wall");
 
   TestValidator.equals(
-    "a walk from a top reaches what hangs under it",
+    "every other element is named by something else",
     namedFacts([
       [
-        "the wall is the top and the buttress is not",
+        "a root a space claims is not left over",
         () =>
-          builtEnvironmentUnclaimedElements(castle, drawnCastle).join(",") ===
-          "castle/outer-wall",
+          builtEnvironmentUnclaimedElements(record).includes(
+            "residence/residence-root",
+          ) === false,
       ],
       [
-        "the wall's members name the buttress",
-        () => wall.members.items.includes("element:castle/wall-buttress"),
+        "an unassigned element under a drawn parent is not left over",
+        () =>
+          builtEnvironmentUnclaimedElements(record).includes(
+            "residence/wall-buttress",
+          ) === false,
       ],
       [
-        "and its own placed parts as well",
+        "an unassigned element under a group is not left over either",
         () =>
-          wall.members.items.some((id) =>
-            id.startsWith("element-part:castle/outer-wall/"),
-          ),
+          builtEnvironmentUnclaimedElements(record).includes(
+            "residence/great-hall-chair-seat",
+          ) === false,
       ],
       [
-        "the transform-only group is named by neither",
+        "and neither is an element a space claims outright",
         () =>
-          wall.members.items.includes("element:castle/shell") === false &&
-          builtEnvironmentUnclaimedElements(castle, drawnCastle).includes(
-            "castle/shell",
+          builtEnvironmentUnclaimedElements(record).includes(
+            "residence/great-hall-chair",
           ) === false,
       ],
     ]),
     {
-      "the wall is the top and the buttress is not": true,
-      "the wall's members name the buttress": true,
-      "and its own placed parts as well": true,
-      "the transform-only group is named by neither": true,
+      "a root a space claims is not left over": true,
+      "an unassigned element under a drawn parent is not left over": true,
+      "an unassigned element under a group is not left over either": true,
+      "and neither is an element a space claims outright": true,
     },
   );
 };
@@ -160,38 +112,54 @@ const boxModel = (id: string): IAutoMovieModel => ({
 });
 
 /**
- * One yard whose four visible elements answer the four questions at once.
+ * One residence whose two units answer the rule from both sides.
  *
- * Every element hangs from `shell`, because the engine refuses one that belongs to
- * no building unit, and `shell` is the unit's root. It is also transform-only, so
- * it can never be opened: that is the shape a real building has, and it is why the
- * space tree alone leaves an unassigned element unreachable.
- *
- * `outer-wall` is a top, since nothing openable stands above it. `wall-buttress`
- * hangs from the wall, so the wall lists it. `hearth` is a top for the same reason
- * as the wall. `room-shelf` is claimed by the room, which lists it.
+ * The residence unit's root is claimed by the great hall, so the hall lists it
+ * and it is not left over. The garden unit's root carries no space, so nothing
+ * lists it and the index must. Both are transform-only groups, which is the
+ * ordinary shape of a building root and the reason the space tree alone leaves
+ * an unassigned element unreachable.
  */
 const environment = (): IAutoMovieBuiltEnvironment => ({
   version: 1,
-  id: "yard",
+  id: "residence",
   units: "meter",
-  buildings: [{ id: "yard", element: "shell", space: "room" }],
+  buildings: [
+    { id: "residence", element: "residence-root", space: "great-hall" },
+    { id: "garden", element: "garden-wall-root", space: "garden" },
+  ],
   models: [boxModel("cube-model")],
   modelReferences: [],
   elements: [
     {
-      id: "shell",
+      id: "residence-root",
       kind: "building",
       parent: null,
       transform: place(0, 0, 0),
       model: null,
+      space: "great-hall",
+    },
+    {
+      id: "great-hall-chair",
+      kind: "furniture",
+      parent: "residence-root",
+      transform: place(1, 0, 0),
+      model: null,
+      space: "great-hall",
+    },
+    {
+      id: "great-hall-chair-seat",
+      kind: "furniture",
+      parent: "great-hall-chair",
+      transform: place(1, 0.5, 0),
+      model: "cube-model",
       space: null,
     },
     {
       id: "outer-wall",
       kind: "wall",
-      parent: "shell",
-      transform: place(0, 0.5, 0),
+      parent: "residence-root",
+      transform: place(3, 0.5, 0),
       model: "cube-model",
       space: null,
     },
@@ -199,28 +167,31 @@ const environment = (): IAutoMovieBuiltEnvironment => ({
       id: "wall-buttress",
       kind: "structure",
       parent: "outer-wall",
-      transform: place(1, 0.5, 0),
-      model: "cube-model",
-      space: null,
-    },
-    {
-      id: "hearth",
-      kind: "equipment",
-      parent: "shell",
-      transform: place(3, 0.5, 0),
-      model: "cube-model",
-      space: null,
-    },
-    {
-      id: "room-shelf",
-      kind: "equipment",
-      parent: "shell",
       transform: place(4, 0.5, 0),
       model: "cube-model",
-      space: "room",
+      space: null,
+    },
+    {
+      id: "garden-wall-root",
+      kind: "building",
+      parent: null,
+      transform: place(10, 0, 0),
+      model: null,
+      space: null,
+    },
+    {
+      id: "garden-wall",
+      kind: "wall",
+      parent: "garden-wall-root",
+      transform: place(10, 0.5, 0),
+      model: "cube-model",
+      space: null,
     },
   ],
-  spaces: [{ id: "room", kind: "room", parent: null, cells: [] }],
+  spaces: [
+    { id: "great-hall", kind: "room", parent: null, cells: [] },
+    { id: "garden", kind: "room", parent: null, cells: [] },
+  ],
   boundaries: [],
   openings: [],
   connectors: [],

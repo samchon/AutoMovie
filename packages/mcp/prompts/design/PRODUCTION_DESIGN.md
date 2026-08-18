@@ -68,9 +68,9 @@ The order above says which records to edit. In a production stamped from the sca
 
 That script is production-owned code rather than scaffolding to inherit and leave alone. It imports your units, formations, world, and shots by module path, and it states each shot's own `module` and `export`, because a module cannot know the path anything reaches it by and an export cannot read its own name. Sources that move while that script does not leave a design layer still describing the film you deleted.
 
-Three properties of the derivation decide how a replacement goes.
+These properties of the derivation decide how a replacement goes.
 
-- **It writes and never deletes.** A record you stop deriving stays resident, and a resident shot contract is a live obligation at every scope, `design` included. Delete the file under `.automovie/design/` yourself.
+- **It writes and never deletes, and it refuses what it no longer derives.** A record you stop deriving stays resident, and a resident shot contract is a live obligation at every scope, `design` included. The script compares the project's inventory against what the run derived and fails naming each unowned record's own path, so the design layer's removal set is that output rather than a hunt. Delete the file it names, or derive it from a source that owns it.
 - **An unchanged record is not re-stored.** A design mutation stales every dependent shot, review, and render by design, so re-deriving an identical record is deliberately not a mutation.
 - **The screenplay index is not derived at all.** It stays hand-authored and `SCREENPLAY_WRITING` owns it. Why a scene covers a beat is stated in no document, so nothing can generate it.
 
@@ -82,9 +82,12 @@ The evidence graph binds documents, source, and design in both directions, so a 
 
 1. Author your own documents under `docs/<name>`, and your own screenplay index.
 2. Author your own subjects, world, formations, and shots under `src`.
-3. Rewrite `scripts/emitDesign.ts` to derive from those modules, then run `npm run design`.
-4. Delete the starter records that script no longer derives, and the starter modules and documents nothing cites any more.
-5. Compile, and read the diagnostics as the remaining list.
+3. Rewrite `scripts/emitDesign.ts` to derive from those modules, then run `npm run design`. It stores what it derived and then fails with the list of records it no longer owns.
+4. Delete the records that run named, and the starter modules and documents nothing cites any more. Rerun it until it exits clean.
+5. Correct what no claim reaches: `src/film.ts` and `src/production.ts` sit inside `src` and outside both of its evidence claims, and `automovie.config.ts`, `.automovie/assets.json` and `test` are outside the graph entirely. All five carry starter ids and nothing counts them.
+6. Compile, and read the diagnostics as the remaining list.
+
+Do not wait for a diagnostic to find the design layer for you. A resident record that references only other resident records is internally consistent, so the compiler has nothing to refuse: measured on a real replacement, four starter model recipes and a formation were restored into a finished production and `compile` returned `success: true` with zero diagnostics while building them into that production's `generated` output. Whether a record still has an owner is a question only the script that derives them can answer, which is why step 3 is the step that finds them.
 
 Do not plan a documents-only milestone that ends on a green build. It cannot exist, and one benchmark run spent two authoring turns discovering that.
 

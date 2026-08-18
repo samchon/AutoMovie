@@ -203,14 +203,53 @@ export type AutoMovieProductionSubjectInspection = (input: {
   width: number;
   /** Requested pixel height. */
   height: number;
-}) => Promise<{
+}) => Promise<
+  IAutoMovieSubjectInspectionDrawn | IAutoMovieSubjectInspectionRefusal
+>;
+
+/**
+ * The raster one instrument drew for one planned viewpoint.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieSubjectInspectionDrawn {
   /** Raw PNG bytes. */
   bytes: Uint8Array;
   /** Pixel width the instrument actually drew. */
   width: number;
   /** Pixel height the instrument actually drew. */
   height: number;
-}>;
+}
+
+/**
+ * One instrument's answer that this subject is not one it can frame.
+ *
+ * It is separated from throwing because the two mean opposite things about the
+ * instrument. A throw says the instrument itself failed, and the shipped host
+ * answers that by discarding the page it drew through, since a page that lost
+ * its execution context cannot be trusted with the next viewpoint. A refusal
+ * says the instrument is working and this subject is not one it can answer for:
+ * the shipped page stages a world scene, so a prototype measured in model space
+ * stands nowhere in it and a world eye aimed at that box would photograph
+ * whatever occupies the origin.
+ *
+ * Collapsing the two costs the sweep its whole saving. Measured on the starter
+ * production, one model-space subject in a sweep discarded the staged page and
+ * the next subject rebuilt the scene, so a sweep over a population that is
+ * entirely model-space rebuilds once per subject — exactly the cost `#1956`
+ * removed for every other population.
+ *
+ * @author Samchon
+ */
+export interface IAutoMovieSubjectInspectionRefusal {
+  /**
+   * Why this instrument cannot frame the named subject.
+   *
+   * It is quoted to the caller verbatim, so it states what the instrument is
+   * and what would be observable instead, rather than naming an internal.
+   */
+  refused: string;
+}
 
 /**
  * One observation the inspection produced, with the eye it was taken from.
@@ -737,6 +776,17 @@ export class AutoMovieProductionSubjectInspectionService {
           { revision: resolved.revision, subject: resolved.description, plan },
         );
       }
+      // A working instrument saying it cannot frame this subject is the
+      // unsupported-viewpoint answer, not a failure of the instrument. Telling
+      // the caller to correct an instrument that is behaving correctly sends it
+      // to the one place the fault is not, and the review surface already reads
+      // this code as the range being unobservable rather than as work owed.
+      if ("refused" in drawn)
+        return refuse(
+          "review-subject-viewpoint-unsupported",
+          `The subject inspection instrument cannot frame compiled subject "${input.subject}": ${drawn.refused} Report its viewpoint range as unsupported rather than as observed.`,
+          { revision: resolved.revision, subject: resolved.description, plan },
+        );
       let png: PNG;
       try {
         if (drawn.bytes.length === 0)

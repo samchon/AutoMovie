@@ -320,7 +320,7 @@ export const screenplayLedgerDiagnostics = (props: {
       )
         refuse(
           "screenplay-citation-claim-absent",
-          `${label} cites continuity claim "${entry.claim}", which the screenplay index does not declare. The trace is not attached to a canon fact or a proof owner. Correct or add the claim, then compile again.`,
+          `${label} cites continuity claim "${entry.claim}", which the screenplay index does not declare, so the trace is attached to no canon fact and no proof owner. That citation is written in the compiler-owned design record this diagnostic's path names, so correct the claim id, add the claim to the index, or delete a design record the production no longer owns, then compile again.`,
           owner,
         );
     }

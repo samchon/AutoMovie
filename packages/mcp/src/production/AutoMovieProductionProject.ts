@@ -4038,12 +4038,107 @@ class ProductionAtomicCleanupError extends AggregateError {}
 
 class ProductionAtomicRecoveryError extends AggregateError {}
 
+class ProductionAtomicContentionError extends AggregateError {}
+
+/**
+ * The codes a publish collides with while another process holds the target.
+ *
+ * On Windows a rename onto an existing path fails outright when anything else
+ * has a handle open on it, and everything ordinary holds one: an antivirus
+ * scanner reading a file the compiler just wrote, the search indexer, a viewer
+ * page with project state open, a sibling command a second ahead. POSIX renames
+ * over an open file without complaint, so this whole guard is a Windows fault on
+ * a platform this repository supports rather than a portability nicety.
+ *
+ * The distinction that matters is that the collision is **transient**. The same
+ * rename a few milliseconds later succeeds, because the other handle was never
+ * going to be held for long. A permission fault that is not transient carries
+ * one of these codes too, which is why the retry is bounded and why what it
+ * finally throws still names what actually happened.
+ */
+const CONTENDED_ATOMIC_CODES: ReadonlySet<string> = new Set([
+  "EPERM",
+  "EACCES",
+  "EBUSY",
+]);
+
+/**
+ * How many times a contended atomic step is attempted, and the pause between.
+ *
+ * The pause grows with the attempt so a scanner that took the handle for tens
+ * of milliseconds is waited out without making the uncontended path slower: the
+ * first attempt is the ordinary one and costs nothing extra, and only a file
+ * that actually collided ever pauses. Five attempts spend at most 300 ms before
+ * giving up, which is short enough that a genuine permission fault still reads
+ * as a refusal rather than as a hang.
+ */
+const CONTENDED_ATOMIC_ATTEMPTS = 5;
+const CONTENDED_ATOMIC_PAUSE_MS = 20;
+
+const isContendedAtomicError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  typeof (error as { code: unknown }).code === "string" &&
+  CONTENDED_ATOMIC_CODES.has((error as { code: string }).code);
+
+/**
+ * Wait without yielding, because every caller here is synchronous.
+ *
+ * The atomic publish path is called from constructors and from compile steps
+ * that are not promises, so there is no await to reach for. Blocking the thread
+ * is the correct behaviour rather than a compromise: the work that follows the
+ * publish depends on it having happened.
+ */
+const pauseAtomicRetry = (milliseconds: number): void => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+};
+
+/**
+ * Run one atomic filesystem step, surviving a contended target.
+ *
+ * A code outside {@link CONTENDED_ATOMIC_CODES} is thrown immediately and
+ * unchanged, because retrying an error this does not understand would turn a
+ * clear refusal into a slow one. A contended code that outlives every attempt
+ * is thrown as {@link ProductionAtomicContentionError} carrying the original,
+ * because the caller's real problem by then is not the rename: the project has
+ * a compiler-owned file that did not land, and the next command will read that
+ * as state being merely out of date and tell the author to rerun the thing that
+ * just died.
+ */
+const runContendedAtomic = <T>(step: () => T, describe: () => string): T => {
+  for (let attempt = 1; ; ++attempt)
+    try {
+      return step();
+    } catch (error) {
+      if (isContendedAtomicError(error) === false) throw error;
+      if (attempt >= CONTENDED_ATOMIC_ATTEMPTS)
+        throw new ProductionAtomicContentionError(
+          [error],
+          `${describe()} after ${CONTENDED_ATOMIC_ATTEMPTS} attempts against a held handle. The compiler-owned file did not land, so the project may still describe an input it no longer has. Close whatever holds the path and run the command again.`,
+        );
+      pauseAtomicRetry(CONTENDED_ATOMIC_PAUSE_MS * attempt);
+    }
+};
+
+const renameContendedAtomic = (from: string, to: string): void =>
+  runContendedAtomic(
+    () => fs.renameSync(from, to),
+    () => `Production atomic publish of "${to}" failed`,
+  );
+
+const removeContendedAtomic = (file: string): void =>
+  runContendedAtomic(
+    () => fs.rmSync(file, { force: true }),
+    () => `Production atomic removal of "${file}" failed`,
+  );
+
 const removeAtomicTemporary = (
   temporary: string,
   failure: IProductionAtomicFailure | undefined,
 ): void => {
   try {
-    fs.rmSync(temporary, { force: true });
+    removeContendedAtomic(temporary);
   } catch (cleanupFailure) {
     if (failure === undefined) throw cleanupFailure;
     throw new ProductionAtomicCleanupError(
@@ -4065,7 +4160,7 @@ const writeAtomic = (
   try {
     fs.writeFileSync(temporary, content);
     beforePublish();
-    fs.renameSync(temporary, file);
+    renameContendedAtomic(temporary, file);
     afterPublish();
   } catch (error) {
     failure = { error };
@@ -4081,14 +4176,14 @@ const removeAtomic = (file: string, afterQuarantine: () => void): void => {
     return;
   }
   const quarantine = temporaryPath(file, "delete");
-  fs.renameSync(file, quarantine);
+  renameContendedAtomic(file, quarantine);
   try {
     afterQuarantine();
-    fs.rmSync(quarantine, { force: true });
+    removeContendedAtomic(quarantine);
   } catch (error) {
     try {
       if (lstatOrNull(quarantine) !== null && lstatOrNull(file) === null)
-        fs.renameSync(quarantine, file);
+        renameContendedAtomic(quarantine, file);
     } catch (recoveryFailure) {
       throw new ProductionAtomicRecoveryError(
         [error, recoveryFailure],

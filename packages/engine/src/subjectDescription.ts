@@ -51,9 +51,19 @@ export const describeAutoMovieSubjects = (
     descriptions.push(describeElement(context, node.id));
   for (const set of artifact.compiled.instanceSets)
     descriptions.push(describeInstanceSet(context, set));
-  for (const environment of artifact.compiled.builtEnvironments ?? [])
+  for (const environment of artifact.compiled.builtEnvironments ?? []) {
+    // A transform-only group stages no node, so the scene walk above never
+    // reaches one. Leaving it out made the inventory of a building smaller than
+    // the building: one authored example carries 30 elements and stages 22, and
+    // the 8 it does not stage include both of its unit roots. They are elements
+    // the record owns, so a census that omits them is a census of the scene
+    // rather than of the work.
+    for (const element of environment.elements)
+      if (element.model === null)
+        descriptions.push(describeElementGroup(context, environment, element));
     for (const space of environment.spaces)
       descriptions.push(describeSpace(context, environment, space));
+  }
   return descriptions.sort((left, right) =>
     compareAutoMovieRenderIds(left.id, right.id),
   );
@@ -89,6 +99,15 @@ export const describeAutoMovieSubject = (
     (candidate) => elementId(candidate.id) === subjectId,
   );
   if (node !== undefined) return describeElement(context, node.id);
+  for (const environment of artifact.compiled.builtEnvironments ?? []) {
+    const group = environment.elements.find(
+      (candidate) =>
+        candidate.model === null &&
+        elementId(`${environment.id}/${candidate.id}`) === subjectId,
+    );
+    if (group !== undefined)
+      return describeElementGroup(context, environment, group);
+  }
   for (const candidate of artifact.compiled.scene.nodes) {
     const candidateModel = context.models.get(candidate.model);
     const part = candidateModel?.parts.find(
@@ -126,13 +145,20 @@ interface IDescriptionContext {
   >;
   populationSpaces: Map<string, string>;
   /**
-   * Scene-node children of one built element, by that element's node id.
+   * Child elements of one built element, by that element's node id.
    *
    * An element's assignment to a logical space is authored, and an exterior wall,
-   * a foundation, or a structural frame legitimately belongs to no room. One
-   * measured production left 671 of 3,474 elements in no space for exactly that
-   * reason, and a space that lists nothing about them was the only way down, so
-   * nothing could be opened without already knowing its key.
+   * a foundation, or a structural frame legitimately belongs to no room, so the
+   * space tree is an index over a building rather than a cover of it. The element
+   * hierarchy is the cover: `IAutoMovieBuiltEnvironment.buildings` states that
+   * ownership is total, every element descending from exactly one unit's roots,
+   * so a walk down the parent relation reaches everything the record owns.
+   *
+   * Every child is listed, whether or not the compiler staged a node for it,
+   * because a transform-only group is describable in its own right. Substituting
+   * a group's drawn descendants for the group was measured and rejected: on one
+   * authored building it would have made a unit's root space list every staged
+   * node under it, which is a flat dump of the building rather than a way in.
    */
   elementChildren: Map<string, string[]>;
 }
@@ -158,38 +184,15 @@ const createDescriptionContext = (
         spaceId(environment.id, population.space),
       );
   }
-  const drawn = new Set(artifact.compiled.scene.nodes.map((node) => node.id));
   const elementChildren: IDescriptionContext["elementChildren"] = new Map();
-  for (const environment of artifact.compiled.builtEnvironments ?? []) {
-    const byParent = new Map<string, string[]>();
+  for (const environment of artifact.compiled.builtEnvironments ?? [])
     for (const element of environment.elements) {
       if (element.parent === null) continue;
-      const siblings = byParent.get(element.parent) ?? [];
-      siblings.push(element.id);
-      byParent.set(element.parent, siblings);
+      const parent = `${environment.id}/${element.parent}`;
+      const siblings = elementChildren.get(parent) ?? [];
+      siblings.push(elementId(`${environment.id}/${element.id}`));
+      elementChildren.set(parent, siblings);
     }
-    // A group the compiler draws no node for cannot be described, so listing it
-    // would hand back an id that resolves to nothing. It becomes transparent
-    // instead: its own drawn descendants take its place, which keeps every
-    // element reachable from above without naming one that is not there.
-    const drawnDescendants = (
-      id: string,
-      seen: Set<string> = new Set(),
-    ): string[] => {
-      if (seen.has(id)) return [];
-      seen.add(id);
-      return (byParent.get(id) ?? []).flatMap((child) =>
-        drawn.has(`${environment.id}/${child}`)
-          ? [elementId(`${environment.id}/${child}`)]
-          : drawnDescendants(child, seen),
-      );
-    };
-    for (const element of environment.elements) {
-      const node = `${environment.id}/${element.id}`;
-      if (drawn.has(node) === false) continue;
-      elementChildren.set(node, drawnDescendants(element.id));
-    }
-  }
   return {
     artifact,
     models,
@@ -299,6 +302,54 @@ const describeElement = (
       ...(model?.parts.map((part) => elementPartId(node.id, part.id)) ?? []),
       ...(context.elementChildren.get(node.id) ?? []),
     ]),
+  };
+};
+
+/**
+ * Describe one built element the compiler stages no scene node for.
+ *
+ * A transform-only group is an authored element: it has an identity, a kind, a
+ * parent, and a logical space, and other elements hang from it. What it does not
+ * have is geometry, so it was left out of this surface entirely and every id
+ * naming one answered "does not exist". That refusal did not stay inside the
+ * group. A space lists the elements it claims, and one authored building has
+ * both of its unit roots claimed by a space, so a reviewer opening a room was
+ * handed ids that opened nothing while the elements underneath them appeared at
+ * the top of the index as though they hung from nothing at all.
+ *
+ * It therefore states its place the way the rest of the engine already states
+ * it. `builtEnvironmentPlacementBounds` answers `null` for a transform-only
+ * group "because neither states a place a body occupies", and this agrees: no
+ * transform, no content bounds, no materials, no prototype. What it does carry
+ * is the structure a walk needs, which is the whole reason to be able to open
+ * it.
+ */
+const describeElementGroup = (
+  context: IDescriptionContext,
+  environment: IAutoMovieBuiltEnvironment,
+  element: IAutoMovieBuiltEnvironment["elements"][number],
+): IAutoMovieSubjectDescription => {
+  const node = `${environment.id}/${element.id}`;
+  return {
+    version: 1,
+    revision: context.artifact.revision,
+    id: elementId(node),
+    kind: "element",
+    semanticKind: element.kind,
+    name: null,
+    prototype: null,
+    placement: elementId(node),
+    owner:
+      element.parent === null
+        ? null
+        : elementId(`${environment.id}/${element.parent}`),
+    model: null,
+    space:
+      element.space === null ? null : spaceId(environment.id, element.space),
+    transform: null,
+    bounds: { declared: null, content: null, coordinateSpace: "world" },
+    materials: [],
+    members: summarizeMembers(context.elementChildren.get(node) ?? []),
   };
 };
 

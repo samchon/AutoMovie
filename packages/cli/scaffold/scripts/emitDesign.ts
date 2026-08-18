@@ -10,6 +10,7 @@ import type {
 } from "@automovie/interface";
 import {
   AutoMovieProductionProject,
+  compareCodeUnits,
   findAutoMovieProjectRoot,
 } from "@automovie/mcp";
 
@@ -50,6 +51,28 @@ const project = AutoMovieProductionProject.open(
 );
 
 /**
+ * One design record's identity, as a comparable string.
+ *
+ * `production` and `world` are one-per-project and carry no id, so they are
+ * their own key; the rest are addressed by kind and id together, because a
+ * model and a formation may legitimately share a name.
+ */
+const address = (target: IAutoMovieDesignTarget): string =>
+  target.kind === "production" || target.kind === "world"
+    ? target.kind
+    : `${target.kind} "${target.id}"`;
+
+/**
+ * Every record this run derived, keyed by {@link address}.
+ *
+ * Registration is a side effect of emitting rather than a list kept beside it.
+ * A replacement rewrites every import and every `emit` call in this file, and a
+ * second list of what those calls cover would be updated last or not at all,
+ * which is exactly the pass the check below exists for.
+ */
+const derived = new Set<string>();
+
+/**
  * Store one derived record where the compiler reads it, and say what moved.
  *
  * Which design tree an artifact belongs to is the project's to decide: a model,
@@ -70,6 +93,7 @@ const emit = (
   value: unknown,
   store: () => IAutoMovieDesignMutationOutput,
 ): void => {
+  derived.add(address(target));
   const current = project.design(target);
   if (current !== null && JSON.stringify(current) === JSON.stringify(value)) {
     process.stdout.write(`unchanged ${label}\n`);
@@ -217,3 +241,69 @@ for (const scenario of [...openingAcceptance, ...answerAcceptance])
 // because why a scene covers a beat, what a catalog entry binds to, and which
 // scenario discharges a continuity claim are stated in no document. Deriving
 // prose that only looks right is worse than transcribing prose that is read.
+
+/**
+ * What the project stores right now, read once.
+ *
+ * One snapshot rather than a read per kind, so the list below cannot describe
+ * a project that changed between two of its own lines.
+ */
+const inventory = project.inventory();
+
+/**
+ * Every design record resident in the project, as an addressable target.
+ *
+ * Taken from the project's own inventory rather than by walking the design
+ * tree, for the same reason the emitters above go through the setters: where a
+ * record lives is the project's decision, and a directory walk here would be a
+ * second spelling of that layout. The screenplay index is deliberately absent,
+ * because it is not a design target and nothing above derives it.
+ */
+const resident: IAutoMovieDesignTarget[] = [
+  ...(inventory.production ? [{ kind: "production" } as const] : []),
+  ...(inventory.world ? [{ kind: "world" } as const] : []),
+  ...inventory.models.map((id) => ({ kind: "model", id }) as const),
+  ...inventory.formations.map((id) => ({ kind: "formation", id }) as const),
+  ...inventory.shots.map((id) => ({ kind: "shot", id }) as const),
+  ...inventory.acceptance.map((id) => ({ kind: "acceptance", id }) as const),
+];
+
+/**
+ * Refuse a resident design record no source in this script derives.
+ *
+ * This is the only place that can ask the question. A design record is derived
+ * from the typed source that owns it, so "does any source own this record" is
+ * answerable here and nowhere downstream: the compiler sees a record, not the
+ * absence of an owner for it, and a record that is internally consistent gives
+ * it nothing to refuse. Measured on a real replacement, five starter records
+ * (four models and a formation) were restored into a finished production and
+ * `compile` returned success with zero diagnostics while building them into
+ * that production's `generated` output. Nothing was wrong with them; they were
+ * simply somebody else's film, and no diagnostic can say so.
+ *
+ * The check is therefore about ownership rather than about validity, and it
+ * refuses rather than warns. Everything above has already been stored by the
+ * time this runs, so a refusal costs the author nothing but the deletion it
+ * names, and a warning printed under a column of `unchanged` lines is the
+ * notice that gets read once and never again.
+ *
+ * Ordering is by the record's own path so a second run reports the same list in
+ * the same order, and the paths come from the project for the same reason the
+ * inventory does.
+ */
+const orphaned = resident
+  .filter((target) => derived.has(address(target)) === false)
+  .map(
+    (target) => `  ${project.designRecordPath(target)}  (${address(target)})`,
+  )
+  .sort(compareCodeUnits);
+if (orphaned.length !== 0)
+  throw new Error(
+    [
+      `${orphaned.length} resident design record(s) are derived by no source in this script:`,
+      ...orphaned,
+      "",
+      "A design record and the typed source that owns it are two representations of one fact, so a record no source here derives is a record nothing in this production can correct. It stays resident, keeps every obligation it carries, and goes on describing whatever film it was written for.",
+      "Either derive it above from the source that owns it, or delete the file.",
+    ].join("\n"),
+  );

@@ -84,6 +84,37 @@ export interface IAutoMovieInspectionImage {
 }
 
 /**
+ * One answer to a view request: the frame, or why this page cannot draw it.
+ *
+ * A subject this page cannot frame is answered rather than thrown, and the
+ * difference is what the staged scene costs. A throw out of the page hook says
+ * the page failed, and the host discards it on that reading — correctly, since
+ * a page that lost its execution context cannot be trusted with the next
+ * viewpoint. But a prototype measured in model space stands nowhere in this
+ * world scene, and refusing it says nothing about the page: the scene behind it
+ * is intact and every other subject standing in it is still drawable.
+ *
+ * Measured on the starter production, one such subject mid-sweep discarded the
+ * page and the next subject rebuilt the whole scene. A population that is
+ * entirely model-space, which is what the prototype review obligation asks for,
+ * would therefore rebuild once per subject and give back the entire saving
+ * `#1956` was opened to win.
+ */
+export type IAutoMovieInspectionAnswer =
+  | {
+      /** Null because {@link image} carries the frame that was drawn. */
+      refused: null;
+      /** The frame this page drew for the requested subject and pose. */
+      image: IAutoMovieInspectionImage;
+    }
+  | {
+      /** Why this page cannot frame the requested subject. */
+      refused: string;
+      /** Null because nothing was drawn. */
+      image: null;
+    };
+
+/**
  * The one entry point the host adapter drives.
  *
  * Deliberately not `window.__automovieCapture`. That name belongs to pages
@@ -104,7 +135,7 @@ export interface IAutoMovieInspectionHook {
     pose: IAutoMovieInspectionPose,
     viewpoint: string,
     subject: string,
-  ) => IAutoMovieInspectionImage;
+  ) => IAutoMovieInspectionAnswer;
 }
 
 declare global {
@@ -181,37 +212,54 @@ interface IResolvedSubject {
   key: ReturnType<typeof parseAutoMovieViewerSubjectKey>;
 }
 
-const resolved = new Map<string, IResolvedSubject>();
+/**
+ * One requested name's answer, remembered whichever way it came out.
+ *
+ * A refusal is remembered as well as a subject, exactly as `subject.ts` does
+ * with its own description memo and for the same reason: the lookup walks every
+ * prototype and every scene node's parts before it reaches spaces, so a name
+ * this shot cannot frame is the most expensive question the page can be asked.
+ * A sweep over a population this page refuses would otherwise pay that walk
+ * once per request instead of once per name.
+ */
+const resolved = new Map<string, IResolvedSubject | string>();
 
 /**
- * Resolve one requested subject against the staged shot.
+ * Resolve one requested subject against the staged shot, or say why not.
  *
- * Every refusal here is raised before anything is drawn, so a subject that is
+ * Every refusal here is reached before anything is drawn, so a subject that is
  * measured in model space, has no extent, or cannot be spelled in the viewer
- * key grammar costs a message rather than a frame of the wrong thing.
+ * key grammar costs a message rather than a frame of the wrong thing. It is
+ * returned rather than thrown because the page is not what went wrong; see
+ * {@link IAutoMovieInspectionAnswer} for what that distinction is worth.
  */
-const resolveSubject = (requested: string): IResolvedSubject => {
+const resolveSubject = (requested: string): IResolvedSubject | string => {
   const cached = resolved.get(requested);
   if (cached !== undefined) return cached;
-  const description = resolve(requested);
-  const box = description.bounds.content ?? description.bounds.declared;
-  if (box === null)
-    throw new Error(
-      `${description.id} has neither a content nor a declared extent, so there is nothing to aim at.`,
-    );
-  if (description.bounds.coordinateSpace !== "world")
-    throw new Error(
-      `${description.id} is measured in ${description.bounds.coordinateSpace} space and stands nowhere in shot ` +
-        `"${shotId}", so a world eye aimed at it would photograph whatever happens to occupy the origin. ` +
-        "Inspect a placement of it instead.",
-    );
-  const entry: IResolvedSubject = {
-    description,
-    bounds: box,
-    key: parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id)),
-  };
-  resolved.set(requested, entry);
-  return entry;
+  let answer: IResolvedSubject | string;
+  try {
+    const description = resolve(requested);
+    const box = description.bounds.content ?? description.bounds.declared;
+    if (box === null)
+      throw new Error(
+        `${description.id} has neither a content nor a declared extent, so there is nothing to aim at.`,
+      );
+    if (description.bounds.coordinateSpace !== "world")
+      throw new Error(
+        `${description.id} is measured in ${description.bounds.coordinateSpace} space and stands nowhere in shot ` +
+          `"${shotId}", so a world eye aimed at it would photograph whatever happens to occupy the origin. ` +
+          "Inspect a placement of it instead.",
+      );
+    answer = {
+      description,
+      bounds: box,
+      key: parseAutoMovieViewerSubjectKey(viewerKeyOf(description.id)),
+    };
+  } catch (error) {
+    answer = error instanceof Error ? error.message : `${error}`;
+  }
+  resolved.set(requested, answer);
+  return answer;
 };
 
 const productionRuntimeResponse = await fetch(
@@ -306,11 +354,16 @@ const sectionAt = (
 window.__automovieInspect = {
   ready: true,
   view: (pose, viewpoint, requested) => {
-    const { description, bounds, key: subject } = resolveSubject(requested);
+    const staged = resolveSubject(requested);
+    if (typeof staged === "string") return { refused: staged, image: null };
+    const { description, bounds, key: subject } = staged;
     if (pose.coordinateSpace !== "world")
-      throw new Error(
-        `Viewpoint "${viewpoint}" states a ${pose.coordinateSpace}-space eye, and this page stages a world scene.`,
-      );
+      return {
+        refused:
+          `Viewpoint "${viewpoint}" states a ${pose.coordinateSpace}-space eye, ` +
+          "and this page stages a world scene.",
+        image: null,
+      };
     // The raster follows the element, and the host fixes the element by fixing
     // the browser viewport. Nothing is corrected to the requested size here on
     // purpose: the surface compares what it asked for against what came back
@@ -351,9 +404,12 @@ window.__automovieInspect = {
       `${description.id} @${requestedRevision}\n` +
       `viewpoint ${viewpoint}  ${drawn.image.width}x${drawn.image.height}`;
     return {
-      dataUrl: drawn.image.dataUrl,
-      width: drawn.image.width,
-      height: drawn.image.height,
+      refused: null,
+      image: {
+        dataUrl: drawn.image.dataUrl,
+        width: drawn.image.width,
+        height: drawn.image.height,
+      },
     };
   },
 };

@@ -453,9 +453,12 @@ export const extrudeAutoMovieProfile = (props: {
  * {@link buildAutoMoviePolyhedron}, whose per-face frame is isometric, or as a
  * flat cap through {@link extrudeAutoMovieRegion}, and a spire built as facets
  * is how a spire is built anyway. {@link loftAutoMovieSections} is not the
- * escape here that it is for the coordinate-less builders, because it measures
- * this same pair and a tapered loft shears the same way. Where the form has to
- * stay a true surface of revolution, the finish on it stays non-directional.
+ * escape here that it is for the coordinate-less builders. It measures this
+ * same pair, a tapered loft shears the same way, and it gives up something this
+ * one keeps: the map here is exactly equiareal, while a loft's `v` is path
+ * distance rather than surface distance, so a taper or a bend costs it texel
+ * density on top of the angle. Where the form has to stay a true surface of
+ * revolution, the finish on it stays non-directional.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a surface by revolving an authored metric profile.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Preserves the authored meridian topology through revolution.
@@ -524,6 +527,14 @@ export const revolveAutoMovieProfile = (props: {
  * declared at `at` 0 and `at` 1, which sweeps a section this one would have
  * hulled and lays a stated metric atlas over it. Reach for that one whenever
  * the member carries a finish.
+ *
+ * Declaring both sections the same spares that substitute the taper's cost and
+ * not the bend's, which matters here more than anywhere because the members
+ * listed above are curved runs. A loft around a turn carries the density
+ * gradient stated on {@link loftAutoMovieSections}, so on a curved path the
+ * substitution replaces the geometry rather than the finish: read that contract
+ * before putting a directional or density-critical finish on the result, and
+ * mitre a straight run instead where the finish has to hold.
  *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Builds a solid by sweeping one authored section along a path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Connects section copies into a closed sweep topology.
@@ -979,9 +990,46 @@ export const extrudeAutoMovieRegion = (props: {
  * section is wide folds the surface through itself, and this kernel measures
  * neither the turn nor the width.
  *
+ * Where this atlas differs from a revolution's is worth stating, because the
+ * difference is texel density rather than the angle between the axes, and
+ * density is the distortion an author cannot see coming. A revolution's `v` is
+ * the meridian's own length, so its map is exactly equiareal and only shears. A
+ * loft's `v` is distance along the path, which is not distance along the
+ * surface, and the gap between those two is area the atlas gains or loses.
+ *
+ * It opens two ways, and both are closed forms rather than tendencies. A
+ * changing section tilts each ruling off the path by the taper angle, so the
+ * ruling is longer than the path step by that angle's secant and the leg's area
+ * ratio is that angle's cosine: a section growing 0.5 m over 4 m of path reads
+ * 0.9923. A turning path is the larger one. At a point of the path whose
+ * curvature radius is `R`, a section point sitting a signed `d` away from the
+ * path travels `(R + d) / R` times as far as the path does, so its area ratio
+ * is `R / (R + d)`. That depends on `d / R` alone, so scaling the whole member
+ * up changes nothing: a section reaching a quarter of the bend radius on each
+ * side of the path spans 0.8 to 1.333 across itself, a 1.67:1 density range on
+ * one moulding, stretched on the outside of the turn and crowded on the inside.
+ * A constant section does not save it; the bend alone produces it.
+ *
+ * `d` is the offset in the plane the path turns in, not the distance from the
+ * path, and the difference is what an author can act on. A point displaced only
+ * perpendicular to that plane carries `d` of zero however far out it sits, so
+ * around a level bend it is the section's width that costs density and not its
+ * height: a tall thin fillet loses almost nothing where a wide flat band of the
+ * same reach loses a third on the outside and doubles on the inside. Turn a
+ * band on edge before you curve it, or mitre a straight run instead.
+ *
+ * That is declared rather than pending, for the reason the revolution's shear
+ * is. Making `v` measure surface distance would give every section point its
+ * own `v` at one station, which is a developed layout of a bent tube rather
+ * than this frame, and it would rewrite the coordinates of every surface
+ * already authored against this one. So a finish wanting even texel density
+ * belongs on a straight run of constant section, and a cornice that has to turn
+ * a corner carries a finish that does not report its own density.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Connects authored planar sections along a declared path.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Refuses incompatible ring topology rather than inventing correspondence.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Measures section travel against path travel in the same developed metre frame the convention states, so one declared scale reads the same on a loft as on a flat face.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::developed-atlas-shear Carries the half of the bound that is not area-preserving, bounding a taper's loss by the taper angle's cosine and a bend's by `R / (R + d)` rather than claiming the revolution's equiareal map.
  */
 export const loftAutoMovieSections = (props: {
   path: readonly IAutoMovieVector3[];
@@ -1212,9 +1260,26 @@ export const mergeAutoMovieMeshes = (
  * Build the member in the orientation it will be seen in, or accept that its
  * grain travels with it, which is what a real board does when it is turned.
  *
+ * A rotation is where riding along is free. A scale is not, and it is the one
+ * case where carrying the atlas unchanged costs the set its unit. A metric set
+ * says one unit is one metre of surface, and a scaled placement stretches the
+ * surface while leaving the numbers where they were, so a member built at
+ * unit size and placed at three times it reads one metre where the surface now
+ * measures three: the finish comes out three times too large, uniformly. A
+ * non-uniform scale is worse than wrong by a constant, because each face takes
+ * its own factor and the set stops being metric by any single number at all.
+ *
+ * Nothing downstream recovers it. `validateTextureScale` measures a binding
+ * against the part's own coordinate span and never reads a placement, so a
+ * scaled member's declaration passes exactly as it did before it was scaled.
+ * Author an atlas-bearing member at the size it will be seen at and place it
+ * with translation and rotation, or drop `coordinateSource` on it rather than
+ * claiming metres a scale has already falsified.
+ *
  * @evidence requirements/asset-authoring/geometry.md#asset-composable-geometry-operations Applies a declared placement to a reusable mesh operand.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-geometry-operations-topology Transforms positions and normals while preserving valid winding.
  * @evidence specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention Carries a member's coordinate set through a placement unchanged, which is what keeps the set measured in the frame the member was built in and what reverses its handedness under a mirroring scale.
+ * @evidencePart specifications/asset-and-representation/model-geometry-and-surface-facts.md#asset-spec-surface-coordinate-convention::coordinate-absence-and-composition Implements the placement half of the fragment the merge answers for the composition half of: coordinates move with the surface rather than being recut, which is free for a rotation and costs a metric set its unit under a scale.
  */
 export const transformAutoMovieMesh = (
   mesh: IAutoMovieMesh,
@@ -1284,6 +1349,16 @@ export const transformAutoMovieMesh = (
  * A material group is what lets one merged draw call still say which triangles
  * are the tread and which are the riser, so a finish, a budget, or a quantity
  * take-off can address a member after the buffers were concatenated.
+ *
+ * Each member is placed through {@link transformAutoMovieMesh} and the result
+ * concatenated by {@link mergeAutoMovieMeshes}, so both of their coordinate
+ * rules apply here and this is where an author meets them. One member without
+ * coordinates costs the whole assembly its atlas, and a member placed with a
+ * scale keeps coordinates that no longer measure its surface. Reuse is what
+ * makes the second bite: building one member and placing it at several sizes is
+ * exactly the economy this function exists for, and it is the case that
+ * falsifies a metric declaration. Place a reused atlas-bearing member by
+ * translation and rotation, and build a second one where the size differs.
  *
  * @evidence requirements/asset-authoring/identity-and-instances.md#asset-logical-group Merges geometry while retaining named group membership.
  * @evidence specifications/asset-and-representation/alternatives-instances-and-groups.md#asset-spec-group-individuality Reports the exact index span contributed by each member.
