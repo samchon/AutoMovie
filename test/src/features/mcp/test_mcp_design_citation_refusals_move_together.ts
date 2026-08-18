@@ -39,8 +39,9 @@ import { productionFixture } from "./productionFixtures";
  *    that exists, so the author can open what the message points at.
  * 3. One design record raises both, which is the join that makes them a pair
  *    rather than two independent messages that happen to be adjacent.
- * 4. The clause the two share names the compiler-owned design record, so the
- *    day one of them is reworded without it, this goes red.
+ * 4. The clause the two share names the compiler-owned design record, and every
+ *    refusal of either code carries that clause, so the day one of them is
+ *    reworded without it this goes red.
  */
 export const test_mcp_design_citation_refusals_move_together = (): void => {
   const fixture = productionFixture();
