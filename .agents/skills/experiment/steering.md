@@ -70,6 +70,10 @@ The third was caught only because rollout size disagreed with the walker: the wa
 
 **Its absence is not agreement either.** One driver waited an hour on a completion notification that never arrived, on a turn that had ended cleanly forty minutes earlier. That is the fifth trap from the other side: a notification that fires for a live turn and a notification that never fires for a finished one are both silence about the thing you asked, and silence reads as "still working" whichever way it happened. Poll the three signals on a cadence rather than waiting to be told.
 
+**And the same failure happens one step further from the evidence, when a measurement is retold rather than re-read.** A driver reported a corrupted document as losing three of thirteen sections; the blob said ten headings, of which the three past the damage were duplicates, and the search loss was seven of seven because the tool refuses the whole file. Wrong in opposite directions at once — overstating what was lost, understating how much was unreadable — from a count it had itself run correctly minutes earlier. The reviewer then repeated the figures into a pull request without re-reading the blob either.
+
+Nothing here was careless: both parties had measured, and both wrote from memory of the measurement. **Transcribing is not measuring. Re-count when you move a number into prose**, and cite the artifact you re-counted from, because that citation is what makes the next reader able to convict you.
+
 When a wrapper is reaped the transcript survives it: the `exec`ed process keeps its stdout redirect, and one measured log went on growing to 46 MB with nothing lost. So there is nothing to recover — identify the session process by ancestry again, re-arm on it, and carry on.
 
 ## The Agent Will Rebut You, And May Be Right
