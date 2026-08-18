@@ -18,6 +18,7 @@ import {
   nclose,
   qclose,
   qunit,
+  throwsError,
   vclose,
 } from "../internal/predicates";
 
@@ -375,37 +376,50 @@ export const test_architecture_built_connector = (): void => {
     })(),
   );
 
-  TestValidator.error("an unknown connector refuses geometry", () =>
-    builtConnectorGeometry(source, "missing"),
+  TestValidator.predicate(
+    "an unknown connector refuses geometry",
+    throwsError(() => builtConnectorGeometry(source, "missing")),
   );
-  TestValidator.error("an unknown connector refuses a section", () =>
-    builtConnectorSectionAt(source, "missing", 0),
+  TestValidator.predicate(
+    "an unknown connector refuses a section",
+    throwsError(() => builtConnectorSectionAt(source, "missing", 0)),
   );
-  TestValidator.error("a parameter outside the route is refused", () =>
-    builtConnectorSectionAt(source, "flight", 1.5),
+  TestValidator.predicate(
+    "a parameter outside the route is refused",
+    throwsError(() => builtConnectorSectionAt(source, "flight", 1.5)),
   );
-  TestValidator.error("a non-finite parameter is refused", () =>
-    builtConnectorSectionAt(source, "flight", Number.NaN),
+  TestValidator.predicate(
+    "a non-finite parameter is refused",
+    throwsError(() => builtConnectorSectionAt(source, "flight", Number.NaN)),
   );
-  TestValidator.error("an empty route has nothing to measure", () => {
-    const value = levels();
-    value.connectors[0]!.route = [];
-    builtConnectorGeometry(value, "spiral");
-  });
-  TestValidator.error("a route that never moves has nothing to measure", () => {
-    const value = levels();
-    value.connectors[0]!.route = [
-      { x: 1, y: 1, z: 1 },
-      { x: 1, y: 1, z: 1 },
-    ];
-    builtConnectorGeometry(value, "spiral");
-  });
-  TestValidator.error("a connector with no section at all is refused", () => {
-    const value = levels();
-    delete value.connectors[3]!.width;
-    delete value.connectors[3]!.clearHeight;
-    builtConnectorSectionAt(value, "flight", 0);
-  });
+  TestValidator.predicate(
+    "an empty route has nothing to measure",
+    throwsError(() => {
+      const value = levels();
+      value.connectors[0]!.route = [];
+      builtConnectorGeometry(value, "spiral");
+    }),
+  );
+  TestValidator.predicate(
+    "a route that never moves has nothing to measure",
+    throwsError(() => {
+      const value = levels();
+      value.connectors[0]!.route = [
+        { x: 1, y: 1, z: 1 },
+        { x: 1, y: 1, z: 1 },
+      ];
+      builtConnectorGeometry(value, "spiral");
+    }),
+  );
+  TestValidator.predicate(
+    "a connector with no section at all is refused",
+    throwsError(() => {
+      const value = levels();
+      delete value.connectors[3]!.width;
+      delete value.connectors[3]!.clearHeight;
+      builtConnectorSectionAt(value, "flight", 0);
+    }),
+  );
 
   const malformed: Array<
     readonly [string, (value: IAutoMovieBuiltEnvironment) => void, string]

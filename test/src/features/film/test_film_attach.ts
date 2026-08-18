@@ -19,7 +19,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose, qclose, vclose } from "../internal/predicates";
+import { nclose, qclose, throwsError, vclose } from "../internal/predicates";
 
 const IDENTITY_OFFSET: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -222,5 +222,8 @@ export const test_film_attach = (): void => {
       shotDuration: 2,
     });
   };
-  TestValidator.error("a zero-span attach throws", zeroSpanAttach);
+  TestValidator.predicate(
+    "a zero-span attach throws",
+    throwsError(zeroSpanAttach),
+  );
 };

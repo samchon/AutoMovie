@@ -15,7 +15,13 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { namedFacts, nclose, qclose, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  qclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const NO_ROTATION: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -635,17 +641,24 @@ export const test_architecture_built_connector_operation = (): void => {
     builtConnectorCarriagePlacements(source, "stair"),
     [],
   );
-  TestValidator.error("an unknown connector has no carriage", () =>
-    builtConnectorCarriagePlacements(source, "missing"),
+  TestValidator.predicate(
+    "an unknown connector has no carriage",
+    throwsError(() => builtConnectorCarriagePlacements(source, "missing")),
   );
-  TestValidator.error("an unknown operating state is refused", () =>
-    builtConnectorCarriagePlacements(source, "lift", "at-level-9"),
+  TestValidator.predicate(
+    "an unknown operating state is refused",
+    throwsError(() =>
+      builtConnectorCarriagePlacements(source, "lift", "at-level-9"),
+    ),
   );
-  TestValidator.error("a carriage whose element is gone is refused", () => {
-    const value = runs();
-    value.elements = value.elements.filter((element) => element.id !== "car");
-    builtConnectorCarriagePlacements(value, "lift");
-  });
+  TestValidator.predicate(
+    "a carriage whose element is gone is refused",
+    throwsError(() => {
+      const value = runs();
+      value.elements = value.elements.filter((element) => element.id !== "car");
+      builtConnectorCarriagePlacements(value, "lift");
+    }),
+  );
   TestValidator.predicate(
     "a state that names no value leaves its carriage at rest and serving nothing",
     (() => {

@@ -6,7 +6,7 @@ import {
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 /** A horizontal cut at y = 3: everything ABOVE it is removed. */
 const CEILING: IAutoMovieSectionPlane = {
@@ -103,16 +103,22 @@ export const test_inspection_section_plane_classification = (): void => {
   );
 
   // 3. degenerate normals are refused, not defaulted
-  TestValidator.error("a zero normal is refused", () =>
-    autoMovieSectionPlaneDistance(
-      { point: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 0 } },
-      { x: 1, y: 1, z: 1 },
+  TestValidator.predicate(
+    "a zero normal is refused",
+    throwsError(() =>
+      autoMovieSectionPlaneDistance(
+        { point: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 0 } },
+        { x: 1, y: 1, z: 1 },
+      ),
     ),
   );
-  TestValidator.error("a non-finite normal is refused", () =>
-    autoMovieSectionPlaneDistance(
-      { point: { x: 0, y: 0, z: 0 }, normal: { x: Number.NaN, y: 1, z: 0 } },
-      { x: 1, y: 1, z: 1 },
+  TestValidator.predicate(
+    "a non-finite normal is refused",
+    throwsError(() =>
+      autoMovieSectionPlaneDistance(
+        { point: { x: 0, y: 0, z: 0 }, normal: { x: Number.NaN, y: 1, z: 0 } },
+        { x: 1, y: 1, z: 1 },
+      ),
     ),
   );
 

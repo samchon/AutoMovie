@@ -17,7 +17,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { namedFacts, qclose } from "../internal/predicates";
+import { namedFacts, qclose, throwsError } from "../internal/predicates";
 
 const transform = (
   x = 0,
@@ -511,34 +511,45 @@ export const test_architecture_built_environment = (): void => {
     },
     { room: "tower-a", root: "tower-a", annex: "annex" },
   );
-  TestValidator.error("unknown containment space throws", () =>
-    builtEnvironmentContainsPoint(source, "missing", { x: 0, y: 0, z: 0 }),
+  TestValidator.predicate(
+    "unknown containment space throws",
+    throwsError(() =>
+      builtEnvironmentContainsPoint(source, "missing", { x: 0, y: 0, z: 0 }),
+    ),
   );
-  TestValidator.error("unknown adjacency space throws", () =>
-    builtEnvironmentAdjacentSpaces(source, "missing"),
+  TestValidator.predicate(
+    "unknown adjacency space throws",
+    throwsError(() => builtEnvironmentAdjacentSpaces(source, "missing")),
   );
-  TestValidator.error("unknown connector space throws", () =>
-    builtEnvironmentSpaceConnectors(source, "missing"),
+  TestValidator.predicate(
+    "unknown connector space throws",
+    throwsError(() => builtEnvironmentSpaceConnectors(source, "missing")),
   );
-  TestValidator.error("unknown surface space throws", () =>
-    builtEnvironmentSpaceSurfaces(source, "missing"),
+  TestValidator.predicate(
+    "unknown surface space throws",
+    throwsError(() => builtEnvironmentSpaceSurfaces(source, "missing")),
   );
-  TestValidator.error("unknown staged-node space throws", () =>
-    builtEnvironmentSpaceNodes(source, "missing"),
+  TestValidator.predicate(
+    "unknown staged-node space throws",
+    throwsError(() => builtEnvironmentSpaceNodes(source, "missing")),
   );
-  TestValidator.error("unknown owner space throws", () =>
-    builtEnvironmentBuildingOfSpace(source, "missing"),
+  TestValidator.predicate(
+    "unknown owner space throws",
+    throwsError(() => builtEnvironmentBuildingOfSpace(source, "missing")),
   );
-  TestValidator.error("a space owned by no building unit throws", () => {
-    const orphan = building();
-    orphan.spaces.push({
-      id: "detached",
-      kind: "room",
-      parent: null,
-      cells: [],
-    });
-    builtEnvironmentBuildingOfSpace(orphan, "detached");
-  });
+  TestValidator.predicate(
+    "a space owned by no building unit throws",
+    throwsError(() => {
+      const orphan = building();
+      orphan.spaces.push({
+        id: "detached",
+        kind: "room",
+        parent: null,
+        cells: [],
+      });
+      builtEnvironmentBuildingOfSpace(orphan, "detached");
+    }),
+  );
 
   const reversed = building();
   reversed.elements.reverse();
@@ -933,9 +944,12 @@ export const test_architecture_built_environment = (): void => {
     refusalPaths(() => {}),
     [],
   );
-  TestValidator.error("lowering refuses an invalid building", () => {
-    const value = building();
-    value.elements[0]!.parent = "missing";
-    lowerBuiltEnvironment(value);
-  });
+  TestValidator.predicate(
+    "lowering refuses an invalid building",
+    throwsError(() => {
+      const value = building();
+      value.elements[0]!.parent = "missing";
+      lowerBuiltEnvironment(value);
+    }),
+  );
 };
