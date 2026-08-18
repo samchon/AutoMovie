@@ -61,6 +61,24 @@ export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {
         color: new THREE.Color(SPACE_COLOR, SPACE_COLOR, SPACE_COLOR),
         metalness: 0,
         roughness: 0.95,
+        // Biased away from the eye so an authored floor wins the tie. A
+        // production that builds its own slab and also declares the space it
+        // stands on puts two surfaces on one plane, and a `#1954` benchmark
+        // photographed the result: a stepped diagonal seam across a living
+        // room floor, with the storey-owned slab's top face at exactly
+        // Y = 0.0 and the room's walkable polygon at Y = 0. Both storeys did
+        // it. Neither surface is wrong and the renderer has no principled way
+        // to order them, so this states the order: the stand-in yields.
+        //
+        // A bias rather than a suppression, because this group exists for the
+        // scene that has no floor of its own (#1173) and must still draw when
+        // nothing else is there. Its own JSDoc calls it the ground the guide
+        // passes see; taking it away where a slab exists would need the
+        // viewer to decide which authored elements count as floor, which is a
+        // judgement it has no basis to make.
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
       }),
     );
     mesh.name = surface.id;
