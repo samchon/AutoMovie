@@ -1,6 +1,7 @@
 import { TestValidator } from "@nestia/e2e";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -45,9 +46,25 @@ import { namedFacts } from "../internal/predicates";
  * 4. The gap reporter reads the exact directory the entry point writes. These
  *    are two files with one path between them, and moving either alone reports
  *    a different run than the one just measured.
+ * 5. The entry point can say how many per-process records a run left, counting
+ *    records and nothing else. One commit measured 813/813 tests passing and
+ *    141,395 statements instrumented on both platforms, with 118,208 covered on
+ *    Ubuntu against 79,618 on Windows — an identical denominator under a much
+ *    smaller numerator, which is data collected and not counted rather than
+ *    positions mis-mapped. Counting the records is what separates "none were
+ *    written" from "they were written and not merged", and a count that also
+ *    counted a stray note or a nested directory would answer neither.
  */
 export const test_workspace_coverage_isolation = (): void => {
   const entry = path.join(ROOT, "internals", "coverage.mjs");
+  // A directory holding one record and two things that are not records, so the
+  // count is asserted against a mixture rather than against an empty answer.
+  const records = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-coverage-records-"),
+  );
+  fs.writeFileSync(path.join(records, "coverage-1-2-0.json"), "{}");
+  fs.writeFileSync(path.join(records, "notes.txt"), "");
+  fs.mkdirSync(path.join(records, "nested"));
   const probe = spawnSync(
     process.execPath,
     [
@@ -55,20 +72,35 @@ export const test_workspace_coverage_isolation = (): void => {
       `import(${JSON.stringify(pathToFileURL(entry).href)}).then((module) => {
          const first = module.coverageTemporaryDirectory();
          const second = module.coverageTemporaryDirectory();
-         console.log(JSON.stringify({ first, second }));
+         const counted = module.coverageRecordCount(${JSON.stringify(records)});
+         const absent = module.coverageRecordCount(${JSON.stringify(
+           path.join(records, "never-created"),
+         )});
+         console.log(JSON.stringify({ first, second, counted, absent }));
        });`,
     ],
     { cwd: ROOT, encoding: "utf8" },
   );
+  fs.rmSync(records, { recursive: true, force: true });
 
   const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
-  const drawn = ((): { first: string; second: string } | null => {
+  const drawn = ((): {
+    first: string;
+    second: string;
+    counted: number;
+    absent: number;
+  } | null => {
     const line = probe.stdout
       .split("\n")
       .map((value) => value.trim())
       .find((value) => value.startsWith("{"));
     if (line === undefined) return null;
-    return JSON.parse(line) as { first: string; second: string };
+    return JSON.parse(line) as {
+      first: string;
+      second: string;
+      counted: number;
+      absent: number;
+    };
   })();
 
   TestValidator.equals(
@@ -97,6 +129,18 @@ export const test_workspace_coverage_isolation = (): void => {
         "importing it measured nothing",
         () => probe.stdout.includes("AutoMovie Test Program") === false,
       ],
+      // The count is what separates "no records were written" from "records
+      // were written and not merged", which is the only question a low total
+      // leaves open. It must count records and nothing else, or it answers a
+      // different question than the one it is printed to answer.
+      [
+        "it counts records and not the other contents",
+        () => drawn !== null && drawn.counted === 1,
+      ],
+      [
+        "and a directory that was never created is zero rather than a throw",
+        () => drawn !== null && drawn.absent === 0,
+      ],
     ]),
     {
       "the entry point answered": true,
@@ -104,6 +148,8 @@ export const test_workspace_coverage_isolation = (): void => {
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
       "importing it measured nothing": true,
+      "it counts records and not the other contents": true,
+      "and a directory that was never created is zero rather than a throw": true,
     },
   );
 
