@@ -1,5 +1,5 @@
 import { TestValidator } from "@nestia/e2e";
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -45,10 +45,12 @@ import { namedFacts } from "../internal/predicates";
  *    file's own `open()` — an errno about a path the reader never chose, with
  *    nothing to do about it.
  */
-export const test_mcp_coordination_root_override = (): void => {
-  const honoured = probe("absolute");
-  const relative = probe("relative");
-  const denied = probe("denied");
+export const test_mcp_coordination_root_override = async (): Promise<void> => {
+  const [honoured, relative, denied] = await Promise.all([
+    probe("absolute"),
+    probe("relative"),
+    probe("denied"),
+  ]);
 
   TestValidator.equals(
     "an absolute override moves the coordination root off the home",
@@ -138,7 +140,9 @@ interface IProbe {
  * process which took it, so probes sharing a root would leave later ones
  * refused by earlier ones' leftovers.
  */
-const probe = (mode: "absolute" | "relative" | "denied"): IProbe => {
+const probe = async (
+  mode: "absolute" | "relative" | "denied",
+): Promise<IProbe> => {
   const cache = path.resolve(__dirname, "../../../node_modules/.cache");
   fs.mkdirSync(cache, { recursive: true });
   const directory = fs.mkdtempSync(path.join(cache, "automovie-coord-"));
@@ -195,18 +199,36 @@ const probe = (mode: "absolute" | "relative" | "denied"): IProbe => {
   `;
   const file = path.join(directory, "probe.ts");
   fs.writeFileSync(file, script, "utf8");
-  let run: SpawnSyncReturns<string>;
+  // Spawned rather than `spawnSync`, so the three probes run at once. Each
+  // one pays a full package import, and run sequentially they were the
+  // slowest case in the suite by a wide margin; nothing about them is
+  // ordered, since each fences its own directory.
+  let run: { stdout: string; stderr: string };
   try {
-    run = spawnSync(
-      process.execPath,
-      [
-        path.resolve(
-          __dirname,
-          "../../../node_modules/ttsc/lib/launcher/ttsx.js",
-        ),
-        file,
-      ],
-      { cwd: path.resolve(__dirname, "../../.."), encoding: "utf8" },
+    run = await new Promise<{ stdout: string; stderr: string }>(
+      (resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          [
+            path.resolve(
+              __dirname,
+              "../../../node_modules/ttsc/lib/launcher/ttsx.js",
+            ),
+            file,
+          ],
+          { cwd: path.resolve(__dirname, "../../..") },
+        );
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk: Buffer) => {
+          stdout += chunk.toString("utf8");
+        });
+        child.stderr.on("data", (chunk: Buffer) => {
+          stderr += chunk.toString("utf8");
+        });
+        child.on("error", reject);
+        child.on("close", () => resolve({ stdout, stderr }));
+      },
     );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
