@@ -50,8 +50,8 @@ const preserveCliRenderFixtureCleanup = (
  * Scenarios:
  *
  * 1. Missing/unknown actions and an uninstalled project fail with correction.
- * 2. A scaffold-local tsx entry receives the render script, action, and options in
- *    exact order.
+ * 2. The scaffold-local TypeScript launcher receives its project flag, the
+ *    render script, the action and the options, in exact order.
  * 3. The public CLI propagates the child process exit status.
  * 4. `verify` accepts no arguments and delegates the read-only final verifier.
  */
@@ -74,9 +74,9 @@ export const test_cli_render = (): void => {
     fs.mkdirSync(path.join(outside, "scripts"), { recursive: true });
     fs.writeFileSync(
       path.join(outside, "scripts", "render.ts"),
-      "// missing tsx runtime\n",
+      "// missing TypeScript launcher\n",
     );
-    const missingTsx = captureCli(["render", "status"]);
+    const missingLauncher = captureCli(["render", "status"]);
     TestValidator.equals(
       "render CLI rejects bad actions and missing project runtime",
       namedFacts([
@@ -105,10 +105,10 @@ export const test_cli_render = (): void => {
           "invalidVerifyStderrIncludes",
           () => invalidVerify.stderr.includes("takes no arguments"),
         ],
-        ["missingTsxStatus", () => missingTsx.status === 1],
+        ["missingLauncherStatus", () => missingLauncher.status === 1],
         [
-          "missingTsxStderrIncludes",
-          () => missingTsx.stderr.includes("scaffolded project"),
+          "missingLauncherStderrIncludes",
+          () => missingLauncher.stderr.includes("scaffolded project"),
         ],
       ]),
       {
@@ -122,28 +122,40 @@ export const test_cli_render = (): void => {
         missingVerifyStderrIncludes: true,
         invalidVerifyStatus: true,
         invalidVerifyStderrIncludes: true,
-        missingTsxStatus: true,
-        missingTsxStderrIncludes: true,
+        missingLauncherStatus: true,
+        missingLauncherStderrIncludes: true,
       },
     );
 
     const script = path.join(project, "scripts", "render.ts");
     const verifyScript = path.join(project, "scripts", "verify.ts");
-    const tsx = path.join(project, "node_modules", "tsx", "dist", "cli.mjs");
+    // The launcher this repository ships, at the path the CLI resolves it
+    // from. A stub rather than the real one, because what is under test is the
+    // argv the CLI hands it and not what it does with them.
+    const launcher = path.join(
+      project,
+      "node_modules",
+      "ttsc",
+      "lib",
+      "launcher",
+      "ttsx.js",
+    );
     fs.mkdirSync(path.dirname(script), { recursive: true });
-    fs.mkdirSync(path.dirname(tsx), { recursive: true });
+    fs.mkdirSync(path.dirname(launcher), { recursive: true });
     fs.writeFileSync(script, "// delegated scaffold render entry\n");
     fs.writeFileSync(verifyScript, "// delegated scaffold verify entry\n");
     fs.writeFileSync(
-      tsx,
+      launcher,
       `import fs from "node:fs";
 fs.writeFileSync(
   "render-call.json",
   JSON.stringify(process.argv.slice(2)),
 );
-if (process.argv[3] === "verify") process.exitCode = 7;
-if (process.argv[3] === "finalize") process.kill(process.pid, "SIGTERM");
-if (process.argv[2]?.endsWith("verify.ts"))
+// Two ahead of where they sat under a runner that took no project flag: the
+// launcher is handed its project config before the script it runs.
+if (process.argv[5] === "verify") process.exitCode = 7;
+if (process.argv[5] === "finalize") process.kill(process.pid, "SIGTERM");
+if (process.argv[4]?.endsWith("verify.ts"))
   fs.writeFileSync("verify-call.json", JSON.stringify(process.argv.slice(2)));
 `,
     );
@@ -173,11 +185,16 @@ if (process.argv[2]?.endsWith("verify.ts"))
       "render CLI delegates exact argv and propagates child status",
       namedFacts([
         ["delegatedStatus", () => delegated.status === 0],
-        ["callScript", () => path.resolve(call[0]!) === script],
+        ["callProjectFlag", () => call[0] === "-P"],
+        [
+          "callProjectConfig",
+          () => path.resolve(call[1]!) === path.join(project, "tsconfig.json"),
+        ],
+        ["callScript", () => path.resolve(call[2]!) === script],
         [
           "callSliceRun",
           () =>
-            call.slice(1).join(",") === "run,--deliverable,feature,--workers,3",
+            call.slice(3).join(",") === "run,--deliverable,feature,--workers,3",
         ],
         ["plannedStatus", () => planned.status === 0],
         ["statusStatus", () => status.status === 0],
@@ -188,12 +205,14 @@ if (process.argv[2]?.endsWith("verify.ts"))
         ["verifiedStatus", () => verified.status === 0],
         [
           "verifyCallVerifyScript",
-          () => path.resolve(verifyCall[0]!) === verifyScript,
+          () => path.resolve(verifyCall[2]!) === verifyScript,
         ],
-        ["verifyCall", () => verifyCall.length === 1],
+        ["verifyCall", () => verifyCall.length === 3],
       ]),
       {
         delegatedStatus: true,
+        callProjectFlag: true,
+        callProjectConfig: true,
         callScript: true,
         callSliceRun: true,
         plannedStatus: true,

@@ -604,17 +604,28 @@ const runProjectScript = (
 ): number => {
   const root = process.cwd();
   const script = path.join(root, "scripts", scriptName);
-  const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
-  if (fs.existsSync(script) === false || fs.existsSync(tsx) === false) {
+  // The launcher this repository ships, not a second TypeScript runner. The
+  // other one reads the passwd database at its own module load on Windows,
+  // before any project code exists, and dies where that syscall is denied.
+  const launcher = path.join(
+    root,
+    "node_modules",
+    "ttsc",
+    "lib",
+    "launcher",
+    "ttsx.js",
+  );
+  if (fs.existsSync(script) === false || fs.existsSync(launcher) === false) {
     process.stderr.write(
-      `The current project has no installed scripts/${scriptName} + tsx runtime. Run this command from a scaffolded project after npm install.\n`,
+      `The current project has no installed scripts/${scriptName} + TypeScript launcher. Run this command from a scaffolded project after npm install.\n`,
     );
     return 1;
   }
-  const child = spawnSync(process.execPath, [tsx, script, ...args], {
-    cwd: root,
-    stdio: "inherit",
-  });
+  const child = spawnSync(
+    process.execPath,
+    [launcher, "-P", path.join(root, "tsconfig.json"), script, ...args],
+    { cwd: root, stdio: "inherit" },
+  );
   return child.status ?? 1;
 };
 
