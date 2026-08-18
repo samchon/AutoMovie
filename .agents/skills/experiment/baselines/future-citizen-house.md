@@ -1709,3 +1709,57 @@ shot id 누락). **둘 다 컴파일러 메시지 그대로 진단했다고 스�
 > **따라서 에이전트가 55건의 리뷰를 닫은 **뒤에** 리팩하면 그 55건이 즉시 전부 stale이 된다.**
 > 이 샌드박스에 남은 **가장 큰 단일 작업**을 통째로 버리게 된다.
 > **순서: 리팩 → `compile` → 그다음 리뷰 원장.** 드라이버가 경계에서 리팩을 먼저 요청한 이유다.
+
+## 두 번째 리팩 — **총계는 1 줄었고 그 안에서 세 가지가 움직였다**
+
+리팩 잔존, `lib/*.js`에서 내가 직접 확인:
+engine `builtEnvironmentSpaceBoundaries` **6** · **컴파일 샌드박스 표면에 2파일/5회**
+(shot 소스에서 부를 수 있다) · `space-enclosure` **1** ·
+`opening-location`/`connector-location` **0** (**폐기지 이름 변경이 아니다**) ·
+lock 모듈 `AUTOMOVIE_COORDINATION_ROOT` **7**.
+
+`compile` exit 0 (64초), revision 193 → 194,
+지문 `33d21553…` → **`820949f1…`** (**소스 변경 0** — 또 제품이 움직였다).
+
+### 총계로 읽으면 안 되는 이유 — 실측
+
+| 계측 | 값 |
+| --- | --- |
+| 선언된 격차 **총계** | 37 → **36** (**−1**) |
+| **범주별 실제 이동** | **제거 2 · 추가 1** |
+
+```
+REMOVED  unsupported  schedule/connector-location
+REMOVED  unsupported  schedule/opening-location
+ADDED    unsupported  schedule/space-enclosure
+```
+
+> **총계 −1은 세 개의 변화를 숨긴다.** 총계만 본 드라이버는 "격차 하나가 고쳐졌다"고 읽고
+> **은퇴 2건과 신설 1건을 전부 놓친다.** 이 캠페인이 다른 형태로 반복해 잡아온 실패
+> (0을 합계에서 읽기, 서버별로 묶지 않기)의 **산술 버전**이다.
+> **규칙: 격차는 범주별로 diff한다. 총계는 방향이 다른 변화들을 상쇄한다.**
+
+> **계측기 함정도 같은 자리에서 또 나왔다.** 첫 추출기가 `category`·`kind`·`check`·`id`·`name`을
+> 읽었는데 **실제 키는 `subject`·`status`·`reason`·`remedy`**다. 스크립트는 실패하지 않고
+> **`37 ?/?`** 라는 그럴듯한 답을 냈다. **객체 키를 먼저 찍어보고 잡았다.**
+
+### **`#2035`의 침묵이 이 리팩으로 닫혔다** — 게이트가 아니라 **선언**으로
+
+새 격차의 본문이 `#2035`의 실질 그대로다.
+
+> `schedule:space/space-enclosure` — "a room row states what stands in the space and what it
+> connects to, and nothing about the boundaries that enclose it, so **a room bounded by nothing
+> reads exactly like a room whose bounding surfaces are owned by its storey**"
+>
+> remedy: "ask `builtEnvironmentSpaceBoundaries` for the boundaries a space is named on and read
+> their kind and realizing elements; **do not read an absent enclosure row as an unenclosed room,
+> and do not scan the kind for a fixed word, because it is an open label**"
+
+**"방의 경계 표면을 층이 소유하는 경우"가 이름 그대로 적혀 있다.**
+이 기준선이 기록한 대조("제품은 검사 안 하는 것을 대체로 선언하는데 천장 소유권만 침묵한다")는
+**이제 제품이 그 하나까지 선언함으로써 해소됐다.** 그리고 형태가 `maxOcclusionRatio`와 같다 —
+**선언된 한계 + 명시된 대체 절차**, 게다가 remedy가 **오독 두 가지를 스스로 막는다**
+(부재를 무경계로 읽지 말 것, 열린 라벨을 고정 단어로 스캔하지 말 것).
+
+**드라이버는 이 격차를 저작 에이전트에게 말하지 않는다.** remedy가 검사를 처방하지 않고
+**질의를 이름 대는** 격차를 저작자가 어떻게 읽는지가 측정 대상이고, 소유권 질문과 같은 부류다.
