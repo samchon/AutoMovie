@@ -14,6 +14,7 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeProp, primitivePart } from "../internal/fixtures";
+import { throwsError } from "../internal/predicates";
 
 const place = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -475,11 +476,13 @@ export const test_architecture_built_environment_placement = (): void => {
     }).status,
     "unresolved",
   );
-  TestValidator.error("negative tolerance is refused", () =>
-    bearing("resting", support("element", "slab"), -1),
+  TestValidator.predicate(
+    "negative tolerance is refused",
+    throwsError(() => bearing("resting", support("element", "slab"), -1)),
   );
-  TestValidator.error("non-finite tolerance is refused", () =>
-    bearing("resting", support("element", "slab"), Infinity),
+  TestValidator.predicate(
+    "non-finite tolerance is refused",
+    throwsError(() => bearing("resting", support("element", "slab"), Infinity)),
   );
 
   const overlap = (left: string, right: string) =>

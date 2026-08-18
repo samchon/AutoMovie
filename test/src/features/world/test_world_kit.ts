@@ -11,7 +11,7 @@ import {
 import { IAutoMovieInstanceSetDesign } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const instanceBase = (): Omit<IAutoMovieInstanceSetDesign, "layout"> => ({
   id: "trees",
@@ -303,6 +303,9 @@ export const test_world_kit = (): void => {
       }),
   ];
   rejected.forEach((callback, index) =>
-    TestValidator.error(`invalid world placement ${index} throws`, callback),
+    TestValidator.predicate(
+      `invalid world placement ${index} throws`,
+      throwsError(callback),
+    ),
   );
 };

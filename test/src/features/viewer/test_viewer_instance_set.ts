@@ -22,7 +22,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { namedFacts, nclose } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 import { modelRecipe, worldDesign } from "../mcp/productionFixtures";
 
 const instanceMeshes = (object: THREE.Object3D): THREE.InstancedMesh[] =>
@@ -471,25 +471,30 @@ export const test_viewer_instance_set = async (): Promise<void> => {
     { builtStatsCulled: true, meshesEveryMesh: true },
   );
 
-  TestValidator.error("missing instance LOD model throws", () =>
-    buildInstancedInstanceSet({
-      instanceSet: compiled,
-      models: new Map(),
-    }),
+  TestValidator.predicate(
+    "missing instance LOD model throws",
+    throwsError(() =>
+      buildInstancedInstanceSet({
+        instanceSet: compiled,
+        models: new Map(),
+      }),
+    ),
   );
-  TestValidator.error("instance regeneration rejects a fractional slot", () =>
-    regenerateInstanceSlot(compiled, 0.5),
+  TestValidator.predicate(
+    "instance regeneration rejects a fractional slot",
+    throwsError(() => regenerateInstanceSlot(compiled, 0.5)),
   );
-  TestValidator.error("instance regeneration rejects a negative slot", () =>
-    regenerateInstanceSlot(compiled, -1),
+  TestValidator.predicate(
+    "instance regeneration rejects a negative slot",
+    throwsError(() => regenerateInstanceSlot(compiled, -1)),
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "instance regeneration rejects an out-of-range slot",
-    () => regenerateInstanceSlot(compiled, compiled.count),
+    throwsError(() => regenerateInstanceSlot(compiled, compiled.count)),
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "route regeneration requires compiled route geometry",
-    () =>
+    throwsError(() =>
       regenerateInstanceSlot(
         {
           ...compiled,
@@ -502,10 +507,11 @@ export const test_viewer_instance_set = async (): Promise<void> => {
         },
         0,
       ),
+    ),
   );
-  TestValidator.error(
+  TestValidator.predicate(
     "route regeneration requires at least two compiled waypoints",
-    () =>
+    throwsError(() =>
       regenerateInstanceSlot(
         {
           ...compiled,
@@ -522,34 +528,41 @@ export const test_viewer_instance_set = async (): Promise<void> => {
         },
         0,
       ),
-  );
-  TestValidator.error("an explicit layout needs a transform per slot", () =>
-    regenerateInstanceSlot(
-      {
-        ...compiled,
-        layout: { kind: "explicit", transforms: [] },
-      },
-      0,
     ),
   );
-  TestValidator.error("an unknown explicit prototype is refused", () =>
-    regenerateInstanceSlot(
-      {
-        ...compiled,
-        layout: {
-          kind: "explicit",
-          transforms: [
-            {
-              id: "only",
-              translation: { x: 0, y: 0, z: 0 },
-              rotation: { x: 0, y: 0, z: 0, w: 1 },
-              scale: { x: 1, y: 1, z: 1 },
-              prototype: "absent",
-            },
-          ],
+  TestValidator.predicate(
+    "an explicit layout needs a transform per slot",
+    throwsError(() =>
+      regenerateInstanceSlot(
+        {
+          ...compiled,
+          layout: { kind: "explicit", transforms: [] },
         },
-      },
-      0,
+        0,
+      ),
+    ),
+  );
+  TestValidator.predicate(
+    "an unknown explicit prototype is refused",
+    throwsError(() =>
+      regenerateInstanceSlot(
+        {
+          ...compiled,
+          layout: {
+            kind: "explicit",
+            transforms: [
+              {
+                id: "only",
+                translation: { x: 0, y: 0, z: 0 },
+                rotation: { x: 0, y: 0, z: 0, w: 1 },
+                scale: { x: 1, y: 1, z: 1 },
+                prototype: "absent",
+              },
+            ],
+          },
+        },
+        0,
+      ),
     ),
   );
 
@@ -1544,44 +1557,56 @@ export const test_viewer_instance_set = async (): Promise<void> => {
     ]),
     { vertices: true, oneMaterial: true },
   );
-  TestValidator.error("skinned imported prototypes are refused", () =>
-    flattenInstancedObject(
-      importedObject(
-        new THREE.SkinnedMesh(
-          new THREE.BoxGeometry(),
-          new THREE.MeshBasicMaterial(),
+  TestValidator.predicate(
+    "skinned imported prototypes are refused",
+    throwsError(() =>
+      flattenInstancedObject(
+        importedObject(
+          new THREE.SkinnedMesh(
+            new THREE.BoxGeometry(),
+            new THREE.MeshBasicMaterial(),
+          ),
         ),
       ),
     ),
   );
   const morphed = new THREE.BoxGeometry();
   morphed.morphAttributes.position = [morphed.getAttribute("position").clone()];
-  TestValidator.error("morphed imported prototypes are refused", () =>
-    flattenInstancedObject(
-      importedObject(new THREE.Mesh(morphed, new THREE.MeshBasicMaterial())),
-    ),
-  );
-  TestValidator.error("multi-material imported meshes are refused", () =>
-    flattenInstancedObject(
-      importedObject(
-        new THREE.Mesh(new THREE.BoxGeometry(), [
-          new THREE.MeshBasicMaterial(),
-          new THREE.MeshBasicMaterial(),
-        ]),
+  TestValidator.predicate(
+    "morphed imported prototypes are refused",
+    throwsError(() =>
+      flattenInstancedObject(
+        importedObject(new THREE.Mesh(morphed, new THREE.MeshBasicMaterial())),
       ),
     ),
   );
-  TestValidator.error("empty imported prototypes are refused", () =>
-    flattenInstancedObject(
-      createImportedModelObject({
-        object: new THREE.Group(),
-        bones: new Map(),
-      }),
+  TestValidator.predicate(
+    "multi-material imported meshes are refused",
+    throwsError(() =>
+      flattenInstancedObject(
+        importedObject(
+          new THREE.Mesh(new THREE.BoxGeometry(), [
+            new THREE.MeshBasicMaterial(),
+            new THREE.MeshBasicMaterial(),
+          ]),
+        ),
+      ),
     ),
   );
-  TestValidator.error(
+  TestValidator.predicate(
+    "empty imported prototypes are refused",
+    throwsError(() =>
+      flattenInstancedObject(
+        createImportedModelObject({
+          object: new THREE.Group(),
+          bones: new Map(),
+        }),
+      ),
+    ),
+  );
+  TestValidator.predicate(
     "an unsupported host prototype is refused on the instancing path",
-    () =>
+    throwsError(() =>
       buildInstancedInstanceSet({
         instanceSet: compiledColorless,
         models,
@@ -1597,5 +1622,6 @@ export const test_viewer_instance_set = async (): Promise<void> => {
           ],
         ]),
       }),
+    ),
   );
 };

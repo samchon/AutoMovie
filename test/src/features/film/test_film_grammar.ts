@@ -8,7 +8,7 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const point = (x: number, y: number, z: number): IAutoMovieVector3 => ({
   x,
@@ -102,11 +102,14 @@ export const test_film_grammar = (): void => {
     name: string,
     mutate: (input: IAutoMovieGrammarShotObservation) => void,
   ): void => {
-    TestValidator.error(name, () => {
-      const input = structuredClone(shot(`invalid-${name}`));
-      mutate(input);
-      analyzeFilmGrammar({ shots: [input] });
-    });
+    TestValidator.predicate(
+      name,
+      throwsError(() => {
+        const input = structuredClone(shot(`invalid-${name}`));
+        mutate(input);
+        analyzeFilmGrammar({ shots: [input] });
+      }),
+    );
   };
   TestValidator.equals(
     "empty edit has no pacing or grammar diagnostic",
@@ -563,23 +566,33 @@ export const test_film_grammar = (): void => {
       },
     ]).includes("grammar-shot-size") === false,
   );
-  TestValidator.error("zero occupancy is invalid", () =>
-    classifyGrammarShotSize(0),
+  TestValidator.predicate(
+    "zero occupancy is invalid",
+    throwsError(() => classifyGrammarShotSize(0)),
   );
-  TestValidator.error("duplicate shot ids are invalid", () =>
-    analyzeFilmGrammar({ shots: [shot("duplicate"), shot("duplicate")] }),
+  TestValidator.predicate(
+    "duplicate shot ids are invalid",
+    throwsError(() =>
+      analyzeFilmGrammar({ shots: [shot("duplicate"), shot("duplicate")] }),
+    ),
   );
-  TestValidator.error("non-positive cut angle is invalid", () =>
-    analyzeFilmGrammar({
-      shots: [shot("valid")],
-      minimumCutAngleDegrees: 0,
-    }),
+  TestValidator.predicate(
+    "non-positive cut angle is invalid",
+    throwsError(() =>
+      analyzeFilmGrammar({
+        shots: [shot("valid")],
+        minimumCutAngleDegrees: 0,
+      }),
+    ),
   );
-  TestValidator.error("non-positive re-establish distance is invalid", () =>
-    analyzeFilmGrammar({
-      shots: [shot("valid-distance")],
-      reestablishDistance: 0,
-    }),
+  TestValidator.predicate(
+    "non-positive re-establish distance is invalid",
+    throwsError(() =>
+      analyzeFilmGrammar({
+        shots: [shot("valid-distance")],
+        reestablishDistance: 0,
+      }),
+    ),
   );
   TestValidator.predicate(
     "explicit positive thresholds are accepted",

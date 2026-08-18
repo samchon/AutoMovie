@@ -16,7 +16,13 @@ import type {
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { namedFacts, nclose, qclose, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  qclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const NO_ROTATION: IAutoMovieQuaternion = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -595,52 +601,72 @@ export const test_architecture_built_opening = (): void => {
     },
     { placements: [], sweep: [] },
   );
-  TestValidator.error("an unknown opening refuses placement", () =>
-    builtOpeningPanelPlacements(source, "missing"),
+  TestValidator.predicate(
+    "an unknown opening refuses placement",
+    throwsError(() => builtOpeningPanelPlacements(source, "missing")),
   );
-  TestValidator.error("an unknown opening refuses an envelope", () =>
-    builtOpeningSweepEnvelope(source, "missing"),
+  TestValidator.predicate(
+    "an unknown opening refuses an envelope",
+    throwsError(() => builtOpeningSweepEnvelope(source, "missing")),
   );
-  TestValidator.error("an unknown operating state is refused", () =>
-    builtOpeningPanelPlacements(source, "door", "ajar"),
+  TestValidator.predicate(
+    "an unknown operating state is refused",
+    throwsError(() => builtOpeningPanelPlacements(source, "door", "ajar")),
   );
-  TestValidator.error("an unknown boundary refuses a wall cut", () =>
-    builtBoundaryWallCut(source, "missing"),
+  TestValidator.predicate(
+    "an unknown boundary refuses a wall cut",
+    throwsError(() => builtBoundaryWallCut(source, "missing")),
   );
-  TestValidator.error("a boundary with no face refuses a wall cut", () =>
-    builtBoundaryWallCut(source, "threshold"),
+  TestValidator.predicate(
+    "a boundary with no face refuses a wall cut",
+    throwsError(() => builtBoundaryWallCut(source, "threshold")),
   );
-  TestValidator.error("a dangling panel element refuses placement", () => {
-    const broken = partition();
-    broken.openings[0]!.operation!.panels[0]!.element = "missing";
-    builtOpeningPanelPlacements(broken, "door");
-  });
-  TestValidator.error("a dangling panel element refuses an envelope", () => {
-    const broken = partition();
-    broken.openings[0]!.operation!.panels[0]!.element = "missing";
-    builtOpeningSweepEnvelope(broken, "door");
-  });
+  TestValidator.predicate(
+    "a dangling panel element refuses placement",
+    throwsError(() => {
+      const broken = partition();
+      broken.openings[0]!.operation!.panels[0]!.element = "missing";
+      builtOpeningPanelPlacements(broken, "door");
+    }),
+  );
+  TestValidator.predicate(
+    "a dangling panel element refuses an envelope",
+    throwsError(() => {
+      const broken = partition();
+      broken.openings[0]!.operation!.panels[0]!.element = "missing";
+      builtOpeningSweepEnvelope(broken, "door");
+    }),
+  );
   // A travel the solver cannot walk to the end of is refused by name rather
   // than entered: the critical-angle walk over an infinite or unbounded range
   // would never terminate, which is worse than any wrong number.
-  TestValidator.error("an unbounded lowest travel refuses an envelope", () => {
-    const broken = partition();
-    broken.openings[0]!.operation!.panels[0]!.motion.min =
-      Number.NEGATIVE_INFINITY;
-    builtOpeningSweepEnvelope(broken, "door");
-  });
-  TestValidator.error("an unbounded highest travel refuses an envelope", () => {
-    const broken = partition();
-    broken.openings[0]!.operation!.panels[0]!.motion.max =
-      Number.POSITIVE_INFINITY;
-    builtOpeningSweepEnvelope(broken, "door");
-  });
-  TestValidator.error("a travel beyond a full turn refuses an envelope", () => {
-    const broken = partition();
-    broken.openings[0]!.operation!.panels[0]!.motion.min = -100;
-    broken.openings[0]!.operation!.panels[0]!.motion.max = 100;
-    builtOpeningSweepEnvelope(broken, "door");
-  });
+  TestValidator.predicate(
+    "an unbounded lowest travel refuses an envelope",
+    throwsError(() => {
+      const broken = partition();
+      broken.openings[0]!.operation!.panels[0]!.motion.min =
+        Number.NEGATIVE_INFINITY;
+      builtOpeningSweepEnvelope(broken, "door");
+    }),
+  );
+  TestValidator.predicate(
+    "an unbounded highest travel refuses an envelope",
+    throwsError(() => {
+      const broken = partition();
+      broken.openings[0]!.operation!.panels[0]!.motion.max =
+        Number.POSITIVE_INFINITY;
+      builtOpeningSweepEnvelope(broken, "door");
+    }),
+  );
+  TestValidator.predicate(
+    "a travel beyond a full turn refuses an envelope",
+    throwsError(() => {
+      const broken = partition();
+      broken.openings[0]!.operation!.panels[0]!.motion.min = -100;
+      broken.openings[0]!.operation!.panels[0]!.motion.max = 100;
+      builtOpeningSweepEnvelope(broken, "door");
+    }),
+  );
 
   const malformed: Array<
     readonly [string, (value: IAutoMovieBuiltEnvironment) => void, string]
