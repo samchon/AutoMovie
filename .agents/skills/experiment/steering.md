@@ -31,11 +31,34 @@ Two details decide whether the delivery works at all.
 
 ## One Machine, Several Campaigns
 
-Confirm your own session UUID is on a process's command line before killing it, and leave it alone otherwise. A sub-agent runner does not print the session it belongs to, so `codex exec --cd . -c agents.max_threads=32 ...` is all the process table shows and two campaigns on one machine are indistinguishable in it.
+Attribute a process by **ancestry**, and root that closure at the session process rather than at your launcher. Walk the chain down from the process you started, find the main `codex.exe` beneath the node wrapper, and hold **that** as the durable root — pinned by its process id **and its creation time together**, because process ids are reused and a rule that stores only the number will, after its root exits, silently adopt a stranger's process as the root of your tree. On a machine running a second campaign that stranger is plausibly theirs.
+
+Rooting at the launcher looks equivalent and fails at the one moment it matters. The wrapper is exactly what a harness reap takes, so the root dies, the closure computes empty, and an empty closure is indistinguishable from a session that ended. Two of the failures below then compose into one believable lie: the notification says the task completed and the walker agrees that nothing is running. One driver kept the rule only because it had pinned the inner process about a minute before its own wrapper was reaped. Nothing in a command line identifies one reliably, and a sub-agent runner does not print the session it belongs to, so `codex exec --cd . -c agents.max_threads=32 ...` is all the process table shows and two campaigns on one machine are indistinguishable in it.
+
+Matching the session UUID against command lines was the rule here until two drivers measured it in the same hour. Across their two trees the closure held 14 and 19 processes, matching the sandbox path found 7 of each (50% and 37%), and **matching the session UUID found none at all**. The rule identified nothing. What it missed is the expensive half: `node_repl.exe`, `codex-code-mode-host.exe`, command runners, `conhost.exe`, a `codex.exe` in one driver's own tree — and in both trees the authoring agent's own `powershell.exe` working shells, which are the processes actually doing the work under observation. A cleanup that does not recognise those orphans exactly what is being measured.
+
+String matching survives as a cross-check that under-reports by half or more. Ancestry is the rule.
 
 An indiscriminate `taskkill` destroys hours of the other campaign's work. It happened more than once here, and the killed fleets left orphan capture runners contending over the same state until the capture stopped updating without saying so.
 
 Kill the main process only. Its children clean up behind it.
+
+## Your Own Instruments Fail Plausibly Too
+
+The rule that an instrument is verified before the subject applies to the small ones you write while steering, not only to a capture sweep. Four process-inspection filters failed inside one campaign in one day, and **not one of them failed loudly**.
+
+| The filter | What it returns |
+| --- | --- |
+| A query whose own command line contains the search string | Itself, in the results, indistinguishable from a real match |
+| `-and` and `-or` mixed without parentheses | Processes that match neither clause |
+| A hashtable keyed on `ParentProcessId`, a `UInt32`, read with an `Int32` | **No children** — the same answer as a turn that has ended |
+| `$queue[1..($queue.Count-1)]` on a one-element queue | `$queue[1..0]`, read as indices 1 then 0, re-adding the element: an infinite loop presenting as a two-minute hang on a machine that really is loaded |
+
+Two report something believable, one reports a believable nothing, and one looks like ordinary slowness. A fifth arrives as good news: **a harness notification announcing that a task completed, while the turn it was watching is still running.** What was reaped was the task wrapper, not the session. A driver that reads it as the turn boundary records a turn that has not ended, fires the next one into a live thread and earns a `thread-store conflict` — or logs a session death and starts recovering something that was never broken. An instrument that shows nothing is caught in a minute; these are the other kind.
+
+The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.** A notification is not one of the three; it either agrees with them or it is wrong.
+
+When a wrapper is reaped the transcript survives it: the `exec`ed process keeps its stdout redirect, and one measured log went on growing to 46 MB with nothing lost. So there is nothing to recover — identify the session process by ancestry again, re-arm on it, and carry on.
 
 ## The Agent Will Rebut You, And May Be Right
 
