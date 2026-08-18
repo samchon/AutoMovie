@@ -230,6 +230,72 @@ probe 2의 답을 이미 적어두고 있다:
 통과시킨다」는 미확인 항목은 저장소가 이미 측정해 둔 것이고, emitter의 거절이 그 답으로
 만들어진 수정이다.** 남는 조건은 하나뿐이다 — **그 거절은 `design`을 돌려야만 나온다.**
 
+#### `#1961` probe 2 — 실행함. 재팩된 현재 제품, scratch 사본 (2026-08-18 16:5x)
+
+`experimental/.probe-1961`에 프로덕션을 복사하고(`renders/` 제외) `node_modules`를
+**junction**으로 걸어 모듈 해석을 동일하게 두었다. 락은 프로젝트 루트 경로의 해시로
+키가 잡히므로(`rootNamespaceLock.ts:96`) 실제 샌드박스와 충돌하지 않는다. 측정 뒤
+**junction을 먼저 rmdir로 떼고** 디렉터리를 지웠다 — 재귀 삭제가 junction을 따라가면
+실제 샌드박스의 `node_modules`가 사라진다.
+
+**깨끗한 기준선을 먼저 잡았다** (이것이 없으면 뒤의 결과를 귀속할 수 없다):
+`design` exit 0 전부 `unchanged`, `compile` exit 0 / `success: true` / **진단 0**,
+리뷰 대상 47 / missing 0.
+
+그 다음 서로만 참조하는 스타터 레코드 5개를 복원했다 —
+`shared/models/{soloist,chorus-hero,chorus-near,chorus-far}.json`,
+`shared/formations/chorus.json`. (`chorus` → `chorus-hero` → `chorus-{hero,near,far}`,
+`soloist` → 자기 자신. 폐집합임을 파일 내용으로 확인했다.)
+
+| | `design` | `compile` 진단 | 리뷰 대상 | missing |
+| --- | --- | --- | --- | --- |
+| 원본 | exit 0 | **0** | 47 | 0 |
+| **+ 고아 5개** | **exit 1, 5개를 전부 이름** | **0 (완전 침묵)** | 48 | **1** |
+| 삭제 후 | exit 0 | 0 (정착 후) | 47 | 0 |
+
+**저장소의 주장이 현재 제품에서도 성립한다.** `compile`은 exit 0, `success: true`,
+`"diagnostics": []`로 **완전히 침묵**하면서 남의 영화를 `generated/`에 **9개 파일**로
+지어 넣었다 — `contracts/{formations/chorus,models/{chorus-far,chorus-hero,chorus-near,soloist}}.json`
+과 `models/*.json` 4개. 삭제하면 9개가 0개로 정리된다.
+
+**`design`만이 그것을 잔재로 이름 댄다** — exit 1, 5개 전부를 프로젝트 상대 경로와
+레코드 id와 조치까지. (여기서도 문구는 저작자가 고쳐 쓴 한 문장이었다 — probe 1의
+정정이 통제된 조건에서 재현됐다.)
+
+##### 그런데 다른 표면이 그것을 이름 대고, **반대를 말한다**
+
+`lint` / `verify` / `review:status`가 침묵하지 않는다. 복원한 formation이 리뷰 대상으로
+**새로 생기고**(47 → 48) `state: "missing"`이 되며, `lint`가 그것을
+**`category: "error"`**로 올린다.
+
+```
+{
+  "code": "review-missing",
+  "category": "error",
+  "phase": "review",
+  "target": "design:formation:chorus",
+  "path": null,
+  "message": "Review state is missing. Run prepareReview, correct the target, and submitReview before this compile scope. Correction feedback does not authorize deleting the artifact."
+}
+```
+
+**`design`은 "지워라"라고 하고, 리뷰 표면은 "리뷰해라, 삭제는 허가되지 않는다"고 한다.**
+같은 레코드에 대해 두 배송 표면이 반대 지시를 낸다.
+
+**다만 정확히 말해야 한다 — 이것은 고아를 겨냥해 쓴 문장이 아니다.**
+`AutoMovieProductionReviewService.ts:3197`의 `appendReviewCorrectionSafety`가 그 문장을
+**모든 리뷰 진단에 무조건 덧붙인다**(이미 있으면 건너뛸 뿐). 의도는 명백히
+"리뷰 피드백은 고치는 대신 지워도 된다는 허가가 아니다"라는 안전장치다.
+그러므로 주장은 「제품이 자기모순이다」가 아니라 이것이다 —
+**포괄 안전 접미사가 그것을 위해 쓰이지 않은 경우에 도달하고, 그 경우에 emitter 자신의
+조치와 충돌한다.**
+
+##### 남는 비대칭
+
+고아 5개 중 **리뷰 표면이 이름 댄 것은 formation 하나뿐**이다. 모델 4개는 리뷰 대상이
+되지 않았다. 즉 "design 말고 다른 것이 이름 대는가"의 답은 **부분적으로 그렇다**이고,
+그나마 잔재로서가 아니라 **떠안아야 할 의무로서**다.
+
 #### 새로운 오염 형태 — 형제 저장소 에이전트가 샌드박스에 손으로 써 넣는다
 
 핸드오프 11절은 공유 checkout의 **브랜치 이동**이 tracked 편집을 지운다고 적었다.
@@ -274,6 +340,49 @@ viewer/src/subject.ts:551:61 - error TS2554: Expected 2 arguments, but got 3.
 태어났는지에 대한 **저장소와 무관한 기준선**이고, 거기서 벗어난 파일은 저작자 아니면
 침입자다. 저장소 작업 트리와 대조하는 것으로는 이것을 가릴 수 없다 — 침입자의 출처가
 바로 그 작업 트리이기 때문이다.
+
+### 제품 결함 후보 — `opening-location`/`connector-location`이 저자에게 불가능한 조치를 지시한다
+
+**S2의 마지막 gap을 쫓다가 나왔다.** 개구부 16개의 `place`가 전부 `null`이고, 제품이
+그것을 gap `opening-location`, **`status: "not-run"`**, remedy
+*"resolve the opening's host boundary to the spaces it separates, **then fill the row's
+place**"*로 선언한다. 저작자는 그 조치를 거부하며 *"the schedule schema does not project
+them. I did not invent a parallel schedule"*라고 적었다. **저작자가 옳다.**
+
+**코드 경로 (`packages/engine/src/drawing/drawingSchedule.ts`).**
+`openingOccurrences`와 `connectorOccurrences`의 **모든 return 8개가 `place: null`을
+하드코딩**한다 (416, 433, 447, 455행 및 480, 497행 등). 개구부·커넥터의 `place`를
+채우는 코드 경로가 **존재하지 않는다.** 반면 space 행은 280행에서 실제로 채운다 —
+필드가 死文이 아니라 **subject에 따라 갈린다.**
+
+**타입 계약이 이것을 오분류로 판정한다** (`IAutoMovieDrawing.ts`).
+
+| 요소 | 계약 문구 |
+| --- | --- |
+| `AutoMovieDrawingGapStatus` | *"Whether a derivation is **missing entirely** or merely **had nothing to run on**."* |
+| `status` | *"Whether the derivation **does not exist** or merely **had no input**."* |
+| `remedy` | *"Exactly what would make the derivation produce a result."* |
+
+엔진 자신의 주석이 205–208행에서 **"that derivation is not written"**이라고 적는다 —
+즉 derivation이 **존재하지 않는다**. 계약대로면 `unsupported`다. 그런데 `not-run`으로
+나가고, `remedy`는 **저자에게** 말을 건다. 저자는 그것을 만족시킬 수 없다.
+
+**같은 함수가 같은 어휘를 두 번은 옳게 쓴다.** `opening-performance`는 `unsupported`이고
+remedy가 실제로 저자 행동이다("author the opening's operable state…").
+`traversal-performance`도 `unsupported`이고 remedy가 제품을 향한다("run a traversal
+analysis **once one exists**"). **셋 중 하나만 어긋난다.**
+
+**도달 범위.** `subject !== "space"`인 모든 스케줄 — 즉 개구부나 커넥터를 가진
+**모든 프로덕션**. 이 샌드박스에서 개구부 16 · 커넥터 8, revision 359에서 실측.
+
+**비용이 실재한다.** 저작 세션이 S2 종료 시점에 이것을 만나 턴 시간을 쓰고, 옳게
+거부한 뒤 unmet으로 기록했다. 덜 신중한 저자는 채울 수 없는 필드를 쫓는다.
+브리프가 S2 gap을 닫으라고 요구하기 때문이다.
+
+**관측자의 가설로 적는 수정 방향.** `status`를 `unsupported`로 바꾸고 remedy를 제품을
+향하게 하는 것(`traversal-performance`의 문형)이 계약과 일치한다. 다만 요구사항이
+"모든 subject가 location을 답한다"이므로, 진짜 답은 derivation을 쓰는 것일 수도 있다.
+**어느 쪽인지는 이 실험이 판정할 것이 아니다** — 오분류만이 측정된 것이다.
 
 ---
 
