@@ -181,6 +181,6 @@ Compare every sweep against the previous round byte for byte. How many frames ch
 What replaces it is the propagation shape, which can fail and did not:
 
 - **Design untouched between rounds — nothing derived moves at all.** Measured at 122 files with `CHANGED 0 / NEW 0 / GONE 0` while the revision read 100, and separately at 0 of 216 with nothing in `generated/`.
-- **Design touched — its dependents move and nothing else.** One new curtain wall moved 22 of 222 artifacts, 19 of them in `generated/`, and the only two shots that moved were the two that face it.
+- **Design touched — its dependents move and nothing else.** One new curtain wall moved 22 of 222 artifacts, 19 of them in `generated/`, and the only two shots whose **pixels** moved were the two that face it. Read that pair carefully, because it was misread once: the nineteen include **every** generated shot contract, since a contract embeds the whole built environment and all sixteen of that production's are 724 KB each to within ninety bytes. Measured the same way, four productions carry contracts of 1,025,819 · 724,036 · 276,916 · 158,778 bytes, uniform across every shot in each. Artifact propagation is wholesale; only the rendered pixels are proportional, and treating the first as evidence of the second turns a product constant into an anomaly nobody can find.
 
 Hash what the product wrote and nothing else — `generated/`, the design and production records, the reports, the renders — and take the snapshot on both sides of the same command.
