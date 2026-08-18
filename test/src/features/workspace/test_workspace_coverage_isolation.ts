@@ -65,9 +65,26 @@ export const test_workspace_coverage_isolation = (): void => {
   const records = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-coverage-records-"),
   );
+  // Three of the four URLs are `file:` paths under this directory: **two**
+  // written and one never created. Two present rather than one on purpose —
+  // with one of each, a rule that counted the surviving files instead of the
+  // absent ones would return the same number and the case would pass inverted.
+  // The fourth is not a file URL at all, so the walk has to skip it rather
+  // than report it absent.
+  const present = path.join(records, "present.js");
+  const alsoPresent = path.join(records, "also-present.js");
+  fs.writeFileSync(present, "");
+  fs.writeFileSync(alsoPresent, "");
   fs.writeFileSync(
     path.join(records, "coverage-1-2-0.json"),
-    JSON.stringify({ result: [{ url: "a" }, { url: "b" }, { url: "c" }] }),
+    JSON.stringify({
+      result: [
+        { url: pathToFileURL(present).href },
+        { url: pathToFileURL(alsoPresent).href },
+        { url: pathToFileURL(path.join(records, "gone.js")).href },
+        { url: "node:internal/modules/cjs/loader" },
+      ],
+    }),
   );
   // A record the collector had not finished writing when the walk reached it.
   fs.writeFileSync(path.join(records, "coverage-1-2-1.json"), '{"result":[{"u');
@@ -85,7 +102,10 @@ export const test_workspace_coverage_isolation = (): void => {
          const absent = module.coverageRecordCount(${JSON.stringify(
            path.join(records, "never-created"),
          )});
-         console.log(JSON.stringify({ first, second, counted, absent, walked }));
+         const scripts = module.coverageMissingScripts(${JSON.stringify(records)});
+         console.log(
+           JSON.stringify({ first, second, counted, absent, walked, scripts }),
+         );
        });`,
     ],
     { cwd: ROOT, encoding: "utf8" },
@@ -99,6 +119,7 @@ export const test_workspace_coverage_isolation = (): void => {
     counted: number;
     absent: number;
     walked: { count: number; bytes: number; parsed: number; results: number };
+    scripts: { urls: number; missing: number };
   } | null => {
     const line = probe.stdout
       .split("\n")
@@ -116,6 +137,7 @@ export const test_workspace_coverage_isolation = (): void => {
         parsed: number;
         results: number;
       };
+      scripts: { urls: number; missing: number };
     };
   })();
 
@@ -167,8 +189,22 @@ export const test_workspace_coverage_isolation = (): void => {
           drawn !== null &&
           drawn.walked.count === 2 &&
           drawn.walked.parsed === 1 &&
-          drawn.walked.results === 3 &&
+          drawn.walked.results === 4 &&
           drawn.walked.bytes > 0,
+      ],
+      // A record can be complete, parsable and counted and still contribute
+      // nothing, because the script it names is gone by the time anyone reads
+      // it. The three figures above cannot see that; this one can.
+      [
+        "a script URL that no longer exists is reported as gone",
+        () => drawn !== null && drawn.scripts.missing === 1,
+      ],
+      // Counted per distinct URL, and a non-file URL is skipped rather than
+      // reported absent: `node:` internals are named by every record and are
+      // not files anybody could look for.
+      [
+        "and only the file URLs are looked for",
+        () => drawn !== null && drawn.scripts.urls === 3,
       ],
     ]),
     {
@@ -180,6 +216,8 @@ export const test_workspace_coverage_isolation = (): void => {
       "it counts records and not the other contents": true,
       "and a directory that was never created is zero rather than a throw": true,
       "an unreadable record counts as present and not as parsable": true,
+      "a script URL that no longer exists is reported as gone": true,
+      "and only the file URLs are looked for": true,
     },
   );
 

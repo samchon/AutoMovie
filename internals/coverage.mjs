@@ -68,6 +68,62 @@ export const coverageRecordCount = (directory) =>
  * itself, which is the other branch and needs a different fix. Three numbers
  * from one directory walk, on a step that already takes minutes.
  */
+/**
+ * How many script URLs a run's records name that no longer exist on disk.
+ *
+ * The three numbers above moved the question into the merge and stopped there,
+ * because they describe the records and not what the records point at. A V8
+ * record names a `url` and carries no source; the report step opens that file
+ * to turn ranges into lines and to follow its source map back to the `.ts`. So
+ * a record can be complete, parsable and counted, and still contribute nothing,
+ * because the file it names is gone by the time anyone reads it.
+ *
+ * That is not hypothetical here. The launcher emits to a run-scoped directory
+ * under `node_modules/.cache` and removes it, so every URL a suite's own
+ * records name is a path with a limited life, and a child process that spawns
+ * its own launcher gets its own. This says how many of them survived to the
+ * report, which is the one thing that separates "the merge dropped complete
+ * records" from "the records were complete and pointed at nothing".
+ *
+ * Counted per distinct URL rather than per record, because one file appears in
+ * as many records as there were processes that loaded it and a per-record total
+ * would report the same absence several times over.
+ */
+export const coverageMissingScripts = (directory) => {
+  const urls = new Set();
+  let entries;
+  try {
+    entries = fs.readdirSync(directory);
+  } catch {
+    return { urls: 0, missing: 0 };
+  }
+  for (const entry of entries) {
+    if (entry.endsWith(".json") === false) continue;
+    let record;
+    try {
+      record = JSON.parse(fs.readFileSync(path.join(directory, entry), "utf8"));
+    } catch {
+      continue;
+    }
+    for (const script of Array.isArray(record.result) ? record.result : [])
+      if (typeof script.url === "string" && script.url.startsWith("file:"))
+        urls.add(script.url);
+  }
+  let missing = 0;
+  for (const url of urls) {
+    let target;
+    try {
+      target = fileURLToPath(url);
+    } catch {
+      // A URL this cannot resolve is not a file this can look for, and saying
+      // so as an absence would be a guess rather than a reading.
+      continue;
+    }
+    if (fs.existsSync(target) === false) missing++;
+  }
+  return { urls: urls.size, missing };
+};
+
 export const coverageRecords = (directory) => {
   let count = 0;
   let bytes = 0;
@@ -189,9 +245,14 @@ const measure = () => {
     // caught mid-write from a merge that drops complete ones, and they cost one
     // directory read on a step that already took minutes.
     const records = coverageRecords(temporary);
+    const scripts = coverageMissingScripts(temporary);
     console.log(
       `coverage records: ${records.count} files, ${records.parsed} parsable, ` +
         `${records.results} script entries, ${records.bytes} bytes in ${temporary}`,
+    );
+    console.log(
+      `coverage scripts: ${scripts.urls} distinct file URLs, ` +
+        `${scripts.missing} of them gone from disk at report time`,
     );
     process.exitCode = result.status ?? 1;
   } finally {
