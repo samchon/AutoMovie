@@ -538,35 +538,47 @@ const described = new Map<string, IAutoMovieSubjectDescription | Error>();
 
 const describedSubject = (
   compiledId: string,
+  memberOffset: number = 0,
 ): IAutoMovieSubjectDescription | Error => {
-  const remembered = described.get(compiledId);
+  // Remembered per page, not per subject: two pages of one node are two
+  // answers, and keying them together would hand the second reader the first
+  // reader's rows.
+  const key = `${compiledId} ${memberOffset}`;
+  const remembered = described.get(key);
   if (remembered !== undefined) return remembered;
   let answer: IAutoMovieSubjectDescription | Error;
   try {
-    answer = describeAutoMovieSubject(artifact, compiledId);
+    answer = describeAutoMovieSubject(artifact, compiledId, { memberOffset });
   } catch (error) {
     answer = error instanceof Error ? error : new Error(`${error}`);
   }
-  described.set(compiledId, answer);
+  described.set(key, answer);
   return answer;
 };
 
 /**
  * What one node says about its own contents, including what it is not showing.
  *
- * `items` is a bounded sample the description chose and `omitted` is what it
- * left out, so a node that listed its sample and said nothing else would be
- * claiming the sample is the population. On the medieval residence the largest
- * room holds 629 members and names 64 of them, so that claim would be wrong by
- * 565 subjects at one node.
+ * `items` is a bounded sample the description chose, so a node that listed its
+ * sample and said nothing else would be claiming the sample is the population.
+ * On the medieval residence the largest room holds 629 members and names 64 of
+ * them, so that claim would be wrong by 565 subjects at one node.
+ *
+ * `listed` is what the tree has actually laid out, which grows as the reviewer
+ * asks for further pages and is not what any single description reports. Read
+ * off the summary instead of off `items` because a second page arrives in its
+ * own answer, and a line derived from that answer alone would count backwards.
  */
-const membershipLine = (members: IAutoMovieSubjectMemberSummary): string =>
+const membershipLine = (
+  members: IAutoMovieSubjectMemberSummary,
+  listed: number,
+): string =>
   members.total === 0
     ? "nothing inside"
-    : members.omitted === 0
+    : listed >= members.total
       ? `${members.total} inside`
-      : `${members.total} inside · ${members.items.length} listed · ` +
-        `${members.omitted} named only by key`;
+      : `${members.total} inside · ${listed} listed · ` +
+        `${members.total - listed} not yet listed`;
 
 /** One row of the tree: what it names, what it holds, and whether it is open. */
 interface ISubjectTreeRow {
@@ -584,6 +596,8 @@ interface ISubjectTreeRow {
   open: boolean;
   /** Child rows once the node has been opened, `null` before that. */
   loaded: ISubjectTreeRow[] | null;
+  /** The line stating this node's population, rewritten as pages arrive. */
+  summary: HTMLDivElement | null;
 }
 
 /**
@@ -645,23 +659,51 @@ const subjectTree = (rootIds: readonly string[]): HTMLElement[] => {
     box.placeholder = `narrow the ${built.length} rows now open`;
   };
 
-  /** Ask one node what it holds, once, and lay its answer out beneath it. */
-  const expand = (row: ISubjectTreeRow): void => {
-    if (row.loaded !== null) return;
-    const answer = describedSubject(row.compiledId);
+  /**
+   * Ask one node for one page of what it holds, and lay it out beneath it.
+   *
+   * A page rather than the whole, because the description's sample is bounded
+   * and a building is flat: one measured manor is a single root owning 988
+   * children, so the first page names 64 and the reviewer used to reach no
+   * further. The rest were never lost — the subject census enumerates every one
+   * — but the tree, which is how a reviewer actually looks, stopped there.
+   */
+  const expandFrom = (row: ISubjectTreeRow, offset: number): void => {
+    const answer = describedSubject(row.compiledId, offset);
     if (answer instanceof Error) {
-      row.loaded = [];
+      row.loaded ??= [];
       row.children.append(line(answer.message, "stale"));
       return;
     }
-    const kids: ISubjectTreeRow[] = [];
+    const kids = row.loaded ?? [];
     row.loaded = kids;
-    row.children.append(line(membershipLine(answer.members), "omitted"));
+    if (row.summary === null) {
+      row.summary = line("", "omitted");
+      row.children.append(row.summary);
+    }
     for (const id of answer.members.items) {
       const kid = buildRow(id);
       kids.push(kid);
       row.children.append(kid.node);
     }
+    row.summary.textContent = membershipLine(answer.members, kids.length);
+    const remaining =
+      answer.members.total - (offset + answer.members.items.length);
+    if (remaining > 0) {
+      const more = line(`list ${remaining} more`, "more");
+      more.addEventListener("click", () => {
+        more.remove();
+        expandFrom(row, offset + answer.members.items.length);
+        refreshFilter();
+      });
+      row.children.append(more);
+    }
+  };
+
+  /** Ask one node what it holds, once, and lay its first page out beneath it. */
+  const expand = (row: ISubjectTreeRow): void => {
+    if (row.loaded !== null) return;
+    expandFrom(row, 0);
   };
 
   function buildRow(compiledId: string): ISubjectTreeRow {
@@ -686,6 +728,7 @@ const subjectTree = (rootIds: readonly string[]): HTMLElement[] => {
       toggle,
       open: false,
       loaded: null,
+      summary: null,
     };
     built.push(row);
     toggle.addEventListener("click", () => {
@@ -993,13 +1036,15 @@ const openSubjectPage = async (key: string): Promise<void> => {
       );
     if (description.owner !== null)
       panel.append(line("", "gap"), subjectLink(description.owner, "↑ "));
-    // `members.items` is already a bounded sample the description chose, and
-    // `omitted` is how many it left out, so the whole sample is listed and the
-    // remainder is stated rather than truncated a second time here. Every node
-    // of the tree below repeats that accounting for itself.
+    // `members.items` is a bounded sample the description chose, so the whole
+    // sample is listed here and the remainder is stated rather than truncated a
+    // second time. The root is the one node with no page control of its own:
+    // the tree pages from a node's own twist, and this panel has none, so a
+    // reviewer reaches the rest by opening the root's children rather than by
+    // asking this line for more. Every node of the tree below pages itself.
     panel.append(
       line("", "gap"),
-      line(membershipLine(members), "omitted"),
+      line(membershipLine(members, members.items.length), "omitted"),
       ...subjectTree(members.items),
     );
   }
