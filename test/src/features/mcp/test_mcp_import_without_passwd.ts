@@ -1,5 +1,5 @@
 import { TestValidator } from "@nestia/e2e";
-import { type SpawnSyncReturns, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -43,10 +43,15 @@ import { namedFacts } from "../internal/predicates";
  *    lease still resolves, which is what makes the passwd entry a fallback
  *    rather than the source.
  */
-export const test_mcp_import_without_passwd = (): void => {
-  const denied = probe("both");
-  const partial = probe("passwd-only");
-  const intact = probe("none");
+export const test_mcp_import_without_passwd = async (): Promise<void> => {
+  // Concurrent, because each probe pays a full package import and none of them
+  // is ordered against another: the comment on `probe` explains that each one
+  // already fences its own directory, which is what makes this safe.
+  const [denied, partial, intact] = await Promise.all([
+    probe("both"),
+    probe("passwd-only"),
+    probe("none"),
+  ]);
 
   TestValidator.equals(
     "the package imports where the home directory cannot be read",
@@ -107,7 +112,9 @@ interface IProbe {
  * readers throw, so the same script covers the denial, the passwd-only case and
  * the untouched control without three copies of the harness.
  */
-const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
+const probe = async (
+  deny: "both" | "passwd-only" | "none",
+): Promise<IProbe> => {
   // The readers to remove, chosen here rather than compared inside the probe:
   // a literal comparison against an interpolated constant is a type error the
   // launcher refuses, and a list says the same thing without one.
@@ -167,18 +174,32 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
   // `test_mcp_guide_snippet_compilation` writes its scratch modules here.
   const file = path.join(directory, "probe.ts");
   fs.writeFileSync(file, script, "utf8");
-  let run: SpawnSyncReturns<string>;
+  let run: { stdout: string; stderr: string };
   try {
-    run = spawnSync(
-      process.execPath,
-      [
-        path.resolve(
-          __dirname,
-          "../../../node_modules/ttsc/lib/launcher/ttsx.js",
-        ),
-        file,
-      ],
-      { cwd: path.resolve(__dirname, "../../.."), encoding: "utf8" },
+    run = await new Promise<{ stdout: string; stderr: string }>(
+      (resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          [
+            path.resolve(
+              __dirname,
+              "../../../node_modules/ttsc/lib/launcher/ttsx.js",
+            ),
+            file,
+          ],
+          { cwd: path.resolve(__dirname, "../../..") },
+        );
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk: Buffer) => {
+          stdout += chunk.toString("utf8");
+        });
+        child.stderr.on("data", (chunk: Buffer) => {
+          stderr += chunk.toString("utf8");
+        });
+        child.on("error", reject);
+        child.on("close", () => resolve({ stdout, stderr }));
+      },
     );
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
