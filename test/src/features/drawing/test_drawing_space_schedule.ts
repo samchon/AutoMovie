@@ -144,6 +144,10 @@ export const test_drawing_space_schedule = (): void => {
     "the schedule says which zones it could not bound, and never prints a zero",
     schedule.gaps.map((gap) => [gap.subject, gap.status]),
     [
+      // `space-enclosure` states the other half of what a room row omits: the
+      // fit-out gap covers what stands IN a room, this covers what encloses it.
+      // Its content is asserted in `test_drawing_space_enclosure_gap`.
+      ["space-enclosure", "unsupported"],
       ["space-fit-out", "unsupported"],
       ["space-geometry", "not-run"],
     ],
