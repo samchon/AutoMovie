@@ -10,12 +10,22 @@ Everything below comes from one campaign that ran about a day. Almost none of it
 
 Six things, all settled before the first turn, because a brief edited mid-run can no longer be rerun. One section below owns each.
 
-1. The subject and the references it will be judged against, without the method for building it.
+1. The subject and the references it will be judged against, without the method for building it, and which of the two governs where they disagree.
 2. The stages, coarsest first, and what closes each one.
 3. The decomposition the production owes by the end of the first stage.
 4. The fixed camera set and the artifact queries you will read every round.
 5. The condition that ends the run.
 6. What you will do and what you will not, so the agent knows which side of the boundary a task is on.
+
+## Say Which Source Governs When Two Disagree
+
+A brief names the subject **and** the references it is judged against, and those two disagree. Not occasionally — twice in one run, on one production, in the same shape.
+
+The fixed massing said "one main body, one garage, nothing else"; the reference plainly showed a chimney. Earlier, the fixed circulation named a straight flight; the reference showed a dog-leg stair. Both times the agent stopped and asked, which is the behaviour to want — it refused to resolve a contradiction in its own instructions by picking the half it preferred. Both times the driver had to adjudicate in flight, which is a decision the brief should already have made.
+
+So the brief states the rule, once, in the section that fixes the massing: **which source governs, and for what.** The ruling that worked was that the fixed graph governs volumes and circulation, the reference governs everything the envelope carries, and a detail that cannot be expressed without changing the graph is a stop rather than a judgement call.
+
+Whatever the rule is, name it before the first turn. A contradiction adjudicated mid-run cannot be rerun, and an agent that meets one with no rule either stops — costing a turn — or picks, which silently makes the brief mean whatever it picked.
 
 ## Withhold The Method
 
