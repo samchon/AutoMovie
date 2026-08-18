@@ -94,6 +94,16 @@ The observer was wrong seven times in that campaign. The most expensive one plac
 
 Settle that kind of rebuttal by measurement rather than by another look at the frames. Counting 39 oriel elements and 57 hub pieces in the compiled artifact withdrew two more claims immediately, and both of those claims would have survived another round of looking at frames.
 
+## Telling It What You Found Spends The Finding
+
+A driver traced a dangling reference the authoring agent had left — one of two call sites updated, the other naming an id that no longer existed — and deliberately did not execute the path, because it wanted the product's own gate to say whether it catches that class. Then it sent the agent the trace.
+
+The agent fixed it about nine thousand log lines **before** the compile ran. So the production is correct and the question is unanswerable: whether the gate catches a dangling required subject is still unverified, and the cleanest evidence that run could have produced was spent buying a repair that would have happened anyway.
+
+Both halves were right on their own terms. Withholding a known defect from the agent to preserve a measurement is not a trade a driver should make quietly, and the run exists to measure. **The move is to notice which one you are spending before you send**, and say so: run the gate first if the answer is the thing you want, or send the trace and record that the gate is now untested for that class rather than discovering it afterwards.
+
+The same run shows the other side, and it is why the ordering matters rather than the withholding. The agent's next compile — the one that ran — **did** catch something nobody had traced: shot assembly was dropping the authored service networks, and the building report returned zero honestly. That is a gate result worth having, and it cost nothing, because nobody had told it the answer first.
+
 ## Ask For Its List When Yours Is Empty
 
 Running out of findings is not the same as there being none left, so ask the agent for its own before you treat the run as closed.
