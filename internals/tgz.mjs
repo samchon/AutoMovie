@@ -43,9 +43,10 @@ const TARBALL_DIR = ".tarballs";
  * request times out at 60 seconds, and no environment variable moves it, so a
  * linked sandbox handed a live agent zero tools no matter how long it waited.
  *
- * Typia's compile-time transform is already applied, so no consumer needs
- * `ttsx` to avoid `typia.llm.controller(): no transform has been configured`,
- * and the scaffold's own `tsx` scripts run unmodified.
+ * Typia's compile-time transform is already applied, so no consumer needs to
+ * re-run it to avoid `typia.llm.controller(): no transform has been
+ * configured`, and the scaffold's own scripts run unmodified under the
+ * launcher this repository ships.
  *
  * `lib/index.js` is CommonJS emitted by `tsc`, whose `__exportStar` form
  * `cjs-module-lexer` does follow, so an ESM importer sees every name the index

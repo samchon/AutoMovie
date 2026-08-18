@@ -279,7 +279,7 @@ const main = () => {
         `  cd experimental/${name}\n` +
         `  claude\n\n` +
         `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
-        `  codex mcp add automovie -- npx tsx ${path.join(target, "scripts", "mcp.ts")}\n` +
+        `  codex mcp add automovie -- node ${path.join(target, "node_modules", "ttsc", "lib", "launcher", "ttsx.js")} -P ${path.join(target, "tsconfig.json")} ${path.join(target, "scripts", "mcp.ts")}\n` +
         `  cd experimental/${name} && codex\n\n` +
         `The sandbox installs packed working-tree tarballs, so after changing a\n` +
         `package under packages/ rerun this command with --refresh, which repacks\n` +

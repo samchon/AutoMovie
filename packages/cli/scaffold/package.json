@@ -11,23 +11,23 @@
     }
   },
   "scripts": {
-    "capture:doctor": "tsx scripts/capture-doctor.ts",
-    "capture:install": "tsx scripts/capture-install.ts",
+    "capture:doctor": "ttsx -P tsconfig.json scripts/capture-doctor.ts",
+    "capture:install": "ttsx -P tsconfig.json scripts/capture-install.ts",
     "build": "npm run compile",
-    "compile": "tsx scripts/compile.ts",
+    "compile": "ttsx -P tsconfig.json scripts/compile.ts",
     "lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts",
     "lint:source": "ttsc --noEmit -p tsconfig.json",
-    "preview": "tsx scripts/preview.ts",
-    "review:status": "tsx scripts/review-status.ts",
-    "render": "tsx scripts/render.ts",
+    "preview": "ttsx -P tsconfig.json scripts/preview.ts",
+    "review:status": "ttsx -P tsconfig.json scripts/review-status.ts",
+    "render": "ttsx -P tsconfig.json scripts/render.ts",
     "viewer": "vite --host 127.0.0.1",
-    "test": "tsx test/opening.test.ts",
-    "verify": "tsx scripts/verify.ts",
+    "test": "ttsx -P tsconfig.json test/opening.test.ts",
+    "verify": "ttsx -P tsconfig.json scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json",
-    "design": "tsx scripts/emitDesign.ts",
-    "derive:example": "tsx scripts/deriveExampleArtifact.ts",
-    "building:report": "tsx scripts/deriveBuilding.ts",
-    "texture:scale": "tsx scripts/measureTextureScale.ts"
+    "design": "ttsx -P tsconfig.json scripts/emitDesign.ts",
+    "derive:example": "ttsx -P tsconfig.json scripts/deriveExampleArtifact.ts",
+    "building:report": "ttsx -P tsconfig.json scripts/deriveBuilding.ts",
+    "texture:scale": "ttsx -P tsconfig.json scripts/measureTextureScale.ts"
   },
   "dependencies": {
     "@automovie/archetypes": "{{version:archetypes}}",
@@ -55,7 +55,6 @@
     "@types/three": "{{version:threeTypes}}",
     "playwright": "{{version:playwright}}",
     "ttsc": "{{version:ttsc}}",
-    "tsx": "^4.19.0",
     "typescript": "{{version:typescript}}",
     "vite": "{{version:vite}}",
     "@ttsc/evidence": "{{version:ttscEvidence}}"
