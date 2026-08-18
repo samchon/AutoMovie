@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import {
@@ -11,52 +10,6 @@ import {
 } from "../project/commitLock";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
-
-/**
- * Where this machine keeps its root-namespace fences, resolved on first use.
- *
- * Resolved lazily, and that is the whole point of the indirection. This was a
- * module-scope `os.userInfo()`, and the package barrel re-exports this module,
- * so importing `@automovie/mcp` at all evaluated it. Where that syscall is
- * denied the package could not be imported — not degraded, not partly working:
- * the import threw before any of the surface existed, and every scaffold script
- * that reaches the package went with it. That environment is the one an
- * authoring agent actually works in, where the call fails as
- * `uv_os_get_passwd returned ENOMEM` with gigabytes free, naming a resource
- * that is not the problem. A caller that never takes a lease now never asks.
- *
- * `os.homedir()` is tried first because it is the datum this actually needs and
- * it prefers the environment before consulting a passwd database. The passwd
- * entry is the fallback rather than the source.
- *
- * What it must never do is choose a different path when neither answers. Two
- * processes disagreeing about where the coordination root lives is precisely
- * the state these locks exist to prevent, so an unresolvable home is a refusal
- * naming the capability rather than a temporary directory nobody else will look
- * in.
- */
-const coordinationRoot = (): string => {
-  if (resolvedCoordinationRoot !== null) return resolvedCoordinationRoot;
-  const home = ((): string => {
-    for (const read of [
-      () => os.homedir(),
-      () => os.userInfo().homedir,
-    ] as const)
-      try {
-        const value = read();
-        if (typeof value === "string" && value.length !== 0) return value;
-      } catch {
-        continue;
-      }
-    throw new Error(
-      "AutoMovie cannot resolve this account's home directory, so it cannot name the root-lock coordination path every process on this machine has to agree on. Neither os.homedir() nor os.userInfo() answered, which a sandbox that withholds the passwd database does. Grant that access or run outside the sandbox; a fallback path would let two processes fence against different roots, which is what these locks exist to prevent.",
-    );
-  })();
-  resolvedCoordinationRoot = path.join(home, ".automovie-root-locks");
-  return resolvedCoordinationRoot;
-};
-
-let resolvedCoordinationRoot: string | null = null;
 
 /**
  * Held namespace reservation for one physical production project root.
@@ -80,17 +33,36 @@ export interface IAutoMovieProductionRootNamespaceLease {
   inode: string;
 }
 
+/**
+ * Where one project's namespace fences live: inside the project they fence.
+ *
+ * They used to live under the caller's home directory, and that is a per-user
+ * path standing in for a per-machine one. Two accounts reaching one project
+ * then computed the **same coordinate under different roots** and fenced
+ * nothing — measured on one host as `production-id-1927a1d0….lock` resident in
+ * two profiles at once, with an operation blocked from one side succeeding from
+ * the other. That is the arrangement this product is built for: an authoring
+ * agent inside a sandbox account, driven from outside it.
+ *
+ * A directory inside the root agrees for exactly the population that has to
+ * agree — every process that can reach the project — and needs no cross-user
+ * permission, no machine-global location and no cleanup owner. The objection
+ * this design was written against, that neither the project nor its parent
+ * should own transient lock bytes, is one the product already declines to
+ * honour: `revision.lock` has always lived under `.automovie/productions`, and
+ * the scaffold's ignore rules already cover everything below `.automovie` that
+ * is not explicitly kept.
+ *
+ * Both coordinates stay. Aliases of one root differ in their path digest and
+ * agree in their identity digest, so two spellings still collide on the second
+ * — the same fence as before, in a place both callers can see.
+ */
 const coordinatePath = (
-  kind:
-    | "create-path"
-    | "create-id"
-    | "root-path"
-    | "root-id"
-    | "production-path"
-    | "production-id",
+  kind: "root-path" | "root-id" | "production-path" | "production-id",
   namespace: string,
+  lockRoot: string,
 ): string => {
-  ensureCoordinationRoot();
+  const directory = ensureCoordinateDirectory(lockRoot);
   // Case-folding can only over-coordinate distinct POSIX paths; it also makes
   // aliases of one case-insensitive Windows namespace share the same fence.
   const canonical = path.normalize(namespace).toLowerCase();
@@ -98,22 +70,28 @@ const coordinatePath = (
     .createHash("sha256")
     .update(`${kind}\0${canonical}`)
     .digest("hex");
-  return path.join(coordinationRoot(), `${kind}-${digest}.lock`);
+  return path.join(directory, `${kind}-${digest}.lock`);
 };
 
-const ensureCoordinationRoot = (): void => {
-  try {
-    fs.mkdirSync(coordinationRoot(), { mode: 0o700 });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-  }
-  const linked = fs.lstatSync(coordinationRoot());
+const ensureCoordinateDirectory = (lockRoot: string): string => {
+  const directory = path.join(lockRoot, AUTOMOVIE_NAMESPACE_LOCK_DIRECTORY);
+  fs.mkdirSync(directory, { recursive: true });
+  const linked = fs.lstatSync(directory);
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
-      `AutoMovie root-lock coordination path "${coordinationRoot()}" is not a physical directory.`,
+      `AutoMovie namespace lock path "${directory}" is not a physical directory.`,
     );
-  fs.chmodSync(coordinationRoot(), 0o700);
+  return directory;
 };
+
+/**
+ * The namespace lock directory's path relative to a project root.
+ *
+ * Under `.automovie` because the scaffold's ignore rules keep only the entries
+ * they name there, so a transient lock is already ignored without a rule being
+ * written for it.
+ */
+const AUTOMOVIE_NAMESPACE_LOCK_DIRECTORY = path.join(".automovie", "locks");
 
 // One fenced operation can invoke another inside the same process -- a guarded
 // commit runs the read-only compiler gate -- so a coordinate is reached twice.
@@ -149,9 +127,8 @@ const acquireCoordinates = (
  * The refusal a contended coordinate set ends with, naming every lock held.
  *
  * One abnormally ended session leaves a lock on each coordinate it fenced — the
- * measured case left three, across the user-global coordination root and the
- * in-tree revision lock together — and an acquire fails on whichever it reaches
- * first. A caller told about only that one clears it, retries, pays another full
+ * measured case left three, across the namespace coordinates and the revision
+ * lock together — and an acquire fails on whichever it reaches first. A caller told about only that one clears it, retries, pays another full
  * timeout, and is refused by the next, with nothing anywhere saying a set
  * exists. Three rounds of that read as a fix that did not work.
  *
@@ -182,43 +159,54 @@ const releaseCoordinates = (
   for (const lease of [...leases].reverse()) releaseCoordinate(lease);
 };
 
-const creationCoordinates = (
+/**
+ * Create one directory by acting on the attempt, not by looking first.
+ *
+ * A root that does not exist has nowhere inside it to hold a lock, which is the
+ * one case the in-project coordinates cannot serve. It does not need them:
+ * `mkdir` on an existing path fails `EEXIST` **atomically, at the filesystem**,
+ * so two processes racing to create one directory cannot both win it, with or
+ * without a lock. What the removed coordinates added was that the look-then-
+ * create sequence could not be interleaved — and a sequence with no look in it
+ * cannot be interleaved either.
+ *
+ * The parent's physical identity is still checked, after rather than before. A
+ * parent swapped mid-flight is what that check exists to catch, and catching it
+ * afterwards catches the same swap; the difference is that the child now
+ * definitely exists when the question is asked, so the answer is about what was
+ * actually created.
+ *
+ * @returns the created or existing child's canonical path.
+ */
+const createDirectoryUnder = (
   parentReal: string,
   childName: string,
-  parentIdentity: fs.BigIntStats,
-): string[] => {
-  return [
-    coordinatePath("create-path", path.join(parentReal, childName)),
-    coordinatePath(
-      "create-id",
-      `${parentIdentity.dev}\0${parentIdentity.ino}\0${childName.toLowerCase()}`,
-    ),
-  ];
-};
-
-const acquireCreationCoordinates = (
-  parentReal: string,
-  childName: string,
-): Array<{ path: string; token: string }> => {
+  describe: string,
+): string => {
   const parentIdentity = fs.statSync(parentReal, { bigint: true });
-  const locks = acquireCoordinates(
-    creationCoordinates(parentReal, childName, parentIdentity),
-  );
+  const physical = path.join(parentReal, childName);
   try {
-    const current = physicalDirectoryIdentityOrNull(parentReal);
+    fs.mkdirSync(physical);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    const current = lstatOrNull(physical);
     if (
       current === null ||
-      current.dev !== parentIdentity.dev ||
-      current.ino !== parentIdentity.ino
+      current.isSymbolicLink() ||
+      fs.statSync(physical).isDirectory() === false
     )
-      throw new Error(
-        `Production project parent "${parentReal}" changed physical identity during namespace acquisition. No child was created.`,
-      );
-    return locks;
-  } catch (error) {
-    releaseCoordinates(locks);
-    throw error;
+      throw new Error(`${describe} is not a physical directory.`);
   }
+  const settled = physicalDirectoryIdentityOrNull(parentReal);
+  if (
+    settled === null ||
+    settled.dev !== parentIdentity.dev ||
+    settled.ino !== parentIdentity.ino
+  )
+    throw new Error(
+      `Production project parent "${parentReal}" changed physical identity during namespace acquisition.`,
+    );
+  return fs.realpathSync(physical);
 };
 
 const ensureDirectory = (directory: string): string => {
@@ -235,26 +223,11 @@ const ensureDirectory = (directory: string): string => {
     throw new Error(
       `Production project parent "${directory}" does not exist as a physical directory.`,
     );
-  const parentReal = ensureDirectory(parent);
-  const physical = path.join(parentReal, path.basename(directory));
-  const locks = acquireCreationCoordinates(
-    parentReal,
+  return createDirectoryUnder(
+    ensureDirectory(parent),
     path.basename(directory),
+    `Production project parent "${directory}"`,
   );
-  try {
-    const current = lstatOrNull(physical);
-    if (current === null) fs.mkdirSync(physical);
-    else if (
-      current.isSymbolicLink() ||
-      fs.statSync(physical).isDirectory() === false
-    )
-      throw new Error(
-        `Production project parent "${directory}" is not a physical directory.`,
-      );
-    return fs.realpathSync(physical);
-  } finally {
-    releaseCoordinates(locks);
-  }
 };
 
 const acquireExistingRoot = (
@@ -277,14 +250,15 @@ const acquireExistingRoot = (
   const locks =
     productionId === undefined
       ? acquireCoordinates([
-          coordinatePath("root-path", root),
-          coordinatePath("root-id", `${device}\0${inode}`),
+          coordinatePath("root-path", root, root),
+          coordinatePath("root-id", `${device}\0${inode}`, root),
         ])
       : acquireCoordinates([
-          coordinatePath("production-path", `${root}\0${productionId}`),
+          coordinatePath("production-path", `${root}\0${productionId}`, root),
           coordinatePath(
             "production-id",
             `${device}\0${inode}\0${productionId}`,
+            root,
           ),
         ]);
   const lease: IAutoMovieProductionRootNamespaceLease = {
@@ -328,26 +302,22 @@ export const acquireOrCreateProductionRootNamespace = (
   const root = path.resolve(rootDirectory);
   const linked = lstatOrNull(root);
   if (linked !== null) return acquireExistingRoot(root);
-  const parentReal = ensureDirectory(path.dirname(root));
-  const physical = path.join(parentReal, path.basename(root));
-  const locks = acquireCreationCoordinates(parentReal, path.basename(root));
+  const physical = createDirectoryUnder(
+    ensureDirectory(path.dirname(root)),
+    path.basename(root),
+    `Production project root "${root}"`,
+  );
+  // The lease is taken after the root exists, which is what makes an in-project
+  // coordinate possible at all: the winner of the creation is the first caller
+  // able to fence inside it, and a loser meets that fence rather than a second
+  // creation.
+  const lease = acquireExistingRoot(physical);
   try {
-    const current = lstatOrNull(physical);
-    if (current === null) fs.mkdirSync(physical);
-    else if (current.isSymbolicLink() || current.isDirectory() === false)
-      throw new Error(
-        `Production project root "${root}" is not a physical directory.`,
-      );
-    const lease = acquireExistingRoot(physical);
-    try {
-      assertRequestedRootIdentity(root, lease);
-      return lease;
-    } catch (error) {
-      releaseProductionRootNamespace(lease);
-      throw error;
-    }
-  } finally {
-    releaseCoordinates(locks);
+    assertRequestedRootIdentity(root, lease);
+    return lease;
+  } catch (error) {
+    releaseProductionRootNamespace(lease);
+    throw error;
   }
 };
 

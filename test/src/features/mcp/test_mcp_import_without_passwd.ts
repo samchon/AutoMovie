@@ -6,88 +6,111 @@ import path from "node:path";
 import { namedFacts } from "../internal/predicates";
 
 /**
- * Importing the package asks for no capability the caller has not used.
+ * A namespace fence needs no home directory, and two homes name one lock.
  *
- * `rootNamespaceLock` needs a home directory to name the path every process on
- * one machine fences against, and it used to read that at module scope. The
- * barrel re-exports the module, so `import("@automovie/mcp")` evaluated the
- * syscall, and where the syscall is denied the package could not be imported at
- * all: not degraded, not partly working — the import threw before any of the
- * surface existed, taking every scaffold script that reaches the package with
- * it.
+ * `rootNamespaceLock` used to derive its coordination root from the caller's
+ * home. Two things followed, and they were found in that order.
  *
- * That environment is the one an authoring agent works in. Two drivers of the
- * `#1954` benchmark measured it in separate sandboxes: inside the Codex sandbox
- * the call fails as `uv_os_get_passwd returned ENOMEM` while gigabytes are
- * free, naming a resource that is not the problem, and the same call succeeds
- * for the same user outside.
+ * The first was that reading the home at module scope made the whole package
+ * unimportable where that syscall is denied — not degraded, not partly
+ * working: the import threw before any of the surface existed, taking every
+ * scaffold script with it. That environment is the one an authoring agent works
+ * in, where the call fails as `uv_os_get_passwd returned ENOMEM` while
+ * gigabytes are free, naming a resource that is not the problem.
  *
- * The denial is reproduced here by replacing both readers in a child process
- * rather than by a sandbox, because what has to hold is a property of this
- * module and not of anyone's environment: whatever the reason a home directory
- * cannot be read, the import must survive it and the refusal must arrive only
- * when a lease is actually taken.
+ * The second is worse and was measured afterwards. A home is **per user**, and
+ * two accounts reaching one project computed the same coordinate under two
+ * different roots — the identical `production-id-…` file resident in two
+ * profiles on one host, with an operation blocked from one side succeeding from
+ * the other. A fence both sides can compute and neither can see is not a fence.
+ *
+ * Both are answered by the same change: the coordinates live inside the project
+ * they fence, and nothing in the module reads a home at all. So the property
+ * here is no longer "a lease refuses by naming the capability" — it is that a
+ * lease **works** with no home, and that two different homes produce **one**
+ * lock path.
+ *
+ * The denial is reproduced by replacing both readers in a child process rather
+ * than by a sandbox, because what has to hold is a property of this module and
+ * not of anyone's environment.
  *
  * Scenarios:
  *
- * 1. With both `os.homedir()` and `os.userInfo()` throwing, importing the
- *    package succeeds and its surface is present, so nothing is paid for by a
- *    caller that never fences.
- * 2. Taking a lease in that state refuses, and the refusal names the capability
- *    and says why a fallback path is not offered — two processes fencing
- *    against different roots is the state these locks exist to prevent.
- * 3. The negative twin: with the readers intact the same import and the same
- *    call behave normally, so scenario 1 is not passing because the module was
- *    inert.
- * 4. `os.homedir()` alone is enough. With only `os.userInfo()` throwing the
- *    lease still resolves, which is what makes the passwd entry a fallback
- *    rather than the source.
+ * 1. With `os.homedir()` and `os.userInfo()` both throwing, the package imports
+ *    and its surface is present, so nothing is paid for by a caller that never
+ *    fences.
+ * 2. In that same state a lease is **taken**, not refused. A module that needed
+ *    a home would fail here, and a module that merely deferred reading one
+ *    would fail at exactly this line.
+ * 3. Every lock the lease holds is inside the project root. That is the fence
+ *    two accounts can both see, and the one place neither can be denied.
+ * 4. Two probes reporting two different home directories name the **same** lock
+ *    paths for one root. This is the cross-account invariant reduced to
+ *    something one machine can measure: what a home is does not enter into it.
  */
 export const test_mcp_import_without_passwd = (): void => {
-  const denied = probe("both");
-  const partial = probe("passwd-only");
-  const intact = probe("none");
+  const denied = probe("both", "/nowhere/one");
+  const partial = probe("passwd-only", "/nowhere/one");
+  const intact = probe("none", "/nowhere/one");
+  // One root for the pair that differs only in its home. Two roots would differ
+  // in their lock paths for a reason that has nothing to do with homes.
+  const shared = sharedRoot();
+  const here = probe("none", "/nowhere/one", shared);
+  const elsewhere = probe("none", "/nowhere/two", shared);
+  fs.rmSync(path.dirname(shared), { recursive: true, force: true });
 
   TestValidator.equals(
-    "the package imports where the home directory cannot be read",
+    "the package imports and fences where no home can be read",
     namedFacts([
       ["it imports", () => denied.imported === true],
       ["its surface is there", () => denied.surface === true],
-      ["taking a lease is what refuses", () => denied.leased === false],
+      // The point of the whole change: no home, and the lease still happens.
+      ["the lease is taken rather than refused", () => denied.leased === true],
+      ["nothing refused", () => denied.refusal === ""],
       [
-        "and the refusal names the capability rather than a memory fault",
-        () => denied.refusal.includes("home directory"),
-      ],
-      [
-        "and says why no fallback path is offered",
-        () => denied.refusal.includes("fence against different roots"),
+        "every lock it held is inside the project",
+        () =>
+          denied.locks.length > 0 &&
+          denied.locks.every((lock) => insideRoot(lock, denied.root)),
       ],
     ]),
     {
       "it imports": true,
       "its surface is there": true,
-      "taking a lease is what refuses": true,
-      "and the refusal names the capability rather than a memory fault": true,
-      "and says why no fallback path is offered": true,
+      "the lease is taken rather than refused": true,
+      "nothing refused": true,
+      "every lock it held is inside the project": true,
     },
   );
 
   TestValidator.equals(
-    "the readers are what the case removed, so the clean run still leases",
+    "what the home directory is does not enter into where the lock goes",
     namedFacts([
-      ["intact imports", () => intact.imported === true],
-      ["intact leases", () => intact.leased === true],
-      // The passwd entry is the fallback, not the source: losing it alone
-      // changes nothing.
+      // The counter-case for scenario 1: the readers are what that case
+      // removed, so an intact run must behave the same rather than differently.
+      ["an intact run leases", () => intact.leased === true],
       [
         "losing only the passwd entry changes nothing",
         () => partial.leased === true,
       ],
+      [
+        "two different homes name the same locks",
+        () =>
+          here.locks.length > 0 &&
+          here.locks.join(" ") === elsewhere.locks.join(" "),
+      ],
+      // Stated separately from the equality above, because two runs that both
+      // fenced somewhere outside the project would also be equal to each other.
+      [
+        "and those locks are the project's own",
+        () => elsewhere.locks.every((lock) => insideRoot(lock, elsewhere.root)),
+      ],
     ]),
     {
-      "intact imports": true,
-      "intact leases": true,
+      "an intact run leases": true,
       "losing only the passwd entry changes nothing": true,
+      "two different homes name the same locks": true,
+      "and those locks are the project's own": true,
     },
   );
 };
@@ -97,7 +120,35 @@ interface IProbe {
   surface: boolean;
   leased: boolean;
   refusal: string;
+  root: string;
+  locks: string[];
 }
+
+/**
+ * A project root two probes share, so their homes are the only difference.
+ *
+ * Its own directory rather than one of the probes', because a probe removes its
+ * directory when it is done and the second run needs the first's root to still
+ * be there.
+ */
+const sharedRoot = (): string => {
+  const cache = path.resolve(__dirname, "../../../node_modules/.cache");
+  fs.mkdirSync(cache, { recursive: true });
+  const directory = fs.mkdtempSync(
+    path.join(cache, "automovie-passwd-shared-"),
+  );
+  const root = path.join(directory, "root");
+  fs.mkdirSync(root);
+  return root;
+};
+
+/** Whether one lock path is the project root's own rather than somewhere else. */
+const insideRoot = (lock: string, root: string): boolean => {
+  const relative = path.relative(path.resolve(root), path.resolve(lock));
+  return (
+    relative.startsWith("..") === false && path.isAbsolute(relative) === false
+  );
+};
 
 /**
  * Import the package in a child whose home-directory readers are removed.
@@ -105,9 +156,14 @@ interface IProbe {
  * A child process, because the replacement has to be in place before the module
  * evaluates and this suite has already imported it. `deny` selects which
  * readers throw, so the same script covers the denial, the passwd-only case and
- * the untouched control without three copies of the harness.
+ * the untouched control without three copies of the harness. `home` is what the
+ * untouched readers answer, so two runs can differ in nothing else.
  */
-const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
+const probe = (
+  deny: "both" | "passwd-only" | "none",
+  home: string,
+  shared?: string,
+): IProbe => {
   // The readers to remove, chosen here rather than compared inside the probe:
   // a literal comparison against an interpolated constant is a type error the
   // launcher refuses, and a list says the same thing without one.
@@ -117,15 +173,15 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
       : deny === "passwd-only"
         ? ["userInfo"]
         : [];
-  // Each probe fences its own directory. A lease is a file in the coordination
-  // root and it outlives the process that took it, so probes sharing one root
-  // would leave the later ones refused by the earlier ones' leftovers -- which
-  // is how this case first failed, and is the separate defect `#1994` names.
+  // Each probe fences its own directory. A lease is a file that outlives the
+  // process that took it, so probes sharing one root would leave the later ones
+  // refused by the earlier ones' leftovers -- which is how this case first
+  // failed, and is the separate defect `#1994` names.
   const cache = path.resolve(__dirname, "../../../node_modules/.cache");
   fs.mkdirSync(cache, { recursive: true });
   const directory = fs.mkdtempSync(path.join(cache, "automovie-passwd-"));
-  const root = path.join(directory, "root");
-  fs.mkdirSync(root);
+  const root = shared ?? path.join(directory, "root");
+  if (shared === undefined) fs.mkdirSync(root);
   const script = `
     const os = require("node:os");
     const fail = (name: "userInfo" | "homedir"): void => {
@@ -137,7 +193,16 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
     };
     for (const name of ${JSON.stringify(removed)} as ReadonlyArray<"userInfo" | "homedir">)
       fail(name);
-    const out = { imported: false, surface: false, leased: false, refusal: "" };
+    (os as unknown as { homedir: () => string }).homedir = (): string =>
+      ${JSON.stringify(home)};
+    const out = {
+      imported: false,
+      surface: false,
+      leased: false,
+      refusal: "",
+      root: ${JSON.stringify(root)},
+      locks: [] as string[],
+    };
     import("@automovie/mcp")
       .then((mcp) => {
         out.imported = true;
@@ -145,8 +210,13 @@ const probe = (deny: "both" | "passwd-only" | "none"): IProbe => {
         try {
           const lease = mcp.acquireProductionRootNamespace(${JSON.stringify(root)});
           out.leased = true;
-          // Released rather than dropped, so a passing run leaves the
-          // coordination root as it found it.
+          out.locks = lease.locks
+            .map((lock: { path: string }) => lock.path)
+            .sort((left: string, right: string) =>
+              left < right ? -1 : left > right ? 1 : 0,
+            );
+          // Released rather than dropped, so a passing run leaves the project
+          // as it found it.
           mcp.releaseProductionRootNamespace(lease);
         } catch (error) {
           out.refusal = error instanceof Error ? error.message : String(error);
