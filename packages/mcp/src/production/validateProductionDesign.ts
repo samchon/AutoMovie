@@ -776,7 +776,7 @@ export const validateAutoMovieProductionGraph = (
             "design-range-invalid",
             "world",
             file,
-            `Surface "${surface.id}" heightfield carries ${lattice.samples.length} samples for a ${lattice.columns} by ${lattice.rows} lattice. Store exactly ${lattice.columns * lattice.rows} row-major heights in the tracked world design record.`,
+            `Surface "${surface.id}" heightfield carries ${lattice.samples.length} samples for a lattice of ${lattice.columns} by ${lattice.rows}. Store exactly ${lattice.columns * lattice.rows} row-major heights in the tracked world design record.`,
           );
         for (const sample of lattice.samples)
           finite(diagnostics, sample, "world", file, "surface.height.samples");

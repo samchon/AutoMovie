@@ -399,7 +399,7 @@ const validateHeightRule = (
     collector.push(
       "range",
       `${path}.samples`,
-      `a ${rule.columns} by ${rule.rows} heightfield needs exactly ${rule.columns * rule.rows} row-major samples, but had ${rule.samples.length}`,
+      `a heightfield of ${rule.columns} by ${rule.rows} needs exactly ${rule.columns * rule.rows} row-major samples, but had ${rule.samples.length}`,
       rule.samples.length,
     );
   rule.samples.forEach((sample, i) => {

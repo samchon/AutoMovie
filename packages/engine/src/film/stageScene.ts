@@ -17,6 +17,7 @@ import {
   AUTO_MOVIE_LIGHT_TYPES,
   isAutoMovieLightType,
 } from "../resolve/lightChannel";
+import { withArticle } from "../text/article";
 import { isRecord } from "../validation/artifactShape";
 import { validateSceneEnvironment } from "../validation/validateSceneEnvironment";
 import { validateSpace } from "../validation/validateSpace";
@@ -140,7 +141,7 @@ const validateLightPlacementShape = (
       out.push(
         "type",
         `${path}.direction`,
-        `a ${type} light is aimed and needs a direction`,
+        `${withArticle(type)} light is aimed and needs a direction`,
         light.direction,
       );
   } else if (!aimed)
@@ -166,7 +167,7 @@ const validateLightPlacementShape = (
       out.push(
         "type",
         `${path}.position`,
-        `a ${type} light stands somewhere in the world and needs a position`,
+        `${withArticle(type)} light stands somewhere in the world and needs a position`,
         light.position,
       );
   } else if (!positioned)
@@ -189,7 +190,7 @@ const validateLightPlacementShape = (
       out.push(
         "type",
         `${path}.range`,
-        `a ${type} light has no distance falloff and takes no range`,
+        `${withArticle(type)} light has no distance falloff and takes no range`,
         light.range,
       );
     else if (!Number.isFinite(light.range) || light.range < 0)
@@ -206,7 +207,7 @@ const validateLightPlacementShape = (
       out.push(
         "type",
         `${path}.coneAngle`,
-        `only a spot light has a cone; a ${type} light takes no coneAngle`,
+        `only a spot light has a cone; ${withArticle(type)} light takes no coneAngle`,
         light.coneAngle,
       );
     else if (

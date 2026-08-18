@@ -49,6 +49,7 @@ import { resolveTargetPoint } from "../perform/resolveTargetPoint";
 import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { spaceGround } from "../space/surfaces";
+import { withArticle } from "../text/article";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import {
@@ -919,7 +920,7 @@ export const performShot = (props: {
         out.push(
           "type",
           `${base}[${i}].actor`,
-          `a ${action.verb} action's actor must be a staged scene node, but "${actor}" is a camera`,
+          `${withArticle(action.verb)} action's actor must be a staged scene node, but "${actor}" is a camera`,
           actor,
         );
     });

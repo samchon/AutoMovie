@@ -1,5 +1,6 @@
 import { IAutoMovieClip, IAutoMovieLight } from "@automovie/interface";
 
+import { withArticle } from "../text/article";
 import {
   IAutoMovieLightOverride,
   LIGHT_CHANNEL_PROPERTIES,
@@ -93,7 +94,7 @@ export const resolveShotLighting = (
       const property = LIGHT_CHANNEL_PROPERTIES[target.property];
       if (!property.carries(light.type))
         throw new Error(
-          `light clip "${clip.id}" addresses "${target.property}", which a ${light.type} light does not carry`,
+          `light clip "${clip.id}" addresses "${target.property}", which ${withArticle(light.type)} light does not carry`,
         );
       const carried = overrides.get(target.light);
       const override = carried ?? {};

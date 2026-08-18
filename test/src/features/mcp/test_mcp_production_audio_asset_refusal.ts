@@ -111,7 +111,7 @@ export const test_mcp_production_audio_asset_refusal = (): void => {
         "aFormatChunkTooShortToDeclareItsFieldsIsRefused",
         () =>
           refuses(productionWav({ formatChunkSize: 14, channels: [[0]] }), [
-            'has a 14-byte "fmt " chunk; a WAVE format chunk is at least 16 bytes',
+            'has a "fmt " chunk of 14 bytes; a WAVE format chunk is at least 16 bytes',
           ]),
       ],
       [
@@ -197,7 +197,7 @@ export const test_mcp_production_audio_asset_refusal = (): void => {
           refuses(
             productionWav({ declaredChannels: 2, data: new Uint8Array(6) }),
             [
-              'has a 6-byte "data" chunk, which is not a whole number of 2-channel 16-bit sample frames',
+              'has a "data" chunk of 6 bytes, which is not a whole number of 2-channel 16-bit sample frames',
             ],
           ),
       ],

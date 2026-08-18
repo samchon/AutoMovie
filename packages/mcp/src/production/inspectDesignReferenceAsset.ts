@@ -184,7 +184,7 @@ const jpegBounds = (
     if (JPEG_FRAME_MARKERS.has(marker)) {
       if (size < 7)
         throw new Error(
-          `Design reference "${path}" carries a ${size}-byte JPEG frame header, which is too small to state an extent.`,
+          `Design reference "${path}" carries a JPEG frame header of ${size} bytes, which is too small to state an extent.`,
         );
       const height = view.getUint16(cursor + 5, false);
       const width = view.getUint16(cursor + 7, false);

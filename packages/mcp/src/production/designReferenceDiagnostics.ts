@@ -172,7 +172,7 @@ export const designReferenceDiagnostics = (props: {
         diagnostic(
           "design-reference-frame-bounds-mismatch",
           `${reference.id}/${frame.id}`,
-          `Frame "${frame.id}" declares a ${frame.bounds.width}x${frame.bounds.height} source extent, but "${reference.asset}" measures ${inspected.bounds.width}x${inspected.bounds.height}. A frame reads part of its sheet, never more than the sheet holds.`,
+          `Frame "${frame.id}" declares a source extent of ${frame.bounds.width}x${frame.bounds.height}, but "${reference.asset}" measures ${inspected.bounds.width}x${inspected.bounds.height}. A frame reads part of its sheet, never more than the sheet holds.`,
         );
     }
   }
