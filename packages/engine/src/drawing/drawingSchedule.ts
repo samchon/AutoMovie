@@ -1,7 +1,9 @@
 import {
   IAutoMovieBuiltEnvironment,
   IAutoMovieBuiltSpace,
+  IAutoMovieDrawingConnectorPlace,
   IAutoMovieDrawingGap,
+  IAutoMovieDrawingOpeningPlace,
   IAutoMovieDrawingSchedule,
   IAutoMovieDrawingScheduleBox,
   IAutoMovieDrawingSchedulePlace,
@@ -22,7 +24,6 @@ import {
   autoMovieRenderDigest,
   compareAutoMovieRenderIds,
 } from "../render/renderDigest";
-import { withArticle } from "../text/article";
 import {
   autoMovieOpeningExtent,
   autoMovieOpeningFillExtent,
@@ -230,28 +231,6 @@ export const deriveAutoMovieDrawingSchedule = (props: {
       remedy:
         "ask `builtEnvironmentSpaceBoundaries` for the boundaries a space is named on and read their kind and realizing elements; do not read an absent enclosure row as an unenclosed room, and do not scan the kind for a fixed word, because it is an open label",
     });
-  if (subject !== "space")
-    gaps.push({
-      // The requirement asks every subject for a location. A room answers with
-      // the space it is; an opening and a connector would answer through their
-      // host boundary and their declared stops, and that derivation is not
-      // written, so the row's absent place is stated rather than implied.
-      //
-      // `unsupported` rather than `not-run`, and the remedy addresses this
-      // product rather than the author. `not-run` says an author could supply
-      // something and has not, and no author can: these rows carry `place: null`
-      // on every path that builds them, while a space row fills it. An authoring
-      // agent hit the old pairing while closing a stage, was told to fill a
-      // field nothing populates, and only avoided spending the round on it by
-      // refusing the remedy and filing the gap unmet.
-      subject: `${subject}-location`,
-      status: "unsupported",
-      reason: `${withArticle(subject)} row states type, size and count but no place, so its location must still be read from the design rather than from the schedule`,
-      remedy:
-        subject === "opening"
-          ? "derive an opening's place from its host boundary and the spaces that boundary separates, once that derivation exists; until then read an opening's location from the design"
-          : "derive a connector's place from the spaces its declared stops stand in, once that derivation exists; until then read a connector's location from the design",
-    });
   gaps.sort((left, right) =>
     compareAutoMovieRenderIds(left.subject, right.subject),
   );
@@ -316,6 +295,7 @@ const spaceOccurrences = (
       height: extent.height,
       basis: declared === null ? ("unmeasured" as const) : ("profile" as const),
       place: {
+        kind: "space",
         building: builtEnvironmentBuildingOfSpace(environment, space.id),
         parent: space.parent,
         declared,
@@ -432,6 +412,7 @@ const openingOccurrences = (
 ): IOccurrence[] => {
   const matrices = autoMovieDrawingWorldMatrices(environment);
   return environment.openings.map((opening) => {
+    const place = openingPlace(environment, opening.boundary);
     const element =
       opening.fill === null
         ? undefined
@@ -451,7 +432,7 @@ const openingOccurrences = (
         width: extent.width,
         height: extent.height,
         basis: "profile",
-        place: null,
+        place,
       };
     }
     const model =
@@ -468,7 +449,7 @@ const openingOccurrences = (
         width: null,
         height: null,
         basis: "unmeasured",
-        place: null,
+        place,
       };
     const corners = transformAutoMovieDrawingTriangles(
       matrices.get(element.id)!,
@@ -482,7 +463,7 @@ const openingOccurrences = (
         width: null,
         height: null,
         basis: "unmeasured",
-        place: null,
+        place,
       };
     return {
       id: opening.id,
@@ -490,7 +471,7 @@ const openingOccurrences = (
       model: model.id,
       ...autoMovieOpeningFillExtent(corners),
       basis: "fill",
-      place: null,
+      place,
     };
   });
 };
@@ -507,6 +488,7 @@ const connectorOccurrences = (
   environment: IAutoMovieBuiltEnvironment,
 ): IOccurrence[] =>
   environment.connectors.map((connector) => {
+    const place = connectorPlace(environment, connector);
     if (connector.width !== undefined && connector.clearHeight !== undefined)
       return {
         id: connector.id,
@@ -515,7 +497,7 @@ const connectorOccurrences = (
         width: roundAutoMovieDrawingScalar(connector.width),
         height: roundAutoMovieDrawingScalar(connector.clearHeight),
         basis: "profile" as const,
-        place: null,
+        place,
       };
     // Validation already refused a connector that states neither spelling, so
     // the sampled sections are there whenever the constant pair is not.
@@ -532,9 +514,87 @@ const connectorOccurrences = (
           .min,
       ),
       basis: "profile" as const,
-      place: null,
+      place,
     };
   });
+
+/**
+ * Where an opening is: its host boundary and the regions that boundary joins.
+ *
+ * This row answered `null` for as long as the place record was a room's alone,
+ * and the schedule filed a permanent gap saying an opening's location had to be
+ * read from the design instead. The design always held it. An opening names its
+ * host `boundary`, a boundary names the one region it encloses or the two it
+ * separates, and a region resolves to the building unit that owns it — so the
+ * answer is two lookups over records the environment has already validated.
+ *
+ * The building is `null` rather than guessed where the regions do not agree on
+ * one unit. Validation has already refused a boundary citing no region at all,
+ * so `separates` is never empty here; what it can be is a pair straddling two
+ * units, and a separation between two buildings belongs to neither alone.
+ */
+const openingPlace = (
+  environment: IAutoMovieBuiltEnvironment,
+  boundary: string,
+): IAutoMovieDrawingOpeningPlace => {
+  const separates = (
+    environment.boundaries.find((candidate) => candidate.id === boundary)
+      ?.spaces ?? []
+  )
+    .slice()
+    .sort(compareAutoMovieRenderIds);
+  return {
+    kind: "opening",
+    building: buildingOfAny(environment, separates),
+    boundary,
+    separates,
+  };
+};
+
+/**
+ * Where a connector is: the regions its declared stops stand in.
+ *
+ * Every stop, not only the two ends, because a run reaches every stop it
+ * declares and a lift serving four floors is in four places. That is the same
+ * rule `builtEnvironmentSpaceConnectors` follows from the other direction.
+ */
+const connectorPlace = (
+  environment: IAutoMovieBuiltEnvironment,
+  connector: IAutoMovieBuiltEnvironment["connectors"][number],
+): IAutoMovieDrawingConnectorPlace => {
+  const stops = [
+    ...new Set([
+      connector.from,
+      ...(connector.landings ?? []).map((landing) => landing.space),
+      connector.to,
+    ]),
+  ].sort(compareAutoMovieRenderIds);
+  return {
+    kind: "connector",
+    building: buildingOfAny(environment, stops),
+    stops,
+  };
+};
+
+/**
+ * The one building unit a set of regions belongs to, or `null`.
+ *
+ * `null` where the set is empty, where no region resolves, and where two
+ * regions resolve to different units. The last is the one worth stating: a
+ * sky-bridge between two buildings belongs to neither alone, and naming one of
+ * them would be a choice this derivation has no basis to make.
+ */
+const buildingOfAny = (
+  environment: IAutoMovieBuiltEnvironment,
+  spaces: readonly string[],
+): string | null => {
+  const units = new Set(
+    spaces
+      .map((space) => builtEnvironmentBuildingOfSpace(environment, space))
+      .filter((unit): unit is string => typeof unit === "string"),
+  );
+  return units.size === 1 ? [...units][0]! : null;
+};
 
 const groupKey = (occurrence: IOccurrence): string =>
   [
@@ -598,17 +658,26 @@ const canonicalPlace = (
 ): string =>
   place === null
     ? "unplaced"
-    : [
-        place.building,
-        String(place.parent),
-        canonicalBox(place.declared),
-        canonicalBox(place.content),
-        place.fidelity,
-        place.contents.join(","),
-        String(place.omittedContents),
-        place.adjacent.join(","),
-        place.connectors.join(","),
-      ].join("~");
+    : place.kind === "opening"
+      ? [
+          "opening",
+          String(place.building),
+          place.boundary,
+          place.separates.join(","),
+        ].join("~")
+      : place.kind === "connector"
+        ? ["connector", String(place.building), place.stops.join(",")].join("~")
+        : [
+            place.building,
+            String(place.parent),
+            canonicalBox(place.declared),
+            canonicalBox(place.content),
+            place.fidelity,
+            place.contents.join(","),
+            String(place.omittedContents),
+            place.adjacent.join(","),
+            place.connectors.join(","),
+          ].join("~");
 
 const canonicalBox = (box: IAutoMovieDrawingScheduleBox | null): string =>
   box === null

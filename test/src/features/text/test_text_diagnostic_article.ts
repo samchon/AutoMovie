@@ -1,7 +1,6 @@
 import {
   AUTOMOVIE_ANALYSIS_DOMAINS,
   AUTO_MOVIE_LIGHT_TYPES,
-  deriveAutoMovieDrawingSchedule,
   performShot,
   stageScene,
   summarizeAutoMovieAnalysis,
@@ -12,7 +11,6 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { drawingEnvironment } from "../internal/drawingFixtures";
 import {
   makePerformanceWrite,
   makeScriptWrite,
@@ -130,29 +128,6 @@ export const test_text_diagnostic_article = (): void => {
   );
 
   TestValidator.equals(
-    "a schedule row without a place is named with its own article",
-    namedFacts([
-      [
-        "an opening row",
-        () => locationGap("opening")?.startsWith("an opening row") === true,
-      ],
-      [
-        "a connector row",
-        () => locationGap("connector")?.startsWith("a connector row") === true,
-      ],
-      // A space answers with the space it is, so it is owed no location gap at
-      // all. Asserted here because the article and that guard sit on the same
-      // statement and a rewrite could take both.
-      ["a space owes no location gap", () => locationGap("space") === null],
-    ]),
-    {
-      "an opening row": true,
-      "a connector row": true,
-      "a space owes no location gap": true,
-    },
-  );
-
-  TestValidator.equals(
     "an action aimed through a camera is named with its verb's article",
     namedFacts([
       [
@@ -235,15 +210,6 @@ const lightMessages = (type: string): string[] => {
     .map((violation) => violation.expected)
     .filter((message) => message.includes(` ${type} light`));
 };
-
-/** The reason a schedule states for a `subject` row that has no place. */
-const locationGap = (
-  subject: "space" | "opening" | "connector",
-): string | null =>
-  deriveAutoMovieDrawingSchedule({
-    environment: drawingEnvironment(),
-    subject,
-  }).gaps.find((gap) => gap.subject === `${subject}-location`)?.reason ?? null;
 
 /** The refusal an action draws for naming a camera as its actor. */
 const cameraActorRefusal = (action: IAutoMovieActionCall): string | null => {

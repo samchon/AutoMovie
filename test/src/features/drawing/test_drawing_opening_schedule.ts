@@ -100,7 +100,12 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["front-door"],
         omittedMembers: 0,
         basis: "profile",
-        place: null,
+        place: {
+          kind: "opening",
+          building: "unit-a",
+          boundary: "north",
+          separates: ["hall"],
+        },
       },
       {
         mark: "vent-01",
@@ -112,7 +117,12 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["vent"],
         omittedMembers: 0,
         basis: "unmeasured",
-        place: null,
+        place: {
+          kind: "opening",
+          building: "unit-a",
+          boundary: "north",
+          separates: ["hall"],
+        },
       },
       {
         mark: "window-01",
@@ -124,7 +134,12 @@ export const test_drawing_opening_schedule = (): void => {
         members: ["oculus"],
         omittedMembers: 0,
         basis: "profile",
-        place: null,
+        place: {
+          kind: "opening",
+          building: "unit-a",
+          boundary: "north",
+          separates: ["hall"],
+        },
       },
     ],
   );
@@ -146,7 +161,12 @@ export const test_drawing_opening_schedule = (): void => {
       members: ["front-door"],
       omittedMembers: 0,
       basis: "fill",
-      place: null,
+      place: {
+        kind: "opening",
+        building: "unit-a",
+        boundary: "north",
+        separates: ["hall"],
+      },
     },
   );
   TestValidator.equals(
@@ -154,10 +174,9 @@ export const test_drawing_opening_schedule = (): void => {
     schedule.gaps.map((gap) => [gap.subject, gap.status]),
     [
       ["opening-geometry", "not-run"],
-      // `unsupported` because nothing populates an opening row's place: the row
-      // builders write it as null on every path, so no input an author supplies
-      // reaches it. `not-run` would send them looking for one.
-      ["opening-location", "unsupported"],
+      // `opening-location` used to sit here, saying the place had to be read
+      // from the design. The row reads it from the design now, so the gap is
+      // gone rather than relabelled.
       ["opening-performance", "unsupported"],
     ],
   );
@@ -177,7 +196,12 @@ export const test_drawing_opening_schedule = (): void => {
       members: ["front-door"],
       omittedMembers: 0,
       basis: "unmeasured",
-      place: null,
+      place: {
+        kind: "opening",
+        building: "unit-a",
+        boundary: "north",
+        separates: ["hall"],
+      },
     },
   );
   TestValidator.equals(
@@ -282,7 +306,11 @@ export const test_drawing_opening_schedule = (): void => {
           members: ["service-ramp"],
           omittedMembers: 0,
           basis: "profile",
-          place: null,
+          place: {
+            kind: "connector",
+            building: "unit-a",
+            stops: ["hall", "roof-deck"],
+          },
         },
         {
           mark: "stair-01",
@@ -294,7 +322,11 @@ export const test_drawing_opening_schedule = (): void => {
           members: ["roof-stair"],
           omittedMembers: 0,
           basis: "profile",
-          place: null,
+          place: {
+            kind: "connector",
+            building: "unit-a",
+            stops: ["hall", "roof-deck"],
+          },
         },
       ],
     ],
@@ -303,7 +335,8 @@ export const test_drawing_opening_schedule = (): void => {
     "a connector schedule refuses to read a scheduled stair as a climbable one",
     connectors.gaps.map((gap) => [gap.subject, gap.status]),
     [
-      ["connector-location", "unsupported"],
+      // `connector-location` used to sit here. A connector row now states the
+      // regions its declared stops stand in, so there is no gap to declare.
       ["traversal-performance", "unsupported"],
     ],
   );
