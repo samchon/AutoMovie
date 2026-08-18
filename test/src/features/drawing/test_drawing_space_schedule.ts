@@ -5,6 +5,7 @@ import {
 import {
   IAutoMovieBuiltEnvironment,
   IAutoMovieBuiltSpace,
+  IAutoMovieDrawingSpacePlace,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -77,6 +78,7 @@ export const test_drawing_space_schedule = (): void => {
     "a room states where it is, what is in it, and what reaches it",
     hall.place,
     {
+      kind: "space",
       building: "unit-a",
       parent: "site",
       declared: {
@@ -400,19 +402,19 @@ export const test_drawing_space_schedule = (): void => {
     "finish, furniture, fixture, equipment, light and service terminal are not scheduled subjects yet, so a room row states its identity, extent, contents and relations only",
   );
   TestValidator.equals(
-    "an opening and a connector row admit they carry no place yet",
+    "an opening and a connector now state a place, and owe no gap for it",
     (["opening", "connector"] as const).map((subject) => {
       const other = deriveAutoMovieDrawingSchedule({ environment, subject });
       return [
-        other.rows.every((candidate) => candidate.place === null),
-        other.gaps.find((gap) => gap.subject === `${subject}-location`)?.status,
+        other.rows.every((candidate) => candidate.place?.kind === subject),
+        // The gap this replaced. It said the location had to be read from the
+        // design; the design is where the derivation now reads it from.
+        other.gaps.some((gap) => gap.subject === `${subject}-location`),
       ];
     }),
     [
-      // Unsupported rather than not-run: the place is absent because the
-      // derivation is unwritten, not because an author withheld an input.
-      [true, "unsupported"],
-      [true, "unsupported"],
+      [true, false],
+      [true, false],
     ],
   );
 };
@@ -424,7 +426,21 @@ const byText = (left: string, right: string): number =>
 const row = (
   schedule: ReturnType<typeof deriveAutoMovieDrawingSchedule>,
   space: string,
-) => schedule.rows.find((candidate) => candidate.members.includes(space))!;
+) => {
+  const found = schedule.rows.find((candidate) =>
+    candidate.members.includes(space),
+  )!;
+  // Narrowed here rather than at every read. `place` is a discriminated union
+  // since an opening and a connector gained their own locations, and a room row
+  // is the only variant carrying declared volume, contents and fidelity; the
+  // cast is a claim this case then proves, because every assertion below reads
+  // a field the other two variants do not have and would fail on a mislabelled
+  // row rather than pass on one.
+  return {
+    ...found,
+    place: found.place as IAutoMovieDrawingSpacePlace | null,
+  };
+};
 
 /** The same design with one more logical space under the building root. */
 const withSpace = (
