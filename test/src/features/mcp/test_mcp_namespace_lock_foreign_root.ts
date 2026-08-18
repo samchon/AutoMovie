@@ -1,4 +1,5 @@
 import {
+  acquireCommitLock,
   acquireProductionRootNamespace,
   releaseProductionRootNamespace,
 } from "@automovie/mcp";
@@ -45,6 +46,13 @@ import { namedFacts } from "../internal/predicates";
  *    no business enforcing on a directory it did not create.
  * 2. The lease still works while `chmod` is denied outright, which is the
  *    environment both sandboxes were actually in.
+ * 3. A lock the filesystem refuses to create at all is refused **immediately**,
+ *    naming the path and saying that waiting will not clear it. Fixing the
+ *    directory moved the same denial one step in, onto the lock file's own
+ *    exclusive create, where the guard tolerated a collision and rethrew a
+ *    permission unhandled — an errno with no owner and no path explained, after
+ *    a caller had already spent the full contention deadline waiting for a file
+ *    it may never be allowed to make.
  *
  * What this case does **not** cover: that preparation still refuses a
  * coordination root which is a file rather than a directory. That check is
@@ -99,6 +107,59 @@ export const test_mcp_namespace_lock_foreign_root = (): void => {
         "the lease was taken": true,
         "and it did not refuse": true,
         "chmod was never called": true,
+      },
+    );
+    const denied = path.join(directory, "denied.lock");
+    const nativeWrite = fs.writeFileSync;
+    let refusal = "";
+    let waited = Number.MAX_SAFE_INTEGER;
+    try {
+      fs.writeFileSync = ((
+        target: fs.PathOrFileDescriptor,
+        ...rest: unknown[]
+      ) => {
+        if (path.resolve(String(target)) !== path.resolve(denied))
+          return (nativeWrite as (...args: unknown[]) => void)(target, ...rest);
+        throw Object.assign(
+          new Error(`EPERM: operation not permitted, open '${denied}'`),
+          { code: "EPERM" },
+        );
+      }) as typeof fs.writeFileSync;
+      const started = Date.now();
+      try {
+        acquireCommitLock(denied);
+      } catch (error) {
+        refusal = error instanceof Error ? error.message : String(error);
+      }
+      waited = Date.now() - started;
+    } finally {
+      fs.writeFileSync = nativeWrite;
+    }
+
+    TestValidator.equals(
+      "a lock the filesystem will not let this process create is refused, not waited out",
+      namedFacts([
+        ["it refused", () => refusal.length > 0],
+        ["it names the path", () => refusal.includes(denied)],
+        [
+          "it says waiting will not help",
+          () => refusal.includes("waiting will not clear it"),
+        ],
+        [
+          "it distinguishes denial from contention",
+          () => refusal.includes("rather than another session holding it"),
+        ],
+        // The deadline is two seconds. Spending it on a file this process may
+        // never be allowed to create is the cost the old guard paid before
+        // reporting an owner that does not exist.
+        ["and it did not spend the deadline", () => waited < 500],
+      ]),
+      {
+        "it refused": true,
+        "it names the path": true,
+        "it says waiting will not help": true,
+        "it distinguishes denial from contention": true,
+        "and it did not spend the deadline": true,
       },
     );
   } finally {

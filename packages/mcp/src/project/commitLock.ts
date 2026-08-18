@@ -31,6 +31,10 @@ import path from "node:path";
  *   refused and named: an id that *is* held proves nothing, since ids are
  *   reused, and a lock written on another host says nothing about this host's
  *   process table at all. Age still authorizes nothing.
+ * - **Denial is not contention.** A lock the filesystem refuses to let this
+ *   process create is refused at once, naming the path, rather than waiting out
+ *   a deadline for a file it may never be allowed to make and then reporting an
+ *   owner that does not exist.
  * - **Namespace retirement is explicit.** An owner that atomically removes the
  *   namespace containing its lock may retire every matching process-local
  *   nesting level without following the now-stale resident path.
@@ -212,7 +216,10 @@ export const acquireCommitLock = (lockPath: string): string => {
       held.set(lockPath, { token, depth: 1 });
       return token;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES")
+        throw deniedCommitLockError(lockPath, error);
+      if (code !== "EEXIST") throw error;
       // A few attempts, spaced, rather than one. The transfer renames onto the
       // resident path, and a rename onto an existing path fails outright on
       // Windows while anything else holds a handle on it -- `#1989` measured
@@ -461,6 +468,33 @@ export const describeCommitLockHolder = (
       return `"${holder.path}" is held by process ${owner.pid} on host "${owner.host}"${taken}; this host's process table cannot say whether that session is still running`;
   }
 };
+
+/**
+ * The refusal a lock that cannot be written at all ends with.
+ *
+ * Contention and denial are different failures and only one of them is this
+ * loop's business. Waiting out a deadline for a file the process may never
+ * create spends two seconds to arrive at the same answer, and the answer it
+ * arrived at named an owner that does not exist.
+ *
+ * Measured twice on one campaign, one step apart. First the coordination
+ * directory refused a `chmod`; that was fixed, and the very next turn the same
+ * environment refused the **lock file's own write** — `EPERM`, errno -4048,
+ * from the exclusive create, with the guard rethrowing it unhandled because it
+ * tolerated `EEXIST` and nothing else. Every command that reaches `open()` died
+ * on an errno with no owner and no path explained.
+ *
+ * The condition is real and is not the caller's to fix from inside: a sandboxed
+ * agent whose resolved home is an account it cannot write to reaches a
+ * coordination root it can neither create in nor take a lock in. What it can
+ * act on is being told which capability is missing and where, which is what
+ * this says. Where that path should be instead is `#2012`.
+ */
+const deniedCommitLockError = (lockPath: string, cause: unknown): Error =>
+  new Error(
+    `AutoMovie cannot write the commit lock at "${lockPath}": the filesystem refused it (${(cause as NodeJS.ErrnoException).code}). This is a permission on that path rather than another session holding it, so waiting will not clear it. The lock lives under this account's home directory; grant this process write access there, or run it as the account that owns it.`,
+    { cause },
+  );
 
 /**
  * The refusal a contended acquire ends with, naming the holder and its state.
