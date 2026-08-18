@@ -7908,12 +7908,20 @@ const reviewGateDiagnostics = (
             phase: entry.target.kind === "asset" ? "source" : "review",
             target: reviewTargetKey(entry.target),
             path: null,
+            // Named rather than "the artifact". A production replacing the
+            // starter meets `design` refusing an orphaned starter record with
+            // "delete the file" in the same session as this clause saying
+            // deletion is not authorized; both are correct, about two different
+            // files, and a definite article is all that stood between the
+            // author and knowing which. The generic branch named nothing at
+            // all — neither the target it told the author to correct nor the
+            // artifact it told them not to delete.
             message:
               entry.target.kind === "asset"
-                ? `Consumed model asset "${entry.target.id}" review state is ${entry.state}. Capture its current isolated turntable, run prepareReview, and submitReview before any shot may import it. Correction feedback does not authorize deleting the artifact.`
+                ? `Consumed model asset "${entry.target.id}" review state is ${entry.state}. Capture its current isolated turntable, run prepareReview, and submitReview before any shot may import it. Correction feedback does not authorize deleting "${reviewTargetKey(entry.target)}".`
                 : entry.target.kind === "subject"
-                  ? `Authored subject "${entry.target.subject}" review state is ${entry.state}. Run inspectSubject on that exact compiled id in shot "${entry.target.shot}", then prepareReview and submitReview under REVIEW_SUBJECT. A frame that happens to contain it discharges nothing, and this is a warning at review scope and a refusal at final. Correction feedback does not authorize deleting the artifact.`
-                  : `Review state is ${entry.state}. Run prepareReview, correct the target, and submitReview before this compile scope. Correction feedback does not authorize deleting the artifact.`,
+                  ? `Authored subject "${entry.target.subject}" review state is ${entry.state}. Run inspectSubject on that exact compiled id in shot "${entry.target.shot}", then prepareReview and submitReview under REVIEW_SUBJECT. A frame that happens to contain it discharges nothing, and this is a warning at review scope and a refusal at final. Correction feedback does not authorize deleting "${reviewTargetKey(entry.target)}".`
+                  : `Review state of "${reviewTargetKey(entry.target)}" is ${entry.state}. Run prepareReview, correct that target, and submitReview before this compile scope. Correction feedback does not authorize deleting "${reviewTargetKey(entry.target)}".`,
           },
         ],
   );

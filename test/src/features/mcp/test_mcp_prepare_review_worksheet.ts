@@ -47,8 +47,13 @@ const MODEL_TARGET = {
  * 5. The fingerprint is a function of current bytes: it repeats for an unchanged
  *    target, differs from another target's, and changes when the model recipe
  *    changes.
- * 6. A design target that does not exist is refused by name with the correction
- *    safety sentence appended, and offers nothing quotable.
+ * 6. A design target that does not exist is refused by name, offers nothing
+ *    quotable, and carries **no** correction-safety clause. That clause guards
+ *    a real move — a review diagnostic naming an artifact is silenced entirely
+ *    by deleting the artifact — and it has nothing to guard when the same
+ *    message has just said the target does not exist in current project bytes.
+ *    Appended there it read as "it exists and is protected", which is the
+ *    opposite of what the diagnostic reports.
  * 7. The two arrangements this case relies on fail loudly rather than quietly:
  *    a pointer written without its leading slash resolves to nothing instead of
  *    to the whole document, and a recolour asked for a palette entry the recipe
@@ -253,8 +258,8 @@ export const test_mcp_prepare_review_worksheet = (): void => {
           category: diagnostic.category,
           phase: diagnostic.phase,
           target: diagnostic.target,
-          correctionSafe: diagnostic.message.endsWith(
-            "Correction feedback does not authorize deleting the artifact.",
+          correctionSafe: diagnostic.message.includes(
+            "does not authorize deleting",
           ),
         })),
       },
@@ -266,7 +271,7 @@ export const test_mcp_prepare_review_worksheet = (): void => {
             category: "error",
             phase: "review",
             target: "design:model:no-such-model",
-            correctionSafe: true,
+            correctionSafe: false,
           },
         ],
       },
