@@ -68,6 +68,8 @@ Two report something believable, one reports a believable nothing, and one looks
 
 The third was caught only because rollout size disagreed with the walker: the walker said the turn had no children, the rollout was still growing. That is the whole argument for never letting one signal say a turn ended. **Take three — the process you launched still alive, the rollout still growing, the disk still changing — and believe none of them until all three agree.** A notification is not one of the three; it either agrees with them or it is wrong.
 
+**Its absence is not agreement either.** One driver waited an hour on a completion notification that never arrived, on a turn that had ended cleanly forty minutes earlier. That is the fifth trap from the other side: a notification that fires for a live turn and a notification that never fires for a finished one are both silence about the thing you asked, and silence reads as "still working" whichever way it happened. Poll the three signals on a cadence rather than waiting to be told.
+
 When a wrapper is reaped the transcript survives it: the `exec`ed process keeps its stdout redirect, and one measured log went on growing to 46 MB with nothing lost. So there is nothing to recover — identify the session process by ancestry again, re-arm on it, and carry on.
 
 ## The Agent Will Rebut You, And May Be Right
