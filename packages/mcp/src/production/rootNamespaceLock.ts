@@ -7,11 +7,51 @@ import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 
-const currentUser = os.userInfo();
-const COORDINATION_ROOT = path.join(
-  currentUser.homedir,
-  ".automovie-root-locks",
-);
+/**
+ * Where this machine keeps its root-namespace fences, resolved on first use.
+ *
+ * Resolved lazily, and that is the whole point of the indirection. This was a
+ * module-scope `os.userInfo()`, and the package barrel re-exports this module,
+ * so importing `@automovie/mcp` at all evaluated it. Where that syscall is
+ * denied the package could not be imported — not degraded, not partly working:
+ * the import threw before any of the surface existed, and every scaffold script
+ * that reaches the package went with it. That environment is the one an
+ * authoring agent actually works in, where the call fails as
+ * `uv_os_get_passwd returned ENOMEM` with gigabytes free, naming a resource
+ * that is not the problem. A caller that never takes a lease now never asks.
+ *
+ * `os.homedir()` is tried first because it is the datum this actually needs and
+ * it prefers the environment before consulting a passwd database. The passwd
+ * entry is the fallback rather than the source.
+ *
+ * What it must never do is choose a different path when neither answers. Two
+ * processes disagreeing about where the coordination root lives is precisely
+ * the state these locks exist to prevent, so an unresolvable home is a refusal
+ * naming the capability rather than a temporary directory nobody else will look
+ * in.
+ */
+const coordinationRoot = (): string => {
+  if (resolvedCoordinationRoot !== null) return resolvedCoordinationRoot;
+  const home = ((): string => {
+    for (const read of [
+      () => os.homedir(),
+      () => os.userInfo().homedir,
+    ] as const)
+      try {
+        const value = read();
+        if (typeof value === "string" && value.length !== 0) return value;
+      } catch {
+        continue;
+      }
+    throw new Error(
+      "AutoMovie cannot resolve this account's home directory, so it cannot name the root-lock coordination path every process on this machine has to agree on. Neither os.homedir() nor os.userInfo() answered, which a sandbox that withholds the passwd database does. Grant that access or run outside the sandbox; a fallback path would let two processes fence against different roots, which is what these locks exist to prevent.",
+    );
+  })();
+  resolvedCoordinationRoot = path.join(home, ".automovie-root-locks");
+  return resolvedCoordinationRoot;
+};
+
+let resolvedCoordinationRoot: string | null = null;
 
 /**
  * Held namespace reservation for one physical production project root.
@@ -53,21 +93,21 @@ const coordinatePath = (
     .createHash("sha256")
     .update(`${kind}\0${canonical}`)
     .digest("hex");
-  return path.join(COORDINATION_ROOT, `${kind}-${digest}.lock`);
+  return path.join(coordinationRoot(), `${kind}-${digest}.lock`);
 };
 
 const ensureCoordinationRoot = (): void => {
   try {
-    fs.mkdirSync(COORDINATION_ROOT, { mode: 0o700 });
+    fs.mkdirSync(coordinationRoot(), { mode: 0o700 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
-  const linked = fs.lstatSync(COORDINATION_ROOT);
+  const linked = fs.lstatSync(coordinationRoot());
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
-      `AutoMovie root-lock coordination path "${COORDINATION_ROOT}" is not a physical directory.`,
+      `AutoMovie root-lock coordination path "${coordinationRoot()}" is not a physical directory.`,
     );
-  fs.chmodSync(COORDINATION_ROOT, 0o700);
+  fs.chmodSync(coordinationRoot(), 0o700);
 };
 
 // One fenced operation can invoke another inside the same process -- a guarded
