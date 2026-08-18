@@ -137,6 +137,144 @@ throw한다.
 **이전 실행의 두 턴을 통째로 먹은 3계층 전부-아니면-전무 교체가 이번엔 완료됐다.**
 사이클이 무엇을 샀는가에 대한 캠페인 자신의 답이다.
 
+### 드라이버 교대 뒤 재확인 — 턴 4 경계와 S2 종료 (2026-08-18 16:08, head `5f79ff38`)
+
+앞 절을 쓴 드라이버가 기록 없이 멈췄고, 후임이 **핸드오프를 받아들이지 않고 다시 쟀다.**
+인수 시점에 저작 세션은 살아 있었다 — 턴 4(rollout 다섯 번째 `turn_context`,
+04:38:11Z 시작)가 2시간 20분째였고 세 신호가 전부 alive였다: root `codex.exe`
+PID 42048이 `CreationDate 13:38:07`로 살아 있고(PID와 생성시각을 **함께** 대조),
+rollout이 16,505,960 → 16,513,992로 자라고, 디스크가 초 단위로 바뀌고 있었다.
+
+**16:08:16에 세 신호가 경계로 일치했다** — PID 42048 소멸, rollout **16,698,517이
+네 번 연속 동일**, 샌드박스 디스크 3분간 0건. 새 `turn_context`는 생기지 않았다.
+
+#### S1 → S2 실측 (아티팩트에서 직접, 저작자 보고 아님)
+
+| 항목 | S1 종료 | S2 종료 |
+| --- | --- | --- |
+| revision | 100 | **359** |
+| `building:report`의 `roof` | **0건** | `s2-roof-shell`·`civic-temple-s2-roof` 소유자로 등장 |
+| 개구부 | 9, `basis: "unmeasured"`, width/height/place 전부 `null` | **16**, `basis: "profile"`, **width·height 실측** |
+| 개구부 `place` | `null` | **여전히 `null`** (6개 mark 전부) |
+| 공간 / 커넥터 | 11 / 8 | 11 / 8 (변화 없음) |
+| 샷 | 4 | **12** (person-height 실내 8개 추가) |
+| `src/**/*.ts` | — | 31개, `civicTempleRoof.ts` 신설 |
+
+**저작자의 체크포인트를 중계하지 않고 검증했다.** 보고된 beauty digest 12개를 샷별
+**가장 새로운** beauty 프레임(outline 제외, mtime으로 기계적 선택)과 대조: **12/12 MATCH.**
+front `b76419fb`, three-quarter `2aef898e`, side `2b6a1d85`, courtyard `e76bd7de`,
+entrance `a0b43f6b`, colonnade `8faf6d35`, offering `535dde49`, shrine `26796a8e`,
+administration `492fb8a4`, records `c6258b41`, storage `742a10bc`, service-yard `5dfdab9d`.
+**체크포인트가 주장이 아니라 읽을 수 있는 산출물이었다** — S1 때와 같다.
+
+**남은 절반을 제품이 스스로 선언한다.** opening 스케줄의 gap `opening-location`,
+status `not-run`: *"a opening row states type, size and count but no place, so its
+location must still be read from the design rather than from the schedule"*,
+remedy: *"resolve the opening's host boundary to the spaces it separates, then fill
+the row's place"*. 저작자도 같은 선을 그었다 — *"The authored boundary faces and routes
+carry locations, but the schedule schema does not project them. I did not invent a
+parallel schedule."* **숨기지 않고 이름과 조치를 함께 내는 성질이 S2 grain에서 다시 성립한다.**
+
+#### 계측기 함정 하나 더 — 긴 경로에서 12/12 "프레임 없음"
+
+digest 대조를 파이썬으로 처음 돌렸을 때 **12개 샷 전부 `NO READABLE FRAMES`**가 나왔다.
+렌더 경로가 content-addressed라 digest 두 개가 겹쳐 `MAX_PATH`를 넘고, `\?\` 확장
+접두어를 잘못 붙인 탓이다. **12/12 빈 결과는 "렌더가 없다"와 구별되지 않는다.**
+글로브는 성공했는데 `exists()`가 전부 False였다는 불일치가 계측기를 의심하게 했고,
+경로를 그대로 다루는 도구로 다시 재니 12/12 MATCH였다. 기준선의 다섯 함정에 같은
+서명이 하나 더 붙는다 — **믿을 만한 아무것도 없음**, 그리고 **입력 개수를 세는 습관이
+그것을 잡았다.**
+
+#### `#1961` probe 1 — 앞 절의 답을 정정한다
+
+앞 드라이버는 **세 번째 층을 저작자에게 알린 것이 `npm run design`의 거절**이라고
+적었다. rollout을 시간순으로 세면 그렇지 않다.
+
+| 시각 | 무엇 |
+| --- | --- |
+| **00:47:41Z** | 저작자가 `scripts/emitDesign.ts` **소스를 읽는다** (턴 1, 세션 시작 3분 뒤) |
+| 00:49:59Z | 같은 소스를 다시 읽는다 |
+| 01:14:0x–01:14:35Z | 저작자가 자기 `emitDesign.ts`를 **패치한다** |
+| **01:22:37Z** | 그 스크립트가 **처음으로 거절한다** (exit 1, 레코드 12개) |
+
+**소스 읽기가 거절보다 35분 앞선다.** 그리고 01:22의 거절문은 제품의 것이 아니다 —
+저작자가 문구를 자기 것으로 바꿔 썼다. 스캐폴드는
+*"A design record and the typed source that owns it are two representations of one
+fact…"* + *"Either derive it above from the source that owns it, or delete the file."*
+두 문장인데, 실제로 찍힌 것은 *"Delete each named record or restore the source that
+derives it."* 한 문장이다. 샌드박스 `scripts/emitDesign.ts:215`가 그렇게 적혀 있고,
+설치된 tarball 스캐폴드와 저장소 스캐폴드는 둘 다 303–307행의 원문을 갖고 있다.
+
+**정정의 범위.** 스캐폴드의 *능력*에 대한 결론은 살아 있다 — 그 검사는 개수·프로젝트
+상대 경로·레코드 id·조치를 전부 찍고, `#1961`의 수락 기준이 요구하는 것이 그것이다.
+죽는 것은 **이 샌드박스가 그 기준의 증거라는 주장**이다. 이 저작자는 (a) 기제를 소스로
+먼저 읽었고 (b) 실제로 본 진단은 자기가 쓴 것이다. **최초 사용자가 진단만으로 안다는
+것을 이 실행은 보이지 못한다.** 발견 가능성 축이 여기서도 같은 방식으로 소진됐다 —
+지목이 아니라 **관찰 표면**이 먼저 답했다.
+
+#### `#1961`은 이미 착지해 있었고 이 샌드박스가 그것을 실은 첫 실행이다
+
+orphan 검사는 `b545100a` (2026-08-18 09:26:56, `campaign(benchmark-friction) … #1988`)에
+들어왔고 이 샌드박스의 tarball은 **3분 뒤 09:29**에 팩됐다. 검사 자신의 JSDoc이
+probe 2의 답을 이미 적어두고 있다:
+
+> Measured on a real replacement, five starter records (four models and a formation)
+> were restored into a finished production and `compile` returned success with zero
+> diagnostics while building them into that production's `generated` output.
+> Nothing was wrong with them; they were simply somebody else's film, and no
+> diagnostic can say so.
+
+`test/src/features/cli/test_cli_scaffold_design_residue.ts`가 같은 측정을 담고
+*"They reference only each other, so no dangling-citation refusal can reach them"*
+이라고 적는다. **따라서 「다른 resident 레코드만 참조하는 레코드는 compile이 조용히
+통과시킨다」는 미확인 항목은 저장소가 이미 측정해 둔 것이고, emitter의 거절이 그 답으로
+만들어진 수정이다.** 남는 조건은 하나뿐이다 — **그 거절은 `design`을 돌려야만 나온다.**
+
+#### 새로운 오염 형태 — 형제 저장소 에이전트가 샌드박스에 손으로 써 넣는다
+
+핸드오프 11절은 공유 checkout의 **브랜치 이동**이 tracked 편집을 지운다고 적었다.
+이번에 잡힌 것은 반대 방향이다: **저장소 쪽 에이전트가 자기 진행 중 변경을 내 샌드박스에
+복사해 넣었다.**
+
+설치된 tarball 스캐폴드와 다르면서 **저장소 작업 트리와 바이트 동일한** 샌드박스 파일이
+정확히 셋이다.
+
+| 파일 | 샌드박스 mtime | 대응 커밋 |
+| --- | --- | --- |
+| `viewer/src/film.ts` | 14:12:43 | `85888669` #2002 (14:02:44) — 무해 |
+| `viewer/src/subject.ts` | **14:42:11** | `f4fd388e` #2009 (15:02:56) |
+| `viewer/subject.html` | **14:42:11** | 같은 커밋 |
+
+뒤의 둘은 **32 ms 차이**로 들어왔고 #2009이 바꾼 파일 **정확히 그 둘**이다. 그 변경은
+engine `#2005`(`4a2ea0e8`, 14:33)의 세 번째 인자를 요구하는데 **이 샌드박스의 engine
+tarball은 09:29 팩이라 그것이 없다.** 결과가 실측됐다 — 06:59:27Z에 `npm run lint:source`가
+exit 2로 죽는다.
+
+```
+viewer/src/subject.ts:551:61 - error TS2554: Expected 2 arguments, but got 3.
+    answer = describeAutoMovieSubject(artifact, compiledId, { memberOffset });
+```
+
+**저작자가 쓴 파일이 아니다.** rollout 4,258줄 전체에서 `viewer/` 아래를 겨눈
+`apply_patch`가 **0건**이고, 저작자의 유일한 viewer 접촉(03:51:46Z)은 **설치된 tarball
+스캐폴드에서 샌드박스로 되돌려 복사**하는 방향 — 즉 2인자 판을 쓰는 쪽이다. 저작자 자신도
+06:59:49Z에 *"That file is outside the production source I changed"*라 적었고, 턴 4
+체크포인트에서 *"I did not author or overwrite that file"*로 다시 적었다.
+**독립적으로 같은 결론에 도달했다.**
+
+**제품 결함이 아니다.** 저장소 CI에 `internals/scaffold-evidence-gate.mjs`가 있고, 그것은
+스캐폴드 `tsconfig.json`의 `include`를 **통째로**(`viewer/src` 포함) 빌드된
+`packages/*/lib/index.d.ts`에 대고 컴파일하며, 두 커밋이 올바른 순서로 착지했으므로
+저장소는 일관됐다. **실행의 조건으로 기록한다** — 그리고 이것이 「샌드박스가 저장소 안에
+살면 자기 실험과 무관한 이동을 겪는다」의 **세 번째 형태**다: head 이동, 브랜치 이동,
+그리고 **남의 손 패치**.
+
+**교훈이자 값싼 계측.** 샌드박스 파일을 **설치된 tarball 스캐폴드**와 대조하면 이것이
+한 번에 보인다. `node_modules/@automovie/cli/scaffold/**`는 그 프로젝트가 무엇으로
+태어났는지에 대한 **저장소와 무관한 기준선**이고, 거기서 벗어난 파일은 저작자 아니면
+침입자다. 저장소 작업 트리와 대조하는 것으로는 이것을 가릴 수 없다 — 침입자의 출처가
+바로 그 작업 트리이기 때문이다.
+
 ---
 
 ## 1. 정체
