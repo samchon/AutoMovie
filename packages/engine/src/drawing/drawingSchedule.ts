@@ -200,6 +200,36 @@ export const deriveAutoMovieDrawingSchedule = (props: {
               "run a traversal analysis once one exists; do not read a scheduled stair as a stair somebody can climb",
           },
   );
+  if (subject === "space")
+    gaps.push({
+      // The other half of what a room row does not state, and the half nothing
+      // said out loud. `space-fit-out` covers what stands IN a room; this
+      // covers what encloses it, which the record can express and this schedule
+      // does not read. Two `#1954` productions assigned every floor slab to a
+      // storey rather than to the rooms it covers — correct by the record's own
+      // rule, since a slab between two storeys belongs to neither room alone
+      // and a room's contents are what stands in it rather than what covers it
+      // — and a room whose ceiling was owned elsewhere on purpose then read
+      // exactly like a room with no ceiling at all. `building:report` exited 0
+      // with thirty-odd declared gaps naming none of it while the reflected
+      // ceiling plan drew over a thousand lines.
+      //
+      // Declared rather than gated, and the remedy points at a query rather
+      // than at a check, because `IAutoMovieBuiltBoundary.kind` is documented
+      // as an OPEN label: a third production spells its separations
+      // `interior-partition` and `floor-opening` without being wrong, so a
+      // derivation scanning for `"ceiling"` would find none and conclude
+      // confidently. That is the same shape as the occlusion ratio this product
+      // already declares unmeasured while naming the inspection that answers
+      // it: state what is not derived, and name what the reader can ask
+      // instead.
+      subject: "space-enclosure",
+      status: "unsupported",
+      reason:
+        "a room row states what stands in the space and what it connects to, and nothing about the boundaries that enclose it, so a room bounded by nothing reads exactly like a room whose bounding surfaces are owned by its storey",
+      remedy:
+        "ask `builtEnvironmentSpaceBoundaries` for the boundaries a space is named on and read their kind and realizing elements; do not read an absent enclosure row as an unenclosed room, and do not scan the kind for a fixed word, because it is an open label",
+    });
   if (subject !== "space")
     gaps.push({
       // The requirement asks every subject for a location. A room answers with
