@@ -25,6 +25,12 @@ import { productionFixture } from "./productionFixtures";
  * alone collapses it. Measured against the wording this replaced, the run falls
  * from 108 characters to 49 and stops naming the record at all.
  *
+ * One phrase is quoted, `compiler-owned design record`, and it is the layer's
+ * own name rather than a sentence. Without it the run could shrink to shared
+ * boilerplate such as the closing instruction to compile again and still pass,
+ * so the anchor is what keeps the run meaning what its name says. Renaming the
+ * layer is a semantic change and is meant to be read here.
+ *
  * Scenarios:
  *
  * 1. One production whose index declares neither the scene nor the claim its
@@ -87,11 +93,22 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
             ),
         ],
         [
+          // Computed from one of each and then required of all of them, so a
+          // template split per owner kind cannot leave half the population
+          // drifting behind the half this fact happened to sample.
           "the clause the two share names the compiler-owned design record",
-          () =>
-            longestCommonRun(scene[0]!.message, claim[0]!.message).includes(
-              "compiler-owned design record",
-            ),
+          () => {
+            const shared = longestCommonRun(
+              scene[0]!.message,
+              claim[0]!.message,
+            );
+            return (
+              shared.includes("compiler-owned design record") &&
+              [...scene, ...claim].every((diagnostic) =>
+                diagnostic.message.includes(shared),
+              )
+            );
+          },
         ],
       ]),
       {
