@@ -961,3 +961,264 @@ EPERM: operation not permitted, mkdir
 > **방법 교훈: `EPERM` 문자열 하나로 우회 실패를 결론낼 뻔했다.**
 > 갈라준 것은 **같은 문자열이 이전 턴 로그에 있는지**를 먼저 본 것이다.
 > **새 증상처럼 보이는 것은 변경 전 로그와 대조하기 전까지 새 증상이 아니다.**
+
+## 턴 11 — 문 배송, 그리고 **차단 해소가 끝까지 증명됐다**
+
+26.6분, `FCH_EXIT=0`, `task_complete` 11, 루트 `codex.exe` 38188 소멸. 세 신호 일치.
+
+**우회는 end-to-end로 증명됐다:** 에이전트가 `design` 1회 · `compile` 2회 ·
+`building:report` 3회 · 렌더 15장 · 영수증 15건을 **전부 통과**시켰다.
+턴 11 로그에 `automovie-root-locks` 언급 **0건**, `commitLock` **0건**, 락 거절 **0건**.
+턴 9·10에서 불가능했던 것이 전부 됐다.
+
+### 조율자가 먼저 원한 답 — **게이트는 시험되지 않았다**
+
+| 로그 줄 | 사건 |
+| --- | --- |
+| **1618** | 에이전트가 `surveyPlan.ts:75`를 실제 패널로 **고침** |
+| 10860 | `design` 최초 실행 |
+| 11545 | `compile` 최초 실행 |
+
+**고침이 게이트보다 9,000줄 앞선다.** 즉 **내 trace가 게이트가 볼 기회를 없앴다.**
+
+- **trace는 옳았다** — 에이전트가 "Your stale-subject trace was correct"라 적고 고쳤다.
+- **게이트가 그것을 잡는지는 실행으로 증명되지 않았다.** `unverified`로 남긴다.
+- **코드로 말할 수 있는 것까지만:** `realizeShotContract.js`가 subject마다 `try`로 풀고,
+  풀리지 않으면 `resolvedSubjects`가 증가하지 않으며, `passed`는
+  `resolvedSubjects === requiredSubjects.length`를 요구한다(:383). **조용히 통과하지는 않는다.**
+  다만 그것이 `compile`의 종료 코드로 어떻게 매핑되는지는 **내가 실행하지 않았다.**
+
+> **방법론적 긴장을 그대로 기록한다.** trace를 준 것은 프로덕션에 옳았고
+> (에이전트가 즉시 고쳤다) **바로 그래서 이 실행이 만들 수 있었던 가장 깨끗한 증거를 없앴다.**
+> 관측자가 개입하면 관측 대상이 바뀐다 — 이 벤치마크에서 그것이 실측된 첫 사례다.
+
+### 그러나 **게이트는 다른 것을 잡았다** (이쪽은 실행으로 증명됨)
+
+에이전트 보고: **첫 성공한 compile이 shot 조립이 저작된 service network를 떨어뜨린다는 것을
+드러냈고, building report가 정직하게 0을 냈다.** `s1Survey.ts:44`가 이제 전달한다.
+**내 실측: 15개 shot 전부 `serviceNetworks` 길이 1.** 게이트가 실제 결함을 잡은 실행 증거다.
+
+### 검증 — 아홉 턴 연속 정확
+
+| 저작자 신고 | 내 실측 |
+| --- | --- |
+| fingerprint `sha256:68e72ba1…` | **바이트 일치** |
+| 312 element / 14 space / 35 boundary / 14 opening / 10 connector | **전부 일치**, 15 shot **동일 서명 1개** |
+| 후면 커튼월 자손 37 | **일치** (턴 10에 검증 불가였던 주장이 이제 확인됨) |
+| 문 8개 채움 · 진짜 doorway 2개 | **일치** — `kind:"door"` 8개가 **전부** fill 보유 |
+| 프레임 다이제스트 6건, 1280×720 | **6/6 바이트 일치** |
+| compile revision 125 | 내 측정 **140** — **불일치 아님**: 140−125 = **15** = 렌더 영수증 수 (커밋 카운터 모델) |
+
+**`kind:"door"`이면서 `fill:null`이던 하나가 닫혔고**, doorway 7개가 문으로 승격,
+2개(entry–stair, entry–common)는 **의도적 개방**으로 남았다 — 내가 "어느 것이 문인지는
+네가 프라이버시에서 유도하라"고 넘긴 판단을 그대로 수행했다.
+
+### 계측기 실패 여덟 번째 — **또 나다. 비교 대상 0개에 자신 있게 답했다**
+
+다이제스트 검증기가 `manifest.json`과 **같은 디렉터리**의 PNG만 훑었다.
+실제 PNG는 `preview/` 하위에 있고 경로는 매니페스트의 `frames[].path`가 갖는다.
+**스크립트는 0개를 해시하고 5건 전부 `NOMATCH`를 냈다.**
+
+**아홉 턴 연속 정확했던 에이전트를 "다섯 건 전부 불일치"로 보고할 뻔했다.**
+`steering.md`가 이 실패에 대해 적은 처방이 정확히 이것이다 —
+**"계측기가 자기 입력 수를 말하게 하고, 0을 결과가 아니라 실패로 다뤄라."**
+고친 검증기는 `comparands hashed: 6`을 함께 찍는다. **0이었으면 결과가 아니라 무효다.**
+
+### 프레임을 직접 봤다 — 그리고 남은 S2 항목이 눈에 보인다
+
+상층 복도 프레임: **목재 문짝·문틀·경첩·검은 레버 손잡이**가 실제 기하로 서 있다.
+레퍼런스 5의 건축 언어와 일치한다. **문이 개구부가 아니라 문이 됐다.**
+
+> **그런데 같은 프레임에서 천장이 새까맣다.** 벽은 조명을 받는데 천장만 검은 판이다.
+> **에이전트의 3번(천장에 방 단위 소유자 없음)이 이제 실내에서 가장 눈에 띄는 결함이고,
+> 프레임이 그것을 증명한다.** 다음 턴의 단일 산출물은 이것이다.
+
+### 에이전트가 남긴 것 (자기 신고)
+
+- **천장이 유일하게 남은 재개 S2 항목.**
+- **opening schedule이 operation·hardware·rating을 표현하지 못한다** — 컴파일된 문짝은
+  개폐 상태와 가시 하드웨어를 담는데 스케줄이 그것을 실을 자리가 없다. **제품 한계**로 신고.
+  declared gap이 36 → **37**로 오른 것도 서비스 네트워크가 보이게 되면서 욕실 방수 구역
+  시뮬레이션 한계가 드러났기 때문이다 — **제품이 자기 한계를 스스로 늘려 신고한다.**
+- upper-storage 프레임이 라이저 헤드 2개에 대한 **약한 시각 증거**라고 스스로 밝힘.
+
+### 순서 규칙의 첫 적용 — **게이트를 먼저 돌리고 나서 말했다**
+
+턴 11의 교훈("관측자가 개입하면 관측 대상이 바뀐다")을 규칙으로 만든 형태는
+**withholding이 아니라 순서**다: 게이트의 답이 필요하면 **메시지를 보내기 전에 돌린다.**
+턴 12에서 처음 적용했다.
+
+**무엇을 쓰고 있는지 먼저 판정했다.**
+
+| 잴 수 있는 것 | 상태 |
+| --- | --- |
+| "에이전트가 지목 없이 천장 문제를 찾아내는가" | **이미 쓰였다 — 에이전트가 자기 목록에서 먼저 올렸다.** 내가 쓴 것이 아니다 |
+| **"제품 게이트가 이것을 언급하는가"** | **미사용, 그리고 에이전트가 고치는 순간 영원히 사라진다** → **먼저 돌렸다** |
+
+**게이트의 답 (저작 전에 포착, 이것이 이 항목의 핵심이다):**
+
+| 계측 | 값 |
+| --- | --- |
+| `building:report` | **exit 0**, 선언된 격차 **37건** |
+| 그중 천장을 언급하는 것 | **0건** |
+| `house-ceiling.svg` | **채워져 있다** — 2.4 m의 reflected-ceiling-plan, `<line>` **1,124개** |
+| 대조군 `house-plan.svg` | `<line>` **640개** |
+| 방이 소유한 천장 요소 | **0개** |
+
+**제품은 이 집의 천장 도면을 가득 그리면서 아무것도 빠졌다고 선언하지 않는다.**
+
+**아티팩트 실측 (부재는 잰 것을 이름 댄다):** 슬래브류 6개
+(`ground-floor-slab`, `upper-floor-slab-*` 3, `upper-floor-slab-front-landing`, `roof-slab`)가
+**전부 `model: "s1-floor"`**를 쓴다. 상층 슬래브의 `space`는 **`upper-floor`(층)**,
+`roof-slab`은 **`space: null`**. 방 11개 중 천장 표면을 소유한 곳은 **없다**.
+소스에서 천장을 언급하는 유일한 파일은 `houseLighting.ts`이고 **좌표로만**
+(`ceilingOffset`·`ceilingY`, 조명을 그 아래 두려고) 쓴다.
+`HOUSE_SURFACE_OWNERS` 26개(그중 room 11개)에 **천장 소유자 없음.**
+
+> **이 실행이 얻은 가장 값진 비대칭:**
+> **도면 6장 · 선언된 격차 37건 · 초록 compile이 전부 침묵했고, 프레임 한 장이 즉시 말했다.**
+> 상층 복도 프레임에서 천장이 **새까만 평면**으로 읽히는데 양쪽 벽은 조명을 받고
+> 새 문짝·경첩·레버가 같은 이미지에서 또렷하다.
+> **제품의 자기 신고가 정직하다는 이 기준선의 판정은 유지된다 — 다만 그 정직함은
+> 수량·스터디 축에 있고, 저작 분해(누가 무엇을 소유하는가) 축에는 게이트가 없다.**
+
+턴 12 발사 17:46:49, 루트 `codex.exe` **37080**, 단일 산출물 **천장** — 이것으로 S2가 닫힌다.
+
+### #2035 — "지목 없는 선택"은 **이미 소진돼 있었다** (턴 9에, 내가 아니라 대화가)
+
+조율자가 "에이전트가 지목 없이 room 소유를 택하는가 storey 슬래브를 택하는가"를
+잡아두라고 했다. **그 측정은 이미 없다. 정확히 언제 사라졌는지 인용으로 남긴다.**
+
+| 시점 | 문장 | 누가 |
+| --- | --- | --- |
+| 턴 9 메시지 | "the shell authors the structural slab with a generic floor material and **no room-owned ceiling surface**" | **드라이버(전임)** |
+| 턴 9 답변 | "Ceilings have **no room-level owner**… **no room owns** a ceiling/soffit surface or finish" | **에이전트** |
+| 턴 10 메시지 | "your items one, two and three: …, **ceiling ownership**" | 드라이버 |
+| 턴 12 메시지 | "`HOUSE_SURFACE_OWNERS` has 26 entries including **11 room owners**, and none of them owns a ceiling" | 드라이버(나) |
+
+**room 프레이밍은 세 턴 전부터 양쪽에 있었다.** 턴 12가 그것을 소진한 것이 아니라,
+**턴 12는 이미 소진된 것을 다시 말했을 뿐이다.** 그러므로 이 턴에서
+"room이냐 storey냐"의 지목 없는 신호는 **얻을 수 없다 — `n/a`, 사유: 사전 소진.**
+
+> **이것이 순서 규칙의 두 번째 교훈이다.** 규칙을 지킨 그 턴에 규칙을 적용해도,
+> **측정은 그보다 앞선 턴에서 이미 지불됐을 수 있다.** 무엇을 쓰는지 판정할 때
+> **이번 메시지만이 아니라 대화 전체를 봐야 한다.** 나는 턴 12에서 게이트를 먼저 돌렸고
+> 그것은 옳았지만, 같은 문단에서 이미 죽은 측정을 살아 있다고 셀 뻔했다.
+
+### 그래도 지목되지 않은 것 — **어떻게** 구현하는가 (진행 중 스냅샷)
+
+내 턴 12 메시지에 구현 지시는 **없다**(지시 어법 검색 0건). 그래서 아래는 실제로 지목 없는 선택이다.
+
+> **주의: 이것은 진행 중 스냅샷이지 결과가 아니다.** 이 기준선이 같은 실수를 세 번 저질렀다.
+> 경계에서 재검증한다.
+
+| 선택 | 에이전트가 한 것 |
+| --- | --- |
+| 새 owner 모듈을 만들까 | **아니다** — `HOUSE_SURFACE_OWNERS`는 **26 그대로** |
+| 11개 방에 레코드를 복사할까 | **아니다** — `houseDimensions.ts`(cross-cutting)에 **규칙 하나** `roomCeilingElement()`를 두고 11개 room 모듈이 부른다 |
+| 바닥 모델을 재사용할까 | **아니다** — 새 모델 **`s2-ceiling`** "Room-owned warm-white ceiling finish" |
+| 두께·높이 | `HOUSE.ceilingFinish = 0.04`, `roomCeilingY(parent)` — **층 datum에서 유도** |
+| 조명과의 관계 | 같은 datum을 **luminaire와 공유**("shared by room surfaces and luminaires") — `houseLighting.ts`도 함께 수정 |
+
+**즉 S3의 종료 조건("반복 요소를 복사 레코드가 아니라 측정과 규칙으로")을
+S2 항목에 스스로 적용했다. 아무도 그렇게 하라고 하지 않았다.**
+
+### 가장 중요한 관측 — **에이전트가 제품에 없는 게이트를 자기 프로덕션에 지었다**
+
+`houseOwnership.ts`에 추가된 불변식:
+
+```ts
+if (roomOwners.has(output.owner)) {
+  const ceilings = (output.elements ?? []).filter(e => e.kind === "room-ceiling-finish");
+  if (ceilings.length !== 1) throw new Error(`room owner "${output.owner}" must emit exactly one ceiling`);
+  if (ceilings[0]!.space !== output.owner) throw new Error(`room owner "${output.owner}" owns ceiling for "${ceilings[0]!.space}"`);
+}
+```
+
+**제품의 `builtEnvironmentUnclaimedElements`는 `space !== null`이면 claimed로 본다 —
+storey가 그 조건을 만족시키므로 두 번째 질문을 하지 않는다**(조율자가 소스에서 확인).
+**에이전트의 검사는 정확히 그 두 번째 질문을 한다: `space`가 *그 방*인가.**
+
+> **#2035의 remedy는 열려 있고 나는 그것을 닫지 않는다.** 다만 이 실행은
+> 조율자가 열거한 선택지 중 하나("방이 자기 경계 표면을 이름 대게 하는 저작 시점 요구")가
+> **실현 가능하다는 존재 증명**과 **그것이 어떤 모양인지**를 함께 내놓았다.
+> 저작 에이전트 한 명이 지목 없이 그 게이트를 지었다는 것 자체가 remedy 논의의 입력이다.
+
+## 턴 12 — 천장 배송, **S2가 닫혔다** (Codex 세션의 마지막 턴)
+
+세 신호 일치: 루트 `codex.exe` 37080 소멸 · rollout 정체 · `FCH_EXIT=0` · `task_complete` 12.
+**쿼터 소진으로 중단된 것이 아니라 정상 완료했다** — 전환은 그 다음에 왔다.
+
+| 저작자 신고 | 내 실측 |
+| --- | --- |
+| 방마다 천장 1개 | **11개 방 전부, 15 shot 동일 서명 1개** (`323 elements \| 11 ceilings \| 11 room-owned \| 11 rooms`) |
+| 요소 312 → 323 | **일치** |
+| revision / fingerprint | **165** / `sha256:d3f4b5eb…` |
+
+`entry-ceiling`·`flex-workroom-ceiling`·`common-room-ceiling` … 각각 `kind:"room-ceiling-finish"`,
+`space:` **자기 방**, `model:"s2-ceiling"`.
+
+**저작자가 자기 보고서에 스스로 적은 것 (내가 묻지 않았다):**
+> "the generic building report remains unable to diagnose absent room ceilings.
+> The production-specific ownership gate now catches this house, but the
+> product-level 37-gap report remains silent."
+
+**`#2035`를 저작 에이전트가 독립적으로, 자기 관점에서 확인했다.**
+
+### 라운드 8 — Codex 시대의 마지막 동결 상태
+
+`design` exit 0 (3초, unowned 0) · `compile` exit 0 (26초) · `review:status` exit 1 (31초) ·
+`building:report` exit 0 (19초). 아티팩트 **439**, CHANGED 26 / ADDED 106 / REMOVED 0.
+
+## 저작 에이전트 교체 — Codex → Claude Sonnet 5 (사용자 지시, 쿼터 소진)
+
+새 세션 UUID `26c72553-643b-471a-9c85-89ad4795b88d`, 같은 샌드박스·같은 프로덕션.
+**`codex exec` 턴을 더 시작하지 않았고 어떤 codex 프로세스도 죽이지 않았다.**
+
+### **가장 비싼 함정 — 락 우회를 그대로 가져왔으면 제품 표면이 통째로 사라졌다**
+
+`#2012` 우회(`USERPROFILE`/`HOME`을 샌드박스 안으로)를 새 에이전트에도 쓰려다 **먼저 쟀다.**
+
+| 프로브 | 결과 |
+| --- | --- |
+| `CLAUDE_CONFIG_DIR`를 딴 곳으로 | `automovie: **⏸ Pending approval**` — 사용자 서버 3개도 사라짐 |
+| **`USERPROFILE`/`HOME`을 샌드박스로** | **`automovie: ⏸ Pending approval`** — 동일 |
+| **아무 것도 안 바꿈 (실제 채택)** | **`automovie: ✔ Connected`** |
+
+**즉 Claude Code의 승인 상태는 사용자 config(`~/.claude`)에 산다.** home을 옮기면
+프로젝트의 `enableAllProjectMcpServers: true`가 있어도 **승인이 따라오지 않는다.**
+
+> **한 에이전트를 위한 치료가 다음 에이전트를 부수고, 그 부서짐이 "에이전트가 도구를
+> 안 썼다"와 **완전히 동일하게 보인다**. 세션은 정상 종료하고 그럴듯한 보고서를 낸다.
+> **`#2034`("치료가 다음 실패를 제조한다")의 두 번째 실측 사례이고, 이번에는 발사 전에 잡았다.**
+
+**그리고 우회 자체가 불필요했다:** Claude Code는 좌표 루트를 소유한 계정으로 돈다.
+라운드 8이 override 없이 `design`·`compile`·`review`·`building`을 전부 통과시켰다.
+**두 계정 분단은 Codex 샌드박스의 산물이지 제품의 상수가 아니다** — `#2012`은 여전히 열려 있으나
+**이 사용자 계정에서는 발화하지 않는다.**
+
+### Claude 세션의 계측기 (rollout에 대응)
+
+| 신호 | 어디 |
+| --- | --- |
+| 성장 | `~/.claude/projects/D--github-samchon-automovie-experimental-future-citizen-house/<uuid>.jsonl` |
+| 프로세스 | `sh.exe` → **`claude.exe`** (내 것: 12528, 18:27:20) |
+| 완료 | 런처의 `SONNET_EXIT`. **`claude -p`는 출력을 버퍼링하므로 로그는 끝날 때까지 0바이트** — 로그 크기는 진행 신호가 **아니다** |
+
+> **함정 1이 또 재현됐다.** UUID로 프로세스를 찾으니 **내 질의 프로세스 4개**
+> (`bash.exe`·`powershell.exe`, 질의 시각 생성)가 함께 잡혔다. 실제 사슬은
+> `sh.exe 24528`/`40244` → `claude.exe 12528`뿐이다.
+
+### 인계 브리프 — **사적인 것을 하나도 담지 않았다** (측정 가능하게)
+
+원 브리프의 계약(주제·고정 공간 그래프·단계 사다리·레퍼런스·경계)만 담고,
+**이전 저작자가 무엇을 했는지·무엇을 의도했는지·내 노트·기준선·내가 발견한 것은 전부 뺐다.**
+검증: 브리프의 `ceiling`·`mullion`·`transom`·`door`·`service`·`lighting`·`canopy`·`revision`
+**8개 단어 전부가 원 브리프에도 존재**한다(단계 목록 문구). 내 지식에서 온 단어 0개.
+
+요구한 것은 하나다 — **프로젝트 자신의 명령·출력·소스만으로 현재 상태를 스스로 세우고,
+확신한 것과 확정 못 한 것을 나누어 보고하라.** 그다음 자기 판단으로 한 산출물.
+
+**이것이 이 샌드박스가 턴 1 이후 처음 얻는 미소진 측정이다:**
+새 에이전트는 아무것도 듣지 않았으므로 **천장·소유권·분해에 대해 스스로 제기하는 것은
+전부 지목 없는 신호다.** 그래서 브리프를 쓰기 **전에** 게이트(라운드 8)를 먼저 돌렸다.
