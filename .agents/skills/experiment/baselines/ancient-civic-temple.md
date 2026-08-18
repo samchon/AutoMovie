@@ -960,6 +960,56 @@ box가 **등판 때문에 바닥에서 1.8 m까지** 뻗어서, 그 안의 어�
 놓쳤을 것이다. **두 독립 검사가 일치했기 때문에** 도구 한계라고 부를 수 있었다 — 이 기준선이
 계측기에 대해 요구하는 규율이 저작자 쪽에서 독립적으로 나온 두 번째 사례다.
 
+#### 고리가 닫혔다 — 저작자가 **거부한 지시**가 제품 변경으로 끝났다
+
+이 실행에서 가장 긴 인과 사슬이고, 시작점이 **저작자의 거부**였다는 점이 값지다.
+
+| 시점 | 상태 |
+| --- | --- |
+| S2 종료 | 개구부 16개의 `place`가 전부 `null`. 제품이 `opening-location`을 **`not-run`**으로 선언하고 remedy가 저자에게 *"then fill the row's place"*라고 지시 |
+| 저작자 | **지시를 거부했다** — *"the schedule schema does not project them. I did not invent a parallel schedule."* |
+| 드라이버 | 거부를 검증했다. 엔진 row builder의 return **8개 전부가 `place: null` 하드코딩**, space 행만 채운다. **저작자가 옳았다** |
+| 발행 | 타입 계약이 오분류를 판정 — `not-run`은 "derivation은 있고 입력이 없다"인데 derivation 자체가 없었다. 같은 함수가 20줄 옆에서 `unsupported`를 **옳게** 두 번 쓴다 |
+| 수정 1 | `status`가 `unsupported`로, remedy가 저자가 아니라 제품을 향하게 |
+| **수정 2 (최종)** | **gap이 은퇴했다 — 문구 수정이 아니라 제거.** `place`가 subject별 변형을 갖는 discriminated union이 되고 행이 실제 데이터를 싣는다 |
+
+재팩 뒤 내가 직접 읽은 것:
+
+```json
+"place": { "kind": "opening", "building": "temple",
+           "boundary": "boundary-offering-colonnade",
+           "separates": ["colonnade", "communal-offering-room"] }
+"place": { "kind": "connector", "building": "temple",
+           "stops": ["colonnade", "service-yard"] }
+```
+
+`opening-location`과 `connector-location`은 스케줄에서 **0건**이다.
+gap 총계는 한 개 들어오고 두 개 나가서 6 → **5**.
+
+**교훈은 관측이 아니라 분업에 있다.** 저작자가 따를 수 없는 지시를 받았을 때
+(a) 억지로 따르거나 (b) 조용히 넘기지 않고 **근거를 대고 거부했다.** 드라이버는
+그 거부를 중계하지 않고 **소스에서 검증**했다. 그 두 단계가 없었으면 이 사슬은
+"저작자가 S2 gap을 안 닫았다"로 기록됐을 것이다.
+
+**드라이버 지침의 「저작자는 증거가 주장보다 약할 때 반박할 것으로 기대된다」가
+실제로 산 것이 이것이다.**
+
+#### 재팩 검증 — 16개 머지 (2026-08-19 00:2x)
+
+`lib/*.js`에서 직접: `builtEnvironmentSpaceBoundaries`가 engine lib 3개 파일 +
+**컴파일 샌드박스 표면**(`sandboxEngineBridge.js`, `sandboxEngineSurface.js`)에 노출,
+`kind: "opening"` 1, `space-enclosure` 1, `opening-location` **0**,
+`AUTOMOVIE_COORDINATION_ROOT` 6. tarball 00:23–00:25.
+
+**turn 6 before-side를 재팩 뒤·정착 컴파일 뒤·저작 전에 떴다** (혼동 방지):
+revision **472**, 프레임 경로 **172**, 샷 digest **13**, 파생 파일 **188**, src 37.
+직전 비교 기준(162 / 12 / 177 @ r430)은 이제 **단계 표식**이지 재팩 비교 대상이 아니다.
+
+**`space-enclosure`는 저작자에게 예고하지 않았다.** 그 remedy가 검사가 아니라 **질의**를
+이름 대므로, 저작자가 그것을 *닫을 과제*로 읽는지 *적어둘 선언*으로 읽는지가 관측이다.
+규칙: **오독이 턴을 잡아먹으면 미리 알리고, 읽는 방식 자체가 측정이면 알리지 않는다.**
+(`generated-stale`은 전자여서 매번 알렸고, 이것은 후자다.)
+
 ---
 
 ## 1. 정체
