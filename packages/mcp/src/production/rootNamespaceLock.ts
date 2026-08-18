@@ -3,7 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import {
+  acquireCommitLock,
+  describeCommitLockHolder,
+  inspectCommitLock,
+  releaseCommitLock,
+} from "../project/commitLock";
 import { compareCodeUnits } from "./contentIdentity";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 
@@ -136,8 +141,39 @@ const acquireCoordinates = (
     return leases;
   } catch (error) {
     for (const lease of leases.reverse()) releaseCoordinate(lease);
-    throw error;
+    throw contendedCoordinatesError(paths, error);
   }
+};
+
+/**
+ * The refusal a contended coordinate set ends with, naming every lock held.
+ *
+ * One abnormally ended session leaves a lock on each coordinate it fenced — the
+ * measured case left three, across the user-global coordination root and the
+ * in-tree revision lock together — and an acquire fails on whichever it reaches
+ * first. A caller told about only that one clears it, retries, pays another full
+ * timeout, and is refused by the next, with nothing anywhere saying a set
+ * exists. Three rounds of that read as a fix that did not work.
+ *
+ * The survey costs one stat per coordinate, at the moment the operation is
+ * already failing, and it is skipped entirely when at most one is held, because
+ * then the underlying refusal already says everything there is to say.
+ */
+const contendedCoordinatesError = (
+  paths: readonly string[],
+  cause: unknown,
+): unknown => {
+  const holders = [...new Set(paths)]
+    .sort(compareCodeUnits)
+    .map((lockPath) => inspectCommitLock(lockPath))
+    .filter((holder) => holder !== null);
+  if (holders.length < 2 || cause instanceof Error === false) return cause;
+  return new Error(
+    `${cause.message}\n\nThis operation fences ${new Set(paths).size} coordinates and ${holders.length} of them are held, so clearing the one named above is not enough:\n${holders
+      .map((holder) => `- ${describeCommitLockHolder(holder)}`)
+      .join("\n")}`,
+    { cause },
+  );
 };
 
 const releaseCoordinates = (
