@@ -43,6 +43,24 @@ const REPORT = path.join(CACHE, "automovie-c8-report");
 export const coverageTemporaryDirectory = () =>
   path.join(CACHE, "automovie-c8", `${process.pid}-${crypto.randomUUID()}`);
 
+/**
+ * How many per-process coverage records a run left in its own directory.
+ *
+ * Counts the files V8 writes, one per process that exited under the collector,
+ * and nothing else: the directory is this run's alone, so anything that is not
+ * a record is not part of this measurement.
+ */
+export const coverageRecordCount = (directory) => {
+  try {
+    return fs.readdirSync(directory).filter((entry) => entry.endsWith(".json"))
+      .length;
+  } catch {
+    // A directory the run never created is zero records, which is exactly what
+    // a caller asking this question needs to be told.
+    return 0;
+  }
+};
+
 /** The measured set. One definition, so two runs cannot count different things. */
 const SOURCES = [
   "packages/archetypes/src",
@@ -119,6 +137,17 @@ const measure = () => {
       { cwd: ROOT, stdio: "inherit", shell: false },
     );
     if (result.error !== undefined) throw result.error;
+    // Printed because the report alone cannot say whether a low number means
+    // little ran or little was counted. One commit measured 813/813 tests
+    // passing and 141,395 statements instrumented on both platforms, and
+    // 118,208 statements covered on Ubuntu against 79,618 on Windows -- an
+    // identical denominator with a much smaller numerator, which is execution
+    // data collected and then not counted rather than positions mis-mapped.
+    // This line is what separates "not written" from "written and not merged",
+    // and it costs one directory read on a step that already took minutes.
+    console.log(
+      `coverage records: ${coverageRecordCount(temporary)} in ${temporary}`,
+    );
     process.exitCode = result.status ?? 1;
   } finally {
     // Leaving it behind is the stale half of the defect this file exists to fix.
