@@ -35,7 +35,7 @@ const at = (position: IAutoMovieVector3): IAutoMovieTransform => ({
  * travel a shot exceeds.
  *
  * The geometry is two boxes and is meant to be replaced. Every measurement
- * below answers to `settings/030-gate.md`; the boxes answer to nothing, which
+ * below answers to `docs/settings/030-gate.md`; the boxes answer to nothing, which
  * is the difference between an object and a piece of scenery somebody typed.
  *
  * No shot in this starter stages it yet, which is the one thing to fix first

@@ -122,7 +122,7 @@ export class Chorus extends AutoMovieSubjectGroup<
     const slots = this.ranks * this.files;
     if (this.count <= slots - this.files || this.count > slots)
       throw new Error(
-        `settings/020-chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
+        `docs/settings/020-chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
       );
     return {
       id: this.id,

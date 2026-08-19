@@ -232,7 +232,12 @@ it is never asked to carry a parent of its own.
 ```
 
 Markdown targets resolve against `docs`, so a document names `settings/040-plaza.md`
-rather than `docs/settings/040-plaza.md`. A principle is targeted by its anchor,
+rather than `docs/settings/040-plaza.md`. That shortening belongs to targets and
+to nothing else. A path written in prose, in a JSDoc sentence, or inside a
+runtime message keeps its `docs/` prefix, because its job is not to resolve
+against a configured root but to be opened by whoever is reading it — a
+validator that refuses a count and names `settings/020-chorus.md` has sent its
+reader to a path that does not exist from where they are standing. A principle is targeted by its anchor,
 `principles/common.md#determinism`, because each rule is its own citable unit: a
 rule nothing acknowledges is one error naming that rule, not a whole document
 discharged by a single citation.
