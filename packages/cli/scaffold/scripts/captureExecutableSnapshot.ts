@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 export interface ICaptureExecutableSnapshot {
   descriptor: number;
@@ -229,6 +230,109 @@ const captureExecutableBytesIntact = (
  */
 export class CaptureExecutableInstructedError extends Error {}
 
+/**
+ * A refusal about bytes this project has already proven.
+ *
+ * Its subject is byte-for-byte the captured file; what moved is the
+ * filesystem's stamps, which say nothing about content. That is the shape of a
+ * virus scanner or a search indexer reading a browser that finished extracting
+ * a minute ago, and such activity is transient by nature: the scan ends.
+ *
+ * The separation from its parent is not stylistic, because the two readers of
+ * these refusals differ. A launch boundary refuses immediately, because it is
+ * about to hand an executable to the operating system and waiting would mean
+ * launching under an assumption it just declined to make. A diagnostic may
+ * wait: its whole job is to answer whether capture is ready, and "run me again"
+ * is a question rather than an answer. Callers separate the two by this type,
+ * for the same reason the parent states about its own wrappers.
+ *
+ * {@link observation} is the refusal without its instruction, so a caller that
+ * has already waited can say what it observed and then give a different
+ * instruction, instead of pasting a second one after the first.
+ */
+export class CaptureExecutableTouchedError extends CaptureExecutableInstructedError {
+  public constructor(
+    message: string,
+    public readonly observation: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * What is left to say once waiting has been tried and did not work.
+ *
+ * Reinstalling is still not the answer — the bytes were proven before the first
+ * wait — so the remaining causes are the ones that do not stop on their own.
+ */
+const PERSISTENT_INSTRUCTION =
+  "Exclude this directory from your antivirus and search indexer, or set capture.browser to a system channel in automovie.config.ts, then run npm run capture:doctor again.";
+
+export interface ISettledCaptureExecutable<T> {
+  /** Acquisitions spent, `1` when nothing was in the way. */
+  attempts: number;
+  value: T;
+  /** Milliseconds spent waiting between them, `0` on a first-attempt success. */
+  waitedMs: number;
+}
+
+/**
+ * Acquire something across ambient filesystem activity, or report that it did
+ * not end.
+ *
+ * This exists because a diagnostic that answers "run me again" has not
+ * answered. `capture:doctor` is the first gate a new project meets, one command
+ * after `capture:install`, which is exactly when a scanner is most likely to be
+ * reading a browser that finished extracting seconds ago — so the transient
+ * refusal lands on the reader least equipped to recognize it as transient, and
+ * the temptation the message spends a paragraph arguing against is to reinstall.
+ *
+ * Only {@link CaptureExecutableTouchedError} is waited on, and waiting accepts
+ * nothing: that class is only ever constructed after the captured bytes were
+ * rehashed and matched, so what is being waited out is the stamps settling, not
+ * a verdict softening. Every other failure, including changed bytes, is
+ * rethrown on its first appearance.
+ *
+ * Exhaustion is itself a finding rather than the same refusal repeated. Stamps
+ * that keep moving across a bounded wait are continuous activity, which is a
+ * different cause with a different remedy, so the last failure is replaced by
+ * one that says how long it was given and what to do instead.
+ *
+ * `wait` is a parameter so a test can measure this without spending the time.
+ */
+export const settleCaptureExecutableTouch = async <T>(props: {
+  acquire: () => Promise<T>;
+  attempts: number;
+  waitMs: number;
+  wait?: (milliseconds: number) => Promise<void>;
+}): Promise<ISettledCaptureExecutable<T>> => {
+  if (Number.isSafeInteger(props.attempts) === false || props.attempts < 1)
+    throw new Error("Capture executable settle attempt count is invalid.");
+  if (Number.isSafeInteger(props.waitMs) === false || props.waitMs < 0)
+    throw new Error("Capture executable settle wait is invalid.");
+  const wait = props.wait ?? delay;
+  let waitedMs = 0;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const value = await props.acquire();
+      return { attempts: attempt, value, waitedMs };
+    } catch (failure) {
+      if (failure instanceof CaptureExecutableTouchedError === false)
+        throw failure;
+      if (attempt >= props.attempts)
+        throw Object.assign(
+          new CaptureExecutableTouchedError(
+            `${failure.observation} Waiting did not help: ${attempt} acquisitions over ${waitedMs} ms each found the stamps moved again, so this activity is continuous rather than the tail of an install. ${PERSISTENT_INSTRUCTION}`,
+            failure.observation,
+          ),
+          { cause: failure },
+        );
+      await wait(props.waitMs);
+      waitedMs += props.waitMs;
+    }
+  }
+};
+
 const changedBytesFailure = (
   expected: ICaptureExecutableSnapshot,
 ): CaptureExecutableInstructedError =>
@@ -239,10 +343,13 @@ const changedBytesFailure = (
 const touchedWhileOpenFailure = (
   expected: ICaptureExecutableSnapshot,
   subject: string,
-): CaptureExecutableInstructedError =>
-  new CaptureExecutableInstructedError(
-    `Capture executable ${subject} "${expected.path}" is byte-for-byte the file this project captured, and its filesystem stamps moved while the descriptor stayed open, so something outside this project touched it mid-run; on Windows an antivirus or search indexer scanning a freshly installed browser is the usual cause. ${RETRY_INSTRUCTION}`,
+): CaptureExecutableTouchedError => {
+  const observation = `Capture executable ${subject} "${expected.path}" is byte-for-byte the file this project captured, and its filesystem stamps moved while the descriptor stayed open, so something outside this project touched it mid-run; on Windows an antivirus or search indexer scanning a freshly installed browser is the usual cause.`;
+  return new CaptureExecutableTouchedError(
+    `${observation} ${RETRY_INSTRUCTION}`,
+    observation,
   );
+};
 
 /** Revalidate the open executable descriptor and its resident pathname. */
 export const assertCaptureExecutable = (
@@ -423,10 +530,16 @@ const assertPhysicalDirectory = (
   // directory ever ceasing to be the one that was captured. That is the same
   // ambient activity the descriptor refusals classify, so it earns the same
   // instruction rather than a reinstall the reader has already performed.
-  if (current.real === expected.real && current.identity === expected.identity)
-    throw new CaptureExecutableInstructedError(
-      `${label} "${expected.path}" changed while this project held its executable open, so something outside this project wrote into it mid-run. ${RETRY_INSTRUCTION}`,
+  if (
+    current.real === expected.real &&
+    current.identity === expected.identity
+  ) {
+    const observation = `${label} "${expected.path}" changed while this project held its executable open, so something outside this project wrote into it mid-run.`;
+    throw new CaptureExecutableTouchedError(
+      `${observation} ${RETRY_INSTRUCTION}`,
+      observation,
     );
+  }
   throw new CaptureExecutableInstructedError(
     `${label} "${expected.path}" changed physical identity. Another directory now occupies that path. ${REINSTALL_INSTRUCTION}`,
   );
