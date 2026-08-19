@@ -43,7 +43,12 @@ than a heading inside one document that holds the whole film.
 | `docs/storylines/` | one file per sequence: what happens and why | its principles, and every setting it uses |
 | `docs/scenarios/` | one file per staged action, with entry and exit state | its principles, **exactly one** storyline, and the settings it rechecks |
 | `docs/script/` | one file per scene, as it will be shot | its principles, **exactly one** scenario, that scenario's storyline, and the settings it rechecks |
-| `src/shots/` | shot factories and the table | the script scenes they realize |
+| `src/shots/` | shot factories and the table | its principles, and the script scenes they realize |
+
+`docs/principles` does not stop at the script. `principles/subjects.md` binds
+every class under the four subject folders and `principles/shots.md` binds every
+shot, so the discipline the prose is written under reaches the source that
+implements it.
 
 `docs/research/` sits beside the ladder rather than on it: ledgers of what the
 world outside this production contains. Nothing above it commissions one,
@@ -250,6 +255,29 @@ Cite the nearest unit, not the most impressive one. A scenario cites its
 storyline, not the governing aim. Skipping a stage hides the gap the ladder
 exists to expose — except where the ladder asks for two parents on purpose, at
 the script.
+
+## A citation that expires
+
+Some references ask for more than a citation. Where one sets `requireReview`,
+the same documentation block must also carry
+`@evidenceReview <target> #<digest> <what you checked>`, and the digest is of the
+cited content as it stands. Move that content and the review stops matching:
+
+```
+Stale @evidenceReview for 'scenarios/001-cue.md' at docs/script/001-cue.md:8:
+the review names '#a43f23e' and that scope now digests to '#9315ff8'.
+```
+
+Expiry is the point. Without it a review is written once and stays green
+forever, and nobody can tell which reviews were written against content that has
+since moved. It is on the ladder's parent references and on the script-to-shot
+join, so changing a storyline re-opens the scenario that refines it, and
+changing a scene re-opens every shot that claimed to realize it.
+
+Write what you read or ran, not what you believe. The check proves a current
+statement exists; it does not prove anyone read the content, and it does not
+judge whether the sentence is sincere. That is why an untrue review is worse
+than a missing one.
 
 ## Refusing an obligation
 

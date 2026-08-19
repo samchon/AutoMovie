@@ -18,6 +18,36 @@ The tools are a knowledge and evidence boundary, not an authoring API. A client 
 
 When a client cannot author something it reasonably should, the answer is the missing engine or renderer capability plus the guide that teaches it, never a tool that produces the thing on the client's behalf. What this surface is for is delivering knowledge at the moment it is needed: a refusal carrying the name of the invariant it enforces, and a document the client can then read.
 
+## A claim the compiler can decide is not a review criterion
+
+Review is expensive: it costs frames, a worksheet, and an agent's judgment, and every one of its verdicts stales when anything upstream moves. So the boundary worth defending is not "what could a reviewer look at" but **what can only be settled by looking**.
+
+Two requirements already set that boundary, and they point the same way. `docs/requirements/story/coverage-and-acceptance.md#story-falsifiable-acceptance` asks a story success condition to carry a subject, a time or event, an observable state, and a failure condition, and forbids it ending in a bare evaluative word. `docs/requirements/story/scenes-and-observable-action.md#story-scene-observability` forbids resting acceptance on inner facts a camera cannot see. A claim that satisfies the first is, by construction, a predicate; a claim that needs the second is, by construction, pixels.
+
+Sort the current review surface by that test and it splits cleanly.
+
+| Kind | Criteria | Settled by |
+| --- | --- | --- |
+| `source` | `binding-and-exports`, `determinism`, `engine-enforcement`, `error-and-boundary-paths` | reading the module — no frames, and `REVIEW_DEPENDENCY` says so itself |
+| `design` | `identity-and-references`, `scope-and-ownership`, `constraints-and-ranges`, `downstream-consumability`, `acceptance-coverage` | the records and the prepare-time diagnostics |
+| `shot` | `acceptance-scenarios` | already the compiler's: `realizeShotContract` returns an explicit outcome per authored opening, closing, event, camera, actor, and formation predicate, and the worksheet only quotes it |
+| `shot` | `temporal-coherence`, `beat-fidelity` | partly the compiler's, once the claim is addressed and timed |
+| `shot`, `asset`, `subject`, `sequence`, `film` | readability, credibility, integrity, rhythm, tone | looking, and nothing else |
+
+The first three rows are work an agent is currently asked to certify by reading, and a compiler decides better: it does not tire, does not stale, and reports the exact figure that disagrees.
+
+The share is not marginal. Measured on a freshly generated production with `test/src/features/mcp/measureReviewQueueShape.ts`, the review queue holds 20 entries: 10 `design`, 4 `asset`, 2 `shot`, 2 `sequence`, 1 `source`, 1 `film`. **Eleven of the twenty are `design` or `source`** — the two kinds that return no frames at all. Fewer than half of a production's review obligations are about anything anyone has to look at.
+
+What stays is a real constraint rather than a leftover. `#story-falsifiable-acceptance` also requires that acceptance identify its **evaluating subject**, and that criteria never declare their own success. A compiled predicate satisfies that — the engine is not the author — but a silhouette that fails to read has no predicate, so its evaluator is an agent looking at a frame, and that verdict has to exist and be attributable. The tools keep producing those pixels; what shrinks is the set of questions a verdict is asked to answer.
+
+So when a review criterion keeps producing the same class of finding, the question is whether it is a diagnostic in the wrong place. Two are settled and one is measured:
+
+- **Settled and mechanized.** Acceptance outcomes are compiler-derived; the reviewer cites them rather than judging them.
+- **Settled and mechanized.** A duration written into scene prose must be one the realizing shot carries (`screenplay-scene-timing-unrealized`), which closed the last joint between the screenplay and the motion under it. Nothing read the prose before, so the shipped starter promised a 1.2 second hold beside a shot whose cue window closed at 3.0 of a 6.0 second scene, and every gate stayed green.
+- **Measured and open.** `determinism` is a named `source` review criterion with no mechanical enforcement anywhere: nothing refuses a wall clock, a filesystem read, or unseeded randomness inside a shot build function, so the criterion is discharged by an agent reading for it. That is a lint rule waiting to be written.
+
+This is not an argument for deleting review. It is the boundary that keeps review affordable: move every addressed, timed, observable claim into the compiler, and spend the frames on what only frames can answer.
+
 ## Server/tool arrangement is not settled
 
 How many servers, and how tools group across them, is a **standing design question, not a one-time decision**.

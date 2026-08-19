@@ -65,7 +65,12 @@ export class Chorus extends AutoMovieSubjectGroup<
     depth: 1,
   };
 
-  /** The deterministic seed every per-member variation is drawn from. */
+  /**
+   * The deterministic seed every per-member variation is drawn from.
+   *
+   * @evidence principles/subjects.md#build-is-pure Draws every per-member
+   *   variation from a declared seed, so two compiles agree.
+   */
   public readonly seed: number = 1415;
 
   /**

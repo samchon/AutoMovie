@@ -22,8 +22,8 @@ A production converges when each rung of definition answers for the one above it
 | Storylines | `docs/storylines/*.md` | its principles, and every setting it uses |
 | Scenarios | `docs/scenarios/*.md` | its principles, **exactly one** storyline, the settings it rechecks |
 | Script | `docs/script/*.md` | its principles, **exactly one** scenario, that scenario's storyline, the settings it rechecks |
-| Implementation | `src/units/*.ts`, `src/objects/*.ts`, `src/world/*.ts`, `src/formations/*.ts` | a settings document |
-| Shots | `src/shots/*.ts` | the script scenes they realize |
+| Implementation | `src/units/*.ts`, `src/objects/*.ts`, `src/world/*.ts`, `src/formations/*.ts` | the subject principles, and a settings document |
+| Shots | `src/shots/*.ts` | the shot principles, and the script scenes they realize |
 
 Keep one file per unit at every prose rung, and one host per document: every citation a document makes lives in the single HTML comment before its H1, so the document answers as a whole and a heading inside it is never asked to carry a parent of its own.
 
@@ -36,6 +36,14 @@ Three properties are worth stating outright, because each of them was a decision
 A rung cannot be skipped. Deleting `docs/scenarios` while `docs/script` still holds scenes does not go quiet: the population `matched no markdown files` and every scene still citing a scenario is a second error. It can only be not-yet-reached, with everything below it absent too.
 
 There is no population for actions. An action belongs to the subject that performs it, as a method on the class its settings document describes. A choreography that spans subjects and belongs to none of them is a shot and cites its scene.
+
+The ladder does not stop at the script. `principles/subjects.md` binds every class under the four subject folders — one class one specification, a stated figure as a field, behaviour on the subject that performs it, nothing canon does not state, a pure build path, refusal over degradation — and `principles/shots.md` binds every shot, including the rule that a duration the scene states must be one the contract carries.
+
+## A citation that expires
+
+Three references ask for more than a citation, and `requireReview` is the one to know about. Where it is set, the same documentation block must carry `@evidenceReview <target> #<digest> <what you checked>`, and the digest is of the cited content as it stands. Move that content and the build re-opens: `the review names '#a43f23e' and that scope now digests to '#9315ff8'`.
+
+It sits on the ladder's parent references and on the script-to-shot join, so changing a storyline re-opens the scenario that refines it and changing a scene re-opens every shot that claimed to realize it. What it proves is narrow, and the library says so itself: a current statement exists. It does not prove anyone read the content and it does not judge sincerity, so an untrue review is worse than a missing one — it removes the error and keeps the problem.
 
 ## Two kinds of production, one configuration
 

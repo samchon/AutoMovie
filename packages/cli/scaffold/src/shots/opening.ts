@@ -96,7 +96,8 @@ const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
   beat: "answer",
   evidence: [
     {
-      reason: "This shot realizes the screenplay's answering gesture.",
+      reason:
+        "This shot realizes the screenplay's held cue, after the rows have closed on it.",
       scene: "SCN-002",
     },
   ],
@@ -319,8 +320,16 @@ const buildCue = (
 /**
  * Opening source proves a neutral-to-raised transition.
  *
+ * @evidenceReview script/001-cue.md #94c1419 Read the scene and checked this
+ *   contract against it: duration 6.0, the cue window closing at 3.0, and the
+ *   closing predicate that keeps the hand up to the last frame.
  * @evidence script/001-cue.md Realizes the raised hand this
  *   scene stages, with the rows held in order behind it.
+ * @evidence principles/shots.md#realizes-a-named-scene Names SCN-001 in this
+ *   citation and in the contract's own evidence entry, and the two agree.
+ * @evidence principles/shots.md#the-contract-is-the-claim Declares the opening
+ *   and closing states the engine evaluates, so what this shot promises is what
+ *   it is measured on.
  */
 export const opening = defineShot("opening", {
   scene: "opening-scene",
@@ -331,8 +340,16 @@ export const opening = defineShot("opening", {
 /**
  * Answer source begins from the raised state established by the first shot.
  *
+ * @evidenceReview script/002-answer.md #ca2ba3d Read the scene and checked this
+ *   contract against it: duration 6.0, the event window 3.0 to 5.0, and a cue
+ *   clip that holds because it opens already raised.
  * @evidence script/002-answer.md Realizes the answering motion
  *   this scene stages, keeping the chorus the visible consequence.
+ * @evidence principles/shots.md#timing-comes-from-the-contract Holds the raised
+ *   cue for the duration this contract declares, which is the figure the scene
+ *   quotes.
+ * @evidence principles/shots.md#subjects-render-themselves Asks the soloist to
+ *   render from its own established state rather than posing the arm here.
  */
 export const answer = defineShot("answer", {
   scene: "answer-scene",
@@ -352,8 +369,13 @@ export const answer = defineShot("answer", {
  * authored, because which pass proves a claim, and what "proved" looks like in
  * it, is a judgement no contract field contains.
  *
+ * @evidenceReview script/001-cue.md #94c1419 Read the scene and checked that
+ *   what it states is what this scenario set measures.
  * @evidence script/001-cue.md Verifies the raised hand this
  *   scene stages, against the frames the shot actually rendered.
+ * @evidence principles/shots.md#acceptance-is-authored-with-the-shot Ships
+ *   beside the shot it judges rather than being fitted to frames it already
+ *   produced.
  */
 export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
   {
@@ -422,8 +444,13 @@ export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
  * shot's frames would accept an answer nobody rendered, which is why these name
  * this shot's own review frame and say what it alone has to carry.
  *
+ * @evidenceReview script/002-answer.md #ca2ba3d Read the scene and checked that
+ *   what it states is what this scenario set measures.
  * @evidence script/002-answer.md Verifies the answering motion
  *   this scene stages, against the frames the shot actually rendered.
+ * @evidence principles/shots.md#no-hidden-inputs Judges the shot from compiled
+ *   facts alone, and the module it sits in reads no clock, process, or
+ *   filesystem.
  */
 export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [
   {
@@ -449,7 +476,7 @@ export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [
     id: `${answer.id}-pose`,
     evidence: [
       {
-        reason: "The pose frame verifies the authored answering gesture.",
+        reason: "The pose frame verifies that the authored cue is still held.",
         scene: "SCN-002",
       },
     ],

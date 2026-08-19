@@ -157,6 +157,8 @@ import {
 } from "./sandboxEngineSurface";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
+import { screenplayTimingDiagnostics } from "./screenplayTimingDiagnostics";
+import { shotDeterminismDiagnostics } from "./shotDeterminismDiagnostics";
 import {
   IAutoMovieSourceContentFinding,
   autoMovieSourceContentDiagnostic,
@@ -703,6 +705,16 @@ export class AutoMovieProductionCompiler {
       }),
       ...screenplayProseDiagnostics({
         screenplay,
+        read: (relative) => this.project.readProseDocument(relative),
+      }),
+      ...screenplayTimingDiagnostics({
+        contracts: graph.shots,
+        read: (relative) => this.project.readProseDocument(relative),
+        scope: input.scope,
+        screenplay,
+      }),
+      ...shotDeterminismDiagnostics({
+        contracts: graph.shots,
         read: (relative) => this.project.readProseDocument(relative),
       }),
     );

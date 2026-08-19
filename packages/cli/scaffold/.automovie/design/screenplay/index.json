@@ -21,7 +21,7 @@
         "beats": [
           {
             "id": "BEAT-ANSWER-1",
-            "text": "The answering gesture proves the cue changed the plaza rather than ending as an isolated pose."
+            "text": "The cue holds after the rows have closed, proving it changed the plaza rather than ending as an isolated pose."
           }
         ],
         "path": "docs/storylines/002-answer.md"
@@ -59,8 +59,8 @@
         "status": "active",
         "covers": [
           {
-            "reason": "The second shot must show a consequence and reply to the opening cue.",
-            "beat": "The answering gesture proves the cue changed the plaza rather than ending as an isolated pose."
+            "reason": "The second shot must show the cue surviving the change it caused, with the rows standing where the first shot brought them.",
+            "beat": "The cue holds after the rows have closed, proving it changed the plaza rather than ending as an isolated pose."
           }
         ],
         "location": "plaza",
