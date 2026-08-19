@@ -159,9 +159,18 @@ coverage: every settings document must be answered for by at least one class,
 field, or method under those four paths. Toward source it is exactly one: every
 exported **class** must cite exactly one settings document, so a subject modelled
 before anything specified it is a compile error at the moment the class is
-written. Fields and methods are not yet held to that bound; cite anyway, at the
-class for the subject, the field for the value that measures it, and the method
-for the behavior it performs.
+written.
+
+Fields and methods are deliberately outside that bound rather than pending. A
+class is a subject and a subject has one specification; a field may implement
+none. `Soloist.prototype.height` carries a stated figure and `Soloist.prototype.id`
+carries an identifier the code chose for itself, and no option can tell those
+apart, so requiring exactly one of every field would buy true citations for the
+first kind at the price of untrue tags for the second. Cite anyway where it is
+true — the class for the subject, the field for the value that measures it, the
+method for the behavior it performs — because coverage is what those hosts owe
+and a document answered by one module out of twenty tells a reader nothing about
+which module answers for which decision.
 
 The shots row is its own population, and it selects both callable and data
 exports. A shot written `export const opening = defineShot("opening", { ... })`
@@ -192,10 +201,16 @@ surface where a citation can live, and removes the transcription that made them
 drift.
 
 The screenplay index is the exception that proves it. It is hand-authored, it
-addresses the storyline and script documents by path, and the compiler checks
-that each indexed beat appears verbatim in the storyline it names and each
-indexed scene heads the script document it names. That check is not the evidence
-graph; it is the second joint holding prose and ledger together.
+addresses the storyline and script documents by path, and the compiler resolves
+those paths on disk: each indexed beat must appear verbatim in the storyline it
+names and each indexed scene must head the script document it names. That check
+is not the evidence graph; it is a second joint holding prose and ledger
+together, and moving a prose document without moving the index dangles it.
+
+The index keeps the older vocabulary for its two story fields: `treatment.sequences`
+addresses `docs/storylines` and `screenplay.scenes` addresses `docs/script`. The
+rung names are the folders; the field names are the ledger's, and the ids —
+`SEQ-*`, `SCN-*` — are what survive both.
 
 ## Writing a citation
 
