@@ -1,6 +1,6 @@
 <!--
-@evidence principles/settings.md#no-placeholder-final Says outright that the two boxes are the part to throw away, so a shipped gate that is still two boxes is unmet work rather than the subject.
-@evidence principles/settings.md#capability-stated Fixes the moving part, its travel and the frame that travel is measured in, which is the whole of what the source may assume it can do.
+@evidence principles/authoring/settings.md#no-placeholder-final Says outright that the two boxes are the part to throw away, so a shipped gate that is still two boxes is unmet work rather than the subject.
+@evidence principles/authoring/settings.md#capability-stated Fixes the moving part, its travel and the frame that travel is measured in, which is the whole of what the source may assume it can do.
 -->
 
 # GATE

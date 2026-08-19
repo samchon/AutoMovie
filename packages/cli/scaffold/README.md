@@ -1,341 +1,110 @@
 # {{name}}
 
-This is a coding-agent-first AutoMovie production repository. Write story
-prose, subject specifications, shot builders, motion helpers, effects, audio
-integration, and tests as ordinary files. AutoMovie owns bounded design,
-deterministic generated output, geometry facts, actual-frame evidence, and
-review freshness.
+This is a coding-agent-first AutoMovie production repository. Write story prose, subject specifications, shot builders, motion helpers, effects, audio integration, and tests as ordinary files. AutoMovie owns bounded design, deterministic generated output, geometry facts, actual-frame evidence, and review freshness.
 
-Prose is a ladder of one document per unit, and each rung answers for the one
-above it. `docs/principles` states how a rung is written, `docs/settings`
-states what exists and how large it is, `docs/storylines` states what happens,
-`docs/scenarios` stages one storyline as one physical action, and `docs/script`
-is the final script the shots realize. `lint.config.ts` makes that ladder a
-compile error rather than a convention: a settings fact no storyline uses, a
-storyline no scenario stages, and a scenario no script scene realizes are each
-one named error. A production that authors only subjects leaves the three story
-folders empty and the story rungs go silent, so the same configuration governs
-a film and a standalone model library without a switch.
+Prose is a ladder of one document per unit, and each rung answers for the one above it. `docs/principles` states how a rung is written, `docs/settings` states what exists and how large it is, `docs/storylines` states what happens, `docs/scenarios` stages one storyline as one physical action, and `docs/script` is the final script the shots realize. `lint.config.ts` makes that ladder a compile error rather than a convention: a settings fact no storyline uses, a storyline no scenario stages, and a scenario no script scene realizes are each one named error. A production that authors only subjects leaves the three story folders empty and the story rungs go silent, so the same configuration governs a film and a standalone model library without a switch.
 
-`docs/research` sits beside the ladder and is empty until you source something.
-Write one ledger and its rules arrive with it: an identifiable source, a stated
-confidence, the settings fact each entry grounds, and a disagreement recorded
-rather than resolved in silence. A ledger is never a settings document; it is
-why a figure is what it is, not what the figure is.
+`docs/research` sits beside the ladder and is empty until you source something. Write one ledger and its rules arrive with it: an identifiable source, a stated confidence, the settings fact each entry grounds, and a disagreement recorded rather than resolved in silence. A ledger is never a settings document; it is why a figure is what it is, not what the figure is.
 
-Keep the exact beat text and `SCN-*` identities in `docs/storylines` and
-`docs/script` aligned with `.automovie/design/screenplay/index.json`; once shots
-exist, retain locked numbers, use `OMITTED` tombstones for deletions, and alpha
-ids for insertions.
-`npm run lint` checks those joins and requires compiled realization plus completed
-shot/film acceptance evidence for the same realized shot before an active scene
-leaves the coverage ledger. Catalog entries bind explicitly to shared model,
-formation, and world-landmark ids; continuity claims name the exact passing
-outcome or acceptance scenario that proves them.
+Keep the exact beat text and `SCN-*` identities in `docs/storylines` and `docs/script` aligned with `.automovie/design/screenplay/index.json`; once shots exist, retain locked numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions. `npm run lint` checks those joins and requires compiled realization plus completed shot/film acceptance evidence for the same realized shot before an active scene leaves the coverage ledger. Catalog entries bind explicitly to shared model, formation, and world-landmark ids; continuity claims name the exact passing outcome or acceptance scenario that proves them.
 
-Every distributable file matched by the asset lint configuration belongs in
-`.automovie/assets.json`. Record its source URL, license, original/current
-SHA-256, processing chain, and reasoned use before referencing it. External
-glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and
-measurement-proxy decisions. Changed or unregistered bytes fail lint and
-compilation; ingestion itself remains a pure fixed-byte conversion.
+Every distributable file matched by the asset lint configuration belongs in `.automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 
 ## First run
 
 Frame capture defaults to the Chromium build pinned to this project's Playwright version. Installation is explicit rather than a hidden dependency postinstall. The installer revalidates Playwright/core metadata as one composite snapshot and runs the exact captured CLI bytes through an inherited descriptor. The ignored receipt binds the package version, browser revision, executable path, and executable digest, and each canonical package/browser generation publishes one immutable descriptor-bound `O_EXCL` slot after final provenance validation. The reader selects only the exact current metadata key and binds its ancestry, descriptor, pathname, and bytes through the completed read; if that slot is absent, the legacy fixed receipt remains the untouched migration fallback. Receipt descriptors enforce the 64 KiB ceiling before initial hashing and every rehash. Any failed final-slot creation remains visible and fails closed with explicit manual-adjudication guidance instead of risking pathname cleanup of a successor. The doctor launches that exact binary, requires WebGL, captures a canvas, and decodes the PNG. Package metadata and the receipt are descriptor-bound snapshots, and the verified executable stays open and identity-checked through browser launch.
 
 ```bash
-npm install
-npm run capture:install
-npm run capture:doctor
-npm run build
-npm test
-npm run lint:source
-npm run lint
-npm run verify
-npm run preview -- --shot opening --time 2 --pass beauty
-npm run review:status
-npm run render -- all --tier proxy
-npm run viewer
+npm install npm run capture:install npm run capture:doctor npm run build npm test npm run lint:source npm run lint npm run verify npm run preview -- --shot opening --time 2 --pass beauty npm run review:status npm run render -- all --tier proxy npm run viewer
 ```
 
-The viewer is available at `http://127.0.0.1:5173`. The starter intentionally
-ships with an incomplete review queue, so the first lint, verify, or finalization
-attempt may stop at a named review gate after proving the rest of the local
-pipeline. Complete those reviews through MCP, then repeat the same commands.
+The viewer is available at `http://127.0.0.1:5173`. The starter intentionally ships with an incomplete review queue, so the first lint, verify, or finalization attempt may stop at a named review gate after proving the rest of the local pipeline. Complete those reviews through MCP, then repeat the same commands.
 
-Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and
-`PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline
-mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary
-package-local; set that variable to an explicit path for a configured shared
-cache. To use a system browser deliberately, edit `automovie.config.ts`:
+Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary package-local; set that variable to an explicit path for a configured shared cache. To use a system browser deliberately, edit `automovie.config.ts`:
 
 ```ts
-capture: {
-  browser: { source: "system-channel", channel: "chrome" },
-}
+capture: { browser: { source: "system-channel", channel: "chrome" }, }
 ```
 
-A `configured-executable` choice must declare both its product and path. Its
-exact executable digest is then recorded in every render identity.
+A `configured-executable` choice must declare both its product and path. Its exact executable digest is then recorded in every render identity.
 
-Render evidence records structured Playwright, browser, executable, platform,
-headless/raster, backend, and actual WebGL identity. A browser/runtime change
-therefore produces a different content-addressed bundle; legacy v2 evidence
-must be recaptured.
+Render evidence records structured Playwright, browser, executable, platform, headless/raster, backend, and actual WebGL identity. A browser/runtime change therefore produces a different content-addressed bundle; legacy v2 evidence must be recaptured.
 
-The sample review queue is deliberately incomplete. Open the PNG printed by
-`preview`, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or
-`REVIEW_FILM` contract through MCP, and review current evidence.
+The sample review queue is deliberately incomplete. Open the PNG printed by `preview`, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or `REVIEW_FILM` contract through MCP, and review current evidence.
 
 ## Your own film
 
-The starter is one complete film, so starting yours means replacing it, and the
-design records are the half that is easy to leave behind. They are derived:
-`scripts/emitDesign.ts` builds each record from the typed source that owns it and
-`npm run design` stores it. That script is this production's own code and names
-your modules explicitly, so it is edited in the same pass as the sources it
-imports.
+The starter is one complete film, so starting yours means replacing it, and the design records are the half that is easy to leave behind. They are derived: `scripts/emitDesign.ts` builds each record from the typed source that owns it and `npm run design` stores it. That script is this production's own code and names your modules explicitly, so it is edited in the same pass as the sources it imports.
 
-Two consequences decide how a replacement goes. The emitter writes and never
-deletes, so a starter record you stop deriving stays resident and keeps asking
-for the shot it names. `npm run design` refuses while one is there and prints
-its project-relative path, so this layer's removal set is one command rather
-than a hunt. Delete the file it names, or derive it from a source that owns it.
-And the screenplay index is not derived at all, by design, so it is never named
-there. Starter ids also survive where no evidence claim reaches at all:
-`src/film.ts` and `src/production.ts` sit inside `src` and outside both of its
-claims, and `automovie.config.ts`, `.automovie/assets.json` and `test` are
-outside the graph entirely. Those five are yours to find; nothing counts them.
+Two consequences decide how a replacement goes. The emitter writes and never deletes, so a starter record you stop deriving stays resident and keeps asking for the shot it names. `npm run design` refuses while one is there and prints its project-relative path, so this layer's removal set is one command rather than a hunt. Delete the file it names, or derive it from a source that owns it. And the screenplay index is not derived at all, by design, so it is never named there. Starter ids also survive where no evidence claim reaches at all: `src/film.ts` and `src/production.ts` sit inside `src` and outside both of its claims, and `automovie.config.ts`, `.automovie/assets.json` and `test` are outside the graph entirely. Those five are yours to find; nothing counts them.
 
-That refusal is the only place the question can be asked. A resident record that
-references only other resident records is internally consistent, so the compiler
-has nothing to refuse and builds it into `generated` instead: measured on a real
-replacement, four starter model recipes and a formation compiled into a finished
-production at `success: true` with zero diagnostics. Whether a record still has
-an owner is a question only the script that derives them can answer.
+That refusal is the only place the question can be asked. A resident record that references only other resident records is internally consistent, so the compiler has nothing to refuse and builds it into `generated` instead: measured on a real replacement, four starter model recipes and a formation compiled into a finished production at `success: true` with zero diagnostics. Whether a record still has an owner is a question only the script that derives them can answer.
 
-Replacement is one pass rather than a milestone you can close halfway. Documents,
-source, and design cite each other in both directions, so the build stays red
-from the first deletion until the last authored record lands. Read
-`PRODUCTION_DESIGN` through MCP for the ordered procedure.
+Replacement is one pass rather than a milestone you can close halfway. Documents, source, and design cite each other in both directions, so the build stays red from the first deletion until the last authored record lands. Read `PRODUCTION_DESIGN` through MCP for the ordered procedure.
 
 ## Offline geometry measurements
 
-Two measurements already ship. `npm run building:report` derives every drawing
-schedule over the buildings the compiled shots carry, including one row per room
-that keeps the declared cell and the measured content box apart, so what a space
-was declared to be and what actually landed in it are separate facts. `npm run
-texture:scale` re-checks each declared texture scale against the surface it was
-bound to over every model a build produced, and reports a census of what it
-examined beside its findings, because an empty finding list from a run that
-measured nothing reads exactly like a clean one.
+Two measurements already ship. `npm run building:report` derives every drawing schedule over the buildings the compiled shots carry, including one row per room that keeps the declared cell and the measured content box apart, so what a space was declared to be and what actually landed in it are separate facts. `npm run texture:scale` re-checks each declared texture scale against the surface it was bound to over every model a build produced, and reports a census of what it examined beside its findings, because an empty finding list from a run that measured nothing reads exactly like a clean one.
 
-Beyond those, measurement scripts and tests may load the current project
-snapshot without an MCP session:
+Beyond those, measurement scripts and tests may load the current project snapshot without an MCP session:
 
 ```ts
-import {
-  loadAutoMovieProjectState,
-  requireCurrentAutoMovieProjectState,
-} from "@automovie/cli";
-import { Vector3, formationSlot } from "@automovie/engine";
+import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState, } from "@automovie/cli"; import { Vector3, formationSlot } from "@automovie/engine";
 
-const loaded = loadAutoMovieProjectState({ root: process.cwd() });
-const state = requireCurrentAutoMovieProjectState(loaded);
-const formation = state.generated.design.formations.get("chorus")!;
-const slot = formationSlot(formation, 31);
-const landmark = state.generated.design.world.landmarks[0]!;
-const meters = Vector3.length(
-  Vector3.subtract(slot.position, landmark.position),
-);
+const loaded = loadAutoMovieProjectState({ root: process.cwd() }); const state = requireCurrentAutoMovieProjectState(loaded); const formation = state.generated.design.formations.get("chorus")!; const slot = formationSlot(formation, 31); const landmark = state.generated.design.world.landmarks[0]!; const meters = Vector3.length( Vector3.subtract(slot.position, landmark.position), );
 ```
 
-The loaded state includes the generated compile fingerprint, the fingerprint
-recomputed from current inputs, the project revision, and an explicit
-`current`, `stale`, or `missing` status. Always require current state before
-calling pure engine reach, distance, camera, or formation functions.
+The loaded state includes the generated compile fingerprint, the fingerprint recomputed from current inputs, the project revision, and an explicit `current`, `stale`, or `missing` status. Always require current state before calling pure engine reach, distance, camera, or formation functions.
 
-The state reader performs filesystem I/O and is therefore forbidden inside
-shot and film `build` functions. Those functions run in the deterministic
-compiler sandbox. Keep the reader in standalone measurement scripts, tests, or
-offline diagnostics and pass only loaded typed values into engine functions.
+The state reader performs filesystem I/O and is therefore forbidden inside shot and film `build` functions. Those functions run in the deterministic compiler sandbox. Keep the reader in standalone measurement scripts, tests, or offline diagnostics and pass only loaded typed values into engine functions.
 
-Claude Code loads the checked-in `.mcp.json` after one project approval. Other
-MCP clients can import the same project-bound command. Its first call is
-`getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this
-repository root and production id at host startup; tool payloads never switch
-workspaces. Full render, chunk resume, encode, and final publication are project
-CLI jobs, not free-form MCP shell tools:
+Claude Code loads the checked-in `.mcp.json` after one project approval. Other MCP clients can import the same project-bound command. Its first call is `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this repository root and production id at host startup; tool payloads never switch workspaces. Full render, chunk resume, encode, and final publication are project CLI jobs, not free-form MCP shell tools:
 
 ```sh
-npx automovie render plan
-npx automovie render status
-npx automovie render run --workers 2
-npx automovie render verify
-npx automovie render finalize
+npx automovie render plan npx automovie render status npx automovie render run --workers 2 npx automovie render verify npx automovie render finalize
 ```
 
-Use `--tier proxy` for a half-raster, stepped-frame review render and
-`--tier final` (the default) for delivery. Both tiers reopen the same compiled
-film timeline and publish under separate content-addressed paths, so a proxy
-approval never overwrites the final bundle:
+Use `--tier proxy` for a half-raster, stepped-frame review render and `--tier final` (the default) for delivery. Both tiers reopen the same compiled film timeline and publish under separate content-addressed paths, so a proxy approval never overwrites the final bundle:
 
 ```sh
-npx automovie render all --tier proxy
-npx automovie render all --tier final
-npx automovie render gc
-npx automovie render gc --apply
+npx automovie render all --tier proxy npx automovie render all --tier final npx automovie render gc npx automovie render gc --apply
 ```
 
-`render gc` is a dry run unless `--apply` is explicit. It marks the current
-proxy and final plans, stored review-evidence bundles, and every file named by
-the current publication manifest. For chunk media it retains only a current
-direct-root pointer and the exact immutable temporary tree authenticated by
-that pointer; stale pointers, duplicate or unreachable trees, unreferenced
-legacy chunks, quarantine entries, and stale publication bytes are reported.
-Active lock, attempt, and live temporary records are never sweep candidates.
-`render gc --apply` holds an exclusive render-job guard through its live-worker scan and sweep, while `plan`, `run`, `all`, and `finalize` hold session claims that make either start order fail closed before state mutation.
-Render plans form an append-only generation chain under `plan.json.generations`: each predecessor has one immutable no-overwrite successor slot, so a stale or concurrent planner cannot remove either generation, while a legacy `plan.json` remains an immutable chain root authenticated by its persistent successor slot. Publication revalidates source/compiler/runtime inputs and the exact chain head immediately before reserving and writing the final slot through descriptor-bound `O_EXCL`. A render session keeps the captured plan object for scheduling, resume, receipt checks, status, and finalization even if another session appends a later plan.
-Every descriptor-bound render final slot remains visible once creation begins. Write, fsync, readback, target, parent, or root validation failures never trigger automatic pathname cleanup; strict consumer gates and explicit GC or manual adjudication handle partial or ambiguous evidence without deleting a relinked successor.
-Every frame PNG and encoded `chunk.mp4` is likewise reserved and written directly at the root of one UUID temporary tree bound to the render attempt's exact state-root generation, then to its temporary-root and tree generations. The private tree is flat, so there is no nested frame-parent handoff; each exact file snapshot is bound into one completed-tree inventory, and pointer publication consumes and revalidates only that captured tree. No temp-file rename or failure cleanup can replace or delete a child successor, and partial evidence remains available to exact abandoned recovery.
-If a candidate changes at the quarantine boundary, GC fails closed and leaves the observed successor under a top-level `.gc-preserved-*` directory. That reserved evidence is excluded from later automatic GC runs; inspect it and adjudicate it manually before reusing or deleting it.
-Routine worker recovery also keeps each verified file or directory at its private `.gc-preserved-*` path. The public `quarantine/` entry is a strict immutable marker that binds the original path, preserved path, kind, physical identity, and content fingerprint; it is published directly through `O_EXCL`, so a destination competitor or marker successor is never replaced.
-Valid quarantine markers resolve private evidence relative to their proxy or final ownership tier and are inventoried as one GC candidate with combined reclaimable bytes. Current jobs keep UUID evidence children under one retained tier-local preserved parent and use one retained exact-removal staging parent, so concurrent sibling operations never run an empty-check-to-rmdir cleanup. Private staging and public marker parents are identity-fenced while each marker final slot uses direct `O_EXCL`, allowing unrelated sibling publications without weakening exact destination checks. Apply removes the evidence first and its captured marker second; a legacy per-operation parent is removed only when its pre-captured identity remains strictly empty, and a parent pathname successor is preserved. Invalid marker content leaves private evidence outside automatic deletion, and duplicate physical references across tiers remain untouched for manual adjudication.
-Guide-pass publication includes both its MP4 and authenticated
-`frames/<pass>/frame_XXXXXXXX.png` control images.
-Proxy finalization keeps every manifest path materialized as an ordinary file inside its content-addressed directory. It creates missing directories monotonically without ever deleting or replacing a partial or competing tree, then reserves and writes every final payload pathname directly through descriptor-bound `O_EXCL` with `publication.json` last. Existing exact files converge safely, foreign files fail closed, and interrupted direct slots remain visible for explicit adjudication without a candidate hard-link alias. GC retains a proxy publication only after its cached captured receipt and exact directory snapshot pass self-described verification, so pathname ABA cannot change the adjudicated generation.
+`render gc` is a dry run unless `--apply` is explicit. It marks the current proxy and final plans, stored review-evidence bundles, and every file named by the current publication manifest. For chunk media it retains only a current direct-root pointer and the exact immutable temporary tree authenticated by that pointer; stale pointers, duplicate or unreachable trees, unreferenced legacy chunks, quarantine entries, and stale publication bytes are reported. Active lock, attempt, and live temporary records are never sweep candidates. `render gc --apply` holds an exclusive render-job guard through its live-worker scan and sweep, while `plan`, `run`, `all`, and `finalize` hold session claims that make either start order fail closed before state mutation. Render plans form an append-only generation chain under `plan.json.generations`: each predecessor has one immutable no-overwrite successor slot, so a stale or concurrent planner cannot remove either generation, while a legacy `plan.json` remains an immutable chain root authenticated by its persistent successor slot. Publication revalidates source/compiler/runtime inputs and the exact chain head immediately before reserving and writing the final slot through descriptor-bound `O_EXCL`. A render session keeps the captured plan object for scheduling, resume, receipt checks, status, and finalization even if another session appends a later plan. Every descriptor-bound render final slot remains visible once creation begins. Write, fsync, readback, target, parent, or root validation failures never trigger automatic pathname cleanup; strict consumer gates and explicit GC or manual adjudication handle partial or ambiguous evidence without deleting a relinked successor. Every frame PNG and encoded `chunk.mp4` is likewise reserved and written directly at the root of one UUID temporary tree bound to the render attempt's exact state-root generation, then to its temporary-root and tree generations. The private tree is flat, so there is no nested frame-parent handoff; each exact file snapshot is bound into one completed-tree inventory, and pointer publication consumes and revalidates only that captured tree. No temp-file rename or failure cleanup can replace or delete a child successor, and partial evidence remains available to exact abandoned recovery. If a candidate changes at the quarantine boundary, GC fails closed and leaves the observed successor under a top-level `.gc-preserved-*` directory. That reserved evidence is excluded from later automatic GC runs; inspect it and adjudicate it manually before reusing or deleting it. Routine worker recovery also keeps each verified file or directory at its private `.gc-preserved-*` path. The public `quarantine/` entry is a strict immutable marker that binds the original path, preserved path, kind, physical identity, and content fingerprint; it is published directly through `O_EXCL`, so a destination competitor or marker successor is never replaced. Valid quarantine markers resolve private evidence relative to their proxy or final ownership tier and are inventoried as one GC candidate with combined reclaimable bytes. Current jobs keep UUID evidence children under one retained tier-local preserved parent and use one retained exact-removal staging parent, so concurrent sibling operations never run an empty-check-to-rmdir cleanup. Private staging and public marker parents are identity-fenced while each marker final slot uses direct `O_EXCL`, allowing unrelated sibling publications without weakening exact destination checks. Apply removes the evidence first and its captured marker second; a legacy per-operation parent is removed only when its pre-captured identity remains strictly empty, and a parent pathname successor is preserved. Invalid marker content leaves private evidence outside automatic deletion, and duplicate physical references across tiers remain untouched for manual adjudication. Guide-pass publication includes both its MP4 and authenticated `frames/<pass>/frame_XXXXXXXX.png` control images. Proxy finalization keeps every manifest path materialized as an ordinary file inside its content-addressed directory. It creates missing directories monotonically without ever deleting or replacing a partial or competing tree, then reserves and writes every final payload pathname directly through descriptor-bound `O_EXCL` with `publication.json` last. Existing exact files converge safely, foreign files fail closed, and interrupted direct slots remain visible for explicit adjudication without a candidate hard-link alias. GC retains a proxy publication only after its cached captured receipt and exact directory snapshot pass self-described verification, so pathname ABA cannot change the adjudicated generation.
 
-Finalization derives semantic sound effects from compiled shot events, samples their emitters relative to the active camera, mixes authored score cues and caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without a host `ffmpeg`.
-Dialogue uses the local Kokoro ONNX Runtime CPU adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line. Each cache key owns one immutable directory that publishes `audio.f32` first and `receipt.json` last through descriptor-bound `O_EXCL`; cache hits capture and revalidate the exact two-file directory generation instead of combining independent sibling path reads.
-The checked-in `.npmrc` disables ONNX Runtime's Linux CUDA download because this renderer deliberately selects the CPU execution provider; the installed platform-native CPU binding and shared libraries remain part of every sound runtime and cache fingerprint.
-The project pins the verified Kokoro and Transformers.js versions and overrides Transformers.js's Node-only Sharp image dependency with the bundled TTS capability wall.
-Kokoro's text/audio path remains local, while an accidental image-pipeline call fails explicitly instead of installing a non-permissive native image payload.
-The audio deliverable owns `audio.mp4`, waveform and spectrogram PNGs, and parser-verified clipping/event-alignment evidence.
-The feature MP4 muxes that exact audio with H.264 video; final media probing refuses video-only feature output or unequal A/V runtimes.
-For `visualDelivery: "repainted"`, finalization conforms the exact active,
-reviewed repaint clips and records their receipt plus source/rendition/aggregate
-review fingerprints. The current conformer accepts full-shot, cut-only,
-single-decoder-configuration clips, preserves their rational clock and
-conformable B-frame presentation order, and fails explicitly for unsupported
-edits; it never substitutes deterministic feature pixels.
+Finalization derives semantic sound effects from compiled shot events, samples their emitters relative to the active camera, mixes authored score cues and caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without a host `ffmpeg`. Dialogue uses the local Kokoro ONNX Runtime CPU adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line. Each cache key owns one immutable directory that publishes `audio.f32` first and `receipt.json` last through descriptor-bound `O_EXCL`; cache hits capture and revalidate the exact two-file directory generation instead of combining independent sibling path reads. The checked-in `.npmrc` disables ONNX Runtime's Linux CUDA download because this renderer deliberately selects the CPU execution provider; the installed platform-native CPU binding and shared libraries remain part of every sound runtime and cache fingerprint. The project pins the verified Kokoro and Transformers.js versions and overrides Transformers.js's Node-only Sharp image dependency with the bundled TTS capability wall. Kokoro's text/audio path remains local, while an accidental image-pipeline call fails explicitly instead of installing a non-permissive native image payload. The audio deliverable owns `audio.mp4`, waveform and spectrogram PNGs, and parser-verified clipping/event-alignment evidence. The feature MP4 muxes that exact audio with H.264 video; final media probing refuses video-only feature output or unequal A/V runtimes. For `visualDelivery: "repainted"`, finalization conforms the exact active, reviewed repaint clips and records their receipt plus source/rendition/aggregate review fingerprints. The current conformer accepts full-shot, cut-only, single-decoder-configuration clips, preserves their rational clock and conformable B-frame presentation order, and fails explicitly for unsupported edits; it never substitutes deterministic feature pixels.
 
-`status`, `verify`, and `finalize` re-run the package-owned capture, actual
-graphics, declared render-source, and encoder identity preflight. They may
-launch Chromium; any identity change marks the stored chunks stale instead of
-mixing or misattributing output from two runtimes.
+`status`, `verify`, and `finalize` re-run the package-owned capture, actual graphics, declared render-source, and encoder identity preflight. They may launch Chromium; any identity change marks the stored chunks stale instead of mixing or misattributing output from two runtimes.
 
-Chunk workers publish complete UUID claims atomically inside a slot-specific
-lock namespace. A worker yields to every other live claim and removes only its
-own exact path. Interrupted pre-publication candidates are quarantined on the
-next run. A completed unique temp tree stays immutable in place, while a
-descriptor-written `O_EXCL` pointer at the physical project root publishes its
-full receipt and content fingerprint last. Receipt reuse binds that exact pointer
-to one exact tree; finalization consumes its frame and MP4 descriptors without
-reopening verified paths. Abandoned recovery never quarantines a tree reached by
-a valid current pointer.
+Chunk workers publish complete UUID claims atomically inside a slot-specific lock namespace. A worker yields to every other live claim and removes only its own exact path. Interrupted pre-publication candidates are quarantined on the next run. A completed unique temp tree stays immutable in place, while a descriptor-written `O_EXCL` pointer at the physical project root publishes its full receipt and content fingerprint last. Receipt reuse binds that exact pointer to one exact tree; finalization consumes its frame and MP4 descriptors without reopening verified paths. Abandoned recovery never quarantines a tree reached by a valid current pointer.
 
-Each running attempt is authorized by the exact physical snapshot and `{ chunk, pid, token }` bytes of its held chunk lock, then reserves and writes its final record pathname directly through descriptor-bound `O_EXCL`. Dead-owner recovery and the running-to-failed transition remove only an exact captured predecessor before reserving the successor slot, while successful cleanup remains lock-bound; a root, parent, lock, attempt, or competing final-slot successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames.
-Each chunk worker also reserves and writes its unique final claim pathname directly through descriptor-bound `O_EXCL`. The returned exact snapshot is reused for the worker's own scan, owner validation, held-lock authorization, attempt binding, and release; no candidate hard link or candidate cleanup can publish or delete a pathname successor. Legacy `.candidate` entries remain recovery-only evidence for older interrupted jobs.
+Each running attempt is authorized by the exact physical snapshot and `{ chunk, pid, token }` bytes of its held chunk lock, then reserves and writes its final record pathname directly through descriptor-bound `O_EXCL`. Dead-owner recovery and the running-to-failed transition remove only an exact captured predecessor before reserving the successor slot, while successful cleanup remains lock-bound; a root, parent, lock, attempt, or competing final-slot successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames. Each chunk worker also reserves and writes its unique final claim pathname directly through descriptor-bound `O_EXCL`. The returned exact snapshot is reused for the worker's own scan, owner validation, held-lock authorization, attempt binding, and release; no candidate hard link or candidate cleanup can publish or delete a pathname successor. Legacy `.candidate` entries remain recovery-only evidence for older interrupted jobs.
 
-Final conform also reopens the matching proxy bundle as one physical tree. Its
-manifest must account for the exact regular-file inventory, and every declared
-payload length and digest must still match before the proxy can satisfy the final
-plan gate.
+Final conform also reopens the matching proxy bundle as one physical tree. Its manifest must account for the exact regular-file inventory, and every declared payload length and digest must still match before the proxy can satisfy the final plan gate.
 
-Every planning, run, and full-sequence render first measures what the tier is
-about to draw and checks it against the `renderBudgets` entry whose `tier`
-matches this render tier (`proxy` or `final`). The verdict is published as an
-immutable, content-addressed document under
-`.automovie/productions/<production>/render-job/<tier>/render-budget`, and its
-summary is part of the command's own output. Only `over` refuses the render, and
-it names the dominant owner and the source to edit. `incomplete` and `not-run`
-are reported exactly as they are: an unmeasured cost has not been cleared, and a
-production declaring no budget for this tier reads `unbudgeted` with its declared
-tiers named rather than passing silently.
+Every planning, run, and full-sequence render first measures what the tier is about to draw and checks it against the `renderBudgets` entry whose `tier` matches this render tier (`proxy` or `final`). The verdict is published as an immutable, content-addressed document under `.automovie/productions/<production>/render-job/<tier>/render-budget`, and its summary is part of the command's own output. Only `over` refuses the render, and it names the dominant owner and the source to edit. `incomplete` and `not-run` are reported exactly as they are: an unmeasured cost has not been cleared, and a production declaring no budget for this tier reads `unbudgeted` with its declared tiers named rather than passing silently.
 
-`npm run render` is the convenience sequence: it captures current review evidence,
-reuses or renders current chunks, then attempts final publication. Finalize
-still fails closed until every current review is complete. Its terminal commit
-also fingerprints the revision, declared content, live evidence-bound review
-queue and records, generated manifest and bytes, production manifest, exact
-design graph, and state incarnation with canonical structured fields. The
-staged final compiler gate recomputes that review queue from current render
-evidence; any change during the gate rolls the publication back.
+`npm run render` is the convenience sequence: it captures current review evidence, reuses or renders current chunks, then attempts final publication. Finalize still fails closed until every current review is complete. Its terminal commit also fingerprints the revision, declared content, live evidence-bound review queue and records, generated manifest and bytes, production manifest, exact design graph, and state incarnation with canonical structured fields. The staged final compiler gate recomputes that review queue from current render evidence; any change during the gate rolls the publication back.
 
-Run `npm run verify` (or `npx automovie verify`) after publication to reopen the
-generated inventory, evidence-bound reviews, render receipts, and actual
-delivery bytes without modifying project state. It fails on damaged generated
-output, stale or forged receipts, and missing required deliverables.
+Run `npm run verify` (or `npx automovie verify`) after publication to reopen the generated inventory, evidence-bound reviews, render receipts, and actual delivery bytes without modifying project state. It fails on damaged generated output, stale or forged receipts, and missing required deliverables.
 
-Claude Code loads `.claude/settings.json` and checks every `PreToolUse`,
-including direct edits, Bash, and MCP file tools, against compiler-owned
-generated output, render output, capture receipts, and production state.
-Nearest existing ancestors are resolved physically, so a symlink or junction
-cannot disguise an owned target. The refusal names the owning project command.
-The hook deliberately does nothing when `.automovie/manifest.json` is absent,
-so copying it outside an AutoMovie project does not claim unrelated files.
+Claude Code loads `.claude/settings.json` and checks every `PreToolUse`, including direct edits, Bash, and MCP file tools, against compiler-owned generated output, render output, capture receipts, and production state. Nearest existing ancestors are resolved physically, so a symlink or junction cannot disguise an owned target. The refusal names the owning project command. The hook deliberately does nothing when `.automovie/manifest.json` is absent, so copying it outside an AutoMovie project does not claim unrelated files.
 
-The production viewer accepts `?film=1` for GPU cut/dissolve playback of the
-compiler-owned EDL, `?shot=<id>` for one shot, and
-`?asset=<model-id>&angle=<degrees>&elevation=<degrees>` for an isolated model
-turntable. The reusable capture session opens each target/raster page once and
-seeks subsequent frames in place; render output reports page, navigation,
-seek, and capture counts so throughput improvements remain measurable.
+The production viewer accepts `?film=1` for GPU cut/dissolve playback of the compiler-owned EDL, `?shot=<id>` for one shot, and `?asset=<model-id>&angle=<degrees>&elevation=<degrees>` for an isolated model turntable. The reusable capture session opens each target/raster page once and seeks subsequent frames in place; render output reports page, navigation, seek, and capture counts so throughput improvements remain measurable.
 
-`viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in
-your hands: W A S D or the arrow keys to fly, Space and C to rise and descend,
-Q and E for speed, click for pointer-lock mouse look, and the wheel for field
-of view, with the eye's position and lens printed on screen so anything odd can
-be reported by coordinate. It exists to look at staging from angles nobody
-authored, and it is an inspection tool rather than a delivery path: it installs
-no capture hook, writes nothing, holds the shot's opening second, and shows the
-level of detail your own distance selects. Review evidence still comes from
-`npm run preview` and `npm run render`.
+`viewer/inspect.html?shot=<id>` opens the same compiled shot with the camera in your hands: W A S D or the arrow keys to fly, Space and C to rise and descend, Q and E for speed, click for pointer-lock mouse look, and the wheel for field of view, with the eye's position and lens printed on screen so anything odd can be reported by coordinate. It exists to look at staging from angles nobody authored, and it is an inspection tool rather than a delivery path: it installs no capture hook, writes nothing, holds the shot's opening second, and shows the level of detail your own distance selects. Review evidence still comes from `npm run preview` and `npm run render`.
 
-`viewer/subject.html?shot=<id>&subject=<kind>:<id>` opens one authored thing
-alone and turns it around: the left and right arrows walk the deterministic
-turntable, up and down change its elevation ring, the wheel or `-` and `=` pull
-the eye in and out, `F` refits, `X` sections away whatever stands between you
-and a room's inside, and `Backspace` opens the owner. How far the downward ring
-may look up from under a subject is that subject's own answer, so a slate on a
-roof is read from beneath and a room is not read from underground. Spaces,
-elements, parts, instance sets and instance members are openable; opening the
-page with no `subject` lists every space and population of the shot to start
-from, and every panel entry is a link, so a room descends into the things
-standing in it, with a box to narrow a long list by name. The
-eye is derived from the subject's own CONTENT box rather than from the cell a
-room was declared over — those are different extents, and reading the first as
-the second aims a review camera at a wall — and both boxes are printed so the
-gap between them is visible. On screen beside the picture are the subject key,
-the compiled revision, and the current viewpoint id, which is what lets a
-finding name the thing rather than the pixel: a reviewer writes
-`element:<node>@<revision>` and the authoring agent opens exactly that. Same
-status as `inspect.html`: an inspection tool, no capture hook, nothing written,
-not a delivery path.
+`viewer/subject.html?shot=<id>&subject=<kind>:<id>` opens one authored thing alone and turns it around: the left and right arrows walk the deterministic turntable, up and down change its elevation ring, the wheel or `-` and `=` pull the eye in and out, `F` refits, `X` sections away whatever stands between you and a room's inside, and `Backspace` opens the owner. How far the downward ring may look up from under a subject is that subject's own answer, so a slate on a roof is read from beneath and a room is not read from underground. Spaces, elements, parts, instance sets and instance members are openable; opening the page with no `subject` lists every space and population of the shot to start from, and every panel entry is a link, so a room descends into the things standing in it, with a box to narrow a long list by name. The eye is derived from the subject's own CONTENT box rather than from the cell a room was declared over — those are different extents, and reading the first as the second aims a review camera at a wall — and both boxes are printed so the gap between them is visible. On screen beside the picture are the subject key, the compiled revision, and the current viewpoint id, which is what lets a finding name the thing rather than the pixel: a reviewer writes `element:<node>@<revision>` and the authoring agent opens exactly that. Same status as `inspect.html`: an inspection tool, no capture hook, nothing written, not a delivery path.
 
 ## Ownership
 
 - `.automovie/design/shared`: project-shared model, world and formation design
-- `.automovie/design/<production>`, `.automovie/reviews/<production>`:
-  production-scoped tracked contracts
-- `.automovie/productions/<production>`: production-scoped compiler, render-job,
-  receipt and revision state
+- `.automovie/design/<production>`, `.automovie/reviews/<production>`: production-scoped tracked contracts
+- `.automovie/productions/<production>`: production-scoped compiler, render-job, receipt and revision state
 - `src`, `docs`, `test`, `public`: coding-agent source and assets
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
 
-`npm run lint:source` type-checks source and runs the registered `@ttsc/lint`
-contributors without modifying project state. `npm run lint` runs that source
-lint first, then runs the production compiler through the review gate in
-read-only mode. It deliberately fails while any design, source, shot, or film
-review is missing, stale, revising, or incomplete.
+`npm run lint:source` type-checks source and runs the registered `@ttsc/lint` contributors without modifying project state. `npm run lint` runs that source lint first, then runs the production compiler through the review gate in read-only mode. It deliberately fails while any design, source, shot, or film review is missing, stale, revising, or incomplete.
 
-That review gate is the question a finished film must answer, not the one a
-film in progress can. Pass `--scope` to ask a narrower one:
-`npm run lint -- --scope source` runs the same `automovie` rule set against the
-work so far without demanding a complete review queue, which is the check to use
-while building sequence by sequence. `design`, `review`, and `final` are the
-other scopes; omitting the flag keeps `review`. `npm run compile` is the
-narrower production source gate and the only command that may update generated
-output.
+That review gate is the question a finished film must answer, not the one a film in progress can. Pass `--scope` to ask a narrower one: `npm run lint -- --scope source` runs the same `automovie` rule set against the work so far without demanding a complete review queue, which is the check to use while building sequence by sequence. `design`, `review`, and `final` are the other scopes; omitting the flag keeps `review`. `npm run compile` is the narrower production source gate and the only command that may update generated output.

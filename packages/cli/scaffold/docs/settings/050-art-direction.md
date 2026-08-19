@@ -1,6 +1,6 @@
 <!--
-@evidence principles/settings.md#execution-neutrality Fixes palette, scale grammar and readability as constraints every layer is held to, and assigns none of them to a scene.
-@evidence principles/settings.md#reads-at-review-distance Names the review distance the whole production's legibility is judged at, so a later subject inherits the distance rather than choosing one.
+@evidence principles/authoring/settings.md#execution-neutrality Fixes palette, scale grammar and readability as constraints every layer is held to, and assigns none of them to a scene.
+@evidence principles/authoring/settings.md#reads-at-review-distance Names the review distance the whole production's legibility is judged at, so a later subject inherits the distance rather than choosing one.
 @evidence principles/common.md#stated-basis Each figure below says whether it was chosen or measured.
 -->
 

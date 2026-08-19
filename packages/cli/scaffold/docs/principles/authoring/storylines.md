@@ -1,17 +1,17 @@
 # Storyline principles
 
-Rules a storyline answers. A storyline is the narrative treatment: what happens,
-why it happens, and what changes because of it. It is where the settings catalog
-is first accounted for, and it is the last layer that is allowed to be about
-meaning rather than about execution.
+Rules a storyline answers. A storyline is the narrative treatment: what
+happens, why it happens, and what changes because of it. It is where the
+settings catalog is first accounted for, and it is the last layer that is
+allowed to be about meaning rather than about execution.
 
 A production that authors no story owes nothing here.
 
 ## Every sequence carries a figure through an event {#figure-in-event}
 
 A storyline unit names who or what the event happens to and what it does about
-it. A sequence in which nothing is chosen is a description of a situation, not a
-sequence, and no scenario written from it can be staged.
+it. A sequence in which nothing is chosen is a description of a situation, not
+a sequence, and no scenario written from it can be staged.
 
 Sources: `SCREENPLAY_WRITING` on what a treatment sequence owes.
 
@@ -45,6 +45,8 @@ Sources: `SCREENPLAY_WRITING` on treatment obligations.
 
 It says what happens and why. It does not fix camera, staging, blocking, or
 line-level dialogue — those belong to the scenario and the script, and deciding
-them here removes the decision from the layer that can test it against geometry.
+them here removes the decision from the layer that can test it against
+geometry.
 
-Sources: `EVIDENCE_GRAPH` on how settled a document is being one of its two axes.
+Sources: `EVIDENCE_GRAPH` on how settled a document is being one of its two
+axes.

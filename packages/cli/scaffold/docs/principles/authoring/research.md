@@ -4,12 +4,12 @@ Rules a research ledger answers. A ledger records what the world outside this
 production contains: what a thing looked like, how large it was, how it worked,
 and who says so.
 
-It sits beside the ladder rather than on it. Nothing above it commissions it and
-nothing below it is required to use it, because a production may be entirely
-invented and owe the world nothing. What binds is the other direction: a ledger
-that exists is held to these rules, because a source recorded carelessly is
-worse than no source at all — it carries the authority of a citation and none of
-the substance.
+It sits beside the ladder rather than on it. Nothing above it commissions it
+and nothing below it is required to use it, because a production may be
+entirely invented and owe the world nothing. What binds is the other direction:
+a ledger that exists is held to these rules, because a source recorded
+carelessly is worse than no source at all — it carries the authority of a
+citation and none of the substance.
 
 A production that sources nothing owes nothing here.
 
@@ -46,8 +46,8 @@ is never asked to prove that somebody researched it.
 
 Where sources conflict, keep the conflict. Write both readings, say which one
 the production took, and say that taking it was a choice. A ledger that records
-only the winning reading looks like agreement, and the next author has no way to
-know a decision was ever made.
+only the winning reading looks like agreement, and the next author has no way
+to know a decision was ever made.
 
 Sources: `principles/common.md#stated-basis` on chosen figures saying so.
 
