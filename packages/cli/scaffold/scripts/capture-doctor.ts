@@ -7,6 +7,7 @@ import {
   inspectCaptureGraphics,
   launchCaptureBrowser,
 } from "./capture-browser";
+import { settleCaptureExecutableTouch } from "./captureExecutableSnapshot";
 
 interface CaptureDoctorFailure {
   error: unknown;
@@ -29,10 +30,25 @@ const preserveCleanupFailure = async (
   }
 };
 
-const session = await launchCaptureBrowser(
-  process.cwd(),
-  config.capture.browser,
-);
+/**
+ * How long the doctor lets ambient filesystem activity finish.
+ *
+ * Four acquisitions two seconds apart is six seconds of waiting at worst. The
+ * activity being waited out is a scanner reading a browser that finished
+ * extracting seconds ago, which ends on that order; anything still moving the
+ * stamps after six seconds is not that, and the refusal says so and names a
+ * different remedy. The bound stays small on purpose, because a diagnostic that
+ * hangs is worse than one that refuses.
+ */
+const SETTLE_ATTEMPTS = 4;
+const SETTLE_WAIT_MS = 2_000;
+
+const settled = await settleCaptureExecutableTouch({
+  acquire: () => launchCaptureBrowser(process.cwd(), config.capture.browser),
+  attempts: SETTLE_ATTEMPTS,
+  waitMs: SETTLE_WAIT_MS,
+});
+const session = settled.value;
 let browserFailure: CaptureDoctorFailure | undefined;
 try {
   const page = await session.browser.newPage({
@@ -73,6 +89,11 @@ try {
       `${JSON.stringify(
         {
           status: "ready",
+          // Reported on every run rather than only when it mattered, because a
+          // uniform shape is what a reader can parse, and an acquisition that
+          // had to wait is something the reader wants to know about their own
+          // machine even though capture is ready.
+          settled: { attempts: settled.attempts, waitedMs: settled.waitedMs },
           runtimeIdentity,
           rendererIdentity,
           screenshot: {
