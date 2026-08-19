@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { moveFileStamps } from "../internal/moveFileStamps";
 import { namedFactsAsync, rejectsError } from "../internal/predicates";
 
 /** Repository root, four levels above `test/src/features/cli`. */
@@ -141,12 +142,15 @@ export const test_cli_capture_executable_settle = async (): Promise<void> => {
     const snapshot = module.openCaptureExecutable(file);
     opened = snapshot;
 
-    /** Move the file's stamps without moving one byte of it. */
-    const touch = (): void => {
-      const mode = fs.statSync(file).mode;
-      fs.chmodSync(file, mode ^ 0o200);
-      fs.chmodSync(file, mode);
-    };
+    /**
+     * Move the file's stamps without moving one byte of it.
+     *
+     * `moveFileStamps` loops until the descriptor reports a different version,
+     * because a single toggle lands inside the snapshot's own filesystem
+     * timestamp tick about half the time and reads back identical. Assuming it
+     * landed is what made this test intermittent.
+     */
+    const touch = (): void => moveFileStamps(file, snapshot.descriptor);
 
     const waits: number[] = [];
     const record = (milliseconds: number): Promise<void> => {

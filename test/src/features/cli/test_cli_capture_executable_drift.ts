@@ -5,6 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import {
+  moveDirectoryStamps,
+  moveFileStamps,
+} from "../internal/moveFileStamps";
 import { namedFacts, throwsError } from "../internal/predicates";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
@@ -167,17 +171,24 @@ export const test_cli_capture_executable_drift = (): void => {
       ["pathname", INTACT, RERUN],
     );
 
-    fs.writeFileSync(path.join(root, "quarantine.tmp"), "scanner leftover");
+    // Creating the sibling through `moveDirectoryStamps` rather than with one
+    // write, for the same reason the mode toggle below goes through a helper: a
+    // directory entry added inside the captured tick leaves the directory
+    // version unchanged, and the guard then has nothing to refuse.
+    moveDirectoryStamps(root, path.join(root, "quarantine.tmp"));
     const directoryDrift = throwsError(
       () => module.assertCaptureExecutable(snapshot),
       ["capture executable directory", RERUN],
     );
 
     // Mode toggling is the platform's own metadata write: it moves stamps that
-    // the guard folds into its version and never touches a byte.
+    // the guard folds into its version and never touches a byte. It is issued
+    // through `moveFileStamps` rather than inline, because one toggle lands
+    // inside the captured tick often enough to make any fixture that assumes it
+    // landed intermittent; this one only happened to sit far enough from its
+    // own snapshot to get away with it.
     const before = fs.fstatSync(snapshot.descriptor, { bigint: true });
-    fs.chmodSync(file, 0o444);
-    fs.chmodSync(file, 0o666);
+    moveFileStamps(file, snapshot.descriptor);
     const after = fs.fstatSync(snapshot.descriptor, { bigint: true });
     const metadataDescriptor = throwsError(
       () => module.assertCaptureExecutableDescriptor(snapshot),
