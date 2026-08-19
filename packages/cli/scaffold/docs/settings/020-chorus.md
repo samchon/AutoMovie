@@ -18,6 +18,12 @@ its intervals, so anything that destroys the interval destroys the subject.
 Members are 1.7 m, a head shorter than the soloist, so the two subjects read
 apart in one frame without a scale break.
 
+## Advance
+
+When the group answers it moves 2 m as one. Chosen, and written down here
+because it is the group's own figure: a behaviour the source implements that no
+document names is a decision nobody wrote down.
+
 ## Cohesion
 
 In order while the cue is given, and still in order after it. Any loosening is
