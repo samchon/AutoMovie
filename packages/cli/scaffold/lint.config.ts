@@ -1,20 +1,99 @@
 /// <reference types="node" />
-import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
+import {
+  type ITtscEvidenceGraphConfig,
+  type ITtscEvidenceGraphReference,
+  evidence,
+} from "@ttsc/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
 /**
  * The production's obligation graph, expressed as its folder layout.
  *
- * A film converges when each stage of definition answers for the one above it.
- * Screenwriting already works that way, logline to treatment to beat to scene,
- * each stage removing ambiguity the previous one left. Here that ladder is
- * mechanical: every claim population owes a citation to its reference
- * population, every pair is its own 100% obligation, and an unpaid one is a
- * compile error rather than something a reader has to notice.
+ * A production converges when each stage of definition answers for the one
+ * above it. Here that ladder is mechanical: every claim population owes a
+ * citation to its reference population, every pair is its own 100% obligation,
+ * and an unpaid one is a compile error rather than something a reader has to
+ * notice.
  *
  * Read each entry as one sentence. Files under `files` must each cite a unit
  * under `reference`, and a citation toward one reference never counts toward
  * another.
+ *
+ * ## The ladder
+ *
+ * ```
+ * principles  →  settings  →  storylines  →  scenarios  →  script  →  shots
+ *                    ↑____________|____________|____________|
+ *                    every narrative layer accounts for the canon it uses
+ * ```
+ *
+ * `settings` is canon: the facts, figures, places and constraints everything is
+ * held to. `storylines` is the treatment — what happens and why. `scenarios`
+ * refine one storyline unit each into something that can be staged. `script` is
+ * the film as it will be shot. `src/shots` realizes it.
+ *
+ * The governing aim lives in the first settings file rather than in a layer of
+ * its own, because it is a fact about the work rather than a stage of it, and
+ * every layer is sized against it.
+ *
+ * ## Two kinds of production, one configuration
+ *
+ * A production may be a **film**, or a **subject library**: a building, a
+ * vehicle, a set of props, authored on its own with no narrative above it. Both
+ * are first class here and neither needs a switch, because the plugin decides
+ * activation from the claim side.
+ *
+ * A claim whose own `files` population selects no unit is dropped before its
+ * references are materialized at all, so it costs nothing and says nothing. A
+ * claim that is live and whose reference population matches no files is a hard
+ * refusal rather than silence. Both halves are measured at `@ttsc/evidence`
+ * 0.26.1 on `internals/scaffold-evidence-gate.mjs`:
+ *
+ * - Delete `docs/storylines`, `docs/scenarios`, `docs/script` and `src/shots`
+ *   together and the graph is clean. Every story claim loses its own hosts at
+ *   once and goes quiet; `docs/settings` and the `src` subject populations stay
+ *   bound exactly as they were. That is a subject library, and it needed no
+ *   switch to become one.
+ * - Delete only `docs/scenarios` and the graph refuses: `Claim 4 reference 3
+ *   (markdown, symbols: file) matched no markdown files for ['scenarios/*.md']
+ *   under root 'docs'`, followed by one error for each script scene still
+ *   citing a scenario nothing materializes. A rung cannot be skipped; it can
+ *   only be not-yet-reached, with everything below it absent too.
+ *
+ * So the rule this file is written around is: **no claim's host population may
+ * span both kinds.** Every story obligation is hosted under `docs/storylines`,
+ * `docs/scenarios` or `docs/script`, none of which a subject library has, so
+ * they fall silent together. Everything a subject library owes is hosted on
+ * `docs/settings` and on `src`, which both kinds always have.
+ *
+ * That is also why a narrative layer cites the settings it uses rather than the
+ * settings citing the scenes that need them. Hosting that obligation on the
+ * settings library would make it live in a subject library too, and refuse a
+ * production for lacking scenes it was never going to have.
+ *
+ * ## Principles
+ *
+ * `docs/principles` holds the rules the production is written against, one
+ * anchored H2 per rule, answered by the layer it governs. `common.md` binds
+ * every authored document; `settings.md` binds canon under both kinds; the
+ * other three bind one narrative layer each and vanish with it.
+ *
+ * The obligation is **coverage of the items**, not an answer from every host to
+ * every item. Answering item by item on every file needs a `checklist`
+ * reference, which `@ttsc/evidence` gained after the version this scaffold
+ * pins; when that version is the pinned one, tightening this is a flag rather
+ * than a rewrite.
+ *
+ * ## Where the bijection stops
+ *
+ * Refinement between narrative layers is one-to-one, so a scenario cites
+ * exactly one storyline unit and a script scene exactly one scenario unit, and
+ * `singleEvidencePerSymbol` says so. The script-to-shot boundary is the one
+ * place that stops being true: a scene is legitimately many shots. There the
+ * obligation is coverage of the scenes instead, and no one-parent rule is
+ * imposed on a shot.
+ *
+ * ## What is deliberately outside
  *
  * The design records under `.automovie/design` are absent on purpose. Evidence
  * graphs Markdown, Prisma, TypeScript, and Swagger; JSON cannot host a
@@ -25,14 +104,13 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * than stylistic. An example teaches one authoring technique against
  * placeholder geometry, and the shipped `AGENTS.md` tells the reader to copy
  * the technique out and delete the file. Admitting it to the implementation
- * claim would make it owe a `docs/objects` or `docs/world` specification, that
- * specification would owe a scene, and the scene would owe a beat: a file whose
- * whole purpose is to be deleted would drag a chain of invented story documents
- * into every generated project, and deleting it would then leave those
- * documents uncited and break the build of a project that did exactly what the
- * instructions said. `src/film.ts` and `src/production.ts` are outside for a
- * different reason: they declare the compile itself rather than a subject, so
- * the document they would answer for does not exist at any rung of the ladder.
+ * claim would make it owe a settings document, and a file whose whole purpose
+ * is to be deleted would drag invented documents into every generated
+ * project. `src/film.ts` and `src/production.ts` are outside for a different
+ * reason: they declare the compile itself rather than a subject, so the
+ * document they would answer for does not exist at any rung of the ladder.
+ *
+ * ## Why the implementation claim is written twice
  *
  * `evidence/graph` runs its obligation from the reference toward the claim, so
  * on its own it makes a document nobody implements an error while leaving a
@@ -44,12 +122,12 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * `src/world/zzz.ts` with an exported, uncited class now fails with
  * `cites 0 distinct selected evidence unit(s); singleEvidencePerSymbol requires
  * exactly 1`, and the same file compiles clean once the class cites one
- * specification. So a wall modelled before anything specifies the wall is
+ * settings document. So a wall modelled before anything specifies the wall is
  * refused at the moment it is written.
  *
- * Writing the claim twice is also why a specification nothing implements now
- * reports the same missing acknowledgement once per claim rather than once.
- * Two claims select that document, so two obligations go unpaid; both are
+ * Writing the claim twice is also why a settings document nothing implements
+ * reports the same missing acknowledgement once per claim rather than once. Two
+ * claims select that document, so two obligations go unpaid; both are
  * discharged by the same citation.
  *
  * The bound is the class, and the rest of it is measured debt rather than a
@@ -73,58 +151,145 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * case subsumed: a declaration with no block cites nothing, and citing nothing
  * is what the claim below already refuses.
  */
+/** Canon. Both kinds of production have it; nothing above it is required. */
+const SETTINGS = ["settings/*.md"];
+
+/** The three narrative layers, which only a film has. */
+const STORYLINES = ["storylines/*.md"];
+const SCENARIOS = ["scenarios/*.md"];
+const SCRIPT = ["script/*.md"];
+
+/**
+ * One principle file, as a reference every selected host population must cover.
+ *
+ * `symbol: "h2"` makes each rule its own citable unit, so a rule nothing in the
+ * production acknowledges is one error naming that rule rather than a whole
+ * document discharged by a single citation.
+ *
+ * `noEvidenceExclude` because a principle binds wherever its condition applies.
+ * A document that cannot honestly satisfy one is defective rather than
+ * excusable, and an exclusion here would read green forever.
+ */
+const principles = (file: string): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: "docs",
+  files: [`principles/${file}`],
+  symbol: "h2",
+  noEvidenceExclude: true,
+});
+
+/**
+ * A cross-layer parent: exactly one, and no exclusions.
+ *
+ * Refinement is a bijection between layers. A scenario refines one storyline
+ * unit and a script scene realizes one scenario unit, so a host citing two has
+ * hidden which of them the film actually made, and a host citing none has
+ * refined nothing. `singleEvidencePerSymbol` says both at once, because it
+ * counts from the claim's whole selected host population.
+ */
+const parent = (files: string[]): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: "docs",
+  files,
+  symbol: "file",
+  noEvidenceExclude: true,
+  singleEvidencePerSymbol: true,
+});
+
+/** The settings catalog, as a reference a narrative layer accounts for. */
+const settingsUsed: ITtscEvidenceGraphReference = {
+  type: "markdown",
+  root: "docs",
+  files: SETTINGS,
+  symbol: "file",
+};
+
 const graph: ITtscEvidenceGraphConfig = {
   claims: [
-    // The staged prose ladder. Each stage is one file per unit, so a sequence,
-    // a beat, and a scene are each a citable member rather than a heading
-    // inside a document that holds the whole film.
+    // Canon answers the rules that govern canon. Hosted on the settings
+    // library, which both kinds of production have, so these are the rules a
+    // subject library still owes when it owes no story at all.
     {
       type: "markdown",
-      files: ["docs/*/02-treatment/*.md"],
-      reference: {
-        type: "markdown",
-        files: ["docs/*/01-logline.md"],
-        symbol: "file",
-      },
+      root: "docs",
+      files: SETTINGS,
+      // One host per document. Every citation a layer makes lives in the single
+      // HTML comment before its H1, so the document answers as a whole and a
+      // heading inside it is never asked to carry a parent of its own.
+      symbol: "file",
+      reference: [principles("common.md"), principles("settings.md")],
     },
+    // A storyline answers the common and storyline principles, and accounts for
+    // the settings it uses. This is the layer that decides which facts the work
+    // is made of: the catalog does not prove itself, and a setting no storyline
+    // uses is a fact the film does not need.
     {
       type: "markdown",
-      files: ["docs/*/03-beats/*.md"],
-      reference: {
-        type: "markdown",
-        files: ["docs/*/02-treatment/*.md"],
-        symbol: "file",
-      },
+      root: "docs",
+      files: STORYLINES,
+      // One host per document. Every citation a layer makes lives in the single
+      // HTML comment before its H1, so the document answers as a whole and a
+      // heading inside it is never asked to carry a parent of its own.
+      symbol: "file",
+      reference: [
+        principles("common.md"),
+        principles("storylines.md"),
+        settingsUsed,
+      ],
     },
+    // A scenario refines exactly one storyline unit and rechecks settings
+    // directly. The recheck is not redundancy: it is what stops a storyline's
+    // misreading of canon from reaching the staging unchallenged.
     {
       type: "markdown",
-      files: ["docs/*/04-scenes/*.md"],
-      reference: {
-        type: "markdown",
-        files: ["docs/*/03-beats/*.md"],
-        symbol: "file",
-      },
+      root: "docs",
+      files: SCENARIOS,
+      // One host per document. Every citation a layer makes lives in the single
+      // HTML comment before its H1, so the document answers as a whole and a
+      // heading inside it is never asked to carry a parent of its own.
+      symbol: "file",
+      reference: [
+        principles("common.md"),
+        principles("scenarios.md"),
+        parent(STORYLINES),
+        settingsUsed,
+      ],
     },
-    // The spec library. A subject exists because a scene calls for it; one that
-    // no scene calls for is a subject the film does not need.
+    // The script realizes exactly one scenario unit, cites the storyline above
+    // it as well, and rechecks settings. Two parents at two depths is the
+    // triangulation: a scenario is a refinement, refinements can be wrong, and
+    // citing the storyline directly is what catches a miswired scenario instead
+    // of inheriting its mistake.
     {
       type: "markdown",
-      files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
-      reference: {
-        type: "markdown",
-        files: ["docs/*/04-scenes/*.md"],
-        symbol: "file",
-      },
+      root: "docs",
+      files: SCRIPT,
+      // One host per document. Every citation a layer makes lives in the single
+      // HTML comment before its H1, so the document answers as a whole and a
+      // heading inside it is never asked to carry a parent of its own.
+      symbol: "file",
+      reference: [
+        principles("common.md"),
+        principles("script.md"),
+        parent(SCENARIOS),
+        {
+          type: "markdown",
+          root: "docs",
+          files: STORYLINES,
+          symbol: "file",
+        },
+        settingsUsed,
+      ],
     },
-    // Implementation answers for its specification. A unit, prop, place, or
-    // formation in source with no spec is a decision nobody wrote down.
+    // Implementation answers for canon. A unit, prop, place, or formation in
+    // source with no settings document is a decision nobody wrote down.
     //
     // Formations belong here rather than in a population of their own. A
     // claim's reference is a whole population, so `src/formations/*.ts`
-    // referencing `docs/characters/*.md` would require every character to be
-    // formed up by something, including a lone figure the story never puts in
-    // ranks. Grouped into this claim, a formation cites the character it
-    // groups and nothing is owed that the story does not ask for.
+    // referencing the settings library alone would require every settings
+    // document to be formed up by something, including a lone figure the story
+    // never puts in ranks. Grouped into this claim, a formation cites the
+    // subject it groups and nothing is owed that the work does not ask for.
     {
       type: "typescript",
       files: [
@@ -140,7 +305,8 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type", "property", "function"],
       reference: {
         type: "markdown",
-        files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
+        root: "docs",
+        files: SETTINGS,
         symbol: "file",
       },
     },
@@ -172,24 +338,56 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: ["type"],
       reference: {
         type: "markdown",
-        files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
+        root: "docs",
+        files: SETTINGS,
         symbol: "file",
         singleEvidencePerSymbol: true,
       },
     },
-    // There is no population for actions. An action belongs to the
-    // subject that performs it: `Army.advance` is a method on the class the
-    // specification describes. A choreography spanning subjects that
-    // belongs to none of them is a shot, which cites its scene instead.
-    // A shot realizes a scene. This is the join that stops a film from
-    // accumulating footage nothing asked for.
+    // There is no population for actions. An action belongs to the subject that
+    // performs it: `Army.advance` is a method on the class its settings
+    // document describes. A choreography spanning subjects that belongs to none
+    // of them is a shot, which cites its script scene instead.
+    //
+    // A shot realizes a script scene. This is the join that stops a film from
+    // accumulating footage nothing asked for, and it is the last rung: every
+    // scene the script writes must be shot by something.
+    //
+    // No `singleEvidencePerSymbol` here, and that is the one place this graph
+    // stops being a bijection. One scene is legitimately many shots, so the
+    // obligation is coverage of the scenes rather than one parent per shot.
+    //
+    // `symbol` names both kinds on purpose, and that is a fix rather than a
+    // preference. A shot is written
+    // `export const opening = defineShot("opening", { ... })`. A `const`
+    // initialized with a call is a `property` to this plugin, never a
+    // `function`: that word selects a function declaration or a `const` holding
+    // an arrow or function expression. So `symbol: "function"` alone selected
+    // no host here at all, and a claim whose host population is empty is
+    // dropped before its references are read. The last rung of the ladder was
+    // therefore silent for as long as it was written that way.
+    //
+    // Measured on `internals/scaffold-evidence-gate.mjs`, which is the only
+    // instrument that settles this: with every `@evidence script/...` deleted
+    // from `src/shots/opening.ts`, the narrow selector reports PASS and the
+    // widened one reports `Missing acknowledgement for 'script/001-cue.md' ...
+    // in Claim 7`, naming both scenes. With the citations restored and
+    // `docs/script` removed, the widened claim refuses twice over: once because
+    // the reference `matched no markdown files`, and once per citation left
+    // pointing at a scene nothing materializes. That second shape is what stops
+    // source from reaching past the script, so it is worth having.
+    //
+    // Widening costs nothing. Without `singleEvidencePerSymbol` an extra host
+    // that cites nothing owes nothing, and the obligation stays coverage of the
+    // scenes.
     {
       type: "typescript",
       files: ["src/shots/*.ts"],
-      symbol: "function",
+      symbol: ["function", "property"],
       reference: {
         type: "markdown",
-        files: ["docs/*/04-scenes/*.md"],
+        root: "docs",
+        files: SCRIPT,
         symbol: "file",
       },
     },

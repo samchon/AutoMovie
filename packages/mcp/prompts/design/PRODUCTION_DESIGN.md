@@ -44,7 +44,7 @@ A report is evidence only while the target it measured is still the target that 
 
 `environmentContext` is optional and declares the read-only site an environmental analysis is measured against: the direction the site calls north, a reference ground plane, the environmental instants the production wants answered, and the neighbouring masses that block light. It is context, never design. The compiler refuses a context whose ids collide with a building's own elements, spaces, or boundaries, so a shading neighbour cannot become part of the work by a copy-paste, and no lowering, scene graph, or quantity take-off ever emits it. The repository ships no climates and no places; a production declares its own instants and its own illuminance. Read `BUILDING_STUDIES` before authoring one.
 
-The art direction must make primitive geometry readable: a small palette, explicit silhouette priorities, and a scale grammar for hero, near, and far units. Put historical research, treatment, screenplay, dialogue, and shot implementation in `docs` and `src`; do not hide them in design strings.
+The art direction must make primitive geometry readable: a small palette, explicit silhouette priorities, and a scale grammar for hero, near, and far units. Put historical research, settings, storylines, scenarios, script, dialogue, and shot implementation in `docs` and `src`; do not hide them in design strings.
 
 Use one-artifact corrections. A production edit deliberately stales every dependent shot, visual review, and render. Inspect consequences, recompile, capture current frames, and review again.
 

@@ -4,11 +4,15 @@ The user may provide only a premise, mood, subject, or "make something." You are
 
 ## Build the ladder
 
-Start with one logline containing protagonist or subject, goal, obstacle, and stakes. If any element is unknowable, make a specific bounded choice consistent with the request; vague placeholders merely postpone the decision into more expensive production.
+Four rungs, in order, one document per unit. Do not start at the scene. `EVIDENCE_GRAPH` owns which folder each rung is written in and what it must cite; this guide owns how to write it.
 
-Write treatment sequences next. Each sequence has a dramatic question and a state change. Break it into beats that can be shown or heard. A beat uses an active verb: discovers, refuses, advances, breaks, recognizes. "There is a battle" is a topic, not a beat.
+**Settings** fix what exists before anything happens to it: the governing aim the whole work is sized against, each subject's silhouette, scale, and stated capability, each place's extent and named points, and the art direction everything is drawn against. Where an element is unknowable, make a specific bounded choice consistent with the request and record it as chosen; a vague placeholder merely postpones the decision into more expensive production. Where a figure genuinely is not decided, write that it is absent rather than inventing one, because a guessed number reads exactly like a measured one to everything downstream.
 
-Then write scenes with a conventional heading, action, and dialogue:
+**Storylines** say what happens and why. Each has a dramatic question and a state change, and each accounts for the settings it uses. This rung is treatment, not script: it fixes the event and leaves the camera, the lens, and the blocking to the rungs below. Use active verbs — discovers, refuses, advances, breaks, recognizes. "There is a battle" is a topic, not a storyline. What a storyline leaves behind is the state the next one begins from; if it leaves nothing, nothing after it has anything to do.
+
+**Scenarios** stage exactly one storyline as one physical action, written as entry state, action, exit state. Everything a scenario asks for must be a settings fact, and every distance and travel it describes must be one the place and the subject admit. This is the rung that catches a storyline nobody can shoot, and it is why it rechecks canon directly instead of trusting the storyline's reading of it.
+
+**Script** is the film as it will be shot. A scene realizes exactly one scenario, cites the storyline above it as well, and states every duration in seconds rather than as an adverb, because the engine keeps time in seconds. Write it with a conventional heading, action, and dialogue:
 
 - Heading establishes INT/EXT, named location, and time condition.
 - Action is present tense and observable. Do not write thoughts the camera cannot represent without behavior, dialogue, or sound.
@@ -16,7 +20,7 @@ Then write scenes with a conventional heading, action, and dialogue:
 - Dialogue earns its place by changing information, relation, intention, or rhythm. Avoid having characters narrate what the image already proves.
 - Parentheticals describe only a necessary playable adjustment; prose should not micromanage every gesture.
 
-The typed scene index points from stable ids into prose. It must not become a second abbreviated screenplay. Stable identifiers survive wording changes and form the joins used by shot contracts, source, review, and acceptance.
+The typed screenplay index calls the storyline rung `treatment` and the script rung `screenplay`, and addresses both by path. It points from stable ids into that prose and must not become a second abbreviated screenplay: each indexed beat must appear verbatim in the storyline it names, and each indexed scene must head the script document it names. Stable identifiers survive wording changes and form the joins used by shot contracts, source, review, and acceptance.
 
 ## Scene craft
 
@@ -32,7 +36,7 @@ For short work, compression is not speed. One precise image and one irreversible
 
 ## Shootability pass
 
-For every beat, ask:
+For every storyline beat, ask:
 
 1. What is the observable start state?
 2. What changes on screen or in sound?
@@ -41,10 +45,10 @@ For every beat, ask:
 5. Which shot or coverage pair makes the change readable?
 6. Which acceptance predicate would falsify success?
 
-If a beat depends on an unavailable asset, impossible articulation, invisible internal state, or unbounded crowd simulation, rewrite it or design the missing capability deliberately. Never wait for diffusion to invent semantic structure.
+If it depends on an unavailable asset, impossible articulation, invisible internal state, or unbounded crowd simulation, rewrite it or design the missing capability deliberately. Never wait for diffusion to invent semantic structure.
 
 ## Revision rubric
 
-Read the prose aloud. Remove repeated information, generic intensifiers, camera directions that belong in shot design, and ornamental action that does not change story state. Verify causality between beats, setup and payoff, stable identity, spatial logic, and whether the ending answers the dramatic question created by the beginning.
+Read the prose aloud. Remove repeated information, generic intensifiers, camera directions that belong in shot design, and ornamental action that does not change story state. Verify causality between storylines, setup and payoff, stable identity, spatial logic, and whether the ending answers the dramatic question created by the beginning.
 
 Lock the screenplay softly only after the ladder is coherent. Later production evidence may justify a revision, but the change must invalidate and rebuild its downstream dependents instead of silently drifting them.

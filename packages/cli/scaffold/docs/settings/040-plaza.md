@@ -1,4 +1,7 @@
-<!-- @evidence docs/{{name}}/04-scenes/SCN-001.md Exists because this scene needs open ground the gesture reads against. -->
+<!--
+@evidence principles/settings.md#surface-ownership Names the ground and the landmark on it, so a shot can say where the gesture happened without a source inventing a coordinate.
+@evidence principles/settings.md#measured-extent States the extent of the ground apart from what stands on it.
+-->
 
 # PLAZA
 

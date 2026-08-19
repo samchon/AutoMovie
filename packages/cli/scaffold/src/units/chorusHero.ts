@@ -19,7 +19,7 @@ import { soloist } from "./soloist";
  * the formation that holds it is what a shot stages. What it owns is the
  * member's measured facts and the LOD ladder those facts imply.
  *
- * @evidence docs/characters/chorus.md Answers the Scale section for one member:
+ * @evidence settings/020-chorus.md Answers the Scale section for one member:
  *   the document states 1.7 m and "a head shorter than the soloist" at once,
  *   and this class is where both readings are held against each other.
  */
@@ -99,7 +99,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * has. `design()` is where the record leaves the class, which makes it the
    * one place every construction has to pass through.
    *
-   * @evidence docs/characters/chorus.md Requires rows and columns to stay
+   * @evidence settings/020-chorus.md Requires rows and columns to stay
    *   legible at every distance, which is what the tier ladder answers for.
    */
   public design(): IAutoMovieModelRecipe {
@@ -112,7 +112,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
       ChorusMember.SCALE_TOLERANCE
     )
       throw new Error(
-        `docs/characters/chorus.md states a member is ${ChorusMember.SPECIFIED_HEIGHT} m, a head shorter than the soloist, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
+        `settings/020-chorus.md states a member is ${ChorusMember.SPECIFIED_HEIGHT} m, a head shorter than the soloist, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
       );
     return {
       id: this.id,
@@ -142,7 +142,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * engine's. A member that did render individually would also be the first
    * step toward two thousand scene nodes.
    *
-   * @evidence docs/characters/chorus.md States the group is one subject and the
+   * @evidence settings/020-chorus.md States the group is one subject and the
    *   film never asks the audience to follow an individual inside it.
    */
   public render(
@@ -158,7 +158,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
  * Carries the subject's citation until a class can carry its own
  * (samchon/ttsc#1121).
  *
- * @evidence docs/characters/chorus.md Implements the member scale and the
+ * @evidence settings/020-chorus.md Implements the member scale and the
  *   row-and-column readability that specification requires at every distance.
  */
 export const chorusHero = new ChorusMember();
@@ -179,7 +179,7 @@ export const chorusHero = new ChorusMember();
  * tier is a row standing frozen behind rows that walk, which is the one thing
  * the group must never look like.
  *
- * @evidence docs/characters/chorus.md Answers the Life section at distance:
+ * @evidence settings/020-chorus.md Answers the Life section at distance:
  *   that section holds "at every distance the group is seen from", so the
  *   coarse rungs are still articulated figures with a baked stride rather than
  *   boxes, which is the only reading of it that survives the far tier.
@@ -225,7 +225,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * production that retyped them would own a second humanoid that drifts from
    * the first.
    *
-   * @evidence docs/characters/chorus.md States every member walks the same
+   * @evidence settings/020-chorus.md States every member walks the same
    *   stride, each at its own point in it, which is the one cycle this declares.
    */
   public profile(): IAutoMovieProfile {
@@ -252,7 +252,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * base constructor has run, and `design()` is the one gate every construction
    * passes through.
    *
-   * @evidence docs/characters/chorus.md States a member too distant to be posed
+   * @evidence settings/020-chorus.md States a member too distant to be posed
    *   is still a member, so the walk has to hold at every distance the group is
    *   seen from.
    */
@@ -262,7 +262,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
       this.limbRadius < chorusHero.limbRadius
     )
       throw new Error(
-        `docs/characters/chorus.md requires the walk to read at every distance, so the "${this.id}" tier cannot be finer than the hero tier it stands behind: ${this.headRadius} m head and ${this.limbRadius} m limbs against ${chorusHero.headRadius} m and ${chorusHero.limbRadius} m. Coarsen this tier or refine the hero.`,
+        `settings/020-chorus.md requires the walk to read at every distance, so the "${this.id}" tier cannot be finer than the hero tier it stands behind: ${this.headRadius} m head and ${this.limbRadius} m limbs against ${chorusHero.headRadius} m and ${chorusHero.limbRadius} m. Coarsen this tier or refine the hero.`,
       );
     return {
       id: this.id,
@@ -288,7 +288,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * the formation instances at a distance, and it has no individual existence
    * for a shot to place.
    *
-   * @evidence docs/characters/chorus.md States the group is one subject and the
+   * @evidence settings/020-chorus.md States the group is one subject and the
    *   film never asks the audience to follow an individual inside it.
    */
   public render(
@@ -304,7 +304,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
  * Carries the subject's citation until a class can carry its own
  * (samchon/ttsc#1121).
  *
- * @evidence docs/characters/chorus.md Implements the walking member the
+ * @evidence settings/020-chorus.md Implements the walking member the
  *   specification requires, at the distance where the interval still reads.
  */
 export const chorusNear = new ChorusTier("chorus-near", "near", 0.15, 0.065);
@@ -315,7 +315,7 @@ export const chorusNear = new ChorusTier("chorus-near", "near", 0.15, 0.065);
  * Carries the subject's citation until a class can carry its own
  * (samchon/ttsc#1121).
  *
- * @evidence docs/characters/chorus.md Implements the walking member at the
+ * @evidence settings/020-chorus.md Implements the walking member at the
  *   distance the specification still calls a member rather than a texture.
  */
 export const chorusFar = new ChorusTier("chorus-far", "far", 0.17, 0.085);

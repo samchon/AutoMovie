@@ -5,7 +5,7 @@ AutoMovie produces a deterministic prototype: a blocking pass whose staging, mot
 ## Flow
 
 1. Start with this constitution, then choose the next guide from Guide selection. Whenever a named guide is required, retrieve only that guide by calling `getGuideDocument` with its exact stem, for example `getGuideDocument({ name: "SCREENPLAY_WRITING" })`.
-2. Author the screenplay ladder: logline, treatment sequences and beats, then scene prose and its typed index. Read `EVIDENCE_GRAPH` for which folder each stage owns and what it must cite, then `SCREENPLAY_WRITING` for the craft. Every stage cites the stage above it, and the graph refuses a stage that nothing below elaborates, so fill the ladder downward before deepening any one branch.
+2. Author the prose ladder in order: settings, storylines, scenarios, script, then the typed screenplay index. Read `EVIDENCE_GRAPH` for which folder each rung owns and what it must cite, then `SCREENPLAY_WRITING` for the craft. Every rung cites the rung above it, the graph refuses a rung that nothing below elaborates, and it refuses outright a rung written over a skipped one — so fill the ladder downward before deepening any one branch. A production that authors only subjects and no film leaves the three story rungs empty and they go silent together; that is a supported shape, not a shortcut to take with a film.
 3. Author production, models, world, built environments, formations, shot contracts, acceptance scenarios, and TypeScript shot/film source in their tracked owners. Read the matching contract guide and handbook before editing. Once shots begin to repeat, read `SOURCE_COMPOSITION`: a feature-length production is written as a program that emits shots, not as one hand-authored module per shot.
 4. When deterministic work is too expensive for the one-second source sandbox, read `DERIVED_ARTIFACTS` and run its explicit generation command before compiling. Compilation verifies a derived artifact and never generates or repairs one, so a `derived-artifact-*` refusal is cleared by rerunning that command, not by compiling again.
 5. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
@@ -48,7 +48,7 @@ Two groups carry their own index, `built-environment/` and `review/`, because th
 
 ## [`craft/`](craft/): the decisions no record can make for you
 
-- `SCREENPLAY_WRITING`: logline-to-scene screenplay craft and revision rubric.
+- `SCREENPLAY_WRITING`: settings-to-script prose craft and revision rubric.
 - `CINEMATOGRAPHY`: shot-size meaning, the 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
 - `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.

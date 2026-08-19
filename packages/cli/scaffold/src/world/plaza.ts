@@ -25,7 +25,7 @@ import { chorus } from "../formations/chorus";
  * geometry is context-free and performance is not, and a class that pretended
  * otherwise would need a shot before it could say where it is.
  *
- * @evidence docs/world/plaza.md Every piece the one specified place is made of
+ * @evidence settings/040-plaza.md Every piece the one specified place is made of
  *   enters the world through this class, and the geometry-before-performance
  *   split it fixes is what lets that place state its extent and its named point
  *   without waiting for a shot to ask.
@@ -65,7 +65,7 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
  *
- * @evidence docs/world/plaza.md Answers the specification's Extent section: the
+ * @evidence settings/040-plaza.md Answers the specification's Extent section: the
  *   open level ground the rows must end inside is this class and nothing else,
  *   and the half-extent it derives is the number that claim resolves to.
  */
@@ -117,7 +117,7 @@ export class PlazaGround extends WorldPiece {
    * second answer that agrees until it does not is the failure the whole
    * one-owner rule exists to prevent.
    *
-   * @evidence docs/world/plaza.md Requires one level open place, which is the
+   * @evidence settings/040-plaza.md Requires one level open place, which is the
    *   height this returns everywhere inside it.
    */
   public heightAt(point: { x: number; z: number }): number {
@@ -133,7 +133,7 @@ export class PlazaGround extends WorldPiece {
    * meshes from it. That is how a plaza corrected in the design record went on
    * drawing a floor a third the size of the group standing on it.
    *
-   * @evidence docs/world/plaza.md Requires the rows to end inside the place,
+   * @evidence settings/040-plaza.md Requires the rows to end inside the place,
    *   which is a claim about the ground the audience sees.
    */
   public patches(): readonly IAutoMovieSurface[] {
@@ -163,7 +163,7 @@ export class PlazaGround extends WorldPiece {
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
  *
- * @evidence docs/world/plaza.md Answers the specification's Landmarks section:
+ * @evidence settings/040-plaza.md Answers the specification's Landmarks section:
  *   `plaza-center` is named there precisely so a contract can point at the
  *   gesture without a coordinate, and this class is where that id exists.
  */
@@ -194,7 +194,7 @@ export class PlazaCenterMark extends WorldPiece {
  * a recipe nothing activates is dead configuration, and a zone with no recipe
  * has nothing to emit.
  *
- * @evidence docs/world/plaza.md Held to the specification's opening rule that
+ * @evidence settings/040-plaza.md Held to the specification's opening rule that
  *   the place carries no feature competing with a silhouette: this is the one
  *   piece that could, so its bounds and opacity are declared here where that
  *   rule can be read against them rather than tuned inside a shot.
@@ -253,9 +253,18 @@ export class PlazaHaze extends WorldPiece {
  * them. Its record is the merge of what its pieces place, so adding a step
  * means adding a piece rather than editing an array in the middle of a blob.
  *
- * @evidence docs/world/plaza.md Is the whole of PLAZA rather than a part of it:
+ * @evidence settings/040-plaza.md Is the whole of PLAZA rather than a part of it:
  *   the specification describes one place, and this is the single subject a
  *   shot names when it stages that place.
+ * @evidenceExclude settings/000-governing-aim.md The governing aim is what the
+ *   film is for and how large it is. No class implements it: it is the sentence
+ *   every layer is sized against, answered by the storylines that carry it and
+ *   by nothing under `src`. Written once here for the whole source population.
+ * @evidenceExclude settings/050-art-direction.md Palette, scale grammar and
+ *   review distance are constraints every subject is drawn against rather than
+ *   a subject to build. They are answered by the documents that apply them, and
+ *   a class claiming to implement art direction would be claiming to own a rule
+ *   that binds every other class too.
  */
 export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
@@ -280,7 +289,7 @@ export class Plaza extends AutoMovieSubjectGroup<
    * no standable-but-forbidden top; a world that grows one states it where the
    * piece is defined rather than here.
    *
-   * @evidence docs/world/plaza.md Requires one open level place, which is what
+   * @evidence settings/040-plaza.md Requires one open level place, which is what
    *   a shot stands its figures on.
    */
   public space(): IAutoMovieSpace {
@@ -295,7 +304,7 @@ export class Plaza extends AutoMovieSubjectGroup<
   /**
    * The world record, assembled from what its pieces place.
    *
-   * @evidence docs/world/plaza.md Requires one place carrying the named point
+   * @evidence settings/040-plaza.md Requires one place carrying the named point
    *   and the extent, which this composes rather than transcribes.
    */
   public design(): IAutoMovieWorldDesign {
@@ -326,7 +335,7 @@ export class Plaza extends AutoMovieSubjectGroup<
  * Carries the citation for the plaza and every piece standing on it, until a
  * class can carry its own (samchon/ttsc#1121).
  *
- * @evidence docs/world/plaza.md Implements the open level ground, the named
+ * @evidence settings/040-plaza.md Implements the open level ground, the named
  *   ground point, and the extent that specification requires.
  */
 export const plaza = new Plaza();

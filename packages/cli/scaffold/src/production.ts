@@ -31,10 +31,11 @@ export const production = {
    * The promise every sequence answers for, quoted from the document that owns
    * it.
    *
-   * `docs/{{name}}/01-logline.md` is the root of the prose ladder and this is
-   * the same sentence. It is copied rather than read, because reading it would
-   * mean recovering one sentence out of a Markdown document by rule, and a rule
-   * that guesses which sentence is the logline is a second author.
+   * `settings/000-governing-aim.md` is the first canon document, the one every
+   * rung of the ladder is sized against, and this is the same sentence. It is
+   * copied rather than read, because reading it would mean recovering one
+   * sentence out of a Markdown document by rule, and a rule that guesses which
+   * sentence is the logline is a second author.
    */
   logline: "A soloist raises a hand, and a chorus standing in rows answers it.",
   /**
@@ -54,7 +55,7 @@ export const production = {
     colorSpace: "srgb",
   },
   /**
-   * The bounded visual grammar, specified by `docs/art-direction.md`.
+   * The bounded visual grammar, specified by `settings/050-art-direction.md`.
    *
    * Palette and scale rules live here rather than inside a subject because they
    * are decisions about the film: a subject picks its color out of this list,

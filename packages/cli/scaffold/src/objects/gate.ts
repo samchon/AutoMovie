@@ -35,7 +35,7 @@ const at = (position: IAutoMovieVector3): IAutoMovieTransform => ({
  * travel a shot exceeds.
  *
  * The geometry is two boxes and is meant to be replaced. Every measurement
- * below answers to `docs/objects/gate.md`; the boxes answer to nothing, which
+ * below answers to `settings/030-gate.md`; the boxes answer to nothing, which
  * is the difference between an object and a piece of scenery somebody typed.
  *
  * No shot in this starter stages it yet, which is the one thing to fix first
@@ -53,7 +53,7 @@ const at = (position: IAutoMovieVector3): IAutoMovieTransform => ({
  * };
  * ```
  *
- * @evidence docs/objects/gate.md Is GATE entire: the single hinge that document
+ * @evidence settings/030-gate.md Is GATE entire: the single hinge that document
  *   fixes, the travel it bounds, and the edge placement it derives from staged
  *   ground all resolve on this class, while the two boxes it renders answer to
  *   nothing and are meant to be thrown away.
@@ -92,7 +92,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   /**
    * How tall the leaf stands, in metres.
    *
-   * @evidence docs/objects/gate.md Requires an opening a figure could walk
+   * @evidence settings/030-gate.md Requires an opening a figure could walk
    *   through at the production's human scale, which is what this derives.
    */
   public height(): number {
@@ -109,7 +109,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    * it. A world with no ground under it is refused here rather than placing the
    * gate at the origin, which is a gate standing on top of the soloist.
    *
-   * @evidence docs/objects/gate.md Requires the gate at the plaza's far edge,
+   * @evidence settings/030-gate.md Requires the gate at the plaza's far edge,
    *   which is the edge this reads off the staged ground itself.
    */
   public farEdgeZ(context: IAutoMovieShotBuildContext): number {
@@ -130,7 +130,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   /**
    * Where the gate stands, in world metres.
    *
-   * @evidence docs/objects/gate.md Requires the gate at the plaza's far edge,
+   * @evidence settings/030-gate.md Requires the gate at the plaza's far edge,
    *   square to the ground and facing the figures.
    */
   public position(context: IAutoMovieShotBuildContext): IAutoMovieVector3 {
@@ -146,7 +146,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    * first until one of them is edited, and a clip that addresses nothing is a
    * shot that renders a gate nobody opened.
    *
-   * @evidence docs/objects/gate.md Requires one hinge and only one, which is
+   * @evidence settings/030-gate.md Requires one hinge and only one, which is
    *   the single channel this names.
    */
   public hingeNode(): string {
@@ -219,7 +219,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
   /**
    * The prop specification the compiler forges and stages.
    *
-   * @evidence docs/objects/gate.md Implements the single hinge, the leaf that
+   * @evidence settings/030-gate.md Implements the single hinge, the leaf that
    *   rides it, and the travel that specification bounds, and claims no room or
    *   wall because this production has no building to claim one in.
    */
@@ -276,7 +276,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    * and left the second to whichever shot happened to stage it would be a gate
    * that claims the plaza's edge from the middle of the ground.
    *
-   * @evidence docs/objects/gate.md Requires the gate square to the ground at
+   * @evidence settings/030-gate.md Requires the gate square to the ground at
    *   the far edge, facing the figures.
    */
   public stage(context: IAutoMovieShotBuildContext): IAutoMovieStageSetPiece {
@@ -296,7 +296,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
    * nothing stages, and a placement with no specification is a box with no
    * moving part.
    *
-   * @evidence docs/objects/gate.md Stages the one changeable thing this
+   * @evidence settings/030-gate.md Stages the one changeable thing this
    *   specification puts on the ground.
    */
   public render(
@@ -314,7 +314,7 @@ export class PlazaGate extends AutoMovieSubject<IAutoMoviePropSpec> {
  * (samchon/ttsc#1121), and its measured facts cannot cite at all for the same
  * reason.
  *
- * @evidence docs/objects/gate.md Implements the scale, the single moving part,
+ * @evidence settings/030-gate.md Implements the scale, the single moving part,
  *   the travel, and the placement that specification states, and claims nothing
  *   it does not.
  */
