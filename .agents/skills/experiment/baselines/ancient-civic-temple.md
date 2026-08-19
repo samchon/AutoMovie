@@ -1301,9 +1301,16 @@ tools.shell_command({ command: "rg -n ... node_modules/@automovie" })
 
 - `examples/era-reference-images/**`가 **없다.** 레퍼런스 5장은 이슈의 GitHub 자산
   URL에서 직접 받았다.
-- `npm run status`, `npm run contribution`, `gltf`, `derive:example` 스크립트가
-  **없다.** `status`는 `review:status`로 읽었다. `contribution`은 대체하지 않고
-  `unverified`로 남긴다 — 대체하면 다른 것을 재게 된다.
+- `npm run status`, `npm run contribution`, `gltf` 스크립트가 **없다.** `status`는
+  `review:status`로 읽었다. `contribution`은 대체하지 않고 `unverified`로 남긴다 —
+  대체하면 다른 것을 재게 된다.
+- **`derive:example`은 있다.** 이 줄은 원래 없는 것으로 적혀 있었고, 그것이
+  틀렸다. 이 샌드박스의 `package.json`이 지금 나열하는 스크립트는 `capture:doctor`
+  `capture:install` `build` `compile` `lint` `lint:source` `preview`
+  `review:status` `render` `viewer` `test` `verify` `format` `design`
+  `derive:example` `building:report` `texture:scale`이며, 세어 보면 답이 나오는
+  주장을 세어 보지 않고 적은 것이 이 오기의 전부다. 추적되는 기준선의 틀린 줄은
+  다음 사이클을 그대로 오도하므로, 지우지 않고 정정으로 남긴다.
 - `internals/scorecard.mjs`가 없다.
 - 이슈가 지목한 `renderer-verification` 스킬은 존재하지 않는 이름이다. 실제 스킬은
   `viewer-verification`.
