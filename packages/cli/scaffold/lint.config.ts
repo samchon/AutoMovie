@@ -21,11 +21,25 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  *
  * ## The ladder
  *
+ * The story rungs, each answered for by the one below it, with every narrative
+ * rung also accounting for the canon it stands on:
+ *
  * ```
- * principles  →  settings  →  storylines  →  scenarios  →  script  →  shots
- *                    ↑____________|____________|____________|
- *                    every narrative layer accounts for the canon it uses
+ * settings  →  storylines  →  scenarios  →  script  →  src/shots
+ *    ↑______________|____________|___________|
  * ```
+ *
+ * The subject side, which both kinds of production have, and which runs the
+ * other way because source implements canon rather than refining it:
+ *
+ * ```
+ * settings  ←  src/units, src/objects, src/world, src/formations
+ * ```
+ *
+ * `docs/principles` governs every rung in both diagrams and is drawn in
+ * neither, because an arrow from it to each of them would say less than the
+ * sentence does. `docs/research` sits beside the ladder rather than on it, and
+ * answers principles alone.
  *
  * `settings` is canon: the facts, figures, places and constraints everything is
  * held to. `storylines` is the treatment — what happens and why. `scenarios`
@@ -75,14 +89,44 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  *
  * `docs/principles` holds the rules the production is written against, one
  * anchored H2 per rule, answered by the layer it governs. `common.md` binds
- * every authored document; `settings.md` binds canon under both kinds; the
- * other three bind one narrative layer each and vanish with it.
+ * every authored document. `settings.md` binds canon, so it is live under both
+ * kinds of production. `storylines.md`, `scenarios.md` and `script.md` bind one
+ * narrative layer each and vanish with it. `research.md` binds a ledger that
+ * many productions never write, and is silent until one does.
+ *
+ * A principles document is a reference population and never a host, so nothing
+ * asks a rule to justify itself. That is the one asymmetry here worth knowing:
+ * add `principles/foo.md` without adding a claim that references it and it is
+ * inert — no rung answers it and no diagnostic says so.
  *
  * The obligation is **coverage of the items**, not an answer from every host to
- * every item. Answering item by item on every file needs a `checklist`
- * reference, which `@ttsc/evidence` gained after the version this scaffold
- * pins; when that version is the pinned one, tightening this is a flag rather
- * than a rewrite.
+ * every item, so a rung can satisfy the population while one of its documents
+ * quietly answers nothing. Answering item by item on every file needs a
+ * `checklist` reference, which `@ttsc/evidence` gained after the version this
+ * scaffold pins; when that version is the pinned one, tightening this is a flag
+ * rather than a rewrite.
+ *
+ * ## Where an exclusion is allowed, and why
+ *
+ * `@evidenceExclude` says a population intentionally owes a unit nothing, and
+ * whether that sentence can ever be true differs by reference, so two of them
+ * set `noEvidenceExclude` and the rest do not.
+ *
+ * A **principle** refuses it. A rule binds wherever its condition applies, so a
+ * document that cannot honestly satisfy one is defective rather than excusable,
+ * and an exclusion would read green forever. A **parent** refuses it for a
+ * different reason: a refinement with no parent is not a refinement, so a
+ * scenario excusing itself from having a storyline has excused itself from
+ * being a scenario. Both are measured — the refusal is
+ * `noEvidenceExclude requires positive @evidence for this reference`.
+ *
+ * The other three allow it, because for each of them the sentence can be true.
+ * A narrative rung may honestly owe nothing to a settings fact that only source
+ * honours, such as a render constraint no scene stages. The script may owe
+ * nothing to a storyline whose scene the soft lock preserved as `OMITTED`. And
+ * source may owe nothing to a settings document no class can implement, which
+ * is why `src/world/plaza.ts` carries the two population-wide exclusions for
+ * the governing aim and the art direction.
  *
  * ## Where the bijection stops
  *
