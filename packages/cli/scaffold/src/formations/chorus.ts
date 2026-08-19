@@ -22,7 +22,7 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  * The seed is declared here rather than chosen in source, so the same design
  * always materializes the same chorus.
  *
- * @evidence docs/characters/chorus.md Answers the Silhouette and Cohesion
+ * @evidence settings/020-chorus.md Answers the Silhouette and Cohesion
  *   sections, which are claims about the group and not about a member: the
  *   interval that must survive, the edge the rows read by, and the order that
  *   holds through the cue are all arrangement, and arrangement lives here.
@@ -115,14 +115,14 @@ export class Chorus extends AutoMovieSubjectGroup<
    * longer has. `design()` is where the record leaves the class, which makes it
    * the one place every construction has to pass through.
    *
-   * @evidence docs/characters/chorus.md States the rows stay in order and that
+   * @evidence settings/020-chorus.md States the rows stay in order and that
    *   any loosening must be authored as a dramatic event.
    */
   public design(): IAutoMovieFormationDesign {
     const slots = this.ranks * this.files;
     if (this.count <= slots - this.files || this.count > slots)
       throw new Error(
-        `docs/characters/chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
+        `settings/020-chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
       );
     return {
       id: this.id,
@@ -156,7 +156,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    * choice, because the place it stands on is sized to hold it. A shot free to
    * pick a farther one would walk the rows off ground nobody widened.
    *
-   * @evidence docs/characters/chorus.md States the rows remain in order while
+   * @evidence settings/020-chorus.md States the rows remain in order while
    *   the cue is given and after it.
    */
   public advance(props: {
@@ -198,7 +198,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    * is refused at compile time, naming the corner, and widening the place is
    * the answer.
    *
-   * @evidence docs/characters/chorus.md States any loosening is a dramatic
+   * @evidence settings/020-chorus.md States any loosening is a dramatic
    *   event and must be authored as one, never left to chance.
    */
   public break(props: {
@@ -234,7 +234,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    * group means knowing its footprint, and computing it at each call site is
    * how two shots end up disagreeing about where the edge is.
    *
-   * @evidence docs/characters/chorus.md States the group reads by its edges,
+   * @evidence settings/020-chorus.md States the group reads by its edges,
    *   which is the measurement this returns.
    */
   public footprint(): { width: number; depth: number } {
@@ -254,7 +254,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    * far, and it carries {@link advanceMetres} because a place has to hold the
    * group where it goes rather than only where it forms up.
    *
-   * @evidence docs/characters/chorus.md States the group reads by its edges,
+   * @evidence settings/020-chorus.md States the group reads by its edges,
    *   which is what this measures against the ground it stands on.
    */
   public reach(): number {
@@ -272,7 +272,7 @@ export class Chorus extends AutoMovieSubjectGroup<
    * and merges the cue; standing still is the default because the specification
    * treats motion as an event rather than a state.
    *
-   * @evidence docs/characters/chorus.md States the rows are in order while the
+   * @evidence settings/020-chorus.md States the rows are in order while the
    *   cue is given, which is a group that holds rather than moves.
    */
   public render(
@@ -288,7 +288,7 @@ export class Chorus extends AutoMovieSubjectGroup<
  * Carries the subject's citation until a class can carry its own
  * (samchon/ttsc#1121).
  *
- * @evidence docs/characters/chorus.md Implements the rows-and-columns
+ * @evidence settings/020-chorus.md Implements the rows-and-columns
  *   silhouette and the cohesion that specification requires while the cue is
  *   given.
  */

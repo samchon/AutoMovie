@@ -17,7 +17,7 @@ import type {
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
  *
- * @evidence docs/characters/soloist.md Is SOLOIST entire: the one upright
+ * @evidence settings/010-soloist.md Is SOLOIST entire: the one upright
  *   figure that document describes, carrying its stated scale and the single
  *   raised-hand capability it permits and nothing beyond it.
  */
@@ -54,7 +54,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * The measured recipe the production derives its design record from.
    *
-   * @evidence docs/characters/soloist.md Implements the upright single
+   * @evidence settings/010-soloist.md Implements the upright single
    *   silhouette and the one claimed capability, at the stated scale.
    */
   public design(): IAutoMovieModelRecipe {
@@ -82,7 +82,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * opening abduction lets a following shot begin where the previous one ended,
    * which is what an untrimmed cut between two shots requires.
    *
-   * @evidence docs/characters/soloist.md Implements the raise-and-hold this
+   * @evidence settings/010-soloist.md Implements the raise-and-hold this
    *   specification claims as the figure's only capability.
    */
   public cue(
@@ -148,7 +148,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * the figure's scale cannot leave the camera aiming where the head used to
    * be. The ratio is the anthropometric one; only the scale is authored.
    *
-   * @evidence docs/characters/soloist.md Fixes the scale this measurement is
+   * @evidence settings/010-soloist.md Fixes the scale this measurement is
    *   derived from, and this value states nothing that specification does not.
    */
   public eyeHeight(): number {
@@ -163,7 +163,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * capability, and the compiler owns the rig that realizes them. Refusing
    * loudly here keeps every motion from having to re-check it.
    *
-   * @evidence docs/characters/soloist.md Requires an articulated figure that
+   * @evidence settings/010-soloist.md Requires an articulated figure that
    *   raises a hand, which is a claim on a rig this source does not own.
    */
   public skeleton(context: IAutoMovieShotBuildContext): string {
@@ -183,7 +183,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * cast entry that echoed the design id would reference a model the scene has
    * no node for.
    *
-   * @evidence docs/characters/soloist.md Specifies the figure whose built
+   * @evidence settings/010-soloist.md Specifies the figure whose built
    *   model this resolves, and nothing about how the compiler names it.
    */
   public modelRef(context: IAutoMovieShotBuildContext): string {
@@ -198,7 +198,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * Stage this figure and the clip it performs.
    *
-   * @evidence docs/characters/soloist.md Stages the single separated figure
+   * @evidence settings/010-soloist.md Stages the single separated figure
    *   this specification requires the camera to be able to follow.
    */
   public render(
@@ -227,7 +227,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
  * (samchon/ttsc#1121). Its measured facts cannot cite at all for the same
  * reason, so this one tag answers for the whole subject until they can.
  *
- * @evidence docs/characters/soloist.md Implements the silhouette, the scale,
+ * @evidence settings/010-soloist.md Implements the silhouette, the scale,
  *   and the single capability that specification states, and claims nothing it
  *   does not.
  */

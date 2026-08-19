@@ -1,5 +1,7 @@
-<!-- @evidence docs/{{name}}/04-scenes/SCN-001.md Exists because this scene needs rows that read as rows. -->
-<!-- @evidence docs/{{name}}/04-scenes/SCN-002.md Exists because this scene needs the chorus to read as the consequence of the exchange. -->
+<!--
+@evidence principles/settings.md#capability-stated States that the group is one subject and that no individual inside it is followable, so no source may address a member as a figure.
+@evidence principles/common.md#refuse-rather-than-approximate Where the interval is what makes the group read, the document states the interval rather than an impression of density.
+-->
 
 # CHORUS
 

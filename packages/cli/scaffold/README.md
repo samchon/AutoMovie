@@ -1,15 +1,26 @@
 # {{name}}
 
-This is a coding-agent-first AutoMovie production repository. Write treatment,
-screenplay, shot builders, motion helpers, effects, audio integration, and tests
-as ordinary files. AutoMovie owns bounded design, deterministic generated
-output, geometry facts, actual-frame evidence, and review freshness.
+This is a coding-agent-first AutoMovie production repository. Write story
+prose, subject specifications, shot builders, motion helpers, effects, audio
+integration, and tests as ordinary files. AutoMovie owns bounded design,
+deterministic generated output, geometry facts, actual-frame evidence, and
+review freshness.
 
-Treatment and screenplay prose are under `docs/{{name}}`. Keep their exact
-beat and `SCN-*` identities aligned with
-`.automovie/design/{{name}}/screenplay/index.json`; once shots exist, retain
-locked numbers, use `OMITTED` tombstones for deletions, and alpha ids for
-insertions.
+Prose is a ladder of one document per unit, and each rung answers for the one
+above it. `docs/principles` states how a rung is written, `docs/settings`
+states what exists and how large it is, `docs/storylines` states what happens,
+`docs/scenarios` stages one storyline as one physical action, and `docs/script`
+is the final script the shots realize. `lint.config.ts` makes that ladder a
+compile error rather than a convention: a settings fact no storyline uses, a
+storyline no scenario stages, and a scenario no script scene realizes are each
+one named error. A production that authors only subjects leaves the three story
+folders empty and the story rungs go silent, so the same configuration governs
+a film and a standalone model library without a switch.
+
+Keep the exact beat text and `SCN-*` identities in `docs/storylines` and
+`docs/script` aligned with `.automovie/design/screenplay/index.json`; once shots
+exist, retain locked numbers, use `OMITTED` tombstones for deletions, and alpha
+ids for insertions.
 `npm run lint` checks those joins and requires compiled realization plus completed
 shot/film acceptance evidence for the same realized shot before an active scene
 leaves the coverage ledger. Catalog entries bind explicitly to shared model,

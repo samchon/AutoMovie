@@ -289,7 +289,7 @@ const buildCue = (
     )
       ? // The group owns its own advance. Spelling the cue out here loosened
         // the intervals by five percent and turned the rows four degrees,
-        // which `docs/characters/chorus.md` permits only as an authored
+        // which `settings/020-chorus.md` permits only as an authored
         // dramatic event, and `Chorus.break` is what authors one.
         [
           chorus.advance({
@@ -319,7 +319,7 @@ const buildCue = (
 /**
  * Opening source proves a neutral-to-raised transition.
  *
- * @evidence docs/{{name}}/04-scenes/SCN-001.md Realizes the raised hand this
+ * @evidence script/001-cue.md Realizes the raised hand this
  *   scene stages, with the rows held in order behind it.
  */
 export const opening = defineShot("opening", {
@@ -331,7 +331,7 @@ export const opening = defineShot("opening", {
 /**
  * Answer source begins from the raised state established by the first shot.
  *
- * @evidence docs/{{name}}/04-scenes/SCN-002.md Realizes the answering motion
+ * @evidence script/002-answer.md Realizes the answering motion
  *   this scene stages, keeping the chorus the visible consequence.
  */
 export const answer = defineShot("answer", {
@@ -352,7 +352,7 @@ export const answer = defineShot("answer", {
  * authored, because which pass proves a claim, and what "proved" looks like in
  * it, is a judgement no contract field contains.
  *
- * @evidence docs/{{name}}/04-scenes/SCN-001.md Verifies the raised hand this
+ * @evidence script/001-cue.md Verifies the raised hand this
  *   scene stages, against the frames the shot actually rendered.
  */
 export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
@@ -422,7 +422,7 @@ export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
  * shot's frames would accept an answer nobody rendered, which is why these name
  * this shot's own review frame and say what it alone has to carry.
  *
- * @evidence docs/{{name}}/04-scenes/SCN-002.md Verifies the answering motion
+ * @evidence script/002-answer.md Verifies the answering motion
  *   this scene stages, against the frames the shot actually rendered.
  */
 export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [

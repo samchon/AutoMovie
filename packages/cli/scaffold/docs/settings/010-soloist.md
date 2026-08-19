@@ -1,4 +1,8 @@
-<!-- @evidence docs/{{name}}/04-scenes/SCN-001.md Exists because this scene needs someone to raise the cue. -->
+<!--
+@evidence principles/settings.md#reads-at-review-distance Fixes the silhouette against the widest shot the film uses, and says the subject is lost if it stops reading there.
+@evidence principles/settings.md#measured-extent States the figure's own occupied height rather than the ground it stands on.
+@evidence principles/common.md#evidence-discipline Each fact below is stated so a storyline citing it can say which fact it used.
+-->
 
 # SOLOIST
 

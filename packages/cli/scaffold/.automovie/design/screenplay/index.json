@@ -2,7 +2,7 @@
   "version": 1,
   "production": "{{name}}",
   "treatment": {
-    "path": "docs/{{name}}/02-treatment/SEQ-CUE.md",
+    "path": "docs/storylines/001-cue.md",
     "sequences": [
       {
         "id": "SEQ-CUE",
@@ -13,7 +13,7 @@
             "text": "A soloist raises a hand while the chorus behind stays visibly in its rows."
           }
         ],
-        "path": "docs/{{name}}/02-treatment/SEQ-CUE.md"
+        "path": "docs/storylines/001-cue.md"
       },
       {
         "id": "SEQ-ANSWER",
@@ -24,12 +24,12 @@
             "text": "The answering gesture proves the cue changed the plaza rather than ending as an isolated pose."
           }
         ],
-        "path": "docs/{{name}}/02-treatment/SEQ-ANSWER.md"
+        "path": "docs/storylines/002-answer.md"
       }
     ]
   },
   "screenplay": {
-    "path": "docs/{{name}}/04-scenes/SCN-001.md",
+    "path": "docs/script/001-cue.md",
     "lock": {
       "activatedBy": "agent-before-first-shot",
       "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
@@ -51,7 +51,7 @@
         ],
         "location": "plaza",
         "disposition": null,
-        "path": "docs/{{name}}/04-scenes/SCN-001.md"
+        "path": "docs/script/001-cue.md"
       },
       {
         "id": "SCN-002",
@@ -65,7 +65,7 @@
         ],
         "location": "plaza",
         "disposition": null,
-        "path": "docs/{{name}}/04-scenes/SCN-002.md"
+        "path": "docs/script/002-answer.md"
       }
     ]
   },

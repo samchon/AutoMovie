@@ -50,11 +50,25 @@ outer wall. It writes nothing and is not a delivery path either. Read
 The project write hook also protects `renders`, capture receipts, and
 `.automovie/productions`; use the command named by its refusal.
 
-Write treatment and screenplay prose in `docs/{{name}}`. Keep exact treatment
-beats, `SCN-*` headings, catalogs, continuity claims, and downstream
-`{ reason, scene, claim? }` evidence synchronized with the screenplay index.
-Activate its soft lock before the first shot; after lock preserve deleted
-numbers as `OMITTED` and use alpha insertion ids instead of renumbering.
+Write prose as a ladder of one document per unit, downward and in order:
+`docs/settings` states what exists and how large it is, `docs/storylines`
+states what happens, `docs/scenarios` stages one storyline as one physical
+action, and `docs/script` is the final script the shots realize. Every document
+cites the rung above it and `docs/principles`, in one HTML comment before its
+H1. There is no shortcut from a setting to a scene: `lint.config.ts` refuses a
+storyline no scenario stages and a scenario no script scene realizes, each by
+name. Read `EVIDENCE_GRAPH` before adding a rung.
+
+A production that authors only subjects leaves `docs/storylines`,
+`docs/scenarios` and `docs/script` empty, and those rungs go silent together
+while `docs/settings` and `src` stay bound. Do not delete the empty folders and
+do not edit `lint.config.ts` to reach that state.
+
+Keep exact beat text, `SCN-*` headings, catalogs, continuity claims, and
+downstream `{ reason, scene, claim? }` evidence synchronized with the
+screenplay index. Activate its soft lock before the first shot; after lock
+preserve deleted numbers as `OMITTED` and use alpha insertion ids instead of
+renumbering.
 
 Register every distributable asset in `.automovie/assets.json` before use.
 Preserve its source, license, original/current digest, processing chain, and
