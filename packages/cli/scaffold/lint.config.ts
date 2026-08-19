@@ -110,6 +110,15 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * reason: they declare the compile itself rather than a subject, so the
  * document they would answer for does not exist at any rung of the ladder.
  *
+ * `scripts`, `test`, `viewer/src` and the root config files are compiled and
+ * linted by `npm run lint:source` and are outside the graph as well, and that
+ * is the same reason once more. They are how the production is built, measured
+ * and looked at, not what it depicts, so no rung holds a document they could
+ * answer for. The rule for a module under any other path is worth stating
+ * plainly, because its failure mode is silence: a subject written outside the
+ * five selected source folders does not fail the graph, it leaves it, and
+ * nothing reports the omission.
+ *
  * ## Why the implementation claim is written twice
  *
  * `evidence/graph` runs its obligation from the reference toward the claim, so
@@ -130,18 +139,45 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * claims select that document, so two obligations go unpaid; both are
  * discharged by the same citation.
  *
- * The bound is the class, and the rest of it is measured debt rather than a
- * decided boundary. Turning `singleEvidencePerSymbol` on for `type`,
- * `property`, and `function` at once reports 64 hosts in the shipped
- * production citing nothing; 10 of those are the classes, which this
- * configuration pays, and the remaining 54 are fields and methods. Widening the
- * second claim's `symbol` list is how they get paid.
+ * ## Why the bound stops at the class
  *
- * `evidence/documented`, which all eleven library packages under `packages/`
- * enable and this one does not, stays off and is measured: enabling it here
- * reports 63 exported declarations with no JSDoc block at all, 46 of them in
- * `src/examples` and 17 inside the graphed populations. It cannot be aimed at
- * only those populations. Its own options carry no `files` selector; a
+ * The exactly-one bound is set for `type` and for nothing below it, and that is
+ * a decided boundary rather than debt. Turning `singleEvidencePerSymbol` on for
+ * `property` and `function` as well reports 54 further hosts in the shipped
+ * production citing nothing, 44 fields and 10 methods, and reading that list is
+ * what settles the question, because it has two halves that the option cannot
+ * tell apart.
+ *
+ * One half is measured values a document really does own:
+ * `Soloist.prototype.height`, `Soloist.prototype.cueAbduction`,
+ * `Chorus.prototype.ranks`, `Chorus.prototype.spacing`,
+ * `ChorusMember.SPECIFIED_HEIGHT`, `PlazaGate.prototype.openDeg`. A citation
+ * there is real and worth writing.
+ *
+ * The other half is structure no document specifies and none should:
+ * `Soloist.prototype.id`, `Plaza.prototype.members`,
+ * `WorldPiece.prototype.render`, `WorldPiece.prototype.patches`,
+ * `WorldPiece.prototype.design`. An identifier is the code's own choice and a
+ * render hook is the engine's interface; a settings document that specified
+ * either would be specifying the implementation.
+ *
+ * Exactly-one is true of a class, because a class is a subject and a subject
+ * has one specification. It is false of a field, because a field may implement
+ * none. Setting it anyway would not collect 54 citations; it would collect the
+ * 44 that are true and force untrue tags for the rest, which is the one thing
+ * the plugin's own refusal tells a reader never to do. What those hosts owe is
+ * coverage, and the first claim above already asks them for it.
+ *
+ * ## Why `evidence/documented` is off
+ *
+ * Every library package under `packages/` enables it; this one does not, and
+ * the reason is measured rather than assumed. Enabling it here reports 237
+ * exported declarations with no JSDoc block at all: 164 under `scripts`, 63
+ * under `src`, and 10 under `viewer/src`. Only 17 of those 237 are inside the
+ * graphed populations; 46 are in `src/examples` and the remaining 174 are in
+ * project plumbing the graph never selects.
+ *
+ * It cannot be aimed at the 17. Its own options carry no `files` selector; a
  * per-entry `files` selector would take `evidence/graph` with it, and
  * `@ttsc/lint` documents that a project-scoped contributor rule must come from
  * an entry without one; an array of config entries is rejected with the
@@ -153,6 +189,9 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  */
 /** Canon. Both kinds of production have it; nothing above it is required. */
 const SETTINGS = ["settings/*.md"];
+
+/** Beside the ladder: what the world outside this production contains. */
+const RESEARCH = ["research/*.md"];
 
 /** The three narrative layers, which only a film has. */
 const STORYLINES = ["storylines/*.md"];
@@ -281,6 +320,30 @@ const graph: ITtscEvidenceGraphConfig = {
         settingsUsed,
       ],
     },
+    // A research ledger answers the rules a ledger is written to, and nothing
+    // else. It sits beside the ladder rather than on it: nothing above it
+    // commissions it, because a production may invent every figure it uses and
+    // owe the world nothing, and nothing below it is required to use it.
+    //
+    // Hosting the obligation here rather than referencing `research/*.md` from
+    // canon is what keeps that true in both directions. A reference would make
+    // every settings document owe a source, which is false of a chosen figure,
+    // and would refuse outright in the ordinary case where the folder is empty,
+    // because a live claim whose reference population matches no file is a hard
+    // error. Hosted this way the rung behaves like the narrative layers: a
+    // ledger appears and the rules arrive with it, the folder is empty and the
+    // claim is dropped before its references are read.
+    //
+    // The shipped production sources nothing, so this claim is silent in it. It
+    // activates on the first file an author writes into `docs/research`.
+    {
+      type: "markdown",
+      root: "docs",
+      files: RESEARCH,
+      // One host per document, as everywhere else on this graph.
+      symbol: "file",
+      reference: [principles("common.md"), principles("research.md")],
+    },
     // Implementation answers for canon. A unit, prop, place, or formation in
     // source with no settings document is a decision nobody wrote down.
     //
@@ -318,12 +381,16 @@ const graph: ITtscEvidenceGraphConfig = {
     // written, which is the one thing the reference-side claims above cannot
     // say.
     //
-    // Narrowed to `type` on purpose. Exactly-one is right for a class, because
-    // a class is a subject and a subject has one specification. It is measured
-    // and not yet right for every field and method: 64 selected hosts in the
-    // shipped production cite nothing, and 54 of those are fields and methods
-    // whose citations are real work rather than a configuration flip. Widening
-    // the `symbol` list here is how that debt is paid down.
+    // Narrowed to `type` on purpose, and the narrowing is a decision rather
+    // than an unpaid balance. Exactly-one is right for a class, because a class
+    // is a subject and a subject has one specification. It is wrong one grain
+    // down: `Soloist.prototype.height` implements a stated figure, and
+    // `Soloist.prototype.id` and `WorldPiece.prototype.render` implement
+    // nothing a settings document should ever contain. Measured, widening to
+    // `property` and `function` reports 54 further hosts citing nothing, and
+    // only part of that list could be answered truthfully. The file JSDoc above
+    // names both halves; what those hosts owe is coverage, and the claim above
+    // already asks them for it.
     //
     // `src/examples` is outside the `files` list for the same reason it is
     // outside the claim above, so this obligation never reaches an example.

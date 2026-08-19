@@ -39,13 +39,26 @@ than a heading inside one document that holds the whole film.
 | --- | --- | --- |
 | `docs/principles/` | one anchored `##` per rule the production is written against | nothing; it is the root |
 | `docs/settings/` | one file per fact, figure, place, subject, or constraint | the common and settings principles |
+| `docs/research/` | one file per source ledger, beside the ladder | the common and research principles |
 | `docs/storylines/` | one file per sequence: what happens and why | its principles, and every setting it uses |
 | `docs/scenarios/` | one file per staged action, with entry and exit state | its principles, **exactly one** storyline, and the settings it rechecks |
 | `docs/script/` | one file per scene, as it will be shot | its principles, **exactly one** scenario, that scenario's storyline, and the settings it rechecks |
 | `src/shots/` | shot factories and the table | the script scenes they realize |
 
-`docs/research/` sits beside the ladder rather than on it: source ledgers with
-URLs and confidence, which ground a claim and cite nothing.
+`docs/research/` sits beside the ladder rather than on it: ledgers of what the
+world outside this production contains. Nothing above it commissions one,
+because a production may invent every figure it uses and owe the world nothing,
+and nothing below it is required to use one. What binds is the other direction —
+a ledger that exists answers `principles/common.md` and `principles/research.md`,
+which ask for an identifiable source, a stated confidence, the settings fact each
+entry grounds, and a disagreement recorded rather than silently resolved.
+
+The obligation is hosted on the ledger rather than referenced from canon, and
+that is what keeps it honest. A reference would make every settings document owe
+a source, which is false of a chosen figure, and would refuse outright in the
+ordinary case where the folder is empty. Hosted this way the rung behaves like
+the story rungs: empty and it is silent, one file and all ten rules arrive at
+once.
 
 Three properties of that table are worth reading twice.
 
