@@ -15,10 +15,10 @@ carries is a promise the film does not keep.
 
 ## Intended scale {#intended-scale}
 
-One location, two named figures and one group, under four minutes. Chosen rather
-than measured: it is the size at which a single legible gesture can carry a whole
-work, and it is small enough that every subject in the settings library is used
-by something.
+One location, two named figures and one group, under four minutes. Chosen
+rather than measured: it is the size at which a single legible gesture can
+carry a whole work, and it is small enough that every subject in the settings
+library is used by something.
 
 A production that grows past this rewrites this fact first, because every layer
 below it is sized against this sentence.

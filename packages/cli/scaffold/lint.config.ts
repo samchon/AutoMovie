@@ -482,7 +482,10 @@ const graph: ITtscEvidenceGraphConfig = {
     // instrument that settles this: with every `@evidence script/...` deleted
     // from `src/shots/opening.ts`, the narrow selector reports PASS and the
     // widened one reports `Missing acknowledgement for 'script/001-cue.md' ...
-    // in Claim 7`, naming both scenes. With the citations restored and
+    // in Claim 8 reference 1`, naming both scenes. That index is positional and
+    // moves whenever a claim is inserted above this one, so re-measure the
+    // quote rather than adjusting it by counting — it read `Claim 7` until the
+    // research rung was added between the script and the source claims. With the citations restored and
     // `docs/script` removed, the widened claim refuses twice over: once because
     // the reference `matched no markdown files`, and once per citation left
     // pointing at a scene nothing materializes. That second shape is what stops

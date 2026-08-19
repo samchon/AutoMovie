@@ -112,7 +112,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
       ChorusMember.SCALE_TOLERANCE
     )
       throw new Error(
-        `settings/020-chorus.md states a member is ${ChorusMember.SPECIFIED_HEIGHT} m, a head shorter than the soloist, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
+        `docs/settings/020-chorus.md states a member is ${ChorusMember.SPECIFIED_HEIGHT} m, a head shorter than the soloist, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
       );
     return {
       id: this.id,
@@ -262,7 +262,7 @@ export class ChorusTier extends AutoMovieSubject<IAutoMovieModelRecipe> {
       this.limbRadius < chorusHero.limbRadius
     )
       throw new Error(
-        `settings/020-chorus.md requires the walk to read at every distance, so the "${this.id}" tier cannot be finer than the hero tier it stands behind: ${this.headRadius} m head and ${this.limbRadius} m limbs against ${chorusHero.headRadius} m and ${chorusHero.limbRadius} m. Coarsen this tier or refine the hero.`,
+        `docs/settings/020-chorus.md requires the walk to read at every distance, so the "${this.id}" tier cannot be finer than the hero tier it stands behind: ${this.headRadius} m head and ${this.limbRadius} m limbs against ${chorusHero.headRadius} m and ${chorusHero.limbRadius} m. Coarsen this tier or refine the hero.`,
       );
     return {
       id: this.id,

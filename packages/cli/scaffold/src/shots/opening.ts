@@ -289,7 +289,7 @@ const buildCue = (
     )
       ? // The group owns its own advance. Spelling the cue out here loosened
         // the intervals by five percent and turned the rows four degrees,
-        // which `settings/020-chorus.md` permits only as an authored
+        // which `docs/settings/020-chorus.md` permits only as an authored
         // dramatic event, and `Chorus.break` is what authors one.
         [
           chorus.advance({
