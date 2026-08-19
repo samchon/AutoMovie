@@ -64,6 +64,12 @@ A production that authors only subjects leaves `docs/storylines`,
 while `docs/settings` and `src` stay bound. Do not delete the empty folders and
 do not edit `lint.config.ts` to reach that state.
 
+`docs/research` is a ledger beside the ladder, empty until you source something.
+Write one and its rules arrive with it: an identifiable source, a stated
+confidence, the settings fact each entry grounds, and a disagreement recorded
+rather than resolved in silence. A ledger never fixes what this production is;
+that is what `docs/settings` is for.
+
 Keep exact beat text, `SCN-*` headings, catalogs, continuity claims, and
 downstream `{ reason, scene, claim? }` evidence synchronized with the
 screenplay index. Activate its soft lock before the first shot; after lock

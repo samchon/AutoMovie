@@ -17,6 +17,12 @@ one named error. A production that authors only subjects leaves the three story
 folders empty and the story rungs go silent, so the same configuration governs
 a film and a standalone model library without a switch.
 
+`docs/research` sits beside the ladder and is empty until you source something.
+Write one ledger and its rules arrive with it: an identifiable source, a stated
+confidence, the settings fact each entry grounds, and a disagreement recorded
+rather than resolved in silence. A ledger is never a settings document; it is
+why a figure is what it is, not what the figure is.
+
 Keep the exact beat text and `SCN-*` identities in `docs/storylines` and
 `docs/script` aligned with `.automovie/design/screenplay/index.json`; once shots
 exist, retain locked numbers, use `OMITTED` tombstones for deletions, and alpha

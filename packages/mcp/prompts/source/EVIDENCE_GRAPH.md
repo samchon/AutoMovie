@@ -39,13 +39,26 @@ than a heading inside one document that holds the whole film.
 | --- | --- | --- |
 | `docs/principles/` | one anchored `##` per rule the production is written against | nothing; it is the root |
 | `docs/settings/` | one file per fact, figure, place, subject, or constraint | the common and settings principles |
+| `docs/research/` | one file per source ledger, beside the ladder | the common and research principles |
 | `docs/storylines/` | one file per sequence: what happens and why | its principles, and every setting it uses |
 | `docs/scenarios/` | one file per staged action, with entry and exit state | its principles, **exactly one** storyline, and the settings it rechecks |
 | `docs/script/` | one file per scene, as it will be shot | its principles, **exactly one** scenario, that scenario's storyline, and the settings it rechecks |
 | `src/shots/` | shot factories and the table | the script scenes they realize |
 
-`docs/research/` sits beside the ladder rather than on it: source ledgers with
-URLs and confidence, which ground a claim and cite nothing.
+`docs/research/` sits beside the ladder rather than on it: ledgers of what the
+world outside this production contains. Nothing above it commissions one,
+because a production may invent every figure it uses and owe the world nothing,
+and nothing below it is required to use one. What binds is the other direction —
+a ledger that exists answers `principles/common.md` and `principles/research.md`,
+which ask for an identifiable source, a stated confidence, the settings fact each
+entry grounds, and a disagreement recorded rather than silently resolved.
+
+The obligation is hosted on the ledger rather than referenced from canon, and
+that is what keeps it honest. A reference would make every settings document owe
+a source, which is false of a chosen figure, and would refuse outright in the
+ordinary case where the folder is empty. Hosted this way the rung behaves like
+the story rungs: empty and it is silent, one file and all ten rules arrive at
+once.
 
 Three properties of that table are worth reading twice.
 
@@ -146,9 +159,18 @@ coverage: every settings document must be answered for by at least one class,
 field, or method under those four paths. Toward source it is exactly one: every
 exported **class** must cite exactly one settings document, so a subject modelled
 before anything specified it is a compile error at the moment the class is
-written. Fields and methods are not yet held to that bound; cite anyway, at the
-class for the subject, the field for the value that measures it, and the method
-for the behavior it performs.
+written.
+
+Fields and methods are deliberately outside that bound rather than pending. A
+class is a subject and a subject has one specification; a field may implement
+none. `Soloist.prototype.height` carries a stated figure and `Soloist.prototype.id`
+carries an identifier the code chose for itself, and no option can tell those
+apart, so requiring exactly one of every field would buy true citations for the
+first kind at the price of untrue tags for the second. Cite anyway where it is
+true — the class for the subject, the field for the value that measures it, the
+method for the behavior it performs — because coverage is what those hosts owe
+and a document answered by one module out of twenty tells a reader nothing about
+which module answers for which decision.
 
 The shots row is its own population, and it selects both callable and data
 exports. A shot written `export const opening = defineShot("opening", { ... })`
@@ -179,10 +201,16 @@ surface where a citation can live, and removes the transcription that made them
 drift.
 
 The screenplay index is the exception that proves it. It is hand-authored, it
-addresses the storyline and script documents by path, and the compiler checks
-that each indexed beat appears verbatim in the storyline it names and each
-indexed scene heads the script document it names. That check is not the evidence
-graph; it is the second joint holding prose and ledger together.
+addresses the storyline and script documents by path, and the compiler resolves
+those paths on disk: each indexed beat must appear verbatim in the storyline it
+names and each indexed scene must head the script document it names. That check
+is not the evidence graph; it is a second joint holding prose and ledger
+together, and moving a prose document without moving the index dangles it.
+
+The index keeps the older vocabulary for its two story fields: `treatment.sequences`
+addresses `docs/storylines` and `screenplay.scenes` addresses `docs/script`. The
+rung names are the folders; the field names are the ledger's, and the ids —
+`SEQ-*`, `SCN-*` — are what survive both.
 
 ## Writing a citation
 
