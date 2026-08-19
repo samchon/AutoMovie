@@ -320,16 +320,30 @@ const buildCue = (
 /**
  * Opening source proves a neutral-to-raised transition.
  *
- * @evidenceReview script/001-cue.md #94c1419 Read the scene and checked this
+ * @evidenceReview script/001-cue.md #e592a47 Read the scene and checked this
  *   contract against it: duration 6.0, the cue window closing at 3.0, and the
  *   closing predicate that keeps the hand up to the last frame.
  * @evidence script/001-cue.md Realizes the raised hand this
  *   scene stages, with the rows held in order behind it.
- * @evidence principles/shots.md#realizes-a-named-scene Names SCN-001 in this
+ * @evidence principles/source/shots.md#realizes-a-named-scene Names SCN-001 in
+ *   this
  *   citation and in the contract's own evidence entry, and the two agree.
- * @evidence principles/shots.md#the-contract-is-the-claim Declares the opening
+ * @evidence principles/source/shots.md#the-contract-is-the-claim Declares the
+ *   opening
  *   and closing states the engine evaluates, so what this shot promises is what
  *   it is measured on.
+ * @evidence principles/craft/motion.md#seconds-not-adverbs Declares
+ *   its duration and its cue window in seconds, which is the only form the
+ *   engine reads.
+ * @evidence principles/review/observation.md#declared-view-set
+ *   Declares the frames and passes its judgment rests on, including the mask
+ *   pass that carries the silhouette.
+ * @evidence principles/craft/light.md#accent-is-scarce Spends
+ *   the reserved accent on the soloist alone, which is what makes the
+ *   raised hand findable in one frame.
+ * @evidence principles/craft/motion.md#holds-are-authored Holds the
+ *   raised hand to the last frame rather than letting the
+ *   interpolation decide how long it reads.
  */
 export const opening = defineShot("opening", {
   scene: "opening-scene",
@@ -340,16 +354,30 @@ export const opening = defineShot("opening", {
 /**
  * Answer source begins from the raised state established by the first shot.
  *
- * @evidenceReview script/002-answer.md #ca2ba3d Read the scene and checked this
+ * @evidenceReview script/002-answer.md #ecd3d70 Read the scene and checked this
  *   contract against it: duration 6.0, the event window 3.0 to 5.0, and a cue
  *   clip that holds because it opens already raised.
  * @evidence script/002-answer.md Realizes the answering motion
  *   this scene stages, keeping the chorus the visible consequence.
- * @evidence principles/shots.md#timing-comes-from-the-contract Holds the raised
+ * @evidence principles/source/shots.md#timing-comes-from-the-contract Holds the
+ *   raised
  *   cue for the duration this contract declares, which is the figure the scene
  *   quotes.
- * @evidence principles/shots.md#subjects-render-themselves Asks the soloist to
+ * @evidence principles/source/shots.md#subjects-render-themselves Asks the
+ *   soloist to
  *   render from its own established state rather than posing the arm here.
+ * @evidence principles/craft/motion.md#change-needs-a-still Holds
+ *   every subject still so the change the previous scene made stays legible as a
+ *   change.
+ * @evidence principles/craft/light.md#delivery-light Carries
+ *   the key the cue scene established rather than relighting the plaza for a
+ *   second look.
+ * @evidence principles/craft/motion.md#screen-direction Keeps the
+ *   camera on the side the cue scene established, so the two shots
+ *   read as one place.
+ * @evidence principles/craft/light.md#shadow-informs Keeps the
+ *   key that plants the figures on the ground rather than adding a
+ *   shape the eye must discount.
  */
 export const answer = defineShot("answer", {
   scene: "answer-scene",
@@ -369,13 +397,20 @@ export const answer = defineShot("answer", {
  * authored, because which pass proves a claim, and what "proved" looks like in
  * it, is a judgement no contract field contains.
  *
- * @evidenceReview script/001-cue.md #94c1419 Read the scene and checked that
+ * @evidenceReview script/001-cue.md #e592a47 Read the scene and checked that
  *   what it states is what this scenario set measures.
  * @evidence script/001-cue.md Verifies the raised hand this
  *   scene stages, against the frames the shot actually rendered.
- * @evidence principles/shots.md#acceptance-is-authored-with-the-shot Ships
+ * @evidence principles/source/shots.md#acceptance-is-authored-with-the-shot
+ *   Ships
  *   beside the shot it judges rather than being fitted to frames it already
  *   produced.
+ * @evidence principles/review/observation.md#falsifying-condition
+ *   Names the subject, the instant, and the measured condition that would refute
+ *   each claim.
+ * @evidence principles/craft/motion.md#measure-the-contact Measures
+ *   the raised arm as a joint angle at a sampled time rather than describing it
+ *   as readable.
  */
 export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
   {
@@ -444,13 +479,22 @@ export const openingAcceptance: IAutoMovieAcceptanceScenario[] = [
  * shot's frames would accept an answer nobody rendered, which is why these name
  * this shot's own review frame and say what it alone has to carry.
  *
- * @evidenceReview script/002-answer.md #ca2ba3d Read the scene and checked that
+ * @evidenceReview script/002-answer.md #ecd3d70 Read the scene and checked that
  *   what it states is what this scenario set measures.
  * @evidence script/002-answer.md Verifies the answering motion
  *   this scene stages, against the frames the shot actually rendered.
- * @evidence principles/shots.md#no-hidden-inputs Judges the shot from compiled
+ * @evidence principles/source/shots.md#no-hidden-inputs Judges the shot from
+ *   compiled
  *   facts alone, and the module it sits in reads no clock, process, or
  *   filesystem.
+ * @evidence principles/review/observation.md#declare-the-instants
+ *   Samples the held interval rather than one still, so a cue that arrives and
+ *   drifts cannot pass.
+ * @evidence principles/craft/light.md#contrast-directs Requires
+ *   the accented subject to remain the most readable thing in the frame.
+ * @evidence principles/review/observation.md#evidence-is-dated Judges
+ *   from compiler-derived outcomes bound to the compiled state, so a
+ *   stale frame cannot discharge it.
  */
 export const answerAcceptance: IAutoMovieAcceptanceScenario[] = [
   {

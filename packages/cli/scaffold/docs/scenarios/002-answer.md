@@ -1,14 +1,14 @@
 <!--
-@evidence principles/scenarios.md#physical-progression The answer begins from where the cue left both subjects — the hand up, the group already closed — and nothing moves from there, which is what makes the previous scene's change legible as a change.
+@evidence principles/authoring/scenarios.md#physical-progression The answer begins from where the cue left both subjects — the hand up, the group already closed — and nothing moves from there, which is what makes the previous scene's change legible as a change.
 @evidence storylines/002-answer.md Refines the answering sequence into the staged exchange it turns on.
 @evidence settings/020-chorus.md Holds the group where the cue scene left it, as one subject rather than as figures inside it, so it reads as what the cue moved.
 @evidence settings/030-gate.md Keeps the gate shut and states that this production does not move it, rather than staging a change the film does not contain.
 @evidence principles/common.md#evidence-discipline Each citation below names one unit and what this scenario does about it.
 @evidence principles/common.md#refuse-rather-than-approximate Leaves the hold unquantified here and says where the number belongs, rather than guessing one.
-@evidence principles/scenarios.md#one-parent Refines exactly the answering sequence and nothing else.
-@evidence principles/scenarios.md#stageability Everything it asks for is a settings fact, and it asks for no movement at all — a held state is the cheapest thing a production can stage and the easiest to get wrong by describing motion into it.
-@evidence principles/scenarios.md#entry-and-exit Begins with the hand up and the group already closed, and ends with both exactly there, which is the whole content of the scene.
-@evidence principles/scenarios.md#settings-rechecked Cites the group and the gate directly rather than inheriting the storyline's reading of them.
+@evidence principles/authoring/scenarios.md#one-parent Refines exactly the answering sequence and nothing else.
+@evidence principles/authoring/scenarios.md#stageability Everything it asks for is a settings fact, and it asks for no movement at all — a held state is the cheapest thing a production can stage and the easiest to get wrong by describing motion into it.
+@evidence principles/authoring/scenarios.md#entry-and-exit Begins with the hand up and the group already closed, and ends with both exactly there, which is the whole content of the scene.
+@evidence principles/authoring/scenarios.md#settings-rechecked Cites the group and the gate directly rather than inheriting the storyline's reading of them.
 @evidence settings/000-governing-aim.md Stages the answer the aim promises, which is the half of that sentence this scenario owns.
 @evidenceReview storylines/002-answer.md #a2bd79f Read the sequence and confirmed this scenario stages its reply as a hold rather than a movement, which is what that sequence now asks for.
 -->

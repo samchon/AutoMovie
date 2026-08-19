@@ -10,28 +10,30 @@ import { parseScreenplayProse } from "./screenplayProseDiagnostics";
 const SAME_SECOND = 1e-6;
 
 /**
- * A standalone decimal token, so an identifier's digits are never a duration.
+ * A duration is a number the prose attaches its unit to.
  *
- * `SCN-002` and `plaza-2` carry numbers that mean nothing about time, and a
- * scan that took them would refuse prose for saying its own scene number.
+ * Scanning a sentence that merely says "second" reads an ordinal as a
+ * measurement: "the second row holds 4 figures" offered `4` as a duration and
+ * would have refused honest prose. So the number must carry the unit itself,
+ * and the one gap that leaves — the first figure of a range — is closed by
+ * reading the pair.
+ *
+ * The leading boundary is a captured group rather than a lookbehind, and that
+ * is not a style choice. `(?<![\w.-])` compiled here, reported the source and
+ * flags it was given, kept `lastIndex` at zero, and matched **nothing** through
+ * this project's transpiled path while matching correctly under plain `node`.
+ * A silent zero is the worst failure a scanner can have, because every scene
+ * passes. Keep the boundary explicit.
  */
-const NUMBER = /(?<![\w.-])(\d+(?:\.\d+)?)(?![\w-])/gu;
-
-/** Sentences, cheaply: a script states one timing per sentence, not per line. */
-const sentences = (body: string): string[] =>
-  body
-    .replace(/[*_`]/gu, "")
-    .split(/(?<=[.!?])\s+/u)
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
+const DURATION =
+  /(^|[^\w.-])(\d+(?:\.\d+)?)(?:\s*(?:and|to|-)\s*(\d+(?:\.\d+)?))?\s*seconds?/giu;
 
 /** Every duration in seconds a scene's prose states. */
 const statedSeconds = (body: string): number[] => {
   const found: number[] = [];
-  for (const sentence of sentences(body)) {
-    if (/\bseconds?\b/iu.test(sentence) === false) continue;
-    for (const match of sentence.matchAll(NUMBER)) found.push(Number(match[1]));
-  }
+  for (const match of body.replace(/[*_`]/gu, "").matchAll(DURATION))
+    for (const group of [match[2], match[3]])
+      if (group !== undefined) found.push(Number(group));
   return found;
 };
 
@@ -86,7 +88,8 @@ export const screenplayTimingDiagnostics = (props: {
 
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const scene of screenplay.screenplay.scenes) {
-    if (scene.status !== "active" || scene.disposition !== null) continue;
+    if (scene.status !== "active" || scene.disposition?.phase === "production")
+      continue;
     const realizing = byScene.get(scene.id) ?? [];
     if (realizing.length === 0) continue;
     const documentPath = scene.path ?? screenplay.screenplay.path;

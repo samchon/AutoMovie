@@ -2,7 +2,7 @@
 @evidence principles/common.md#determinism The aim is fixed here in prose and nothing downstream derives it at run time, so two compiles of this production answer to the same sentence.
 @evidence principles/common.md#stated-basis The scale below is stated as a chosen figure rather than a measured one, and says so.
 @evidence principles/common.md#change-upstream-first This file is the earliest owning layer, so a change of intent starts here and moves down.
-@evidence principles/settings.md#execution-neutrality States what the work is for and how large it is, and assigns no subject to a scene and no reveal to a moment.
+@evidence principles/authoring/settings.md#execution-neutrality States what the work is for and how large it is, and assigns no subject to a scene and no reveal to a moment.
 -->
 
 # Governing aim

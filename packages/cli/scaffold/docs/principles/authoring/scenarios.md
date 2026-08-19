@@ -5,8 +5,8 @@ that can actually be staged: where it happens, who is where, what moves, and
 what state the unit is left in.
 
 It is the first layer held to physical truth. A storyline may say a figure
-crosses the hall; a scenario says the hall is nine metres and the crossing takes
-the time nine metres takes.
+crosses the hall; a scenario says the hall is nine metres and the crossing
+takes the time nine metres takes.
 
 A production that authors no story owes nothing here.
 
@@ -15,17 +15,17 @@ A production that authors no story owes nothing here.
 Every element the scenario asks for exists in settings, stands somewhere the
 geometry admits, and moves in a way the engine can resolve. A scenario that
 requires a subject nobody specified is refused by the graph; a scenario that
-requires a movement the space does not allow is refused by the engine, later and
-more expensively.
+requires a movement the space does not allow is refused by the engine, later
+and more expensively.
 
-Sources: `EVIDENCE_GRAPH` on the settings library; `BUILT_ENVIRONMENT` on asking
-the model what a space contains and what reaches it.
+Sources: `EVIDENCE_GRAPH` on the settings library; `BUILT_ENVIRONMENT` on
+asking the model what a space contains and what reaches it.
 
 ## Entry and exit state are both stated {#entry-and-exit}
 
 The scenario says what is true when the unit begins and what is true when it
-ends. Without both, the next unit inherits an assumption instead of a state, and
-the first thing that contradicts it will be a frame.
+ends. Without both, the next unit inherits an assumption instead of a state,
+and the first thing that contradicts it will be a frame.
 
 Sources: `SHOT_CONTRACT` on what a shot declares about its own state.
 

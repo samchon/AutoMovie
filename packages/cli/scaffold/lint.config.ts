@@ -23,8 +23,28 @@ import type { ITtscLintConfig } from "@ttsc/lint";
  * settings ← src/units, src/objects, src/world, src/formations
  * ```
  *
- * `docs/principles` governs every rung in both diagrams; `docs/research` sits
- * beside them and answers principles alone.
+ * `docs/research` sits beside both diagrams and answers principles alone.
+ *
+ * ## The principles are a tree
+ *
+ * `docs/principles` is organised by who answers each rule, and two families
+ * carry an exception a reader has to know.
+ *
+ * - `common.md` binds every authored document.
+ * - `authoring/` binds one prose rung each.
+ * - `source/` binds `subjects` and `shots`.
+ * - `craft/` binds the modelled work: `form`, `scale`, `light`, `motion`.
+ * - `craft/space.md` is a **domain** family, wired through `domainPrinciples`
+ *   so one population-wide `@evidenceExclude` can state that this production
+ *   has no built environment. Every other principle refuses exclusion, because
+ *   a rule binds wherever its condition applies; a domain rule's condition may
+ *   honestly not be met.
+ * - `review/observation.md` binds what a shot declares will be looked at.
+ * - `review/judgment.md` is referenced by nothing, deliberately. Its rules
+ *   govern how a verdict is reached, and no source file could cite them
+ *   truthfully — the citation would assert something about a module that the
+ *   rule does not say. An unreferenced principles document is inert, which is
+ *   the correct state for this one and a hazard for any other.
  *
  * ## Activation decides the two kinds of production
  *
@@ -144,6 +164,22 @@ const principles = (file: string): ITtscEvidenceGraphReference => ({
 });
 
 /**
+ * A principle whose condition a production may honestly not meet.
+ *
+ * `principles` refuses `@evidenceExclude` because a rule binds wherever it
+ * applies. Some rules apply only where the production has the element they
+ * govern — a built environment, a water feature, a crowd — and for those "this
+ * production owes this nothing" is a true sentence rather than an excuse. Those
+ * live here, where one population-wide exclusion states the boundary.
+ */
+const domainPrinciples = (file: string): ITtscEvidenceGraphReference => ({
+  type: "markdown",
+  root: "docs",
+  files: [`principles/${file}`],
+  symbol: "h2",
+});
+
+/**
  * A cross-layer parent: exactly one, and no exclusions.
  *
  * Refinement is a bijection between layers. A scenario refines one storyline
@@ -182,7 +218,7 @@ const graph: ITtscEvidenceGraphConfig = {
       // HTML comment before its H1, so the document answers as a whole and a
       // heading inside it is never asked to carry a parent of its own.
       symbol: "file",
-      reference: [principles("common.md"), principles("settings.md")],
+      reference: [principles("common.md"), principles("authoring/settings.md")],
     },
     // A storyline accounts for the settings it uses, which is what decides
     // which facts the work is made of: a setting no storyline uses is a fact
@@ -197,7 +233,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: "file",
       reference: [
         principles("common.md"),
-        principles("storylines.md"),
+        principles("authoring/storylines.md"),
         settingsUsed,
       ],
     },
@@ -213,7 +249,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: "file",
       reference: [
         principles("common.md"),
-        principles("scenarios.md"),
+        principles("authoring/scenarios.md"),
         parent(STORYLINES),
         settingsUsed,
       ],
@@ -231,7 +267,7 @@ const graph: ITtscEvidenceGraphConfig = {
       symbol: "file",
       reference: [
         principles("common.md"),
-        principles("script.md"),
+        principles("authoring/script.md"),
         parent(SCENARIOS),
         {
           type: "markdown",
@@ -254,7 +290,7 @@ const graph: ITtscEvidenceGraphConfig = {
       files: RESEARCH,
       // One host per document, as everywhere else on this graph.
       symbol: "file",
-      reference: [principles("common.md"), principles("research.md")],
+      reference: [principles("common.md"), principles("authoring/research.md")],
     },
     // Implementation answers for canon and for the subject principles. A unit,
     // prop, place, or formation with no settings document is a decision nobody
@@ -278,7 +314,10 @@ const graph: ITtscEvidenceGraphConfig = {
       // measuring it, a method for the behavior it performs.
       symbol: ["type", "property", "function"],
       reference: [
-        principles("subjects.md"),
+        principles("source/subjects.md"),
+        principles("craft/form.md"),
+        principles("craft/scale.md"),
+        domainPrinciples("craft/space.md"),
         {
           type: "markdown",
           root: "docs",
@@ -326,9 +365,10 @@ const graph: ITtscEvidenceGraphConfig = {
     // references were read, and this rung enforced nothing from the day it was
     // written: with every `@evidence script/...` deleted from
     // `src/shots/opening.ts` the gate reported PASS. Widened, the same state
-    // names both scenes `in Claim 8 reference 1` — a positional index, so
-    // re-measure that quote rather than counting it; it read `Claim 7` before
-    // the research rung was inserted above.
+    // names both scenes `in Claim 8 reference 2` — a positional index, so
+    // re-measure that quote rather than counting it: it read `Claim 7` before
+    // the research rung was inserted above, and `reference 1` before the shot
+    // principles were added beside the script.
     //
     // `requireReview` on the script reference: a scene's prose moving re-opens
     // every shot that claimed to realize it.
@@ -337,7 +377,10 @@ const graph: ITtscEvidenceGraphConfig = {
       files: ["src/shots/*.ts"],
       symbol: ["function", "property"],
       reference: [
-        principles("shots.md"),
+        principles("source/shots.md"),
+        principles("craft/motion.md"),
+        principles("craft/light.md"),
+        principles("review/observation.md"),
         {
           type: "markdown",
           root: "docs",

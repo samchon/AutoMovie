@@ -22,6 +22,9 @@ import { soloist } from "./soloist";
  * @evidence settings/020-chorus.md Answers the Scale section for one member:
  *   the document states 1.7 m and "a head shorter than the soloist" at once,
  *   and this class is where both readings are held against each other.
+ * @evidence principles/craft/form.md#detail-at-distance Carries
+ *   the coarser tier's radii so the member resolves only as finely as the widest
+ *   shot that shows it.
  */
 export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "chorus-hero";
@@ -41,6 +44,9 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * than the soloist, and a subject that only derived would go on being
    * internally consistent while drifting away from the number the film was
    * written around.
+   * @evidence principles/craft/scale.md#proportion-is-internal
+   *   Holds the member-to-soloist relation as a stated rule rather than as two
+   *   unrelated numbers.
    */
   public static readonly SPECIFIED_HEIGHT: number = 1.7;
 
@@ -50,6 +56,10 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * A nanometre. Small enough that no scale a document could state slips
    * through, large enough that a subtraction of two authored metres is not
    * mistaken for one.
+   * @evidence principles/craft/scale.md#tolerance-is-stated
+   *   States the deviation a member's height may carry and what it is measured
+   *   against, so a rounding error in one tier cannot accumulate into a
+   *   visible one.
    */
   public static readonly SCALE_TOLERANCE: number = 1e-9;
 

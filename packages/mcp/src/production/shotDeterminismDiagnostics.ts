@@ -40,11 +40,6 @@ const FORBIDDEN: ReadonlyArray<{
     pattern: /\bprocess\s*\.\s*(?:env|argv|cwd|hrtime|platform|pid)\b/u,
     why: "process state makes the film depend on the machine that built it",
   },
-  {
-    found: "node:fs",
-    pattern: /["']node:fs["']|["']fs["']/u,
-    why: "a build function that reads the filesystem depends on state no record carries",
-  },
 ];
 
 /** Lines that are only a comment, which state intent rather than run. */
@@ -66,11 +61,18 @@ const executable = (line: string): boolean => {
  * function, so an agent discharged the criterion by reading for it. A criterion
  * a machine can decide is not a review criterion, and this is the machine.
  *
+ * It covers globals and nothing else, because imports already have a better
+ * owner: the compiler walks the module's TypeScript AST and refuses an
+ * unsupported or dynamic import as `source-import-unsupported`. Measured — a
+ * shot module opening with `import fs from "node:fs"` never reaches this scan,
+ * because that refusal fires first. A regex beside a parser is a second, worse
+ * spelling of the same rule, so this one stops where the parser starts.
+ *
  * The scan is textual and says so. It has no type checker, so it names the
  * spelling it found rather than a resolved symbol, and it skips comment-only
  * lines because a JSDoc sentence about `Math.random` is not a call to it. What
- * it cannot see — an alias, a dynamic import, a helper in another module — is
- * the reason the source review keeps a reader for the rest.
+ * it cannot see — an alias, a helper in another module, a global reached
+ * through a computed property — is why the source review keeps a reader.
  *
  * The severity is not scope-dependent. Determinism is the property every other
  * check in this product compares two runs against, so a violation is wrong at

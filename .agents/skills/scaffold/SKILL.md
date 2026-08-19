@@ -37,7 +37,19 @@ A rung cannot be skipped. Deleting `docs/scenarios` while `docs/script` still ho
 
 There is no population for actions. An action belongs to the subject that performs it, as a method on the class its settings document describes. A choreography that spans subjects and belongs to none of them is a shot and cites its scene.
 
-The ladder does not stop at the script. `principles/subjects.md` binds every class under the four subject folders — one class one specification, a stated figure as a field, behaviour on the subject that performs it, nothing canon does not state, a pure build path, refusal over degradation — and `principles/shots.md` binds every shot, including the rule that a duration the scene states must be one the contract carries.
+`docs/principles` is a tree rather than a preamble, and it does not stop at the script.
+
+| Family | Binds | Exclusion |
+| --- | --- | --- |
+| `common.md` | every authored document | refused |
+| `authoring/` | one prose rung each | refused |
+| `source/` | `subjects` and `shots` | refused |
+| `craft/` | `form`, `scale`, `light`, `motion` | refused |
+| `craft/space.md` | only a production with a built environment | **allowed**, once, population-wide |
+| `review/observation.md` | what a shot declares will be looked at | refused |
+| `review/judgment.md` | the act of judging | **bound by nothing** |
+
+Two of those are the ones to get right. `craft/space.md` is a domain family: a production with no rooms, storeys or connectors declares that once as an `@evidenceExclude` rather than inventing a space to answer it, which is why it alone admits one. `review/judgment.md` is wired to nothing on purpose — its rules govern how a person reaches a verdict, and no source file could honestly cite them; a citation there would assert something about a module that the rule does not say.
 
 ## A citation that expires
 
@@ -59,7 +71,7 @@ Do not edit the graph configuration to reach either shape. Author the folders th
 
 ## Research sits beside the ladder
 
-`docs/research/*.md` is a ledger of what the world outside this production contains, and it is bound by `principles/common.md` and `principles/research.md` — source identity, stated confidence, the settings fact each entry grounds, a disagreement recorded rather than silently resolved, and the standing rule that a ledger is never a settings document.
+`docs/research/*.md` is a ledger of what the world outside this production contains, and it is bound by `principles/common.md` and `principles/authoring/research.md` — source identity, stated confidence, the settings fact each entry grounds, a disagreement recorded rather than silently resolved, and the standing rule that a ledger is never a settings document.
 
 The obligation is hosted on the ledger rather than referenced from canon, and that is what keeps it honest in both directions. A reference would make every settings document owe a source, which is false of a chosen figure, and would refuse outright in the ordinary case where the folder is empty. Hosted this way it behaves like the narrative rungs: the shipped production sources nothing so the claim is silent, and the first file an author writes into `docs/research` brings all ten rules with it at once.
 

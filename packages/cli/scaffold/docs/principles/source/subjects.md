@@ -11,9 +11,9 @@ implemented against canon.
 ## One class answers for one settings document {#one-specification}
 
 A class is a subject, and a subject has one specification. Cite it, and cite
-only it: a class citing two has hidden which document the reader should correct,
-and a class citing none is a thing somebody modelled before anybody said what it
-was.
+only it: a class citing two has hidden which document the reader should
+correct, and a class citing none is a thing somebody modelled before anybody
+said what it was.
 
 The graph refuses both at the moment the class is written, which is the one
 thing a reference-side obligation cannot do.
@@ -30,14 +30,15 @@ old value, because nothing connected them.
 A value derived from another is derived in one place too, so a change to the
 scale it comes from reaches it.
 
-Sources: `SOURCE_COMPOSITION` on subjects as classes; `principles/settings.md#capability-stated`.
+Sources: `SOURCE_COMPOSITION` on subjects as classes;
+`principles/authoring/settings.md#capability-stated`.
 
 ## Behaviour belongs to the subject that performs it {#behaviour-belongs-to-its-subject}
 
-An action is a method on the class that performs it, not a block inside whatever
-shot happens to stage it. A group's advance belongs to the group; a gate's swing
-belongs to the gate. A choreography that spans subjects and belongs to none of
-them is a shot, and cites its scene instead.
+An action is a method on the class that performs it, not a block inside
+whatever shot happens to stage it. A group's advance belongs to the group; a
+gate's swing belongs to the gate. A choreography that spans subjects and
+belongs to none of them is a shot, and cites its scene instead.
 
 There is no population for actions, and that is why.
 
@@ -53,7 +54,8 @@ discovered by whoever is surprised by it in a frame.
 Where the work needs a capability canon lacks, the settings document changes
 first.
 
-Sources: `principles/settings.md#capability-stated`; `principles/common.md#change-upstream-first`.
+Sources: `principles/authoring/settings.md#capability-stated`;
+`principles/common.md#change-upstream-first`.
 
 ## A build path reads nothing it was not given {#build-is-pure}
 
@@ -61,9 +63,9 @@ No wall clock, no network, no process state, no filesystem, and no unseeded
 randomness on any path a shot builds through. Variation the production wants is
 a seed the design states.
 
-The reason is not purity. Every check this production has compares two runs, and
-a value that moves on its own makes each of those comparisons unable to fail —
-which reads exactly like passing.
+The reason is not purity. Every check this production has compares two runs,
+and a value that moves on its own makes each of those comparisons unable to
+fail — which reads exactly like passing.
 
 Sources: `principles/common.md#determinism`; the production contract's timing
 and randomness rules in `AGENTS.md`.

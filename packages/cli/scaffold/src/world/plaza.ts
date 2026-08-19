@@ -25,7 +25,8 @@ import { chorus } from "../formations/chorus";
  * geometry is context-free and performance is not, and a class that pretended
  * otherwise would need a shot before it could say where it is.
  *
- * @evidence settings/040-plaza.md Every piece the one specified place is made of
+ * @evidence settings/040-plaza.md Every piece the one specified place is made
+ *   of
  *   enters the world through this class, and the geometry-before-performance
  *   split it fixes is what lets that place state its extent and its named point
  *   without waiting for a shot to ask.
@@ -65,7 +66,8 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
  *
- * @evidence settings/040-plaza.md Answers the specification's Extent section: the
+ * @evidence settings/040-plaza.md Answers the specification's Extent section:
+ *   the
  *   open level ground the rows must end inside is this class and nothing else,
  *   and the half-extent it derives is the number that claim resolves to.
  */
@@ -163,7 +165,8 @@ export class PlazaGround extends WorldPiece {
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
  *
- * @evidence settings/040-plaza.md Answers the specification's Landmarks section:
+ * @evidence settings/040-plaza.md Answers the specification's Landmarks
+ *   section:
  *   `plaza-center` is named there precisely so a contract can point at the
  *   gesture without a coordinate, and this class is where that id exists.
  */
@@ -198,6 +201,9 @@ export class PlazaCenterMark extends WorldPiece {
  *   the place carries no feature competing with a silhouette: this is the one
  *   piece that could, so its bounds and opacity are declared here where that
  *   rule can be read against them rather than tuned inside a shot.
+ * @evidence principles/craft/form.md#proxy-is-declared Stands
+ *   in for atmosphere as a declared effect zone rather than as geometry
+ *   pretending to be weather.
  */
 export class PlazaHaze extends WorldPiece {
   public readonly id = "plaza-haze";
@@ -253,7 +259,8 @@ export class PlazaHaze extends WorldPiece {
  * them. Its record is the merge of what its pieces place, so adding a step
  * means adding a piece rather than editing an array in the middle of a blob.
  *
- * @evidence settings/040-plaza.md Is the whole of PLAZA rather than a part of it:
+ * @evidence settings/040-plaza.md Is the whole of PLAZA rather than a part of
+ *   it:
  *   the specification describes one place, and this is the single subject a
  *   shot names when it stages that place.
  * @evidenceExclude settings/000-governing-aim.md The governing aim is what the
@@ -265,6 +272,35 @@ export class PlazaHaze extends WorldPiece {
  *   a subject to build. They are answered by the documents that apply them, and
  *   a class claiming to implement art direction would be claiming to own a rule
  *   that binds every other class too.
+ * @evidenceExclude principles/craft/space.md#space-and-enclosure
+ *   No bounded space exists to state an extent or an owning surface for.
+ *   This production stages one open ground: no rooms, no storeys, no
+ *   connectors, nothing enclosed. Declared once for the whole source
+ *   population rather than answered by a class that would have to invent a
+ *   space to answer it.
+ * @evidenceExclude principles/craft/space.md#circulation-levels
+ *   No routes exist: the plaza is one ground and the figures stand on it.
+ *   This production stages one open ground: no rooms, no storeys, no
+ *   connectors, nothing enclosed. Declared once for the whole source
+ *   population rather than answered by a class that would have to invent a
+ *   space to answer it.
+ * @evidenceExclude principles/craft/space.md#reachability-is-measured
+ *   Nothing connects to anything, so there is no reachability to ask the
+ *   model about. This production stages one open ground: no rooms, no
+ *   storeys, no connectors, nothing enclosed. Declared once for the whole
+ *   source population rather than answered by a class that would have to
+ *   invent a space to answer it.
+ * @evidenceExclude principles/craft/space.md#hierarchy-is-authored
+ *   There is one place, so no spatial hierarchy exists to emphasise. This
+ *   production stages one open ground: no rooms, no storeys, no connectors,
+ *   nothing enclosed. Declared once for the whole source population rather
+ *   than answered by a class that would have to invent a space to answer it.
+ * @evidenceExclude principles/craft/space.md#declare-the-section
+ *   Nothing here encloses anything, so no judgment needs a near side
+ *   removed. This production stages one open ground: no rooms, no storeys,
+ *   no connectors, nothing enclosed. Declared once for the whole source
+ *   population rather than answered by a class that would have to invent a
+ *   space to answer it.
  */
 export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
@@ -289,7 +325,8 @@ export class Plaza extends AutoMovieSubjectGroup<
    * no standable-but-forbidden top; a world that grows one states it where the
    * piece is defined rather than here.
    *
-   * @evidence settings/040-plaza.md Requires one open level place, which is what
+   * @evidence settings/040-plaza.md Requires one open level place, which is
+   *   what
    *   a shot stands its figures on.
    */
   public space(): IAutoMovieSpace {

@@ -1703,11 +1703,12 @@ export class AutoMovieProductionProject {
   }
 
   /**
-   * Read one human-authored prose document the screenplay index addresses.
+   * Read one author-owned text file a compiler-owned record addresses.
    *
-   * Prose is the only project content the compiler reads that it does not own,
-   * so the path comes from a record an author edits and is treated as
-   * untrusted: it must resolve inside the project and must not be reached
+   * Named for its first caller and used by more than one: the screenplay index
+   * addresses prose documents, and a shot contract addresses the module that
+   * builds it, both of which the compiler reads without owning. The path comes
+   * from a record an author edits and is treated as untrusted: it must resolve inside the project and must not be reached
    * through a link, exactly as a compiler-owned read is. An absent document
    * returns `null` rather than throwing, because the screenplay checks report a
    * missing document as their own diagnostic and would otherwise turn one

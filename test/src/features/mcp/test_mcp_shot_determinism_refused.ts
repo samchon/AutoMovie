@@ -17,7 +17,7 @@ const CODE = "source-shot-nondeterministic";
  *
  * `determinism` is a named criterion of the `source` review, and it was the one
  * criterion with no mechanical enforcement anywhere: nothing refused a wall
- * clock, a filesystem read, or unseeded randomness inside a shot module, so an
+ * clock, unseeded randomness, or process state inside a shot module, so an
  * agent discharged it by reading for it. A criterion a machine can decide is
  * not a review criterion.
  *
@@ -29,10 +29,14 @@ const CODE = "source-shot-nondeterministic";
  * Scenarios:
  *
  * 1. The shipped starter's shot module is clean.
- * 2. A wall clock, unseeded randomness, and a filesystem import are each
- *    refused, and the refusal names the spelling, the line, and the shots that
- *    module builds.
- * 3. The scan reads code rather than prose: the same spelling inside a JSDoc
+ * 2. A wall clock, unseeded randomness, and process state are each refused, and
+ *    the refusal names the spelling, the line, and the shots that module
+ *    builds.
+ * 3. An import is not this scan's business. The compiler walks the module's
+ *    TypeScript AST and refuses an unsupported one as
+ *    `source-import-unsupported` before this ever runs, so a regex beside a
+ *    parser would be a second, worse spelling of the same rule.
+ * 4. The scan reads code rather than prose: the same spelling inside a JSDoc
  *    line is not a call and is not refused.
  */
 export const test_mcp_shot_determinism_refused = (): void => {
@@ -43,46 +47,54 @@ export const test_mcp_shot_determinism_refused = (): void => {
     const compiler = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     );
-    const refusals = (): IAutoMovieDiagnostic[] =>
+    const of = (code: string): IAutoMovieDiagnostic[] =>
       compiler
         .compile({ scope: "source" })
-        .diagnostics.filter((diagnostic) => diagnostic.code === CODE);
+        .diagnostics.filter((diagnostic) => diagnostic.code === code);
 
-    const clean = refusals();
+    const clean = of(CODE);
 
     fs.writeFileSync(
       module,
       `${authored}\nexport const drift = Date.now();\n`,
       "utf8",
     );
-    const clock = refusals();
+    const clock = of(CODE);
 
     fs.writeFileSync(
       module,
       `${authored}\nexport const jitter = Math.random();\n`,
       "utf8",
     );
-    const random = refusals();
+    const random = of(CODE);
 
     fs.writeFileSync(
       module,
-      `import fs from "node:fs";\n${authored}\nexport const bytes = fs;\n`,
+      `${authored}\nexport const host = process.platform;\n`,
       "utf8",
     );
-    const filesystem = refusals();
+    const machine = of(CODE);
+
+    // The parser owns imports; this scan stops where it starts.
+    fs.writeFileSync(
+      module,
+      `import nodeFs from "node:fs";\n${authored}\nexport const bytes = nodeFs;\n`,
+      "utf8",
+    );
+    const imported = of("source-import-unsupported");
 
     fs.writeFileSync(
       module,
       `${authored}\n/** Never call Math.random() here; use a declared seed. */\nexport const advice = 1;\n`,
       "utf8",
     );
-    const prose = refusals();
+    const prose = of(CODE);
 
     fs.writeFileSync(module, authored, "utf8");
-    const restored = refusals();
+    const restored = of(CODE);
 
     TestValidator.equals(
-      "a shot module that reads a clock, a die, or the filesystem is refused",
+      "a shot module that reads a clock, a die, or the machine is refused",
       namedFacts([
         ["theStarterIsClean", () => clean.length === 0],
         ["restoringItIsCleanAgain", () => restored.length === 0],
@@ -99,11 +111,10 @@ export const test_mcp_shot_determinism_refused = (): void => {
             random.length === 1 && random[0]!.message.includes("Math.random"),
         ],
         [
-          "aFilesystemImportIsRefused",
-          () =>
-            filesystem.length === 1 &&
-            filesystem[0]!.message.includes("node:fs"),
+          "processStateIsRefused",
+          () => machine.length === 1 && machine[0]!.message.includes("process"),
         ],
+        ["theParserOwnsImports", () => imported.length !== 0],
         [
           "theRefusalNamesTheModuleAndItsShots",
           () =>
@@ -117,7 +128,8 @@ export const test_mcp_shot_determinism_refused = (): void => {
         restoringItIsCleanAgain: true,
         aWallClockIsRefused: true,
         unseededRandomnessIsRefused: true,
-        aFilesystemImportIsRefused: true,
+        processStateIsRefused: true,
+        theParserOwnsImports: true,
         theRefusalNamesTheModuleAndItsShots: true,
         proseIsNotACall: true,
       },

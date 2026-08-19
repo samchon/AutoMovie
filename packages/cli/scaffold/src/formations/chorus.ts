@@ -26,6 +26,9 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  *   sections, which are claims about the group and not about a member: the
  *   interval that must survive, the edge the rows read by, and the order that
  *   holds through the cue are all arrangement, and arrangement lives here.
+ * @evidence principles/craft/form.md#line-of-action Keeps the
+ *   rows as one readable mass with open ground ahead of it, so the soloist's
+ *   gesture has space to read against.
  */
 export class Chorus extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,
@@ -68,7 +71,8 @@ export class Chorus extends AutoMovieSubjectGroup<
   /**
    * The deterministic seed every per-member variation is drawn from.
    *
-   * @evidence principles/subjects.md#build-is-pure Draws every per-member
+   * @evidence principles/source/subjects.md#build-is-pure Draws every
+   *   per-member
    *   variation from a declared seed, so two compiles agree.
    */
   public readonly seed: number = 1415;

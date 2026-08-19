@@ -31,8 +31,10 @@ Sort the current review surface by that test and it splits cleanly.
 | `source` | `binding-and-exports`, `determinism`, `engine-enforcement`, `error-and-boundary-paths` | reading the module — no frames, and `REVIEW_DEPENDENCY` says so itself |
 | `design` | `identity-and-references`, `scope-and-ownership`, `constraints-and-ranges`, `downstream-consumability`, `acceptance-coverage` | the records and the prepare-time diagnostics |
 | `shot` | `acceptance-scenarios` | already the compiler's: `realizeShotContract` returns an explicit outcome per authored opening, closing, event, camera, actor, and formation predicate, and the worksheet only quotes it |
-| `shot` | `temporal-coherence`, `beat-fidelity` | partly the compiler's, once the claim is addressed and timed |
-| `shot`, `asset`, `subject`, `sequence`, `film` | readability, credibility, integrity, rhythm, tone | looking, and nothing else |
+| `shot` | `beat-fidelity`, `representability` | partly the compiler's, once the claim is addressed and timed |
+| `shot` | `staging-readability`, `performance-credibility`, `style-intent-justification` | looking, and nothing else |
+| `rendition` | `visual-fidelity-to-source`, `temporal-coherence`, `anatomy-and-artifact-integrity`, `reference-consistency` | looking |
+| `asset`, `subject`, `sequence`, `film` | silhouette, rig and material, coverage, rhythm, tone | looking |
 
 The first three rows are work an agent is currently asked to certify by reading, and a compiler decides better: it does not tire, does not stale, and reports the exact figure that disagrees.
 
@@ -40,20 +42,27 @@ The share is not marginal. Measured on a freshly generated production with `test
 
 What stays is a real constraint rather than a leftover. `#story-falsifiable-acceptance` also requires that acceptance identify its **evaluating subject**, and that criteria never declare their own success. A compiled predicate satisfies that — the engine is not the author — but a silhouette that fails to read has no predicate, so its evaluator is an agent looking at a frame, and that verdict has to exist and be attributable. The tools keep producing those pixels; what shrinks is the set of questions a verdict is asked to answer.
 
-So when a review criterion keeps producing the same class of finding, the question is whether it is a diagnostic in the wrong place. Two are settled and one is measured:
+So when a review criterion keeps producing the same class of finding, the question is whether it is a diagnostic in the wrong place. Three of `source`'s four now are, and the fourth says where the boundary sits:
 
-- **Settled and mechanized.** Acceptance outcomes are compiler-derived; the reviewer cites them rather than judging them.
-- **Settled and mechanized.** A duration written into scene prose must be one the realizing shot carries (`screenplay-scene-timing-unrealized`), which closed the last joint between the screenplay and the motion under it. Nothing read the prose before, so the shipped starter promised a 1.2 second hold beside a shot whose cue window closed at 3.0 of a 6.0 second scene, and every gate stayed green.
-- **Measured and open.** `determinism` is a named `source` review criterion with no mechanical enforcement anywhere: nothing refuses a wall clock, a filesystem read, or unseeded randomness inside a shot build function, so the criterion is discharged by an agent reading for it. That is a lint rule waiting to be written.
+- **Acceptance outcomes** were already the compiler's; the reviewer cites them rather than judging them.
+- **A duration written into scene prose** must be one the realizing shot carries (`screenplay-scene-timing-unrealized`), which closed the last joint between the screenplay and the motion under it.
+- **A shot build path's hidden inputs** are refused by `source-shot-nondeterministic`: a wall clock, unseeded randomness, or process state inside a shot module. `determinism` had been the one named criterion with no mechanical enforcement of its globals at all, discharged by an agent reading for it.
+- **Imports were never open.** The compiler already walks the module's TypeScript AST and refuses an unsupported or dynamic one as `source-import-unsupported`, which is why the scan above covers globals and stops there. This is the shape of the mistake to avoid: a regex beside a parser looks like new coverage and is a second, worse spelling of a rule that already held. Measure what already refuses the case before writing the check that refuses it again.
+
+One joint is measured and still open. A shot names the scene it realizes twice — once as `@evidence script/00X.md` in its JSDoc and once as `evidence[].scene` in its contract — and nothing checks that the two agree. Measured: swapping the two shipped shots' prose citations so each cites the other's scene leaves the graph reporting PASS, because coverage is satisfied either way and the ledger never reads JSDoc. Closing it means walking the module's AST for the exported shot's tags and mapping them through the index's `scenes[].path`; the compiler already walks that AST for imports, so the pieces exist. `principles/source/shots.md#realizes-a-named-scene` states the join as the author's to keep until then, rather than implying a check that is not there.
 
 This is not an argument for deleting review. It is the boundary that keeps review affordable: move every addressed, timed, observable claim into the compiler, and spend the frames on what only frames can answer.
 
 ## Server/tool arrangement is not settled
 
 How many servers, and how tools group across them, is a **standing design question, not a one-time decision**.
+
 Today canonical `AutoMovieApplication` is the evidence surface: `getGuideDocument`, `captureFrame`, `captureTurntable`, `repaintShot`, `inspectSubject`, `prepareReview`, and `submitReview`.
+
 Ordinary screenplay and shot implementation, design records, deterministic compilation, geometry inspection, status, migration, tests, and render orchestration stay in repository code or package/CLI APIs.
+
 The former legacy, granular, gateway, and production application families are retired, and `automovie-mcp` is the only MCP binary.
+
 Whenever this surface changes:
 
 - Think deeply about the split before coding -- one server vs. several, one tool per engine call vs. coarser/finer groupings -- and write down the reasoning (a `.wiki/07-decisions/` entry or PR description).

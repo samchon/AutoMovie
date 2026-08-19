@@ -1,5 +1,5 @@
 <!--
-@evidence principles/settings.md#capability-stated States that the group is one subject and that no individual inside it is followable, so no source may address a member as a figure.
+@evidence principles/authoring/settings.md#capability-stated States that the group is one subject and that no individual inside it is followable, so no source may address a member as a figure.
 @evidence principles/common.md#refuse-rather-than-approximate Where the interval is what makes the group read, the document states the interval rather than an impression of density.
 -->
 

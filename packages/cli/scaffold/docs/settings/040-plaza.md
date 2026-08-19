@@ -1,6 +1,6 @@
 <!--
-@evidence principles/settings.md#surface-ownership Names the ground and the landmark on it, so a shot can say where the gesture happened without a source inventing a coordinate.
-@evidence principles/settings.md#measured-extent States the extent of the ground apart from what stands on it.
+@evidence principles/authoring/settings.md#surface-ownership Names the ground and the landmark on it, so a shot can say where the gesture happened without a source inventing a coordinate.
+@evidence principles/authoring/settings.md#measured-extent States the extent of the ground apart from what stands on it.
 -->
 
 # PLAZA

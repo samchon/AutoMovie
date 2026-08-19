@@ -20,8 +20,12 @@ import type {
  * @evidence settings/010-soloist.md Is SOLOIST entire: the one upright
  *   figure that document describes, carrying its stated scale and the single
  *   raised-hand capability it permits and nothing beyond it.
- * @evidence principles/subjects.md#one-specification Answers for SOLOIST and
+ * @evidence principles/source/subjects.md#one-specification Answers for SOLOIST
+ *   and
  *   for no other settings document.
+ * @evidence principles/craft/scale.md#scale-has-a-reference
+ *   States its height against the rows it stands ahead of, which is the
+ *   reference this production fixes.
  */
 export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "soloist";
@@ -32,7 +36,8 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * Every other subject states its size against this number rather than against
    * a second opinion, which is why it is public: a subject that needs human
    * scale reads it from here instead of restating 1.8.
-   * @evidence principles/subjects.md#measured-values-are-fields Holds the
+   * @evidence principles/source/subjects.md#measured-values-are-fields Holds
+   *   the
    *   stated scale as a field, so a shot reads it here rather than repeating
    *   the number.
    */
@@ -89,12 +94,17 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence settings/010-soloist.md Implements the raise-and-hold this
    *   specification claims as the figure's only capability.
-   * @evidence principles/subjects.md#no-unstated-capability Implements raising
+   * @evidence principles/source/subjects.md#no-unstated-capability Implements
+   *   raising
    *   and holding one hand, which is the whole of what the specification
    *   claims.
-   * @evidence principles/subjects.md#behaviour-belongs-to-its-subject Keeps the
+   * @evidence principles/source/subjects.md#behaviour-belongs-to-its-subject
+   *   Keeps the
    *   cue on the figure that performs it rather than in the shot that stages
    *   it.
+   * @evidence principles/craft/form.md#silhouette-test Raises
+   *   the arm clear of the torso so the contour carries the cue, which is what
+   *   the mask pass is captured to check.
    */
   public cue(
     context: IAutoMovieShotBuildContext,
@@ -161,6 +171,9 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence settings/010-soloist.md Fixes the scale this measurement is
    *   derived from, and this value states nothing that specification does not.
+   * @evidence principles/craft/scale.md#derived-once Derives
+   *   the eye from the authored height in one place, so a change of scale cannot
+   *   leave the camera aiming where the head used to be.
    */
   public eyeHeight(): number {
     return this.height * 0.9;
@@ -176,7 +189,8 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * @evidence settings/010-soloist.md Requires an articulated figure that
    *   raises a hand, which is a claim on a rig this source does not own.
-   * @evidence principles/subjects.md#refuse-rather-than-degrade Refuses when
+   * @evidence principles/source/subjects.md#refuse-rather-than-degrade Refuses
+   *   when
    *   the compile context carries no rig, instead of rendering a lesser figure.
    */
   public skeleton(context: IAutoMovieShotBuildContext): string {
