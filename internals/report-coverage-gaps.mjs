@@ -62,6 +62,84 @@ const sourceText = (file) => {
   }
 };
 
+/**
+ * How many lines a file has, which is not how many pieces splitting it yields.
+ *
+ * A file ending in a newline splits into one more piece than it has lines, and
+ * a guard that tolerates one line past the end is a guard with a hole in the one
+ * place it is supposed to be exact.
+ */
+export const lineCount = (text) =>
+  text === "" ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
+
+/**
+ * Every reported position that lies past the end of the file it names.
+ *
+ * `#1991` asks for exactly this guard, and asks for it here because it is
+ * "checkable from the report alone". A span ending beyond the last line is the
+ * unambiguous form of the fault: the tool inverted a source map against the
+ * wrong artifact and handed back the transpiled output's geometry. Unlike a
+ * misattributed line inside the file, nothing about it is arguable.
+ *
+ * Measured on one 343-file report the count is **zero**, which is why this can
+ * be a refusal rather than a notice. It stays silent today and goes red the day
+ * the instrument regresses, which is the difference between a gate and a number
+ * nobody can certify.
+ *
+ * The line count must come from `measured-lines.json`, which the measurement
+ * writes while the sources on disk are still the sources it measured. Judging
+ * against the current file instead blames the instrument for an ordinary edit:
+ * one commit that shortened a file by 23 lines made 26 of its positions read as
+ * past the end, and not one of them was a fault. A file the sidecar does not
+ * name is left unjudged and counted as such.
+ */
+export const positionsPastEndOfFile = (data, lines) => {
+  const spans = [
+    ...Object.values(data.statementMap ?? {}),
+    ...Object.values(data.fnMap ?? {}).map((entry) => entry?.loc),
+    ...Object.values(data.branchMap ?? {}).flatMap(
+      (entry) => entry?.locations ?? [],
+    ),
+  ];
+  return spans.filter((span) => {
+    const last = Math.max(span?.start?.line ?? 0, span?.end?.line ?? 0);
+    return last > lines;
+  }).length;
+};
+
+/**
+ * The length recorded for one file, or `null` when the record cannot say.
+ *
+ * `null` has two readings and both mean the same thing to a caller: no record
+ * was written, or this file is not in it. Either way the only honest answer is
+ * to judge nothing, because the alternative is judging a report against a file
+ * it never measured.
+ */
+export const measuredLineCount = (record, file) =>
+  record === null || record === undefined || typeof record[file] !== "number"
+    ? null
+    : record[file];
+
+/**
+ * What each file's length was when the report was written, or `null`.
+ *
+ * Absent for a report produced before this sidecar existed, or by anything other
+ * than `internals/coverage.mjs`. That is a reason to judge nothing rather than a
+ * reason to judge against today's file.
+ */
+const readMeasuredLines = () => {
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        path.join(path.dirname(REPORT), "measured-lines.json"),
+        "utf8",
+      ),
+    );
+  } catch {
+    return null;
+  }
+};
+
 const REPORT = path.resolve(
   "node_modules/.cache/automovie-c8-report/coverage-final.json",
 );
@@ -89,6 +167,10 @@ const reportGaps = () => {
   const coverage = JSON.parse(fs.readFileSync(REPORT, "utf8"));
   let ghosts = 0;
   let unconfirmed = 0;
+  let outside = 0;
+  let unmeasured = 0;
+  const outsideFiles = [];
+  const measuredLines = readMeasuredLines();
   for (const [file, data] of Object.entries(coverage).sort(([left], [right]) =>
     left.localeCompare(right),
   )) {
@@ -97,6 +179,14 @@ const reportGaps = () => {
       .map(([id]) => location(data.statementMap[id]));
     const text = sourceText(file);
     const source = text === null ? [] : text.split("\n");
+    const measured = measuredLineCount(measuredLines, file);
+    if (measured !== null) {
+      const past = positionsPastEndOfFile(data, measured);
+      if (past !== 0) {
+        outside += past;
+        outsideFiles.push(`${relative(file)} (${past}, ${measured} lines)`);
+      }
+    } else unmeasured++;
     const covered = new Set(
       Object.entries(data.f)
         .filter(([, hits]) => hits > 0)
@@ -145,6 +235,21 @@ const reportGaps = () => {
   if (ghosts !== 0)
     console.log(
       `${ghosts} zero-hit function entr${ghosts === 1 ? "y" : "ies"} named a function that ran under another entry, or a name this repository never wrote, and ${ghosts === 1 ? "is" : "are"} not listed above. That is the coverage tool reading its own emitted output, not a gap here.`,
+    );
+  // A refusal rather than a notice, because a position outside the file it names
+  // is not arguable: nothing in the source sits there to be uncovered. Zero on
+  // the report this was measured against, so it costs nothing until it costs a
+  // red job, which is the point.
+  if (outside !== 0) {
+    console.log(
+      `${outside} reported position${outside === 1 ? "" : "s"} lie past the end of the file named, so a source map was inverted against the wrong artifact:`,
+    );
+    for (const named of outsideFiles) console.log(`  ${named}`);
+    process.exitCode = 1;
+  }
+  if (unmeasured !== 0)
+    console.log(
+      `${unmeasured} file${unmeasured === 1 ? "" : "s"} could not be checked for positions past their own end, because the measurement recorded no length for ${unmeasured === 1 ? "it" : "them"}. Re-run the measurement to restore that check.`,
     );
   if (unconfirmed !== 0)
     console.log(

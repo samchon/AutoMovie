@@ -83,8 +83,11 @@ jobs:
         working-directory: test
 
       # Always, not only on failure: the gaps are the record of what is left,
-      # and they are worth reading on a green run.
-      - name: Report Exact Coverage Gaps
+      # and they are worth reading on a green run. This step can fail the job,
+      # and only for one thing: a reported position past the end of the file it
+      # names, which is the instrument inverting a source map against the wrong
+      # artifact rather than a gap anybody can close.
+      - name: Report Coverage Gaps
         run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache
@@ -128,7 +131,7 @@ jobs:
         run: pnpm coverage
         working-directory: test
 
-      - name: Report Exact Coverage Gaps
+      - name: Report Coverage Gaps
         run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache

@@ -22,7 +22,15 @@ const SOURCE = [
   "export const mountViewer = (host) => host;",
 ];
 
-/** One newline, built rather than written: an escape in this file is emitted literally. */
+/**
+ * One newline, built rather than written as an escape.
+ *
+ * The probe below is a template literal whose output is JavaScript source, so an
+ * escape written inside it is resolved while the template builds the string: the
+ * probe would receive a real line break in the middle of a string literal and
+ * fail to parse. Building the character instead keeps the escape out of the
+ * template entirely.
+ */
 const NEWLINE = String.fromCharCode(10);
 
 const entry = (name: string, line: number) =>
@@ -32,13 +40,23 @@ const entry = (name: string, line: number) =>
   });
 
 interface IAnswers {
+  noRecord: number | null;
+  unnamedFile: number | null;
+  namedFile: number | null;
+  malformedFile: number | null;
+  emptyLines: number;
+  bareLine: number;
+  trailingLine: number;
+  pastEnd: number;
+  withinFile: number;
+  everyMap: number;
   fresh: boolean;
   ranElsewhere: boolean;
   neverWritten: boolean;
   anonymous: boolean;
   unreadable: boolean;
   confirmed: boolean;
-  bodyAnchored: boolean;
+  otherName: boolean;
 }
 
 /**
@@ -77,9 +95,22 @@ interface IAnswers {
  *    nothing.
  * 6. Position confirmation is a separate question, and answers no for a line
  *    that holds a different name — which is a count, never a drop.
- * 7. Importing the reporter prints nothing. That guard is what lets this case
- *    ask about the rule at all, and `coverage.mjs` carries it for the same
- *    reason.
+ * 7. The length a position is judged against comes from what the measurement
+ *    recorded, never from the file as it now stands. An Istanbul report carries
+ *    no hash, so it cannot say which content it measured. A file the record does
+ *    not name, and a record whose value is not a number, are both judged by
+ *    nothing rather than by a guess.
+ * 8. A file's line count is what it has, not what splitting it yields: a
+ *    trailing newline must not buy one line of slack in the one check that
+ *    exists to be exact.
+ * 9. A span ending past the file's last line as measured is refused rather than
+ *    counted, because nothing in the source sits there to be left untested. That
+ *    makes it the one class that can turn a job red without turning it
+ *    permanently red. All three of the report's maps are read, because a fault
+ *    in any one of them is the same fault.
+ * 10. Importing the reporter prints nothing. That guard is what lets this case
+ *     ask about the rule at all, and `coverage.mjs` carries it for the same
+ *     reason.
  */
 export const test_workspace_coverage_gap_attribution = (): void => {
   const module = path.join(ROOT, "internals", "report-coverage-gaps.mjs");
@@ -90,6 +121,8 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       `import(${JSON.stringify(pathToFileURL(module).href)}).then((loaded) => {
          const source = ${JSON.stringify(SOURCE)};
          const text = ${JSON.stringify(SOURCE.join(NEWLINE))};
+         const NEWLINE = String.fromCharCode(10);
+         const span = (from, to) => ({ start: { line: from }, end: { line: to } });
          const real = (name, covered, body) =>
            loaded.functionGapIsReal({
              name,
@@ -105,11 +138,34 @@ export const test_workspace_coverage_gap_attribution = (): void => {
              neverWritten: real("__setModuleDefault", []),
              anonymous: real("(anonymous_12)", []),
              unreadable: real("__setModuleDefault", [], null),
+             noRecord: loaded.measuredLineCount(null, "a.ts"),
+             unnamedFile: loaded.measuredLineCount({ "b.ts": 12 }, "a.ts"),
+             namedFile: loaded.measuredLineCount({ "a.ts": 12 }, "a.ts"),
+             malformedFile: loaded.measuredLineCount({ "a.ts": "12" }, "a.ts"),
+             emptyLines: loaded.lineCount(""),
+             bareLine: loaded.lineCount("a"),
+             trailingLine: loaded.lineCount("a" + NEWLINE),
+             pastEnd: loaded.positionsPastEndOfFile(
+               { statementMap: { 0: span(900, 901) } },
+               5,
+             ),
+             withinFile: loaded.positionsPastEndOfFile(
+               { statementMap: { 0: span(2, 3) } },
+               5,
+             ),
+             everyMap: loaded.positionsPastEndOfFile(
+               {
+                 statementMap: { 0: span(2, 3) },
+                 fnMap: { 0: { loc: span(80, 81) } },
+                 branchMap: { 0: { locations: [span(90, 90)] } },
+               },
+               5,
+             ),
              confirmed: loaded.functionPositionConfirmed(
                source,
                ${entry("mountViewer", 5)},
              ),
-             bodyAnchored: loaded.functionPositionConfirmed(
+             otherName: loaded.functionPositionConfirmed(
                source,
                ${entry("mountViewer", 4)},
              ),
@@ -153,6 +209,37 @@ export const test_workspace_coverage_gap_attribution = (): void => {
         "a file the report outlived is kept whole",
         () => answers?.unreadable === true,
       ],
+      // Which content the report measured is not knowable from the report: the
+      // per-file entry carries a path, the maps and the counts, and no hash. So
+      // the length comes from what the measurement recorded, and a file it did
+      // not record is judged by nothing rather than by today's file.
+      ["no record judges nothing", () => answers?.noRecord === null],
+      [
+        "and neither does a record that omits the file",
+        () => answers?.unnamedFile === null,
+      ],
+      ["a recorded length is the one used", () => answers?.namedFile === 12],
+      // A hand-edited or truncated record is not a length. Trusting one would
+      // compare a line number against a string and refuse on the answer.
+      [
+        "and a record that is not a number judges nothing",
+        () => answers?.malformedFile === null,
+      ],
+      // A file ending in a newline splits into one more piece than it has
+      // lines, and a guard that tolerates one line past the end has a hole in
+      // the one place it exists to be exact.
+      ["an empty file has no lines", () => answers?.emptyLines === 0],
+      ["a line without a newline is one", () => answers?.bareLine === 1],
+      ["and a line with one is still one", () => answers?.trailingLine === 1],
+      // The one class that is refused rather than counted. A span ending past
+      // the last line names nothing the source could have left untested, and a
+      // report full of them is the fault this issue opened on.
+      ["a span past the last line is refused", () => answers?.pastEnd === 1],
+      ["a span inside the file is not", () => answers?.withinFile === 0],
+      [
+        "and all three maps are read, not only statements",
+        () => answers?.everyMap === 2,
+      ],
       // Position is counted, never acted on. Both answers matter: a rule that
       // always said yes would report nothing to distrust.
       [
@@ -161,7 +248,7 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       ],
       [
         "and a line holding another name does not",
-        () => answers?.bodyAnchored === false,
+        () => answers?.otherName === false,
       ],
       [
         "importing the reporter printed no report",
@@ -175,6 +262,16 @@ export const test_workspace_coverage_gap_attribution = (): void => {
       "and neither is a name this repository never wrote": true,
       "an anonymous entry is kept, because nothing can be looked for": true,
       "a file the report outlived is kept whole": true,
+      "no record judges nothing": true,
+      "and neither does a record that omits the file": true,
+      "a recorded length is the one used": true,
+      "and a record that is not a number judges nothing": true,
+      "an empty file has no lines": true,
+      "a line without a newline is one": true,
+      "and a line with one is still one": true,
+      "a span past the last line is refused": true,
+      "a span inside the file is not": true,
+      "and all three maps are read, not only statements": true,
       "a definition line confirms its own position": true,
       "and a line holding another name does not": true,
       "importing the reporter printed no report": true,
