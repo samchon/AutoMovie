@@ -196,6 +196,16 @@ Take any "before" **after the last compile and before the repack**, and say so w
 
 The product refuses rather than serving stale frames, which is it behaving: a capture after a repack fails with `generated-stale` until the production is recompiled, and the refusal comes from the capture path itself, which does not compile for you. `preview` refuses the same way — while still committing an input snapshot and advancing the revision, so a command that moves the revision is not evidence that it did the work.
 
+## Read The Artifact You Are Holding
+
+The most repeated driver error in this campaign was not a missed check. It was reading a picture to answer a question the compiled document already answered, while holding the document. One driver counted four downlights from a frame where the artifact carried eight and its own pre-turn notes already listed eight. The same driver told its session the camera faced away from the front elevation; the session answered with the eye and aim vectors and it faced toward it. Another called four columns "three grey and one tan" when they bound one material and sampled within a few RGB units of each other.
+
+Every one of those was correctable from a file already open. So keep the two questions apart. **Counts, ids, positions, bindings and dimensions come from the artifact.** The frame answers the one thing no artifact can: whether a thing reads as itself at review distance, and whether a room reads as that room.
+
+When the frame and the artifact disagree about a count, the artifact wins and the disagreement is a fact about the frame — an object below the crop, behind the camera, or too small to resolve. A driver that reported four bins `placed` and their visibility `unverified`, because it could not identify them by eye, had both halves right at once.
+
+And a difference between two surfaces is a measurement, not an impression. Sample both and compare **chromaticity separately from brightness**: two walls at `(156.0, 154.0, 148.2)` and `(137.0, 135.0, 130.1)` differ by twelve per cent in brightness and agree to three parts in a thousand in ratio, which is one white lit from two angles and not two materials. This campaign reached that conclusion twice — once by accepting the author's rebuttal and once by measuring it — and only the measured one transferred to the next driver.
+
 ## Prove The Pixels Are New
 
 A checkpoint report is the agent's claim about its output, not a reading of it. One reported `revision 212, gables stand, spire clears the ridge` while the PNG on disk was byte-identical to the file written three hours earlier, which a hash caught and a description never would have.
