@@ -195,17 +195,30 @@ const partsMeet = (
  * An element resolves to its parts, because a multi-part body's union box is
  * mostly air and a test written against it answers about the box rather than
  * the body. Every other locator has no part structure to consult and keeps the
- * one box it reports.
+ * one box it reports, and so does an element that draws nothing.
+ *
+ * The parts arrive through `lookup` rather than from a fixed source, because
+ * one caller asks about a single pair and another has already resolved the whole
+ * building. The rule about what to do with the answer is the same either way,
+ * and writing it twice is how the two stop agreeing.
  */
 const solidBoxes = (
-  environment: IAutoMovieBuiltEnvironment,
   locator: AutoMovieBuiltPlacementBodyLocator,
   reported: IAutoMovieBuiltPlacementBounds,
-): IWorldBox[] => {
+  lookup: (id: string) => readonly IWorldBox[] | null | undefined,
+): readonly IWorldBox[] => {
   if (locator.kind !== "element") return [reported];
-  const parts = builtEnvironmentElementPartBounds(environment, locator.id);
-  return parts === null || parts.length === 0 ? [reported] : parts;
+  const parts = lookup(locator.id);
+  return parts === null || parts === undefined || parts.length === 0
+    ? [reported]
+    : parts;
 };
+
+/** The single-pair lookup: one element's parts, resolved on the spot. */
+const partsOfElement =
+  (environment: IAutoMovieBuiltEnvironment) =>
+  (id: string): readonly IWorldBox[] | null =>
+    builtEnvironmentElementPartBounds(environment, id);
 
 /**
  * Test two named building bodies for positive-volume world-bounds overlap.
@@ -234,6 +247,7 @@ export const builtEnvironmentPlacementOverlap = (props: {
     environment: props.environment,
     target: props.right,
   });
+  const parts = partsOfElement(props.environment);
   const unresolved: ("left" | "right")[] = [];
   if (left === null) unresolved.push("left");
   if (right === null) unresolved.push("right");
@@ -242,8 +256,8 @@ export const builtEnvironmentPlacementOverlap = (props: {
       left === null || right === null
         ? "unresolved"
         : partsMeet(
-              solidBoxes(props.environment, props.left, left),
-              solidBoxes(props.environment, props.right, right),
+              solidBoxes(props.left, left, parts),
+              solidBoxes(props.right, right, parts),
             )
           ? "overlapping"
           : "separate",
@@ -251,24 +265,6 @@ export const builtEnvironmentPlacementOverlap = (props: {
     leftBasis: left?.basis ?? null,
     rightBasis: right?.basis ?? null,
   };
-};
-
-/**
- * A body's part boxes taken from a pass already made, or its reported box.
- *
- * The same reading {@link solidBoxes} performs, for a caller that resolved every
- * element's parts at once. A population has no part structure and a
- * transform-only element draws nothing, and both keep the single box the record
- * reports for them.
- */
-const sweptBoxes = (
-  boxes: ReadonlyMap<string, IWorldBox[]>,
-  locator: AutoMovieBuiltPlacementBodyLocator,
-  reported: IAutoMovieBuiltPlacementBounds,
-): IWorldBox[] => {
-  if (locator.kind !== "element") return [reported];
-  const parts = boxes.get(locator.id);
-  return parts === undefined || parts.length === 0 ? [reported] : parts;
 };
 
 /**
@@ -534,8 +530,9 @@ export const builtEnvironmentSupportSweep = (props: {
   // was reported as floating over an empty room. The subject keeps its union,
   // because a body's underside is the lowest point it has.
   const boxes = builtEnvironmentPartBoxes(props.environment);
+  const partsById = (id: string) => boxes.get(id);
   const candidates = resolved.flatMap((owner) =>
-    sweptBoxes(boxes, owner.body, owner.bounds).map((bounds) => ({
+    solidBoxes(owner.body, owner.bounds, partsById).map((bounds) => ({
       bounds,
       owner,
     })),
@@ -635,6 +632,7 @@ export const builtEnvironmentPlacementOverlapSweep = (props: {
   // a time re-walks the element tree per body, which on the three-thousand-body
   // production this sweep is sized for is the whole cost of the check again.
   const boxes = builtEnvironmentPartBoxes(props.environment);
+  const partsById = (id: string) => boxes.get(id);
   for (const subject of order) {
     // Anything whose right edge is behind this body's left edge can meet neither
     // it nor anything after it, because the sweep only ever moves right.
@@ -651,8 +649,8 @@ export const builtEnvironmentPlacementOverlapSweep = (props: {
       // everything standing on it, so the pair is confirmed part against part
       // and withdrawn when nothing solid actually met. The union stays the
       // prune, because it contains every part and can only over-admit.
-      const firstParts = sweptBoxes(boxes, first.body, first.bounds);
-      const secondParts = sweptBoxes(boxes, second.body, second.bounds);
+      const firstParts = solidBoxes(first.body, first.bounds, partsById);
+      const secondParts = solidBoxes(second.body, second.bounds, partsById);
       let volume = 0;
       for (const left of firstParts)
         for (const right of secondParts) volume += sharedVolume(left, right);

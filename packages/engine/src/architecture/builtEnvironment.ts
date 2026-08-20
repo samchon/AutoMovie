@@ -1574,47 +1574,6 @@ const gridExtremeCells = (
   ];
 };
 
-/**
- * The world points one placed element draws, or its origin when it draws none.
- *
- * Parts are placed the way the renderer places them, each under its own
- * transform and then under the element's world matrix. A model the environment
- * does not own is `undefined` here rather than an error, because a runtime
- * model reference is a legal way to furnish a building and the record simply
- * does not carry its vertices.
- */
-/**
- * One world box per drawn part, rather than one box over all of them.
- *
- * A model's union box says where the body is and nothing about how much of that
- * volume it fills. A shelf is a back panel and two boards, so its union spans
- * floor to head height and is mostly air; anything standing on a board is
- * inside that box, and a test written against the union reports an overlap that
- * is true about the boxes and false about the bodies. The same box puts the
- * bearing face at the panel's top rather than at the board the object rests on,
- * which is the paired "floating" answer.
- *
- * Part boxes are contained in the union box, so every answer they give is one
- * the union would also have given or a false positive the union invented. A
- * single-part body yields exactly the union box and behaves as before.
- *
- * An element with no drawn part keeps its degenerate origin box, for the reason
- * {@link builtEnvironmentElementBounds} states.
- */
-const placedPartBoxes = (
-  model: IAutoMovieModel | undefined,
-  world: number[],
-): { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] => {
-  const boxes: { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] = [];
-  for (const part of model === undefined ? [] : model.parts) {
-    const points = placedPartPoints(part, world);
-    if (points.length !== 0) boxes.push(boundsOf(points));
-  }
-  return boxes.length === 0
-    ? [boundsOf([applyMatrix(world, { x: 0, y: 0, z: 0 })])]
-    : boxes;
-};
-
 /** Every world point one drawn part contributes. */
 const placedPartPoints = (
   part: IAutoMovieModel["parts"][number],
@@ -1647,39 +1606,57 @@ const placedPartPoints = (
   return points;
 };
 
+/**
+ * The world points one placed element draws, or its origin when it draws none.
+ *
+ * Parts are placed the way the renderer places them, each under its own
+ * transform and then under the element's world matrix. A model the environment
+ * does not own is `undefined` here rather than an error, because a runtime
+ * model reference is a legal way to furnish a building and the record simply
+ * does not carry its vertices.
+ */
 const placedElementPoints = (
   model: IAutoMovieModel | undefined,
   world: number[],
 ): IAutoMovieVector3[] => {
-  const points: IAutoMovieVector3[] = [];
-  for (const part of model === undefined ? [] : model.parts) {
-    const positions =
-      part.geometry.type === "primitive"
-        ? tessellate(part.geometry.shape).positions
-        : part.geometry.mesh.positions;
-    const matrix =
-      part.transform === null
-        ? world
-        : Matrix4.multiply(
-            world,
-            Matrix4.compose(
-              part.transform.translation,
-              part.transform.rotation,
-              part.transform.scale,
-            ),
-          );
-    for (let index = 0; index + 2 < positions.length; index += 3)
-      points.push(
-        applyMatrix(matrix, {
-          x: positions[index]!,
-          y: positions[index + 1]!,
-          z: positions[index + 2]!,
-        }),
-      );
-  }
+  const points = (model === undefined ? [] : model.parts).flatMap((part) =>
+    placedPartPoints(part, world),
+  );
   return points.length === 0
     ? [applyMatrix(world, { x: 0, y: 0, z: 0 })]
     : points;
+};
+
+/**
+ * One world box per drawn part, rather than one box over all of them.
+ *
+ * A model's union box says where the body is and nothing about how much of that
+ * volume it fills. A shelf is a back panel and two boards, so its union spans
+ * floor to head height and is mostly air; anything standing on a board is
+ * inside that box, and a test written against the union reports an overlap that
+ * is true about the boxes and false about the bodies. The same box puts the
+ * bearing face at the panel's top rather than at the board the object rests on,
+ * which is the paired "floating" answer.
+ *
+ * Part boxes are contained in the union box, so every answer they give is one
+ * the union would also have given or a false positive the union invented. A
+ * single-part body yields exactly the union box and behaves as before.
+ *
+ * An element with no drawn part keeps its degenerate origin box, for the reason
+ * {@link builtEnvironmentElementBounds} states.
+ */
+const placedPartBoxes = (
+  model: IAutoMovieModel | undefined,
+  world: number[],
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] => {
+  const boxes: { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] = [];
+  for (const part of model === undefined ? [] : model.parts) {
+    const points = placedPartPoints(part, world);
+    if (points.length !== 0) boxes.push(boundsOf(points));
+  }
+  return boxes.length === 0
+    ? [boundsOf([applyMatrix(world, { x: 0, y: 0, z: 0 })])]
+    : boxes;
 };
 
 /**
