@@ -30,6 +30,7 @@ export type AutoMovieSandboxEngineExport =
   | "builtEnvironmentBuildingOfSpace"
   | "builtEnvironmentContainsPoint"
   | "builtEnvironmentElementBounds"
+  | "builtEnvironmentElementPartBounds"
   | "builtEnvironmentPlacementBounds"
   | "builtEnvironmentPlacementOverlap"
   | "builtEnvironmentSupportStatus"
@@ -117,6 +118,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "builtEnvironmentBuildingOfSpace",
     "builtEnvironmentContainsPoint",
     "builtEnvironmentElementBounds",
+    "builtEnvironmentElementPartBounds",
     "builtEnvironmentPlacementBounds",
     "builtEnvironmentPlacementOverlap",
     "builtEnvironmentSupportStatus",
@@ -378,6 +380,8 @@ const QUESTION_OF_EXPORT: Readonly<
   builtEnvironmentSpacePopulations:
     "What does the building I declared actually contain?",
   builtEnvironmentElementBounds:
+    "Does this building placement rest, float, sink, or overlap?",
+  builtEnvironmentElementPartBounds:
     "Does this building placement rest, float, sink, or overlap?",
   builtInstanceSetPlacementBounds:
     "Does this building placement rest, float, sink, or overlap?",
