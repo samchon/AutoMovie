@@ -26,6 +26,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { lineCount } from "./report-coverage-gaps.mjs";
+
 const ROOT = path.resolve(import.meta.dirname, "..");
 const CACHE = path.join(ROOT, "node_modules", ".cache");
 const REPORT = path.join(CACHE, "automovie-c8-report");
@@ -183,6 +185,57 @@ const INCLUDES = [
   "packages/mcp/src/**",
 ];
 
+/** Where a run records how long each measured file was while it was measured. */
+export const MEASURED_LINES = "measured-lines.json";
+
+/**
+ * Record every measured file's line count beside the report that names it.
+ *
+ * An Istanbul report carries positions and no way to say which content they were
+ * taken from — the per-file entry holds `path`, the maps and the counts, and no
+ * hash. So a reader asking "does this position exist in the file?" is asking
+ * about whatever the file has since become, and a guard built on that answer
+ * blames the instrument for an ordinary edit. Measured on this repository: one
+ * commit that shortened a file by 23 lines made 26 positions read as past its
+ * end, none of which was a fault.
+ *
+ * Written here because this is the one moment the sources on disk are the
+ * sources just measured. A missing entry is a file the reader must not judge.
+ *
+ * The length itself is {@link lineCount}'s to define, and it is defined beside
+ * the reader because that is where the reason lives: a file ending in a newline
+ * splits into one more piece than it has lines, and the reader's check is exact
+ * or it is nothing. Two copies of that arithmetic is how a writer and a reader
+ * stop agreeing about what a length is.
+ */
+export const writeMeasuredLines = () => {
+  const report = path.join(REPORT, "coverage-final.json");
+  let coverage;
+  try {
+    coverage = JSON.parse(fs.readFileSync(report, "utf8"));
+  } catch {
+    // No report, nothing to describe. The reader already says so in its own
+    // words when the report is absent.
+    return;
+  }
+  const lines = {};
+  for (const file of Object.keys(coverage)) {
+    let text;
+    try {
+      text = fs.readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    lines[file] = lineCount(text);
+  }
+  fs.writeFileSync(
+    path.join(REPORT, MEASURED_LINES),
+    `${JSON.stringify(lines, null, 2)}
+`,
+    "utf8",
+  );
+};
+
 /**
  * Measure once, into a directory this run alone owns.
  *
@@ -244,6 +297,7 @@ const measure = () => {
     // and does not reach the total. The remaining numbers separate a record
     // caught mid-write from a merge that drops complete ones, and they cost one
     // directory read on a step that already took minutes.
+    writeMeasuredLines();
     const records = coverageRecords(temporary);
     const scripts = coverageMissingScripts(temporary);
     console.log(
