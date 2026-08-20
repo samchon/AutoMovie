@@ -126,6 +126,87 @@ export const coverageMissingScripts = (directory) => {
   return { urls: urls.size, missing };
 };
 
+/**
+ * How many measured sources were read in more than one shape, and by how many.
+ *
+ * A whole-suite figure can be lower than a scoped one over the same file, which
+ * is arithmetically impossible for an execution count and entirely possible for
+ * a merge. Measured on this repository: a geometry-scoped run reports
+ * `tessellate.ts` at 226/226 statements while the full suite reports 172/226,
+ * same denominator, same source. Its merged function map carries the six real
+ * functions with tens of thousands of hits **and** two more naming two of them
+ * at a line that defines neither, with zero hits.
+ *
+ * That second reading is what this counts. A record is one process's view of one
+ * script; two processes that resolved the same source through different loaded
+ * forms produce two range shapes, and the merge keeps both — the real one and
+ * one whose positions land nowhere and whose counts are zero. The report cannot
+ * show that afterwards, because by then it is one entry.
+ *
+ * The shape is the sorted list of each function's name and first start offset,
+ * which is what changes when a different form of the same source is measured and
+ * what stays fixed when the same form runs more or less often.
+ *
+ * Counted over the measured set only. Every process also loads its own launcher
+ * and toolchain, and those disagree with each other constantly without affecting
+ * one figure this repository reports.
+ */
+export const coverageScriptShapes = (directory, roots = SOURCES) => {
+  const measured = (url) => {
+    const target = url.replace(/^file:[/]{3}/u, "").replace(/[/]/gu, "/");
+    return roots.some((root) =>
+      target.toLowerCase().includes(root.toLowerCase()),
+    );
+  };
+  const shapes = new Map();
+  let entries;
+  try {
+    entries = fs.readdirSync(directory);
+  } catch {
+    return { urls: 0, reread: 0, disagreeing: 0, sample: [] };
+  }
+  for (const entry of entries) {
+    if (entry.endsWith(".json") === false) continue;
+    let record;
+    try {
+      record = JSON.parse(fs.readFileSync(path.join(directory, entry), "utf8"));
+    } catch {
+      continue;
+    }
+    for (const script of Array.isArray(record.result) ? record.result : []) {
+      if (
+        typeof script.url !== "string" ||
+        script.url.startsWith("file:") === false ||
+        measured(script.url) === false
+      )
+        continue;
+      const shape = (Array.isArray(script.functions) ? script.functions : [])
+        .map(
+          (fn) =>
+            `${fn.functionName ?? ""}:${fn.ranges?.[0]?.startOffset ?? -1}`,
+        )
+        .sort()
+        .join(",");
+      const seen = shapes.get(script.url) ?? { count: 0, forms: new Set() };
+      seen.count += 1;
+      seen.forms.add(shape);
+      shapes.set(script.url, seen);
+    }
+  }
+  let reread = 0;
+  let disagreeing = 0;
+  const sample = [];
+  for (const [url, seen] of shapes) {
+    if (seen.count > 1) reread += 1;
+    if (seen.forms.size > 1) {
+      disagreeing += 1;
+      if (sample.length < 5)
+        sample.push(`${url.split("/").pop()} (${seen.forms.size} shapes)`);
+    }
+  }
+  return { urls: shapes.size, reread, disagreeing, sample };
+};
+
 export const coverageRecords = (directory) => {
   let count = 0;
   let bytes = 0;
@@ -307,6 +388,12 @@ const measure = () => {
     console.log(
       `coverage scripts: ${scripts.urls} distinct file URLs, ` +
         `${scripts.missing} of them gone from disk at report time`,
+    );
+    const shapes = coverageScriptShapes(temporary);
+    console.log(
+      `coverage shapes: ${shapes.reread} scripts were read by more than one ` +
+        `process, ${shapes.disagreeing} of those in more than one shape` +
+        (shapes.sample.length === 0 ? "" : ` (${shapes.sample.join(", ")})`),
     );
     process.exitCode = result.status ?? 1;
   } finally {

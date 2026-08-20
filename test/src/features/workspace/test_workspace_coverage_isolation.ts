@@ -90,6 +90,29 @@ export const test_workspace_coverage_isolation = (): void => {
   fs.writeFileSync(path.join(records, "coverage-1-2-1.json"), '{"result":[{"u');
   fs.writeFileSync(path.join(records, "notes.txt"), "");
   fs.mkdirSync(path.join(records, "nested"));
+  // Two processes reading one measured source, the second in a different shape.
+  // Kept in its own directory so the record counts above stay what they assert.
+  // `present.js` sits outside the measured set and must not be counted at all.
+  const shaped = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-coverage-shapes-"),
+  );
+  const shape = (offset: number) => ({
+    url: pathToFileURL(
+      path.join(ROOT, "packages", "engine", "src", "geometry", "probe.ts"),
+    ).href,
+    functions: [{ functionName: "probe", ranges: [{ startOffset: offset }] }],
+  });
+  fs.writeFileSync(
+    path.join(shaped, "coverage-2-1-0.json"),
+    JSON.stringify({
+      result: [shape(10), { url: pathToFileURL(present).href }],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(shaped, "coverage-2-2-0.json"),
+    JSON.stringify({ result: [shape(64)] }),
+  );
+
   const probe = spawnSync(
     process.execPath,
     [
@@ -103,14 +126,28 @@ export const test_workspace_coverage_isolation = (): void => {
            path.join(records, "never-created"),
          )});
          const scripts = module.coverageMissingScripts(${JSON.stringify(records)});
+         const shapes = module.coverageScriptShapes(${JSON.stringify(shaped)});
+         const narrow = module.coverageScriptShapes(${JSON.stringify(shaped)}, [
+           "packages/face/src",
+         ]);
          console.log(
-           JSON.stringify({ first, second, counted, absent, walked, scripts }),
+           JSON.stringify({
+             first,
+             second,
+             counted,
+             absent,
+             walked,
+             scripts,
+             shapes,
+             narrow,
+           }),
          );
        });`,
     ],
     { cwd: ROOT, encoding: "utf8" },
   );
   fs.rmSync(records, { recursive: true, force: true });
+  fs.rmSync(shaped, { recursive: true, force: true });
 
   const parent = path.join(ROOT, "node_modules", ".cache", "automovie-c8");
   const drawn = ((): {
@@ -120,6 +157,13 @@ export const test_workspace_coverage_isolation = (): void => {
     absent: number;
     walked: { count: number; bytes: number; parsed: number; results: number };
     scripts: { urls: number; missing: number };
+    shapes: {
+      urls: number;
+      reread: number;
+      disagreeing: number;
+      sample: string[];
+    };
+    narrow: { urls: number; reread: number; disagreeing: number };
   } | null => {
     const line = probe.stdout
       .split("\n")
@@ -138,6 +182,13 @@ export const test_workspace_coverage_isolation = (): void => {
         results: number;
       };
       scripts: { urls: number; missing: number };
+      shapes: {
+        urls: number;
+        reread: number;
+        disagreeing: number;
+        sample: string[];
+      };
+      narrow: { urls: number; reread: number; disagreeing: number };
     };
   })();
 
@@ -145,6 +196,27 @@ export const test_workspace_coverage_isolation = (): void => {
     "every coverage run draws a directory no other run writes",
     namedFacts([
       ["the entry point answered", () => drawn !== null],
+      // A whole-suite figure can read lower than a scoped one over the same
+      // file, which no execution count can do and a merge can. Two processes
+      // that resolved one source through different loaded forms leave two range
+      // shapes, and the merged entry keeps both: the real reading and one whose
+      // positions land nowhere with zero hits. The report cannot show that
+      // afterwards, so the walk over the raw records is the only place it is
+      // visible.
+      [
+        "a source read in two shapes is counted as both reread and disagreeing",
+        () => drawn?.shapes.reread === 1 && drawn?.shapes.disagreeing === 1,
+      ],
+      [
+        "and named, so the figure it spoils can be found",
+        () => drawn?.shapes.sample.join(" ").includes("probe.ts") === true,
+      ],
+      // Every process also loads its own launcher and toolchain, and those
+      // disagree constantly without touching one figure this repository reports.
+      [
+        "a source outside the measured set is not counted at all",
+        () => drawn?.narrow.urls === 0 && drawn?.narrow.disagreeing === 0,
+      ],
       [
         "two draws in one process differ",
         () => drawn !== null && drawn.first !== drawn.second,
@@ -209,6 +281,9 @@ export const test_workspace_coverage_isolation = (): void => {
     ]),
     {
       "the entry point answered": true,
+      "a source read in two shapes is counted as both reread and disagreeing": true,
+      "and named, so the figure it spoils can be found": true,
+      "a source outside the measured set is not counted at all": true,
       "two draws in one process differ": true,
       "both sit under the coverage cache": true,
       "neither is the shared parent itself": true,
