@@ -11,6 +11,7 @@ import {
   IAutoMovieBuiltSupportQuery,
   IAutoMovieBuiltSupportResult,
   IAutoMovieBuiltSupportSweepReport,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 
 import {
@@ -25,6 +26,8 @@ import {
 } from "../space/footprint";
 import {
   builtEnvironmentElementBounds,
+  builtEnvironmentElementPartBounds,
+  builtEnvironmentPartBoxes,
   builtInstanceSetPlacementBounds,
 } from "./builtEnvironment";
 
@@ -132,7 +135,11 @@ export const builtEnvironmentSupportStatus = (props: {
     environment: props.environment,
     target: props.query.subject,
   });
-  const support = resolveSupport(props.environment, props.query.support);
+  const support = resolveSupport(
+    props.environment,
+    props.query.support,
+    subject,
+  );
   const unresolved: ("subject" | "support")[] = [];
   if (subject === null) unresolved.push("subject");
   if (support === null) unresolved.push("support");
@@ -172,6 +179,34 @@ export const builtEnvironmentSupportStatus = (props: {
   };
 };
 
+/** Whether any part of one body shares positive volume with any part of another. */
+const partsMeet = (
+  left: readonly IWorldBox[],
+  right: readonly IWorldBox[],
+): boolean =>
+  left.some((leftPart) =>
+    right.some((rightPart) => propBoundsOverlap(leftPart, rightPart)),
+  );
+
+/**
+ * The boxes a locator's body actually fills, one per drawn part where it has
+ * them and the reported box otherwise.
+ *
+ * An element resolves to its parts, because a multi-part body's union box is
+ * mostly air and a test written against it answers about the box rather than
+ * the body. Every other locator has no part structure to consult and keeps the
+ * one box it reports.
+ */
+const solidBoxes = (
+  environment: IAutoMovieBuiltEnvironment,
+  locator: AutoMovieBuiltPlacementBodyLocator,
+  reported: IAutoMovieBuiltPlacementBounds,
+): IWorldBox[] => {
+  if (locator.kind !== "element") return [reported];
+  const parts = builtEnvironmentElementPartBounds(environment, locator.id);
+  return parts === null || parts.length === 0 ? [reported] : parts;
+};
+
 /**
  * Test two named building bodies for positive-volume world-bounds overlap.
  *
@@ -206,7 +241,10 @@ export const builtEnvironmentPlacementOverlap = (props: {
     status:
       left === null || right === null
         ? "unresolved"
-        : propBoundsOverlap(left, right)
+        : partsMeet(
+              solidBoxes(props.environment, props.left, left),
+              solidBoxes(props.environment, props.right, right),
+            )
           ? "overlapping"
           : "separate",
     unresolved,
@@ -215,9 +253,79 @@ export const builtEnvironmentPlacementOverlap = (props: {
   };
 };
 
+/**
+ * A body's part boxes taken from a pass already made, or its reported box.
+ *
+ * The same reading {@link solidBoxes} performs, for a caller that resolved every
+ * element's parts at once. A population has no part structure and a
+ * transform-only element draws nothing, and both keep the single box the record
+ * reports for them.
+ */
+const sweptBoxes = (
+  boxes: ReadonlyMap<string, IWorldBox[]>,
+  locator: AutoMovieBuiltPlacementBodyLocator,
+  reported: IAutoMovieBuiltPlacementBounds,
+): IWorldBox[] => {
+  if (locator.kind !== "element") return [reported];
+  const parts = boxes.get(locator.id);
+  return parts === undefined || parts.length === 0 ? [reported] : parts;
+};
+
+/**
+ * The support part a subject bears on, chosen from the parts it stands over.
+ *
+ * Nearest underside rather than highest: a subject resting on a low board and a
+ * subject sunk into a high one are different answers, and choosing the highest
+ * part would report the first as floating by the height of the second.
+ *
+ * A subject over none of the parts gets one of them rather than the union. It is
+ * over no part, so any part answers `not-over-support`, which is the truth; the
+ * union would have said it stands over the body for the same reason a shelf's
+ * box swallows what stands on it, and a notch in an L-shaped body is exactly
+ * where that reappears.
+ */
+const bearingPart = (
+  environment: IAutoMovieBuiltEnvironment,
+  locator: AutoMovieBuiltPlacementSupportLocator,
+  body: IAutoMovieBuiltPlacementBounds,
+  subject: IAutoMovieBuiltPlacementBounds | null,
+): IWorldBox => {
+  if (locator.kind !== "element" || subject === null) return body;
+  const parts = builtEnvironmentElementPartBounds(environment, locator.id);
+  if (parts === null || parts.length < 2) return body;
+  const over = parts.filter(
+    (part) =>
+      part.min.x < subject.max.x &&
+      part.max.x > subject.min.x &&
+      part.min.z < subject.max.z &&
+      part.max.z > subject.min.z,
+  );
+  if (over.length === 0) return parts[0]!;
+  return over.reduce((best, part) =>
+    Math.abs(part.max.y - subject.min.y) < Math.abs(best.max.y - subject.min.y)
+      ? part
+      : best,
+  );
+};
+
+/**
+ * The face a body bears on, chosen from the parts it is actually over.
+ *
+ * A support's union box puts the bearing face at the highest point of the whole
+ * body, which for a shelf is the back panel rather than the board an object
+ * rests on — so a correctly seated object reads as floating by the height of a
+ * part it is nowhere near. Where the support has drawn parts, the face is the
+ * top of the part nearest the subject's underside among the parts its footprint
+ * covers, and where it covers none of them the face comes from a part anyway:
+ * standing over no part is what `not-over-support` means, and the union would
+ * have answered that the subject stands over the body.
+ *
+ * A single-part support yields its own box either way.
+ */
 const resolveSupport = (
   environment: IAutoMovieBuiltEnvironment,
   locator: AutoMovieBuiltPlacementSupportLocator,
+  subject: IAutoMovieBuiltPlacementBounds | null,
 ): IResolvedSupport | null => {
   if (locator.kind === "surface") {
     const entry = environment.surfaces.find(
@@ -236,7 +344,8 @@ const resolveSupport = (
     target: locator,
   });
   if (body === null) return null;
-  const { min, max } = body;
+  const bearing = bearingPart(environment, locator, body, subject);
+  const { min, max } = bearing;
   return {
     face: {
       polygon: {
@@ -303,10 +412,17 @@ const builtEnvironmentBodies = (
 };
 
 /** Whether two boxes share footprint area, exact contact excluded. */
-const footprintOverlaps = (
-  left: IAutoMovieBuiltPlacementBounds,
-  right: IAutoMovieBuiltPlacementBounds,
-): boolean =>
+/**
+ * A world-space box, whichever resolution produced it.
+ *
+ * The measuring helpers read six numbers and nothing else, so a part box is
+ * admissible wherever a body's reported bounds are. Keeping them typed as the
+ * reported bounds would have forced a fabricated `basis` onto every part, which
+ * is a claim about how the part was resolved that nobody made.
+ */
+type IWorldBox = { min: IAutoMovieVector3; max: IAutoMovieVector3 };
+
+const footprintOverlaps = (left: IWorldBox, right: IWorldBox): boolean =>
   left.min.x < right.max.x &&
   left.max.x > right.min.x &&
   left.min.z < right.max.z &&
@@ -320,7 +436,7 @@ const footprintOverlaps = (
  * to avoid.
  */
 const firstAtOrBelow = (
-  descending: readonly { bounds: IAutoMovieBuiltPlacementBounds }[],
+  descending: readonly { bounds: IWorldBox }[],
   ceiling: number,
 ): number => {
   let low = 0;
@@ -333,15 +449,16 @@ const firstAtOrBelow = (
   return low;
 };
 
-const boxVolume = (box: IAutoMovieBuiltPlacementBounds): number =>
+const boxVolume = (box: IWorldBox): number =>
   Math.max(0, box.max.x - box.min.x) *
   Math.max(0, box.max.y - box.min.y) *
   Math.max(0, box.max.z - box.min.z);
 
-const sharedVolume = (
-  left: IAutoMovieBuiltPlacementBounds,
-  right: IAutoMovieBuiltPlacementBounds,
-): number =>
+/** How much solid a body's parts hold, which is not the volume of its box. */
+const solidVolume = (parts: readonly IWorldBox[]): number =>
+  parts.reduce((total, part) => total + boxVolume(part), 0);
+
+const sharedVolume = (left: IWorldBox, right: IWorldBox): number =>
   Math.max(
     0,
     Math.min(left.max.x, right.max.x) - Math.max(left.min.x, right.min.x),
@@ -366,12 +483,18 @@ const sharedVolume = (
  * needs no declaration at all.
  *
  * It reports a measurement rather than a relation. For each body it takes the
- * highest measurable body whose footprint overlaps this one and whose top is at
- * or below this one's underside, then reports the clearance between them. Nothing
- * here claims that body is the support: a lintel measured under a sill is simply
- * the nearest thing beneath it. What the answer does support is the reading that
- * matters, which is that nothing is under this body at all, or that the nearest
- * thing is a metre down.
+ * highest drawn part whose footprint overlaps this one and whose top is at or
+ * below this one's underside, then reports the clearance to it and names the
+ * body that part belongs to. Nothing here claims that body is the support: a
+ * lintel measured under a sill is simply the nearest thing beneath it. What the
+ * answer does support is the reading that matters, which is that nothing is
+ * under this body at all, or that the nearest thing is a metre down.
+ *
+ * Parts rather than boxes, because a body's box is not its body. A shelf that is
+ * a back panel and two boards has a box spanning the floor to head height, and
+ * everything standing on a board is under its top and over its bottom without
+ * touching anything. Eight scroll cases seated exactly on such a shelf were
+ * reported as floating by the height of a panel they were nowhere near.
  *
  * `groundY` is the plane a footing legitimately rests on, and it defaults to the
  * world origin's height. Without it every ground-borne element reports as
@@ -405,11 +528,23 @@ export const builtEnvironmentSupportSweep = (props: {
     );
 
   const { resolved, unresolved } = builtEnvironmentBodies(props.environment);
+  // What a body might rest on is a drawn part, not a union box. A shelf's union
+  // spans the floor to the top of its back panel and is mostly air, so a case
+  // standing on its lower board found nothing at or below its own underside and
+  // was reported as floating over an empty room. The subject keeps its union,
+  // because a body's underside is the lowest point it has.
+  const boxes = builtEnvironmentPartBoxes(props.environment);
+  const candidates = resolved.flatMap((owner) =>
+    sweptBoxes(boxes, owner.body, owner.bounds).map((bounds) => ({
+      bounds,
+      owner,
+    })),
+  );
   // Descending by top height, so the first footprint hit at or below a subject's
-  // underside is the nearest body under it and the walk can stop there. The
+  // underside is the nearest part under it and the walk can stop there. The
   // alternative is reading every body for every body, which is the shape that
   // makes a whole-building check something nobody runs twice.
-  const descending = [...resolved].sort(
+  const descending = [...candidates].sort(
     (left, right) => right.bounds.max.y - left.bounds.max.y,
   );
   const floating: IAutoMovieBuiltFloatingBody[] = [];
@@ -432,12 +567,12 @@ export const builtEnvironmentSupportSweep = (props: {
       ++index
     ) {
       const candidate = descending[index]!;
-      if (candidate === subject) continue;
+      if (candidate.owner === subject) continue;
       ++compared;
       if (footprintOverlaps(subject.bounds, candidate.bounds) === false)
         continue;
       nearest = {
-        body: candidate.body,
+        body: candidate.owner.body,
         clearance: subject.bounds.min.y - candidate.bounds.max.y,
       };
       break;
@@ -496,6 +631,10 @@ export const builtEnvironmentPlacementOverlapSweep = (props: {
   const pairs: IAutoMovieBuiltPlacementOverlapPair[] = [];
   const active: typeof order = [];
   let compared = 0;
+  // One pass over the record for every body's parts. Resolving them one body at
+  // a time re-walks the element tree per body, which on the three-thousand-body
+  // production this sweep is sized for is the whole cost of the check again.
+  const boxes = builtEnvironmentPartBoxes(props.environment);
   for (const subject of order) {
     // Anything whose right edge is behind this body's left edge can meet neither
     // it nor anything after it, because the sweep only ever moves right.
@@ -508,10 +647,23 @@ export const builtEnvironmentPlacementOverlapSweep = (props: {
         continue;
       const first = candidate.index < subject.index ? candidate : subject;
       const second = candidate.index < subject.index ? subject : candidate;
-      const volume = sharedVolume(first.bounds, second.bounds);
+      // The union boxes met; the bodies may not have. A shelf's union swallows
+      // everything standing on it, so the pair is confirmed part against part
+      // and withdrawn when nothing solid actually met. The union stays the
+      // prune, because it contains every part and can only over-admit.
+      const firstParts = sweptBoxes(boxes, first.body, first.bounds);
+      const secondParts = sweptBoxes(boxes, second.body, second.bounds);
+      let volume = 0;
+      for (const left of firstParts)
+        for (const right of secondParts) volume += sharedVolume(left, right);
+      if (volume <= 0) continue;
+      // Measured against the solid the parts occupy rather than the union, so a
+      // column standing inside a mostly-air body is not graded as a sliver of
+      // the air. Clamped because two parts of one body may themselves meet, and
+      // a share of more than the whole is a number nobody can read.
       const smaller = Math.min(
-        boxVolume(first.bounds),
-        boxVolume(second.bounds),
+        solidVolume(firstParts),
+        solidVolume(secondParts),
       );
       pairs.push({
         left: first.body,
@@ -519,7 +671,7 @@ export const builtEnvironmentPlacementOverlapSweep = (props: {
         leftBasis: first.bounds.basis,
         rightBasis: second.bounds.basis,
         volume,
-        fraction: smaller === 0 ? 0 : volume / smaller,
+        fraction: smaller === 0 ? 0 : Math.min(1, volume / smaller),
       });
     }
     active.push(subject);

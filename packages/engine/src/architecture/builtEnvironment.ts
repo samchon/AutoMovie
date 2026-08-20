@@ -1583,6 +1583,70 @@ const gridExtremeCells = (
  * model reference is a legal way to furnish a building and the record simply
  * does not carry its vertices.
  */
+/**
+ * One world box per drawn part, rather than one box over all of them.
+ *
+ * A model's union box says where the body is and nothing about how much of that
+ * volume it fills. A shelf is a back panel and two boards, so its union spans
+ * floor to head height and is mostly air; anything standing on a board is
+ * inside that box, and a test written against the union reports an overlap that
+ * is true about the boxes and false about the bodies. The same box puts the
+ * bearing face at the panel's top rather than at the board the object rests on,
+ * which is the paired "floating" answer.
+ *
+ * Part boxes are contained in the union box, so every answer they give is one
+ * the union would also have given or a false positive the union invented. A
+ * single-part body yields exactly the union box and behaves as before.
+ *
+ * An element with no drawn part keeps its degenerate origin box, for the reason
+ * {@link builtEnvironmentElementBounds} states.
+ */
+const placedPartBoxes = (
+  model: IAutoMovieModel | undefined,
+  world: number[],
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] => {
+  const boxes: { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] = [];
+  for (const part of model === undefined ? [] : model.parts) {
+    const points = placedPartPoints(part, world);
+    if (points.length !== 0) boxes.push(boundsOf(points));
+  }
+  return boxes.length === 0
+    ? [boundsOf([applyMatrix(world, { x: 0, y: 0, z: 0 })])]
+    : boxes;
+};
+
+/** Every world point one drawn part contributes. */
+const placedPartPoints = (
+  part: IAutoMovieModel["parts"][number],
+  world: number[],
+): IAutoMovieVector3[] => {
+  const points: IAutoMovieVector3[] = [];
+  const positions =
+    part.geometry.type === "primitive"
+      ? tessellate(part.geometry.shape).positions
+      : part.geometry.mesh.positions;
+  const matrix =
+    part.transform === null
+      ? world
+      : Matrix4.multiply(
+          world,
+          Matrix4.compose(
+            part.transform.translation,
+            part.transform.rotation,
+            part.transform.scale,
+          ),
+        );
+  for (let index = 0; index + 2 < positions.length; index += 3)
+    points.push(
+      applyMatrix(matrix, {
+        x: positions[index]!,
+        y: positions[index + 1]!,
+        z: positions[index + 2]!,
+      }),
+    );
+  return points;
+};
+
 const placedElementPoints = (
   model: IAutoMovieModel | undefined,
   world: number[],
@@ -1616,6 +1680,75 @@ const placedElementPoints = (
   return points.length === 0
     ? [applyMatrix(world, { x: 0, y: 0, z: 0 })]
     : points;
+};
+
+/**
+ * The world boxes one element's drawn parts fill, one per part.
+ *
+ * Answers the question {@link builtEnvironmentElementBounds} cannot: how much of
+ * a body's box is body. A caller testing whether two placed things intersect,
+ * or which face one rests on, reads these rather than the union, because a
+ * multi-part body's union is mostly air and says so nowhere.
+ *
+ * `null` for the same reasons the union answers `null`: an element that was
+ * never declared, or one that draws nothing.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support `builtEnvironmentElementPartBounds` supplies the per-part world extents a support probe needs to name the face an object actually rests on.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Resolves one element's placed geometry into its drawn parts' world boxes while preserving the measurement basis.
+ * @author Samchon
+ */
+export const builtEnvironmentElementPartBounds = (
+  environment: IAutoMovieBuiltEnvironment,
+  elementId: string,
+): { min: IAutoMovieVector3; max: IAutoMovieVector3 }[] | null => {
+  const element = environment.elements.find(
+    (candidate) => candidate.id === elementId,
+  );
+  if (element === undefined || element.model === null) return null;
+  const matrices = worldMatricesOf(environment, operationDeltas(environment));
+  const model = environment.models.find(
+    (candidate) => candidate.id === element.model,
+  );
+  return placedPartBoxes(model, matrices.get(element.id)!);
+};
+
+/**
+ * Every drawn element's part boxes, resolved in one pass over the record.
+ *
+ * {@link builtEnvironmentElementPartBounds} answers for one element and walks
+ * the whole element tree to do it, which is the right cost for one question and
+ * the wrong one for a sweep: a building with three thousand placed bodies would
+ * pay that walk three thousand times. This resolves the world matrices once and
+ * reads every element through them, so a whole-building pass is one walk.
+ *
+ * A transform-only element is absent rather than present and empty, matching the
+ * single-element answer's `null`, because a grouping node draws nothing and a
+ * caller that finds no entry should fall back to the box the record reports for
+ * it rather than treat it as a body with no volume.
+ *
+ * @evidence requirements/building-exterior/structure-and-envelope.md#building-structural-support Supplies the per-part world extents a whole-building support pass needs without re-walking the element tree once per body.
+ * @evidence specifications/building-envelope/structure-envelope-and-materials.md#building-envelope-structural-support-input-output Resolves every drawn element's placed geometry into its parts' world boxes from a single placement pass.
+ * @author Samchon
+ */
+export const builtEnvironmentPartBoxes = (
+  environment: IAutoMovieBuiltEnvironment,
+): Map<string, { min: IAutoMovieVector3; max: IAutoMovieVector3 }[]> => {
+  const matrices = worldMatricesOf(environment, operationDeltas(environment));
+  const models = new Map(
+    environment.models.map((model) => [model.id, model] as const),
+  );
+  const boxes = new Map<
+    string,
+    { min: IAutoMovieVector3; max: IAutoMovieVector3 }[]
+  >();
+  for (const element of environment.elements) {
+    if (element.model === null) continue;
+    boxes.set(
+      element.id,
+      placedPartBoxes(models.get(element.model), matrices.get(element.id)!),
+    );
+  }
+  return boxes;
 };
 
 /**
