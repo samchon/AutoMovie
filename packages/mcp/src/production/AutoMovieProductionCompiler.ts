@@ -730,6 +730,7 @@ export class AutoMovieProductionCompiler {
       );
     if (input.scope === "review" || input.scope === "final")
       diagnostics.push(...reviewGateDiagnostics(reviews, input.scope));
+    else diagnostics.push(...reviewDebtNotice(reviews));
     if (input.scope === "final")
       diagnostics.push(
         ...finalDeliverableDiagnostics(
@@ -7877,6 +7878,46 @@ const screenplayResidencyDiagnostics = (props: {
           message: `${props.contracts.size} shot contract(s) are resident with no screenplay index. Their scene citations join to numbering that does not exist, so nothing downstream can be traced to authored work. Author the screenplay index, then compile again.`,
         },
       ];
+
+/**
+ * One line, at the scope an author actually runs, saying what review is owed.
+ *
+ * `#2058` measured the shape of this failure: an authoring agent completed a
+ * production and never called the review tools — zero invocations, zero errors,
+ * which is a tool never reached rather than one that failed — while five
+ * channels had already carried the names to it. The names were not missing. The
+ * commands carrying them were `verify` and `review:status`, which are terminal
+ * or optional, while `compile` runs dozens of times at `source` scope and said
+ * nothing about review at all.
+ *
+ * So this is not a sixth channel; it is one of the five, moved to where the
+ * author is. And it is one diagnostic rather than one per target on purpose:
+ * the counter-argument the issue states is that a source-scope compile flooded
+ * with 82 per-target warnings teaches an author to scroll past compile output,
+ * which costs more than it buys. A single line naming the count and the first
+ * target survives that objection.
+ *
+ * It is a warning at this scope and never an error. Review being incomplete is
+ * the normal state of a film being built; the gate that refuses it is `review`,
+ * and this only makes its existence visible before the author reaches it.
+ */
+const reviewDebtNotice = (
+  queue: IAutoMovieReviewQueue,
+): IAutoMovieDiagnostic[] => {
+  const owed = queue.entries.filter((entry) => entry.state !== "complete");
+  if (owed.length === 0) return [];
+  const first = owed[0]!;
+  return [
+    {
+      code: "review-incomplete",
+      category: "warning",
+      phase: "review",
+      target: "review",
+      path: null,
+      message: `${owed.length} review ${owed.length === 1 ? "target is" : "targets are"} not complete, starting with a ${first.target.kind} target (${first.state}). This compile does not gate on them; the review scope does, and a production reaches it with the same list. Run npm run review:status for the per-target list and the next action each one needs.`,
+    },
+  ];
+};
 
 /**
  * Which scope an unfinished review blocks, by what the target is.
