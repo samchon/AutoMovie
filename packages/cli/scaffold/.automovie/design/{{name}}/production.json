@@ -1,0 +1,53 @@
+{
+  "id": "{{name}}",
+  "title": "{{name}}",
+  "logline": "A soloist raises a hand, and a chorus standing in rows answers it.",
+  "targetRuntimeSeconds": 11.5,
+  "visualDelivery": "deterministic",
+  "frameFormat": {
+    "width": 1280,
+    "height": 720,
+    "fps": 24,
+    "colorSpace": "srgb"
+  },
+  "artDirection": {
+    "style": "primitive-3d",
+    "palette": [
+      "#182235",
+      "#d7b56d",
+      "#8f9d74",
+      "#6f746e",
+      "#89918a"
+    ],
+    "silhouettePriority": "The soloist and the raised hand remain distinct from the ground and background.",
+    "scaleGrammar": "A named soloist and the promoted formation heroes remain readable against simultaneous near and far anonymous rows."
+  },
+  "deliverables": [
+    {
+      "id": "starter-preview",
+      "kind": "preview",
+      "required": true
+    },
+    {
+      "id": "starter-feature",
+      "kind": "feature",
+      "required": true
+    },
+    {
+      "id": "starter-pose-guide",
+      "kind": "guide-pass",
+      "pass": "pose",
+      "required": true
+    },
+    {
+      "id": "starter-captions",
+      "kind": "captions",
+      "required": true
+    },
+    {
+      "id": "starter-audio",
+      "kind": "audio-mix",
+      "required": true
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "production": "{{name}}",
+  "treatment": {
+    "path": "docs/storylines/001-cue.md",
+    "sequences": [
+      {
+        "id": "SEQ-CUE",
+        "title": "The call",
+        "beats": [
+          {
+            "id": "BEAT-CUE-1",
+            "text": "The audience finds SOLOIST ahead of the rows, and the hand begins to rise as a deliberate act rather than incidental motion."
+          },
+          {
+            "id": "BEAT-CUE-2",
+            "text": "CHORUS closes the authored distance without losing order."
+          }
+        ],
+        "path": "docs/storylines/001-cue.md"
+      },
+      {
+        "id": "SEQ-ANSWER",
+        "title": "The reply holds",
+        "beats": [
+          {
+            "id": "BEAT-ANSWER-1",
+            "text": "CHORUS remains where the cue brought it, and SOLOIST's hand remains raised; neither state decays when the initiating movement ends."
+          },
+          {
+            "id": "BEAT-ANSWER-2",
+            "text": "GATE stays shut while the raised hand and advanced rows remain the established answer."
+          }
+        ],
+        "path": "docs/storylines/002-answer.md"
+      }
+    ]
+  },
+  "screenplay": {
+    "path": "docs/script/001-cue.md",
+    "lock": {
+      "activatedBy": "agent-before-first-shot",
+      "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
+      "sceneIds": [
+        "SCN-001",
+        "SCN-002"
+      ]
+    },
+    "scenes": [
+      {
+        "id": "SCN-001",
+        "title": "The cue",
+        "status": "active",
+        "covers": [
+          {
+            "reason": "The opening shot must make the separated caller's deliberate gesture readable.",
+            "beat": "The audience finds SOLOIST ahead of the rows, and the hand begins to rise as a deliberate act rather than incidental motion."
+          },
+          {
+            "reason": "The opening shot must show the ordered group accept the cue without losing formation.",
+            "beat": "CHORUS closes the authored distance without losing order."
+          }
+        ],
+        "location": "plaza",
+        "disposition": null,
+        "path": "docs/script/001-cue.md"
+      },
+      {
+        "id": "SCN-002",
+        "title": "The answer",
+        "status": "active",
+        "covers": [
+          {
+            "reason": "The answer shot must preserve the first scene's hand and formation endpoint without drift.",
+            "beat": "CHORUS remains where the cue brought it, and SOLOIST's hand remains raised; neither state decays when the initiating movement ends."
+          },
+          {
+            "reason": "The answer shot must keep the gate shut so the film closes on the exchange rather than a new event.",
+            "beat": "GATE stays shut while the raised hand and advanced rows remain the established answer."
+          }
+        ],
+        "location": "plaza",
+        "disposition": null,
+        "path": "docs/script/002-answer.md"
+      }
+    ]
+  },
+  "catalog": {
+    "characters": [
+      {
+        "id": "soloist",
+        "name": "The Soloist",
+        "evidence": [
+          {
+            "reason": "The screenplay explicitly gives the soloist the raised hand.",
+            "scene": "SCN-001"
+          }
+        ],
+        "bindings": [
+          {
+            "kind": "model",
+            "id": "soloist"
+          }
+        ]
+      }
+    ],
+    "factions": [
+      {
+        "id": "chorus",
+        "name": "The Chorus",
+        "evidence": [
+          {
+            "reason": "The rows are a story force the cue is visibly addressed to.",
+            "scene": "SCN-001"
+          }
+        ],
+        "bindings": [
+          {
+            "kind": "formation",
+            "id": "chorus"
+          }
+        ]
+      }
+    ],
+    "locations": [
+      {
+        "id": "plaza",
+        "name": "Plaza",
+        "evidence": [
+          {
+            "reason": "Both screenplay scenes explicitly occur on the same plaza.",
+            "scene": "SCN-001"
+          }
+        ],
+        "bindings": [
+          {
+            "kind": "world-landmark",
+            "id": "plaza-center"
+          }
+        ]
+      }
+    ]
+  },
+  "continuity": [
+    {
+      "id": "cue-arm-readable",
+      "text": "The soloist's raised cueing arm remains readable.",
+      "verification": "frame-review",
+      "proof": {
+        "owner": "frame-review",
+        "scenario": "opening-pose"
+      },
+      "evidence": [
+        {
+          "reason": "The opening scene establishes the raised hand as the cue.",
+          "scene": "SCN-001"
+        }
+      ]
+    }
+  ]
+}

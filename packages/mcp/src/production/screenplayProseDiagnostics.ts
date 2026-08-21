@@ -21,6 +21,80 @@ const HEADING =
   /^#{1,6}[ \t]+(SCN-[A-Za-z0-9-]+)[ \t]+(?:—|-|:)[ \t]+(.+?)[ \t]*$/u;
 
 /**
+ * Markdown lines that can make an audience-facing prose claim.
+ *
+ * HTML comments carry evidence metadata and fenced blocks carry examples or
+ * implementation notes. Neither is screenplay prose: letting either through
+ * would allow a citation review to satisfy an unwritten scene, or make a
+ * number in an example look like a timing promise. Comment removal preserves
+ * line breaks so the remaining heading and body boundaries stay unchanged.
+ */
+const authoredMarkdownLines = (content: string): string[] => {
+  const lines: string[] = [];
+  let fence: string | undefined;
+  let fenceLength = 0;
+  let htmlComment = false;
+  for (const sourceLine of content.replace(/\r\n/gu, "\n").split("\n")) {
+    if (fence !== undefined) {
+      const trimmed = sourceLine.replace(/^[ \t]+/u, "");
+      const indent = sourceLine.length - trimmed.length;
+      if (indent <= 3 && trimmed[0] === fence) {
+        let length = 0;
+        while (length < trimmed.length && trimmed[length] === fence) ++length;
+        if (
+          length >= fenceLength &&
+          trimmed.slice(length).trim().length === 0
+        ) {
+          fence = undefined;
+          fenceLength = 0;
+        }
+      }
+      continue;
+    }
+    let line = "";
+    for (let cursor = 0; cursor < sourceLine.length; ) {
+      if (htmlComment) {
+        const close = sourceLine.indexOf("-->", cursor);
+        if (close === -1) {
+          line += " ".repeat(sourceLine.length - cursor);
+          break;
+        }
+        line += " ".repeat(close + 3 - cursor);
+        cursor = close + 3;
+        htmlComment = false;
+      } else {
+        const open = sourceLine.indexOf("<!--", cursor);
+        if (open === -1) {
+          line += sourceLine.slice(cursor);
+          break;
+        }
+        line += `${sourceLine.slice(cursor, open)}    `;
+        cursor = open + 4;
+        htmlComment = true;
+      }
+    }
+    const trimmed = line.replace(/^[ \t]+/u, "");
+    const indent = line.length - trimmed.length;
+    const marker = trimmed[0];
+    if (
+      indent <= 3 &&
+      trimmed.length >= 3 &&
+      (marker === "`" || marker === "~")
+    ) {
+      let length = 0;
+      while (length < trimmed.length && trimmed[length] === marker) ++length;
+      if (length >= 3) {
+        fence = marker;
+        fenceLength = length;
+        continue;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+};
+
+/**
  * Whitespace that only exists because Markdown soft-wraps.
  *
  * The index quotes a sentence verbatim; a document may wrap that same sentence
@@ -40,38 +114,18 @@ const comparableProse = (value: string): string =>
 export const parseScreenplayProse = (content: string): IMarkdownScene[] => {
   const scenes: IMarkdownScene[] = [];
   let current: IMarkdownScene | undefined;
-  let fence: string | undefined;
-  let fenceLength = 0;
-  for (const line of content.replace(/\r\n/gu, "\n").split("\n")) {
-    const trimmed = line.replace(/^[ \t]+/u, "");
-    const indent = line.length - trimmed.length;
-    const marker = trimmed[0];
-    if (
-      indent <= 3 &&
-      trimmed.length >= 3 &&
-      (marker === "`" || marker === "~")
-    ) {
-      let length = 0;
-      while (length < trimmed.length && trimmed[length] === marker) ++length;
-      if (fence === undefined && length >= 3) {
-        fence = marker;
-        fenceLength = length;
-      } else if (
-        marker === fence &&
-        length >= fenceLength &&
-        trimmed.slice(length).trim() === ""
-      ) {
-        fence = undefined;
-        fenceLength = 0;
-      }
-    }
-    if (fence === undefined) {
-      const match = HEADING.exec(line);
-      if (match !== null) {
-        if (current !== undefined) scenes.push(current);
-        current = { id: match[1]!, title: match[2]!.trim(), body: "" };
-        continue;
-      }
+  for (const line of authoredMarkdownLines(content)) {
+    const match = HEADING.exec(line);
+    if (match !== null) {
+      if (current !== undefined) scenes.push(current);
+      current = {
+        id: match[1]!,
+        // An explicit Markdown id stabilizes evidence citations; it is
+        // metadata on the heading, not part of the screenplay scene title.
+        title: match[2]!.replace(/[ \t]+\{#[^{}\s]+\}[ \t]*$/u, "").trim(),
+        body: "",
+      };
+      continue;
     }
     if (current !== undefined) current.body += `${line}\n`;
   }
@@ -137,7 +191,9 @@ export const screenplayProseDiagnostics = (props: {
         : screenplay.treatment.path;
     const content = read(documentPath);
     if (content === null) continue;
-    const comparable = comparableProse(content);
+    const comparable = comparableProse(
+      authoredMarkdownLines(content).join("\n"),
+    );
     for (const beat of sequence.beats)
       if (
         beat.text.trim().length !== 0 &&

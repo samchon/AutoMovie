@@ -61,7 +61,14 @@ export const test_mcp_capture_refusals = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
     fs.writeFileSync(
-      path.join(fixture.root, ".automovie", "design", "models", "crate.json"),
+      path.join(
+        fixture.root,
+        ".automovie",
+        "design",
+        "shared",
+        "models",
+        "crate.json",
+      ),
       `${JSON.stringify(CRATE, null, 2)}\n`,
       "utf8",
     );

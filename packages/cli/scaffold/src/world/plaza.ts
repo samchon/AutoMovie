@@ -25,11 +25,21 @@ import { chorus } from "../formations/chorus";
  * geometry is context-free and performance is not, and a class that pretended
  * otherwise would need a shot before it could say where it is.
  *
- * @evidence settings/040-plaza.md Every piece the one specified place is made
- *   of
- *   enters the world through this class, and the geometry-before-performance
- *   split it fixes is what lets that place state its extent and its named point
- *   without waiting for a shot to ask.
+ * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
+ *   design and no other model file.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the common world-piece boundary it realizes.
+ * @evidence models/040-plaza.md#plaza-world-composition Defines the common
+ *   context-free contribution boundary for every reviewed world piece.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that defines the common context-free contribution boundary for every reviewed world piece.
+ * @evidence principles/model-sources.md#design-owned-construction Keeps world
+ *   pieces as implementations of the cited model design.
+ * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that keeps world pieces as implementations of the cited model design.
+ * @evidence principles/model-sources.md#deterministic-build Returns the same
+ *   placed contribution from the same piece state in every shot.
+ * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that returns the same placed contribution from the same piece state in every shot.
+ * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit Makes
+ *   unsupported enclosure and final atmosphere fidelity absent from the API.
+ * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that makes unsupported enclosure and final atmosphere fidelity absent from the API.
  */
 export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContribution> {
   /** What this piece puts into the world, independent of any shot. */
@@ -66,10 +76,12 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
  *
- * @evidence settings/040-plaza.md Answers the specification's Extent section:
- *   the
- *   open level ground the rows must end inside is this class and nothing else,
- *   and the half-extent it derives is the number that claim resolves to.
+ * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
+ *   design and no other model file.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the ground subset it realizes.
+ * @evidence models/040-plaza.md#plaza-world-composition Implements the one
+ *   derived level square used by both world and rendered surface records.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one derived level square used by both world and rendered surface records.
  */
 export class PlazaGround extends WorldPiece {
   public readonly id = "ground";
@@ -119,8 +131,9 @@ export class PlazaGround extends WorldPiece {
    * second answer that agrees until it does not is the failure the whole
    * one-owner rule exists to prevent.
    *
-   * @evidence settings/040-plaza.md Requires one level open place, which is the
-   *   height this returns everywhere inside it.
+   * @evidence models/040-plaza.md#plaza-world-composition Reads the reviewed
+   *   level-surface height through the engine's owning query.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and heightAt in src/world/plaza.ts; confirmed this citation after checking the claim that reads the reviewed level-surface height through the engine's owning query.
    */
   public heightAt(point: { x: number; z: number }): number {
     return worldSurfaceHeight(this.place().surfaces![0]!, point);
@@ -135,8 +148,9 @@ export class PlazaGround extends WorldPiece {
    * meshes from it. That is how a plaza corrected in the design record went on
    * drawing a floor a third the size of the group standing on it.
    *
-   * @evidence settings/040-plaza.md Requires the rows to end inside the place,
-   *   which is a claim about the ground the audience sees.
+   * @evidence models/040-plaza.md#plaza-world-composition Emits the same
+   *   reviewed polygon for the floor a delivered scene draws.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and patches in src/world/plaza.ts; confirmed this citation after checking the claim that emits the same reviewed polygon for the floor a delivered scene draws.
    */
   public patches(): readonly IAutoMovieSurface[] {
     const half = this.halfExtent();
@@ -165,10 +179,12 @@ export class PlazaGround extends WorldPiece {
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
  *
- * @evidence settings/040-plaza.md Answers the specification's Landmarks
- *   section:
- *   `plaza-center` is named there precisely so a contract can point at the
- *   gesture without a coordinate, and this class is where that id exists.
+ * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
+ *   design and no other model file.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the landmark subset it realizes.
+ * @evidence models/040-plaza.md#plaza-world-composition Implements the reviewed
+ *   named origin and its deterministic landmark record.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that implements the reviewed named origin and its deterministic landmark record.
  */
 export class PlazaCenterMark extends WorldPiece {
   public readonly id = "plaza-center";
@@ -197,13 +213,12 @@ export class PlazaCenterMark extends WorldPiece {
  * a recipe nothing activates is dead configuration, and a zone with no recipe
  * has nothing to emit.
  *
- * @evidence settings/040-plaza.md Held to the specification's opening rule that
- *   the place carries no feature competing with a silhouette: this is the one
- *   piece that could, so its bounds and opacity are declared here where that
- *   rule can be read against them rather than tuned inside a shot.
- * @evidence principles/craft/form.md#proxy-is-declared Stands
- *   in for atmosphere as a declared effect zone rather than as geometry
- *   pretending to be weather.
+ * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
+ *   design and no other model file.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the atmosphere subset it realizes.
+ * @evidence models/040-plaza.md#plaza-atmosphere-proxy Implements the one
+ *   reviewed seeded smoke recipe and bounded low-contrast effect zone.
+ * @evidenceReview models/040-plaza.md#plaza-atmosphere-proxy #bf7943e Read models/040-plaza.md#plaza-atmosphere-proxy and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one reviewed seeded smoke recipe and bounded low-contrast effect zone.
  */
 export class PlazaHaze extends WorldPiece {
   public readonly id = "plaza-haze";
@@ -259,48 +274,24 @@ export class PlazaHaze extends WorldPiece {
  * them. Its record is the merge of what its pieces place, so adding a step
  * means adding a piece rather than editing an array in the middle of a blob.
  *
- * @evidence settings/040-plaza.md Is the whole of PLAZA rather than a part of
- *   it:
- *   the specification describes one place, and this is the single subject a
- *   shot names when it stages that place.
- * @evidenceExclude settings/000-governing-aim.md The governing aim is what the
- *   film is for and how large it is. No class implements it: it is the sentence
- *   every layer is sized against, answered by the storylines that carry it and
- *   by nothing under `src`. Written once here for the whole source population.
- * @evidenceExclude settings/050-art-direction.md Palette, scale grammar and
- *   review distance are constraints every subject is drawn against rather than
- *   a subject to build. They are answered by the documents that apply them, and
- *   a class claiming to implement art direction would be claiming to own a rule
- *   that binds every other class too.
- * @evidenceExclude principles/craft/space.md#space-and-enclosure
- *   No bounded space exists to state an extent or an owning surface for.
- *   This production stages one open ground: no rooms, no storeys, no
- *   connectors, nothing enclosed. Declared once for the whole source
- *   population rather than answered by a class that would have to invent a
- *   space to answer it.
- * @evidenceExclude principles/craft/space.md#circulation-levels
- *   No routes exist: the plaza is one ground and the figures stand on it.
- *   This production stages one open ground: no rooms, no storeys, no
- *   connectors, nothing enclosed. Declared once for the whole source
- *   population rather than answered by a class that would have to invent a
- *   space to answer it.
- * @evidenceExclude principles/craft/space.md#reachability-is-measured
- *   Nothing connects to anything, so there is no reachability to ask the
- *   model about. This production stages one open ground: no rooms, no
- *   storeys, no connectors, nothing enclosed. Declared once for the whole
- *   source population rather than answered by a class that would have to
- *   invent a space to answer it.
- * @evidenceExclude principles/craft/space.md#hierarchy-is-authored
- *   There is one place, so no spatial hierarchy exists to emphasise. This
- *   production stages one open ground: no rooms, no storeys, no connectors,
- *   nothing enclosed. Declared once for the whole source population rather
- *   than answered by a class that would have to invent a space to answer it.
- * @evidenceExclude principles/craft/space.md#declare-the-section
- *   Nothing here encloses anything, so no judgment needs a near side
- *   removed. This production stages one open ground: no rooms, no storeys,
- *   no connectors, nothing enclosed. Declared once for the whole source
- *   population rather than answered by a class that would have to invent a
- *   space to answer it.
+ * @evidence models/040-plaza.md Answers for the complete reviewed PLAZA model
+ *   design and no other model file.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that answers for the complete reviewed PLAZA model design and no other model file.
+ * @evidence models/040-plaza.md#plaza-world-composition Composes exactly the
+ *   reviewed ground, origin marker, and atmosphere pieces into one world.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that composes exactly the reviewed ground, origin marker, and atmosphere pieces into one world.
+ * @evidence models/040-plaza.md#plaza-neutral-review-views Exposes the shared
+ *   surface, bounds, and piece identities the neutral review set compares.
+ * @evidenceReview models/040-plaza.md#plaza-neutral-review-views #a5bb28d Read models/040-plaza.md#plaza-neutral-review-views and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that exposes the shared surface, bounds, and piece identities the neutral review set compares.
+ * @evidence principles/model-sources.md#design-owned-construction Adds no world
+ *   piece or spatial relation outside the cited design.
+ * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that adds no world piece or spatial relation outside the cited design.
+ * @evidence principles/model-sources.md#deterministic-build Merges the same
+ *   ordered piece contributions into the same world record.
+ * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that merges the same ordered piece contributions into the same world record.
+ * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit Keeps
+ *   enclosure and physically based atmosphere outside this blocking model.
+ * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that keeps enclosure and physically based atmosphere outside this blocking model.
  */
 export class Plaza extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
@@ -325,9 +316,9 @@ export class Plaza extends AutoMovieSubjectGroup<
    * no standable-but-forbidden top; a world that grows one states it where the
    * piece is defined rather than here.
    *
-   * @evidence settings/040-plaza.md Requires one open level place, which is
-   *   what
-   *   a shot stands its figures on.
+   * @evidence models/040-plaza.md#plaza-world-composition Composes the reviewed
+   *   ground patches into the one staged space.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and space in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed ground patches into the one staged space.
    */
   public space(): IAutoMovieSpace {
     const surfaces = this.members().flatMap((piece) => [...piece.patches()]);
@@ -341,8 +332,9 @@ export class Plaza extends AutoMovieSubjectGroup<
   /**
    * The world record, assembled from what its pieces place.
    *
-   * @evidence settings/040-plaza.md Requires one place carrying the named point
-   *   and the extent, which this composes rather than transcribes.
+   * @evidence models/040-plaza.md#plaza-world-composition Composes the reviewed
+   *   surface, landmark, instance, and effect records without transcribing them.
+   * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and design in src/world/plaza.ts; confirmed this citation after checking the claim that composes the reviewed surface, landmark, instance, and effect records without transcribing them.
    */
   public design(): IAutoMovieWorldDesign {
     const placed = mergeAutoMovieSubjectContributions(
@@ -372,7 +364,8 @@ export class Plaza extends AutoMovieSubjectGroup<
  * Carries the citation for the plaza and every piece standing on it, until a
  * class can carry its own (samchon/ttsc#1121).
  *
- * @evidence settings/040-plaza.md Implements the open level ground, the named
- *   ground point, and the extent that specification requires.
+ * @evidence models/040-plaza.md#plaza-world-composition Instantiates the
+ *   reviewed complete world once.
+ * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and plaza in src/world/plaza.ts; confirmed this citation after checking the claim that instantiates the reviewed complete world once.
  */
 export const plaza = new Plaza();

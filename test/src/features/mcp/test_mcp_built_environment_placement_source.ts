@@ -51,9 +51,9 @@ export const test_mcp_built_environment_placement_source = (): void => {
     );
     const withPlacementReview = rewriteSource(
       withImports,
-      "  const performer = soloist.render(context, { from: openingAbduction });",
+      "  const performer = soloist.render(context, { from: props.openingAbduction });",
       [
-        "  const performer = soloist.render(context, { from: openingAbduction });",
+        "  const performer = soloist.render(context, { from: props.openingAbduction });",
         "  const building = new ExampleBuilding().design();",
         "  const relation = {",
         '    subject: { kind: "element", id: "tower-door-leaf-0" },',

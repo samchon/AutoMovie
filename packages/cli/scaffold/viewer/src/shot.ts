@@ -15,6 +15,7 @@ import {
 } from "@automovie/viewer";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
+import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createCompiledShotRuntime } from "./shotRuntime";
 import {
   type IAutoMovieShotObservation,
@@ -74,7 +75,7 @@ const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
   pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-mounted.renderer.setClearColor(0x11151b, 1);
+mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
 
 let lastObservation: IAutoMovieShotObservation;
 

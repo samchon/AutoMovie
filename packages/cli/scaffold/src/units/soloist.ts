@@ -8,6 +8,8 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
+import { createSoloistCueMotion } from "../motions/soloistCue";
+
 /**
  * The one figure the camera follows.
  *
@@ -17,15 +19,28 @@ import type {
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
  *
- * @evidence settings/010-soloist.md Is SOLOIST entire: the one upright
- *   figure that document describes, carrying its stated scale and the single
- *   raised-hand capability it permits and nothing beyond it.
- * @evidence principles/source/subjects.md#one-specification Answers for SOLOIST
- *   and
- *   for no other settings document.
- * @evidence principles/craft/scale.md#scale-has-a-reference
- *   States its height against the rows it stands ahead of, which is the
- *   reference this production fixes.
+ * @evidence models/010-soloist.md Answers for the complete reviewed SOLOIST
+ *   model design and no other model file.
+ * @evidenceReview models/010-soloist.md #7d3364e Read models/010-soloist.md and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that answers for the complete reviewed SOLOIST model design and no other model file.
+ * @evidence models/010-soloist.md#soloist-blocking-representation Owns the
+ *   recipe, dimensions, accent, signal id, and inert actor speed field.
+ * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that owns the recipe, dimensions, accent, signal id, and inert actor speed field.
+ * @evidence models/010-soloist.md#soloist-articulation-interface Resolves the
+ *   compiler-built skeleton and delegates its only pose change to motion.
+ * @evidenceReview models/010-soloist.md#soloist-articulation-interface #474016c Read models/010-soloist.md#soloist-articulation-interface and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that resolves the compiler-built skeleton and delegates its only pose change to motion.
+ * @evidence models/010-soloist.md#soloist-neutral-review-views Exposes stable
+ *   occupied height and pose states the neutral review set compares.
+ * @evidenceReview models/010-soloist.md#soloist-neutral-review-views #2143508 Read models/010-soloist.md#soloist-neutral-review-views and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that exposes stable occupied height and pose states the neutral review set compares.
+ * @evidence principles/model-sources.md#design-owned-construction Makes every
+ *   visible constant answer to the cited model design.
+ * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that makes every visible constant answer to the cited model design.
+ * @evidence principles/model-sources.md#deterministic-build Maps the same
+ *   explicit model and runtime inputs to the same recipe and contribution.
+ * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that maps the same explicit model and runtime inputs to the same recipe and contribution.
+ * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+ *   Refuses a missing compiled model or skeleton instead of degrading the
+ *   reviewed articulated proxy.
+ * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that refuses a missing compiled model or skeleton instead of degrading the reviewed articulated proxy.
  */
 export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "soloist";
@@ -36,36 +51,31 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * Every other subject states its size against this number rather than against
    * a second opinion, which is why it is public: a subject that needs human
    * scale reads it from here instead of restating 1.8.
-   * @evidence principles/source/subjects.md#measured-values-are-fields Holds
-   *   the
-   *   stated scale as a field, so a shot reads it here rather than repeating
-   *   the number.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Holds the
+   *   reviewed occupied height as one public source of scale.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and height in src/units/soloist.ts; confirmed this citation after checking the claim that holds the reviewed occupied height as one public source of scale.
    */
   public readonly height: number = 1.8;
 
   /**
-   * How far the cueing arm travels from rest, in degrees of abduction.
+   * Positive actor-runtime locomotion rate, in metres per second.
    *
-   * The specification says the hand is raised and held; this is what "raised"
-   * measures, kept here so a shot that wants a partly raised hand scales one
-   * declared extent rather than inventing an angle.
-   */
-  public readonly cueAbduction: number = 110;
-
-  /**
-   * When the raised hand arrives, in seconds from the start of the shot.
+   * The runtime schema requires the field even though this model exposes no
+   * walking action. Keeping it named and model-owned makes that inert value
+   * reviewable instead of hiding a source-only performance decision.
    *
-   * The gesture has to be complete while the event that measures it is sampled,
-   * so this is the subject's own claim about its timing rather than a number
-   * each shot rediscovers.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Carries
+   *   the reviewed required-but-inert actor locomotion rate.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and locomotionSpeed in src/units/soloist.ts; confirmed this citation after checking the claim that carries the reviewed required-but-inert actor locomotion rate.
    */
-  public readonly arrivalSeconds: number = 2;
+  public readonly locomotionSpeed: number = 1.2;
 
   /**
    * The measured recipe the production derives its design record from.
    *
-   * @evidence settings/010-soloist.md Implements the upright single
-   *   silhouette and the one claimed capability, at the stated scale.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Implements
+   *   the reviewed recipe, dimensions, palette, and fidelity ceiling.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and design in src/units/soloist.ts; confirmed this citation after checking the claim that implements the reviewed recipe, dimensions, palette, signal capability, and fidelity ceiling.
    */
   public design(): IAutoMovieModelRecipe {
     return {
@@ -90,76 +100,22 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * The hold is the point: the specification dramatizes a cue that stays
    * legible, so the hand arrives and stops rather than returning. Passing the
    * opening abduction lets a following shot begin where the previous one ended,
-   * which is what an untrimmed cut between two shots requires.
+   * which is what an untrimmed edit boundary between two shots requires.
    *
-   * @evidence settings/010-soloist.md Implements the raise-and-hold this
-   *   specification claims as the figure's only capability.
-   * @evidence principles/source/subjects.md#no-unstated-capability Implements
-   *   raising
-   *   and holding one hand, which is the whole of what the specification
-   *   claims.
-   * @evidence principles/source/subjects.md#behaviour-belongs-to-its-subject
-   *   Keeps the
-   *   cue on the figure that performs it rather than in the shot that stages
-   *   it.
-   * @evidence principles/craft/form.md#silhouette-test Raises
-   *   the arm clear of the torso so the contour carries the cue, which is what
-   *   the mask pass is captured to check.
+   * @evidence models/010-soloist.md#soloist-articulation-interface Resolves
+   *   the reviewed skeleton interface, while `src/motions` owns the path.
+   * @evidenceReview models/010-soloist.md#soloist-articulation-interface #474016c Read models/010-soloist.md#soloist-articulation-interface and cue in src/units/soloist.ts; confirmed this citation after checking the claim that resolves the reviewed skeleton interface, while `src/motions` owns the path.
    */
   public cue(
     context: IAutoMovieShotBuildContext,
     props: { from: number } = { from: 0 },
   ): IAutoMovieMotion {
-    const skeleton = this.skeleton(context);
-    const pose = (abduction: number) => ({
-      skeleton,
-      root: null,
-      joints: [
-        {
-          bone: "leftUpperArm" as const,
-          flexion: null,
-          abduction,
-          twist: null,
-        },
-        {
-          bone: "leftLowerArm" as const,
-          flexion: 25,
-          abduction: null,
-          twist: null,
-        },
-      ],
+    return createSoloistCueMotion({
+      id: context.contract.id,
+      duration: context.contract.durationSeconds,
+      skeleton: this.skeleton(context),
+      from: props.from,
     });
-    const duration = context.contract.durationSeconds;
-    const key = (
-      time: number,
-      abduction: number,
-      easing: "linear" | "easeInOut",
-    ) => ({
-      time,
-      pose: pose(abduction),
-      expression: null,
-      easing,
-      bezier: null,
-    });
-    return {
-      id: `${context.contract.id}-cue`,
-      skeleton,
-      duration,
-      loop: false,
-      // Already raised: hold, so a shot that continues the previous one opens
-      // on the state that one closed with. Otherwise arrive at
-      // `arrivalSeconds` and hold, because the raise has to be complete while
-      // the event that measures it is sampled, not still travelling.
-      keyframes:
-        props.from >= this.cueAbduction
-          ? [key(0, props.from, "linear"), key(duration, props.from, "linear")]
-          : [
-              key(0, props.from, "easeInOut"),
-              key(this.arrivalSeconds, this.cueAbduction, "linear"),
-              key(duration, this.cueAbduction, "linear"),
-            ],
-      gaitCycle: null,
-    };
   }
 
   /**
@@ -167,13 +123,12 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *
    * Derived from {@link height} rather than stated a second time, so a change to
    * the figure's scale cannot leave the camera aiming where the head used to
-   * be. The ratio is the anthropometric one; only the scale is authored.
+   * be. The 90-percent ratio is the model document's chosen blocking reference,
+   * not an anthropometric claim.
    *
-   * @evidence settings/010-soloist.md Fixes the scale this measurement is
-   *   derived from, and this value states nothing that specification does not.
-   * @evidence principles/craft/scale.md#derived-once Derives
-   *   the eye from the authored height in one place, so a change of scale cannot
-   *   leave the camera aiming where the head used to be.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Derives the
+   *   eye from the model's one reviewed occupied-height field.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and eyeHeight in src/units/soloist.ts; confirmed this citation after checking the claim that derives the eye from the model's one reviewed occupied-height field.
    */
   public eyeHeight(): number {
     return this.height * 0.9;
@@ -187,11 +142,12 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * capability, and the compiler owns the rig that realizes them. Refusing
    * loudly here keeps every motion from having to re-check it.
    *
-   * @evidence settings/010-soloist.md Requires an articulated figure that
-   *   raises a hand, which is a claim on a rig this source does not own.
-   * @evidence principles/source/subjects.md#refuse-rather-than-degrade Refuses
-   *   when
-   *   the compile context carries no rig, instead of rendering a lesser figure.
+   * @evidence models/010-soloist.md#soloist-articulation-interface Resolves the
+   *   stable compiler skeleton the motion design is allowed to drive.
+   * @evidenceReview models/010-soloist.md#soloist-articulation-interface #474016c Read models/010-soloist.md#soloist-articulation-interface and skeleton in src/units/soloist.ts; confirmed this citation after checking the claim that resolves the stable compiler skeleton the motion design is allowed to drive.
+   * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+   *   Refuses when the reviewed articulated model has no skeleton.
+   * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and skeleton in src/units/soloist.ts; confirmed this citation after checking the claim that refuses when the reviewed articulated model has no skeleton.
    */
   public skeleton(context: IAutoMovieShotBuildContext): string {
     const model = context.runtimeModels[this.id];
@@ -210,8 +166,9 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * cast entry that echoed the design id would reference a model the scene has
    * no node for.
    *
-   * @evidence settings/010-soloist.md Specifies the figure whose built
-   *   model this resolves, and nothing about how the compiler names it.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Resolves
+   *   the runtime instance built from the one reviewed recipe.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and modelRef in src/units/soloist.ts; confirmed this citation after checking the claim that resolves the runtime instance built from the one reviewed recipe.
    */
   public modelRef(context: IAutoMovieShotBuildContext): string {
     const model = context.runtimeModels[this.id];
@@ -225,8 +182,9 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
   /**
    * Stage this figure and the clip it performs.
    *
-   * @evidence settings/010-soloist.md Stages the single separated figure
-   *   this specification requires the camera to be able to follow.
+   * @evidence models/010-soloist.md#soloist-blocking-representation Contributes
+   *   the one reviewed model instance without reconstructing it in a shot.
+   * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and render in src/units/soloist.ts; confirmed this citation after checking the claim that contributes the one reviewed model instance and inert actor rate without reconstructing either in a shot.
    */
   public render(
     context: IAutoMovieShotBuildContext,
@@ -237,7 +195,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
         {
           node: this.id,
           model: this.id,
-          speed: 1.2,
+          speed: this.locomotionSpeed,
           eyeHeight: this.eyeHeight(),
         },
       ],
@@ -249,13 +207,11 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
 /**
  * The production's one soloist.
  *
- * The subject's citation lives on the instance rather than on {@link Soloist}
- * itself, because `@ttsc/evidence` does not yet select a class as a unit
- * (samchon/ttsc#1121). Its measured facts cannot cite at all for the same
- * reason, so this one tag answers for the whole subject until they can.
+ * The class owns the exact model file; this exported instance separately
+ * answers for constructing that reviewed figure once.
  *
- * @evidence settings/010-soloist.md Implements the silhouette, the scale,
- *   and the single capability that specification states, and claims nothing it
- *   does not.
+ * @evidence models/010-soloist.md#soloist-blocking-representation Instantiates
+ *   the reviewed SOLOIST model owner once for the production.
+ * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and soloist in src/units/soloist.ts; confirmed this citation after checking the claim that instantiates the reviewed SOLOIST model owner once for the production.
  */
 export const soloist = new Soloist();

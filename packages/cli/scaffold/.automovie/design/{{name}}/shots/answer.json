@@ -1,0 +1,100 @@
+{
+  "id": "answer",
+  "beat": "answer",
+  "source": {
+    "module": "src/shots/opening.ts",
+    "export": "answer"
+  },
+  "evidence": [
+    {
+      "reason": "This shot holds the completed answer while its terminal gate insert makes the shut boundary readable.",
+      "scene": "SCN-002"
+    }
+  ],
+  "durationSeconds": 6,
+  "participants": [
+    {
+      "kind": "actor",
+      "id": "soloist"
+    },
+    {
+      "kind": "formation",
+      "id": "chorus"
+    }
+  ],
+  "opening": [
+    {
+      "id": "cue-carried",
+      "description": "The answering shot independently carries the established raised cue into the gate insert.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "soloist",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "closing": [
+    {
+      "id": "answer-held",
+      "description": "The cue remains held through the insert even after it leaves the frame.",
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "soloist",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "camera": {
+    "intent": "A wide terminal insert faces the shut gate along its clear far-edge sightline; the compiled cue and chorus holds continue off-screen.",
+    "requiredSubjects": [
+      "plaza-gate"
+    ],
+    "maxOcclusionRatio": 0.05
+  },
+  "events": [
+    {
+      "id": "cue-answered",
+      "kind": "reveal",
+      "window": {
+        "from": 3,
+        "to": 5
+      },
+      "subjects": [
+        "soloist"
+      ],
+      "predicates": [
+        {
+          "kind": "joint-angle",
+          "actor": "soloist",
+          "bone": "leftUpperArm",
+          "axis": "abduction",
+          "operator": ">=",
+          "value": 100,
+          "tolerance": 0.001
+        }
+      ]
+    }
+  ],
+  "reviewFrames": [
+    {
+      "id": "shut-gate",
+      "time": 4,
+      "passes": [
+        "beauty",
+        "mask"
+      ]
+    }
+  ]
+}

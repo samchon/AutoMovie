@@ -1,39 +1,32 @@
 <!--
-@evidence principles/authoring/settings.md#capability-stated States that the group is one subject and that no individual inside it is followable, so no source may address a member as a figure.
-@evidence principles/common.md#refuse-rather-than-approximate Where the interval is what makes the group read, the document states the interval rather than an impression of density.
+@evidence principles/common.md#purpose-fit Defines the group whose ordered advance makes the soloist's gesture a cue rather than an isolated pose.
+@evidenceReview principles/common.md#purpose-fit #403e074 Compared principles/common.md#purpose-fit with the complete 020-chorus.md document; confirmed that this host defines the group whose ordered advance makes the soloist's gesture a cue rather than an isolated pose.
+@evidence principles/common.md#layer-boundary Owns group identity, spacing, extent, and capability while leaving member geometry, gait curves, scene order, and framing downstream.
+@evidenceReview principles/common.md#layer-boundary #cfb2a7f Compared principles/common.md#layer-boundary with the complete 020-chorus.md document; confirmed that this host owns group identity, spacing, extent, and capability while leaving member geometry, gait curves, scene order, and framing downstream.
+@evidence principles/common.md#declared-basis Marks member height, the interval requirement, and travel as chosen blocking facts rather than measured crowd data.
+@evidenceReview principles/common.md#declared-basis #4a10eec Compared principles/common.md#declared-basis with the complete 020-chorus.md document; confirmed that this host marks member height, the interval requirement, and travel as chosen blocking facts rather than measured crowd data.
+@evidence principles/settings.md#fact-status Records every numeric crowd fact as a scoped production choice.
+@evidenceReview principles/settings.md#fact-status #01510e7 Compared principles/settings.md#fact-status with the complete 020-chorus.md document; confirmed that this host records every numeric crowd fact as a scoped production choice.
+@evidence principles/settings.md#capability-boundary Separates ordered advance, exact hold, and uniform break capabilities while explicitly withholding individually addressable members.
+@evidenceReview principles/settings.md#capability-boundary #c690f24 Compared principles/settings.md#capability-boundary with the complete 020-chorus.md document; confirmed that this host separates ordered advance, exact hold, and uniform break capabilities while explicitly withholding individually addressable members.
+@evidence principles/settings.md#observable-identity Defines the chorus by readable rows, columns, intervals, and group edges under the shared review condition.
+@evidenceReview principles/settings.md#observable-identity #fdb9365 Compared principles/settings.md#observable-identity with the complete 020-chorus.md document; confirmed that this host defines the chorus by readable rows, columns, intervals, and group edges under the shared review condition.
 -->
 
 # CHORUS
 
-The group the soloist leads. It is one subject, not many: the film never asks
-the audience to follow an individual inside it.
+## Group identity {#chorus-group-identity}
 
-## Silhouette
+CHORUS is one subject formed by rows and columns, not a collection of individually followable figures. Members have a chosen occupied height of 1.7 m and keep visible longitudinal and lateral intervals; if the intervals or group edges cease to read, the represented subject is no longer this chorus.
 
-Rows and columns legible as rows and columns. The group reads by its edges and
-its intervals, so anything that destroys the interval destroys the subject.
+## Advance capability {#chorus-advance-capability}
 
-## Scale
+CHORUS may translate 2 m toward SOLOIST as one formation while preserving its rows, columns, and planted ground relation. Member gait may vary phase to avoid a frozen repeated pattern, but it may not change formation spacing or grant a member independent dramatic action. The distance is a chosen blocking value measured in the shared world frame.
 
-Members are 1.7 m, a head shorter than the soloist, so the two subjects read
-apart in one frame without a scale break.
+## Hold capability {#chorus-hold-capability}
 
-## Advance
+CHORUS may hold its completed formation without positional, facing, or interval drift.
 
-When the group answers it moves 2 m as one. Chosen, and written down here
-because it is the group's own figure: a behaviour the source implements that no
-document names is a decision nobody wrote down.
+## Break capability {#chorus-break-capability}
 
-## Cohesion
-
-In order while the cue is given, and still in order after it. Any loosening is
-a dramatic event and must be authored as one, never left to chance.
-
-## Life
-
-The rows are alive rather than one frozen figure repeated. Every member walks
-the same stride and each is at its own point in it, so the group reads as many
-bodies rather than as a pattern. The stride belongs to the member and never
-reaches the interval: the group that walks is the same group, in the same
-order, as the group that stands. A member too distant to be posed is still a
-member, so this holds at every distance the group is seen from.
+CHORUS exposes one deliberate break capability that scales lateral and depth intervals uniformly, but only the owning result layer may authorize its use: storyline and scenario for a film, or direct brief for a non-narrative demonstration. That layer must choose a scale contained by the staged ground. Rerouting, unequal axis scales, and member-level exceptions remain unsupported.

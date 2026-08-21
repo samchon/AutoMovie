@@ -180,9 +180,9 @@ const siteSource = (original: string, podiumBaseY: number): string =>
         '} from "@automovie/engine";',
       ].join("\n"),
     ),
-    "  const performer = soloist.render(context, { from: openingAbduction });",
+    "  const performer = soloist.render(context, { from: props.openingAbduction });",
     [
-      "  const performer = soloist.render(context, { from: openingAbduction });",
+      "  const performer = soloist.render(context, { from: props.openingAbduction });",
       "  const ground = worldTerrain({",
       '    id: "site-ground",',
       "    polygon: [",

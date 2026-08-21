@@ -8,6 +8,7 @@ import type { AutoMovieGuidePass, IAutoMovieModel } from "@automovie/interface";
 import { applyPose, applyRenderMode, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
+import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createShotTextureCache, loadCompiledModel } from "./loadCompiledModel";
 import { viewerDocument } from "./viewerDocument";
 
@@ -74,7 +75,7 @@ const mounted = mountViewer(canvas, scene, camera, () => true, {
   pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-mounted.renderer.setClearColor(0x11151b, 1);
+mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
 
 const queryAngle = finiteParameter("angle");
 const elevation = finiteParameter("elevation") ?? 15;

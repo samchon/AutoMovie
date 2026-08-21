@@ -12,6 +12,7 @@
     "types": ["node"]
   },
   "include": [
+    "config/src",
     "src",
     "scripts",
     "test",

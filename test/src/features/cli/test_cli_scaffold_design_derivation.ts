@@ -1,3 +1,4 @@
+import { renderScaffold } from "@automovie/cli";
 import { compareCodeUnits } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -18,7 +19,7 @@ import path from "node:path";
  * two turns against shots it had already deleted. Nothing failed, because
  * nothing checks that the two halves describe one film.
  *
- * The check is a name check rather than an execution. Running the emitter needs
+ * The check is a logical-label check rather than an execution. Running the emitter needs
  * the project's own installed dependencies, and the fixture roots this suite
  * builds have none, so this asks the weaker question that still catches the
  * whole failure class: a record whose path the emitter never names is a record
@@ -28,7 +29,8 @@ import path from "node:path";
  *
  * 1. The scaffold ships design records, so a reader that finds none fails here
  *    instead of passing on an empty population.
- * 2. Every shipped record except the screenplay index is named by the emitter,
+ * 2. Every shipped record except the screenplay index has a shared or
+ *    production-tree path whose logical suffix is named by the emitter,
  *    literally or by a template that covers its directory.
  * 3. The screenplay index is the one exception, and the emitter says so in
  *    prose. This keeps the exception a decision rather than an omission that
@@ -70,10 +72,25 @@ export const test_cli_scaffold_design_derivation = (): void => {
     },
     { resident: true, derived: false, explained: true },
   );
+
+  const rendered = renderScaffold({ name: "rendered-production" });
+  TestValidator.equals(
+    "production-owned design paths substitute the project name",
+    Object.hasOwn(
+      rendered,
+      ".automovie/design/rendered-production/screenplay/index.json",
+    ),
+    true,
+  );
+  TestValidator.equals(
+    "no scaffold path ships an unresolved project-name token",
+    Object.keys(rendered).every((file) => file.includes("{{name}}") === false),
+    true,
+  );
 };
 
 /** The one record the emitter deliberately leaves alone. */
-const SCREENPLAY_INDEX = "screenplay/index.json";
+const SCREENPLAY_INDEX = "{{name}}/screenplay/index.json";
 
 const walk = (directory: string): string[] =>
   fs.existsSync(directory) === false
@@ -89,9 +106,11 @@ const walk = (directory: string): string[] =>
         );
 
 /**
- * Whether the emitter names this record's path.
+ * Whether the emitter names this record's logical label.
  *
- * Two spellings count, because the emitter legitimately uses both. A record with
+ * The design-tree prefix is storage ownership and not part of an emitter label,
+ * so `shared/` and `{{name}}/` are removed first. Two spellings then count,
+ * because the emitter legitimately uses both. A record with
  * one owner is named whole (`"shots/opening.json"`), and a family whose members
  * come from a list is named by a template over its directory
  * (`` `acceptance/${scenario.id}.json` ``). A template is accepted for its whole
@@ -100,9 +119,14 @@ const walk = (directory: string): string[] =>
  * the emitter here.
  */
 const isDerived = (record: string, emitter: string): boolean => {
-  if (emitter.includes(`"${record}"`)) return true;
-  const directory = record.includes("/")
-    ? record.slice(0, record.indexOf("/"))
+  const label = record.startsWith("shared/")
+    ? record.slice("shared/".length)
+    : record.startsWith("{{name}}/")
+      ? record.slice("{{name}}/".length)
+      : record;
+  if (emitter.includes(`"${label}"`)) return true;
+  const directory = label.includes("/")
+    ? label.slice(0, label.indexOf("/"))
     : null;
   return directory === null ? false : emitter.includes(`\`${directory}/\${`);
 };

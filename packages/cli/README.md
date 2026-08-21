@@ -21,10 +21,12 @@ review ledger. The starter intentionally keeps long-form authoring in files
 instead of asking the model to serialize dense motion graphs through tool
 calls.
 
-Treatment and screenplay prose live under `docs/<production>/`. Their machine
-index lives at `.automovie/design/screenplay/index.json` before the first open
-and migrates into the selected production namespace. `npm run lint` checks exact
-beat coverage, SCN headings and bodies, the permanent soft-lock ledger,
+Settings, model, motion, treatment, and screenplay prose live in their
+production-owned directories under `docs/`. The hand-authored screenplay index
+lives at `.automovie/design/<production>/screenplay/index.json`; other
+production design records share that tree, while reusable models, formations,
+and world records live under `.automovie/design/shared/`. `npm run lint` checks
+exact beat coverage, SCN headings and bodies, the permanent soft-lock ledger,
 catalog/continuity references, and realized scene coverage without replacing
 the prose with JSON.
 

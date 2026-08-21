@@ -39,11 +39,13 @@ const statedSeconds = (body: string): number[] => {
 
 /** Every duration in seconds a shot contract actually carries. */
 const carriedSeconds = (contract: IAutoMovieShotContract): number[] => [
+  0,
   contract.durationSeconds,
   ...(contract.events ?? []).flatMap((event) => [
     event.window.from,
     event.window.to,
   ]),
+  ...contract.reviewFrames.map((frame) => frame.time),
 ];
 
 /**
@@ -59,9 +61,10 @@ const carriedSeconds = (contract: IAutoMovieShotContract): number[] => [
  *
  * The scan is deliberately narrow. Only a sentence that says "second" is read,
  * only standalone decimal tokens inside it are taken, and a number is satisfied
- * by the shot's `durationSeconds` or by either bound of any event window. So a
- * scene that quotes a figure the contract holds passes, and one that quotes a
- * figure nobody holds is named with what the shot does carry.
+ * by shot-local zero, the shot's `durationSeconds`, either bound of an event
+ * window, or a declared review-frame time. So a scene that quotes a figure the
+ * contract holds passes, and one that quotes a figure nobody holds is named
+ * with what the shot does carry.
  *
  * Severity follows `screenplay-scene-unrealized`: a warning while authoring,
  * because prose legitimately runs ahead of the shot that will realize it, and

@@ -1,50 +1,24 @@
 <!--
-@evidence principles/authoring/settings.md#no-placeholder-final Says outright that the two boxes are the part to throw away, so a shipped gate that is still two boxes is unmet work rather than the subject.
-@evidence principles/authoring/settings.md#capability-stated Fixes the moving part, its travel and the frame that travel is measured in, which is the whole of what the source may assume it can do.
+@evidence principles/common.md#purpose-fit Defines the shut boundary object that gives the final hold a visible stake and constrains its reusable capability.
+@evidenceReview principles/common.md#purpose-fit #403e074 Compared principles/common.md#purpose-fit with the complete 030-gate.md document; confirmed that this host defines the shut boundary object that gives the final hold a visible stake and constrains its reusable capability.
+@evidence principles/common.md#layer-boundary Owns the gate's identity, hinge capability, and placement relation without choosing primitive geometry, an opening curve, or a scene event.
+@evidenceReview principles/common.md#layer-boundary #cfb2a7f Compared principles/common.md#layer-boundary with the complete 030-gate.md document; confirmed that this host owns the gate's identity, hinge capability, and placement relation without choosing primitive geometry, an opening curve, or a scene event.
+@evidence principles/common.md#declared-basis Labels width and angular bound as chosen values, requires human clearance, and names the intentionally unauthored wall.
+@evidenceReview principles/common.md#declared-basis #4a10eec Compared principles/common.md#declared-basis with the complete 030-gate.md document; confirmed that this host labels width and angular bound as chosen values, requires human clearance, and names the intentionally unauthored wall.
+@evidence principles/settings.md#fact-status Separates production choices from the explicit absence of a building or joinery claim.
+@evidenceReview principles/settings.md#fact-status #01510e7 Compared principles/settings.md#fact-status with the complete 030-gate.md document; confirmed that this host separates production choices from the explicit absence of a building or joinery claim.
+@evidence principles/settings.md#capability-boundary Authorizes only leaf rotation about one vertical hinge from zero through 100 degrees and fixes the frame as immobile.
+@evidenceReview principles/settings.md#capability-boundary #c690f24 Compared principles/settings.md#capability-boundary with the complete 030-gate.md document; confirmed that this host authorizes only leaf rotation about one vertical hinge from zero through 100 degrees and fixes the frame as immobile.
+@evidence principles/settings.md#observable-identity Requires a leaf, frame, shut reading, and traversable human scale without prescribing their mesh construction.
+@evidenceReview principles/settings.md#observable-identity #fdb9365 Compared principles/settings.md#observable-identity with the complete 030-gate.md document; confirmed that this host requires a leaf, frame, shut reading, and traversable human scale without prescribing their mesh construction.
 -->
 
 # GATE
 
-The one object on this ground with a moving part. It stands at the plaza's edge
-and reads as shut, so that a leaf swung off its frame is a change the audience
-can see rather than a change the record merely claims.
+## Identity and placement {#gate-identity-placement}
 
-Nothing here is a piece of joinery. The gate is two boxes, and the boxes are the
-part you throw away: what this document fixes is the moving part, its travel,
-and the frame that travel is measured in.
+GATE stands on level ground at the far plaza edge, halfway from that edge's centre toward its screen-right corner, square to the ground and facing the figures. The chosen fractional placement keeps a clear sightline beside CHORUS and scales with the derived plaza extent instead of copying a world-space coordinate. It consists perceptually of a fixed frame and one leaf, reads as shut at zero degrees, and has a chosen 0.9 m opening width with clearance above the production's 1.8 m human reference. This starter claims no surrounding wall, room, or joinery.
 
-## Scale
+## Hinge capability {#gate-hinge-capability}
 
-The leaf is 0.9 m wide and stands a head's clearance above the production's
-human scale, so the opening reads as one a figure could walk through at the
-widest shot the film uses. Stated as a clearance rather than as a height,
-because a gate that keeps its own number while the figures change size is a gate
-the audience watches the soloist duck under.
-
-## Moving part
-
-One hinge, and nothing else. The leaf turns about the vertical edge it is hung
-on; the frame it hangs from never moves. Two moving parts would be a second
-claim this scene does not make, and a gate whose frame drifts is a gate that has
-come off its post.
-
-The leaf is the part that turns. Stating which piece rides the hinge is what
-separates a gate that opens from a hinge that turns nothing.
-
-## Travel
-
-Shut at zero and open at 100 degrees, one direction only. The bound is the
-gate's own, not a shot's: a shot may swing the leaf anywhere inside it, and a
-shot that asks for more is refused against this number rather than quietly
-clamped by whoever renders it last.
-
-## Placement
-
-At the plaza's edge, on the far side from the camera, square to the ground and
-facing the figures. The edge is whatever the staged ground says it is, so a
-larger crowd carries the gate out with it rather than leaving it standing in the
-middle of the plaza.
-
-It claims no room and no wall, because this production has no building for it to
-claim one in; it is a thing standing on open ground, and the record says exactly
-that much.
+Only the leaf may rotate, about its frame-local vertical hinge, in one direction from zero through 100 degrees. The frame never moves. Requests outside that bound are unsupported rather than silently reinterpreted; this film keeps the gate at zero throughout the answer scene that stages it.

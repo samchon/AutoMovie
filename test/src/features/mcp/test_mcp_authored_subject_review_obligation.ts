@@ -59,9 +59,9 @@ export const test_mcp_authored_subject_review_obligation = (): void => {
     );
     const withSuite = rewriteSource(
       withImport,
-      "  const performer = soloist.render(context, { from: openingAbduction });",
+      "  const performer = soloist.render(context, { from: props.openingAbduction });",
       [
-        "  const performer = soloist.render(context, { from: openingAbduction });",
+        "  const performer = soloist.render(context, { from: props.openingAbduction });",
         "  const placement = new ExamplePlacementSuite().design();",
       ].join("\n"),
     );
