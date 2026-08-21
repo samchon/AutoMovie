@@ -112,7 +112,7 @@ const materialOf = (
 /**
  * The generated viewer carries simulated-surface material ids into its scene.
  *
- * The runtime module is loaded by absolute URL so this test executes the exact
+ * The runtime module is loaded by absolute path so this test executes the exact
  * scaffold source every generated project inherits without widening the test
  * project's TypeScript root to include another package.
  *

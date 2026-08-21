@@ -9,9 +9,7 @@ continues to use deterministic proxy geometry and measurement data.
 vegetation, prop, and debris chunks with seeded scale, palette, numeric traits,
 frustum culling, and automatic LOD without scene-node expansion.
 
-`buildSpaceObject`가 만드는 support patch는 depth, mask, normal, outline용 구조
-가이드이며 beauty 색상이나 깊이를 쓰지 않는다. 최종 화면에 보일 바닥은 slab,
-terrain, platform 같은 물리 geometry로 별도 저작해야 한다.
+`buildSpaceObject`가 만드는 support patch는 depth, mask, normal, outline용 구조 가이드이며 beauty 색상이나 깊이를 쓰지 않는다. 최종 화면에 보일 바닥은 slab, terrain, platform 같은 물리 geometry로 별도 저작해야 한다.
 
 `@automovie/viewer`는 AutoMovie 산출물을 `three.js` 위에서 재생하는 런타임이다.
 

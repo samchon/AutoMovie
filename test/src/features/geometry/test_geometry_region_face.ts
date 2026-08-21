@@ -67,6 +67,21 @@ export const test_geometry_region_face = (): void => {
         () => topology.watertight === false && topology.boundaryEdges === 8,
       ],
       ["not degenerate", () => topology.degenerate === 0],
+      [
+        "counter-clockwise triangles",
+        () =>
+          (face.indices ?? []).every((_, index, indices) => {
+            if (index % 3 !== 0) return true;
+            const a = indices[index]! * 3;
+            const b = indices[index + 1]! * 3;
+            const c = indices[index + 2]! * 3;
+            const abx = face.positions[b]! - face.positions[a]!;
+            const aby = face.positions[b + 1]! - face.positions[a + 1]!;
+            const acx = face.positions[c]! - face.positions[a]!;
+            const acy = face.positions[c + 1]! - face.positions[a + 1]!;
+            return abx * acy - aby * acx > 0;
+          }),
+      ],
       ["one side only", () => face.indices?.length === 24],
     ]),
     {
@@ -77,6 +92,7 @@ export const test_geometry_region_face = (): void => {
       "metric UVs": true,
       "open boundary": true,
       "not degenerate": true,
+      "counter-clockwise triangles": true,
       "one side only": true,
     },
   );

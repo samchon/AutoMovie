@@ -12,7 +12,9 @@ import { compareAutoMovieRenderIds } from "./renderDigest";
  * refused. Candidate and property order cannot affect either the result or the
  * diagnostic.
  *
+ * @evidence requirements/rendering/materials-lighting-and-color.md#rendering-material-resolution Resolves each named simulated surface to one stable declared material identity and refuses missing or ambiguous bindings instead of selecting a fallback.
  * @evidence requirements/rendering/budgets.md#rendering-geometry-memory-budget Resolves each simulated drawable's material to one definition before its material and texture cost is counted.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-material-color Defines the deterministic cross-model identity join used before runtime material lowering.
  * @evidence specifications/editorial-render-and-delivery/render-budget-identity-and-recovery.md#spec-render-budget-preflight Defines the deterministic material-identity join used by conservative render preflight.
  * @author Samchon
  */
