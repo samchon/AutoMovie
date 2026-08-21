@@ -132,6 +132,9 @@ importers:
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
+      typescript-compiler:
+        specifier: npm:typescript@5.9.3
+        version: typescript@5.9.3
 
   config:
     devDependencies:

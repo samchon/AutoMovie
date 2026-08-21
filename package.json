@@ -5,8 +5,9 @@
   "description": "Coding-agent-native deterministic filmmaking: tracked authoring, compilation, rendering, review, and delivery.",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
-    "build": "pnpm --filter=./docs --filter=./packages/** -r build",
+    "build": "pnpm --filter=./docs --filter=./packages/** -r build && pnpm run consumer:check",
     "build:tgz": "node internals/build-tgz.mjs",
+    "consumer:check": "node internals/public-api-consumer-gate.mjs --self-test && node internals/public-api-consumer-gate.mjs",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "experimental": "node internals/experimental.mjs",
     "license:check": "node internals/license-policy.mjs",
@@ -33,6 +34,7 @@
     "prettier": "catalog:typescript",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
+    "typescript-compiler": "npm:typescript@5.9.3",
     "typescript": "catalog:typescript"
   }
 }

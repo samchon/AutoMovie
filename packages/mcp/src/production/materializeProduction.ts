@@ -129,40 +129,12 @@ export type IAutoMovieGroundedFormationDesign = IAutoMovieFormationDesign &
   IAutoMovieFormationGrounding;
 
 /**
- * Materialize one compact formation into ordered world-space slots.
- */
-export const materializeFormationSlots = (
-  formation: IAutoMovieGroundedFormationDesign,
-): IAutoMovieFormationSlot[] =>
-  Array.from({ length: formation.count }, (_, slot) =>
-    materializeFormationSlot(formation, slot),
-  );
-
-/**
  * Regenerate one exact formation slot in constant memory.
  */
 export const materializeFormationSlot = (
   formation: IAutoMovieGroundedFormationDesign,
   slot: number,
 ): IAutoMovieFormationSlot => formationSlot(formation, slot);
-
-/**
- * Compiler-owned formation inventory passed to deterministic shot source.
- */
-export const materializeFormationInventory = (
-  formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
-  surfaces: IAutoMovieWorldDesign["surfaces"] = [],
-): Readonly<Record<string, readonly IAutoMovieFormationSlot[]>> =>
-  Object.fromEntries(
-    [...formations]
-      .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([id, formation]) => [
-        id,
-        materializeFormationSlots(
-          groundFormation(formation, surfaces).formation,
-        ),
-      ]),
-  );
 
 /**
  * Compile every formation into bounded chunks rather than anonymous nodes.
@@ -453,7 +425,7 @@ const selectedInstancePrototype = (
   }
   const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
   let sample = seededValue(instanceSet.seed, slot, 0x70726f74) * total;
-  for (const choice of choices) {
+  for (const choice of choices.slice(0, -1)) {
     if (sample < choice.weight) return choice;
     sample -= choice.weight;
   }
@@ -486,17 +458,6 @@ const seededInstanceRotation = (
         order: "XYZ",
       });
 };
-
-/**
- * Materialize one general instance set for direct inspection.
- */
-export const materializeInstanceSlots = (
-  instanceSet: IAutoMovieInstanceSetDesign,
-  world: Pick<IAutoMovieWorldDesign, "routes">,
-): IAutoMovieInstanceSlot[] =>
-  Array.from({ length: instanceSet.count }, (_, slot) =>
-    materializeInstanceSlot(instanceSet, world, slot),
-  );
 
 /**
  * Compile every world instance set into bounded regenerable chunks.
@@ -627,7 +588,7 @@ export const materializeCompiledInstanceSet = (
     route:
       layout.kind === "along-route"
         ? structuredClone(
-            world.routes.find((route) => route.id === layout.route) ?? null,
+            world.routes.find((route) => route.id === layout.route)!,
           )
         : null,
     anchor: structuredClone(instanceSet.anchor),
@@ -1007,13 +968,15 @@ const localInstancePoint = (
       `Instance set "${instanceSet.id}" route "${layout.route}" must have finite non-zero length.`,
     );
   let remaining = ((slot + 0.5) / instanceSet.count) * total;
-  const segment = (segments.find((candidate) => {
-    if (remaining <= candidate.length) return true;
+  let segment = segments.at(-1)!;
+  for (const candidate of segments.slice(0, -1)) {
+    if (remaining <= candidate.length) {
+      segment = candidate;
+      break;
+    }
     remaining -= candidate.length;
-    return false;
-  }) ?? segments.at(-1))!;
-  const ratio =
-    segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
+  }
+  const ratio = Math.min(1, remaining / segment.length);
   const tangent = {
     x: segment.right.x - segment.left.x,
     z: segment.right.z - segment.left.z,
@@ -1024,14 +987,10 @@ const localInstancePoint = (
     layout.lateralJitter;
   return {
     x:
-      segment.left.x +
-      tangent.x * ratio -
-      (tangentLength === 0 ? 0 : (tangent.z / tangentLength) * jitter),
+      segment.left.x + tangent.x * ratio - (tangent.z / tangentLength) * jitter,
     y: 0,
     z:
-      segment.left.z +
-      tangent.z * ratio +
-      (tangentLength === 0 ? 0 : (tangent.x / tangentLength) * jitter),
+      segment.left.z + tangent.z * ratio + (tangent.x / tangentLength) * jitter,
   };
 };
 
@@ -1171,7 +1130,7 @@ const materializeModel = (
         id: "registered-collision-proxy",
         name: "registered collision proxy",
         geometry: { type: "primitive", shape },
-        material: generated.materials[0]?.id ?? null,
+        material: generated.materials[0]!.id,
         attachedBone: null,
         transform: null,
       },
