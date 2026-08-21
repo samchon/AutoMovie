@@ -1,5 +1,6 @@
 import {
   lowerSoftFurnishing,
+  validateAutoMovieSoftFurnishingDomainOwnership,
   validateSoftFurnishings,
 } from "@automovie/engine";
 import {
@@ -78,9 +79,11 @@ const check = (props: {
  *    furnishing holds is refused for the same reason, and the identical state
  *    left unheld is not — a boundary condition nobody applied is not a panel
  *    hanging anywhere.
- * 6. Two furnishings cannot draw one panel. A domain is a world-space object, so a
- *    second binding does not hang a second curtain; it draws the same cloth
- *    twice and charges a render budget for both.
+ * 6. Two furnishings cannot draw one panel, whether their bindings cite the
+ *    same or different environments. The production-wide findings are ordered
+ *    by domain and furnishing id rather than authoring order; a caller that
+ *    performs that join once can skip repeating it in each environment-local
+ *    validation pass.
  * 7. The lowering's capability matrix: a furnishing paired with a domain it does
  *    not draw is `not-run`, an invalid domain is `not-run` with no geometry, an
  *    undeclared named state is `not-run`, a request for cloth-on-cloth contact
@@ -373,7 +376,7 @@ export const test_soft_furnishing_binding = (): void => {
               ],
             }),
             "type",
-            "furnishings[1].domain",
+            "furnishings[0].domain",
           ),
       ],
       [
@@ -389,6 +392,108 @@ export const test_soft_furnishing_binding = (): void => {
       ],
     ]),
     { second: true, distinctDomainsPass: true },
+  );
+
+  const duplicateDomains = [
+    softFurnishing({
+      id: "zeta",
+      domain: "z-domain",
+    }),
+    softFurnishing({
+      id: "alpha",
+      environment: "other",
+      domain: "z-domain",
+    }),
+    softFurnishing({
+      id: "omega",
+      domain: "a-domain",
+    }),
+    softFurnishing({
+      id: "beta",
+      environment: "other",
+      domain: "a-domain",
+    }),
+  ];
+  const ownershipFacts = (furnishings: IAutoMovieSoftFurnishing[]) => {
+    const validation =
+      validateAutoMovieSoftFurnishingDomainOwnership(furnishings);
+    return validation.success === true
+      ? []
+      : validation.violations.map((violation) => [
+          violation.value,
+          violation.expected,
+        ]);
+  };
+  const expectedOwnershipFacts = [
+    [
+      "a-domain",
+      'soft body domain "a-domain" is already drawn by furnishing "beta"',
+    ],
+    [
+      "z-domain",
+      'soft body domain "z-domain" is already drawn by furnishing "alpha"',
+    ],
+  ];
+  TestValidator.equals(
+    "domain ownership is global and deterministic",
+    namedFacts([
+      [
+        "sameEnvironment",
+        () =>
+          validateAutoMovieSoftFurnishingDomainOwnership([
+            softFurnishing(),
+            softFurnishing({ id: "second-curtain" }),
+          ]).success === false,
+      ],
+      [
+        "differentEnvironment",
+        () =>
+          validateAutoMovieSoftFurnishingDomainOwnership([
+            softFurnishing(),
+            softFurnishing({ id: "second-curtain", environment: "other" }),
+          ]).success === false,
+      ],
+      [
+        "differentDomains",
+        () =>
+          validateAutoMovieSoftFurnishingDomainOwnership([
+            softFurnishing(),
+            softFurnishing({
+              id: "second-curtain",
+              environment: "other",
+              domain: "other-panel",
+            }),
+          ]).success === true,
+      ],
+      [
+        "stableOrder",
+        () =>
+          JSON.stringify(ownershipFacts(duplicateDomains)) ===
+            JSON.stringify(expectedOwnershipFacts) &&
+          JSON.stringify(ownershipFacts([...duplicateDomains].reverse())) ===
+            JSON.stringify(expectedOwnershipFacts),
+      ],
+      [
+        "prevalidated",
+        () =>
+          validateSoftFurnishings({
+            environment: roomEnvironment(),
+            furnishings: [
+              softFurnishing(),
+              softFurnishing({ id: "second-curtain" }),
+            ],
+            domains: [panel()],
+            domainOwnership: "prevalidated",
+          }).success === true,
+      ],
+    ]),
+    {
+      sameEnvironment: true,
+      differentEnvironment: true,
+      differentDomains: true,
+      stableOrder: true,
+      prevalidated: true,
+    },
   );
 
   const frame = (

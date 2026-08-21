@@ -18,6 +18,7 @@ import { tessellateSurface } from "../geometry/surfaceMesh";
 import { tessellate } from "../geometry/tessellate";
 import { plantingBudget } from "../soft/planting";
 import { softBodyBudget } from "../soft/softBody";
+import { resolveAutoMovieMaterial } from "./materialResolution";
 import { compareAutoMovieRenderIds } from "./renderDigest";
 import {
   IAutoMovieRenderPrototypeCost,
@@ -209,10 +210,6 @@ export const measureAutoMovieRenderInventory = (props: {
   // somewhere before its textures can be counted; resolving it against the
   // DRAWN models only would refuse a curtain fabric declared on a model this
   // shot does not stage.
-  const declared = new Map<string, IAutoMovieMaterial>();
-  for (const model of subject.models)
-    for (const material of model.materials)
-      if (!declared.has(material.id)) declared.set(material.id, material);
   const materials = new Map<string, IAutoMovieMaterial>();
   let defaultMaterials = 0;
   /**
@@ -236,11 +233,17 @@ export const measureAutoMovieRenderInventory = (props: {
       add(`material:${owner}/default`, source, "materials", 1);
       return;
     }
-    const found = declared.get(material);
-    if (found === undefined)
+    let found: IAutoMovieMaterial;
+    try {
+      found = resolveAutoMovieMaterial({
+        models: subject.models,
+        material,
+      });
+    } catch (error) {
       throw new Error(
-        `render inventory cannot measure ${cited}: material "${material}" is absent from the subject's models`,
+        `render inventory cannot measure ${cited}: ${(error as Error).message}`,
       );
+    }
     if (!materials.has(material)) materials.set(material, found);
   };
 

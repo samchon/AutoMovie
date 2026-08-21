@@ -17,7 +17,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { flatBasin } from "../internal/fluidFixtures";
 import { namedFacts, throwsError } from "../internal/predicates";
-import { modelsFixture } from "../internal/renderFixtures";
+import { boxModel, material, modelsFixture } from "../internal/renderFixtures";
 import {
   plantingCluster,
   plantingRecipe,
@@ -56,8 +56,9 @@ import {
  * 6. A cluster stating no prototype cost leaves geometry `not-run` while draw
  *    calls, instance slots and nodes stay exact, and the report `incomplete`.
  * 7. A named material is counted once however many drawables bind it and drags its
- *    textures in; an unnamed one is exactly one material per drawable; a
- *    material nothing declares is refused rather than counted.
+ *    textures in; an unnamed one is exactly one material per drawable; an
+ *    absent or conflicting cross-model definition is refused rather than
+ *    selected by model order.
  * 8. A fractional or negative prototype cost is refused at its own message.
  * 9. A leafless cluster submits one batch, not two.
  */
@@ -758,6 +759,35 @@ export const test_render_simulated_budget = (): void => {
           ),
       ],
       [
+        "conflicting panel material",
+        () =>
+          throwsError(
+            () =>
+              measure({
+                scene: scene(),
+                models: [
+                  ...modelsFixture(),
+                  boxModel({
+                    id: "z-conflict",
+                    materials: [{ ...material("stone"), roughness: 0.25 }],
+                  }),
+                ],
+                softBodies: [
+                  {
+                    domain: softPanel({ columns: 2, rows: 2 }),
+                    owner: null,
+                    material: "stone",
+                  },
+                ],
+              }),
+            [
+              'soft body "panel"',
+              'material "stone" has conflicting definitions',
+              '"slab-model", "wall-model", "z-conflict"',
+            ],
+          ),
+      ],
+      [
         "fractional prototype",
         () =>
           throwsError(
@@ -778,6 +808,7 @@ export const test_render_simulated_budget = (): void => {
       "absent panel material": true,
       "absent leaf material": true,
       "absent water material": true,
+      "conflicting panel material": true,
       "fractional prototype": true,
       "negative prototype": true,
     },
