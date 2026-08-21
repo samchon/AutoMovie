@@ -25,6 +25,7 @@ export type AutoMovieSandboxEngineExport =
   | "autoMoviePatternInstanceTransforms"
   | "autoMoviePatternTextureTransforms"
   | "buildAutoMoviePolyhedron"
+  | "buildAutoMovieRegionFace"
   | "buildAutoMovieWall"
   | "builtEnvironmentAdjacentSpaces"
   | "builtEnvironmentBuildingOfSpace"
@@ -113,6 +114,7 @@ export const AUTOMOVIE_SANDBOX_ENGINE_SURFACE: readonly AutoMovieSandboxEngineEx
     "autoMoviePatternInstanceTransforms",
     "autoMoviePatternTextureTransforms",
     "buildAutoMoviePolyhedron",
+    "buildAutoMovieRegionFace",
     "buildAutoMovieWall",
     "builtEnvironmentAdjacentSpaces",
     "builtEnvironmentBuildingOfSpace",
@@ -324,6 +326,8 @@ const QUESTION_OF_EXPORT: Readonly<
   mergeAutoMovieSubjectContributions:
     "How do I write a subject and a shot at all?",
   buildAutoMoviePolyhedron:
+    "How do I turn a profile or a region into geometry?",
+  buildAutoMovieRegionFace:
     "How do I turn a profile or a region into geometry?",
   buildAutoMovieWall: "How do I turn a profile or a region into geometry?",
   extrudeAutoMovieProfile: "How do I turn a profile or a region into geometry?",

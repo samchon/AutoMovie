@@ -13,11 +13,13 @@ import {
   placeFormationSlot,
   readAutoMovieImageFacts,
   realizeShotContract,
+  resolveAutoMovieMaterial,
   retargetHumanoidMotion,
   sampleFormationMotion,
   sampleFormationSlotMotion,
   unsupportedAutoMovieMaterialExtensions,
   validateAutoMovieEnvironmentContext,
+  validateAutoMovieSoftFurnishingDomainOwnership,
   validateBuiltEnvironment,
   validateDesignLineage,
   validateDesignLineageBinding,
@@ -2879,6 +2881,19 @@ const buildingBoundDiagnostics = (
       );
   };
 
+  say(
+    validateAutoMovieSoftFurnishingDomainOwnership(softFurnishings),
+    {
+      fields: {
+        furnishings: {
+          key: "softFurnishings",
+          indices: allOf(softFurnishings),
+        },
+      },
+    },
+    "Give each world-space soft-body domain exactly one furnishing owner before compiling the shot.",
+  );
+
   for (const environment of environments) {
     const water = bindingsOfEnvironment(waterFeatures, environment.id);
     if (water.items.length !== 0)
@@ -2903,6 +2918,7 @@ const buildingBoundDiagnostics = (
           environment,
           furnishings: cloth.items,
           domains: [...softBodyDomains],
+          domainOwnership: "prevalidated",
         }),
         {
           fields: {
@@ -4605,6 +4621,7 @@ const validateCompiledShot = (
   diagnostics.push(...validateAutoMovieEffects(contract, value));
   for (const model of value.models)
     appendValidation(diagnostics, id, validateModel({ model }));
+  diagnostics.push(...validateCompiledMaterialBindings(id, value));
   const skeletons = new Map(
     value.models.flatMap((model) =>
       model.skeleton === null
@@ -4626,6 +4643,53 @@ const validateCompiledShot = (
       appendValidation(diagnostics, id, validateMotion({ motion, skeleton }));
   }
   return diagnostics;
+};
+
+/** Refuse every simulated-surface material citation that cannot resolve once. */
+const validateCompiledMaterialBindings = (
+  id: string,
+  value: IAutoMovieCompiledShotSource,
+): IAutoMovieDiagnostic[] => {
+  const bindings: Array<{ path: string; material: string | null }> = [
+    ...(value.waterFeatures ?? []).map((feature, index) => ({
+      path: `waterFeatures[${index}].material`,
+      material: feature.material,
+    })),
+    ...(value.softFurnishings ?? []).map((furnishing, index) => ({
+      path: `softFurnishings[${index}].material`,
+      material: furnishing.material,
+    })),
+    ...(value.plantingInstallations ?? []).flatMap((installation, index) => [
+      {
+        path: `plantingInstallations[${index}].branchMaterial`,
+        material: installation.branchMaterial,
+      },
+      {
+        path: `plantingInstallations[${index}].leafMaterial`,
+        material: installation.leafMaterial,
+      },
+    ]),
+  ];
+  return bindings.flatMap((binding) => {
+    if (binding.material === null) return [];
+    try {
+      resolveAutoMovieMaterial({
+        models: value.models,
+        material: binding.material,
+      });
+      return [];
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message.replace(/\.$/u, "") : `${error}`;
+      return [
+        engineDiagnostic(
+          id,
+          binding.path,
+          `must resolve to one compiled material definition, but ${message}`,
+        ),
+      ];
+    }
+  });
 };
 
 /**

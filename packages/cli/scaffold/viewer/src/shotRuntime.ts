@@ -11,6 +11,7 @@ import {
   simulateAutoMovieWearableSoftBody,
   softBodyStepAt,
   softBodySurfaceGeometry,
+  validateAutoMovieSoftFurnishingDomainOwnership,
 } from "@automovie/engine";
 import type {
   AutoMovieExpressionPreset,
@@ -29,6 +30,7 @@ import {
   applyPose,
   applyRenderMode,
   applyRendererEnvironment,
+  buildAutoMovieMaterialLibrary,
   buildFluidSprayObject,
   buildFluidSurfaceObject,
   buildInstancedEffect,
@@ -346,6 +348,18 @@ export const createCompiledShotRuntime = async (
   const liveSoftIds = new Set(
     liveSoftSelections.map((selection) => selection.domain.id),
   );
+  const softFurnishings = compiled.softFurnishings ?? [];
+  const softDomainOwnership =
+    validateAutoMovieSoftFurnishingDomainOwnership(softFurnishings);
+  if (softDomainOwnership.success === false)
+    throw new Error(
+      `Compiled soft furnishing ownership is ambiguous: ${softDomainOwnership.violations
+        .map((violation) => violation.expected)
+        .join("; ")}.`,
+    );
+  const furnishingByDomain = new Map(
+    softFurnishings.map((furnishing) => [furnishing.domain, furnishing]),
+  );
   const plantingDomains = new Map(
     (compiled.plantingDomains ?? []).map(
       (domain) => [domain.id, domain] as const,
@@ -356,6 +370,20 @@ export const createCompiledShotRuntime = async (
       (cluster) => [cluster.id, cluster] as const,
     ),
   );
+  const materialLibrary = await buildAutoMovieMaterialLibrary({
+    models: compiled.models,
+    materialIds: [
+      ...(compiled.waterFeatures ?? []).map((feature) => feature.material),
+      ...(compiled.softFurnishings ?? []).map(
+        (furnishing) => furnishing.material,
+      ),
+      ...(compiled.plantingInstallations ?? []).flatMap((installation) => [
+        installation.branchMaterial,
+        installation.leafMaterial,
+      ]),
+    ],
+    textures,
+  });
   const waterObjects = (compiled.waterFeatures ?? []).map((feature) => {
     const domain = fluidDomains.get(feature.domain);
     if (domain === undefined)
@@ -371,6 +399,7 @@ export const createCompiledShotRuntime = async (
       still: feature.mode === "static",
       surface: buildFluidSurfaceObject({
         surface: lowered.surface,
+        material: materialLibrary.resolve(feature.material),
         mode: feature.mode,
       }),
       spray: buildFluidSprayObject({ sample: lowered.spray }),
@@ -400,6 +429,7 @@ export const createCompiledShotRuntime = async (
         object: buildSoftBodyObject({
           surface: lowered.surface,
           status: lowered.analysis.status,
+          material: materialLibrary.resolve(furnishing.material),
         }),
       },
     ];
@@ -429,6 +459,8 @@ export const createCompiledShotRuntime = async (
         buildPlantingObject({
           plant: lowered.plant,
           arrangement: lowered.arrangement,
+          branchMaterial: materialLibrary.resolve(installation.branchMaterial),
+          leafMaterial: materialLibrary.resolve(installation.leafMaterial),
         }),
       ];
     },
@@ -575,6 +607,9 @@ export const createCompiledShotRuntime = async (
         state: solved.state,
       }),
       status: "solved",
+      material: materialLibrary.resolve(
+        furnishingByDomain.get(selection.domain.id)?.material ?? null,
+      ),
     });
     scene.scene.add(object.object);
     return { selection, object, budget: solved.budget };
@@ -823,6 +858,7 @@ export const createCompiledShotRuntime = async (
       for (const soft of softObjects) soft.object.dispose();
       for (const soft of liveSoftObjects) soft.object.dispose();
       for (const planting of plantingObjects) planting.dispose();
+      materialLibrary.dispose();
       await textures.dispose();
     },
   };
