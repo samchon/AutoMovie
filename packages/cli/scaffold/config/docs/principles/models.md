@@ -4,7 +4,7 @@ Model documents specify the deterministic blocking representation that source co
 
 ## Representation contract {#representation-contract}
 
-Every model file names the geometry strategy, hierarchy, reusable parts, and proxy status used to represent its settings subject. It applies the population's representation ceiling to this subject by naming the local observations the chosen proxy can and cannot support.
+Every model file names the geometry strategy, hierarchy, reusable parts, and proxy status used to represent its settings subject. It applies the population's representation ceiling to this subject by naming the local observations the chosen proxy can and cannot support. When adjoining visible sides need different material or light responses, it gives them separate authored surface owners; one enclosing mass does not stand in for a ceiling, liner, or pane face with an independent response.
 
 Review question: can an implementer build the intended blocking representation without choosing an unstated form or pretending a proxy is final fidelity?
 
