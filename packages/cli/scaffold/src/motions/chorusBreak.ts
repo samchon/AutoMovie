@@ -3,9 +3,9 @@ import type { IAutoMovieFormationMotion } from "@automovie/interface";
 /**
  * Creates the reviewed uniform formation interval break.
  *
- * @evidence motions/030-chorus-break.md Implements this motion file and no
- *   other motion design.
- * @evidenceReview motions/030-chorus-break.md #36089c4 Read motions/030-chorus-break.md and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed this citation after checking the claim that implements this motion file and no other motion design.
+ * @evidence motions/030-chorus-break.md Solely owns the reviewed uniform
+ *   lateral-and-depth interval expansion with a consumer-selected scale.
+ * @evidenceReview motions/030-chorus-break.md #36089c4 Read motions/030-chorus-break.md and createChorusBreakMotion in src/motions/chorusBreak.ts; confirmed that this function solely owns the reviewed uniform lateral-and-depth expansion and accepts only its consumer-selected scale.
  * @evidence motions/030-chorus-break.md#chorus-uniform-break Changes only the
  *   two spacing channels from one to the same explicit scale, selecting walk
  *   while documenting that zero root travel supplies no gait cadence.

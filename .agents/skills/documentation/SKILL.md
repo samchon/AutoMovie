@@ -37,6 +37,12 @@ When a public export participates in the committed contract graph, preserve and 
 - **State the rule before its reason.** Use negative phrasing only for a named failure mode that the affirmative rule does not already exclude.
 - **Skills point, not paraphrase.** Do not restate what the `.wiki/`, READMEs, or source comments already say; link to them. Skills carry cross-cutting rules and conventions, not a second copy of project docs.
 
+Give every instruction one semantic owner and link to it elsewhere. A capability router belongs in `SKILL.md`; a substantial conditional phase belongs in one directly linked sibling Markdown file. A phase document owns one stage of one workflow, while a rule shared by every phase stays in the router. Do not create nested skill directories, `agents/openai.yaml`, or unreferenced examples and metadata.
+
+Before creating, moving, splitting, renaming, or editing an agent instruction, classify whether the rule is global behavior, a skill trigger, a shared procedure, a conditional phase, a product contract, or working knowledge. Do not copy a completion condition into several owners. Preserve necessary context, authority, stop conditions, and failure guards while removing ceremony and repeated conclusions.
+
+Review every changed instruction literally with its linked callers and described implementation. Check frontmatter, directory and `name` agreement, trigger scope, links, unique ownership, prose-line form, and contradictory or duplicate completion points. After corrections stop, require two consecutive complete instruction-diff rounds with no finding and no edit before final repository gates.
+
 ## Prose line breaks
 
 Write each Markdown paragraph on one source line. Never hard-wrap a single paragraph at a fixed column: Markdown already soft-wraps it, while manual wrapping makes small edits reflow unrelated lines.

@@ -2,6 +2,26 @@
 
 Motion documents specify deterministic change of represented state over time. They consume settings capabilities and model interfaces without redefining either one.
 
+## Addressable motion decisions {#addressable-motion-decisions}
+
+Every independently callable, composable, revisable, or reviewable transition or observation has one stable H2. A transition with its own entry, exit, time domain, parameter set, interruption behavior, or consumer does not hide under another motion's heading, and a review protocol that several transitions share belongs to the population obligation rather than being copied.
+
+Review question: which timed behavior could be selected, changed, or falsified independently and therefore still needs its own H2 owner?
+
+This item owns motion-document address structure. The common substantive obligation owns each unit's completeness, and the exact source edge owns its implementation.
+
+Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [Web Animations timing model](https://www.w3.org/TR/web-animations-1/#timing-model)
+
+## Motion information structure {#motion-information-structure}
+
+Every H2 first identifies its subject, entry and exit, active time domain, and observable consequence, then develops phases, interpolation, spatial relations, invariants, limits, composition, parameters, and review samples in paragraphs with distinct functions. A table may make samples or parameter ranges clearer but does not replace the transition rule.
+
+Review question: can a reverse outline give every paragraph one temporal or verification function without finding mixed transitions or repeated orientation?
+
+This item owns information order inside a motion H2. `addressable-motion-decisions` owns the boundary between H2 units.
+
+Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
+
 ## State endpoints {#state-endpoints}
 
 Every motion file names its complete entry state, exit state, and the properties allowed to change. A hold is an authored interval with identical endpoints, not an absence of specification.

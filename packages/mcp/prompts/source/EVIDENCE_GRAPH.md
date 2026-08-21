@@ -16,7 +16,7 @@ Set `kind` in `lint.config.ts`. The kinds are mutually exclusive, and authored s
 
 A ten-second story is still a film. A long technical demonstration may still be a brief. Do not use `brief` to avoid defining dramatic causality, or `library` when delivery contains a shot.
 
-Each layer is explicitly `disabled`, `evidence`, or `review`. `disabled` means the production does not contain it and its governed Markdown or TypeScript hosts are absent. `evidence` requires at least one governed host and complete citations. Every active Markdown file has an explicitly anchored H2 unit, film and brief ladder files also have explicitly anchored and correctly nested H3 and H4 units, and every governed source file has a named exported owner of the governed kind. `review` additionally requires current review fingerprints. The factory refuses residual, empty, and structurally empty populations. Select these states through `createAutoMovieEvidenceConfig`; do not rewrite graph populations to make a production pass.
+Each layer is explicitly `disabled`, `draft`, `evidence`, or `review`. `disabled` means the layer has no governed hosts because the selected kind forbids it or its authorship has not begun. `draft` requires at least one governed host but keeps shared graph coverage off while the complete first version is written. `evidence` turns coverage on after that coherent draft exists. `review` additionally requires current review fingerprints. Every hosted Markdown layer has explicitly anchored H2 units, film and brief ladders also have correctly nested H3 and H4 units, and every governed source file has a named exported owner of the governed kind. The factory refuses residual, empty, and structurally empty populations. Select these states through `createAutoMovieEvidenceConfig`; do not rewrite graph populations to make a production pass.
 
 ## Reusable law and production evidence
 
@@ -25,12 +25,15 @@ The two document roots must not mix.
 | Root | Holds | Changes when |
 | --- | --- | --- |
 | `config/docs/principles` | reusable rules: per-file checklists for authored Markdown and population coverage for heterogeneous source exports, one concern per anchored H2 | the reusable authoring standard changes |
-| `config/docs/obligations` | distinct responsibilities distributed across a population | the population's required roles change |
+| `config/docs/obligations/common.md` | unit-level scope, completion, proportionality, and evidence-truth duties answered by every selected authored unit | a universal unit-completion duty changes |
+| Other `config/docs/obligations` | distinct required responsibilities distributed across one layer population | the population's required roles change |
 | `docs` | researched facts and decisions for this production | the production changes |
 
-An authored-document principle is a checklist. Every Markdown file in its governed layer cites every applicable H2, exclusions are refused, and each reason says how that file obeys the rule. A source principle is covered across the selected export population because constructors, motions, deliveries, and acceptance records have different applicable duties; every source H2 still needs concrete implementation evidence, while exact design edges prevent orphan or multiply owned exports. An obligation is document-population coverage: one host may own a role on behalf of the population, and a permitted exclusion means the whole production deliberately lacks it.
+An authored-document principle is a file checklist. Every Markdown file in its governed layer cites every applicable H2, exclusions are refused, and each reason says how that file obeys the rule. A source principle is covered across the selected export population because constructors, motions, deliveries, and acceptance records have different applicable duties; every source H2 still needs concrete implementation evidence, while exact design edges prevent orphan or multiply owned exports.
 
-Never copy the same rule into both families. If every host must obey it, it is a principle. If the population must collectively allocate it, it is an obligation.
+`obligations/common.md` is a no-exclusion unit checklist. Every settings, model, and motion H2 and every film or brief H2/H3/H4 answers its four items directly; one strong sibling never covers a weak unit. Other obligations distribute roles across the owning H2 population. Settings, model, and storyline roles permit no exclusion. A motion role may receive one population-wide exclusion only when the complete production lacks the condition named by that target.
+
+Never copy the same rule into several families. A file-wide repeated condition is a principle, a universal unit duty belongs in common obligations, and a role allocated somewhere in a population is a layer obligation.
 
 Before changing a principle, compare it with every sibling. Reduce each to the subject it governs and the decision it requires. If two can govern the same decision, merge them or redraw the boundary. Test one compliant case and one counterexample at the boundary, and check that obeying one cannot contradict another without an independently named concern.
 
@@ -53,20 +56,33 @@ The principal domain boundaries are strict:
 | Layer | Host | Direct evidence |
 | --- | --- | --- |
 | Research | `docs/research/*.md` | common and research principles; once a consumer exists, every research H2 is consumed by a downstream authored H2 |
-| Settings | `docs/settings/*.md` | common and settings principles; settings obligations |
-| Models | `docs/models/*.md` | settings; common and model principles; model obligations |
-| Motions | `docs/motions/*.md` | settings and models; common and motion principles; motion obligations |
-| Storylines | `docs/storylines/*.md` | settings; common, narrative, and storyline principles; storyline obligations |
-| Scenarios | `docs/scenarios/*.md` | matching storyline units and settings; common, narrative, and scenario principles |
-| Script | `docs/script/*.md` | matching scenario and storyline units and settings; common, narrative, and script principles |
-| Briefs | `docs/briefs/*.md` | settings and any active model or motion branches; common and brief principles |
+| Settings | `docs/settings/*.md` | common and settings principles; common unit obligations; settings roles |
+| Models | `docs/models/*.md` | settings; common and model principles; common unit obligations; model roles |
+| Motions | `docs/motions/*.md` | settings and models; common and motion principles; common unit obligations; motion roles |
+| Storylines | `docs/storylines/*.md` | settings; common, narrative, and storyline principles; common unit obligations; storyline roles |
+| Scenarios | `docs/scenarios/*.md` | matching storyline units and settings; common, narrative, and scenario principles; common unit obligations |
+| Script | `docs/script/*.md` | matching scenario and storyline units and settings; common, narrative, and script principles; common unit obligations |
+| Briefs | `docs/briefs/*.md` | settings and any active model or motion branches; common and brief principles; common unit obligations |
 | Model source | subject classes under `src/units`, `src/objects`, `src/world`, and `src/formations` | exactly one model file; model design units and model-source principles |
 | Motion source | exports under `src/motions` | exactly one motion file; motion design units and motion-source principles |
 | Shots | exports under `src/shots` | exactly one script scene or brief shot; shot principles |
 | Production source | exports in `src/production.ts` | settings; production-source principles |
 | Film source | export in `src/film.ts` | every script sequence or brief delivery; film-source principles |
 
-Research is an optional upstream branch. It may be drafted alone, but once any authored production layer is active, research must already be in `review` and every research H2 must support at least one downstream H2. Each entry records the identifiable source and used portion, its authority, material uncertainty or disagreement, and the exact production decision it constrains; the owning downstream layer still makes that decision.
+Research is an optional upstream branch. When enabled, it may be drafted alone, but before an authored consumer of the ledger begins, research must be in `review`; once such a consumer participates in evidence, every research H2 must support at least one downstream H2. Each entry records the identifiable source and used portion, its authority, material uncertainty or disagreement, and the exact production decision it constrains; the owning downstream layer still makes that decision.
+
+## Production-specific contracts
+
+Before bulk settings work, preserve direct user instructions and audit the production's structural, stylistic, formal, subject, representation, motion, and review rules. Distinguish user-confirmed authority, author decisions, and sourced facts. Give every adopted rule one owner rather than creating a catch-all contract.
+
+- A production or world fact, capability, constraint, and delivery condition belongs to an independent settings H2.
+- A condition every selected file must satisfy belongs to a production-local `docs/principles` target.
+- A role allocated across one layer belongs to a production-local `docs/obligations` target.
+- A relationship already owned by an authored unit cites that target through an added claim only when the shared graph does not already express it.
+- An independent target with different evidence behavior uses a descriptive plural or collective `docs/<family>`.
+- A possibly reusable rule without proven universality stays in working research.
+
+Declare each production-local target and its typed `claims` entry in `lint.config.ts` together. Added claims extend the shared graph and never replace or weaken it. Keep `claims` absent or empty only after a literal audit finds no independent target.
 
 ## Exact unit identity
 
@@ -96,7 +112,7 @@ The graph selects governed model types exactly and motion functions and properti
 
 ## Writing citations
 
-Markdown file citations live in one HTML comment before the H1. Citations owned by an H2, H3, or H4 live in the comment immediately after that heading. TypeScript uses JSDoc on the exact exported symbol.
+Markdown principle citations live in one HTML comment before the H1. Common obligations, layer roles, foundations, and lineage owned by an H2, H3, or H4 live in the comment immediately after that heading. TypeScript uses JSDoc on the exact exported symbol.
 
 Targets under a configured Markdown root omit the root itself:
 
@@ -118,14 +134,14 @@ The reason is part of the contract. State what the host does about the target in
 
 ## Evidence stages and expiring review
 
-A child may enter `evidence` only after every direct parent is in `review`. The factory refuses skipped or mixed topology before lint can report a false clean result. Advance one layer across the production before going deeper:
+A child may enter `draft` only after every direct parent is in `review`. The factory refuses skipped or mixed topology before lint can report a false clean result. Advance one layer across the production before going deeper:
 
-1. Set the next eligible layer to `evidence`.
-2. Pay every citation and run the evidence gate.
-3. Read each target and host and check their concrete relationship.
-4. Copy only the compiler-issued fingerprint into a substantive review statement.
-5. Set the layer to `review` and compile again.
-6. Then activate its children.
+1. Set the next eligible layer to `draft` and write the complete first version without compiler-driven coverage work.
+2. Audit declared scope, unit addressability, substantive completion, proportional development, placeholders, and omissions.
+3. Commit the coherent draft, set the layer to `evidence`, pay every citation, and compile clean.
+4. Commit the evidence state, read each target and host, and check their concrete relationship.
+5. Set the layer to `review`, copy only compiler-issued fingerprints into substantive review statements, and compile again.
+6. Then begin the next child at `draft`.
 
 Where review is required, the same host carries:
 
@@ -139,7 +155,7 @@ Changing the target changes its digest and reopens every dependent review. For a
 
 Principles and exact parent edges refuse exclusion. A host that cannot satisfy a principle is defective; a refinement without its exact parent is not that refinement.
 
-Distributed obligations may allow one population-wide exclusion when the concern truly does not exist. This is a decided boundary, not an unfinished task. Put it on one visible carrier and explain the production-wide fact. A `@todo` is an error rather than an exclusion.
+Only a reference whose config permits exclusion may receive one population-wide exclusion when the concern truly does not exist. This is a decided boundary, not an unfinished task. Put it on one visible carrier and explain the complete-population fact. Common obligations, principles, exact lineage, settings roles, model roles, and storyline roles refuse exclusion. A `@todo` is an error rather than an exclusion.
 
 ## Derived records and examples
 

@@ -28,9 +28,9 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  * The seed is declared in the model design rather than invented by a caller,
  * so the same design always materializes the same chorus.
  *
- * @evidence models/020-chorus.md Belongs to the complete reviewed CHORUS
- *   model design and no other model file.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that belongs to the complete reviewed CHORUS model design and no other model file, while its H2 citations delimit the formation subset it realizes.
+ * @evidence models/020-chorus.md Owns the reviewed 2,049-member layout,
+ *   anchor, facing, spacing, seed, and formation channels as one CHORUS model.
+ * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and Chorus in src/formations/chorus.ts; confirmed that this class alone owns the reviewed 2,049-member layout, anchor, facing, spacing, seed, and formation channels, while its H2 citations delimit the formation subset it realizes.
  * @evidence models/020-chorus.md#chorus-formation-representation Implements
  *   count, layout, anchor, facing, spacing, seed, and motion channels.
  * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that implements count, layout, anchor, facing, spacing, seed, and motion channels.

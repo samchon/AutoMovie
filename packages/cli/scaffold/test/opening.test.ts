@@ -924,7 +924,42 @@ try {
     shots: "review",
     productionSources: "review",
     filmSources: "review",
+    claims: [
+      {
+        name: "starter-only contract probe",
+        type: "markdown",
+        root: "docs",
+        files: ["settings/**/*.md"],
+        symbol: "h2",
+        disabled: true,
+        reference: {
+          type: "markdown",
+          root: "docs",
+          files: ["settings/**/*.md"],
+          symbol: "h2",
+        },
+      },
+      {
+        name: "starter-owned empty-reference probe",
+        type: "markdown",
+        root: "docs",
+        files: ["settings/**/*.md"],
+        symbol: "h2",
+        disabled: true,
+        reference: [],
+      },
+    ],
   });
+  assert.equal(
+    fullFilmGraph.claims.at(-2)?.name,
+    "starter-only contract probe",
+    "production claims extend the shared graph after its fixed claims",
+  );
+  assert.equal(
+    fullFilmGraph.claims.at(-1)?.name,
+    "starter-owned empty-reference probe",
+    "production claims remain additive instead of being normalized away",
+  );
   assert.ok(
     fullFilmGraph.claims.some(
       (claim) =>
@@ -959,6 +994,65 @@ try {
       fullFilmGraph.claims.some((claim) => claim.name === name),
       `The full film graph must include ${name}.`,
     );
+  for (const name of [
+    "settings H2 units answer common obligations and allocate setting roles",
+    "model H2 units answer common obligations and account for settings and model roles",
+    "motion H2 units answer common obligations and account for settings models and motion roles",
+    "storyline H2 sequences answer common obligations and allocate storyline roles",
+    "scenario H4 units answer common obligations and refine storylines",
+    "script H4 units answer common obligations and preserve narrative lineage",
+  ]) {
+    const claim = fullFilmGraph.claims.find(
+      (candidate) => candidate.name === name,
+    );
+    assert.ok(claim !== undefined && Array.isArray(claim.reference));
+    assert.ok(
+      claim.reference.some(
+        (reference) =>
+          reference.type === "markdown" &&
+          reference.files[0] === "obligations/common.md" &&
+          reference.checklist === true &&
+          reference.noEvidenceExclude === true,
+      ),
+      `${name} must carry the no-exclusion common-unit checklist.`,
+    );
+  }
+  for (const [claimName, target, refusesExclusion] of [
+    [
+      "settings H2 units answer common obligations and allocate setting roles",
+      "obligations/settings.md",
+      true,
+    ],
+    [
+      "model H2 units answer common obligations and account for settings and model roles",
+      "obligations/models.md",
+      true,
+    ],
+    [
+      "storyline H2 sequences answer common obligations and allocate storyline roles",
+      "obligations/storylines.md",
+      true,
+    ],
+    [
+      "motion H2 units answer common obligations and account for settings models and motion roles",
+      "obligations/motions.md",
+      false,
+    ],
+  ] as const) {
+    const claim = fullFilmGraph.claims.find(
+      (candidate) => candidate.name === claimName,
+    );
+    assert.ok(claim !== undefined && Array.isArray(claim.reference));
+    const obligation = claim.reference.find(
+      (reference) =>
+        reference.type === "markdown" && reference.files[0] === target,
+    );
+    assert.equal(
+      obligation?.noEvidenceExclude === true,
+      refusesExclusion,
+      `${target} must expose its configured exclusion contract.`,
+    );
+  }
   assert.doesNotThrow(() =>
     createAutoMovieEvidenceConfig({
       ...disabled,
@@ -992,6 +1086,21 @@ try {
       research: "evidence",
     }),
   );
+  const draftGraph = createAutoMovieEvidenceConfig({
+    ...disabled,
+    location: ignoredHeadingRoot,
+    kind: "library",
+    settings: "draft",
+  });
+  assert.equal(
+    draftGraph.claims.find(
+      (claim) =>
+        claim.name ===
+        "settings files answer common and settings principle checklists",
+    )?.disabled,
+    true,
+    "draft hosts are structurally present while shared coverage remains off",
+  );
   assert.doesNotThrow(() =>
     createAutoMovieEvidenceConfig({
       ...disabled,
@@ -1011,7 +1120,7 @@ try {
   const directBriefH2 = directBriefGraph.claims.find(
     (claim) =>
       claim.name ===
-      "brief H2 units account for settings and active design branches",
+      "brief H2 units answer common obligations and account for active design branches",
   );
   assert.ok(
     directBriefH2 !== undefined && Array.isArray(directBriefH2.reference),
@@ -1020,7 +1129,10 @@ try {
     directBriefH2.reference.every(
       (reference) =>
         reference.type !== "markdown" ||
-        reference.files.every((file) => file.startsWith("settings/")),
+        reference.files.every(
+          (file) =>
+            file === "obligations/common.md" || file.startsWith("settings/"),
+        ),
     ),
     "A brief with disabled model and motion branches must not cite their resident starter documents.",
   );
@@ -1041,9 +1153,20 @@ try {
       createAutoMovieEvidenceConfig({
         ...disabled,
         kind: "film",
-        briefs: "evidence",
+        briefs: "draft",
       }),
     /film cannot activate the direct-brief layer/,
+  );
+  assert.throws(
+    () =>
+      createAutoMovieEvidenceConfig({
+        ...disabled,
+        location: filmRoot,
+        kind: "film",
+        settings: "evidence",
+        storylines: "draft",
+      }),
+    /storylines cannot enter draft before settings is in review/,
   );
   assert.throws(
     () =>
@@ -1076,6 +1199,29 @@ try {
         shots: "evidence",
       }),
     /shots cannot enter evidence before briefs is in review/,
+  );
+  assert.throws(
+    () =>
+      createAutoMovieEvidenceConfig({
+        ...disabled,
+        kind: "brief",
+        settings: "review",
+        models: "evidence",
+        briefs: "draft",
+      }),
+    /briefs cannot enter draft before models is in review/,
+  );
+  assert.throws(
+    () =>
+      createAutoMovieEvidenceConfig({
+        ...disabled,
+        kind: "brief",
+        settings: "review",
+        models: "review",
+        motions: "evidence",
+        briefs: "draft",
+      }),
+    /briefs cannot enter draft before motions is in review/,
   );
   assert.throws(
     () =>
@@ -1239,9 +1385,9 @@ try {
       createAutoMovieEvidenceConfig({
         ...disabled,
         kind: "film",
-        settings: "evidence",
+        settings: "draft",
       }),
-    /settings cannot enter evidence without a governed \.md host/,
+    /settings cannot enter draft without a governed \.md host/,
   );
   assert.throws(
     () =>

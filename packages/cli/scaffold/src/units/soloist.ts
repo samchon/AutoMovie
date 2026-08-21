@@ -19,9 +19,9 @@ import { createSoloistCueMotion } from "../motions/soloistCue";
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
  *
- * @evidence models/010-soloist.md Answers for the complete reviewed SOLOIST
- *   model design and no other model file.
- * @evidenceReview models/010-soloist.md #7d3364e Read models/010-soloist.md and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that answers for the complete reviewed SOLOIST model design and no other model file.
+ * @evidence models/010-soloist.md Owns the reviewed 1.8 m stickman recipe,
+ *   planted contribution, signal articulation, and neutral pose observations.
+ * @evidenceReview models/010-soloist.md #7d3364e Read models/010-soloist.md and Soloist in src/units/soloist.ts; confirmed that the class owns the reviewed 1.8 m stickman recipe, planted contribution, signal articulation, and neutral pose observations without answering another model file.
  * @evidence models/010-soloist.md#soloist-blocking-representation Owns the
  *   recipe, dimensions, accent, signal id, and inert actor speed field.
  * @evidenceReview models/010-soloist.md#soloist-blocking-representation #057edb2 Read models/010-soloist.md#soloist-blocking-representation and Soloist in src/units/soloist.ts; confirmed this citation after checking the claim that owns the recipe, dimensions, accent, signal id, and inert actor speed field.

@@ -18,9 +18,9 @@ export const CHORUS_ADVANCE_METRES = 2;
 /**
  * Creates the reviewed ordered formation advance.
  *
- * @evidence motions/020-chorus-advance.md Implements this motion file and no
- *   other motion design.
- * @evidenceReview motions/020-chorus-advance.md #2487edf Read motions/020-chorus-advance.md and createChorusAdvanceMotion in src/motions/chorusAdvance.ts; confirmed this citation after checking the claim that implements this motion file and no other motion design.
+ * @evidence motions/020-chorus-advance.md Solely owns the reviewed ordered
+ *   2 m formation translation and its preserved spacing and facing channels.
+ * @evidenceReview motions/020-chorus-advance.md #2487edf Read motions/020-chorus-advance.md and createChorusAdvanceMotion in src/motions/chorusAdvance.ts; confirmed that this function solely owns the reviewed ordered 2 m translation and preserves both spacing channels and facing.
  * @evidence motions/020-chorus-advance.md#chorus-ordered-advance Moves the
  *   formation 2 m forward with the reviewed walk gait while preserving facing
  *   and both spacing channels.
@@ -32,8 +32,8 @@ export const CHORUS_ADVANCE_METRES = 2;
  *   formation, start, and end values to one deterministic record.
  * @evidenceReview principles/motion-sources.md#pure-time-mapping #c0ea4a6 Read principles/motion-sources.md#pure-time-mapping and createChorusAdvanceMotion in src/motions/chorusAdvance.ts; confirmed explicit id, formation, start, and end values produce one deterministic time-addressed record while engine sampling stays outside the constructor.
  * @evidence principles/motion-sources.md#invalid-input-is-visible Rejects an
- *   empty identity, non-finite time, or a non-positive interval.
- * @evidenceReview principles/motion-sources.md#invalid-input-is-visible #ca43ce3 Read principles/motion-sources.md#invalid-input-is-visible and createChorusAdvanceMotion in src/motions/chorusAdvance.ts; confirmed this citation after checking the claim that rejects an empty identity, non-finite time, or a non-positive interval.
+ *   invalid identity or interval before constructing a translated endpoint.
+ * @evidenceReview principles/motion-sources.md#invalid-input-is-visible #ca43ce3 Read principles/motion-sources.md#invalid-input-is-visible and createChorusAdvanceMotion in src/motions/chorusAdvance.ts; confirmed that invalid identities and intervals fail before the function can construct a translated endpoint.
  */
 export function createChorusAdvanceMotion(props: {
   id: string;

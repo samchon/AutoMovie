@@ -6,7 +6,9 @@ Briefs govern bounded non-narrative deliveries such as a short demonstration, tu
 
 Every brief states one observable production question that can be completely answered without a multi-scene causal, choice, or disclosure structure. If downstream work would have to invent such a structure, the production is a film regardless of runtime.
 
-Review question: can one document state the entire intended progression without hiding a storyline decision in source code?
+Review question: can the requested result be stated as one bounded falsifiable question, or does it require independent deliveries or a causal ladder?
+
+This item decides whether the requested result qualifies for the brief shape. `no-narrative-smuggling` separately checks that content authored after selection stays inside that boundary.
 
 Sources: [NIST test and evaluation guidance](https://www.nist.gov/topics/testing); [NASA systems engineering handbook on defining verification objectives](https://www.nasa.gov/reference/systems-engineering-handbook/)
 

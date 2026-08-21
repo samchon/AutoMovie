@@ -1,29 +1,77 @@
-# Evidence staging
+# Production evidence staging
 
-Every layer is explicitly `disabled`, `evidence`, or `review`.
+Read `lint.config.ts`, `config/src/createAutoMovieEvidenceConfig.ts`, every target and host involved, and the applicable authoring phase document before changing a stage or evidence statement.
 
-- `disabled` means the production kind does not contain the layer. Its governed Markdown or TypeScript host files must be absent.
-- `evidence` requires a non-empty governed population and complete citations but does not yet require review fingerprints. Every Markdown host has an explicitly anchored H2 unit; film and brief ladder hosts also have explicitly anchored, correctly nested H3 and H4 units. Every governed source file has a named exported owner of the kind its graph governs.
-- `review` requires complete citations and current, substantive `@evidenceReview` records.
+## States
 
-A child can enter `evidence` only after every direct parent is in `review`. A layer can enter `review` only after its evidence compiles and a human review has checked every cited target against the host. This makes incompleteness explicit without allowing a downstream refinement to outrun an unsettled parent.
+Every layer is `disabled`, `draft`, `evidence`, or `review`.
 
-Research is optional. When active, it becomes an additional parent of every authored production layer, so it must reach `review` before settings or any later authored layer can be active. Research may be drafted by itself before those consumers exist; once a consumer is active, the graph requires every research H2 to support at least one downstream H2.
+- `disabled` means the layer currently has no governed hosts and its shared claims do not run. The selected kind decides whether the layer is forbidden or merely not begun.
+- `draft` means the layer is applicable and owns non-empty hosts, but shared evidence coverage is off while the author completes the first version.
+- `evidence` enables the layer's shared and production-specific claims without requiring review fingerprints.
+- `review` keeps those claims active and requires a current substantive review for every acknowledgement and exclusion.
 
-Shots wait for the reviewed screenplay or brief and, whenever their corresponding design layers are active, reviewed model and motion source layers. A camera-only brief may disable those branches; an active branch cannot be bypassed.
+An applicable layer moves only `disabled -> draft -> evidence -> review`. Leave completed layers in `review` so later target edits reopen affected checks. Do not return incomplete authored hosts to `disabled`, and do not leave a host behind when its layer is disabled.
 
-Production source waits for reviewed settings. Film source exists only for film and brief shapes and waits for both reviewed production source and reviewed shots; it assembles global editorial time and auxiliary tracks without taking over local composition. A library keeps production source active but removes film source.
+`draft` does not forbid an obvious truthful citation. Record one when it preserves context, but do not interrupt first-version authorship to chase complete coverage or fingerprints. Evidence and review passes own those jobs.
 
-When scenarios or script are active, the factory compares their ordered H2/H3/H4 identity sequence with every active parent. Reordered, renamed, duplicated, unanchored, or misnested units fail before citation lint, so a bijective but cross-wired ladder cannot report clean.
+## Relationship types
 
-Advance one layer at a time:
+- A principle is an item-by-item file checklist. Every selected Markdown file answers every applicable H2, exclusions are refused, and one strong unit cannot cover a weak unit elsewhere in the file.
+- `obligations/common.md` is an item-by-item unit checklist. Every governed settings, model, and motion H2 and every film or brief H2/H3/H4 answers every item directly; exclusions are refused.
+- A layer obligation is distributed coverage. Every H2 that materially realizes a role may cite it, and the complete population accounts for every role. Settings, model, and storyline roles permit no exclusion. Motion roles permit one population-wide exclusion only where the target's own condition is absent from the complete production.
+- Settings, model, motion, and research references are foundation coverage. A host cites only the units it uses. A target no host in that claim population uses may receive one concrete population-wide exclusion only where the configured reference permits it.
+- Film lineage is exact. Every scenario and screenplay H2/H3/H4 cites one matching same-level parent, every parent has one matching child, and exclusions are refused. The factory also compares physical anchor order and nesting.
+- Model and motion source ownership is exact at file level, while source-principle and design-unit coverage is distributed across selected exports. Shot ownership is exact per screenplay scene or brief shot.
 
-1. Set the next eligible layer to `evidence`.
-2. Pay its citations and falsify its edges.
-3. Review each target-host relationship and copy only compiler-issued fingerprints.
-4. Set the layer to `review` and compile again.
-5. Then activate its children.
+An omission from one host is not an exclusion. `@evidenceExclude` says no host in the complete claim population owes the target. Never cite and exclude the same target in one population, use one host as a catalogue for all targets, or use a generic reason to hide missing authored work.
 
-Never invent a digest, reuse a review sentence across unrelated hosts, or bulk-mark a layer reviewed. A changed target expires the review by design.
+## Tags
 
-Removing a layer is a production-kind change. Remove its hosts and all descendants, then set it to `disabled`; do not silence dangling claims by weakening populations.
+Put file-level principle answers in one HTML comment before the first H1. Put common obligations, distributed roles, foundations, lineage, and package-claim evidence directly under the exact H2, H3, or H4 that realizes them unless that claim deliberately selects a file host.
+
+```text
+@evidence path/file.md#anchor What exact fact, decision, transition, or observation the host realizes.
+@evidenceExclude path/file.md#anchor Why no host in the complete population owes the target.
+@evidenceReview path/file.md#anchor #fingerprint What target-host relationship was checked.
+@evidenceExcludeReview path/file.md#anchor #fingerprint What population boundary was checked.
+```
+
+Use configured roots such as `settings/...`, `models/...`, `motions/...`, `storylines/...`, `scenarios/...`, `script/...`, shared `principles/...` and `obligations/...`, or the root declared by a production-specific claim. Do not prefix a target with `docs/` unless that claim's root requires it. Every Markdown target unit has a stable explicit anchor.
+
+A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, “uses this setting,” “implements this rule,” and a copied reason are not evidence.
+
+## Transitions
+
+Move a layer from `draft` to `evidence` only after the full layer has a complete first version, stable anchored topology and ordered files, no placeholders, a manual scope and omission audit, and truthful unit-by-unit answers to every common obligation. Commit that coherent draft before changing the state.
+
+Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](review.md), copy only compiler-issued fingerprints, and compile again.
+
+A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for every active model and motion source branch. Production source waits for settings. Film source waits for production source and shots.
+
+The factory checks non-empty host populations, required anchors, named source owners, production-kind exclusions, and exact narrative identities before lint. When changing the factory, preserve the typed object API, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
+
+## Diagnostics
+
+A compiler diagnostic is a question about the artifact, not an instruction to add a tag.
+
+1. Stop the current evidence batch and any downstream work behind its gate.
+2. Read the full diagnostic, complete host, complete target with selected descendants, config, and necessary upstream and downstream context.
+3. State the intended semantic relationship without relying on the existing annotation.
+4. Compare plausible defects in target, host, ownership, hierarchy, statement or placement, claim population or cardinality, and compiler behavior.
+5. Fix the earliest actual owner and every affected dependant.
+6. Reread the repaired scopes literally before writing evidence or resuming the batch.
+
+Rewrite false or shallow content. Split, move, rename, merge, or replace a target whose scope is wrong. Correct only the tag when the content relationship already holds. Change config only when its intended population, stage, cardinality, exclusion, or implementation is itself wrong.
+
+Never clear a diagnostic with exaggerated evidence, copied reviews, blanket exclusions, filler, path shuffling, stage reduction, weakened populations, invented fingerprints, or a package exception. When `obligations/common.md#evidence-content-conformance` fails, perform its halt and repair before retaining any acknowledgement.
+
+## Production-specific claims
+
+Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. Put selected-file conditions under package-local `docs/principles`, distributed roles under `docs/obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
+
+A package-local principle uses file hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A distributed role uses the owning layer's H2 hosts, ordinary H2 coverage, and only the exclusion behavior the target justifies. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
+
+## Verification
+
+Run the scoped generated-project source lint at every transition and final package gate, not at prose checkpoints. After graph changes, run the scaffold gate and negative probes required by the scaffold skill. A pure deletion that changes no stage, claim, config, source, or schema needs exact target and diff inspection rather than an unrelated build.

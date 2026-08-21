@@ -1,3 +1,5 @@
+import type { ITtscEvidenceGraphClaim } from "@ttsc/evidence";
+
 import type { AutoMovieEvidenceStage } from "./AutoMovieEvidenceStage";
 import type { AutoMovieProductionKind } from "./AutoMovieProductionKind";
 
@@ -52,4 +54,11 @@ export interface IAutoMovieEvidenceConfigProps {
 
   /** Sets the final editorial timeline source stage. */
   filmSources: AutoMovieEvidenceStage;
+
+  /**
+   * Adds claims that belong only to this production.
+   *
+   * They follow the shared graph and may extend, but never replace, it.
+   */
+  claims?: ITtscEvidenceGraphClaim[];
 }

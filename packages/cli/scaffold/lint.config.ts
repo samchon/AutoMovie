@@ -16,12 +16,11 @@ import { createAutoMovieEvidenceConfig } from "./config/src/createAutoMovieEvide
  * - `library` owns settings, production source, model or motion design, and
  *   their source without shots or film source.
  *
- * `disabled` requires that layer's governed hosts to be absent. `evidence`
- * enforces every citation and checklist once hosts exist. `review` additionally requires a
- * current review fingerprint beside every acknowledgement. A downstream layer
- * cannot start until its immediate parent is in `review`, and the factory
- * refuses a mixed or skipped topology before lint can report a false clean
- * result.
+ * `disabled` means the layer has no hosts because its kind forbids it or work
+ * has not begun. An applicable layer advances through `draft`, `evidence`, and
+ * `review`: draft owns the complete first version without graph pressure,
+ * evidence enforces coverage, and review also requires current fingerprints.
+ * A child cannot enter draft until its direct parents are reviewed.
  */
 const graph = createAutoMovieEvidenceConfig({
   location: import.meta.dirname,
@@ -39,6 +38,10 @@ const graph = createAutoMovieEvidenceConfig({
   shots: "review",
   productionSources: "review",
   filmSources: "review",
+
+  // The starter audit found no production-specific target beyond the shared
+  // graph. Add typed claims here with the target documents they activate.
+  claims: [],
 });
 
 /**
