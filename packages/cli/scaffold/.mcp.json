@@ -4,6 +4,8 @@
       "command": "node",
       "args": [
         "${CLAUDE_PROJECT_DIR:-.}/node_modules/ttsc/lib/launcher/ttsx.js",
+        "--cache-dir",
+        "${CLAUDE_PROJECT_DIR:-.}/node_modules/.cache/ttsc",
         "-P",
         "${CLAUDE_PROJECT_DIR:-.}/tsconfig.json",
         "${CLAUDE_PROJECT_DIR:-.}/scripts/mcp.ts"
