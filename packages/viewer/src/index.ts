@@ -1,5 +1,6 @@
 export * from "./analysisOverlay";
 export * from "./geometry";
+export * from "./materialLibrary";
 export * from "./buildModel";
 export * from "./applyPose";
 export * from "./applyExpression";

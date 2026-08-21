@@ -295,6 +295,7 @@ export const test_mcp_production_source_link = (): void => {
       "autoMoviePatternInstanceTransforms",
       "autoMoviePatternTextureTransforms",
       "buildAutoMoviePolyhedron",
+      "buildAutoMovieRegionFace",
       "buildAutoMovieWall",
       "builtEnvironmentAdjacentSpaces",
       "builtEnvironmentBuildingOfSpace",

@@ -34,7 +34,6 @@
   },
   "devDependencies": {
     "@gltf-transform/core": "catalog:gltf",
-    "@ttsc/unplugin": "catalog:typescript",
     "@types/node": "catalog:utils",
     "@types/pngjs": "catalog:media",
     "@types/three": "catalog:three",

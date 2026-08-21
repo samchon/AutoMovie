@@ -12,14 +12,7 @@ import * as THREE from "three";
 export const SPACE_GROUP_NAME = "__automovie_space";
 
 /**
- * Flat neutral gray for a ground surface. Deliberately featureless: the set is
- * a structural hint for the diffusion passes, and appearance is the diffusion
- * model's job, so the surface carries shape and nothing else.
- */
-const SPACE_COLOR = 0.62;
-
-/**
- * Build the visible ground of an {@link IAutoMovieSpace}: one `Mesh` per
+ * Build the structural ground of an {@link IAutoMovieSpace}: one `Mesh` per
  * standable surface, grouped under {@link SPACE_GROUP_NAME}.
  *
  * This is what closes the gap between the space the feet obey and the world the
@@ -27,15 +20,23 @@ const SPACE_COLOR = 0.62;
  * ground (`heightAt`, support contacts, walkability) but nothing ever drew
  * them, so a depth or mask pass of a staged scene showed actors floating in a
  * void. Building them as real meshes is enough: every structural pass collects
- * geometry as `scene.traverse` ∩ `isMesh`, so the ground joins depth, mask,
- * normal, and outline with no pass-side change, unlike the playground's
- * `GridHelper`, which is a `LineSegments` and is hidden before every structural
- * pass.
+ * geometry as `scene.traverse` ∩ `isMesh` and replaces its material, so the
+ * ground joins depth, mask, normal, and outline with no pass-side special case,
+ * unlike the playground's `GridHelper`, which is a `LineSegments` and is hidden
+ * before every structural pass.
+ *
+ * The ordinary material writes neither colour nor depth. A support patch is a
+ * semantic declaration used by grounding and locomotion, not proof that an
+ * authored slab, terrain mesh, or platform exists. Drawing the declaration in
+ * beauty would let a missing physical floor look complete, and writing only
+ * depth would still let it occlude authored geometry. Guide passes replace the
+ * material and therefore keep the structural geometry #1173 introduced.
  *
  * Each surface is tessellated by the engine. Floors and ramps become a convex
  * fan; heightfields split at their authored lattice and preserve every relief
  * sample. Every vertex height comes from the same `surfaceHeightAt` query used
- * by grounding, so semantic ground and visible ground cannot diverge.
+ * by grounding, so semantic ground and its structural-pass geometry cannot
+ * diverge.
  *
  * The hull is counter-clockwise in the XZ plan, whose fan normal points
  * **down**, so the fan is wound in reverse: front faces look up, which is what
@@ -46,7 +47,9 @@ const SPACE_COLOR = 0.62;
  * and contributes no mesh rather than an invalid geometry.
  *
  * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this space surface from the resolved scene state only.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps semantic support out of beauty while retaining it for structural products.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging space to viewer geometry.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the support patch as structural-only render geometry.
  * @author Samchon
  */
 export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {
@@ -57,29 +60,7 @@ export const buildSpaceObject = (space: IAutoMovieSpace): THREE.Group => {
     if (geometry === null) continue;
     const mesh = new THREE.Mesh(
       geometry,
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(SPACE_COLOR, SPACE_COLOR, SPACE_COLOR),
-        metalness: 0,
-        roughness: 0.95,
-        // Biased away from the eye so an authored floor wins the tie. A
-        // production that builds its own slab and also declares the space it
-        // stands on puts two surfaces on one plane, and a `#1954` benchmark
-        // photographed the result: a stepped diagonal seam across a living
-        // room floor, with the storey-owned slab's top face at exactly
-        // Y = 0.0 and the room's walkable polygon at Y = 0. Both storeys did
-        // it. Neither surface is wrong and the renderer has no principled way
-        // to order them, so this states the order: the stand-in yields.
-        //
-        // A bias rather than a suppression, because this group exists for the
-        // scene that has no floor of its own (#1173) and must still draw when
-        // nothing else is there. Its own JSDoc calls it the ground the guide
-        // passes see; taking it away where a slab exists would need the
-        // viewer to decide which authored elements count as floor, which is a
-        // judgement it has no basis to make.
-        polygonOffset: true,
-        polygonOffsetFactor: 1,
-        polygonOffsetUnits: 1,
-      }),
+      new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
     );
     mesh.name = surface.id;
     group.add(mesh);

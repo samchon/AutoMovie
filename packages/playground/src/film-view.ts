@@ -79,10 +79,16 @@ const staging: IAutoMovieStage = {
     { node: "walker", position: { x: 0, y: 0, z: -2.4 }, facingDeg: 0 },
     { node: "waiter", position: { x: 0, y: 0, z: 0.55 }, facingDeg: 0 },
   ],
-  // Set pieces (#1173): one unit box model resized per placement. The wall and
-  // the crate are the SAME `block` model at two sizes, which is the point of
-  // `scale`. The floor is drawn from the space below, not as a set node.
+  // Set pieces (#1173): one unit box model resized per placement. The wall,
+  // crate, and physical floor slab are the SAME `block` model at three sizes,
+  // which is the point of `scale`.
   set: [
+    {
+      node: "floor-slab",
+      model: "block",
+      position: { x: 0, y: -0.05, z: 0 },
+      scale: { x: 12, y: 0.1, z: 10 },
+    },
     {
       node: "wall-back",
       model: "block",
@@ -97,9 +103,9 @@ const staging: IAutoMovieStage = {
       scale: 0.5,
     },
   ],
-  // The space is the same floor's MEANING: one walkable patch under the whole
-  // walk. `buildSpaceObject` draws it, so the ground reaches every structural
-  // guide pass (a GridHelper never did: it is a LineSegments, hidden first).
+  // The space is the floor's MEANING: one walkable patch under the whole walk.
+  // `buildSpaceObject` carries it into every structural guide pass but writes no
+  // beauty colour or depth; the explicit slab above is the visible floor.
   space: {
     id: "space-pursuit",
     surfaces: [
@@ -386,10 +392,10 @@ export const FILM_DURATION = cut.runtime;
 // ── the set: scene nodes → three.js ─────────────────────────────────────────
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xf2f4f8);
-// The staged space, drawn as real meshes (#1173). This replaces the GridHelper
-// that used to stand in for a floor: a grid is a LineSegments, which every
-// structural guide pass hides (#1226), so depth/mask/outline saw no ground at
-// all. A mesh floor is collected by the passes like any other geometry.
+// The staged support is a real structural mesh (#1173). This replaces the
+// GridHelper that used to stand in for support: a grid is a LineSegments, which
+// every structural guide pass hides (#1226), so depth/mask/outline saw no ground
+// at all. Its ordinary material writes no beauty; the staged slab does.
 scene.add(buildSpaceObject(staged.scene.space!));
 // The staged ATMOSPHERE, through the viewer's one call. This page is what the
 // offline renderer captures, so a fog declared on the scene and honoured only
