@@ -61,9 +61,9 @@ const GATE_FINISH_LINEAR = Object.freeze({
  * };
  * ```
  *
- * @evidence models/030-gate.md Answers for the complete reviewed GATE model
- *   design and no other model file.
- * @evidenceReview models/030-gate.md #1b9711d Read models/030-gate.md and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that answers for the complete reviewed GATE model design and no other model file.
+ * @evidence models/030-gate.md Owns the reviewed post and leaf geometry,
+ *   finish, far-edge placement, hinge node, and zero-to-100-degree limit.
+ * @evidenceReview models/030-gate.md #1b9711d Read models/030-gate.md and PlazaGate in src/objects/gate.ts; confirmed that the class owns the reviewed post and leaf geometry, finish, far-edge placement, hinge node, and zero-to-100-degree limit without answering another model file.
  * @evidence models/030-gate.md#gate-blocking-representation Implements the
  *   declared two-box proxy, finish, human-relative dimensions, and placement.
  * @evidenceReview models/030-gate.md#gate-blocking-representation #1e3238b Read models/030-gate.md#gate-blocking-representation and PlazaGate in src/objects/gate.ts; confirmed this citation after checking the claim that implements the declared two-box proxy, finish, human-relative dimensions, and staged placement.

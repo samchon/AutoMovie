@@ -1,6 +1,6 @@
 # Storyline obligations
 
-These roles must be covered across the storyline H2 sequence population. An absent role requires one explicit production-wide exclusion rather than silence.
+These required roles must be covered across the storyline H2 sequence population and permit no exclusion. A film without deliberate withholding still owns an explicit audience route that says what is available from the start and how attention moves through it.
 
 ## Opening condition {#opening-condition}
 

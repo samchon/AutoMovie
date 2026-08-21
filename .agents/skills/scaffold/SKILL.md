@@ -1,63 +1,60 @@
 ---
 name: scaffold
-description: Defines how an automovie production is authored inside the scaffold, including its mutually exclusive film, brief, and library shapes; reusable principles and obligations; production-specific prose, model, motion, production, shot, and film-source evidence; staged review; research; and generated-project guidance. Use before authoring or reviewing production content, or editing packages/cli/scaffold, which every generated project inherits.
+description: Defines how an automovie production is researched, authored, evidenced, implemented, and reviewed inside the scaffold, including mutually exclusive film, brief, and library shapes; the settings-to-screenplay ladder; model and motion branches; production-specific contracts; and generated-project guidance. Use before authoring or reviewing production content or editing packages/cli/scaffold, which every generated project inherits.
 ---
 
 # Authoring a production
 
-`packages/cli/scaffold/` is both the template `@automovie/cli` stamps out and a working production. Treat it as a public API: a change lands in every generated project.
+`packages/cli/scaffold` is both the template `@automovie/cli` stamps out and a working production. Treat every change as a generated-project API change.
 
-Read the generated project's `AGENTS.md` first. Read the [evidence graph skill](../evidence-graph/SKILL.md) for repository requirement-to-source traceability. The production graph described here is separate and this skill owns its topology.
+Identify the selected `kind` and every layer stage in `lint.config.ts`. Read the production's `AGENTS.md`, all earlier active layers, the shared contracts under `config/docs`, and every production-local target selected by an added claim before writing.
 
-Before changing a production, read the topic documents that apply:
+Reusable production law lives in `config/docs`. Production-specific facts, research, designs, prose, and additional targets live in `docs`. Never put one production's fact in reusable law, weaken a shared rule for one production, or create a production-local target without an active additive claim.
 
-- Read [Production kinds](production-kinds.md) before selecting or changing a production shape.
-- Read [Principles and obligations](principles-and-obligations.md) before editing `config/docs` or changing a principle population.
-- Read [Evidence staging](evidence-staging.md) before activating, reviewing, or removing a layer.
-- Read [Models and motions](models-and-motions.md) before changing a model, geometry, rig, motion, or their source implementation.
-- Read [Review](review.md) before reviewing any production evidence or writing an `@evidenceReview`.
+## Workflow documents
 
-## Two document roots
+Read each applicable document in full before acting:
 
-The scaffold deliberately has two document roots.
+- [Production kinds](production-kinds.md) selects exactly one film, brief, or library shape.
+- [Production-specific contract](work-specific.md) preserves direct instructions and classifies every adopted rule before bulk settings work.
+- [Research](research.md) owns the optional external-evidence ledger and its downstream consumption.
+- [Settings](settings.md) defines delivery, canon, capabilities, constraints, and shared conventions for every shape.
+- [Models and motions](models-and-motions.md) defines deterministic representation and reusable change over time.
+- [Storylines](storylines.md), [Scenarios](scenarios.md), and [Screenplays](screenplays.md) own the film-only refinement ladder.
+- [Direct briefs](briefs.md) owns bounded non-narrative audiovisual delivery.
+- [Principles and obligations](principles-and-obligations.md) governs reusable and production-local contract documents.
+- [Evidence staging](evidence-staging.md) owns populations, tags, `draft -> evidence -> review`, diagnostics, and fingerprints.
+- [Review](review.md) owns evidence review and final whole-production review.
 
-- `config/docs/` is reusable production law. Its principles define one concern each; authored-document principles are per-file checklists, source principles are covered by their selected export populations, and obligations allocate responsibility across a document population. Generated productions inherit and may deliberately customize it.
-- `docs/` is evidence about one production. It states its researched facts, canon, model decisions, motion decisions, narrative refinements, or bounded brief.
+The repository [evidence graph skill](../evidence-graph/SKILL.md) owns committed requirement-to-source traceability. This scaffold skill owns the separate generated-production graph. Apply the repository skill's citation honesty and diagnostic discipline without imposing its requirement-specification-source triangle here.
 
-Never put a production fact in `config/docs`, and never weaken a reusable rule merely because one production cannot satisfy it. Select the right production kind or write a justified population exclusion where the rule permits one.
+## Layer boundaries
 
-## Evidence topology
+| Owner | Decision |
+| --- | --- |
+| Research | External source identity, used portion, authority, uncertainty, and affected production decision |
+| Settings | Production and world facts, delivery, identity, capability, constraint, access, units, and review conditions |
+| Models | Deterministic fixed blocking representation and its neutral observations |
+| Motions | Reusable deterministic state change over time and its neutral observations |
+| Storylines | Detailed narrative treatment and audience-facing development |
+| Scenarios | Executable physical progression and consequential exchange |
+| Screenplay | Final visible, written, audible, silent, and render-timed audience contract |
+| Brief | One bounded non-narrative delivery and falsifying observations |
+| Production source | Mechanical serialization of reviewed settings |
+| Model and motion source | Implementation of one reviewed design owner |
+| Shot source | Local composition, camera, light, orchestration, and acceptance for one reviewed scene or brief shot |
+| Film source | Global selection, source-time mapping, transitions, and auxiliary-track mapping |
 
-Each active rung answers for its direct parent and the reusable contracts that govern it. A parent must already be in `review` before a child activates; once the child itself enters `review`, every acknowledgement also carries a current fingerprint. Exact refinements are bijective at the authored unit shown below.
+Correct the earliest owner when a later layer exposes a defect, then propagate the consequence and renew affected reviews. A clean compiler never authorizes an invented relationship or a decision in the wrong layer.
 
-| Layer | Host | Direct evidence |
-| --- | --- | --- |
-| Research | `docs/research/*.md` | common/research principles; every active H2 is consumed by a downstream authored H2 once one exists |
-| Settings | `docs/settings/*.md` | common/settings principles and settings obligations |
-| Production source | exported production properties in `src/production.ts` | settings plus production-source principles |
-| Models | `docs/models/*.md` | settings, common/model principles, model obligations |
-| Motions | `docs/motions/*.md` | models and settings, common/motion principles, motion obligations |
-| Storylines | `docs/storylines/*.md` | settings, narrative/storyline principles, and storyline obligations |
-| Scenarios | `docs/scenarios/*.md` | exactly one storyline unit, settings, narrative/scenario principles |
-| Script | `docs/script/*.md` | exactly one scenario unit, its storyline, settings, narrative/script principles |
-| Briefs | `docs/briefs/*.md` | settings, any active model or motion branches, and common/brief principles |
-| Model source | model classes under `src` | exactly one model document plus model-source principles |
-| Motion source | exported motion functions and properties under `src/motions` | exactly one motion document plus motion-source principles |
-| Shots | exported shot and acceptance symbols under `src/shots` | exactly one script scene or brief shot plus shot principles |
-| Film source | exported film property in `src/film.ts` | every script sequence or brief delivery plus film-source principles |
+## Authored and derived source
 
-For a film, narrative identity is an explicitly anchored `##` sequence, `###` scene, and `####` beat repeated in the same order and nesting through storyline, scenario, and script. The factory compares those physical identities as well as the citations, and a shot cites one script `###` scene. For a brief, an explicitly anchored `##` delivery, `###` shot, and `####` observation structure goes directly from brief to shots without borrowing narrative semantics. Do not cite whole files when an exact authored unit exists.
+Write production work in `docs`, `src`, `test`, and declared assets. Subject definitions are classes, recurring behavior is a named motion function, cross-subject choreography is a shot, production source serializes settings, and film source maps reviewed local shots and authored auxiliary tracks onto global time. Every governed source file contains its own named exported owner.
 
-Research is an optional upstream branch. It may be drafted alone, but once any production layer is active, active research must be reviewed first and every research H2 must support at least one downstream authored H2. A downstream unit cites only the research it actually consumes; the population collectively prevents ledger entries with no production consequence.
+`.automovie/design`, `generated`, and `renders` are derived. Correct authored source and regenerate them. The screenplay index at `.automovie/design/<production>/screenplay/index.json` is hand-authored and resolves every scene and beat against Markdown, so an identity or wording change updates the index and all dependants.
 
-## Authored source
-
-Write the production in `docs`, `src`, `test`, and declared assets. Subject definitions are classes; recurring behavior is a named motion function; cross-subject choreography is a shot; production source serializes settings; film source maps reviewed shots and auxiliary tracks onto global time. Every governed source file contains its own named exported owner, so an otherwise invisible helper belongs outside those populations. Counts, layouts, envelopes, and procedural construction remain code rather than expanded records.
-
-`.automovie/design`, `generated`, and `renders` are derived. Correct the authored source and regenerate them. The screenplay index at `.automovie/design/<production>/screenplay/index.json` is hand-authored and separately resolves every named beat and scene against the referenced Markdown, so moving prose also requires updating that index.
-
-`src/examples` teaches transferable techniques only. Nothing may import it, and it remains outside the production evidence populations. Add a technique, not finished production content.
+`src/examples` demonstrates transferable techniques only. Production source does not import it or place it in an evidence population.
 
 ## Verification
 
-Run the scaffold evidence gate after every topology or citation change. Falsify each new edge by removing one representative citation and confirming the intended diagnostic appears before restoring it. Build and test the repository, generate a fresh scaffold, and compile that generated production. If render, pose, expression, or motion changed, also follow the viewer-verification skill.
+After topology, contract, or citation changes, run the scaffold evidence gate. Falsify each new edge or refusal with a disposable negative probe, restore it, and require the normal graph to pass. Build and test the repository, generate a fresh scaffold from packed packages, and run that consumer's source lint, tests, design regeneration, and compile. Measure every changed executable scaffold source at 100% statements, branches, functions, and lines. For render, pose, expression, geometry, material, or motion changes, also follow the applicable 3D-modeling and viewer-verification skills.

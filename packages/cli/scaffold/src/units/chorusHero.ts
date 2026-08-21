@@ -29,9 +29,9 @@ const chorusProfile = (recipe: string): IAutoMovieProfile => ({
  * the formation that holds it is what a shot stages. What it owns is the
  * member's measured facts and the LOD ladder those facts imply.
  *
- * @evidence models/020-chorus.md Belongs to the complete reviewed CHORUS
- *   model design and no other model file.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that belongs to the complete reviewed CHORUS model design and no other model file, while its H2 citation delimits the member subset it realizes.
+ * @evidence models/020-chorus.md Owns the reviewed hero member recipe and its
+ *   LOD selection without claiming formation layout or an independent subject.
+ * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusMember in src/units/chorusHero.ts; confirmed that the class owns the reviewed hero member recipe and LOD selection without claiming formation layout or an independent subject, while its H2 citation delimits the member subset it realizes.
  * @evidence models/020-chorus.md#chorus-member-tier-representation Implements
  *   the hero recipe, scale check, material, walk profile, and LOD ladder.
  * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and ChorusMember in src/units/chorusHero.ts; confirmed this citation after checking the claim that implements the hero recipe, scale check, material, walk profile, and LOD ladder.
@@ -217,9 +217,9 @@ export const chorusHero = new ChorusMember();
  * tier is a row standing frozen behind rows that walk, which is the one thing
  * the group must never look like.
  *
- * @evidence models/020-chorus.md Belongs to the complete reviewed CHORUS
- *   model design and no other model file.
- * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that belongs to the complete reviewed CHORUS model design and no other model file, while its H2 citation delimits the distance-tier subset it realizes.
+ * @evidence models/020-chorus.md Owns one reviewed coarse distance tier that
+ *   preserves CHORUS member height, articulation, palette, and gait identity.
+ * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and ChorusTier in src/units/chorusHero.ts; confirmed that each instance owns one reviewed coarse distance tier preserving member height, articulation, palette, and gait identity, while its H2 citation delimits the distance-tier subset it realizes.
  * @evidence models/020-chorus.md#chorus-member-tier-representation Preserves
  *   member height, articulation, palette, and gait silhouette in coarse tiers.
  * @evidenceReview models/020-chorus.md#chorus-member-tier-representation #8993be3 Read models/020-chorus.md#chorus-member-tier-representation and ChorusTier in src/units/chorusHero.ts; confirmed this citation after checking the claim that preserves member height, articulation, palette, and the exact walk-only profile in coarse tiers.

@@ -25,9 +25,9 @@ import { chorus } from "../formations/chorus";
  * geometry is context-free and performance is not, and a class that pretended
  * otherwise would need a shot before it could say where it is.
  *
- * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
- *   design and no other model file.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the common world-piece boundary it realizes.
+ * @evidence models/040-plaza.md Defines the context-free contribution boundary
+ *   shared by the reviewed ground, centre landmark, and haze pieces of PLAZA.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and WorldPiece in src/world/plaza.ts; confirmed that the abstraction defines the context-free contribution boundary shared by the reviewed ground, centre landmark, and haze pieces, while its H2 citation delimits that common world-piece boundary.
  * @evidence models/040-plaza.md#plaza-world-composition Defines the common
  *   context-free contribution boundary for every reviewed world piece.
  * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and WorldPiece in src/world/plaza.ts; confirmed this citation after checking the claim that defines the common context-free contribution boundary for every reviewed world piece.
@@ -76,9 +76,9 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
  *
- * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
- *   design and no other model file.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the ground subset it realizes.
+ * @evidence models/040-plaza.md Owns the one reviewed level square whose
+ *   derived extent contains the formation and supplies both ground records.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaGround in src/world/plaza.ts; confirmed that the class owns the one reviewed level square whose derived extent contains the formation and supplies both ground records, while its H2 citation delimits the ground subset it realizes.
  * @evidence models/040-plaza.md#plaza-world-composition Implements the one
  *   derived level square used by both world and rendered surface records.
  * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaGround in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one derived level square used by both world and rendered surface records.
@@ -179,9 +179,9 @@ export class PlazaGround extends WorldPiece {
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
  *
- * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
- *   design and no other model file.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the landmark subset it realizes.
+ * @evidence models/040-plaza.md Owns the reviewed ground-level origin marker
+ *   that lets shots address `plaza-center` without copying its coordinates.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaCenterMark in src/world/plaza.ts; confirmed that the class owns the reviewed ground-level origin marker used by shots as `plaza-center`, while its H2 citation delimits the landmark subset it realizes.
  * @evidence models/040-plaza.md#plaza-world-composition Implements the reviewed
  *   named origin and its deterministic landmark record.
  * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and PlazaCenterMark in src/world/plaza.ts; confirmed this citation after checking the claim that implements the reviewed named origin and its deterministic landmark record.
@@ -213,9 +213,9 @@ export class PlazaCenterMark extends WorldPiece {
  * a recipe nothing activates is dead configuration, and a zone with no recipe
  * has nothing to emit.
  *
- * @evidence models/040-plaza.md Belongs to the complete reviewed PLAZA model
- *   design and no other model file.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that belongs to the complete reviewed PLAZA model design and no other model file, while its H2 citation delimits the atmosphere subset it realizes.
+ * @evidence models/040-plaza.md Owns the reviewed seeded smoke recipe and the
+ *   bounded low-contrast PLAZA region that activates it.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and PlazaHaze in src/world/plaza.ts; confirmed that the class owns the reviewed seeded smoke recipe together with its bounded low-contrast PLAZA region, while its H2 citation delimits the atmosphere subset it realizes.
  * @evidence models/040-plaza.md#plaza-atmosphere-proxy Implements the one
  *   reviewed seeded smoke recipe and bounded low-contrast effect zone.
  * @evidenceReview models/040-plaza.md#plaza-atmosphere-proxy #bf7943e Read models/040-plaza.md#plaza-atmosphere-proxy and PlazaHaze in src/world/plaza.ts; confirmed this citation after checking the claim that implements the one reviewed seeded smoke recipe and bounded low-contrast effect zone.
@@ -274,9 +274,9 @@ export class PlazaHaze extends WorldPiece {
  * them. Its record is the merge of what its pieces place, so adding a step
  * means adding a piece rather than editing an array in the middle of a blob.
  *
- * @evidence models/040-plaza.md Answers for the complete reviewed PLAZA model
- *   design and no other model file.
- * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that answers for the complete reviewed PLAZA model design and no other model file.
+ * @evidence models/040-plaza.md Owns the reviewed composition of level ground,
+ *   centre landmark, bounded haze, and their shared world and surface records.
+ * @evidenceReview models/040-plaza.md #87863be Read models/040-plaza.md and Plaza in src/world/plaza.ts; confirmed that the class owns the reviewed composition of level ground, centre landmark, bounded haze, and their shared world and surface records without answering another model file.
  * @evidence models/040-plaza.md#plaza-world-composition Composes exactly the
  *   reviewed ground, origin marker, and atmosphere pieces into one world.
  * @evidenceReview models/040-plaza.md#plaza-world-composition #dc0afe8 Read models/040-plaza.md#plaza-world-composition and Plaza in src/world/plaza.ts; confirmed this citation after checking the claim that composes exactly the reviewed ground, origin marker, and atmosphere pieces into one world.

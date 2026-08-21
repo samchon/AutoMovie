@@ -2,6 +2,26 @@
 
 Model documents specify the deterministic blocking representation that source code must construct. They neither redefine the subject's in-world identity nor prescribe changes over time.
 
+## Addressable model decisions {#addressable-model-decisions}
+
+Every independently implementable, citable, revisable, or reviewable representation decision has one stable H2. Geometry allocation, hierarchy, articulation interface, material zone, fidelity boundary, and review observation with different consumers or change paths are not hidden inside one umbrella unit or repeated in another file.
+
+Review question: which model decision could change or be implemented independently and therefore still needs its own H2 owner?
+
+This item owns the model-document address structure. The common substantive obligation owns the completeness of each addressed design unit, and the exact source edge owns its implementation.
+
+Sources: [NASA on unique identification and one requirement per statement](https://swehb.nasa.gov/pages/viewpage.action?pageId=146540037); [OpenUSD model and asset terminology](https://openusd.org/release/glossary.html)
+
+## Model information structure {#model-information-structure}
+
+Every H2 first identifies the represented part or observation, its central representation decision, applicable settings basis, and downstream consequence, then develops geometry, hierarchy, dimensions, surfaces, interfaces, limits, derivations, and review conditions in paragraphs with distinct functions. Tables and lists clarify mappings rather than replacing those decisions.
+
+Review question: can a reverse outline give every paragraph one design function without finding a second hidden owner or repeated orientation?
+
+This item owns information order inside a model H2. `addressable-model-decisions` owns the boundary between H2 units.
+
+Sources: [Purdue OWL on paragraph focus and support](https://owl.purdue.edu/owl/graduate_writing/introduction_to_writing/documents/drafting-your-document/organization-at-the-paragraph-level.pdf); [George Mason Writing Center on reverse outlining](https://writingcenter.gmu.edu/writing-resources/writing-as-process/reverse-outlining)
+
 ## Representation contract {#representation-contract}
 
 Every model file names the geometry strategy, hierarchy, reusable parts, and proxy status used to represent its settings subject. It applies the population's representation ceiling to this subject by naming the local observations the chosen proxy can and cannot support. When adjoining visible sides need different material or light responses, it gives them separate authored surface owners; one enclosing mass does not stand in for a ceiling, liner, or pane face with an independent response.

@@ -20,9 +20,9 @@ const ARRIVAL_SECONDS = 2;
 /**
  * Creates the reviewed neutral-to-raised transition and terminal hold.
  *
- * @evidence motions/010-soloist-cue.md Implements this motion file and no
- *   other motion design.
- * @evidenceReview motions/010-soloist-cue.md #c7f2166 Read motions/010-soloist-cue.md and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that implements this motion file and no other motion design.
+ * @evidence motions/010-soloist-cue.md Solely owns the reviewed left-arm
+ *   raise to 110 degrees by 2 seconds and its terminal hold.
+ * @evidenceReview motions/010-soloist-cue.md #c7f2166 Read motions/010-soloist-cue.md and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed that this function solely owns the reviewed left-arm raise to 110 degrees by 2 seconds and its terminal hold.
  * @evidence motions/010-soloist-cue.md#soloist-raise-hold Maps the declared
  *   start abduction to 110 degrees by 2 seconds and then holds it.
  * @evidenceReview motions/010-soloist-cue.md#soloist-raise-hold #d61383a Read motions/010-soloist-cue.md#soloist-raise-hold and createSoloistCueMotion in src/motions/soloistCue.ts; confirmed this citation after checking the claim that maps the declared start abduction to 110 degrees by 2 seconds and then holds it.
