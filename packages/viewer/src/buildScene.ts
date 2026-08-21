@@ -9,7 +9,6 @@ import * as THREE from "three";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 import { applyLightState } from "./applyLightMotion";
-import { applyPose } from "./applyPose";
 import { IAutoMovieModelObject, applyTransform } from "./buildModel";
 import { SPACE_GROUP_NAME, buildSpaceObject } from "./buildSpace";
 import { applySceneEnvironment } from "./sceneEnvironment";
@@ -70,15 +69,19 @@ export interface IAutoMovieSceneObject {
  * goes after them, and a host that prepends a child of its own breaks the
  * second one exactly as it always broke the first.
  *
- * A scene carrying a `space` also gets its ground drawn (#1173): the standable
- * surfaces become real meshes under one `SPACE_GROUP_NAME` group (see
- * {@link buildSpaceObject}), so the structural guide passes describe a world
- * instead of actors floating in a void. The group is added LAST, after the
- * nodes and lights, for that reason, and so the whole ground reads as one
- * colour rather than one per surface.
+ * A scene carrying a `space` also gets its structural ground (#1173): the
+ * standable surfaces become real meshes under one `SPACE_GROUP_NAME` group (see
+ * {@link buildSpaceObject}), so guide passes describe a world instead of actors
+ * floating in a void. Their ordinary material writes no beauty colour or depth,
+ * because a semantic support declaration is not evidence that physical floor
+ * geometry exists. The group is added LAST, after the nodes and lights, for
+ * that reason, and so the whole ground reads as one mask colour rather than one
+ * per surface.
  *
  * @evidence requirements/staging/scope-and-source-of-truth.md#staging-resolved-scene-state Materializes this surface from the resolved scene state only.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Keeps semantic support out of beauty while retaining it for structural products.
  * @evidence specifications/editorial-render-and-delivery/render-schedule-state-and-headless.md#spec-render-state-isolation Implements the boundary from resolved staging state to the viewer scene.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Implements the scene's support patch as structural-only render geometry.
  * @author Samchon
  */
 export const buildScene = (
@@ -106,7 +109,7 @@ export const buildScene = (
     nodeGroup.name = node.id;
     applyTransform(nodeGroup, node.transform);
     nodeGroup.add(built.object);
-    // Static posing (node.pose) is done by the caller via applyPose, since it
+    // Static posing (node.pose) is done by the caller via `applyPose`, since it
     // needs the model's skeleton, which buildScene does not resolve here.
     root.add(nodeGroup);
   }
@@ -161,10 +164,11 @@ export const buildScene = (
  * The requirement asks for caster and receiver to be **distinguished** rather
  * than blanket-enabled, and the product knows the difference at exactly one
  * place, which is here. A model's parts are solids: they cast and they receive.
- * The standable surfaces under {@link SPACE_GROUP_NAME} are planar patches
- * standing in for ground, with no volume to cast from, and a flat patch casting
- * onto its own plane produces depth acne rather than a shadow — so they
- * receive only. Anything carrying no geometry is untouched.
+ * The standable surfaces under {@link SPACE_GROUP_NAME} are semantic patches
+ * reserved for structural guide passes. They neither cast nor receive: a flat
+ * volume-free patch casting onto its own plane produces depth acne, while a
+ * patch receiving a shadow would promote the declaration back into beauty
+ * evidence of a physical floor. Anything carrying no geometry is untouched.
  *
  * Exported, and separate from {@link buildScene}, for the reason
  * {@link applySceneFog} is: a host that assembles its own scene graph — the
@@ -178,7 +182,9 @@ export const buildScene = (
  * production sees its frames change.
  *
  * @evidence requirements/lighting/shadows-reflections-and-transmission.md#lighting-shadow-identity Distinguishes the casting and receiving objects the shadow identity requirement holds apart from the source's own size, direction and bias.
+ * @evidence requirements/rendering/passes-channels-and-products.md#rendering-beauty-structural-distinction Prevents a structural-only support patch from entering beauty through shadow reception.
  * @evidence specifications/camera-light-and-visibility/light-transport-color-and-budget.md#clv-shadow-state-sampling Completes that shadow state at the object boundary, so the sampled state describes geometry that participates rather than a configured light with nothing to occlude.
+ * @evidence specifications/editorial-render-and-delivery/render-products-visibility-and-color.md#spec-render-pass-products Keeps structural support outside the beauty lighting product.
  * @author Samchon
  */
 export const applyAutoMovieShadowParticipation = (
@@ -198,7 +204,7 @@ export const applyAutoMovieShadowParticipation = (
     if ((object as THREE.Mesh).isMesh !== true) return;
     const patch = ground.has(object);
     object.castShadow = !patch;
-    object.receiveShadow = true;
+    object.receiveShadow = !patch;
   });
 };
 
@@ -357,9 +363,6 @@ const aimLight = <Light extends THREE.DirectionalLight | THREE.SpotLight>(
   light.add(light.target);
   return light;
 };
-
-/** Re-export so callers can pose static nodes after building the scene. */
-export { applyPose };
 
 /**
  * Re-export for the same reason, one rung further in: a scene carrying props is

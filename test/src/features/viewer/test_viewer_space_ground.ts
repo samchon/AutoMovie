@@ -9,7 +9,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
-import { namedFacts, nclose, vclose } from "../internal/predicates";
+import { nclose, vclose } from "../internal/predicates";
 
 const FLOOR_POLYGON = [
   { x: -2, y: 0, z: -1 },
@@ -262,86 +262,5 @@ export const test_viewer_space_ground = (): void => {
   TestValidator.predicate(
     "restoring puts the ground's beauty material back",
     groundMesh.material === beauty,
-  );
-};
-
-/**
- * The ground stand-in yields to an authored floor on the same plane.
- *
- * A production that builds its own slab and also declares the space standing on
- * it puts two surfaces at one height, and a `#1954` benchmark photographed the
- * result: a stepped diagonal seam across a living-room floor. Measured from the
- * compiled artifact rather than from the frame — the storey-owned slab spans
- * −0.2 to 0.0 so its **top face is exactly Y = 0.0**, and the room's walkable
- * polygon is **Y = 0**. The upper storey repeated it at 3.0 against 3.
- *
- * Neither surface is wrong and the renderer has no principled way to order two
- * coplanar faces, so the order is stated: the stand-in is biased away from the
- * eye and the authored floor wins.
- *
- * A bias rather than a suppression. This group exists for the scene that has no
- * floor of its own, and must still draw when nothing else is there; removing it
- * where a slab exists would need the viewer to decide which authored elements
- * count as floor, which is a judgement it has no basis to make.
- *
- * Scenarios:
- *
- * 1. Every standable surface carries a polygon offset, and it is **positive** —
- *    the sign is the whole assertion, because a negative one pulls the stand-in
- *    forward and hides the authored floor behind it, which is the same defect
- *    with the two surfaces swapped.
- * 2. A model's own meshes carry no offset, so only the stand-in yields. A
- *    blanket bias would order nothing, since two biased surfaces tie again.
- */
-export const test_viewer_space_ground_offset = (): void => {
-  const { scene } = sceneOf(
-    spaceOf([{ id: "floor", kind: "floor", polygon: FLOOR_POLYGON }]),
-  );
-  const patches: THREE.MeshStandardMaterial[] = [];
-  scene.getObjectByName(SPACE_GROUP_NAME)!.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh === true)
-      patches.push(
-        (object as THREE.Mesh).material as THREE.MeshStandardMaterial,
-      );
-  });
-  const modelMaterials: THREE.Material[] = [];
-  scene.getObjectByName("node-a")!.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh === true)
-      modelMaterials.push((object as THREE.Mesh).material as THREE.Material);
-  });
-
-  TestValidator.equals(
-    "the ground stand-in is biased behind an authored floor, and nothing else is",
-    namedFacts([
-      ["the space contributed a patch", () => patches.length > 0],
-      [
-        "every patch is offset",
-        () => patches.every((m) => m.polygonOffset === true),
-      ],
-      // The sign is the assertion. Reversed, the stand-in wins the tie and
-      // hides the floor a production actually authored.
-      [
-        "away from the eye rather than toward it",
-        () =>
-          patches.every(
-            (m) => m.polygonOffsetFactor > 0 && m.polygonOffsetUnits > 0,
-          ),
-      ],
-      ["the model contributed meshes", () => modelMaterials.length > 0],
-      [
-        "and none of them is offset",
-        () =>
-          modelMaterials.every(
-            (m) => (m as THREE.MeshStandardMaterial).polygonOffset !== true,
-          ),
-      ],
-    ]),
-    {
-      "the space contributed a patch": true,
-      "every patch is offset": true,
-      "away from the eye rather than toward it": true,
-      "the model contributed meshes": true,
-      "and none of them is offset": true,
-    },
   );
 };

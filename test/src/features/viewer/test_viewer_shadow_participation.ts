@@ -89,11 +89,10 @@ const meshesUnder = (root: THREE.Object3D): THREE.Mesh[] => {
  *
  * 1. A model's parts both cast and receive. They are the solids in the scene,
  *    and a solid that occludes nothing is the defect this closes.
- * 2. A standable surface receives and does **not** cast. The requirement asks
- *    for caster and receiver to be distinguished rather than blanket-enabled,
- *    and this is the one place the product knows the difference: a support
- *    patch is a planar stand-in for ground with no volume to cast from, and a
- *    flat patch casting onto its own plane yields depth acne, not a shadow.
+ * 2. A standable surface neither casts nor receives. It is a semantic patch
+ *    reserved for structural guide passes, not beauty geometry; receiving a
+ *    shadow would promote the declaration back into the delivered image, while
+ *    casting from a volume-free plane produces depth acne rather than a shadow.
  * 3. Non-mesh renderables are untouched. A grid helper, a line, a point cloud
  *    and a sprite carry the same `castShadow` field and mean nothing by it, so
  *    a rule that set every `Object3D` would silently claim they participate.
@@ -109,7 +108,7 @@ export const test_viewer_shadow_participation = (): void => {
   const nodeMeshes = meshesUnder(scene.getObjectByName("node-a")!);
 
   TestValidator.equals(
-    "solids cast and receive while a support patch only receives",
+    "solids cast and receive while a support patch participates in neither",
     namedFacts([
       ["the model contributed meshes", () => nodeMeshes.length > 0],
       [
@@ -124,8 +123,8 @@ export const test_viewer_shadow_participation = (): void => {
       // The whole distinction in one assertion. A blanket rule passes every
       // other fact in this case and fails this one.
       [
-        "which receives",
-        () => groundMeshes.every((mesh) => mesh.receiveShadow === true),
+        "which receives nothing",
+        () => groundMeshes.every((mesh) => mesh.receiveShadow === false),
       ],
       [
         "and casts nothing",
@@ -137,7 +136,7 @@ export const test_viewer_shadow_participation = (): void => {
       "and every one of them casts": true,
       "and receives": true,
       "the space contributed a patch": true,
-      "which receives": true,
+      "which receives nothing": true,
       "and casts nothing": true,
     },
   );
