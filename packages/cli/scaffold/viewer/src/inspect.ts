@@ -21,6 +21,7 @@ import { applyRendererEnvironment, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
+import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createCompiledShotRuntime } from "./shotRuntime";
 import { viewerDocument } from "./viewerDocument";
 
@@ -112,7 +113,7 @@ const eye = new THREE.PerspectiveCamera(
 const mounted = mountViewer(canvas, runtime.scene, eye, (elapsed) =>
   frame(elapsed),
 );
-mounted.renderer.setClearColor(0x11151b, 1);
+mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
 // One draw through the shot's own camera lowers the scene to its opening
 // second. `render` is what applies poses, prop articulation, object motion and
 // light motion, and nothing else does, so an eye flown over an unprimed graph

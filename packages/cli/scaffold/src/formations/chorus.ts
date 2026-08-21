@@ -8,6 +8,12 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
+import {
+  CHORUS_ADVANCE_METRES,
+  createChorusAdvanceMotion,
+} from "../motions/chorusAdvance";
+import { createChorusBreakMotion } from "../motions/chorusBreak";
+import { createChorusHoldMotion } from "../motions/chorusHold";
 import { ChorusMember, chorusHero } from "../units/chorusHero";
 
 /**
@@ -19,16 +25,27 @@ import { ChorusMember, chorusHero } from "../units/chorusHero";
  * compiler stores bounded chunks instead of scene nodes and the rows regenerate
  * from index and seed alone.
  *
- * The seed is declared here rather than chosen in source, so the same design
- * always materializes the same chorus.
+ * The seed is declared in the model design rather than invented by a caller,
+ * so the same design always materializes the same chorus.
  *
- * @evidence settings/020-chorus.md Answers the Silhouette and Cohesion
- *   sections, which are claims about the group and not about a member: the
- *   interval that must survive, the edge the rows read by, and the order that
- *   holds through the cue are all arrangement, and arrangement lives here.
- * @evidence principles/craft/form.md#line-of-action Keeps the
- *   rows as one readable mass with open ground ahead of it, so the soloist's
- *   gesture has space to read against.
+ * @evidence models/020-chorus.md Belongs to the complete reviewed CHORUS
+ *   model design and no other model file.
+ * @evidenceReview models/020-chorus.md #6744e96 Read models/020-chorus.md and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that belongs to the complete reviewed CHORUS model design and no other model file, while its H2 citations delimit the formation subset it realizes.
+ * @evidence models/020-chorus.md#chorus-formation-representation Implements
+ *   count, layout, anchor, facing, spacing, seed, and motion channels.
+ * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that implements count, layout, anchor, facing, spacing, seed, and motion channels.
+ * @evidence models/020-chorus.md#chorus-neutral-review-views Exposes stable
+ *   formation bounds and deterministic tier placement for inspection.
+ * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that exposes stable formation bounds and deterministic tier placement for inspection.
+ * @evidence principles/model-sources.md#design-owned-construction Keeps every
+ *   layout and hierarchy decision owned by the cited model design.
+ * @evidenceReview principles/model-sources.md#design-owned-construction #6cf1a71 Read principles/model-sources.md#design-owned-construction and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that keeps every layout and hierarchy decision owned by the cited model design.
+ * @evidence principles/model-sources.md#deterministic-build Uses one declared
+ *   seed and explicit dimensions to regenerate the same formation.
+ * @evidenceReview principles/model-sources.md#deterministic-build #bf45408 Read principles/model-sources.md#deterministic-build and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that uses one declared seed and explicit dimensions to regenerate the same formation.
+ * @evidence principles/model-sources.md#unsupported-fidelity-is-explicit
+ *   Refuses a count that cannot fill the reviewed row layout honestly.
+ * @evidenceReview principles/model-sources.md#unsupported-fidelity-is-explicit #d7527d5 Read principles/model-sources.md#unsupported-fidelity-is-explicit and Chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that refuses a count that cannot fill the reviewed row layout honestly.
  */
 export class Chorus extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,
@@ -71,9 +88,9 @@ export class Chorus extends AutoMovieSubjectGroup<
   /**
    * The deterministic seed every per-member variation is drawn from.
    *
-   * @evidence principles/source/subjects.md#build-is-pure Draws every
-   *   per-member
-   *   variation from a declared seed, so two compiles agree.
+   * @evidence models/020-chorus.md#chorus-formation-representation Draws every
+   *   per-member variation from the reviewed declared seed.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and seed in src/formations/chorus.ts; confirmed this citation after checking the claim that draws every per-member variation from the reviewed declared seed.
    */
   public readonly seed: number = 1415;
 
@@ -94,19 +111,7 @@ export class Chorus extends AutoMovieSubjectGroup<
   /** Which way the rows face, in degrees. */
   public readonly facingDeg: number = 180;
 
-  /**
-   * How far the group steps forward when a shot puts it in motion, in metres.
-   *
-   * The group owns the distance rather than each shot choosing one, because the
-   * place it stands on has to be large enough to hold the step and a plaza
-   * sized to a number no shot agreed to is a plaza the group walks off.
-   *
-   * Like every measured fact here it carries no citation of its own, because
-   * `@ttsc/evidence` does not yet select a class field as a unit
-   * (samchon/ttsc#1121). The instance's tag answers for it until then.
-   */
-  public readonly advanceMetres: number = 2;
-
+  /** The one reviewed member recipe this formation instances. */
   public members(): readonly ChorusMember[] {
     return [chorusHero];
   }
@@ -124,14 +129,15 @@ export class Chorus extends AutoMovieSubjectGroup<
    * longer has. `design()` is where the record leaves the class, which makes it
    * the one place every construction has to pass through.
    *
-   * @evidence settings/020-chorus.md States the rows stay in order and that
-   *   any loosening must be authored as a dramatic event.
+   * @evidence models/020-chorus.md#chorus-formation-representation Emits the
+   *   reviewed rows, columns, spacing, anchor, seed, and capabilities.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and design in src/formations/chorus.ts; confirmed this citation after checking the claim that emits the reviewed rows, columns, spacing, anchor, seed, and capabilities.
    */
   public design(): IAutoMovieFormationDesign {
     const slots = this.ranks * this.files;
     if (this.count <= slots - this.files || this.count > slots)
       throw new Error(
-        `docs/settings/020-chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
+        `docs/models/020-chorus.md requires rows and columns legible as rows and columns, so a count of ${this.count} cannot stand in ${this.ranks} rows of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last row empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
       );
     return {
       id: this.id,
@@ -146,7 +152,7 @@ export class Chorus extends AutoMovieSubjectGroup<
       anchor: this.anchor,
       facingDeg: this.facingDeg,
       seed: this.seed,
-      capabilities: ["advance", "break"],
+      capabilities: ["hold", "advance", "break"],
       heroOverrides: [
         { slot: 31, actor: "lead" },
         { slot: 1055, actor: "second" },
@@ -161,37 +167,36 @@ export class Chorus extends AutoMovieSubjectGroup<
    * scale is held at one on both ends rather than left to whatever the caller
    * passes.
    *
-   * The distance is the group's own {@link advanceMetres} rather than a caller's
-   * choice, because the place it stands on is sized to hold it. A shot free to
-   * pick a farther one would walk the rows off ground nobody widened.
+   * The distance is the motion design's {@link CHORUS_ADVANCE_METRES} rather
+   * than a caller's choice, because the place it stands on is sized to hold it.
+   * A shot free to pick a farther one would walk the rows off ground nobody
+   * widened.
    *
-   * @evidence settings/020-chorus.md States the rows remain in order while
-   *   the cue is given and after it.
+   * @evidence models/020-chorus.md#chorus-formation-representation Delegates
+   *   the reviewed translation to the motion owner and preserves intervals.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and advance in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation to the motion owner and preserves intervals.
    */
   public advance(props: {
     id: string;
     start: number;
     end: number;
   }): IAutoMovieFormationMotion {
-    const held = { lateral: 1, depth: 1 };
-    return {
-      id: props.id,
-      formation: this.id,
-      action: "advance",
-      start: props.start,
-      end: props.end,
-      from: {
-        translation: { x: 0, y: 0, z: 0 },
-        facingOffsetDeg: 0,
-        spacingScale: held,
-      },
-      to: {
-        translation: { x: 0, y: 0, z: -this.advanceMetres },
-        facingOffsetDeg: 0,
-        spacingScale: held,
-      },
-      easing: "easeInOut",
-    };
+    return createChorusAdvanceMotion({ ...props, formation: this.id });
+  }
+
+  /**
+   * Hold the complete advance endpoint for an explicit authored interval.
+   *
+   * @evidence models/020-chorus.md#chorus-formation-representation Delegates
+   *   the reviewed translation and spacing channels to the hold motion owner.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and hold in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates the reviewed translation and spacing channels to the hold motion owner.
+   */
+  public hold(props: {
+    id: string;
+    start: number;
+    end: number;
+  }): IAutoMovieFormationMotion {
+    return createChorusHoldMotion({ ...props, formation: this.id });
   }
 
   /**
@@ -201,14 +206,15 @@ export class Chorus extends AutoMovieSubjectGroup<
    * separate method with an explicit scale rather than an option on
    * {@link advance}: a caller has to say it meant to break the group.
    *
-   * Unlike {@link advanceMetres}, the scale is the caller's, so the place is not
-   * sized for it in advance: a plaza cannot pre-hold every loosening a story
-   * might author. A break that pushes the rows past the ground the shot staged
-   * is refused at compile time, naming the corner, and widening the place is
-   * the answer.
+   * Unlike {@link CHORUS_ADVANCE_METRES}, the scale is the caller's, so the
+   * place is not sized for it in advance: a plaza cannot pre-hold every
+   * loosening a story might author. A break that pushes the rows past the
+   * ground the shot staged is refused at compile time, naming the corner, and
+   * widening the place is the answer.
    *
-   * @evidence settings/020-chorus.md States any loosening is a dramatic
-   *   event and must be authored as one, never left to chance.
+   * @evidence models/020-chorus.md#chorus-formation-representation Delegates
+   *   only the reviewed uniform spacing channels to the motion owner.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and break in src/formations/chorus.ts; confirmed this citation after checking the claim that delegates only the reviewed uniform spacing channels to the motion owner.
    */
   public break(props: {
     id: string;
@@ -216,24 +222,7 @@ export class Chorus extends AutoMovieSubjectGroup<
     end: number;
     scale: number;
   }): IAutoMovieFormationMotion {
-    return {
-      id: props.id,
-      formation: this.id,
-      action: "break",
-      start: props.start,
-      end: props.end,
-      from: {
-        translation: { x: 0, y: 0, z: 0 },
-        facingOffsetDeg: 0,
-        spacingScale: { lateral: 1, depth: 1 },
-      },
-      to: {
-        translation: { x: 0, y: 0, z: 0 },
-        facingOffsetDeg: 0,
-        spacingScale: { lateral: props.scale, depth: props.scale },
-      },
-      easing: "easeOut",
-    };
+    return createChorusBreakMotion({ ...props, formation: this.id });
   }
 
   /**
@@ -243,8 +232,9 @@ export class Chorus extends AutoMovieSubjectGroup<
    * group means knowing its footprint, and computing it at each call site is
    * how two shots end up disagreeing about where the edge is.
    *
-   * @evidence settings/020-chorus.md States the group reads by its edges,
-   *   which is the measurement this returns.
+   * @evidence models/020-chorus.md#chorus-neutral-review-views Computes the
+   *   reviewed group footprint used by neutral bounds inspection.
+   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and footprint in src/formations/chorus.ts; confirmed this citation after checking the claim that computes the reviewed group footprint used by neutral bounds inspection.
    */
   public footprint(): { width: number; depth: number } {
     return {
@@ -260,17 +250,18 @@ export class Chorus extends AutoMovieSubjectGroup<
    * the question a place has to answer. Depth is measured from the anchor
    * outward rather than centred, because a row forms up behind its anchor
    * rather than around it, and the sign of the facing cannot make it reach less
-   * far, and it carries {@link advanceMetres} because a place has to hold the
-   * group where it goes rather than only where it forms up.
+   * far, and it carries {@link CHORUS_ADVANCE_METRES} because a place has to
+   * hold the group where it goes rather than only where it forms up.
    *
-   * @evidence settings/020-chorus.md States the group reads by its edges,
-   *   which is what this measures against the ground it stands on.
+   * @evidence models/020-chorus.md#chorus-neutral-review-views Extends the
+   *   reviewed footprint through its full authored advance for containment.
+   * @evidenceReview models/020-chorus.md#chorus-neutral-review-views #a9f6f94 Read models/020-chorus.md#chorus-neutral-review-views and reach in src/formations/chorus.ts; confirmed this citation after checking the claim that extends the reviewed footprint through its full authored advance for containment.
    */
   public reach(): number {
     const footprint = this.footprint();
     return Math.max(
       Math.abs(this.anchor.x) + footprint.width / 2,
-      Math.abs(this.anchor.z) + footprint.depth + this.advanceMetres,
+      Math.abs(this.anchor.z) + footprint.depth + CHORUS_ADVANCE_METRES,
     );
   }
 
@@ -281,8 +272,9 @@ export class Chorus extends AutoMovieSubjectGroup<
    * and merges the cue; standing still is the default because the specification
    * treats motion as an event rather than a state.
    *
-   * @evidence settings/020-chorus.md States the rows are in order while the
-   *   cue is given, which is a group that holds rather than moves.
+   * @evidence models/020-chorus.md#chorus-formation-representation Contributes
+   *   the reviewed standing formation while separate motion sources move it.
+   * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and render in src/formations/chorus.ts; confirmed this citation after checking the claim that contributes the reviewed standing formation while separate motion sources move it.
    */
   public render(
     context: IAutoMovieShotBuildContext,
@@ -294,11 +286,11 @@ export class Chorus extends AutoMovieSubjectGroup<
 /**
  * The production's one chorus.
  *
- * Carries the subject's citation until a class can carry its own
- * (samchon/ttsc#1121).
+ * The class owns the exact model file; this exported instance separately
+ * answers for constructing that reviewed formation once.
  *
- * @evidence settings/020-chorus.md Implements the rows-and-columns
- *   silhouette and the cohesion that specification requires while the cue is
- *   given.
+ * @evidence models/020-chorus.md#chorus-formation-representation Instantiates
+ *   the reviewed complete formation once.
+ * @evidenceReview models/020-chorus.md#chorus-formation-representation #fa5f1f2 Read models/020-chorus.md#chorus-formation-representation and chorus in src/formations/chorus.ts; confirmed this citation after checking the claim that instantiates the reviewed complete formation once.
  */
 export const chorus = new Chorus();

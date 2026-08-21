@@ -151,9 +151,9 @@ const inspectUncitedPenetration = (): void => {
     );
     const withRecords = rewriteSource(
       withImports,
-      "  const performer = soloist.render(context, { from: openingAbduction });",
+      "  const performer = soloist.render(context, { from: props.openingAbduction });",
       [
-        "  const performer = soloist.render(context, { from: openingAbduction });",
+        "  const performer = soloist.render(context, { from: props.openingAbduction });",
         "  const environment = new ExampleBuilding().design();",
       ].join("\n"),
     );

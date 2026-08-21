@@ -53,16 +53,19 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
 
 /**
- * The probe lives under `node_modules/.cache` for three reasons at once: it is
- * already ignored by git and by `format:check`, it is outside every
- * `pnpm-workspace.yaml` glob, and Node resolves from it up into the repository's
- * own `node_modules`, which is where `ttsc`, `@ttsc/lint`, and `@ttsc/evidence`
- * are installed. It is deliberately not under `experimental/`, which holds
- * credentialed sandboxes this gate must never read, write, or name.
+ * The probe lives under the CLI package's ignored `.cache` for four reasons at
+ * once: it is outside every workspace glob, local config imports remain outside
+ * `node_modules` for the lint evaluator's dependency graph, Node resolves
+ * through the adjacent CLI installation that carries the generated project's
+ * compiler dependencies, and the evaluator can resolve that installation's
+ * `@types/node` while compiling the config factory. It is deliberately not
+ * under `experimental/`, which holds credentialed sandboxes this gate must
+ * never read, write, or name.
  */
 const PROBE = path.join(
   ROOT,
-  "node_modules",
+  "packages",
+  "cli",
   ".cache",
   "automovie-scaffold-evidence-gate",
 );
@@ -84,26 +87,7 @@ const TSCONFIG = JSON.parse(
  * while this gate stayed green. `docs` is added because it hosts no compiled
  * file and every evidence reference the graph resolves.
  */
-const INHERITED = ["docs", ...TSCONFIG.include];
-
-/**
- * The one line of the scaffold that the probe may not take verbatim.
- *
- * `@ttsc/lint` evaluates `lint.config.ts` as its own generated project in a
- * temporary directory outside the probe, and that project resolves neither the
- * probe's `typeRoots` nor a hoisted `@types/node`. The directive therefore fails
- * there with TS2688, the config never evaluates, and `ttsc` then reports zero
- * lint diagnostics while still exiting on the type errors, which is the exact
- * shape of a passing run. A generated project installs `@types/node` for real
- * and never meets this, so the directive is a probe artifact rather than a
- * scaffold defect.
- *
- * The config body uses no Node global, so dropping the directive changes nothing
- * the graph is made of. `render` refuses to continue when the line is absent, so
- * a scaffold that stops carrying it fails loudly instead of silently skipping a
- * rewrite that no longer matches.
- */
-const NODE_TYPE_DIRECTIVE = '/// <reference types="node" />\n';
+const INHERITED = ["docs", "config/docs", ...TSCONFIG.include];
 
 /**
  * The two canaries, one per axis this gate reports on.
@@ -417,20 +401,6 @@ const render = () => {
   fs.rmSync(PROBE, { force: true, recursive: true });
   fs.mkdirSync(PROBE, { recursive: true });
   for (const relative of INHERITED) inherit(relative);
-
-  const configFile = path.join(PROBE, "lint.config.ts");
-  const config = fs.readFileSync(configFile, "utf8");
-  if (config.startsWith(NODE_TYPE_DIRECTIVE) === false)
-    throw new Error(
-      `packages/cli/scaffold/lint.config.ts no longer opens with ${JSON.stringify(
-        NODE_TYPE_DIRECTIVE.trim(),
-      )}; re-measure whether the probe still needs to drop it before editing this constant.`,
-    );
-  fs.writeFileSync(
-    configFile,
-    config.slice(NODE_TYPE_DIRECTIVE.length),
-    "utf8",
-  );
 
   fs.writeFileSync(
     path.join(PROBE, "package.json"),

@@ -51,7 +51,7 @@ export const test_mcp_design_citation_refusals_move_together = (): void => {
     // every starter record goes on citing the ids the index just dropped.
     const indexPath = path.join(
       fixture.root,
-      ".automovie/design/screenplay/index.json",
+      ".automovie/design/fixture-film/screenplay/index.json",
     );
     rewrite(indexPath, [
       ['"SCN-001"', '"SCN-900"'],

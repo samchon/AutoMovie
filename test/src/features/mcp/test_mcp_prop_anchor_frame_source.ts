@@ -46,9 +46,9 @@ export const test_mcp_prop_anchor_frame_source = (): void => {
     );
     const withPlacement = rewriteSource(
       withExampleImport,
-      "  const performer = soloist.render(context, { from: openingAbduction });",
+      "  const performer = soloist.render(context, { from: props.openingAbduction });",
       [
-        "  const performer = soloist.render(context, { from: openingAbduction });",
+        "  const performer = soloist.render(context, { from: props.openingAbduction });",
         "  const placement = new ExamplePlacementSuite().design();",
       ].join("\n"),
     );
@@ -58,17 +58,21 @@ export const test_mcp_prop_anchor_frame_source = (): void => {
       [
         "  return {",
         "    models: [...(placement.models ?? [])],",
-        "    props: [...(placement.props ?? [])],",
         "    builtEnvironments: [...(placement.builtEnvironments ?? [])],",
         "    actors:",
       ].join("\n"),
     );
+    const withProps = rewriteSource(
+      withRegistry,
+      "    props: [...(fixture.props ?? [])],",
+      "    props: [...(placement.props ?? []), ...(fixture.props ?? [])],",
+    );
     fs.writeFileSync(
       sourcePath,
       rewriteSource(
-        withRegistry,
-        "    stage: {\n      scene:",
-        "    stage: {\n      set: [...(placement.set ?? [])],\n      scene:",
+        withProps,
+        "      set: [...(fixture.set ?? [])],",
+        "      set: [...(placement.set ?? []), ...(fixture.set ?? [])],",
       ),
       "utf8",
     );

@@ -1,0 +1,20 @@
+{
+  "id": "answer-gate-mask",
+  "evidence": [
+    {
+      "reason": "The object-id mask verifies that the terminal insert contains the authored gate rather than an unresolved or incidental silhouette.",
+      "scene": "SCN-002"
+    }
+  ],
+  "target": {
+    "kind": "shot",
+    "id": "answer"
+  },
+  "criterion": {
+    "kind": "frame",
+    "frame": "shut-gate",
+    "pass": "mask",
+    "expectation": "The mask isolates plaza-gate at the shut-gate review frame with no unresolved subject identity."
+  },
+  "required": true
+}

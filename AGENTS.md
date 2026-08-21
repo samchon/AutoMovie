@@ -31,7 +31,7 @@ Work rules, testing, the per-change 100% coverage obligation, validation, conseq
 
 ### Scaffold Authoring
 
-How a production is authored inside `packages/cli/scaffold`: the prose ladder from principles and settings through storylines and scenarios to the script, subjects as classes under `src`, the research ledger beside the ladder, why an example there teaches a technique instead of shipping content, and the production-specific evidence graph in `lint.config.ts` that makes each rung answer for the one above it and stays correct for a production with no film in it at all, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
+How a production is authored inside `packages/cli/scaffold`: mutually exclusive film, brief, and library shapes; reusable principles and obligations under `config/docs`; production-specific settings, models, motions, prose, production, shot, and film-source evidence; staged review; and generated-project guidance, `.agents/skills/scaffold/SKILL.md`. Read before authoring or reviewing production content, and before editing the scaffold, which every generated project inherits verbatim.
 
 ### Documentation
 

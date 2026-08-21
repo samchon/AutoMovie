@@ -41,7 +41,7 @@ export const test_mcp_dangling_citation_names_its_record = (): void => {
     // smallest way to reproduce it: every starter record still cites the old id.
     const indexPath = path.join(
       fixture.root,
-      ".automovie/design/screenplay/index.json",
+      ".automovie/design/fixture-film/screenplay/index.json",
     );
     const index = fs.readFileSync(indexPath, "utf8");
     TestValidator.equals(

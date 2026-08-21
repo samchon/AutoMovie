@@ -1,0 +1,20 @@
+{
+  "id": "answer-beauty",
+  "evidence": [
+    {
+      "reason": "Beauty evidence verifies that the answering scene reads as a consequence.",
+      "scene": "SCN-002"
+    }
+  ],
+  "target": {
+    "kind": "shot",
+    "id": "answer"
+  },
+  "criterion": {
+    "kind": "frame",
+    "frame": "shut-gate",
+    "pass": "beauty",
+    "expectation": "The shut leaf and fixed post separate at the far edge while the held chorus remains readable as peripheral context at frame left."
+  },
+  "required": true
+}

@@ -49,6 +49,8 @@ const timing = (
  *    script describes it.
  * 4. A number that is part of an identifier is not a duration, so a scene may
  *    say its own `SCN-001` without being refused for it.
+ * 5. Evidence comments and fenced examples are not audience-facing prose, so
+ *    numbers inside either cannot invent a screenplay timing promise.
  */
 export const test_mcp_screenplay_timing_realized = (): void => {
   const fixture = productionFixture();
@@ -59,7 +61,27 @@ export const test_mcp_screenplay_timing_realized = (): void => {
       AutoMovieProductionProject.open(fixture.root),
     );
 
+    const anchoredHeadingIsStable =
+      compiler
+        .compile({ scope: "review" })
+        .diagnostics.filter(
+          (diagnostic) => diagnostic.code === "screenplay-heading-retitled",
+        ).length === 0;
     const asAuthored = timing(compiler, "review");
+
+    fs.writeFileSync(
+      scene,
+      `${authored}\n<!-- Review metadata mentions 1.1 seconds. -->\n\`\`\`html\n<!-- A literal example mentions 1.3 seconds.\n\`\`\`\n`,
+      "utf8",
+    );
+    const metadataAndExample = timing(compiler, "review");
+
+    fs.writeFileSync(
+      scene,
+      `${authored}\n\`\`\`html\n<!-- An unclosed literal comment.\n\`\`\`\nThe visible scene holds for 1.4 seconds.\n`,
+      "utf8",
+    );
+    const visibleAfterExample = timing(compiler, "review");
 
     // The cue window closes at 3.0 and the scene runs 6.0; 1.2 is neither.
     fs.writeFileSync(
@@ -76,7 +98,21 @@ export const test_mcp_screenplay_timing_realized = (): void => {
     TestValidator.equals(
       "a duration stated in scene prose must be one its shots carry",
       namedFacts([
+        [
+          "anExplicitEvidenceAnchorIsNotPartOfTheTitle",
+          () => anchoredHeadingIsStable,
+        ],
         ["theStarterScriptIsClean", () => asAuthored.length === 0],
+        [
+          "metadataAndExamplesMakeNoPromise",
+          () => metadataAndExample.length === 0,
+        ],
+        [
+          "aFenceLiteralCannotHideLaterProse",
+          () =>
+            visibleAfterExample.length === 1 &&
+            visibleAfterExample[0]!.message.includes("1.4s"),
+        ],
         ["restoringItIsCleanAgain", () => restored.length === 0],
         [
           "authoringWarns",
@@ -106,7 +142,10 @@ export const test_mcp_screenplay_timing_realized = (): void => {
         ],
       ]),
       {
+        anExplicitEvidenceAnchorIsNotPartOfTheTitle: true,
         theStarterScriptIsClean: true,
+        metadataAndExamplesMakeNoPromise: true,
+        aFenceLiteralCannotHideLaterProse: true,
         restoringItIsCleanAgain: true,
         authoringWarns: true,
         deliveringRefuses: true,

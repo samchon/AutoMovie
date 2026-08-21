@@ -1,0 +1,87 @@
+{
+  "id": "chorus-hero",
+  "role": "performer",
+  "archetype": "stickman",
+  "parameters": {
+    "height": 1.7,
+    "headRadius": 0.14,
+    "limbRadius": 0.05
+  },
+  "palette": {
+    "body": "#8f9d74"
+  },
+  "lod": [
+    {
+      "tier": "hero",
+      "maxDistance": 5,
+      "recipe": "chorus-hero"
+    },
+    {
+      "tier": "near",
+      "maxDistance": 12,
+      "recipe": "chorus-near"
+    },
+    {
+      "tier": "far",
+      "maxDistance": null,
+      "recipe": "chorus-far"
+    }
+  ],
+  "capabilities": [],
+  "attachments": [],
+  "profiles": [
+    {
+      "id": "chorus-hero-stride",
+      "name": "stride",
+      "controls": [],
+      "drivers": [],
+      "limits": [],
+      "gaits": [
+        {
+          "name": "walk",
+          "period": 0.95,
+          "limbs": [
+            {
+              "bone": "leftUpperLeg",
+              "phase": 0,
+              "duty": 0.55,
+              "amplitude": 30
+            },
+            {
+              "bone": "rightUpperLeg",
+              "phase": 0.5,
+              "duty": 0.55,
+              "amplitude": 30
+            },
+            {
+              "bone": "leftLowerLeg",
+              "phase": 0.25,
+              "duty": 0.5,
+              "amplitude": 18,
+              "neutral": 22
+            },
+            {
+              "bone": "rightLowerLeg",
+              "phase": 0.75,
+              "duty": 0.5,
+              "amplitude": 18,
+              "neutral": 22
+            },
+            {
+              "bone": "leftUpperArm",
+              "phase": 0.5,
+              "duty": 0.5,
+              "amplitude": 18
+            },
+            {
+              "bone": "rightUpperArm",
+              "phase": 0,
+              "duty": 0.5,
+              "amplitude": 18
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

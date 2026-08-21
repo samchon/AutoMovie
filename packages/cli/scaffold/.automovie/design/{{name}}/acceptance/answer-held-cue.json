@@ -1,0 +1,19 @@
+{
+  "id": "answer-held-cue",
+  "evidence": [
+    {
+      "reason": "The compiled event verifies that this shot independently holds the authored cue while the insert looks away.",
+      "scene": "SCN-002"
+    }
+  ],
+  "target": {
+    "kind": "shot",
+    "id": "answer"
+  },
+  "criterion": {
+    "kind": "event",
+    "event": "cue-answered",
+    "expectation": "The realized cue-answered event samples the raised arm at or above 100 degrees inside this shot rather than borrowing the opening realization."
+  },
+  "required": true
+}
