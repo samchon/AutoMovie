@@ -1,4 +1,4 @@
-// Create `experimental/<name>`: the CLI's shipped starter, rewired to consume
+// Create `experimental/<name>`: the CLI's blank scaffold, rewired to consume
 // this working tree instead of npm, so a change to any package can be driven by
 // a live coding agent without publishing anything.
 //
@@ -54,6 +54,9 @@ Options:
  */
 const RENAME = { gitignore: ".gitignore", npmrc: ".npmrc" };
 
+/** Working directories that are never part of a rendered scaffold. */
+const UNSHIPPED = new Set([".git", "node_modules"]);
+
 /** Substitute `{{key}}` tokens, throwing on an unknown key. */
 const renderTemplate = (content, variables) =>
   content.replace(/\{\{([A-Za-z0-9:_@./-]+)\}\}/g, (_match, key) => {
@@ -72,8 +75,10 @@ const listFiles = (root) => {
       .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (entry.isFile()) out.push(path.relative(root, full));
+      if (entry.isDirectory()) {
+        if (UNSHIPPED.has(entry.name)) continue;
+        walk(full);
+      } else if (entry.isFile()) out.push(path.relative(root, full));
     }
   };
   walk(root);
@@ -138,9 +143,9 @@ const renderSandbox = (name, specifiers) => {
  * The scaffold's Claude settings with the project's own MCP server approved.
  *
  * A `.mcp.json` server starts life unapproved, and `claude mcp list` reports it
- * as `Pending approval (run \`claude` to approve)`. Approval is interactive and
- * per-project, and `--dangerously-skip-permissions`does not grant it, so a
- * headless`claude -p` session against a fresh sandbox sees no automovie tools
+ * as `Pending approval (run claude to approve)`. Approval is interactive and
+ * per-project, and `--dangerously-skip-permissions` does not grant it, so a
+ * headless `claude -p` session against a fresh sandbox sees no automovie tools
  * at all and cannot be told to wait for any. Since the whole point of a sandbox
  * is to be driven by an agent, the generator grants that approval up front.
  *
@@ -161,7 +166,7 @@ const claudeSettings = (rendered) => {
  * The sandbox's manifest: the scaffold's, with every workspace package pinned
  * to its sibling tarball.
  *
- * Every one of the eight is pinned directly, including `ingest` and `render`
+ * Every one of the nine is pinned directly, including `evidence`, `ingest`, and `render`
  * which the scaffold never names. `pnpm pack` rewrites each packed package's
  * own `workspace:^` ranges into plain semver, so an unpinned member is fetched
  * from the public registry at a version this monorepo has never published, and
@@ -223,9 +228,10 @@ const main = () => {
 
     // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
     // a package fix reaches a sandbox whose production is mid-flight. Without
-    // it the only way to pick up a change is `--force`, which writes the
-    // starter's design, screenplay, and source back over the film in progress
-    // and destroys exactly the work the experiment exists to produce.
+    // it the only way to pick up a change is `--force`, which rewrites every
+    // scaffold-managed file and can destroy exactly the authored configuration,
+    // guides, scripts, viewer changes, and package wiring the experiment exists
+    // to exercise.
     if (args.includes("--refresh")) {
       const manifest = path.join(target, "package.json");
       if (fs.existsSync(manifest) === false)
@@ -283,7 +289,7 @@ const main = () => {
         `  cd experimental/${name} && codex\n\n` +
         `The sandbox installs packed working-tree tarballs, so after changing a\n` +
         `package under packages/ rerun this command with --refresh, which repacks\n` +
-        `and reinstalls without writing the starter back over work in progress.\n` +
+        `and reinstalls without rewriting scaffold-managed work in progress.\n` +
         `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
     );
     return 0;

@@ -1,6 +1,6 @@
 # Research
 
-Use `docs/research` only when a production decision depends on external evidence whose source identity, uncertainty, and production consequence need a durable review path. A production that needs no such ledger keeps the layer `disabled` and does not create the directory.
+Use `docs/research` only when a production decision depends on external evidence whose source identity, uncertainty, and production consequence need a durable review path. A production that needs no such ledger keeps the precreated branch empty and the layer `disabled`; it creates no Markdown host.
 
 ## Questions before prose
 
@@ -10,12 +10,12 @@ Search results, summaries, and collection portals are discovery routes. Open the
 
 ## Boundary
 
-Research does not decide production canon. A supported conclusion becomes a settings fact with its status and scope, while a representation, motion, narrative, or verification choice belongs to that layer. Cite the research H2 from the consuming authored H2 instead of copying its bibliography downstream.
+Research does not decide production canon. Interpret every adopted conclusion in a settings H2 with its status, scope, affected specialist layer, and production consequence. That settings owner cites the research H2; design, narrative, and verification layers cite the interpreted settings decision instead of copying the bibliography or creating a second research-to-production path.
 
 An interesting fact with no production consequence stays in `.wiki`. A direct production fact that needs no separate source-analysis trail may cite its retrievable support in the owning settings H2 without activating this optional layer.
 
 ## Gate
 
-Begin an enabled ledger with `research: "draft"`. Complete the selected evidence set and uncertainty audit before `evidence`. Research may reach `review` before a consumer exists; before a downstream consumer of that ledger begins, research must already be in `review`, and once the consumer participates in evidence, every research H2 must support at least one downstream H2.
+Begin an enabled ledger with `research: "draft"`. Complete the selected evidence set and uncertainty audit before `evidence`. Research may reach `review` before settings exists. Before settings begins, research must already be in `review`; once settings participates in evidence, every research H2 must support at least one settings H2. The relationship requires review fingerprints only when settings itself reaches `review`.
 
-When later evidence changes or contradicts a used source, update the research owner, the settings or design decision that interpreted it, every dependent unit, and the affected reviews.
+When later evidence changes or contradicts a used source, update the research owner, its interpreting settings decision, every dependent specialist or narrative unit, and the affected reviews.

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "public/audio/starter-tone.json",
+      "digest": "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa",
+      "original": {
+        "url": "https://raw.githubusercontent.com/samchon/AutoMovie/7458eabf8a383cbdac9f4da779f553936a72c1f4/packages/cli/scaffold/public/audio/starter-tone.json",
+        "digest": "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa"
+      },
+      "license": {
+        "identifier": "MIT",
+        "url": "https://github.com/samchon/AutoMovie/blob/7458eabf8a383cbdac9f4da779f553936a72c1f4/LICENSE",
+        "notice": "Copyright (c) Samchon; distributed with AutoMovie under the MIT License."
+      },
+      "processing": [],
+      "uses": [
+        {
+          "production": "{{name}}",
+          "consumer": {
+            "kind": "audio-cue",
+            "id": "starter-silent-guide"
+          },
+          "reason": "The starter film timeline uses this zero-gain guide stem as a deterministic audio integration fixture."
+        }
+      ]
+    }
+  ]
+}

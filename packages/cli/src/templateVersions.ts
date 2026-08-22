@@ -11,6 +11,7 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   archetypes: "^0.1.0",
   cli: "^0.1.0",
   engine: "^0.1.0",
+  evidence: "^0.1.0",
   interface: "^0.1.0",
   mcp: "^0.1.0",
   render: "^0.1.0",
@@ -30,7 +31,6 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   vite: "^5.4.10",
   nodeTypes: "^22.19.17",
   ttsc: "^0.28.1",
-  ttscEvidence: "^0.28.1",
   ttscLint: "^0.28.1",
   typescript: "^7.0.2",
 };

@@ -107,7 +107,7 @@ const swingY = (deg: number): { sin: number; cos: number } => {
  *
  * What a piece contributes does not depend on the shot it appears in, so it
  * states that once through {@link contribute} and hands the same answer to
- * whichever shot asks, exactly as `WorldPiece` does in `src/world`.
+ * whichever shot asks, exactly as a production-owned space or system does.
  */
 export abstract class ExamplePiece<TDesign> extends AutoMovieSubject<TDesign> {
   /** What this piece puts into a shot, independent of any shot. */

@@ -44,12 +44,7 @@ export const test_workspace_experimental_sandbox = (): void => {
     const settings = JSON.parse(
       fs.readFileSync(path.join(TARGET, ".claude", "settings.json"), "utf8"),
     ) as { enableAllProjectMcpServers?: boolean };
-    const authored = path.join(
-      TARGET,
-      "docs",
-      "settings",
-      "000-governing-aim.md",
-    );
+    const authored = path.join(TARGET, "README.md");
     const initial = fs.readFileSync(authored, "utf8");
     fs.writeFileSync(authored, `${initial}\nauthor work\n`, "utf8");
 
@@ -76,6 +71,10 @@ export const test_workspace_experimental_sandbox = (): void => {
         ],
         ["mcpApproved", () => settings.enableAllProjectMcpServers === true],
         [
+          "noWorkingResidue",
+          () => fs.existsSync(path.join(TARGET, "node_modules")) === false,
+        ],
+        [
           "refusedOverwrite",
           () =>
             repeated.status === 1 &&
@@ -94,6 +93,7 @@ export const test_workspace_experimental_sandbox = (): void => {
         created: true,
         portableRanges: true,
         mcpApproved: true,
+        noWorkingResidue: true,
         refusedOverwrite: true,
         refreshed: true,
         forced: true,

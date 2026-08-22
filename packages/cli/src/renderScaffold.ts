@@ -15,7 +15,7 @@ const RENAME: Record<string, string> = {
 };
 
 /**
- * Project-owned values interpolated into the starter's `{{...}}` tokens.
+ * Project-owned values interpolated into the scaffold's `{{...}}` tokens.
  *
  * @evidence requirements/agent-authoring/project-ownership.md#agent-portable-authoring Keeps the generated project's portable identity in explicit source input.
  * @evidence specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-input Carries that portable identity into deterministic scaffold derivation.
@@ -34,7 +34,7 @@ export interface IAutoMovieScaffoldProps {
 /**
  * Normalize `\r\n` → `\n` so the scaffold emits identical bytes on every host
  * (a Windows checkout with `core.autocrlf` would otherwise ship CRLF and drift
- * from the starter's own `lf` convention). The tree is text-only, so this is
+ * from the scaffold's own `lf` convention). The tree is text-only, so this is
  * unconditionally safe.
  */
 const normalizeLineEndings = (content: string): string =>
@@ -92,7 +92,7 @@ const listFiles = (root: string): string[] => {
     // on every host (localeCompare varies with host locale/ICU build).
     const entries = fs
       .readdirSync(dir, { withFileTypes: true })
-      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+      .sort((a, b) => Number(a.name > b.name) - Number(a.name < b.name));
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -106,12 +106,12 @@ const listFiles = (root: string): string[] => {
 };
 
 /**
- * Absolute path to the bundled starter assets, resolved relative to this module
+ * Absolute path to the bundled scaffold assets, resolved relative to this module
  * so it works both from `src` (ttsx, in development) and the published `lib`
  * (the `scaffold/` folder ships alongside).
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Locates the starter whose examples teach reusable authoring techniques instead of supplying finished production content.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the capability-oriented starter as the input to deterministic scaffold rendering.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Locates the scaffold whose examples teach reusable authoring techniques instead of supplying finished production content.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Exposes the capability-oriented scaffold as the input to deterministic scaffold rendering.
  */
 export const scaffoldAssetDirectory = (): string => {
   const directory = path.resolve(__dirname, "..", "scaffold");
@@ -121,7 +121,7 @@ export const scaffoldAssetDirectory = (): string => {
 };
 
 /**
- * Render the bundled starter into an in-memory `{ posixPath: content }` map:
+ * Render the bundled scaffold into an in-memory `{ posixPath: content }` map:
  * read every asset, normalize line endings, substitute `{{name}}` and the
  * catalog-synced `{{version:*}}` tokens, and rename shipped-safe filenames.
  *
@@ -130,13 +130,13 @@ export const scaffoldAssetDirectory = (): string => {
  * so the same output can be asserted in a test, written by the CLI, or handed
  * to another consumer without disk I/O in the middle.
  *
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Delivers the starter examples that explain one reusable technique, its controls, and its verification path.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-technique-example Delivers the scaffold examples that explain one reusable technique, its controls, and its verification path.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-topic-document-discovery Materializes the generated project's routed documentation corpus and its guide entry points.
- * @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Publishes the starter's documented authoring choices and declared capability limits together.
+ * @evidence requirements/agent-authoring/capability-discovery.md#agent-choice-surface-discovery Publishes the scaffold's documented authoring choices and declared capability limits together.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-diagnostic-discovery Ships the generated diagnostic commands and their documented recovery paths as ordinary project files.
  * @evidence requirements/agent-authoring/capability-discovery.md#agent-capability-gap-discovery Ships the contracts that distinguish missing implementation work from an unavailable product capability.
  * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-input-output Emits examples as reusable authoring guidance while leaving each production's content in project-owned source.
- * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Materializes an editable starter whose capability additions remain separate from project-owned content.
+ * @evidence specifications/authoring-and-authority/capability-and-content-boundary.md#spec-authoring-capability-extension-compatibility Materializes an editable scaffold whose capability additions remain separate from project-owned content.
  * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-closed-basis Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and the MCP compiler.
  * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-compile-refusal Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and the MCP compiler.
  * @evidenceExclude requirements/agent-authoring/deterministic-precomputation.md#agent-precomputed-explicit-generation Scaffold rendering writes template bytes; explicit generation, basis sealing, stale refusal, atomic derived publication, and provenance separation are performed later by the generated project's scripts and the MCP compiler.
@@ -148,10 +148,10 @@ export const scaffoldAssetDirectory = (): string => {
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-generation Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-manifest Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
  * @evidenceExclude specifications/authoring-and-authority/deterministic-precomputed-artifacts.md#spec-authoring-precomputed-portability Scaffold rendering writes template bytes and implements no derived ledger, basis closure, generation attempt, compile freshness matrix, publication path invariant, or budget boundary.
- * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits starter bytes but does not execute the generated compiler that records output lineage.
+ * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-derivation-output-lineage Scaffold materialization emits scaffold bytes but does not execute the generated compiler that records output lineage.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-change-impact-report Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change or emit its impact report.
  * @evidenceExclude specifications/authoring-and-authority/source-authority-and-derivation.md#spec-authoring-source-change-impact-invariant Scaffold materialization publishes the generated change-impact machinery but does not evaluate a production source change.
- * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable starter whose documentation and examples expose reusable authoring capabilities.
+ * @evidence requirements/agent-authoring/README.md#에이전트-저작-요구사항 Publishes a portable scaffold whose documentation and examples expose reusable authoring capabilities.
  * @evidence requirements/product/README.md#제품-계약-요구사항 Materializes reusable AutoMovie capability while leaving production facts in project-owned source.
  * @evidence specifications/authoring-and-authority/README.md#저작과-권한-시스템-명세 Derives editable project source from explicit scaffold identity and pinned inputs.
  * @evidenceExclude requirements/product/authorability.md#product-authoring-choice-space Scaffold materialization does not implement the product authoring choice space requirement; it only publishes reusable project-owned authoring capability.
@@ -201,39 +201,39 @@ export const scaffoldAssetDirectory = (): string => {
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-editor-export-exclusion Scaffold materialization does not implement the product editor export exclusion requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-exclusion-reopening Scaffold materialization does not implement the product exclusion reopening requirement; it only publishes reusable project-owned authoring capability.
  * @evidenceExclude requirements/product/scope-and-exclusions.md#product-nondeterministic-completion-exclusion Scaffold materialization does not implement the product nondeterministic completion exclusion requirement; it only publishes reusable project-owned authoring capability.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-agent-input-output Scaffold materialization does not implement the spec authoring agent input output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-compatibility Scaffold materialization does not implement the spec authoring authority compatibility system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-violation-failure Scaffold materialization does not implement the spec authoring authority violation failure system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-decision-authority-state Scaffold materialization does not implement the spec authoring decision authority state system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-runtime-evidence-authority-invariant Scaffold materialization does not implement the spec authoring runtime evidence authority invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-user-director-input Scaffold materialization does not implement the spec authoring user director input system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-adoption-output Scaffold materialization does not implement the spec authoring external adoption output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-execution-state Scaffold materialization does not implement the spec authoring external execution state system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-failure-substitution Scaffold materialization does not implement the spec authoring external failure substitution system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-request-output Scaffold materialization does not implement the spec authoring external request output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-selection-input Scaffold materialization does not implement the spec authoring external selection input system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-provider-compatibility Scaffold materialization does not implement the spec authoring provider compatibility system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-provider-source-invariant Scaffold materialization does not implement the spec authoring provider source invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Scaffold materialization does not implement the spec authoring host evidence output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Scaffold materialization does not implement the spec authoring knowledge request output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Scaffold materialization does not implement the spec authoring tool authoring invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility Scaffold materialization does not implement the spec authoring tool boundary compatibility system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Scaffold materialization does not implement the spec authoring tool choice discovery system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Scaffold materialization does not implement the spec authoring tool content side effect invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Scaffold materialization does not implement the spec authoring tool diagnostic failure system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-atomic-invariant Scaffold materialization does not implement the spec authoring partial atomic invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Scaffold materialization does not implement the spec authoring partial omission failure system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Scaffold materialization does not implement the spec authoring partial result checkpoint system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-resume-compatibility Scaffold materialization does not implement the spec authoring partial resume compatibility system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Scaffold materialization does not implement the spec authoring partial target input system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Scaffold materialization does not implement the spec authoring partial verification invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-work-state Scaffold materialization does not implement the spec authoring partial work state system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant Scaffold materialization does not implement the spec authoring choice determinism invariant system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity Scaffold materialization does not implement the spec authoring deterministic input identity system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output Scaffold materialization does not implement the spec authoring downstream fidelity output system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Scaffold materialization does not implement the spec authoring fidelity failure choice system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Scaffold materialization does not implement the spec authoring prototype exclusion compatibility system responsibility; it only derives the portable editable starter.
- * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Scaffold materialization does not implement the spec authoring structural output invariant system responsibility; it only derives the portable editable starter.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-agent-input-output Scaffold materialization does not implement the spec authoring agent input output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-compatibility Scaffold materialization does not implement the spec authoring authority compatibility system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-authority-violation-failure Scaffold materialization does not implement the spec authoring authority violation failure system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-decision-authority-state Scaffold materialization does not implement the spec authoring decision authority state system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-runtime-evidence-authority-invariant Scaffold materialization does not implement the spec authoring runtime evidence authority invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/delegation-and-decision-authority.md#spec-authoring-user-director-input Scaffold materialization does not implement the spec authoring user director input system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-adoption-output Scaffold materialization does not implement the spec authoring external adoption output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-execution-state Scaffold materialization does not implement the spec authoring external execution state system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-failure-substitution Scaffold materialization does not implement the spec authoring external failure substitution system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-request-output Scaffold materialization does not implement the spec authoring external request output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-external-selection-input Scaffold materialization does not implement the spec authoring external selection input system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-provider-compatibility Scaffold materialization does not implement the spec authoring provider compatibility system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/external-execution-and-provider-neutrality.md#spec-authoring-provider-source-invariant Scaffold materialization does not implement the spec authoring provider source invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-host-evidence-output Scaffold materialization does not implement the spec authoring host evidence output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-knowledge-request-output Scaffold materialization does not implement the spec authoring knowledge request output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-authoring-invariant Scaffold materialization does not implement the spec authoring tool authoring invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-boundary-compatibility Scaffold materialization does not implement the spec authoring tool boundary compatibility system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-choice-discovery Scaffold materialization does not implement the spec authoring tool choice discovery system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-content-side-effect-invariant Scaffold materialization does not implement the spec authoring tool content side effect invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/knowledge-evidence-and-tool-boundary.md#spec-authoring-tool-diagnostic-failure Scaffold materialization does not implement the spec authoring tool diagnostic failure system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-atomic-invariant Scaffold materialization does not implement the spec authoring partial atomic invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-omission-failure Scaffold materialization does not implement the spec authoring partial omission failure system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-result-checkpoint Scaffold materialization does not implement the spec authoring partial result checkpoint system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-resume-compatibility Scaffold materialization does not implement the spec authoring partial resume compatibility system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-target-input Scaffold materialization does not implement the spec authoring partial target input system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-verification-invariant Scaffold materialization does not implement the spec authoring partial verification invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/partial-targets-and-atomic-results.md#spec-authoring-partial-work-state Scaffold materialization does not implement the spec authoring partial work state system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-choice-determinism-invariant Scaffold materialization does not implement the spec authoring choice determinism invariant system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-deterministic-input-identity Scaffold materialization does not implement the spec authoring deterministic input identity system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-downstream-fidelity-output Scaffold materialization does not implement the spec authoring downstream fidelity output system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-fidelity-failure-choice Scaffold materialization does not implement the spec authoring fidelity failure choice system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-prototype-exclusion-compatibility Scaffold materialization does not implement the spec authoring prototype exclusion compatibility system responsibility; it only derives the portable editable scaffold.
+ * @evidenceExclude specifications/authoring-and-authority/prototype-determinism-and-fidelity.md#spec-authoring-structural-output-invariant Scaffold materialization does not implement the spec authoring structural output invariant system responsibility; it only derives the portable editable scaffold.
  * @author Samchon
  */
 export const renderScaffold = (

@@ -8,7 +8,7 @@ Before bulk settings prose, complete the [production-specific contract](work-spe
 
 Start from the applicable domains, then split, rename, or add ordered files as scale requires:
 
-| Starter | Domain |
+| Suggested file | Domain |
 | --- | --- |
 | `000-foundation.md` | production kind, delivery contract, governing aim, access, conventions, review condition, coverage map |
 | `010-world-and-time.md` | inherited reality, world laws, chronology, and pre-delivery state |
@@ -23,9 +23,9 @@ Audit every domain and create no empty or irrelevant file. Mark an unused domain
 
 ## Decomposition and structure
 
-Before drafting a file, inventory candidate owners and apply `config/docs/principles/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners.
+Before drafting a file, inventory candidate owners and apply `docs/principles/settings.md#addressable-canon`. Split anything with its own consumer, fact status, change path, or review. After drafting, inspect overview prose, tables, lists, and embedded biographies or specifications for hidden owners.
 
-Begin each H2 body after evidence comments with `**Status:**` and one or more of `externally supported`, `production invention`, `inherited default`, `derived`, or `unresolved`, plus a qualifier when the label alone hides scope. End an H2 containing externally checkable claims with a `Sources:` line. A pure production decision needs no invented authority.
+Begin each H2 body with `**Status:**` and one or more of `externally supported`, `production invention`, `inherited default`, `derived`, or `unresolved`, plus a qualifier when the label alone hides scope. In `evidence` or `review`, evidence comments sit between the heading and this status line. End an H2 containing externally checkable claims with a `Sources:` line. A pure production decision needs no invented authority.
 
 Apply the settings information-structure principle, then reverse-outline paragraphs by function. Split independently reviewable conditions, evidence, exceptions, and consequences; merge fragments and remove orientation that merely repeats the detailed body.
 

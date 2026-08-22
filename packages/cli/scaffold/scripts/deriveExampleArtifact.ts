@@ -14,7 +14,7 @@ import {
  * outside its own basis can change behavior without changing the digest, and
  * deleting the example after reading it would break this command.
  */
-const INPUT_PATH = "src/world/plaza.ts";
+const INPUT_PATH = "src/examples/buildings.ts";
 
 const deriveUtf8LineIndex = (input: Uint8Array): Uint8Array => {
   new TextDecoder("utf-8", { fatal: true }).decode(input);
@@ -31,7 +31,7 @@ const result = generateAutoMovieDerivedArtifact({
   root: findAutoMovieProjectRoot(process.cwd()),
   generator: "scripts/deriveExampleArtifact.ts",
   inputs: [INPUT_PATH],
-  output: ".automovie/derived/examples/plaza-line-index.json",
+  output: ".automovie/derived/examples/buildings-line-index.json",
   encoding: "utf8",
   generate: (inputs) => {
     const input = inputs[INPUT_PATH];

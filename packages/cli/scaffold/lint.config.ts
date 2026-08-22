@@ -1,58 +1,51 @@
-/// <reference types="node" />
-import { evidence } from "@ttsc/evidence";
+import { createAutoMovieEvidenceConfig, evidence } from "@automovie/evidence";
 import type { ITtscLintConfig } from "@ttsc/lint";
 
-import { createAutoMovieEvidenceConfig } from "./config/src/createAutoMovieEvidenceConfig";
-
 /**
- * The starter is a reviewed film. Change `kind` only when the production's
- * authored result changes shape, and advance each stage only in the order the
- * generated `AGENTS.md` defines.
+ * Select the production shape, then advance one layer at a time through
+ * `draft -> evidence -> review`. The generated project starts deliberately
+ * unselected and contains no production evidence inherited from its template.
  *
- * - `film` owns `storylines -> scenarios -> script -> shots -> filmSources`;
- *   `briefs` stays disabled.
- * - `brief` owns one bounded audiovisual brief, its shots, and film source; all
- *   three narrative layers stay disabled.
- * - `library` owns settings, production source, model or motion design, and
- *   their source without shots or film source.
+ * - film: settings -> storylines -> scenarios -> script -> shots -> filmSources
+ * - brief: settings -> briefs -> shots -> filmSources
+ * - library: settings plus any reviewed design/source branches, without shots
  *
- * `disabled` means the layer has no hosts because its kind forbids it or work
- * has not begun. An applicable layer advances through `draft`, `evidence`, and
- * `review`: draft owns the complete first version without graph pressure,
- * evidence enforces coverage, and review also requires current fingerprints.
- * A child cannot enter draft until its direct parents are reviewed.
+ * Film and brief also require reviewed productionSources as a parallel input
+ * before filmSources; it does not interrupt the prose-to-shot identity ladder.
+ *
+ * Research and the model, space, material, instance, motion, and system
+ * branches are optional only when the delivery genuinely does not use them.
+ * Never delete a shared claim, weaken its cardinality, or hide a resident host;
+ * add production-specific targets through `claims`.
  */
 const graph = createAutoMovieEvidenceConfig({
   location: import.meta.dirname,
-  kind: "film",
-  settings: "review",
+  kind: null,
+  settings: "disabled",
   research: "disabled",
-  models: "review",
-  motions: "review",
-  storylines: "review",
-  scenarios: "review",
-  script: "review",
+  models: "disabled",
+  spaces: "disabled",
+  materials: "disabled",
+  instances: "disabled",
+  motions: "disabled",
+  systems: "disabled",
+  storylines: "disabled",
+  scenarios: "disabled",
+  script: "disabled",
   briefs: "disabled",
-  modelSources: "review",
-  motionSources: "review",
-  shots: "review",
-  productionSources: "review",
-  filmSources: "review",
-
-  // The starter audit found no production-specific target beyond the shared
-  // graph. Add typed claims here with the target documents they activate.
+  modelSources: "disabled",
+  spaceSources: "disabled",
+  materialSources: "disabled",
+  instanceSources: "disabled",
+  motionSources: "disabled",
+  systemSources: "disabled",
+  shots: "disabled",
+  productionSources: "disabled",
+  filmSources: "disabled",
   claims: [],
 });
 
-/**
- * Generated-project lint policy.
- *
- * The evidence factory owns production-document and source traceability. The
- * remaining rules guard the async render path, discriminated unions, and the
- * ordinary TypeScript failures a generated project must reject on its first
- * `npm run lint:source`.
- */
-const config = {
+export default {
   format: {
     severity: "off",
     semi: true,
@@ -65,14 +58,10 @@ const config = {
     tabWidth: 2,
     useTabs: false,
     endOfLine: "lf",
-    sortImports: {
-      order: ["<THIRD_PARTY_MODULES>", "^[./]"],
-    },
+    sortImports: { order: ["<THIRD_PARTY_MODULES>", "^[./]"] },
     jsDoc: true,
   },
-  plugins: {
-    evidence,
-  },
+  plugins: { evidence },
   rules: {
     "evidence/graph": ["error", graph],
     "evidence/todo": "error",
@@ -94,5 +83,3 @@ const config = {
     "typescript/switch-exhaustiveness-check": "error",
   },
 } satisfies ITtscLintConfig;
-
-export default config;

@@ -85,6 +85,86 @@
           }
         }
       }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-additive-extension": {
+      "obligations": {
+        "additive-local-claims": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-construction": {
+      "obligations": {
+        "section-index": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "This heading groups the independently partitioned graph obligations below it and states no additional system behavior."
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-deterministic-result": {
+      "obligations": {
+        "deterministic-failure": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-physical-integrity": {
+      "obligations": {
+        "physical-population-integrity": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-shape-stage": {
+      "obligations": {
+        "shape-stage-machine": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/graph.md#spec-authoring-production-evidence-shared-contract": {
+      "obligations": {
+        "shared-contract": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/input.md#spec-authoring-production-evidence-declaration": {
+      "obligations": {
+        "section-index": {
+          "owner": {
+            "kind": "excluded",
+            "reason": "This heading groups the visible input-state obligation below it and states no additional system behavior."
+          }
+        }
+      }
+    },
+    "specifications/production-evidence/input.md#spec-authoring-production-evidence-input-state": {
+      "obligations": {
+        "visible-selection": {
+          "owner": {
+            "kind": "package",
+            "package": "@automovie/evidence"
+          }
+        }
+      }
     }
   },
   "legacy": {

@@ -135,7 +135,7 @@ const waterFeatures: IAutoMovieWaterFeature[] = staged(
  * The environmental questions this production asks, and the domains it requires
  * an answer for.
  *
- * Every list is empty in the starter, and that is the honest state rather than
+ * Every list is empty in a fresh scaffold, and that is the honest state rather than
  * a placeholder. A daylight study needs a workplane somebody chose to measure;
  * an envelope study needs a build-up whose thermal conductivity somebody
  * measured; a room-acoustic study needs an absorption coefficient; a

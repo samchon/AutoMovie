@@ -1,14 +1,16 @@
 # {{name}}
 
-This is a coding-agent-first AutoMovie production repository. Write production prose, model and motion decisions, source, shots, effects, audio integration, and tests as ordinary files. AutoMovie owns bounded design, deterministic generated output, geometry facts, actual-frame evidence, and review freshness.
+This is a coding-agent-first AutoMovie authoring repository. It deliberately starts without production prose, source, design records, assets, or review claims. Author prose, source, assets, and the screenplay index as ordinary project-owned files; emit the other tracked design records from reviewed source. AutoMovie supplies bounded design types and owns deterministic generated output, geometry facts, actual-frame evidence, and review freshness.
 
-Choose one production shape in `lint.config.ts`: `film` for `storylines -> scenarios -> script -> shots -> filmSources`, `brief` for one bounded non-narrative audiovisual result under `docs/briefs` followed by shots and film source, or `library` for model or motion source without shots or film source. Runtime does not decide the shape. Reusable per-file principles, per-unit common obligations, and distributed layer roles live under `config/docs`; production-specific settings, rules, model decisions, motion decisions, and prose live under `docs` and any additional target activates through an additive typed claim. Exact explicitly anchored film sequence/scene/beat identities are physically compared in order and nesting, while a brief uses delivery/shot/observation identities without a narrative ladder. Every governed source file has a named exported owner. Each exported model class cites exactly one model document, each exported motion function or property cites exactly one motion document, each exported shot or acceptance symbol cites exactly one script scene or brief shot, production source accounts for settings, and film source accounts for every screenplay sequence or brief delivery without taking over local shot composition.
+Choose one production shape in `lint.config.ts`: `film` for the exact `settings -> storylines -> scenarios -> script -> shots -> filmSources` ladder, `brief` for one bounded result that needs no independent narrative refinement through `settings -> briefs -> shots -> filmSources`, or `library` for reviewed design/source branches without shots. Film and brief also require reviewed `productionSources` as a parallel input before `filmSources`. Runtime does not decide the shape. Read `docs/README.md` for the non-overlapping settings, research, model, space, material, instance, motion, system, narrative, and brief ownership map.
 
-Each layer is `disabled`, `draft`, `evidence`, or `review`. Disabled means the layer has no hosts because the selected shape forbids it or its authorship has not begun. Draft holds the complete first version without graph-coverage pressure. Evidence activates citations after scope, addressability, completion, proportionality, placeholder, and omission audits. Review also requires current substantive fingerprints. Complete and review a parent across the production before beginning its child at draft. Production source follows reviewed settings; film source follows reviewed production source and shots. `npm run lint` enforces authored-document principles as per-file checklists, common obligations on every selected authored unit, layer roles as population coverage, exact lineage between prose units, source ownership, production-specific claims, and current review fingerprints.
+The project has one documentation root. Reusable shared targets live in `docs/principles` and `docs/obligations`; named authoring branches hold production hosts, and separately named production target families extend the graph. `lint.config.ts` owns every production stage and custom claim, while `@automovie/evidence` owns the reusable populations and topology checks. Add production-local claims; never replace or weaken the shared graph.
 
-`docs/research` is an optional upstream ledger and remains absent while disabled. Begin it at draft only when a production decision needs a durable external-evidence trail. Each entry identifies the source and used portion, its authority and material uncertainty, and the exact settings, model, motion, narrative, or review decision it constrains. When enabled, research must reach review before a consumer of the ledger begins, and every research H2 must support a downstream H2 once such a consumer participates in evidence. The owning production layer still makes the decision.
+Each layer is `disabled`, `draft`, `evidence`, or `review`. Draft is where the first version is authored and rejects premature evidence tags. Evidence begins only after that version passes scope, addressability, completion, proportionality, same-answer, contradiction, placeholder, and omission audits. Review also requires current substantive fingerprints. A child waits for reviewed parents. Empty active populations, resident disabled hosts, ownerless source, and mismatched film identities fail while the config loads.
 
-Keep the exact beat text and `SCN-*` identities in `docs/storylines` and `docs/script` aligned with `.automovie/design/<production>/screenplay/index.json`; once shots exist, retain locked numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions. `npm run lint` checks those joins and requires compiled realization plus completed shot/film acceptance evidence for the same realized shot before an active scene leaves the coverage ledger. Catalog entries bind explicitly to shared model, formation, and world-landmark ids; continuity claims name the exact passing outcome or acceptance scenario that proves them.
+`docs/research` is optional. When active, each H2 identifies one source and used portion, authority, uncertainty, and exact affected production decision. Research reaches review before settings begins; every adopted result is interpreted and cited by a settings H2 before specialist or narrative layers consume that setting. Research supports decisions but never makes them.
+
+Film storylines, scenarios, and script preserve identical filenames, explicit H2/H3/H4 anchors, nesting, and order. Keep beat text and `SCN-*` identities aligned with the hand-authored screenplay index; after shots exist, preserve deleted numbers as `OMITTED` and use alpha insertion ids.
 
 Every distributable file matched by the asset lint configuration belongs in `.automovie/assets.json`. Record its source URL, license, original/current SHA-256, processing chain, and reasoned use before referencing it. External glTF, GLB, and VRM entries also require explicit ingest, LOD, collision, and measurement-proxy decisions. Changed or unregistered bytes fail lint and compilation; ingestion itself remains a pure fixed-byte conversion.
 
@@ -18,22 +20,15 @@ Frame capture defaults to the Chromium build pinned to this project's Playwright
 
 ```bash
 npm install
-npm run capture:install
-npm run capture:doctor
-npm run build
 npm test
 npm run lint:source
-npm run lint
-npm run verify
-npm run preview -- --shot opening --time 2 --pass beauty
-npm run review:status
-npm run render -- all --tier proxy
-npm run viewer
 ```
+
+The empty design emitter, compile, review lint, preview, render, and verify commands fail until you select a kind and author their prerequisites. That is a truthful blank state, not setup failure. After reviewed source exists, add its explicit imports and `emit` calls to the marked block in `scripts/emitDesign.ts`; preserve the shell's unchanged-record and orphan-inventory checks. Then run `npm run design`, `npm run compile`, and the applicable review/render gates.
 
 Every checked-in `ttsc` and `ttsx` launcher, including the project-bound MCP command, pins its compiler cache to `node_modules/.cache/ttsc`. This keeps a generated project standalone even when its directory is nested below another workspace. Preserve that flag on new TypeScript launcher scripts instead of relying on upward workspace discovery.
 
-The viewer is available at `http://127.0.0.1:5173`. The starter intentionally ships with an incomplete review queue, so the first lint, verify, or finalization attempt may stop at a named review gate after proving the rest of the local pipeline. Complete those reviews through MCP, then repeat the same commands.
+After compilation, the viewer is available at `http://127.0.0.1:5173`. Run `capture:install` and `capture:doctor` before the first preview or render.
 
 Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline mirrors. The default `PLAYWRIGHT_BROWSERS_PATH=0` keeps the binary package-local; set that variable to an explicit path for a configured shared cache. To use a system browser deliberately, edit `automovie.config.ts`:
 
@@ -45,17 +40,15 @@ A `configured-executable` choice must declare both its product and path. Its exa
 
 Render evidence records structured Playwright, browser, executable, platform, headless/raster, backend, and actual WebGL identity. A browser/runtime change therefore produces a different content-addressed bundle; legacy v2 evidence must be recaptured.
 
-The sample review queue is deliberately incomplete. Open the PNG printed by `preview`, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or `REVIEW_FILM` contract through MCP, and review current evidence.
+Open every PNG named by the review queue, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or `REVIEW_FILM` contract through MCP, and review only current evidence.
 
-## Your own production
+## Begin the production
 
-The starter is one complete film. Starting another film, a direct brief, or a model and motion library means replacing its authored topology as one coherent pass, and the design records are the half that is easy to leave behind. They are derived: `scripts/emitDesign.ts` builds each record from the typed source that owns it and `npm run design` stores it. That script is this production's own code and names your modules explicitly, so it is edited in the same pass as the sources it imports.
+Select the kind and begin research or settings at draft. Review settings before activating design or narrative children. For each applicable design branch, review its Markdown before activating matching source. Film and brief shots wait for reviewed prose and the reviewed source corresponding to every active design branch.
 
-Two consequences decide how a replacement goes. The emitter writes and never deletes, so a starter record you stop deriving stays resident and keeps asking for the shot it names. `npm run design` refuses while one is there and prints its project-relative path, so this layer's removal set is one command rather than a hunt. Delete the file it names, or derive it from a source that owns it. And the screenplay index is not derived at all, by design, so it is never named there. Production and film source now belong to explicit evidence populations; starter ids can still survive where no evidence claim reaches at all: `automovie.config.ts`, `.automovie/assets.json`, and `test` remain outside the graph. Those three are yours to find; nothing counts them.
+The design emitter is production-owned code. Import each reviewed source explicitly, state shot module/export addresses, and store every owned record through project setters. It writes and never deletes, so a record you stop deriving remains residue until you delete it or restore its owner. The screenplay index remains hand-authored. `viewer/src/viewerDocument.ts` begins with a neutral clear color so the blank viewer compiles; if that color remains visible in the delivery, replace it with one imported from reviewed production or system source rather than authoring a second visual grammar in viewer code.
 
-That refusal is the only place the question can be asked. A resident record that references only other resident records is internally consistent, so the compiler has nothing to refuse and builds it into `generated` instead: measured on a real replacement, four starter model recipes and a formation compiled into a finished production at `success: true` with zero diagnostics. Whether a record still has an owner is a question only the script that derives them can answer.
-
-Replacement is one pass rather than a milestone you can close halfway. Documents, source, and design cite each other in both directions, so the build stays red from the first deletion until the last authored record lands. Read `PRODUCTION_DESIGN` through MCP for the ordered procedure.
+Read `EVIDENCE_GRAPH` for the authoring graph and `PRODUCTION_DESIGN` for typed design emission. The scaffold contains no completed production to delete.
 
 ## Offline geometry measurements
 
@@ -64,9 +57,26 @@ Two measurements already ship. `npm run building:report` derives every drawing s
 Beyond those, measurement scripts and tests may load the current project snapshot without an MCP session:
 
 ```ts
-import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState, } from "@automovie/cli"; import { Vector3, formationSlot } from "@automovie/engine";
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { Vector3, formationSlot } from "@automovie/engine";
 
-const loaded = loadAutoMovieProjectState({ root: process.cwd() }); const state = requireCurrentAutoMovieProjectState(loaded); const formation = state.generated.design.formations.get("chorus")!; const slot = formationSlot(formation, 31); const landmark = state.generated.design.world.landmarks[0]!; const meters = Vector3.length( Vector3.subtract(slot.position, landmark.position), );
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+const state = requireCurrentAutoMovieProjectState(loaded);
+const formation = state.generated.design.formations.get(
+  "<authored-formation-id>",
+);
+const landmark = state.generated.design.world.landmarks.find(
+  (item) => item.id === "<authored-landmark-id>",
+);
+if (formation === undefined || landmark === undefined)
+  throw new Error("Select authored formation and landmark ids.");
+const slot = formationSlot(formation, 0);
+const meters = Vector3.length(
+  Vector3.subtract(slot.position, landmark.position),
+);
 ```
 
 The loaded state includes the generated compile fingerprint, the fingerprint recomputed from current inputs, the project revision, and an explicit `current`, `stale`, or `missing` status. Always require current state before calling pure engine reach, distance, camera, or formation functions.

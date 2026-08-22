@@ -21,9 +21,8 @@ import { applyRendererEnvironment, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
-import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createCompiledShotRuntime } from "./shotRuntime";
-import { viewerDocument } from "./viewerDocument";
+import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 
 // The eye's own clip range, deliberately wider than any authored camera's: an
 // inspection eye is put against a moulding one minute and outside the whole set
@@ -72,7 +71,11 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 const { canvas, status } = viewerDocument();
 const parameters = new URLSearchParams(window.location.search);
-const shotId = parameters.get("shot") ?? "opening";
+const shotId = parameters.get("shot")?.trim();
+if (shotId === undefined || shotId === "")
+  throw new Error(
+    "No shot was selected. Open this page with ?shot=<authored-shot-id>.",
+  );
 const response = await fetch(
   `/__automovie/shots/${encodeURIComponent(shotId)}.json`,
 );
@@ -113,7 +116,7 @@ const eye = new THREE.PerspectiveCamera(
 const mounted = mountViewer(canvas, runtime.scene, eye, (elapsed) =>
   frame(elapsed),
 );
-mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
+mounted.renderer.setClearColor(VIEWER_BACKGROUND, 1);
 // One draw through the shot's own camera lowers the scene to its opening
 // second. `render` is what applies poses, prop articulation, object motion and
 // light motion, and nothing else does, so an eye flown over an unprimed graph

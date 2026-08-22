@@ -78,6 +78,7 @@ export const resolveTemplateVersions = () => ({
   archetypes: packageVersion("packages/archetypes"),
   cli: packageVersion("packages/cli"),
   engine: packageVersion("packages/engine"),
+  evidence: packageVersion("packages/evidence"),
   interface: packageVersion("packages/interface"),
   mcp: packageVersion("packages/mcp"),
   render: packageVersion("packages/render"),
@@ -100,7 +101,6 @@ export const resolveTemplateVersions = () => ({
   vite: catalogVersion("vite", "vite"),
   nodeTypes: catalogVersion("utils", "@types/node"),
   ttsc: catalogVersion("typescript", "ttsc"),
-  ttscEvidence: catalogVersion("typescript", "@ttsc/evidence"),
   ttscLint: catalogVersion("typescript", "@ttsc/lint"),
   typescript: catalogVersion("typescript", "typescript"),
 });
@@ -114,6 +114,7 @@ export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
   "archetypes",
   "cli",
   "engine",
+  "evidence",
   "interface",
   "mcp",
   "render",

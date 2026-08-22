@@ -27,9 +27,9 @@ const timing = (
  * the index declares, the coverage gate checks that every active scene has a
  * realizing shot, and `realizeShotContract` evaluates every authored opening,
  * closing, and event predicate against the compiled artifact — none of them
- * reads the scene's prose. So the shipped starter said "the hand holds at its
- * height for 1.2 seconds" beside a shot whose cue window closes at 3.0 of a 6.0
- * second scene, and every gate stayed green.
+ * reads the scene's prose. So the completed regression fixture says "the hand
+ * holds at its height for 1.2 seconds" beside a shot whose cue window closes at
+ * 3.0 of a 6.0 second scene, and every gate stayed green.
  *
  * `#story-falsifiable-acceptance` asks a story success condition to carry a
  * subject, a time, an observable state, and a failure condition;
@@ -102,7 +102,7 @@ export const test_mcp_screenplay_timing_realized = (): void => {
           "anExplicitEvidenceAnchorIsNotPartOfTheTitle",
           () => anchoredHeadingIsStable,
         ],
-        ["theStarterScriptIsClean", () => asAuthored.length === 0],
+        ["theFixtureScriptIsClean", () => asAuthored.length === 0],
         [
           "metadataAndExamplesMakeNoPromise",
           () => metadataAndExample.length === 0,
@@ -143,7 +143,7 @@ export const test_mcp_screenplay_timing_realized = (): void => {
       ]),
       {
         anExplicitEvidenceAnchorIsNotPartOfTheTitle: true,
-        theStarterScriptIsClean: true,
+        theFixtureScriptIsClean: true,
         metadataAndExamplesMakeNoPromise: true,
         aFenceLiteralCannotHideLaterProse: true,
         restoringItIsCleanAgain: true,

@@ -59,7 +59,7 @@ const throwingInstrument = (): {
  * before this. Telling a client to correct an instrument that is working sends
  * it to the one place the fault is not, and the shipped host reads a thrown
  * error as proof its page is unusable, so it discards a staged scene that is
- * intact: measured on the starter production, one model-space subject mid-sweep
+ * intact: measured on the completed fixture, one model-space subject mid-sweep
  * cost the next subject a whole scene rebuild, which is the cost `#1956` exists
  * to remove.
  *

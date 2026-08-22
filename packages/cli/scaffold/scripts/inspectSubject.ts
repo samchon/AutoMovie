@@ -314,8 +314,8 @@ export const inspectProductionSubject: AutoMovieProductionSubjectInspection =
     // The page answered, so the page is working. A subject it cannot frame is a
     // fact about that subject and not about the staged scene behind it, and
     // discarding the page over one would rebuild the whole shot for the next
-    // subject - the cost `#1956` was opened to remove. Measured on the starter
-    // production: a sweep holding one page across 42 subjects and 252 draws
+    // subject - the cost `#1956` was opened to remove. Measured on the
+    // repository regression film: a sweep holding one page across 42 subjects and 252 draws
     // opened a second page as soon as one model-space subject was asked for,
     // and the prototype review obligation asks for a population that is
     // entirely model-space. So the page stays resident and the refusal travels

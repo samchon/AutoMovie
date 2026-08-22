@@ -10,7 +10,7 @@ Runtime is the intended finished duration, not the duration of the current sampl
 
 The deliverable inventory must not be empty, and each entry declares a `kind` over a closed vocabulary: `preview`, `feature`, `guide-pass`, `captions`, `audio-mix`. Only a `guide-pass` entry may own a `pass`, and that pass is a structural pass other than beauty; any other kind carrying one is refused at design scope. Declaring a guide pass here states what the production intends to output, and it is not what makes review capture one. The shot's own review frames decide that, so a production that wants a mask judged edits both records. Read `SHOT_CONTRACT`.
 
-A production whose deliverable is a set of held views (an exterior, a cut-away, one room) obeys the same clock as a film. There is no still-image compile scope and no survey exemption: each view is a shot with a duration on the production clock, every shot is placed in the edit or explicitly omitted there, and the declared runtime must equal the frame the assembled timeline ends on before `review` will pass. Declare a runtime you intend to fill rather than one the edit will chase, and give each held view enough frames that its review frames have somewhere to land. Read `EDITING` for the edit that places them.
+A film or brief whose timed deliverable is a set of held views (an exterior, a cut-away, one room) obeys the same clock as any other audiovisual result. There is no still-image compile scope and no survey exemption for that timed delivery: each view is a shot with a duration on the production clock, every shot is placed in the edit or explicitly omitted there, and the declared runtime must equal the frame the assembled timeline ends on before `review` will pass. Declare a runtime you intend to fill rather than one the edit will chase, and give each held view enough frames that its review frames have somewhere to land. A `library` instead ends at reviewed design/source branches; its neutral model, space, material, instance, motion, and system samples are design evidence rather than shots on a film clock. Read `EDITING` for the edit that places film or brief views.
 
 `storyClock` is optional and declares a second timeline: when the film says things happened, as distinct from the order it shows them. It carries only a unit and a non-blank statement of what story time zero denotes. Declaring it is what makes a shot's `storyTime` pin and a `story-sync` acceptance criterion legal; a production that asserts nothing about story time omits it and is unaffected. The frame clock stays the delivery clock. The story clock never changes a duration, a frame index, or the edit.
 
@@ -64,32 +64,30 @@ Do not declare a deliverable required unless the repository has or will have a d
 
 ## Where these records come from in a scaffold production
 
-The order above says which records to edit. In a production stamped from the scaffold it does not say to edit them by hand, because `scripts/emitDesign.ts` derives every one of them from the typed sources that own them and `npm run design` stores what it derived. A record and its typed source are two representations of one fact and the compiler refuses the pair when they disagree, so editing the JSON alone produces that refusal rather than the change you wanted.
+The generated scaffold is an empty authoring harness. Its checked-in `scripts/emitDesign.ts` refuses to invent records because no generic script can know which production modules own a user's models, spaces, materials, instances, motions, systems, shots, or edit. Author that script only after those owners exist.
 
-That script is production-owned code rather than scaffolding to inherit and leave alone. It imports your units, formations, world, and shots by module path, and it states each shot's own `module` and `export`, because a module cannot know the path anything reaches it by and an export cannot read its own name. Sources that move while that script does not leave a design layer still describing the film you deleted.
+Keep each fact in one typed owner and derive the tracked record from it. Model owners live under `src/models`, spatial topology under `src/spaces`, surface construction and response under `src/materials`, repeated populations under `src/instances`, time-varying behavior under `src/motions`, and coupled processes under `src/systems`. A timed film or brief additionally owns `src/shots`, `src/production.ts`, and `src/film.ts`. The matching design documents live under the same-named branches of `docs`; the exact film narrative ladder is `docs/settings -> docs/storylines -> docs/scenarios -> docs/script`.
 
-These properties of the derivation decide how a replacement goes.
+Extend the marked block in `scripts/emitDesign.ts` to import the production's real owners and call its `emit` wrapper explicitly. Preserve the generic setter wrapper and final inventory comparison. A module cannot discover the path by which another module imports it, and an export cannot read its own export name, so the script states every shot's `module` and `export`. The compiler compares each tracked record with its typed owner; editing only the JSON is therefore a disagreement, not a shortcut.
 
-- **It writes and never deletes, and it refuses what it no longer derives.** A record you stop deriving stays resident, and a resident shot contract is a live obligation at every scope, `design` included. The script compares the project's inventory against what the run derived and fails naming each unowned record's own path, so the design layer's removal set is that output rather than a hunt. Delete the file it names, or derive it from a source that owns it.
-- **An unchanged record is not re-stored.** A design mutation stales every dependent shot, review, and render by design, so re-deriving an identical record is deliberately not a mutation.
-- **The screenplay index is not derived at all.** It stays hand-authored and `SCREENPLAY_WRITING` owns it. Why a scene covers a beat is stated in no document, so nothing can generate it.
+The derivation obeys four rules.
 
-## Replacing the starter with your own film
+- **It writes and never deletes.** A record that the script stops deriving remains a live obligation. Compare the project inventory with the records derived in the current run and fail with every unowned path; remove each named record deliberately or restore its owner.
+- **It skips an unchanged record.** Re-storing equal bytes would stale dependent shots and reviews without changing the production.
+- **It never invents narrative intent.** The screenplay index stays hand-authored because no table can prove why a scene realizes a beat.
+- **It covers every resident record.** A mutually consistent orphan can still compile. The emitter's exact derived inventory is the ownership check that finds it.
 
-The scaffold ships one complete film. Starting your own means replacing all of it, and that is one pass rather than a stage you can close green in the middle.
+## Authoring the first production
 
-The evidence graph binds documents, source, and design in both directions, so a partial replacement is red from either side: delete the starter's documents and its classes cite nothing, delete its classes and its documents claim subjects nobody authored. One measured run left the starter's documents standing while it moved everything else and read about forty unresolved evidence targets for it. Expect red from the first deletion until the last authored record lands, and treat it as red you are walking through rather than red you are diagnosing.
+Select exactly one production kind in `lint.config.ts`, then advance only the branches that kind permits. `film` owns the complete narrative ladder and film source. `brief` owns one bounded `docs/briefs` contract and no screenplay hierarchy. `library` owns reusable design branches and no shots or edit. Runtime and aspect ratio do not change that classification.
 
-1. Author your own documents under `docs/<name>`, and your own screenplay index.
-2. Author your own subjects, world, formations, and shots under `src`.
-3. Rewrite `scripts/emitDesign.ts` to derive from those modules, then run `npm run design`. It stores what it derived and then fails with the list of records it no longer owns.
-4. Delete the records that run named, and the starter modules and documents nothing cites any more. Rerun it until it exits clean.
-5. Correct what no claim reaches: `src/film.ts` and `src/production.ts` sit inside `src` and outside both of its evidence claims, and `automovie.config.ts`, `.automovie/assets.json` and `test` are outside the graph entirely. All five carry starter ids and nothing counts them.
-6. Compile, and read the diagnostics as the remaining list.
+1. Research uncertain external facts under `docs/research`, interpret every adopted result in a citing settings H2, then author the needed design branches under `docs`.
+2. For a film, author settings first, then preserve exact filename and H2/H3/H4 identity through storylines, scenarios, and script. For a brief or library, keep the film-only narrative branches absent.
+3. Author typed owners only in their declared `src` branches. Every named export carries the exact evidence citation required by `lint.config.ts`.
+4. Implement `scripts/emitDesign.ts` from those owners and publish the tracked design records. Keep `.automovie/design` empty until this step; generated output is never an authoring surface.
+5. Compile at the narrowest truthful scope, resolve every graph and compiler diagnostic, and advance a stage only after its review is complete.
 
-Do not wait for a diagnostic to find the design layer for you. A resident record that references only other resident records is internally consistent, so the compiler has nothing to refuse: measured on a real replacement, four starter model recipes and a formation were restored into a finished production and `compile` returned `success: true` with zero diagnostics while building them into that production's `generated` output. Whether a record still has an owner is a question only the script that derives them can answer, which is why step 3 is the step that finds them.
-
-Do not plan a documents-only milestone that ends on a green build. It cannot exist, and one benchmark run spent two authoring turns discovering that.
+A documents-only milestone may be a truthful draft, but it is not a completed production. A source-only milestone with no reviewed design claim is equally incomplete. The staged graph exists so incomplete work can be represented without weakening or disabling the final obligations.
 
 ## What the design declaration commits you to looking at
 

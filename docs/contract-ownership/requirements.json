@@ -2240,6 +2240,54 @@
         "package": "@automovie/engine"
       }
     },
+    "requirements/production-evidence/graph.md#agent-production-evidence-additive-extension": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
+    "requirements/production-evidence/graph.md#agent-production-evidence-deterministic-result": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
+    "requirements/production-evidence/graph.md#agent-production-evidence-graph": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "This heading groups the independently owned graph promises below it and adds no separate user-observable requirement."
+      }
+    },
+    "requirements/production-evidence/graph.md#agent-production-evidence-physical-integrity": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
+    "requirements/production-evidence/graph.md#agent-production-evidence-shape-stage": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
+    "requirements/production-evidence/graph.md#agent-production-evidence-shared-contract": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
+    "requirements/production-evidence/input.md#agent-production-evidence-input": {
+      "owner": {
+        "kind": "excluded",
+        "reason": "This heading groups the complete visible-selection promise below it and adds no separate user-observable requirement."
+      }
+    },
+    "requirements/production-evidence/input.md#agent-production-evidence-visible-selection": {
+      "owner": {
+        "kind": "package",
+        "package": "@automovie/evidence"
+      }
+    },
     "requirements/rendering/chunks-resume-and-recovery.md#rendering-atomic-publication": {
       "owner": {
         "kind": "package",

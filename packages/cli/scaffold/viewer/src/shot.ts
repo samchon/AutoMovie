@@ -15,10 +15,10 @@ import {
 } from "@automovie/viewer";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
-import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createCompiledShotRuntime } from "./shotRuntime";
 import {
   type IAutoMovieShotObservation,
+  VIEWER_BACKGROUND,
   viewerDocument,
 } from "./viewerDocument";
 
@@ -31,7 +31,11 @@ const deliveryTone =
   requestedTone === "acesFilmic" || requestedTone === "none"
     ? requestedTone
     : undefined;
-const shotId = parameters.get("shot") ?? "opening";
+const shotId = parameters.get("shot")?.trim();
+if (shotId === undefined || shotId === "")
+  throw new Error(
+    "No shot was selected. Open this page with ?shot=<authored-shot-id>.",
+  );
 const response = await fetch(
   `/__automovie/shots/${encodeURIComponent(shotId)}.json`,
 );
@@ -75,7 +79,7 @@ const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {
   pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
+mounted.renderer.setClearColor(VIEWER_BACKGROUND, 1);
 
 let lastObservation: IAutoMovieShotObservation;
 

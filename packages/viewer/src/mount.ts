@@ -431,6 +431,9 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude requirements/production-design/subject-breakdown-and-asset-plan.md The viewer consumes compiled production state; design authority, authoring gates, reconciliation, and refusal remain upstream.
  * @evidenceExclude requirements/production-design/visual-delivery-and-fidelity-tiers.md The viewer consumes compiled production state; design authority, authoring gates, reconciliation, and refusal remain upstream.
  * @evidenceExclude requirements/README.md The repository requirement root spans product authority beyond the viewer; this package implements only the directly cited projection leaves.
+ * @evidenceExclude requirements/production-evidence/README.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
+ * @evidenceExclude requirements/production-evidence/graph.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
+ * @evidenceExclude requirements/production-evidence/input.md The viewer projects admitted production state and does not configure or validate the generated project's authoring evidence graph.
  * @evidenceExclude requirements/rendering/budgets.md#rendering-budget-decision The viewer owns interactive projection only; render scheduling, headless capture policy, encoding, packaging, and publication remain in the render lane.
  * @evidenceExclude requirements/rendering/budgets.md#rendering-budget-refusal The viewer owns interactive projection only; render scheduling, headless capture policy, encoding, packaging, and publication remain in the render lane.
  * @evidenceExclude requirements/rendering/budgets.md#rendering-budget-tiers The viewer owns interactive projection only; render scheduling, headless capture policy, encoding, packaging, and publication remain in the render lane.
@@ -699,6 +702,9 @@ export interface IAutoMovieViewerHandle {
  * @evidenceExclude specifications/performance-motion-and-staging/staging-events-coverage-and-validation.md The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/performance-motion-and-staging/staging-space-state-and-choreography.md The viewer applies resolved performance state; authoring, solving, retargeting policy, budgets, and validation remain upstream.
  * @evidenceExclude specifications/README.md The repository specification root spans system authority beyond the viewer; this package implements only the directly cited projection leaves.
+ * @evidenceExclude specifications/production-evidence/README.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
+ * @evidenceExclude specifications/production-evidence/graph.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
+ * @evidenceExclude specifications/production-evidence/input.md The viewer starts after authoring admission and does not implement evidence stages, graph construction, or project-tree validation.
  * @evidenceExclude specifications/review-and-acceptance/alternatives-regression-and-revalidation.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/approval-waiver-and-publication.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.
  * @evidenceExclude specifications/review-and-acceptance/case-matrix.md The viewer exposes observable frames; oracle policy, review state, acceptance authority, and publication judgment remain outside it.

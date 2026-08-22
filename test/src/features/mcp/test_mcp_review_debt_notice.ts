@@ -46,7 +46,7 @@ const gateReports = (diagnostics: readonly IAutoMovieDiagnostic[]) =>
  *
  * Scenarios:
  *
- * 1. The starter owes review on more than one target, so a per-target report
+ * 1. The completed fixture owes review on more than one target, so a per-target report
  *    here would be the flood the issue argues against.
  * 2. A `source` compile carries exactly one notice however many are owed, and
  *    it is a warning: an incomplete review is the normal state of a film being
@@ -74,14 +74,14 @@ export const test_mcp_review_debt_notice = (): void => {
     TestValidator.equals(
       "a source compile owns one line of review debt and the gate owns the rest",
       namedFacts([
-        ["the starter owes more than one review", () => owed.length > 1],
+        ["the fixture owes more than one review", () => owed.length > 1],
         [
           "the source compile succeeds",
           () => productionCompileSucceeded("review debt", source),
         ],
         ["and carries exactly one notice", () => notices.length === 1],
         ["which is a warning", () => notice?.category === "warning"],
-        // How many are owed is stable across both readings — the starter has
+        // How many are owed is stable across both readings — the fixture has
         // submitted no review, so nothing is complete under any snapshot — but
         // which state a given entry is in is not, because the compiler builds
         // its queue with a snapshot this test does not have. So the count is
@@ -111,7 +111,7 @@ export const test_mcp_review_debt_notice = (): void => {
         ],
       ]),
       {
-        "the starter owes more than one review": true,
+        "the fixture owes more than one review": true,
         "the source compile succeeds": true,
         "and carries exactly one notice": true,
         "which is a warning": true,

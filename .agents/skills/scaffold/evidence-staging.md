@@ -1,6 +1,6 @@
 # Production evidence staging
 
-Read `lint.config.ts`, `config/src/createAutoMovieEvidenceConfig.ts`, every target and host involved, and the applicable authoring phase document before changing a stage or evidence statement.
+Read the complete production declaration in `lint.config.ts`, every target and host involved, and the applicable authoring phase document before changing a stage or evidence statement. `@automovie/evidence` owns reusable graph mechanics; the generated project has no second local configuration source.
 
 ## States
 
@@ -13,16 +13,18 @@ Every layer is `disabled`, `draft`, `evidence`, or `review`.
 
 An applicable layer moves only `disabled -> draft -> evidence -> review`. Leave completed layers in `review` so later target edits reopen affected checks. Do not return incomplete authored hosts to `disabled`, and do not leave a host behind when its layer is disabled.
 
-`draft` does not forbid an obvious truthful citation. Record one when it preserves context, but do not interrupt first-version authorship to chase complete coverage or fingerprints. Evidence and review passes own those jobs.
+`draft` contains no evidence tags. Preserve citation intent in ordinary prose or working notes, then author the complete evidence batch only after the layer passes its first-version audits and moves to `evidence`. This keeps partial annotations from looking like partial completion.
+
+The authored-unit topology is closed. Outside an optional H1 title, settings, research, model, space, material, instance, motion, and system hosts use only anchored H2 units; storyline, scenario, script, and brief hosts use only anchored H2/H3/H4 units. Any other heading depth fails instead of hiding an ungoverned decision.
 
 ## Relationship types
 
 - A principle is an item-by-item file checklist. Every selected Markdown file answers every applicable H2, exclusions are refused, and one strong unit cannot cover a weak unit elsewhere in the file.
-- `obligations/common.md` is an item-by-item unit checklist. Every governed settings, model, and motion H2 and every film or brief H2/H3/H4 answers every item directly; exclusions are refused.
-- A layer obligation is distributed coverage. Every H2 that materially realizes a role may cite it, and the complete population accounts for every role. Settings, model, and storyline roles permit no exclusion. Motion roles permit one population-wide exclusion only where the target's own condition is absent from the complete production.
-- Settings, model, motion, and research references are foundation coverage. A host cites only the units it uses. A target no host in that claim population uses may receive one concrete population-wide exclusion only where the configured reference permits it.
-- Film lineage is exact. Every scenario and screenplay H2/H3/H4 cites one matching same-level parent, every parent has one matching child, and exclusions are refused. The factory also compares physical anchor order and nesting.
-- Model and motion source ownership is exact at file level, while source-principle and design-unit coverage is distributed across selected exports. Shot ownership is exact per screenplay scene or brief shot.
+- `obligations/common.md` is an item-by-item unit checklist. Every governed settings, research, model, space, material, instance, motion, and system H2 and every film or brief H2/H3/H4 answers every item directly; exclusions are refused.
+- A layer obligation is distributed coverage. Every H2 that materially realizes a role may cite it, and the complete population accounts for every role. Settings, model, space, material, instance, system, and storyline roles permit no exclusion. Motion roles permit one population-wide exclusion only where the target's own condition is absent from the complete production.
+- Settings, model, space, material, instance, motion, and system references are foundation coverage. A host cites only the units it uses. A target no host in that claim population uses may receive one concrete population-wide exclusion only where the configured reference permits it. Research has one stricter bridge: every reviewed research H2 is interpreted by a settings H2, and later layers cite that settings owner.
+- Film lineage is exact. Every scenario and screenplay H2/H3/H4 cites one matching same-level parent, every parent has one matching child, and exclusions are refused. `lint.config.ts` also compares physical anchor order and nesting.
+- Design-source ownership is exact per selected export: model branches require a concrete exported class and select every exported type; motion branches select every exported function and property; space, material, instance, and system branches select every exported type, function, and property. Each selected export cites exactly one design file. More than one export may implement the same design; source-principle and design-unit coverage is distributed across the complete branch population. Each shot or acceptance export likewise cites one screenplay scene or brief shot, and the complete source population covers every such parent.
 
 An omission from one host is not an exclusion. `@evidenceExclude` says no host in the complete claim population owes the target. Never cite and exclude the same target in one population, use one host as a catalogue for all targets, or use a generic reason to hide missing authored work.
 
@@ -39,7 +41,7 @@ Put file-level principle answers in one HTML comment before the first H1. Put co
 
 Use configured roots such as `settings/...`, `models/...`, `motions/...`, `storylines/...`, `scenarios/...`, `script/...`, shared `principles/...` and `obligations/...`, or the root declared by a production-specific claim. Do not prefix a target with `docs/` unless that claim's root requires it. Every Markdown target unit has a stable explicit anchor.
 
-A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, “uses this setting,” “implements this rule,” and a copied reason are not evidence.
+A reason names the host event, decision, limit, transition, implementation, or observable result that would be false without the target. A target-name paraphrase, `uses this setting`, `implements this rule`, and a copied reason are not evidence.
 
 ## Transitions
 
@@ -47,9 +49,9 @@ Move a layer from `draft` to `evidence` only after the full layer has a complete
 
 Move the layer to `review` only after all shared and production-specific claim batches are complete and the production source lint is clean. Commit that evidence state before review. Review each relationship independently under [Review](review.md), copy only compiler-issued fingerprints, and compile again.
 
-A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for every active model and motion source branch. Production source waits for settings. Film source waits for production source and shots.
+A child may enter `draft` only after every direct parent is in `review`. Research, when present, is an additional reviewed parent of authored documents. Shots wait for reviewed screenplay or brief and for the reviewed source corresponding to every active model, space, material, instance, motion, and system branch. Production source waits for settings. Film source waits for production source and shots.
 
-The factory checks non-empty host populations, required anchors, named source owners, production-kind exclusions, and exact narrative identities before lint. When changing the factory, preserve the typed object API, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
+`@automovie/evidence` checks non-empty host populations, required anchors, named source owners, production-kind exclusions, and exact narrative identities from the declaration before lint. Keep every project-specific selector and additive claim in `lint.config.ts` rather than another local configuration file. Preserve the typed declaration, additive `claims`, layer grouping, host-independent ordering, and mixed-state tests.
 
 ## Diagnostics
 
@@ -68,9 +70,9 @@ Never clear a diagnostic with exaggerated evidence, copied reviews, blanket excl
 
 ## Production-specific claims
 
-Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. Put selected-file conditions under package-local `docs/principles`, distributed roles under `docs/obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
+Classify a work rule through [Production-specific contract](work-specific.md) before configuring it. The exact shared inventory reserves `docs/principles` and `docs/obligations`. Put production-only selected-file conditions under `docs/production-principles`, production-only distributed roles under `docs/production-obligations`, existing relationships against their current authored targets, and other independent evidence behavior under a descriptive plural or collective family.
 
-A package-local principle uses file hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A distributed role uses the owning layer's H2 hosts, ordinary H2 coverage, and only the exclusion behavior the target justifies. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
+A production-local principle uses file hosts, H2 targets, `checklist: true`, no exclusion, and the host layer's stage and review requirement. A distributed role uses the owning layer's H2 hosts, ordinary H2 coverage, and only the exclusion behavior the target justifies. Declare these mechanics in the added typed claim, not in target prose. Create no empty target or family.
 
 ## Verification
 

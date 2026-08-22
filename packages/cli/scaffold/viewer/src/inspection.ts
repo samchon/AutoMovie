@@ -44,9 +44,8 @@ import {
 import * as THREE from "three";
 
 import type { IAutoMovieProductionViewerRuntime } from "../../scripts/productionRuntimeState";
-import { PRODUCTION_BACKGROUND } from "../../src/production";
 import { createCompiledShotRuntime } from "./shotRuntime";
-import { viewerDocument } from "./viewerDocument";
+import { VIEWER_BACKGROUND, viewerDocument } from "./viewerDocument";
 
 /**
  * One camera state the inspection asks this page to draw through.
@@ -95,9 +94,10 @@ export interface IAutoMovieInspectionImage {
  * world scene, and refusing it says nothing about the page: the scene behind it
  * is intact and every other subject standing in it is still drawable.
  *
- * Measured on the starter production, one such subject mid-sweep discarded the
- * page and the next subject rebuilt the whole scene. A population that is
- * entirely model-space, which is what the prototype review obligation asks for,
+ * Measured on the repository regression film, one such subject mid-sweep
+ * discarded the page and the next subject rebuilt the whole scene. A
+ * population that is entirely model-space, which is what the prototype review
+ * obligation asks for,
  * would therefore rebuild once per subject and give back the entire saving
  * `#1956` was opened to win.
  */
@@ -147,7 +147,11 @@ declare global {
 
 const { canvas, status } = viewerDocument();
 const parameters = new URLSearchParams(window.location.search);
-const shotId = parameters.get("shot") ?? "opening";
+const shotId = parameters.get("shot")?.trim();
+if (shotId === undefined || shotId === "")
+  throw new Error(
+    "No shot was selected. Open this page with ?shot=<authored-shot-id>.",
+  );
 // The revision the MCP surface digested from the compiled bytes it read. The
 // page states it rather than recomputing one, so an observation can never be
 // labelled with a state the tool did not resolve the subject against.
@@ -290,7 +294,7 @@ const mounted = mountViewer(canvas, runtime.scene, eye, () => true, {
   pixelRatio: 1,
   preserveDrawingBuffer: true,
 });
-mounted.renderer.setClearColor(PRODUCTION_BACKGROUND, 1);
+mounted.renderer.setClearColor(VIEWER_BACKGROUND, 1);
 // One draw through the shot's own camera lowers the scene to its opening
 // second. `render` is what applies poses, prop articulation, object motion and
 // light motion, and nothing else does, so a subject drawn before this would be

@@ -6,7 +6,6 @@
 
 ## 명세의 역할 {#specifications-role}
 
-
 명세는 입력과 출력, identity, 상태 전이, 좌표와 시간, 허용 범위, 결정성, 실패와 거부, 검증 가능한 결과를 정한다.
 
 명세는 특정 package, 파일, 공개 symbol이나 내부 알고리즘을 구현 정답으로 고정하지 않는다.
@@ -14,7 +13,6 @@
 명세는 특정 시대, 장소, 인물이나 작품의 완성 자산을 미리 정하지 않고, 사용자가 선택한 콘텐츠를 구성·채택·검증할 수 있는 일반 능력과 그 경계를 정한다.
 
 ## 시스템 경계와 구현 독립성 {#specifications-system-boundaries}
-
 
 각 폴더는 서로 대체할 수 없는 하나의 시스템 경계를 소유하며, 경계를 넘는 데이터와 상태는 양쪽 명세가 공유 identity와 불변 조건을 합의해야 한다.
 
@@ -24,8 +22,8 @@
 
 ## 명세 지도 {#specifications-topics}
 
-
 - [저작과 권한](./authoring-and-authority/README.md)
+- [생성 프로젝트 증거 설정](./production-evidence/README.md)
 - [서사와 의도](./narrative-and-intent/README.md)
 - [자산과 표현](./asset-and-representation/README.md)
 - [교환과 채택](./interchange-and-adoption/README.md)
@@ -42,7 +40,6 @@
 - [검토와 acceptance](./review-and-acceptance/README.md)
 
 ## 추적과 문서 언어 {#specifications-traceability}
-
 
 모든 H2와 H3는 저장소 전체에서 고유한 명시적 ASCII anchor를 가지며, 각 단원은 자신이 정밀화하는 requirement 단원을 직접 인용한다.
 

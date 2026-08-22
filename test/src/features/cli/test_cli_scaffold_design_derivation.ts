@@ -1,135 +1,197 @@
-import { renderScaffold } from "@automovie/cli";
-import { compareCodeUnits } from "@automovie/mcp";
+import { renderScaffold, scaffoldAssetDirectory } from "@automovie/cli";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { renderCompletedFilmFixture } from "../internal/completedFilmFixture";
+import { namedFacts, throwsError } from "../internal/predicates";
+
 /**
- * Every design record the scaffold ships is one its own emitter derives.
+ * A new project inherits authoring capability, never a completed production.
  *
- * `.automovie/design` looks hand-kept and is not: `scripts/emitDesign.ts` builds
- * each record from the typed source that owns it, and the compiler refuses a
- * record that disagrees with its source. A shipped record nothing derives is
- * therefore a trap rather than a gap. It stays resident through a production's
- * own authoring, keeps every obligation the record carries, and cannot be
- * corrected by editing source, because no source owns it.
- *
- * A benchmark run paid for that trap in the other direction: it replaced the
- * starter's documents and source, left the derived layer alone, and compiled for
- * two turns against shots it had already deleted. Nothing failed, because
- * nothing checks that the two halves describe one film.
- *
- * The check is a logical-label check rather than an execution. Running the emitter needs
- * the project's own installed dependencies, and the fixture roots this suite
- * builds have none, so this asks the weaker question that still catches the
- * whole failure class: a record whose path the emitter never names is a record
- * nobody derives.
- *
- * Scenarios:
- *
- * 1. The scaffold ships design records, so a reader that finds none fails here
- *    instead of passing on an empty population.
- * 2. Every shipped record except the screenplay index has a shared or
- *    production-tree path whose logical suffix is named by the emitter,
- *    literally or by a template that covers its directory.
- * 3. The screenplay index is the one exception, and the emitter says so in
- *    prose. This keeps the exception a decision rather than an omission that
- *    happens to look like one.
+ * The previous scaffold shipped a reviewed film's prose, evidence tags, source,
+ * design records, asset use, speaker binding, and emitter. Replacing only some
+ * of it left internally valid residue from another film. The public scaffold is
+ * now intentionally empty at that ownership boundary; the repository-only film
+ * fixture keeps compiler regression coverage elsewhere.
  */
 export const test_cli_scaffold_design_derivation = (): void => {
   const scaffold = path.resolve(__dirname, "../../../../packages/cli/scaffold");
-  const design = path.join(scaffold, ".automovie", "design");
-  const emitter = fs.readFileSync(
-    path.join(scaffold, "scripts", "emitDesign.ts"),
-    "utf8",
-  );
-
-  const records = walk(design).map((file) =>
-    path.relative(design, file).replaceAll("\\", "/"),
-  );
-  TestValidator.equals(
-    "the scaffold ships tracked design records",
-    records.length > 0,
-    true,
-  );
-
-  TestValidator.equals(
-    "every shipped design record is derived by the scaffold's own emitter",
-    distinct(
-      records
-        .filter((record) => record !== SCREENPLAY_INDEX)
-        .filter((record) => isDerived(record, emitter) === false),
-    ),
-    [],
-  );
-
-  TestValidator.equals(
-    "the screenplay index is the emitter's one stated exception",
-    {
-      resident: records.includes(SCREENPLAY_INDEX),
-      derived: isDerived(SCREENPLAY_INDEX, emitter),
-      explained: emitter.includes("The screenplay index stays hand-authored"),
-    },
-    { resident: true, derived: false, explained: true },
-  );
-
+  const assetDirectory = scaffoldAssetDirectory();
+  const existsSync = fs.existsSync;
+  Object.defineProperty(fs, "existsSync", {
+    configurable: true,
+    value: (candidate: fs.PathLike): boolean =>
+      path.resolve(candidate.toString()) === assetDirectory
+        ? false
+        : existsSync(candidate),
+    writable: true,
+  });
+  try {
+    TestValidator.equals(
+      "a missing scaffold asset directory fails at its public boundary",
+      throwsError(() => scaffoldAssetDirectory(), "assets are missing"),
+      true,
+    );
+  } finally {
+    Object.defineProperty(fs, "existsSync", {
+      configurable: true,
+      value: existsSync,
+      writable: true,
+    });
+  }
   const rendered = renderScaffold({ name: "rendered-production" });
-  TestValidator.equals(
-    "production-owned design paths substitute the project name",
-    Object.hasOwn(
-      rendered,
-      ".automovie/design/rendered-production/screenplay/index.json",
+  const emitter = rendered["scripts/emitDesign.ts"]!;
+  const completedEmitter = renderCompletedFilmFixture("completed-production")[
+    "scripts/emitDesign.ts"
+  ]!;
+  const productionStudies = rendered["scripts/productionStudies.ts"]!;
+  const lint = rendered["lint.config.ts"]!;
+  const evidenceInDocs = Object.entries(rendered)
+    .filter(([file]) => file.startsWith("docs/"))
+    .filter(([, content]) => /@evidence[A-Za-z]*\b/u.test(content))
+    .map(([file]) => file);
+  const productionDocuments = Object.keys(rendered).filter((file) =>
+    /^docs\/(?:settings|research|models|spaces|materials|instances|motions|systems|storylines|scenarios|script|briefs)\/.+\.md$/u.test(
+      file,
     ),
-    true,
+  );
+  const productionSources = Object.keys(rendered).filter((file) =>
+    /^(?:src\/(?:models|spaces|materials|instances|motions|systems|shots)\/.+\.ts|src\/(?:production|film)\.ts)$/u.test(
+      file,
+    ),
+  );
+  const designRecords = Object.keys(rendered).filter((file) =>
+    /^\.automovie\/design\/.+\.json$/u.test(file),
+  );
+  const configurationFiles = Object.keys(rendered).filter((file) =>
+    file.startsWith("config/"),
+  );
+  const generatedArtifacts = Object.keys(rendered).filter((file) =>
+    file.startsWith("generated/"),
+  );
+  const productionState = Object.keys(rendered).filter((file) =>
+    file.startsWith(".automovie/productions/"),
+  );
+  const reviewRecords = Object.keys(rendered).filter(
+    (file) =>
+      file.startsWith(".automovie/reviews/") &&
+      file !== ".automovie/reviews/README.md",
+  );
+  const renderedMedia = Object.keys(rendered).filter(
+    (file) => file.startsWith("renders/") && file !== "renders/README.md",
+  );
+  const publicMedia = Object.keys(rendered).filter(
+    (file) =>
+      /^public\/(?:assets|audio)\//u.test(file) && !file.endsWith("/README.md"),
+  );
+  const registeredAssets = (
+    JSON.parse(rendered[".automovie/assets.json"]!) as {
+      assets: unknown[];
+    }
+  ).assets;
+  const localLintImports = [
+    ...lint.matchAll(/\bfrom\s+["']([^"']+)["'];/gu),
+    ...lint.matchAll(/^import\s+["']([^"']+)["'];/gmu),
+  ]
+    .map((match) => match[1]!)
+    .filter((specifier) => specifier.startsWith("."));
+
+  TestValidator.equals(
+    "the generated project starts with no inherited production",
+    {
+      designRecords,
+      evidenceInDocs,
+      configurationFiles,
+      generatedArtifacts,
+      localLintImports,
+      productionState,
+      productionDocuments,
+      productionSources,
+      publicMedia,
+      registeredAssets,
+      renderedMedia,
+      reviewRecords,
+    },
+    {
+      designRecords: [],
+      evidenceInDocs: [],
+      configurationFiles: [],
+      generatedArtifacts: [],
+      localLintImports: [],
+      productionState: [],
+      productionDocuments: [],
+      productionSources: [],
+      publicMedia: [],
+      registeredAssets: [],
+      renderedMedia: [],
+      reviewRecords: [],
+    },
   );
   TestValidator.equals(
-    "no scaffold path ships an unresolved project-name token",
+    "the empty emitter refuses instead of claiming it generated a design",
+    namedFacts([
+      ["refuses", () => emitter.includes("throw new Error(")],
+      [
+        "explains the first action",
+        () => emitter.includes("Select a production kind in lint.config.ts"),
+      ],
+      [
+        "imports no completed production",
+        () => /from ["']\.\.\/src\//u.test(emitter) === false,
+      ],
+      [
+        "physical design tree is empty",
+        () =>
+          JSON.stringify(
+            fs.readdirSync(path.join(scaffold, ".automovie", "design")),
+          ) === JSON.stringify([".gitkeep"]),
+      ],
+      [
+        "viewer exposes one neutral replacement slot",
+        () =>
+          rendered["viewer/src/viewerDocument.ts"]!.includes(
+            "export const VIEWER_BACKGROUND = 0x202020;",
+          ),
+      ],
+      [
+        "completed fixture retains its production emitter",
+        () =>
+          completedEmitter.includes("Repository-only emitter") &&
+          completedEmitter.includes('from "../src/models/soloist"'),
+      ],
+      [
+        "inherits no environmental study obligation",
+        () => productionStudies.includes("required: []"),
+      ],
+      [
+        "refuses a blank project name",
+        () => throwsError(() => renderScaffold({ name: " " }), "project name"),
+      ],
+      [
+        "refuses a non-portable project name",
+        () =>
+          throwsError(
+            () => renderScaffold({ name: "invalid/name" }),
+            "portable directory segment",
+          ),
+      ],
+    ]),
+    {
+      refuses: true,
+      "explains the first action": true,
+      "imports no completed production": true,
+      "physical design tree is empty": true,
+      "viewer exposes one neutral replacement slot": true,
+      "completed fixture retains its production emitter": true,
+      "inherits no environmental study obligation": true,
+      "refuses a blank project name": true,
+      "refuses a non-portable project name": true,
+    },
+  );
+  TestValidator.equals(
+    "all scaffold paths resolve the generated project identity",
     Object.keys(rendered).every((file) => file.includes("{{name}}") === false),
     true,
   );
 };
-
-/** The one record the emitter deliberately leaves alone. */
-const SCREENPLAY_INDEX = "{{name}}/screenplay/index.json";
-
-const walk = (directory: string): string[] =>
-  fs.existsSync(directory) === false
-    ? []
-    : fs
-        .readdirSync(directory, { withFileTypes: true })
-        .flatMap((entry) =>
-          entry.isDirectory()
-            ? walk(path.join(directory, entry.name))
-            : entry.name.endsWith(".json")
-              ? [path.join(directory, entry.name)]
-              : [],
-        );
-
-/**
- * Whether the emitter names this record's logical label.
- *
- * The design-tree prefix is storage ownership and not part of an emitter label,
- * so `shared/` and `{{name}}/` are removed first. Two spellings then count,
- * because the emitter legitimately uses both. A record with
- * one owner is named whole (`"shots/opening.json"`), and a family whose members
- * come from a list is named by a template over its directory
- * (`` `acceptance/${scenario.id}.json` ``). A template is accepted for its whole
- * directory rather than per member: the ids come from source this reader does not
- * execute, and demanding each one would only be answerable by re-implementing
- * the emitter here.
- */
-const isDerived = (record: string, emitter: string): boolean => {
-  const label = record.startsWith("shared/")
-    ? record.slice("shared/".length)
-    : record.startsWith("{{name}}/")
-      ? record.slice("{{name}}/".length)
-      : record;
-  if (emitter.includes(`"${label}"`)) return true;
-  const directory = label.includes("/")
-    ? label.slice(0, label.indexOf("/"))
-    : null;
-  return directory === null ? false : emitter.includes(`\`${directory}/\${`);
-};
-
-const distinct = (values: readonly string[]): string[] =>
-  [...new Set(values)].sort(compareCodeUnits);

@@ -25,10 +25,11 @@
  * generateAutoMovieDerivedArtifact({
  *   root: findAutoMovieProjectRoot(process.cwd()),
  *   generator: "scripts/deriveMyArtifact.ts",
- *   inputs: ["src/world/plaza.ts"],
- *   output: ".automovie/derived/plaza-line-index.json",
+ *   inputs: ["src/examples/buildings.ts"],
+ *   output: ".automovie/derived/buildings-line-index.json",
  *   encoding: "utf8",
- *   generate: (inputs) => deriveUtf8LineIndex(inputs["src/world/plaza.ts"]!),
+ *   generate: (inputs) =>
+ *     deriveUtf8LineIndex(inputs["src/examples/buildings.ts"]!),
  * });
  * ```
  *
